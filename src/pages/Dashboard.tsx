@@ -1,11 +1,14 @@
+
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { AnalyticsChart } from "@/components/dashboard/AnalyticsChart";
 import { StatsPieChart } from "@/components/dashboard/StatsPieChart";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
-import { Users, Building, Package, Bell, UserCheck } from "lucide-react";
+import { Users, Building, Package, Bell } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserCard } from "@/components/users/UserCard";
+import { ListingCard } from "@/components/listings/ListingCard";
 
 const Dashboard = () => {
   return (
