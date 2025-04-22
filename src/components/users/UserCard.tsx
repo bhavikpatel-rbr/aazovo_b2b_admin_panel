@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ReactNode } from "react";
 
 export type UserType = "buyer" | "supplier" | "partner" | "company";
 
@@ -17,6 +18,7 @@ interface UserCardProps {
   image?: string;
   className?: string;
   onView?: () => void;
+  actions?: ReactNode;
 }
 
 export function UserCard({
@@ -28,6 +30,7 @@ export function UserCard({
   image,
   className,
   onView,
+  actions,
 }: UserCardProps) {
   const typeColors = {
     buyer: "bg-blue-500",
@@ -55,14 +58,14 @@ export function UserCard({
           </Avatar>
           <div className="space-y-1">
             <div className="flex items-center">
-              <h3 className="font-medium leading-none mr-2">{name}</h3>
+              <h3 className="font-medium leading-none mr-2 text-sm">{name}</h3>
               {verified && (
                 <Badge variant="outline" className="ml-1 text-xs bg-green-500/10 text-green-500 border-green-500/20">
                   Verified
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">{email}</p>
+            <p className="text-xs text-muted-foreground">{email}</p>
             <div className="flex space-x-2 pt-1">
               <Badge
                 variant="secondary"
@@ -101,16 +104,20 @@ export function UserCard({
           </div>
         </div>
       </CardContent>
-      <CardFooter className="border-t p-3 bg-muted/30">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-xs gap-1"
-          onClick={onView}
-        >
-          <Eye className="h-3.5 w-3.5" />
-          View Profile
-        </Button>
+      <CardFooter className="border-t p-2 px-3 bg-muted/30 flex justify-between">
+        {actions ? (
+          <div className="flex items-center gap-1">{actions}</div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs gap-1"
+            onClick={onView}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            View Profile
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

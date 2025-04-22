@@ -1,12 +1,11 @@
-
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
-import { ListingCard } from "@/components/listings/ListingCard";
-import { UserCard, UserType } from "@/components/users/UserCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AnalyticsChart } from "@/components/dashboard/AnalyticsChart";
+import { StatsPieChart } from "@/components/dashboard/StatsPieChart";
+import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import { Users, Building, Package, Bell, UserCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
   return (
@@ -44,15 +43,50 @@ const Dashboard = () => {
         />
       </div>
       
+      {/* Analytics Charts */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <AnalyticsChart />
+        <div className="grid grid-rows-2 gap-6">
+          <StatsPieChart 
+            title="Verification Status" 
+            data={[
+              { name: "Verified", value: 65, color: "#3A7AF5" },
+              { name: "Pending", value: 35, color: "#F59E0B" }
+            ]}
+          />
+          <StatsPieChart 
+            title="Listing Types" 
+            data={[
+              { name: "Offers", value: 65, color: "#10B981" },
+              { name: "Demands", value: 35, color: "#F43F5E" }
+            ]}
+          />
+        </div>
+      </div>
+      
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <ActivityTimeline />
+        </div>
+        <StatsPieChart 
+          title="User Distribution" 
+          data={[
+            { name: "Buyers", value: 45, color: "#3A7AF5" },
+            { name: "Suppliers", value: 30, color: "#10B981" },
+            { name: "Partners", value: 25, color: "#F59E0B" }
+          ]}
+        />
+      </div>
+      
       <Separator className="my-6" />
       
       {/* Verification Queue */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Verification Queue</h2>
+        <h2 className="text-base font-semibold mb-4">Verification Queue</h2>
         <Tabs defaultValue="kyc" className="w-full">
           <TabsList className="mb-4">
-            <TabsTrigger value="kyc">KYC Verification</TabsTrigger>
-            <TabsTrigger value="company">Company Verification</TabsTrigger>
+            <TabsTrigger value="kyc" className="text-xs">KYC Verification</TabsTrigger>
+            <TabsTrigger value="company" className="text-xs">Company Verification</TabsTrigger>
           </TabsList>
           <TabsContent value="kyc" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -111,7 +145,7 @@ const Dashboard = () => {
       
       {/* Recent Activity */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Recent Listings</h2>
+        <h2 className="text-base font-semibold mb-4">Recent Listings</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <ListingCard
             type="demand"

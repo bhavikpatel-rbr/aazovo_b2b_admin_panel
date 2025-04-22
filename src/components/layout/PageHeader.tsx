@@ -18,9 +18,9 @@ export function PageHeader({
   return (
     <div className={cn("flex flex-col md:flex-row justify-between items-start md:items-center py-4 pb-6 animate-fade-in", className)}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-xl font-bold tracking-tight">{title}</h1>
         {description && (
-          <p className="text-muted-foreground mt-1">{description}</p>
+          <p className="text-sm text-muted-foreground mt-1">{description}</p>
         )}
       </div>
       {children && (
