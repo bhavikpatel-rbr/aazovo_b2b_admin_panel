@@ -1,4 +1,3 @@
-
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { AnalyticsChart } from "@/components/dashboard/AnalyticsChart";
@@ -15,9 +14,9 @@ const Dashboard = () => {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Welcome to your Trade Nexus admin dashboard."
+        description="Welcome to your aazovo admin dashboard."
       />
-      
+
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard
@@ -45,69 +44,73 @@ const Dashboard = () => {
           trend={{ value: 17, isPositive: true }}
         />
       </div>
-      
+
       {/* Analytics Charts */}
       <div className="grid gap-6 md:grid-cols-2">
         <AnalyticsChart />
         <div className="grid grid-rows-2 gap-6">
-          <StatsPieChart 
-            title="Verification Status" 
+          <StatsPieChart
+            title="Verification Status"
             data={[
               { name: "Verified", value: 65, color: "#3A7AF5" },
-              { name: "Pending", value: 35, color: "#F59E0B" }
+              { name: "Pending", value: 35, color: "#F59E0B" },
             ]}
           />
-          <StatsPieChart 
-            title="Listing Types" 
+          <StatsPieChart
+            title="Listing Types"
             data={[
               { name: "Offers", value: 65, color: "#10B981" },
-              { name: "Demands", value: 35, color: "#F43F5E" }
+              { name: "Demands", value: 35, color: "#F43F5E" },
             ]}
           />
         </div>
       </div>
-      
+
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2">
           <ActivityTimeline />
         </div>
-        <StatsPieChart 
-          title="User Distribution" 
+        <StatsPieChart
+          title="User Distribution"
           data={[
             { name: "Buyers", value: 45, color: "#3A7AF5" },
             { name: "Suppliers", value: 30, color: "#10B981" },
-            { name: "Partners", value: 25, color: "#F59E0B" }
+            { name: "Partners", value: 25, color: "#F59E0B" },
           ]}
         />
       </div>
-      
+
       <Separator className="my-6" />
-      
+
       {/* Verification Queue */}
       <div>
         <h2 className="text-base font-semibold mb-4">Verification Queue</h2>
         <Tabs defaultValue="kyc" className="w-full">
           <TabsList className="mb-4">
-            <TabsTrigger value="kyc" className="text-xs">KYC Verification</TabsTrigger>
-            <TabsTrigger value="company" className="text-xs">Company Verification</TabsTrigger>
+            <TabsTrigger value="kyc" className="text-xs">
+              KYC Verification
+            </TabsTrigger>
+            <TabsTrigger value="company" className="text-xs">
+              Company Verification
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="kyc" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <UserCard 
+              <UserCard
                 name="John Smith"
                 email="john.smith@example.com"
                 type="buyer"
                 location="United States"
                 verified={false}
               />
-              <UserCard 
+              <UserCard
                 name="Maria Rodriguez"
                 email="maria@supplier.co"
                 type="supplier"
                 location="Spain"
                 verified={false}
               />
-              <UserCard 
+              <UserCard
                 name="Ahmed Hassan"
                 email="ahmed@tradeco.com"
                 type="buyer"
@@ -118,21 +121,21 @@ const Dashboard = () => {
           </TabsContent>
           <TabsContent value="company" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <UserCard 
+              <UserCard
                 name="Global Supply Co."
                 email="admin@globalsupply.com"
                 type="company"
                 location="Germany"
                 verified={false}
               />
-              <UserCard 
+              <UserCard
                 name="Eastern Imports Ltd."
                 email="contact@easternimports.com"
                 type="company"
                 location="Taiwan"
                 verified={false}
               />
-              <UserCard 
+              <UserCard
                 name="PetroChem Industries"
                 email="info@petrochem.com"
                 type="company"
@@ -143,9 +146,9 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
-      
+
       <Separator className="my-6" />
-      
+
       {/* Recent Activity */}
       <div>
         <h2 className="text-base font-semibold mb-4">Recent Listings</h2>
