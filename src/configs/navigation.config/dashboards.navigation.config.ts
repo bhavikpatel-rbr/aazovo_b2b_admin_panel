@@ -1,67 +1,25 @@
 import { DASHBOARDS_PREFIX_PATH } from '@/constants/route.constant'
-import {
-    NAV_ITEM_TYPE_TITLE,
-    NAV_ITEM_TYPE_ITEM,
-} from '@/constants/navigation.constant'
+// We only need NAV_ITEM_TYPE_ITEM now
+import { NAV_ITEM_TYPE_ITEM } from '@/constants/navigation.constant'
 import { ADMIN, USER } from '@/constants/roles.constant'
 import type { NavigationTree } from '@/@types/navigation'
 
 const dashboardsNavigationConfig: NavigationTree[] = [
     {
+        // You can keep the key 'dashboard' or make it more specific like 'dashboard.main'
         key: 'dashboard',
-        path: '',
+        // Assign a direct path - using the ecommerce path as an example default
+        path: `${DASHBOARDS_PREFIX_PATH}/ecommerce`,
         title: 'Dashboard',
         translateKey: 'nav.dashboard.dashboard',
         icon: 'dashboard',
-        type: NAV_ITEM_TYPE_TITLE,
+        // Change type to ITEM to make it a clickable link
+        type: NAV_ITEM_TYPE_ITEM,
         authority: [ADMIN, USER],
-        meta: {
-            horizontalMenu: {
-                layout: 'default',
-            },
-        },
-        subMenu: [
-            {
-                key: 'dashboard.ecommerce',
-                path: `${DASHBOARDS_PREFIX_PATH}/ecommerce`,
-                title: 'Ecommerce',
-                translateKey: 'nav.dashboard.ecommerce',
-                icon: 'dashboardEcommerce',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                subMenu: [],
-            },
-            {
-                key: 'dashboard.project',
-                path: `${DASHBOARDS_PREFIX_PATH}/project`,
-                title: 'Project',
-                translateKey: 'nav.dashboard.project',
-                icon: 'dashboardProject',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                subMenu: [],
-            },
-            {
-                key: 'dashboard.marketing',
-                path: `${DASHBOARDS_PREFIX_PATH}/marketing`,
-                title: 'Marketing',
-                translateKey: 'nav.dashboard.marketing',
-                icon: 'dashboardMarketing',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                subMenu: [],
-            },
-            {
-                key: 'dashboard.analytic',
-                path: `${DASHBOARDS_PREFIX_PATH}/analytic`,
-                title: 'Analytic',
-                translateKey: 'nav.dashboard.analytic',
-                icon: 'dashboardAnalytic',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                subMenu: [],
-            },
-        ],
+        // The 'meta' key might not be needed for an ITEM type, depends on your implementation
+        // meta: { ... },
+        // Ensure subMenu is empty
+        subMenu: [],
     },
 ]
 

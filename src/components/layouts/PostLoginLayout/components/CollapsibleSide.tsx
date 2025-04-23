@@ -29,6 +29,13 @@ const CollapsibleSide = ({ children }: CommonProps) => {
                             <>
                                 {smaller.lg && <MobileNav />}
                                 {larger.lg && <SideNavToggle />}
+                                {larger.lg && (
+                                    <span className="font-semibold text-gray-800 dark:text-gray-100 text-lg whitespace-nowrap">
+                                        {' '}
+                                        {/* Added styling */}
+                                        Aazovo Trading Information
+                                    </span>
+                                )}
                                 <Search />
                             </>
                         }

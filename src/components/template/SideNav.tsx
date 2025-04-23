@@ -64,7 +64,11 @@ const SideNav = ({
         >
             <Link
                 to={appConfig.authenticatedEntryPath}
-                className="side-nav-header flex flex-col justify-center"
+                className={classNames(
+                    'side-nav-header',
+                    'flex justify-center items-center gap-2', // Row layout, centering, gap
+                    'border-b border-gray-200 dark:border-gray-700', // Bottom border with light/dark mode colors
+                )}
                 style={{ height: HEADER_HEIGHT }}
             >
                 <Logo
@@ -78,6 +82,11 @@ const SideNav = ({
                             : LOGO_X_GUTTER,
                     )}
                 />
+                {!sideNavCollapse && (
+                    <span className="text-2xl font-bold text-gray-800 dark:text-gray-100 gap-2">
+                        AAZOVO
+                    </span>
+                )}
             </Link>
             <div className={classNames('side-nav-content', contentClass)}>
                 <ScrollBar style={{ height: '100%' }} direction={direction}>

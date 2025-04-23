@@ -15,11 +15,14 @@ const Side = ({ children, ...rest }: SideProps) => {
                         : null}
                 </div>
             </div>
-            <div className="py-6 px-10 lg:flex flex-col flex-1 justify-between hidden rounded-3xl items-end relative max-w-[520px] 2xl:max-w-[720px]">
+            <div
+                className="py-6 px-10 lg:flex flex-col flex-1 justify-between hidden rounded-3xl items-end relative max-w-[520px] 2xl:max-w-[720px] bg-blue-500" // <-- Add desired background color here (e.g., bg-blue-500)
+            >
                 <img
-                    src="/img/others/auth-side-bg.png"
-                    className="absolute h-full w-full top-0 left-0 rounded-3xl"
+                    src="/img/others/Loginimage.png"
+                    className="absolute h-full w-full top-0 left-0 rounded-3xl opacity-75" // <-- Add opacity class (e.g., opacity-75, opacity-50)
                 />
+                {/* Optional: Add other content here if needed; it will be above the image */}
             </div>
         </div>
     )

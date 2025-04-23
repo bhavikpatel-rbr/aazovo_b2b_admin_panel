@@ -1,651 +1,286 @@
-import { CONCEPTS_PREFIX_PATH } from '@/constants/route.constant'
+import { CONCEPTS_PREFIX_PATH } from '@/constants/route.constant' // Assuming this is defined
 import {
     NAV_ITEM_TYPE_TITLE,
-    NAV_ITEM_TYPE_COLLAPSE,
     NAV_ITEM_TYPE_ITEM,
+    NAV_ITEM_TYPE_COLLAPSE,
 } from '@/constants/navigation.constant'
 import { ADMIN, USER } from '@/constants/roles.constant'
 import type { NavigationTree } from '@/@types/navigation'
 
+// Ensure these icon keys *exactly match* the keys in your navigationIcon object
 const conceptsNavigationConfig: NavigationTree[] = [
     {
-        key: 'concepts',
-        path: '',
-        title: 'Concepts',
-        translateKey: 'nav.concepts',
-        icon: 'concepts',
-        type: NAV_ITEM_TYPE_TITLE,
+        key: 'concepts.companyManagement',
+        path: `${CONCEPTS_PREFIX_PATH}/company-management`,
+        title: 'Company Management',
+        translateKey: 'nav.companyManagement',
+        icon: 'account', // Using 'account' as a proxy for company/office
+        type: NAV_ITEM_TYPE_ITEM,
         authority: [ADMIN, USER],
         meta: {
-            horizontalMenu: {
-                layout: 'columns',
-                columns: 4,
+            description: {
+                translateKey: 'nav.companyManagementDesc',
+                label: 'Manage company details',
             },
         },
-        subMenu: [
-            {
-                key: 'concepts.ai',
-                path: '',
-                title: 'AI',
-                translateKey: 'nav.conceptsAi.ai',
-                icon: 'ai',
-                type: NAV_ITEM_TYPE_COLLAPSE,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.conceptsAi.aiDesc',
-                        label: 'AI tools and resources',
-                    },
-                },
-                subMenu: [
-                    {
-                        key: 'concepts.ai.chat',
-                        path: `${CONCEPTS_PREFIX_PATH}/ai/chat`,
-                        title: 'Chat',
-                        translateKey: 'nav.conceptsAi.chat',
-                        icon: 'aiChat',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey: 'nav.conceptsAi.chatDesc',
-                                label: 'AI-powered chat systems',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.ai.image',
-                        path: `${CONCEPTS_PREFIX_PATH}/ai/image`,
-                        title: 'Image',
-                        translateKey: 'nav.conceptsAi.image',
-                        icon: 'aiImage',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey: 'nav.conceptsAi.imageDesc',
-                                label: 'AI image processing',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                ],
+        subMenu: [],
+    },
+    {
+        key: 'concepts.memberManagement',
+        path: `${CONCEPTS_PREFIX_PATH}/member-management`,
+        title: 'Member Management',
+        translateKey: 'nav.memberManagement',
+        icon: 'customers', // <-- Corrected: uses PiUsersDuotone via 'customers' key
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.memberManagementDesc',
+                label: 'Manage team members',
             },
-            {
-                key: 'concepts.projects',
-                path: '',
-                title: 'Projects',
-                translateKey: 'nav.conceptsProjects.projects',
-                icon: 'projects',
-                type: NAV_ITEM_TYPE_COLLAPSE,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.conceptsProjects.projectsDesc',
-                        label: 'Manage and track projects',
-                    },
-                },
-                subMenu: [
-                    {
-                        key: 'concepts.projects.scrumBoard',
-                        path: `${CONCEPTS_PREFIX_PATH}/projects/scrum-board`,
-                        title: 'Scrum Board',
-                        translateKey: 'nav.conceptsProjects.scrumBoard',
-                        icon: 'projectScrumBoard',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsProjects.scrumBoardDesc',
-                                label: 'Manage your scrum workflow',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.projects.projectList',
-                        path: `${CONCEPTS_PREFIX_PATH}/projects/project-list`,
-                        title: 'Project List',
-                        translateKey: 'nav.conceptsProjects.projectList',
-                        icon: 'projectList',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsProjects.projectListDesc',
-                                label: 'Organize all projects',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.projects.projectDetails',
-                        path: `${CONCEPTS_PREFIX_PATH}/projects/project-details/27`,
-                        title: 'Details',
-                        translateKey: 'nav.conceptsProjects.projectDetails',
-                        icon: 'projectDetails',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsProjects.projectDetailsDesc',
-                                label: 'Project detailed information',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.projects.projectTasks',
-                        path: `${CONCEPTS_PREFIX_PATH}/projects/tasks`,
-                        title: 'Tasks',
-                        translateKey: 'nav.conceptsProjects.projectTasks',
-                        icon: 'projectTask',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsProjects.projectTasksDesc',
-                                label: 'Manage project tasks',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.projects.projectIssue',
-                        path: `${CONCEPTS_PREFIX_PATH}/projects/tasks/1`,
-                        title: 'Issue',
-                        translateKey: 'nav.conceptsProjects.projectIssue',
-                        icon: 'projectIssue',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsProjects.projectIssueDesc',
-                                label: 'Resolve project issues',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                ],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.requestsAndFeedbacks',
+        path: `${CONCEPTS_PREFIX_PATH}/requests-feedbacks`,
+        title: 'Requests and Feedbacks',
+        translateKey: 'nav.requestsAndFeedbacks',
+        icon: 'feedback', // Maps to PiChatDotsDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.requestsAndFeedbacksDesc',
+                label: 'View requests and feedback',
             },
-            {
-                key: 'concepts.customers',
-                path: '',
-                title: 'Customers',
-                translateKey: 'nav.conceptsCustomers.customers',
-                icon: 'customers',
-                type: NAV_ITEM_TYPE_COLLAPSE,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.conceptsCustomers.customersDesc',
-                        label: 'Customer management',
-                    },
-                },
-                subMenu: [
-                    {
-                        key: 'concepts.customers.customerList',
-                        path: `${CONCEPTS_PREFIX_PATH}/customers/customer-list`,
-                        title: 'Customer List',
-                        translateKey: 'nav.conceptsCustomers.customerList',
-                        icon: 'customerList',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsCustomers.customerListDesc',
-                                label: 'List of all customers',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.customers.customerEdit',
-                        path: `${CONCEPTS_PREFIX_PATH}/customers/customer-edit/1`,
-                        title: 'Customer Edit',
-                        translateKey: 'nav.conceptsCustomers.customerEdit',
-                        icon: 'customerEdit',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsCustomers.customerEditDesc',
-                                label: 'Edit customer info',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.customers.customerCreate',
-                        path: `${CONCEPTS_PREFIX_PATH}/customers/customer-create`,
-                        title: 'Customer Create',
-                        translateKey: 'nav.conceptsCustomers.customerCreate',
-                        icon: 'customerCreate',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsCustomers.customerCreateDesc',
-                                label: 'Add a new customer',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.customers.customerDetails',
-                        path: `${CONCEPTS_PREFIX_PATH}/customers/customer-details/1`,
-                        title: 'Customer Details',
-                        translateKey: 'nav.conceptsCustomers.customerDetails',
-                        icon: 'customerDetails',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsCustomers.customerDetailsDesc',
-                                label: 'Detailed customer info',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                ],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.opportunity',
+        path: `${CONCEPTS_PREFIX_PATH}/opportunity`,
+        title: 'Opportunity',
+        translateKey: 'nav.opportunity',
+        icon: 'dashboardMarketing', // Maps to PiMegaphoneDuotone (suggests opportunity/outreach)
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.opportunityDesc',
+                label: 'Track sales opportunities',
             },
-            {
-                key: 'concepts.products',
-                path: '',
-                title: 'Products',
-                translateKey: 'nav.conceptsProducts.products',
-                icon: 'products',
-                type: NAV_ITEM_TYPE_COLLAPSE,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.conceptsProducts.productsDesc',
-                        label: 'Product inventory management',
-                    },
-                },
-                subMenu: [
-                    {
-                        key: 'concepts.products.productList',
-                        path: `${CONCEPTS_PREFIX_PATH}/products/product-list`,
-                        title: 'Product List',
-                        translateKey: 'nav.conceptsProducts.productList',
-                        icon: 'productList',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsProducts.productListDesc',
-                                label: 'All products listed',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.products.productEdit',
-                        path: `${CONCEPTS_PREFIX_PATH}/products/product-edit/12`,
-                        title: 'Product Edit',
-                        translateKey: 'nav.conceptsProducts.productEdit',
-                        icon: 'productEdit',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsProducts.productEditDesc',
-                                label: 'Edit product details',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.products.productCreate',
-                        path: `${CONCEPTS_PREFIX_PATH}/products/product-create`,
-                        title: 'Product Create',
-                        translateKey: 'nav.conceptsProducts.productCreate',
-                        icon: 'productCreate',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsProducts.productCreateDesc',
-                                label: 'Add new product',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                ],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.productManagement',
+        path: `${CONCEPTS_PREFIX_PATH}/product-management`,
+        title: 'Product Management',
+        translateKey: 'nav.productManagement',
+        icon: 'products', // Maps to PiPackageDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.productManagementDesc',
+                label: 'Manage product lifecycle',
             },
-            {
-                key: 'concepts.orders',
-                path: '',
-                title: 'Orders',
-                translateKey: 'nav.conceptsOrders.orders',
-                icon: 'orders',
-                type: NAV_ITEM_TYPE_COLLAPSE,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.conceptsOrders.ordersDesc',
-                        label: 'Customer orders management',
-                    },
-                },
-                subMenu: [
-                    {
-                        key: 'concepts.orders.orderList',
-                        path: `${CONCEPTS_PREFIX_PATH}/orders/order-list`,
-                        title: 'Order List',
-                        translateKey: 'nav.conceptsOrders.orderList',
-                        icon: 'orderList',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsOrders.orderListDesc',
-                                label: 'View all customer orders',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.orders.orderEdit',
-                        path: `${CONCEPTS_PREFIX_PATH}/orders/order-edit/95954`,
-                        title: 'Order Edit',
-                        translateKey: 'nav.conceptsOrders.orderEdit',
-                        icon: 'orderEdit',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsOrders.orderEditDesc',
-                                label: 'Edit order details',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.orders.orderCreate',
-                        path: `${CONCEPTS_PREFIX_PATH}/orders/order-create`,
-                        title: 'Order Create',
-                        translateKey: 'nav.conceptsOrders.orderCreate',
-                        icon: 'orderCreate',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsOrders.orderCreateDesc',
-                                label: 'Create new order',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.orders.orderDetails',
-                        path: `${CONCEPTS_PREFIX_PATH}/orders/order-details/95954`,
-                        title: 'Order Details',
-                        translateKey: 'nav.conceptsOrders.orderDetails',
-                        icon: 'ordeDetails',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsOrders.orderDetailsDesc',
-                                label: 'Detailed order information',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                ],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.wallListing',
+        path: `${CONCEPTS_PREFIX_PATH}/wall-listing`,
+        title: 'Wall Listing',
+        translateKey: 'nav.wallListing',
+        icon: 'uiCommonGrid', // Maps to PiGridFourDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.wallListingDesc',
+                label: 'View wall listings',
             },
-            {
-                key: 'concepts.account',
-                path: '',
-                title: 'Account',
-                translateKey: 'nav.conceptsAccount.account',
-                icon: 'account',
-                type: NAV_ITEM_TYPE_COLLAPSE,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.conceptsAccount.accountDesc',
-                        label: 'Account settings and info',
-                    },
-                },
-                subMenu: [
-                    {
-                        key: 'concepts.account.settings',
-                        path: `${CONCEPTS_PREFIX_PATH}/account/settings`,
-                        title: 'Settings',
-                        translateKey: 'nav.conceptsAccount.settings',
-                        icon: 'accountSettings',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsAccount.settingsDesc',
-                                label: 'Configure your settings',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.account.activityLog',
-                        path: `${CONCEPTS_PREFIX_PATH}/account/activity-log`,
-                        title: 'Activity log',
-                        translateKey: 'nav.conceptsAccount.activityLog',
-                        icon: 'accountActivityLogs',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsAccount.activityLogDesc',
-                                label: 'View recent activities',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.account.rolesPermissions',
-                        path: `${CONCEPTS_PREFIX_PATH}/account/roles-permissions`,
-                        title: 'Roles & Permissions',
-                        translateKey: 'nav.conceptsAccount.rolesPermissions',
-                        icon: 'accountRoleAndPermission',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsAccount.rolesPermissionsDesc',
-                                label: 'Manage roles & permissions',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.account.pricing',
-                        path: `${CONCEPTS_PREFIX_PATH}/account/pricing`,
-                        title: 'Pricing',
-                        translateKey: 'nav.conceptsAccount.pricing',
-                        icon: 'accountPricing',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey: 'nav.conceptsAccount.pricingDesc',
-                                label: 'View pricing plans',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                ],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.leads',
+        path: `${CONCEPTS_PREFIX_PATH}/leads`,
+        title: 'Leads',
+        translateKey: 'nav.leads',
+        icon: 'customerCreate', // Maps to PiUserPlusDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.leadsDesc',
+                label: 'Manage sales leads',
             },
-            {
-                key: 'concepts.helpCenter',
-                path: '',
-                title: 'Help Center',
-                translateKey: 'nav.conceptsHelpCenter.helpCenter',
-                icon: 'helpCenter',
-                type: NAV_ITEM_TYPE_COLLAPSE,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.conceptsHelpCenter.helpCenterDesc',
-                        label: 'Support and articles',
-                    },
-                },
-                subMenu: [
-                    {
-                        key: 'concepts.helpCenter.supportHub',
-                        path: `${CONCEPTS_PREFIX_PATH}/help-center/support-hub`,
-                        title: 'Support Hub',
-                        translateKey: 'nav.conceptsHelpCenter.supportHub',
-                        icon: 'helpCeterSupportHub',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsHelpCenter.supportHubDesc',
-                                label: 'Central support hub',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.helpCenter.article',
-                        path: `${CONCEPTS_PREFIX_PATH}/help-center/article/pWBKE_0UiQ`,
-                        title: 'Article',
-                        translateKey: 'nav.conceptsHelpCenter.article',
-                        icon: 'helpCeterArticle',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsHelpCenter.articleDesc',
-                                label: 'Read support articles',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.helpCenter.editArticle',
-                        path: `${CONCEPTS_PREFIX_PATH}/help-center/edit-article/pWBKE_0UiQ`,
-                        title: 'Edit Article',
-                        translateKey: 'nav.conceptsHelpCenter.editArticle',
-                        icon: 'helpCeterEditArticle',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsHelpCenter.editArticleDesc',
-                                label: 'Modify article content',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                    {
-                        key: 'concepts.helpCenter.manageArticle',
-                        path: `${CONCEPTS_PREFIX_PATH}/help-center/manage-article`,
-                        title: 'Manage Article',
-                        translateKey: 'nav.conceptsHelpCenter.manageArticle',
-                        icon: 'helpCeterManageArticle',
-                        type: NAV_ITEM_TYPE_ITEM,
-                        authority: [ADMIN, USER],
-                        meta: {
-                            description: {
-                                translateKey:
-                                    'nav.conceptsHelpCenter.manageArticleDesc',
-                                label: 'Article management',
-                            },
-                        },
-                        subMenu: [],
-                    },
-                ],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.accountDocument',
+        path: `${CONCEPTS_PREFIX_PATH}/account-document`,
+        title: 'Account Document',
+        translateKey: 'nav.accountDocument',
+        icon: 'forms', // Maps to PiFileTextDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.accountDocumentDesc',
+                label: 'Manage account documents',
             },
-            {
-                key: 'concepts.calendar',
-                path: `${CONCEPTS_PREFIX_PATH}/calendar`,
-                title: 'Calendar',
-                translateKey: 'nav.calendar',
-                icon: 'calendar',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.calendarDesc',
-                        label: 'Schedule and events',
-                    },
-                },
-                subMenu: [],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.subscribers',
+        path: `${CONCEPTS_PREFIX_PATH}/subscribers`,
+        title: 'Subscribers',
+        translateKey: 'nav.subscribers',
+        icon: 'customerList', // Re-using PiUsersDuotone (or consider 'mail')
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.subscribersDesc',
+                label: 'Manage newsletter subscribers',
             },
-            {
-                key: 'concepts.fileManager',
-                path: `${CONCEPTS_PREFIX_PATH}/file-manager`,
-                title: 'File Manager',
-                translateKey: 'nav.fileManager',
-                icon: 'fileManager',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.fileManagerDesc',
-                        label: 'Manage your files',
-                    },
-                },
-                subMenu: [],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.blog',
+        path: `${CONCEPTS_PREFIX_PATH}/blog`,
+        title: 'Blog',
+        translateKey: 'nav.blog',
+        icon: 'helpCeterArticle', // Maps to PiNewspaperDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.blogDesc',
+                label: 'Manage blog posts',
             },
-            {
-                key: 'concepts.mail',
-                path: `${CONCEPTS_PREFIX_PATH}/mail`,
-                title: 'Mail',
-                translateKey: 'nav.mail',
-                icon: 'mail',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.mailDesc',
-                        label: 'Manage your emails',
-                    },
-                },
-                subMenu: [],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.formBuilder',
+        path: `${CONCEPTS_PREFIX_PATH}/form-builder`,
+        title: 'Form Builder',
+        translateKey: 'nav.formBuilder',
+        icon: 'uiFormsFormControl', // Maps to PiClipboardTextDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.formBuilderDesc',
+                label: 'Create custom forms',
             },
-            {
-                key: 'concepts.chat',
-                path: `${CONCEPTS_PREFIX_PATH}/chat`,
-                title: 'Chat',
-                translateKey: 'nav.chat',
-                icon: 'chat',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.chatDesc',
-                        label: 'Chat with friends',
-                    },
-                },
-                subMenu: [],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.masters',
+        path: `${CONCEPTS_PREFIX_PATH}/masters`,
+        title: 'Masters',
+        translateKey: 'nav.masters',
+        icon: 'signIn', // Maps to PiKeyDuotone (representing master keys/data)
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.mastersDesc',
+                label: 'Manage master data',
             },
-        ],
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.employeeManagement1',
+        path: `${CONCEPTS_PREFIX_PATH}/employee-management`,
+        title: 'Employee Management',
+        translateKey: 'nav.projectList',
+        icon: 'projectList', // <-- Updated from 'users' (Assuming PiBriefcaseDuotone is available)
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.employeeManagementDesc',
+                label: 'Manage employees',
+            },
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.data1',
+        path: `${CONCEPTS_PREFIX_PATH}/data-management`,
+        title: 'Data',
+        translateKey: 'nav.data',
+        icon: 'dashboardAnalytic', // Maps to PiChartBarDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.dataDesc',
+                label: 'Manage application data',
+            },
+        },
+        subMenu: [],
+    },
+
+    {
+        key: 'concepts.exportMapping',
+        path: `${CONCEPTS_PREFIX_PATH}/export-mapping`,
+        title: 'Export Mapping',
+        translateKey: 'nav.exportMapping',
+        icon: 'uiFormsUpload', // Maps to PiUploadDuotone (suggests exporting)
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.exportMappingDesc',
+                label: 'Configure data exports',
+            },
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.globalSetting',
+        path: `${CONCEPTS_PREFIX_PATH}/global-setting`,
+        title: 'Global Setting',
+        translateKey: 'nav.globalSetting',
+        icon: 'accountSettings', // Maps to PiGearDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.globalSettingDesc',
+                label: 'Configure global settings',
+            },
+        },
+        subMenu: [],
+    },
+    {
+        key: 'concepts.emailMarketing',
+        path: `${CONCEPTS_PREFIX_PATH}/email-marketing`,
+        title: 'Email Marketing',
+        translateKey: 'nav.emailMarketing',
+        icon: 'mail', // Maps to PiEnvelopeDuotone
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: [ADMIN, USER],
+        meta: {
+            description: {
+                translateKey: 'nav.emailMarketingDesc',
+                label: 'Manage email campaigns',
+            },
+        },
+        subMenu: [],
     },
 ]
 

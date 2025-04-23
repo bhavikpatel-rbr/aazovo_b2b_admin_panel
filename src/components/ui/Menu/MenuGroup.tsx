@@ -19,7 +19,7 @@ const MenuGroup = (props: MenuGroupProps) => {
 
     return (
         <div className={menuGroupClass}>
-            {label && !sideCollapsed && (
+            {label && !sideCollapsed && label != 'Dashboard' && (
                 <div className={classNames('menu-title')}>{label}</div>
             )}
             <GroupContextProvider value={null}>
