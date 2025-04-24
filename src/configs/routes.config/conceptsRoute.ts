@@ -351,6 +351,174 @@ const conceptsRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
+    {
+        key: 'concepts.companyManagement',
+        path: `${CONCEPTS_PREFIX_PATH}/company-management`,
+        component: lazy(() => import('@/views/company-management/CompanyManagement')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'concepts.memberManagement',
+        path: `${CONCEPTS_PREFIX_PATH}/member-management`,
+        component: lazy(() => import('@/views/member-management/MemberManagement')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.requestsAndFeedbacks',
+        path: `${CONCEPTS_PREFIX_PATH}/requests-feedbacks`,
+        component: lazy(() => import('@/views/request-feedbacks/RequestsAndFeedbacks')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.opportunity',
+        path: `${CONCEPTS_PREFIX_PATH}/opportunity`,
+        component: lazy(() => import('@/views/opportunity/Opportunity')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.productManagement',
+        path: `${CONCEPTS_PREFIX_PATH}/product-management`,
+        component: lazy(() => import('@/views/product-management/ProductManagement')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.wallListing',
+        path: `${CONCEPTS_PREFIX_PATH}/wall-listing`,
+        component: lazy(() => import('@/views/wall-listing/WallListing')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.leads',
+        path: `${CONCEPTS_PREFIX_PATH}/leads`,
+        component: lazy(() => import('@/views/leads/Leads')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.accountDocument',
+        path: `${CONCEPTS_PREFIX_PATH}/account-document`,
+        component: lazy(() => import('@/views/accounts/Accounts')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.subscribers',
+        path: `${CONCEPTS_PREFIX_PATH}/subscribers`,
+        component: lazy(() => import('@/views/subscribers/Subscribers')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.blog',
+        path: `${CONCEPTS_PREFIX_PATH}/blog`,
+        component: lazy(() => import('@/views/blogs/Blogs')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.formBuilder',
+        path: `${CONCEPTS_PREFIX_PATH}/form-builder`,
+        component: lazy(() => import('@/views/form-builder/FormBuilder')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.masters',
+        path: `${CONCEPTS_PREFIX_PATH}/masters`,
+        component: lazy(() => import('@/views/masters/Masters')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.employeeManagement1',
+        path: `${CONCEPTS_PREFIX_PATH}/employee-management`,
+        component: lazy(() => import('@/views/employee-management/EmployeeManagement')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.data1',
+        path: `${CONCEPTS_PREFIX_PATH}/data-management`,
+        component: lazy(() => import('@/views/data-management/DataManagement')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.exportMapping',
+        path: `${CONCEPTS_PREFIX_PATH}/export-mapping`,
+        component: lazy(() => import('@/views/export-mapping/ExportMapping')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.globalSetting',
+        path: `${CONCEPTS_PREFIX_PATH}/global-setting`,
+        component: lazy(() => import('@/views/global-setting/GlobalSetting')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'concepts.emailMarketing',
+        path: `${CONCEPTS_PREFIX_PATH}/email-marketing`,
+        component: lazy(() => import('@/views/email-marketing/EmailMarketing')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
 ]
 
 export default conceptsRoute

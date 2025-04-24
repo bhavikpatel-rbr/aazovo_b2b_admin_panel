@@ -19,6 +19,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "src/views/member-management/MemberManagement.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
