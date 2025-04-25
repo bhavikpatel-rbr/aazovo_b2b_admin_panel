@@ -1,14 +1,34 @@
 import dashboardsNavigationConfig from './dashboards.navigation.config'
-import uiComponentNavigationConfig from './ui-components.navigation.config'
-import conceptsNavigationConfig from './concepts.navigation.config'
-import authNavigationConfig from './auth.navigation.config'
-import othersNavigationConfig from './others.navigation.config'
-import guideNavigationConfig from './guide.navigation.config'
+import businessEntitiesNavigationConfig from './business-entities.navigation.config'
+import productManagementNavigationConfig from './product-management.navigation.config'
+import salesLeadsNavigationConfig from './sales-leads.navigation.config'
+import marketingNavigationConfig from './marketing.navigation.config'
+import taskNavigationConfig from './task.navigation.config'
+import hrEmployeesNavigationConfig from './hr-employee.navigation.config'
+import accessControlNavigationConfig from './access-controll.navigation.config'
+import systemSettingsNavigationConfig from './system-settings.navigation.config'
+import settingsNavigationConfig from './settings.navigatiom.config'
+import masterNavigationConfig from './master.navigation.config'
+import documentMasterNavigationConfig from './document-master.navigation.config'
+import otherNavigationConfig from './others.navigation.config'
+import conceptNavigationConfig from './concepts.navigation.config'
 import type { NavigationTree } from '@/@types/navigation'
 
 const navigationConfig: NavigationTree[] = [
     ...dashboardsNavigationConfig,
-    ...conceptsNavigationConfig,
+    ...businessEntitiesNavigationConfig,
+    ...productManagementNavigationConfig,
+    ...salesLeadsNavigationConfig,
+    ...marketingNavigationConfig,
+    ...taskNavigationConfig,
+    ...hrEmployeesNavigationConfig,
+    ...accessControlNavigationConfig,
+    ...systemSettingsNavigationConfig,
+    ...settingsNavigationConfig,
+    ...masterNavigationConfig,
+    ...documentMasterNavigationConfig,
+    ...otherNavigationConfig,
+    ...conceptNavigationConfig,
 ]
 
 export default navigationConfig

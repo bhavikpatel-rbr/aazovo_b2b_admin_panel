@@ -1,9 +1,9 @@
 import {
     NAV_ITEM_TYPE_TITLE,
     NAV_ITEM_TYPE_ITEM,
-} from '@/constants/navigation.constant'
-import { ADMIN, USER } from '@/constants/roles.constant'
-import type { NavigationTree } from '@/@types/navigation'
+} from '@/constants/navigation.constant';
+import { ADMIN, USER } from '@/constants/roles.constant';
+import type { NavigationTree } from '@/@types/navigation';
 
 const othersNavigationConfig: NavigationTree[] = [
     {
@@ -16,39 +16,39 @@ const othersNavigationConfig: NavigationTree[] = [
         authority: [ADMIN, USER],
         subMenu: [
             {
-                key: 'others.accessDenied',
-                path: `/access-denied`,
-                title: 'Access Denied',
-                translateKey: 'nav.others.accessDenied',
-                icon: 'accessDenied',
+                key: 'others.exportMapping',
+                path: `/export-mapping`,
+                title: 'Export Mapping',
+                translateKey: 'nav.others.exportMapping',
+                icon: 'exportMapping',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN, USER],
                 meta: {
                     description: {
-                        translateKey: 'nav.others.accessDeniedDesc',
-                        label: 'Access denied page',
+                        translateKey: 'nav.others.exportMappingDesc',
+                        label: 'Manage export mappings',
                     },
                 },
                 subMenu: [],
             },
             {
-                key: 'others.landing',
-                path: `/landing`,
-                title: 'Landing',
-                translateKey: 'nav.others.landing',
-                icon: 'landing',
+                key: 'others.logout',
+                path: `/logout`,
+                title: 'Logout',
+                translateKey: 'nav.others.logout',
+                icon: 'logout',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN, USER],
                 meta: {
                     description: {
-                        translateKey: 'nav.others.landingDesc',
-                        label: 'Shared component usage',
+                        translateKey: 'nav.others.logoutDesc',
+                        label: 'Logout from the system',
                     },
                 },
                 subMenu: [],
             },
         ],
     },
-]
+];
 
-export default othersNavigationConfig
+export default othersNavigationConfig;

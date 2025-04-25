@@ -1,0 +1,106 @@
+import { SETTINGS_PREFIX_PATH } from '@/constants/route.constant';
+import { NAV_ITEM_TYPE_ITEM, NAV_ITEM_TYPE_COLLAPSE } from '@/constants/navigation.constant';
+import { ADMIN } from '@/constants/roles.constant';
+import type { NavigationTree } from '@/@types/navigation';
+
+const settingsNavigationConfig: NavigationTree[] = [
+    {
+        key: 'settings',
+        path: '',
+        title: 'Settings',
+        translateKey: 'nav.settings',
+        icon: 'settings',
+        type: NAV_ITEM_TYPE_COLLAPSE,
+        authority: [ADMIN], // Restricted to ADMIN
+        meta: {
+            horizontalMenu: {
+                layout: 'columns',
+                columns: 3,
+            },
+        },
+        subMenu: [
+            {
+                key: 'settings.companyProfile',
+                path: `${SETTINGS_PREFIX_PATH}/company-profile`,
+                title: 'Company Profile',
+                translateKey: 'nav.settings.companyProfile',
+                icon: 'companyProfile',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.settings.companyProfileDesc',
+                        label: 'Manage company profile',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'settings.globalSettings',
+                path: `${SETTINGS_PREFIX_PATH}/global-settings`,
+                title: 'Global Settings',
+                translateKey: 'nav.settings.globalSettings',
+                icon: 'globalSettings',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.settings.globalSettingsDesc',
+                        label: 'Manage global settings',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'settings.domainManagement',
+                path: `${SETTINGS_PREFIX_PATH}/domain-management`,
+                title: 'Domain Management',
+                translateKey: 'nav.settings.domainManagement',
+                icon: 'domainManagement',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.settings.domainManagementDesc',
+                        label: 'Manage domains',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'settings.cmsManagement',
+                path: `${SETTINGS_PREFIX_PATH}/cms-management`,
+                title: 'CMS Management',
+                translateKey: 'nav.settings.cmsManagement',
+                icon: 'cmsManagement',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.settings.cmsManagementDesc',
+                        label: 'Manage CMS content',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'settings.rawData',
+                path: `${SETTINGS_PREFIX_PATH}/raw-data`,
+                title: 'Raw Data',
+                translateKey: 'nav.settings.rawData',
+                icon: 'rawData',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.settings.rawDataDesc',
+                        label: 'Access raw data',
+                    },
+                },
+                subMenu: [],
+            },
+        ],
+    },
+];
+
+export default settingsNavigationConfig;

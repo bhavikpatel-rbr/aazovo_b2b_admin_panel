@@ -1,26 +1,60 @@
 import { DASHBOARDS_PREFIX_PATH } from '@/constants/route.constant'
-// We only need NAV_ITEM_TYPE_ITEM now
-import { NAV_ITEM_TYPE_ITEM } from '@/constants/navigation.constant'
+import { NAV_ITEM_TYPE_ITEM,
+    NAV_ITEM_TYPE_COLLAPSE
+ } from '@/constants/navigation.constant'
 import { ADMIN, USER } from '@/constants/roles.constant'
 import type { NavigationTree } from '@/@types/navigation'
 
 const dashboardsNavigationConfig: NavigationTree[] = [
     {
-        // You can keep the key 'dashboard' or make it more specific like 'dashboard.main'
         key: 'dashboard',
-        // Assign a direct path - using the ecommerce path as an example default
-        path: `${DASHBOARDS_PREFIX_PATH}/ecommerce`,
+        path: '',
         title: 'Dashboard',
-        translateKey: 'nav.dashboard.dashboard',
-        icon: 'dashboard',
-        // Change type to ITEM to make it a clickable link
-        type: NAV_ITEM_TYPE_ITEM,
+        translateKey: '',
+        icon: 'ai',
+        type: NAV_ITEM_TYPE_COLLAPSE, // Changed from NAV_ITEM_TYPE_TITLE to NAV_ITEM_TYPE_COLLAPSE
         authority: [ADMIN, USER],
-        // The 'meta' key might not be needed for an ITEM type, depends on your implementation
-        // meta: { ... },
-        // Ensure subMenu is empty
-        subMenu: [],
+        meta: {
+            horizontalMenu: {
+                layout: 'columns',
+                columns: 2,
+            },
+        },
+        subMenu: [
+            {
+                key: 'dashboard.main',
+                path: `${DASHBOARDS_PREFIX_PATH}/main`,
+                title: 'Main',
+                translateKey: 'nav.dashboard.main',
+                icon: 'main',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.dashboard.mainDesc',
+                        label: 'Main dashboard overview',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'dashboard.trending',
+                path: `${DASHBOARDS_PREFIX_PATH}/trending`,
+                title: 'Trending',
+                translateKey: 'nav.dashboard.trending',
+                icon: 'trending',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.dashboard.trendingDesc',
+                        label: 'Trending analytics and insights',
+                    },
+                },
+                subMenu: [],
+            },
+        ],
     },
-]
+];
 
-export default dashboardsNavigationConfig
+export default dashboardsNavigationConfig;
