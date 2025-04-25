@@ -1,12 +1,14 @@
 import dashboardsRoute from './dashboardsRoute'
-import conceptsRoute from './conceptsRoute'
-import uiComponentsRoute from './uiComponentsRoute'
 import authRoute from './authRoute'
 import authDemoRoute from './authDemoRoute'
-import guideRoute from './guideRoute'
 import othersRoute from './othersRoute'
 import businessEntityRoute from './businessEntityRoute'
-import productManagementRoute from './productManagementRoutes'
+import productManagementRoute from './productManagementRoute'
+import salesLeadsRoute from './salesLeadsRoute'
+import marketingRoute from './marketingRoute'
+import taskRoute from './taskRoute'
+import hrEmployeesRoute from './hrEmployeesRoute'
+import accessControllRoute from './accessControllRoutes'
 import type { Routes } from '@/@types/routes'
 
 export const publicRoutes: Routes = [...authRoute]
@@ -17,4 +19,9 @@ export const protectedRoutes: Routes = [
     ...othersRoute,
     ...businessEntityRoute,
     ...productManagementRoute,
+    ...salesLeadsRoute,
+    ...marketingRoute,
+    ...taskRoute,
+    ...hrEmployeesRoute,
+    ...accessControllRoute,
 ]

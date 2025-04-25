@@ -1,9 +1,9 @@
-import { SYSTEM_SETTINGS_PREFIX_PATH } from '@/constants/route.constant';
+import { SYSTEM_TOOLS_PREFIX_PATH } from '@/constants/route.constant';
 import { NAV_ITEM_TYPE_ITEM, NAV_ITEM_TYPE_COLLAPSE } from '@/constants/navigation.constant';
 import { ADMIN } from '@/constants/roles.constant';
 import type { NavigationTree } from '@/@types/navigation';
 
-const systemSettingsNavigationConfig: NavigationTree[] = [
+const systemToolsNavigationConfig: NavigationTree[] = [
     {
         key: 'systemTools',
         path: '',
@@ -21,7 +21,7 @@ const systemSettingsNavigationConfig: NavigationTree[] = [
         subMenu: [
             {
                 key: 'systemTools.bugReport',
-                path: `${SYSTEM_SETTINGS_PREFIX_PATH}/bug-report`,
+                path: `${SYSTEM_TOOLS_PREFIX_PATH}/bug-report`,
                 title: 'Bug Report',
                 translateKey: 'nav.systemTools.bugReport',
                 icon: 'bugReport',
@@ -37,7 +37,7 @@ const systemSettingsNavigationConfig: NavigationTree[] = [
             },
             {
                 key: 'systemTools.changeLog',
-                path: `${SYSTEM_SETTINGS_PREFIX_PATH}/change-log`,
+                path: `${SYSTEM_TOOLS_PREFIX_PATH}/change-log`,
                 title: 'Change Log',
                 translateKey: 'nav.systemTools.changeLog',
                 icon: 'changeLog',
@@ -55,4 +55,4 @@ const systemSettingsNavigationConfig: NavigationTree[] = [
     },
 ];
 
-export default systemSettingsNavigationConfig;
+export default systemToolsNavigationConfig;

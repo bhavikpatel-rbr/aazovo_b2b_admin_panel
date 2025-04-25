@@ -6,7 +6,7 @@ import marketingNavigationConfig from './marketing.navigation.config'
 import taskNavigationConfig from './task.navigation.config'
 import hrEmployeesNavigationConfig from './hr-employee.navigation.config'
 import accessControlNavigationConfig from './access-controll.navigation.config'
-import systemSettingsNavigationConfig from './system-settings.navigation.config'
+import systemSettingsNavigationConfig from './system-tools.navigation.config'
 import settingsNavigationConfig from './settings.navigatiom.config'
 import masterNavigationConfig from './master.navigation.config'
 import documentMasterNavigationConfig from './document-master.navigation.config'
@@ -28,7 +28,6 @@ const navigationConfig: NavigationTree[] = [
     ...masterNavigationConfig,
     ...documentMasterNavigationConfig,
     ...otherNavigationConfig,
-    ...conceptNavigationConfig,
 ]
 
 export default navigationConfig

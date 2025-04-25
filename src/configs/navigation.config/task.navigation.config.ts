@@ -21,7 +21,7 @@ const taskNavigationConfig: NavigationTree[] = [
         subMenu: [
             {
                 key: 'task.board',
-                path: `${TASK_PREFIX_PATH}/board`,
+                path: `${TASK_PREFIX_PATH}/task-board`,
                 title: 'Task Board',
                 translateKey: 'nav.task.board',
                 icon: 'taskBoard',
@@ -37,7 +37,7 @@ const taskNavigationConfig: NavigationTree[] = [
             },
             {
                 key: 'task.list',
-                path: `${TASK_PREFIX_PATH}/list`,
+                path: `${TASK_PREFIX_PATH}/task-list`,
                 title: 'Task List',
                 translateKey: 'nav.task.list',
                 icon: 'taskList',
@@ -53,7 +53,7 @@ const taskNavigationConfig: NavigationTree[] = [
             },
             {
                 key: 'task.feedback',
-                path: `${TASK_PREFIX_PATH}/feedback`,
+                path: `${TASK_PREFIX_PATH}/task-feedback`,
                 title: 'Task Feedback',
                 translateKey: 'nav.task.feedback',
                 icon: 'taskFeedback',
