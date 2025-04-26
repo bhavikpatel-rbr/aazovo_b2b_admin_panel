@@ -9,7 +9,7 @@ const hrEmployeesNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'HR & Employees',
         translateKey: 'nav.hrEmployees',
-        icon: 'hrEmployees',
+        icon: 'customers',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN, USER],
         meta: {

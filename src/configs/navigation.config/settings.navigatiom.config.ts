@@ -9,7 +9,7 @@ const settingsNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'Settings',
         translateKey: 'nav.settings',
-        icon: 'settings',
+        icon: 'accountSettings',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN], // Restricted to ADMIN
         meta: {

@@ -10,6 +10,9 @@ import taskRoute from './taskRoute'
 import hrEmployeesRoute from './hrEmployeesRoute'
 import accessControllRoute from './accessControllRoutes'
 import masterRoutes from './masterRoutes'
+import systemToolsRoutes from './systemToolsRoutes'
+import settingsRoutes from './settingsRoutes'
+import documentMasterRoutes from './documentMasterRoutes'
 import type { Routes } from '@/@types/routes'
 
 export const publicRoutes: Routes = [...authRoute]
@@ -25,5 +28,8 @@ export const protectedRoutes: Routes = [
     ...taskRoute,
     ...hrEmployeesRoute,
     ...accessControllRoute,
+    ...systemToolsRoutes,
     ...masterRoutes,
+    ...settingsRoutes,
+    ...documentMasterRoutes,
 ]

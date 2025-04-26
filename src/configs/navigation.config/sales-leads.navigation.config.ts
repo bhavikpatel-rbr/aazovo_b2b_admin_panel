@@ -9,7 +9,7 @@ const salesLeadsNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'Sales & Leads',
         translateKey: 'nav.salesLeads',
-        icon: 'salesLeads',
+        icon: 'accountPricing',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN, USER],
         meta: {

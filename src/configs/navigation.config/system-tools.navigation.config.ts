@@ -9,7 +9,7 @@ const systemToolsNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'System Tools',
         translateKey: 'nav.systemTools',
-        icon: 'systemTools',
+        icon: 'utilsDoc',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN], // Restricted to ADMIN
         meta: {
