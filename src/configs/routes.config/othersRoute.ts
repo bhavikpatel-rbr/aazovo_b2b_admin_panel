@@ -4,31 +4,23 @@ import type { Routes } from '@/@types/routes'
 
 const othersRoute: Routes = [
     {
-        key: 'accessDenied',
-        path: `/access-denied`,
-        component: lazy(
-            () => import('@/views/others/AccessDenied'),
-        ),
+        key: 'exportMapping',
+        path: `/export-mapping`,
+        component: lazy(() => import('@/views/other/Export-Mapping')),
         authority: [ADMIN, USER],
         meta: {
-            pageBackgroundType: 'plain',
             pageContainerType: 'contained',
         },
     },
-    {
-        key: 'landing',
-        path: `/landing`,
-        component: lazy(
-            () => import('@/views/others/Landing'),
-        ),
-        authority: [ADMIN, USER],
-        meta: {
-            layout: 'blank',
-            footer: false,
-            pageContainerType: 'gutterless',
-            pageBackgroundType: 'plain',
-        },
-    },
+    // {
+    //     key: 'logout',
+    //     path: `logout`,
+    //     component: lazy(() => import('@/views/other/Logout')),
+    //     authority: [ADMIN, USER],
+    //     meta: {
+    //         pageContainerType: 'contained',
+    //     },
+    // },
 ]
 
 export default othersRoute

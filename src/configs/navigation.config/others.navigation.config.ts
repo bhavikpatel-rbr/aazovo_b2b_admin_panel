@@ -20,7 +20,7 @@ const othersNavigationConfig: NavigationTree[] = [
                 path: `/export-mapping`,
                 title: 'Export Mapping',
                 translateKey: 'nav.others.exportMapping',
-                icon: 'exportMapping',
+                icon: 'locationPin',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN, USER],
                 meta: {

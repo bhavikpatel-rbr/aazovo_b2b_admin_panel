@@ -9,7 +9,7 @@ const documentMasterNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'Document Master',
         translateKey: 'nav.documentMaster',
-        icon: 'documentMaster',
+        icon: 'documentDetails',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN], // Restricted to ADMIN
         meta: {

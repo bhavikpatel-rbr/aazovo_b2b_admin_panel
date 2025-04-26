@@ -9,7 +9,7 @@ const masterNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'Master',
         translateKey: 'nav.master',
-        icon: 'master',
+        icon: 'masterAccount',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN], // Restricted to ADMIN
         meta: {

@@ -9,7 +9,7 @@ const marketingNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'Marketing',
         translateKey: 'nav.marketing',
-        icon: 'marketing',
+        icon: 'dashboardMarketing',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN, USER],
         meta: {

@@ -9,7 +9,7 @@ const accessControlNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'Access Control',
         translateKey: 'nav.accessControl',
-        icon: 'accessControl',
+        icon: 'authentication',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN], // Restricted to ADMIN
         meta: {

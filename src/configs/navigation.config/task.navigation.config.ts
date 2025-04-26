@@ -9,7 +9,7 @@ const taskNavigationConfig: NavigationTree[] = [
         path: '',
         title: 'Task',
         translateKey: 'nav.task',
-        icon: 'task',
+        icon: 'projectTask',
         type: NAV_ITEM_TYPE_COLLAPSE,
         authority: [ADMIN, USER],
         meta: {
