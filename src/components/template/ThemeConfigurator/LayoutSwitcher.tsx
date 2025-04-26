@@ -25,20 +25,20 @@ const layouts = [
         srcDark: '/img/thumbs/layouts/classic-dark.jpg',
         svg: <CollapsibleSideSvg height={'100%'} width={'100%'} />,
     },
-    {
-        value: LAYOUT_STACKED_SIDE,
-        label: 'Stacked',
-        src: '/img/thumbs/layouts/modern.jpg',
-        srcDark: '/img/thumbs/layouts/modern-dark.jpg',
-        svg: <StackedSideSvg height={'100%'} width={'100%'} />,
-    },
-    {
-        value: LAYOUT_TOP_BAR_CLASSIC,
-        label: 'Top bar',
-        src: '/img/thumbs/layouts/stackedSide.jpg',
-        srcDark: '/img/thumbs/layouts/stackedSide-dark.jpg',
-        svg: <TopBarClassicSvg height={'100%'} width={'100%'} />,
-    },
+    // {
+    //     value: LAYOUT_STACKED_SIDE,
+    //     label: 'Stacked',
+    //     src: '/img/thumbs/layouts/modern.jpg',
+    //     srcDark: '/img/thumbs/layouts/modern-dark.jpg',
+    //     svg: <StackedSideSvg height={'100%'} width={'100%'} />,
+    // },
+    // {
+    //     value: LAYOUT_TOP_BAR_CLASSIC,
+    //     label: 'Top bar',
+    //     src: '/img/thumbs/layouts/stackedSide.jpg',
+    //     srcDark: '/img/thumbs/layouts/stackedSide-dark.jpg',
+    //     svg: <TopBarClassicSvg height={'100%'} width={'100%'} />,
+    // },
     {
         value: LAYOUT_FRAMELESS_SIDE,
         label: 'Frameless',
@@ -46,20 +46,20 @@ const layouts = [
         srcDark: '/img/thumbs/layouts/simple-dark.jpg',
         svg: <FrameLessSideSvg height={'100%'} width={'100%'} />,
     },
-    {
-        value: LAYOUT_CONTENT_OVERLAY,
-        label: 'Overlay',
-        src: '/img/thumbs/layouts/decked.jpg',
-        srcDark: '/img/thumbs/layouts/decked-dark.jpg',
-        svg: <ContentOverlaySvg height={'100%'} width={'100%'} />,
-    },
-    {
-        value: LAYOUT_BLANK,
-        label: 'Blank',
-        src: '/img/thumbs/layouts/blank.jpg',
-        srcDark: '/img/thumbs/layouts/blank-dark.jpg',
-        svg: <BlankSvg height={'100%'} width={'100%'} />,
-    },
+    // {
+    //     value: LAYOUT_CONTENT_OVERLAY,
+    //     label: 'Overlay',
+    //     src: '/img/thumbs/layouts/decked.jpg',
+    //     srcDark: '/img/thumbs/layouts/decked-dark.jpg',
+    //     svg: <ContentOverlaySvg height={'100%'} width={'100%'} />,
+    // },
+    // {
+    //     value: LAYOUT_BLANK,
+    //     label: 'Blank',
+    //     src: '/img/thumbs/layouts/blank.jpg',
+    //     srcDark: '/img/thumbs/layouts/blank-dark.jpg',
+    //     svg: <BlankSvg height={'100%'} width={'100%'} />,
+    // },
 ]
 
 const LayoutSwitcher = () => {

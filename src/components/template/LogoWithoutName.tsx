@@ -11,7 +11,7 @@ interface LogoProps extends CommonProps {
 
 const LOGO_SRC_PATH = '/img/logo/'
 
-const Logo = (props: LogoProps) => {
+const LogoWithoutName = (props: LogoProps) => {
     const {
         type = 'full',
         mode = 'light',
@@ -31,11 +31,11 @@ const Logo = (props: LogoProps) => {
         >
             <img
                 className={imgClass}
-                src={`${LOGO_SRC_PATH}Aazovo-white-03.png`}
+                src={`${LOGO_SRC_PATH}aazovo logo-02.png`}
                 alt={`${APP_NAME} logo`}
             />
         </div>
     )
 }
 
-export default Logo
+export default LogoWithoutName

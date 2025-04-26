@@ -16,9 +16,11 @@ import {
     LOGO_X_GUTTER,
 } from '@/constants/theme.constant'
 import type { Mode } from '@/@types/theme'
+import LogoWithoutName from './LogoWithoutName'
 
 type SideNavProps = {
     translationSetup?: boolean
+    /** Control whether default background styling is applied */
     background?: boolean
     className?: string
     contentClass?: string
@@ -37,7 +39,7 @@ const sideNavCollapseStyle = {
 
 const SideNav = ({
     translationSetup = appConfig.activeNavTranslation,
-    background = true,
+    background = true, // Default background styling is enabled
     className,
     contentClass,
     mode,
@@ -52,43 +54,81 @@ const SideNav = ({
 
     const userAuthority = useSessionUser((state) => state.user.authority)
 
+    // --- Define background and style classes ---
+    // You can customize these Tailwind classes as needed
+    const backgroundClasses = 'bg-white dark:bg-neutral-900' // Example: White in light, Neutral-900 in dark
+    const borderClasses = 'border-r border-gray-200 dark:border-neutral-700' // Example: Right border
+    const shadowClasses = 'shadow-lg' // Example: Add a shadow
+
     return (
         <div
             style={sideNavCollapse ? sideNavCollapseStyle : sideNavStyle}
             className={classNames(
                 'side-nav',
-                background && 'side-nav-bg',
+                'flex flex-col', // Ensure flex column layout for header/content
+                // Apply background and styles conditionally based on the `background` prop
+                background && backgroundClasses,
+                background && borderClasses,
+                background && shadowClasses,
+                // Original classes
+                // 'side-nav-bg', // We are replacing this with Tailwind classes if `background` is true
                 !sideNavCollapse && 'side-nav-expand',
-                className,
+                className, // Allow overriding via props
             )}
         >
+            {/* SideNav Header (Logo Area) */}
             <Link
                 to={appConfig.authenticatedEntryPath}
                 className={classNames(
                     'side-nav-header',
+                    'flex-shrink-0', // Prevent header from shrinking
                     'flex justify-center items-center gap-2', // Row layout, centering, gap
-                    'border-b border-gray-200 dark:border-gray-700', // Bottom border with light/dark mode colors
+                    // Optional: Add a bottom border ONLY to the header if you want separation
+                    // If the main div already has a border-r, you might not need this header border
+                    // 'border-b border-gray-200 dark:border-gray-700',
                 )}
                 style={{ height: HEADER_HEIGHT }}
             >
-                <Logo
-                    imgClass="max-h-10"
-                    mode={mode || defaultMode}
-                    type={sideNavCollapse ? 'streamline' : 'full'}
-                    className={classNames(
-                        sideNavCollapse && 'ltr:ml-[11.5px] ltr:mr-[11.5px]',
-                        sideNavCollapse
-                            ? SIDE_NAV_CONTENT_GUTTER
-                            : LOGO_X_GUTTER,
-                    )}
-                />
-                {!sideNavCollapse && (
-                    <span className="text-2xl font-bold text-gray-800 dark:text-gray-100 gap-2">
-                        AAZOVO
-                    </span>
+                {sideNavCollapse ? (
+                    <LogoWithoutName
+                        imgClass="h-12" // Adjust size as needed
+                        mode={mode || defaultMode}
+                        type={sideNavCollapse ? 'streamline' : 'full'}
+                        className={classNames(
+                            sideNavCollapse &&
+                                'ltr:ml-[11.5px] ltr:mr-[11.5px]', // Original centering logic
+                            sideNavCollapse
+                                ? SIDE_NAV_CONTENT_GUTTER
+                                : LOGO_X_GUTTER,
+                        )}
+                    />
+                ) : (
+                    <Logo
+                        imgClass="w-60 h-12" // Adjust size as needed
+                        mode={mode || defaultMode}
+                        type={sideNavCollapse ? 'streamline' : 'full'}
+                        className={classNames(
+                            sideNavCollapse &&
+                                'ltr:ml-[11.5px] ltr:mr-[11.5px]', // Original centering logic
+                            sideNavCollapse
+                                ? SIDE_NAV_CONTENT_GUTTER
+                                : LOGO_X_GUTTER,
+                        )}
+                    />
                 )}
+
+                {/* Removed the hardcoded text span, relying on Logo component */}
             </Link>
-            <div className={classNames('side-nav-content', contentClass)}>
+
+            {/* SideNav Content (Menu Area) */}
+            <div
+                className={classNames(
+                    'side-nav-content',
+                    'flex-grow', // Allow content to fill remaining space
+                    'overflow-hidden', // Hide overflow before Scrollbar applies
+                    contentClass,
+                )}
+            >
                 <ScrollBar style={{ height: '100%' }} direction={direction}>
                     <VerticalMenuContent
                         collapsed={sideNavCollapse}

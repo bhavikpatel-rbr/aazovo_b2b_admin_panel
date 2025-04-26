@@ -112,7 +112,11 @@ const DefaultItem = (props: DefaultItemProps) => {
                     }
                 >
                     {showIcon && <VerticalMenuIcon icon={nav.icon} />}
-                    {showTitle && <span>{t(nav.translateKey, nav.title)}</span>}
+                    {showTitle && (
+                        <span style={{ color: 'white' }}>
+                            {t(nav.translateKey, nav.title)}
+                        </span>
+                    )}
                 </Link>
             </MenuItem>
         </AuthorityCheck>
