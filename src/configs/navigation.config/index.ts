@@ -13,7 +13,7 @@ import documentMasterNavigationConfig from './document-master.navigation.config'
 import otherNavigationConfig from './others.navigation.config'
 import conceptNavigationConfig from './concepts.navigation.config'
 import type { NavigationTree } from '@/@types/navigation'
-
+import uiComponentNavigationConfig from './ui-components.navigation.config'
 const navigationConfig: NavigationTree[] = [
     ...dashboardsNavigationConfig,
     ...businessEntitiesNavigationConfig,
@@ -28,6 +28,7 @@ const navigationConfig: NavigationTree[] = [
     ...masterNavigationConfig,
     ...documentMasterNavigationConfig,
     ...otherNavigationConfig,
+    ...uiComponentNavigationConfig,
 ]
 
 export default navigationConfig

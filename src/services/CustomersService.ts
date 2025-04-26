@@ -10,6 +10,8 @@ export async function apiGetCustomersList<T, U extends Record<string, unknown>>(
     })
 }
 
+
+
 export async function apiGetCustomer<T, U extends Record<string, unknown>>({
     id,
     ...params

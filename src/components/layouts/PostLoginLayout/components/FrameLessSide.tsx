@@ -98,6 +98,11 @@ const FrameLessSide = ({ children }: CommonProps) => {
                                 <>
                                     {smaller.lg && <MobileNav />}
                                     {larger.lg && <SideNavToggle />}
+                                    <span className="text-lg font-bold text-gray-900 dark:text-gray-300 mr-2 hidden lg:inline">
+                                        {' '}
+                                        {/* Added text with styling */}
+                                        Aazovo Back Office Management System
+                                    </span>
                                     <Search />
                                 </>
                             }
