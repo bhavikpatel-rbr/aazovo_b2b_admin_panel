@@ -9,6 +9,7 @@ import marketingRoute from './marketingRoute'
 import taskRoute from './taskRoute'
 import hrEmployeesRoute from './hrEmployeesRoute'
 import accessControllRoute from './accessControllRoutes'
+import masterRoutes from './masterRoutes'
 import type { Routes } from '@/@types/routes'
 
 export const publicRoutes: Routes = [...authRoute]
@@ -24,4 +25,5 @@ export const protectedRoutes: Routes = [
     ...taskRoute,
     ...hrEmployeesRoute,
     ...accessControllRoute,
+    ...masterRoutes,
 ]
