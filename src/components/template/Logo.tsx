@@ -1,6 +1,7 @@
 import classNames from 'classnames'
 import { APP_NAME } from '@/constants/app.constant'
 import type { CommonProps } from '@/@types/common'
+import { useThemeStore } from '@/store/themeStore'
 
 interface LogoProps extends CommonProps {
     type?: 'full' | 'streamline'
@@ -31,7 +32,7 @@ const Logo = (props: LogoProps) => {
         >
             <img
                 className={imgClass}
-                src={`${LOGO_SRC_PATH}Aazovo-03.png`}
+                src={`${LOGO_SRC_PATH}Aazovo-white-03.png`}
                 alt={`${APP_NAME} logo`}
             />
         </div>

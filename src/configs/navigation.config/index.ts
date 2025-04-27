@@ -28,7 +28,7 @@ const navigationConfig: NavigationTree[] = [
     ...masterNavigationConfig,
     ...documentMasterNavigationConfig,
     ...otherNavigationConfig,
-    ...uiComponentNavigationConfig,
+    // ...uiComponentNavigationConfig,
 ]
 
 export default navigationConfig
