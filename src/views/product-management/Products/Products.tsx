@@ -354,7 +354,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, ProductSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Products (ID, Name, SKU, Cat...)"
+                placeholder="Quick search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -423,11 +423,11 @@ const ProductActionTools = ({
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbBox className="text-xl" />}
+                icon={<TbBox className="text-lg" />}
                 onClick={handleAddProduct}
                 block
             >
-                Add new Product
+                Add New
             </Button>
         </div>
     )
@@ -866,7 +866,7 @@ const Products = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Product Listing</h3>
+                    <h5 className="mb-4 lg:mb-0">Products</h5>
                     <ProductActionTools allProducts={products} />
                 </div>
 

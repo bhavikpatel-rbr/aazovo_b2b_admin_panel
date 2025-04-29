@@ -172,7 +172,7 @@ const CategorySearch = React.forwardRef<HTMLInputElement, CategorySearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Categories (ID, Name, Parent...)" // Updated placeholder
+                placeholder="Quick search..." // Updated placeholder
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -236,7 +236,7 @@ const CategoryActionTools = ({ allCategories }: { allCategories: CategoryItem[] 
                 // onClick={() => navigate('/categories/create')}
                 block
             >
-                Add new Category {/* Updated Text */}
+                Add New {/* Updated Text */}
             </Button>
         </div>
     );
@@ -496,7 +496,7 @@ const Categories = () => { // Renamed Component
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Category Listing</h3> {/* Updated title */}
+                    <h5 className="mb-4 lg:mb-0">Categories</h5> {/* Updated title */}
                     <CategoryActionTools allCategories={categories} /> {/* Use updated component/prop */}
                 </div>
 

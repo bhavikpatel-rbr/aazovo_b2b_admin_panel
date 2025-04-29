@@ -38,7 +38,7 @@ const salesLeadsNavigationConfig: NavigationTree[] = [
             {
                 key: 'salesLeads.lead',
                 path: `${SALES_LEADS_PREFIX_PATH}/lead`,
-                title: 'Lead',
+                title: 'Leads',
                 translateKey: 'nav.salesLeads.lead',
                 icon: 'lead',
                 type: NAV_ITEM_TYPE_ITEM,

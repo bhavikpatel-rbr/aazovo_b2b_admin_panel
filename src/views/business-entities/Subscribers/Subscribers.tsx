@@ -217,7 +217,7 @@ const SubscriberSearch = React.forwardRef<
     return (
         <DebouceInput
             ref={ref}
-            placeholder="Search Subscribers (Email...)"
+            placeholder="Quick search..."
             suffix={<TbSearch className="text-lg" />}
             onChange={(e) => onInputChange(e.target.value)}
         />
@@ -674,7 +674,7 @@ const SubscribersListing = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Subscribers List</h3>
+                    <h5 className="mb-4 lg:mb-0">Subscribers</h5>
                     {/* Action Tools removed from header, Export moved to Table Tools */}
                     {/* <SubscriberActionTools allSubscribers={subscribers} /> */}
                 </div>

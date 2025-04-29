@@ -14,7 +14,7 @@ const AdaptiveCard = (props: AdaptableCardProps) => {
         <Card
             className={classNames(
                 className,
-                adaptiveCardActive && 'border-none dark:bg-transparent',
+                adaptiveCardActive && 'dark:bg-transparent p-4',
             )}
             bodyClass={classNames(bodyClass, adaptiveCardActive && 'p-0')}
             {...rest}

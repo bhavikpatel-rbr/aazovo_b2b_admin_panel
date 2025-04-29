@@ -455,7 +455,7 @@ const FormListActionTools = ({ allForms }: { allForms: FormItem[] }) => {
                 onClick={() => console.log('Navigate to Add New Form page')}
                 block
             >
-                Add new Form
+                Add New
             </Button>
         </div>
     )
@@ -803,7 +803,7 @@ const Continents = () => {
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full">
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Document Type</h3>
+                    <h5 className="mb-4 lg:mb-0">Document Type</h5>
                     <FormListActionTools allForms={forms} />
                 </div>
 

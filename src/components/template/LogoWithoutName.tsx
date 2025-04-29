@@ -29,13 +29,14 @@ const LogoWithoutName = (props: LogoProps) => {
                 ...{
                     width: logoWidth,
                     fill: 'white',
-                    opacity: 0,
+                    opacity: 1,
                     stroke: 'white',
                 },
             }}
         >
             <img
                 className={imgClass}
+                style={{ filter: mode == "light" ? "invert(1)" : "none" }}
                 src={`${LOGO_SRC_PATH}aazovo logo-02.png`}
                 alt={`${APP_NAME} logo`}
             />

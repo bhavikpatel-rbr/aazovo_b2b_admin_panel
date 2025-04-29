@@ -425,7 +425,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Opportunities (Product, Member ID, Mobile...)"
+                placeholder="Quick search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -513,7 +513,7 @@ const ItemActionTools = ({
                 onClick={handleAddItem}
                 block
             >
-                Add new{' '}
+                Add New{' '}
                 {activeTab === TABS.SELLER ? 'Seller Record' : 'Buyer Request'}
             </Button>
         </div>
@@ -1093,7 +1093,7 @@ const Opportunities = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Opportunities</h3>
+                    <h5 className="mb-4 lg:mb-0">Opportunities</h5>
                     <ItemActionTools
                         allItems={currentItems}
                         activeTab={currentTab}

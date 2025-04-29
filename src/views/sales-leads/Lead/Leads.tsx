@@ -177,7 +177,7 @@ const LeadSearch = React.forwardRef<HTMLInputElement, LeadSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Leads (Number, Product, Member, Sales...)" // Updated placeholder
+                placeholder="Quick search..." // Updated placeholder
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -236,12 +236,12 @@ const LeadActionTools = ({ allLeads }: { allLeads: LeadItem[] }) => { // Renamed
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbPlus className="text-xl" />}
+                icon={<TbPlus className="text-lg" />}
                 onClick={() => console.log('Navigate to Add New Lead page')}
                 // onClick={() => navigate('/leads/create')}
                 block
             >
-                Add new Lead {/* Updated Text */}
+                Add New{/* Updated Text */}
             </Button>
         </div>
     );
@@ -499,7 +499,7 @@ const Leads = () => { // Renamed Component
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Leads Listing</h3> {/* Updated title */}
+                    <h5 className="mb-4 lg:mb-0">Leads</h5> {/* Updated title */}
                     <LeadActionTools allLeads={leads} />
                 </div>
 

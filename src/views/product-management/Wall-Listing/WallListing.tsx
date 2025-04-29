@@ -176,7 +176,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Wall Items (Product, ID, Company...)" // Updated placeholder
+                placeholder="Quick search..." // Updated placeholder
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -234,12 +234,12 @@ const ItemActionTools = ({ allItems }: { allItems: WallItem[] }) => { // Renamed
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbPlus className="text-xl" />} // Generic Add
+                icon={<TbPlus className="text-lg" />} // Generic Add
                 onClick={() => console.log('Navigate to Add New Wall Item page')}
                 // onClick={() => navigate('/wall/create')}
                 block
             >
-                Add new Item {/* Updated Text */}
+                Add New{/* Updated Text */}
             </Button>
         </div>
     );
@@ -516,7 +516,7 @@ const WallListing = () => { // Renamed Component
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Wall Listing</h3> {/* Updated title */}
+                    <h5 className="mb-4 lg:mb-0">Wall Listing</h5> {/* Updated title */}
                     <ItemActionTools allItems={wallItems} />
                 </div>
 
