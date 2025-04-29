@@ -10,7 +10,7 @@ export type AppConfig = {
 
 const appConfig: AppConfig = {
     apiPrefix: '/api',
-    authenticatedEntryPath: '/dashboards/ecommerce',
+    authenticatedEntryPath: '/dashboards/main',
     unAuthenticatedEntryPath: '/sign-in',
     locale: 'en',
     accessTokenPersistStrategy: 'localStorage',

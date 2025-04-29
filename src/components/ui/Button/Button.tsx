@@ -73,6 +73,7 @@ const Button = (props: ButtonProps) => {
     const sizeIconClass = 'inline-flex items-center justify-center'
 
     const buttonSize = size || inputGroupSize || formControlSize || controlSize
+    const buttonSizebydefault = 'sm'
     const feedback = !ui?.button?.disableClickFeedback || clickFeedback
     const unclickable = disabled || loading
 

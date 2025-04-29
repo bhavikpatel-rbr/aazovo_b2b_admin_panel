@@ -1,6 +1,7 @@
 import classNames from 'classnames'
 import { APP_NAME } from '@/constants/app.constant'
 import type { CommonProps } from '@/@types/common'
+import { useThemeStore } from '@/store/themeStore'
 
 interface LogoProps extends CommonProps {
     type?: 'full' | 'streamline'
@@ -11,7 +12,7 @@ interface LogoProps extends CommonProps {
 
 const LOGO_SRC_PATH = '/img/logo/'
 
-const LogoWithoutName = (props: LogoProps) => {
+const LogoBlack = (props: LogoProps) => {
     const {
         type = 'full',
         mode = 'light',
@@ -26,21 +27,16 @@ const LogoWithoutName = (props: LogoProps) => {
             className={classNames('logo', className)}
             style={{
                 ...style,
-                ...{
-                    width: logoWidth,
-                    fill: 'white',
-                    opacity: 0,
-                    stroke: 'white',
-                },
+                ...{ width: logoWidth },
             }}
         >
             <img
                 className={imgClass}
-                src={`${LOGO_SRC_PATH}aazovo logo-02.png`}
+                src={`${LOGO_SRC_PATH}Aazovo-03.png`}
                 alt={`${APP_NAME} logo`}
             />
         </div>
     )
 }
 
-export default LogoWithoutName
+export default LogoBlack

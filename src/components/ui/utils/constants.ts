@@ -22,16 +22,16 @@ export const CONTROL_SIZES: Record<
         minW: 'min-w-10',
     },
     [SIZES.MD]: {
-        h: 'h-12',
-        w: 'w-12',
-        minH: 'min-h-12',
-        minW: 'min-w-12',
+        h: 'h-10',
+        w: 'w-10',
+        minH: 'min-h-10',
+        minW: 'min-w-10',
     },
     [SIZES.LG]: {
-        h: 'h-14',
-        w: 'w-14',
-        minH: 'min-h-14',
-        minW: 'min-w-14',
+        h: 'h-10',
+        w: 'w-10',
+        minH: 'min-h-10',
+        minW: 'min-w-10',
     },
 }
 

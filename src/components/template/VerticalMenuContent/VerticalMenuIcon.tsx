@@ -24,7 +24,12 @@ const VerticalMenuIcon = ({ icon }: VerticalMenuIconProps) => {
     return (
         <>
             {navigationIcon[icon] && (
-                <span className={`text-2xl`}>{navigationIcon[icon]}</span>
+                <span
+                    className={`text-2xl `}
+                    style={{ fill: 'white', stroke: 'white' }}
+                >
+                    {navigationIcon[icon]}
+                </span>
             )}
         </>
     )

@@ -7,6 +7,7 @@ import useTimeOutMessage from '@/utils/hooks/useTimeOutMessage'
 import { useThemeStore } from '@/store/themeStore'
 import { Checkbox } from '@/components/ui'
 import { ChangeEvent } from 'react'
+import LogoBlack from '@/components/template/LogoBlack'
 
 type SignInProps = {
     signUpUrl?: string
@@ -30,17 +31,17 @@ export const SignInBase = ({
     return (
         <>
             <div className="mb-8">
-                <Logo
+                <LogoBlack
                     type="streamline"
                     mode={mode}
                     imgClass="mx-auto"
-                    logoWidth={60}
+                    logoWidth={250}
                 />
             </div>
-            <div className="mb-10">
-                <h2 className="mb-2">Login to your Account</h2>
+            <div className="mb-3">
+                <h2 className="mb-2">Welcome back!</h2>
                 <p className="font-semibold heading-text">
-                    Welcome back! please enter your detail
+                    Please enter your credentials to sign in!
                 </p>
             </div>
             {message && (
@@ -56,11 +57,11 @@ export const SignInBase = ({
                     // Use a flex container to place items side-by-side
                     <div className="flex justify-between items-center mb-7 mt-5">
                         {/* Checkbox and Label */}
-                        <label className="flex items-center gap-1 cursor-pointer">
+                        {/* <label className="flex items-center gap-1 cursor-pointer">
                             <Checkbox defaultChecked onChange={onCheck}>
                                 Remember Me
                             </Checkbox>
-                        </label>
+                        </label> */}
 
                         {/* Forgot Password Link */}
                         <ActionLink
