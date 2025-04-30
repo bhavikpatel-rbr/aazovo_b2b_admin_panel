@@ -5,6 +5,15 @@ import type { Routes } from '@/@types/routes';
 
 const salesLeadsRoute: Routes = [
     {
+        key: 'productManagement.wallListing',
+        path: `${SALES_LEADS_PREFIX_PATH}/wall-listing`,
+        component: lazy(() => import('@/views/product-management/Wall-Listing')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'salesLeads.opportunities',
         path: `${SALES_LEADS_PREFIX_PATH}/opportunities`,
         component: lazy(() => import('@/views/sales-Leads/Opportunities')),

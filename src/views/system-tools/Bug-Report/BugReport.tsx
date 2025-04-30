@@ -1044,7 +1044,7 @@ const BugReportListing = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Bug Reports</h3>
+                    <h5 className="mb-4 lg:mb-0">Bug Reports</h5>
                     <BugReportActionTools allReports={reports} />
                 </div>
 

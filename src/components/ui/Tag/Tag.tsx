@@ -24,7 +24,7 @@ const Tag = (props: TagProps) => {
     } = props
 
     const tagDefaultColor =
-        'bg-gray-100 dark:bg-gray-700 border-gray-100 dark:border-gray-700 text-gray-900 dark:text-gray-50'
+        'bg-gray-100 dark:bg-gray-700 border-gray-100 dark:border-gray-700 text-gray-900 dark:text-gray-50 text-center'
 
     return (
         <div

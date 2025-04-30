@@ -30,16 +30,7 @@ const productManagementRoute: Routes = [
         meta: {
             pageContainerType: 'contained',
         },
-    },
-    {
-        key: 'productManagement.wallListing',
-        path: `${PRODUCT_MANAGEMENT_PREFIX_PATH}/wall-listing`,
-        component: lazy(() => import('@/views/product-management/Wall-Listing')),
-        authority: [ADMIN, USER],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
+    }
 ];
 
 export default productManagementRoute;

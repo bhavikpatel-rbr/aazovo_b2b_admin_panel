@@ -198,6 +198,7 @@ const CategoryTableTools = ({ // Renamed component
         </div>
     );
 };
+
 // --- End CategoryTableTools ---
 
 

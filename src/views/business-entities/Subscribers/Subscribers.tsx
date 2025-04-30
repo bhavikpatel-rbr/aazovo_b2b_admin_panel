@@ -15,7 +15,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { ZodType } from 'zod'
-
+import { IoEyeOutline } from "react-icons/io5";
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
@@ -137,7 +137,18 @@ const ActionColumn = ({ onDelete }: { onDelete: () => void }) => {
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
+            <Tooltip title="View Subscriber">
+                <div
+                    className={classNames(
+                        iconButtonClass,
+                        hoverBgClass,
+                        'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-600',
+                    )}
+                    role="button">
+                    <IoEyeOutline />
+                </div>
+            </Tooltip>
             <Tooltip title="Delete Subscriber">
                 <div
                     className={classNames(
@@ -152,6 +163,7 @@ const ActionColumn = ({ onDelete }: { onDelete: () => void }) => {
                 </div>
             </Tooltip>
         </div>
+        
     )
 }
 // --- End ActionColumn ---
@@ -633,16 +645,16 @@ const SubscribersListing = () => {
     const columns: ColumnDef<SubscriberItem>[] = useMemo(
         () => [
             // { header: 'ID', accessorKey: 'id', ... }, // Optional ID
-            { header: 'Email', accessorKey: 'email', enableSorting: true },
+            { header: 'Email', accessorKey: 'email', enableSorting: true, meta: {HeaderClass :'text-left'}, },
             {
                 header: 'Subscribed Date',
                 accessorKey: 'subscribedDate',
                 enableSorting: true,
-                width: 180,
+                meta: {HeaderClass :'text-right'},
                 cell: (props) => {
                     const date = props.row.original.subscribedDate
                     return (
-                        <span>
+                        <span className='text-right block'>
                             {date.toLocaleDateString()}{' '}
                             {date.toLocaleTimeString([], {
                                 hour: '2-digit',
@@ -654,9 +666,9 @@ const SubscribersListing = () => {
             },
             // { header: 'Status', ... }, // Optional Status
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
-                width: 80,
+                meta: {HeaderClass :'text-center'},
                 cell: (props) => (
                     <ActionColumn
                         onDelete={() => handleDelete(props.row.original)}

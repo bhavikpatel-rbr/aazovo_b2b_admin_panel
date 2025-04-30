@@ -9,4 +9,7 @@
 .menu-collapse-item span span > svg path:first-child{
     opacity: 0;
 }
+.menu-item-hoverable span > svg path:first-child{
+    opacity: 0;
+}
 

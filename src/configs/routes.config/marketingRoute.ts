@@ -5,9 +5,18 @@ import type { Routes } from '@/@types/routes';
 
 const marketingRoute: Routes = [
     {
-        key: 'marketing.blog',
-        path: `${MARKETING_PREFIX_PATH}/blog`,
-        component: lazy(() => import('@/views/marketing/Blogs')),
+        key: 'businessEntities.subscriber',
+        path: `${MARKETING_PREFIX_PATH}/subscriber`,
+        component: lazy(() => import('@/views/business-entities/Subscribers')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'businessEntities.requestFeedback',
+        path: `${MARKETING_PREFIX_PATH}/request-feedback`,
+        component: lazy(() => import('@/views/business-entities/RequestFeedback')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',

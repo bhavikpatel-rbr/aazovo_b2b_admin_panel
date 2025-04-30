@@ -5,6 +5,10 @@ import SideNavToggle from '@/components/template/SideNavToggle'
 import MobileNav from '@/components/template/MobileNav'
 import Search from '@/components/template/Search'
 import LanguageSelector from '@/components/template/LanguageSelector'
+import { LiaUserCheckSolid } from "react-icons/lia";
+import { LuCalendarCheck } from "react-icons/lu";
+import { IoCalendarOutline } from "react-icons/io5";
+import { BiTask } from "react-icons/bi";
 import Notification from '@/components/template/Notification'
 import UserProfileDropdown from '@/components//template/UserProfileDropdown'
 import SidePanel from '@/components//template/SidePanel'
@@ -108,8 +112,17 @@ const FrameLessSide = ({ children }: CommonProps) => {
                             }
                             headerEnd={
                                 <>
-                                    <LanguageSelector />
                                     <Notification />
+                                    <div className='text-2xl header-action-item header-action-item-hoverable'>
+                                        <LiaUserCheckSolid/>
+                                    </div>
+                                    <div className='text-2xl header-action-item header-action-item-hoverable'>
+                                        <IoCalendarOutline/>
+                                    </div>
+                                    <div className='text-2xl header-action-item header-action-item-hoverable'>
+                                        <BiTask />
+                                    </div>
+                                    {/* <LanguageSelector /> */}
                                     <SidePanel />
                                     <UserProfileDropdown hoverable={false} />
                                 </>

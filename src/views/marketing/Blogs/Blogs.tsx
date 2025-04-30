@@ -65,9 +65,9 @@ type FilterFormSchema = z.infer<typeof filterValidationSchema>
 
 // --- Constants ---
 const blogStatusColor: Record<BlogItem['status'], string> = {
-    published: 'bg-emerald-500',
-    draft: 'bg-gray-500',
-    archived: 'bg-red-500',
+    published: '!text-green-600 !bg-green-200 rounded-lg py-1 px-2',
+    draft: '!text-blue-600 !bg-blue-200 rounded-lg py-1 px-2',
+    archived: '!text-red-600 !bg-red-200 rounded-lg py-1 px-2',
 }
 
 const initialDummyBlogs: BlogItem[] = [
@@ -160,11 +160,11 @@ const ActionColumn = ({
     onDelete: () => void
 }) => {
     const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
+        'text-lg rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-start gap-2">
             {onClone && (
                 <Tooltip title="Clone Blog">
                     <div
@@ -283,7 +283,7 @@ const BlogSearch = React.forwardRef<HTMLInputElement, BlogSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Blogs (ID, Title...)"
+                placeholder="Quick search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -435,7 +435,7 @@ const BlogActionTools = ({ allBlogs }: { allBlogs: BlogItem[] }) => {
                 block
             >
                 {' '}
-                Add new Blog{' '}
+                Add New{' '}
             </Button>
         </div>
     )
@@ -774,52 +774,56 @@ const Blogs = () => {
     const columns: ColumnDef<BlogItem>[] = useMemo(
         () => [
             {
-                header: 'ID',
-                accessorKey: 'id',
-                enableSorting: true,
-                width: 120,
-            },
-            {
                 header: 'Icon',
                 accessorKey: 'icon',
                 enableSorting: false,
-                width: 80,
+                meta: {HeaderClass :'text-center'},
                 cell: (props) => {
                     const { icon, title } = props.row.original
                     return (
+                        <span className='text-center block'>
                         <Avatar
                             size={40}
-                            shape="square"
+                            shape="circle"
                             src={icon}
                             icon={<TbFileText />}
                         >
                             {!icon ? title.charAt(0).toUpperCase() : ''}
                         </Avatar>
+                        </span>
                     )
                 },
             },
-            { header: 'Title', accessorKey: 'title', enableSorting: true },
+            {
+                header: 'ID',
+                accessorKey: 'id',
+                enableSorting: true,
+                meta: {HeaderClass :'text-left'},
+            },
             {
                 header: 'Status',
                 accessorKey: 'status',
                 enableSorting: true,
-                width: 120,
+                meta: {HeaderClass :'text-center'},
                 cell: (props) => {
                     const { status } = props.row.original
                     return (
+                        <span className='!
+                        -center'>
                         <Tag
                             className={`${blogStatusColor[status]} text-white capitalize`}
                         >
                             {status}
                         </Tag>
+                        </span>
                     )
                 },
             },
+            { header: 'Title', accessorKey: 'title', enableSorting: true },
             {
                 header: 'Created Date',
                 accessorKey: 'createdDate',
                 enableSorting: true,
-                width: 180,
                 cell: (props) => {
                     const date = props.row.original.createdDate
                     return (
@@ -834,12 +838,11 @@ const Blogs = () => {
                 },
             },
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
-                width: 130,
                 cell: (props) => (
                     <ActionColumn
-                        onClone={() => handleClone(props.row.original)}
+                        // onClone={() => handleClone(props.row.original)}
                         onChangeStatus={() =>
                             handleChangeStatus(props.row.original)
                         }
@@ -849,7 +852,9 @@ const Blogs = () => {
                 ),
             },
         ],
-        [handleClone, handleChangeStatus, handleEdit, handleDelete],
+        [ 
+            // handleClone, 
+            handleChangeStatus, handleEdit, handleDelete],
     )
     // --- End Define Columns ---
 
@@ -859,7 +864,7 @@ const Blogs = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Blogs</h3>
+                    <h5 className="mb-4 lg:mb-0">Blogs</h5>
                     <BlogActionTools allBlogs={blogs} />
                 </div>
 
