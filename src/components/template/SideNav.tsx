@@ -65,7 +65,7 @@ const SideNav = ({
             style={sideNavCollapse ? sideNavCollapseStyle : sideNavStyle}
             className={classNames(
                 'side-nav',
-                'flex flex-col', // Ensure flex column layout for header/content
+                'flex flex-col pt-2', // Ensure flex column layout for header/content
                 // Apply background and styles conditionally based on the `background` prop
                 background && backgroundClasses,
                 background && borderClasses,
@@ -104,7 +104,7 @@ const SideNav = ({
                     />
                 ) : (
                     <Logo
-                        imgClass="w-60 h-12" // Adjust size as needed
+                        imgClass="w-60 h-16" // Adjust size as needed
                         mode={mode || defaultMode}
                         type={sideNavCollapse ? 'streamline' : 'full'}
                         className={classNames(
@@ -129,7 +129,7 @@ const SideNav = ({
                     contentClass,
                 )}
             >
-                <ScrollBar style={{ height: '100%' }} direction={direction}>
+                <ScrollBar style={{ height: '100%', marginTop:'16px'}} direction={direction}>
                     <VerticalMenuContent
                         collapsed={sideNavCollapse}
                         navigationTree={navigationConfig}

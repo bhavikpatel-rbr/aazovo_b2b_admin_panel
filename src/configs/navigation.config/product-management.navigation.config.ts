@@ -20,22 +20,6 @@ const productManagementNavigationConfig: NavigationTree[] = [
         },
         subMenu: [
             {
-                key: 'productManagement.categories',
-                path: `${PRODUCT_MANAGEMENT_PREFIX_PATH}/categories`,
-                title: 'Categories',
-                translateKey: 'nav.productManagement.categories',
-                icon: 'categories',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.productManagement.categoriesDesc',
-                        label: 'Manage product categories',
-                    },
-                },
-                subMenu: [],
-            },
-            {
                 key: 'productManagement.brands',
                 path: `${PRODUCT_MANAGEMENT_PREFIX_PATH}/brands`,
                 title: 'Brands',
@@ -47,6 +31,22 @@ const productManagementNavigationConfig: NavigationTree[] = [
                     description: {
                         translateKey: 'nav.productManagement.brandsDesc',
                         label: 'Manage product brands',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'productManagement.categories',
+                path: `${PRODUCT_MANAGEMENT_PREFIX_PATH}/categories`,
+                title: 'Categories',
+                translateKey: 'nav.productManagement.categories',
+                icon: 'categories',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.productManagement.categoriesDesc',
+                        label: 'Manage product categories',
                     },
                 },
                 subMenu: [],
@@ -66,23 +66,7 @@ const productManagementNavigationConfig: NavigationTree[] = [
                     },
                 },
                 subMenu: [],
-            },
-            {
-                key: 'productManagement.wallListing',
-                path: `${PRODUCT_MANAGEMENT_PREFIX_PATH}/wall-listing`,
-                title: 'Wall Listing',
-                translateKey: 'nav.productManagement.wallListing',
-                icon: 'wallListing',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.productManagement.wallListingDesc',
-                        label: 'Manage wall listings',
-                    },
-                },
-                subMenu: [],
-            },
+            }
         ],
     },
 ];

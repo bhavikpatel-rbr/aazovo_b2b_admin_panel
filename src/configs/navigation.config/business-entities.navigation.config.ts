@@ -68,38 +68,6 @@ const businessEntitiesNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'businessEntities.subscriber',
-                path: `${BUSINESS_ENTITIES_PREFIX_PATH}/subscriber`,
-                title: 'Subscriber',
-                translateKey: 'nav.businessEntities.subscriber',
-                icon: 'subscriber',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.businessEntities.subscriberDesc',
-                        label: 'Manage subscribers',
-                    },
-                },
-                subMenu: [],
-            },
-            {
-                key: 'businessEntities.requestFeedback',
-                path: `${BUSINESS_ENTITIES_PREFIX_PATH}/request-feedback`,
-                title: 'Request & Feedback',
-                translateKey: 'nav.businessEntities.requestFeedback',
-                icon: 'requestFeedback',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.businessEntities.requestFeedbackDesc',
-                        label: 'Handle requests and feedback',
-                    },
-                },
-                subMenu: [],
-            },
-            {
                 key: 'businessEntities.allDocuments',
                 path: `${BUSINESS_ENTITIES_PREFIX_PATH}/all-documents`,
                 title: 'All Documents',

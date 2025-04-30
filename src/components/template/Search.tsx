@@ -13,6 +13,7 @@ import { apiGetSearchResult } from '@/services/CommonService'
 import debounce from 'lodash/debounce'
 import { HiOutlineSearch, HiChevronRight } from 'react-icons/hi'
 import { PiMagnifyingGlassDuotone } from 'react-icons/pi'
+import { MdOutlinePushPin } from "react-icons/md";
 import { Link } from 'react-router-dom'
 import Highlighter from 'react-highlight-words'
 
@@ -173,7 +174,7 @@ const _Search = ({ className }: { className?: string }) => {
                 className={classNames(className, 'text-2xl')}
                 onClick={handleSearchOpen}
             >
-                <PiMagnifyingGlassDuotone />
+                <MdOutlinePushPin/>
             </div>
             <Dialog
                 contentClassName="!p-0"

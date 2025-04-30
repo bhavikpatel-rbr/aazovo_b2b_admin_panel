@@ -2,6 +2,7 @@ import classNames from 'classnames'
 import { APP_NAME } from '@/constants/app.constant'
 import type { CommonProps } from '@/@types/common'
 import { useThemeStore } from '@/store/themeStore'
+import useDarkMode from '@/utils/hooks/useDarkMode'
 
 interface LogoProps extends CommonProps {
     type?: 'full' | 'streamline'
@@ -11,6 +12,7 @@ interface LogoProps extends CommonProps {
 }
 
 const LOGO_SRC_PATH = '/img/logo/'
+
 
 const Logo = (props: LogoProps) => {
     const {
@@ -31,7 +33,8 @@ const Logo = (props: LogoProps) => {
             }}
         >
             <img
-                className={imgClass}
+                className={imgClass} 
+                style={{ filter: mode == "light" ? "invert(1)" : "none" }}
                 src={`${LOGO_SRC_PATH}Aazovo-white-03.png`}
                 alt={`${APP_NAME} logo`}
             />

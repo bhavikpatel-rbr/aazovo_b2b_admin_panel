@@ -27,7 +27,7 @@ import {
     TbChecks,
     TbSearch,
     TbCloudDownload, // Keep for potential future export
-    TbUserPlus,
+    TbPlus,
 } from 'react-icons/tb'
 
 // Types
@@ -358,7 +358,7 @@ const ItemListSearch = React.forwardRef<HTMLInputElement, ItemListSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search by ID, Name, or Country..." // Updated placeholder
+                placeholder="Quick search..." // Updated placeholder
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -416,14 +416,14 @@ const ItemListActionTools = ({
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbUserPlus className="text-xl" />}
+                icon={<TbPlus className="text-lg" />}
                 onClick={() =>
                     console.log('Navigate to Add New Number System page')
                 } // Replace with actual navigation
                 // onClick={() => navigate('/number-systems/create')}
                 block // Ensure button takes full width if needed in flex-col
             >
-                Add new Number System
+                Add New
             </Button>
         </div>
     )
@@ -749,7 +749,7 @@ const NumberSystem = () => {
                 {/* Ensure flex column */}
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Number System Management</h3>
+                    <h5 className="mb-4 lg:mb-0">Number System Management</h5>
                     <ItemListActionTools allItems={items} />
                 </div>
                 {/* Tools Section */}

@@ -286,7 +286,7 @@ const BrandSearch = React.forwardRef<HTMLInputElement, BrandSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Brands (ID, Name, Mobile...)" // Updated placeholder
+                placeholder="Quick search..." // Updated placeholder
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -345,12 +345,12 @@ const BrandActionTools = ({ allBrands }: { allBrands: BrandItem[] }) => {
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbBuildingStore className="text-xl" />} // Changed icon
+                icon={<TbBuildingStore className="text-lg" />} // Changed icon
                 onClick={() => console.log('Navigate to Add New Brand page')}
                 // onClick={() => navigate('/brands/create')}
                 block
             >
-                Add new Brand {/* Updated Text */}
+                Add New {/* Updated Text */}
             </Button>
         </div>
     )
@@ -722,7 +722,7 @@ const Brands = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Brand Listing</h3>{' '}
+                    <h5 className="mb-4 lg:mb-0">Brands</h5>{' '}
                     {/* Updated title */}
                     <BrandActionTools allBrands={brands} />{' '}
                     {/* Use updated component/prop */}

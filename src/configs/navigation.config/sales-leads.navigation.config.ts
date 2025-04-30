@@ -20,6 +20,22 @@ const salesLeadsNavigationConfig: NavigationTree[] = [
         },
         subMenu: [
             {
+                key: 'salesLeads.wallListing',
+                path: `${SALES_LEADS_PREFIX_PATH}/wall-listing`,
+                title: 'Wall Listing',
+                translateKey: 'nav.salesLeads.wallListing',
+                icon: 'wallListing',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.salesLeads.wallListingDesc',
+                        label: 'Manage wall listings',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'salesLeads.opportunities',
                 path: `${SALES_LEADS_PREFIX_PATH}/opportunities`,
                 title: 'Opportunities',
@@ -31,22 +47,6 @@ const salesLeadsNavigationConfig: NavigationTree[] = [
                     description: {
                         translateKey: 'nav.salesLeads.opportunitiesDesc',
                         label: 'Manage sales opportunities',
-                    },
-                },
-                subMenu: [],
-            },
-            {
-                key: 'salesLeads.lead',
-                path: `${SALES_LEADS_PREFIX_PATH}/lead`,
-                title: 'Lead',
-                translateKey: 'nav.salesLeads.lead',
-                icon: 'lead',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.salesLeads.leadDesc',
-                        label: 'Manage leads',
                     },
                 },
                 subMenu: [],
@@ -68,21 +68,37 @@ const salesLeadsNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'salesLeads.inquiries',
-                path: `${SALES_LEADS_PREFIX_PATH}/inquiries`,
-                title: 'Inquiries',
-                translateKey: 'nav.salesLeads.inquiries',
-                icon: 'inquiries',
+                key: 'salesLeads.lead',
+                path: `${SALES_LEADS_PREFIX_PATH}/lead`,
+                title: 'Leads',
+                translateKey: 'nav.salesLeads.lead',
+                icon: 'lead',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN, USER],
                 meta: {
                     description: {
-                        translateKey: 'nav.salesLeads.inquiriesDesc',
-                        label: 'Manage inquiries',
+                        translateKey: 'nav.salesLeads.leadDesc',
+                        label: 'Manage leads',
                     },
                 },
                 subMenu: [],
             },
+            // {
+            //     key: 'salesLeads.inquiries',
+            //     path: `${SALES_LEADS_PREFIX_PATH}/inquiries`,
+            //     title: 'Inquiries',
+            //     translateKey: 'nav.salesLeads.inquiries',
+            //     icon: 'inquiries',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN, USER],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.salesLeads.inquiriesDesc',
+            //             label: 'Manage inquiries',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
         ],
     },
 ];

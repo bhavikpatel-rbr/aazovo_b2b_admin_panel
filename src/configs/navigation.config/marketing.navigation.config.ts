@@ -20,6 +20,38 @@ const marketingNavigationConfig: NavigationTree[] = [
         },
         subMenu: [
             {
+                key: 'marketing.subscriber',
+                path: `${MARKETING_PREFIX_PATH}/subscriber`,
+                title: 'Subscriber',
+                translateKey: 'nav.marketing.subscriber',
+                icon: 'subscriber',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.marketing.subscriberDesc',
+                        label: 'Manage subscribers',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'marketing.requestFeedback',
+                path: `${MARKETING_PREFIX_PATH}/request-feedback`,
+                title: 'Request & Feedback',
+                translateKey: 'nav.marketing.requestFeedback',
+                icon: 'requestFeedback',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.marketing.requestFeedbackDesc',
+                        label: 'Handle requests and feedback',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'marketing.blog',
                 path: `${MARKETING_PREFIX_PATH}/blog`,
                 title: 'Blog',

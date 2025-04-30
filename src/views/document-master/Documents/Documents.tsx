@@ -36,7 +36,7 @@ import {
     TbChecks,
     TbSearch,
     TbCloudDownload,
-    TbUserPlus,
+    TbPlus,
     TbFilter, // Added for filter button
 } from 'react-icons/tb'
 
@@ -447,11 +447,11 @@ const FormListActionTools = ({ allForms }: { allForms: FormItem[] }) => {
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbUserPlus />}
+                icon={<TbPlus />}
                 onClick={() => console.log('Navigate to Add New Form page')}
                 block
             >
-                Add new Form
+                Add New
             </Button>
         </div>
     )
@@ -799,7 +799,7 @@ const Documents = () => {
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full">
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Document</h3>
+                    <h5 className="mb-4 lg:mb-0">Document</h5>
                     <FormListActionTools allForms={forms} />
                 </div>
 

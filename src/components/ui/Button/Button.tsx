@@ -61,7 +61,7 @@ const Button = (props: ButtonProps) => {
         loading = false,
         ref,
         shape = 'round',
-        size,
+        size ="xs",
         variant = 'default',
         iconAlignment = 'start',
         ...rest

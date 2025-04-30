@@ -290,6 +290,7 @@ function DataTable<T>(props: DataTableProps<T>) {
                                                         'cursor-pointer select-none point',
                                                     loading &&
                                                         'pointer-events-none',
+                                                        header.column.columnDef.meta?.HeaderClass
                                                 )}
                                                 onClick={header.column.getToggleSortingHandler()}
                                             >
