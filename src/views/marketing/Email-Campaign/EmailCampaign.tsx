@@ -99,7 +99,7 @@ const ActionColumn = ({ onView }: { onView: () => void }) => {
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             {/* View Button */}
             <Tooltip title="View Details">
                 <div
@@ -173,7 +173,7 @@ const CampaignSearch = React.forwardRef<HTMLInputElement, CampaignSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Campaigns (ID, Template...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -416,24 +416,7 @@ const EmailCampaignListing = () => {
     // --- Define Columns ---
     const columns: ColumnDef<EmailCampaignItem>[] = useMemo(
         () => [
-            {
-                header: 'Date & Time',
-                accessorKey: 'dateTime',
-                enableSorting: true,
-                width: 180,
-                cell: (props) => {
-                    const date = props.row.original.dateTime
-                    return (
-                        <span>
-                            {date.toLocaleDateString()}{' '}
-                            {date.toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            })}
-                        </span>
-                    )
-                },
-            },
+           
             {
                 header: 'Template ID',
                 accessorKey: 'templateId',
@@ -457,9 +440,28 @@ const EmailCampaignListing = () => {
                 ),
             },
             {
-                header: '',
+                header: 'Date & Time',
+                accessorKey: 'dateTime',
+                enableSorting: true,
+                width: 180,
+                cell: (props) => {
+                    const date = props.row.original.dateTime
+                    return (
+                        <span>
+                            {date.toLocaleDateString()}{' '}
+                            {date.toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            })}
+                        </span>
+                    )
+                },
+            },
+            {
+                header: 'Action',
                 id: 'action',
-                width: 80, // Adjusted width for single action
+                size: 80, // Adjusted width for single action
+                meta : {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onView={() => handleViewDetails(props.row.original)}
@@ -478,7 +480,7 @@ const EmailCampaignListing = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Email Campaign Listing</h3>
+                    <h5 className="mb-4 lg:mb-0">Email Campaign Listing</h5>
                     <CampaignActionTools allCampaigns={campaigns} />
                 </div>
 

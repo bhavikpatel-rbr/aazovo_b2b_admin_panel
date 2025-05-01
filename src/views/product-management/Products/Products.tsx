@@ -52,10 +52,10 @@ export type ProductItem = {
 
 // --- Constants ---
 const statusColor: Record<ProductItem['status'], string> = {
-    active: 'bg-emerald-500',
-    inactive: 'bg-amber-500',
-    draft: 'bg-gray-500',
-    archived: 'bg-red-500',
+    active: 'text-green-600 bg-green-200',
+    inactive: 'text-red-600 bg-red-200',
+    draft: 'text-blue-600 bg-blue-200',
+    archived: 'text-red-600 bg-red-200',
 }
 
 const initialDummyProducts: ProductItem[] = [
@@ -235,8 +235,8 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
-            {onClone && (
+        <div className="flex items-center justify-center">
+            {/* {onClone && (
                 <Tooltip title="Clone Product">
                     <div
                         className={classNames(
@@ -251,7 +251,7 @@ const ActionColumn = ({
                         <TbCopy />{' '}
                     </div>
                 </Tooltip>
-            )}
+            )} */}
             <Tooltip title="Change Status">
                 <div
                     className={classNames(
@@ -790,50 +790,92 @@ const Products = () => {
                 width: 120,
             },
             {
-                header: 'Image',
-                accessorKey: 'image',
-                enableSorting: false,
-                width: 80, // Adjust width
-                cell: (props) => {
-                    const { image, name } = props.row.original
+                header : "Product",
+                id : "product",
+                enableSorting: true,
+                size: 300,
+                cell : (props)=>{
+                    const {image, name, subcategoryName } = props.row.original
                     return (
-                        <Avatar
-                            size={40}
-                            shape="square"
-                            src={image}
-                            icon={<TbBox />}
-                        >
-                            {!image ? name.charAt(0).toUpperCase() : ''}
-                        </Avatar>
+                        <div className='flex gap-2 max-w-[230px]'>
+                            <Avatar
+                                size={40}
+                                shape="circle"
+                                src={image}
+                                icon={<TbBox />}
+                            >
+                                {!image ? name.charAt(0).toUpperCase() : ''}
+                            </Avatar>
+                            <div className='flex flex-col gap-0.5'>
+                                <span className='font-semibold'>{name}</span>
+                                <span className='text-xs'>{subcategoryName}</span>
+                            </div>
+                        </div>
                     )
-                },
+                }
             },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
+            
+            // {
+            //     header: 'Image',
+            //     accessorKey: 'image',
+            //     enableSorting: false,
+            //     width: 80, // Adjust width
+            //     cell: (props) => {
+            //         const { image, name } = props.row.original
+            //         return (
+            //             <Avatar
+            //                 size={40}
+            //                 shape="circle"
+            //                 src={image}
+            //                 icon={<TbBox />}
+            //             >
+            //                 {!image ? name.charAt(0).toUpperCase() : ''}
+            //             </Avatar>
+            //         )
+            //     },
+            // },
+            // { header: 'Name', accessorKey: 'name', enableSorting: true },
+            {
+                header : "Brands",
+                id:"brands",
+                size: 200,
+                enableSorting: true,
+                cell: (props)=>{
+                    const { brandName, categoryName } = props.row.original
+                    return (
+                        <div className='flex flex-col gap-0.5'>
+                            <span className='font-semibold'>{brandName}</span>
+                            <span className='text-xs'>{categoryName}</span>
+                        </div>
+                    )
+                }
+            },
             { header: 'SKU', accessorKey: 'sku', enableSorting: true },
-            {
-                header: 'Category',
-                accessorKey: 'categoryName',
-                enableSorting: true,
-            },
-            {
-                header: 'Subcategory',
-                accessorKey: 'subcategoryName',
-                enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.subcategoryName ?? '-'}</span>
-                ),
-            },
-            { header: 'Brand', accessorKey: 'brandName', enableSorting: true },
+            // {
+            //     header: 'Category',
+            //     accessorKey: 'categoryName',
+            //     enableSorting: true,
+            // },
+            // {
+            //     header: 'Subcategory',
+            //     accessorKey: 'subcategoryName',
+            //     enableSorting: true,
+            //     cell: (props) => (
+            //         <span>{props.row.original.subcategoryName ?? '-'}</span>
+            //     ),
+            // },
+            // { header: 'Brand', accessorKey: 'brandName', enableSorting: true },
             {
                 header: 'Status',
                 accessorKey: 'status',
                 enableSorting: true,
+                size: 100,
                 cell: (props) => {
                     const { status } = props.row.original
                     return (
                         <Tag
-                            className={`${statusColor[status]} text-white capitalize`}
-                            prefix
+                            className={`${statusColor[status]} capitalize`}
+                            prefix={false}
                         >
                             {status}
                         </Tag>
@@ -841,9 +883,10 @@ const Products = () => {
                 },
             },
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
                 width: 130, // Adjust width for actions
+                meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onClone={() => handleClone(props.row.original)}

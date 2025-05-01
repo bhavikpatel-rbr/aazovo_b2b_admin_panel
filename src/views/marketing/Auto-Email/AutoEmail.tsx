@@ -70,9 +70,9 @@ type FilterFormSchema = z.infer<typeof filterValidationSchema>
 
 // --- Constants ---
 const templateStatusColor: Record<AutoEmailItem['status'], string> = {
-    active: 'bg-emerald-500',
-    inactive: 'bg-amber-500',
-    draft: 'bg-gray-500',
+    active: 'text-green-600 bg-green-200',
+    inactive: 'text-red-600 bg-red-200',
+    draft: 'text-blue-600 bg-blue-200',
 }
 
 const initialDummyAutoEmails: AutoEmailItem[] = [
@@ -174,8 +174,8 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
-            {onClone && (
+        <div className="flex items-center justify-center">
+            {/* {onClone && (
                 <Tooltip title="Clone Template">
                     <div
                         className={classNames(
@@ -189,7 +189,7 @@ const ActionColumn = ({
                         <TbCopy />
                     </div>
                 </Tooltip>
-            )}
+            )} */}
             <Tooltip title="Change Status">
                 <div
                     className={classNames(
@@ -289,7 +289,7 @@ const TemplateSearch = React.forwardRef<HTMLInputElement, TemplateSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Auto Emails (ID, Type, User...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -547,7 +547,7 @@ const TemplateActionTools = ({
                 block
             >
                 {' '}
-                Add new Auto Email{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -926,12 +926,13 @@ const AutoEmailListing = () => {
                 header: 'ID',
                 accessorKey: 'id',
                 enableSorting: true,
-                width: 120,
+                size: 70,
             },
             {
                 header: 'Email Type',
                 accessorKey: 'emailType',
                 enableSorting: true,
+                size: 250,
             },
             {
                 header: 'User Name',
@@ -952,12 +953,12 @@ const AutoEmailListing = () => {
                 header: 'Status',
                 accessorKey: 'status',
                 enableSorting: true,
-                width: 120,
+                size: 80,
                 cell: (props) => {
                     const { status } = props.row.original
                     return (
                         <Tag
-                            className={`${templateStatusColor[status]} text-white capitalize`}
+                            className={`${templateStatusColor[status]} capitalize`}
                         >
                             {status}
                         </Tag>
@@ -966,9 +967,10 @@ const AutoEmailListing = () => {
             },
             // { header: 'Created Date', ... }, // Optional
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
                 width: 130, // Adjusted width for more actions
+                meta:{HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onEdit={() => handleEdit(props.row.original)}
@@ -991,7 +993,7 @@ const AutoEmailListing = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Auto Emails Listing</h3>
+                    <h5 className="mb-4 lg:mb-0">Auto Emails</h5>
                     <TemplateActionTools allTemplates={templates} />
                 </div>
 

@@ -67,9 +67,9 @@ export type MessageSenderItem = {
 
 // --- Constants ---
 const senderStatusColor: Record<SenderStatus, string> = {
-    active: 'bg-emerald-500',
-    inactive: 'bg-gray-500',
-    pending_verification: 'bg-amber-500',
+    active: 'text-green-600 bg-green-200',
+    inactive: 'text-red-600 bg-red-200',
+    pending_verification: 'text-blue-600 bg-blue-200',
 }
 
 // Map types to icons
@@ -112,7 +112,7 @@ const initialDummySenders: MessageSenderItem[] = [
         name: 'Android App Push Service',
         type: 'Push-Android',
         identifier: 'com.example.app.prod',
-        status: 'pending_verification',
+        status: 'active',
         createdDate: new Date(2023, 9, 15),
     },
     {
@@ -169,9 +169,9 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             {/* {onVerify && ( <Tooltip title="Verify Sender"><Button shape="circle" variant="plain" size="sm" icon={<TbCircleCheck />} onClick={onVerify} /> </Tooltip> )} */}
-            {onClone && (
+            {/* {onClone && (
                 <Tooltip title="Clone Sender">
                     <div
                         className={classNames(
@@ -185,7 +185,7 @@ const ActionColumn = ({
                         <TbCopy />
                     </div>
                 </Tooltip>
-            )}
+            )} */}
             <Tooltip title="Change Status">
                 <div
                     className={classNames(
@@ -285,7 +285,7 @@ const SenderSearch = React.forwardRef<HTMLInputElement, SenderSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Senders (Name, ID, Identifier, Type...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -343,7 +343,7 @@ const SenderActionTools = ({
             {/* <CSVLink ... /> */}{' '}
             <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
                 {' '}
-                Add new Sender{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -679,10 +679,10 @@ const MessageSenderListing = () => {
                 header: 'ID',
                 accessorKey: 'id',
                 enableSorting: true,
-                width: 120,
+                size: 70,
             },
             {
-                header: 'Name',
+                header: 'Message Title',
                 accessorKey: 'name',
                 enableSorting: true,
                 cell: (props) => {
@@ -707,10 +707,10 @@ const MessageSenderListing = () => {
                 header: 'Type',
                 accessorKey: 'type',
                 enableSorting: true,
-                width: 140,
+                size: 140,
             },
             {
-                header: 'Identifier',
+                header: 'Sender',
                 accessorKey: 'identifier',
                 enableSorting: true,
             }, // e.g., email, phone number
@@ -718,7 +718,7 @@ const MessageSenderListing = () => {
                 header: 'Status',
                 accessorKey: 'status',
                 enableSorting: true,
-                width: 180,
+                size: 100,
                 cell: (props) => {
                     const { status } = props.row.original
                     const displayStatus = status
@@ -726,7 +726,7 @@ const MessageSenderListing = () => {
                         .replace(/\b\w/g, (l) => l.toUpperCase())
                     return (
                         <Tag
-                            className={`${senderStatusColor[status]} text-white capitalize`}
+                            className={`${senderStatusColor[status]} capitalize`}
                         >
                             {displayStatus}
                         </Tag>
@@ -735,9 +735,10 @@ const MessageSenderListing = () => {
             },
             // { header: 'Created Date', ... }, // Optional
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
-                width: 130,
+                size: 130,
+                meta : {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onEdit={() => handleEdit(props.row.original)}
@@ -760,7 +761,7 @@ const MessageSenderListing = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Message Senders</h3>
+                    <h5 className="mb-4 lg:mb-0">Message Senders</h5>
                     <SenderActionTools allSenders={senders} />
                 </div>
 

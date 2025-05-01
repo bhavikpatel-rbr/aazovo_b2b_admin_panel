@@ -54,8 +54,8 @@ export type CategoryItem = {
 
 // --- Constants ---
 const statusColor: Record<CategoryItem['status'], string> = {
-    active: 'bg-emerald-500', // Use solid colors for tags
-    inactive: 'bg-amber-500',
+    active: 'text-green-600 bg-green-200', // Use solid colors for tags
+    inactive: 'text-red-600 bg-red-200',
 };
 
 const initialDummyCategories: CategoryItem[] = [
@@ -94,13 +94,13 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             {/* Optional Clone Button */}
-            {onClone && (
+            {/* {onClone && (
                 <Tooltip title="Clone Category">
                     <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400' )} role="button" onClick={onClone} > <TbCopy /> </div>
                 </Tooltip>
-             )}
+             )} */}
             <Tooltip title="Change Status">
                 <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400' )} role="button" onClick={onChangeStatus} > <TbSwitchHorizontal /> </div>
             </Tooltip>
@@ -430,26 +430,48 @@ const Categories = () => { // Renamed Component
     // --- Define Columns in Parent ---
     const columns: ColumnDef<CategoryItem>[] = useMemo(
         () => [
-            { header: 'ID', accessorKey: 'id', enableSorting: true, width: 100 }, // Example width
+            { header: 'ID', accessorKey: 'id', enableSorting: true, size: 70 }, // Example width
             {
-                header: 'Image',
-                accessorKey: 'image',
-                enableSorting: false, // Usually don't sort by image
-                cell: props => {
-                    const { image, name } = props.row.original;
+                header : "Category",
+                id: "category",
+                size:200,
+                enableSorting: true,
+                cell: (props)=>{
+                    const { image, name } = props.row.original
                     return (
-                        <Avatar
-                            size={40} // Adjust size
-                            shape="rounded" // Or 'square'
-                            src={image}
-                            icon={<HiOutlinePhotograph />} // Placeholder icon
-                        >
-                            {!image ? name.charAt(0).toUpperCase() : ''} {/* Fallback letter avatar */}
-                        </Avatar>
-                    );
+                        <div className='flex gap-2 items-center'>
+                            <Avatar
+                                size={40}
+                                shape="circle"
+                                src={image}
+                                icon={<HiOutlinePhotograph />} // Placeholder icon
+                            >
+                                {!image ? name.charAt(0).toUpperCase() : ''}
+                            </Avatar>
+                            <span>{name}</span>
+                        </div>
+                    )
                 }
             },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
+            // {
+            //     header: 'Image',
+            //     accessorKey: 'image',
+            //     enableSorting: false, // Usually don't sort by image
+            //     cell: props => {
+            //         const { image, name } = props.row.original;
+            //         return (
+            //             <Avatar
+            //                 size={40} // Adjust size
+            //                 shape="rounded" // Or 'square'
+            //                 src={image}
+            //                 icon={<HiOutlinePhotograph />} // Placeholder icon
+            //             >
+            //                 {!image ? name.charAt(0).toUpperCase() : ''} {/* Fallback letter avatar */}
+            //             </Avatar>
+            //         );
+            //     }
+            // },
+            // { header: 'Name', accessorKey: 'name', enableSorting: true },
             {
                 header: 'Parent Category',
                 accessorKey: 'parentCategoryName',
@@ -464,8 +486,8 @@ const Categories = () => { // Renamed Component
                     const { status } = props.row.original;
                     return (
                         <Tag
-                            className={`${statusColor[status]} text-white capitalize`} // Added text-white for contrast
-                            prefix // Show color as a dot prefix
+                            className={`${statusColor[status]} capitalize`} // Added text-white for contrast
+                            prefix={false} // Show color as a dot prefix
                             // prefixClass={statusColor[status]}
                         >
                             {status}
@@ -474,7 +496,8 @@ const Categories = () => { // Renamed Component
                 }
             },
             {
-                header: '', id: 'action', // Actions column
+                header: 'Action', id: 'action', // Actions column
+                meta : {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onClone={() => handleClone(props.row.original)}

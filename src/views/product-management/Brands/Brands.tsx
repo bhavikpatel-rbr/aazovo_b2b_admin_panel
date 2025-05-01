@@ -54,8 +54,8 @@ export type BrandItem = {
 
 // --- Constants ---
 const statusColor: Record<BrandItem['status'], string> = {
-    active: 'bg-emerald-500', // Use solid colors for tags
-    inactive: 'bg-amber-500',
+    active: 'text-green-600 bg-green-200', // Use solid colors for tags
+    inactive: 'text-red-600 bg-red-200',
 }
 
 const initialDummyBrands: BrandItem[] = [
@@ -163,9 +163,9 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             {/* Optional Clone Button */}
-            {onClone && (
+            {/* {onClone && (
                 <Tooltip title="Clone Brand">
                     <div
                         className={classNames(
@@ -180,7 +180,7 @@ const ActionColumn = ({
                         <TbCopy />{' '}
                     </div>
                 </Tooltip>
-            )}
+            )} */}
             <Tooltip title="Change Status">
                 <div
                     className={classNames(
@@ -295,6 +295,100 @@ const BrandSearch = React.forwardRef<HTMLInputElement, BrandSearchProps>(
 )
 BrandSearch.displayName = 'BrandSearch'
 // --- End BrandSearch ---
+
+// --- SubscriberFilter Component ---
+const SubscriberFilter = ({
+    filterData,
+    setFilterData,
+}: {
+    filterData: FilterFormSchema
+    setFilterData: (data: FilterFormSchema) => void
+}) => {
+    const [dialogIsOpen, setIsOpen] = useState(false)
+    const openDialog = () => setIsOpen(true)
+    const onDialogClose = () => setIsOpen(false)
+    const { control, handleSubmit, reset, watch } = useForm<FilterFormSchema>({
+        defaultValues: filterData,
+        resolver: zodResolver(filterValidationSchema),
+    })
+    const dateRange = watch('dateRange')
+    React.useEffect(() => {
+        reset(filterData)
+    }, [filterData, reset])
+    const onSubmit = (values: FilterFormSchema) => {
+        setFilterData(values)
+        onDialogClose()
+    }
+    const handleReset = () => {
+        const defaultVals = filterValidationSchema.parse({})
+        reset(defaultVals)
+        setFilterData(defaultVals)
+        onDialogClose()
+    }
+    const activeFilterCount =
+        filterData.dateRange?.[0] || filterData.dateRange?.[1] ? 1 : 0
+
+    return (
+        <>
+            <Button
+                icon={<TbFilter />}
+                onClick={openDialog}
+                className="relative"
+            >
+                <span>Filter</span>{' '}
+                {activeFilterCount > 0 && (
+                    <Badge
+                        content={activeFilterCount}
+                        className="absolute -top-2 -right-2"
+                        innerClass="text-xs"
+                    />
+                )}
+            </Button>
+            <Dialog
+                isOpen={dialogIsOpen}
+                onClose={onDialogClose}
+                onRequestClose={onDialogClose}
+                width={500}
+            >
+                <h4 className="mb-4">Filter Subscribers</h4>
+                <Form onSubmit={handleSubmit(onSubmit)}>
+                    <UiFormItem
+                        label="Subscription Date Range"
+                        className="mb-4"
+                    >
+                        <Controller
+                            name="dateRange"
+                            control={control}
+                            render={({ field }) => (
+                                <DatePicker.RangePicker
+                                    placeholder="Select date range"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    inputFormat="YYYY-MM-DD"
+                                    inputPrefix={
+                                        <HiOutlineCalendar className="text-lg" />
+                                    }
+                                />
+                            )}
+                        />
+                    </UiFormItem>
+                    {/* Status filter could be added here */}
+                    <div className="flex justify-end items-center gap-2 mt-6">
+                        <Button type="button" onClick={handleReset}>
+                            {' '}
+                            Reset{' '}
+                        </Button>
+                        <Button type="submit" variant="solid">
+                            {' '}
+                            Apply Filters{' '}
+                        </Button>
+                    </div>
+                </Form>
+            </Dialog>
+        </>
+    )
+}
+// --- End SubscriberFilter ---
 
 // --- BrandTableTools Component ---
 const BrandTableTools = ({
@@ -650,45 +744,69 @@ const Brands = () => {
                 header: 'ID',
                 accessorKey: 'id',
                 enableSorting: true,
-                width: 100,
+                size: 30,
             },
             {
-                header: 'Icon',
-                accessorKey: 'icon',
-                enableSorting: false,
-                cell: (props) => {
+                header : "Brand",
+                id: "brand",
+                enableSorting: true,
+                size: 200,
+                cell: (props)=>{
                     const { icon, name } = props.row.original
                     return (
-                        <Avatar
-                            size={40}
-                            shape="rounded"
-                            src={icon}
-                            icon={<TbBuildingStore />} // Placeholder icon
-                        >
-                            {!icon ? name.charAt(0).toUpperCase() : ''}
-                        </Avatar>
+                        <div className='flex gap-2 items-center'>
+                            <Avatar
+                                size={40}
+                                shape="circle"
+                                src={icon}
+                                icon={<TbBuildingStore />} // Placeholder icon
+                            >
+                                {!icon ? name.charAt(0).toUpperCase() : ''}
+                            </Avatar>
+                            <span>{name}</span>
+                        </div>
                     )
-                },
+                }
             },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
+            // {
+            //     header: 'Icon',
+            //     accessorKey: 'icon',
+            //     enableSorting: false,
+            //     cell: (props) => {
+            //         const { icon, name } = props.row.original
+            //         return (
+            //             <Avatar
+            //                 size={40}
+            //                 shape="circle"
+            //                 src={icon}
+            //                 icon={<TbBuildingStore />} // Placeholder icon
+            //             >
+            //                 {!icon ? name.charAt(0).toUpperCase() : ''}
+            //             </Avatar>
+            //         )
+            //     },
+            // },
+            
+            // { header: 'Name', accessorKey: 'name', enableSorting: true },
             {
                 header: 'Mobile No',
                 accessorKey: 'mobileNo',
                 enableSorting: true,
                 cell: (props) => (
-                    <span>{props.row.original.mobileNo ?? '-'}</span>
+                    <span className='block min-w-[120px]'>{props.row.original.mobileNo ?? '-'}</span>
                 ),
             },
             {
                 header: 'Status',
                 accessorKey: 'status',
                 enableSorting: true,
+                size: "20",
                 cell: (props) => {
                     const { status } = props.row.original
                     return (
                         <Tag
-                            className={`${statusColor[status]} text-white capitalize`}
-                            prefix
+                            className={`${statusColor[status]} capitalize`}
+                            prefix={false}
                             // prefixClass={statusColor[status]} // Alt style
                         >
                             {status}
@@ -697,8 +815,9 @@ const Brands = () => {
                 },
             },
             {
-                header: '',
+                header: 'Action',
                 id: 'action', // Actions column
+                meta: {HeaderClass : "text-center", className : "justify-center"},
                 cell: (props) => (
                     <ActionColumn
                         onClone={() => handleClone(props.row.original)}
