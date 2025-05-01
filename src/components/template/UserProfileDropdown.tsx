@@ -11,6 +11,8 @@ import {
 } from 'react-icons/pi'
 import { useAuth } from '@/auth'
 import type { JSX } from 'react'
+import { logoutAction } from '@/reduxtool/auth/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
 
 type DropdownList = {
     label: string
@@ -38,11 +40,11 @@ const dropdownItemList: DropdownList[] = [
 
 const _UserDropdown = () => {
     const { avatar, userName, email } = useSessionUser((state) => state.user)
-
+    const dispatch = useAppDispatch()
     const { signOut } = useAuth()
 
     const handleSignOut = () => {
-        signOut()
+        dispatch(logoutAction(true))
     }
 
     const avatarProps = {

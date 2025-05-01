@@ -7,6 +7,11 @@ import dynamicImport from 'vite-plugin-dynamic-import'
 export default defineConfig({
   plugins: [react(), dynamicImport()],
   assetsInclude: ['**/*.md'],
+  define: {
+    'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL),
+    'process.env.REACT_APP_USE_APPLICATION_ENCRYPT_STORAGE': JSON.stringify(process.env.REACT_APP_USE_APPLICATION_ENCRYPT_STORAGE),
+    'process.env.REACT_APP_ENCRYPTSTORAGE_SECRET_KEY': JSON.stringify(process.env.REACT_APP_ENCRYPTSTORAGE_SECRET_KEY)
+  },
   resolve: {
     alias: {
       '@': path.join(__dirname, 'src'),

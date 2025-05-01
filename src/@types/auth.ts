@@ -1,6 +1,7 @@
 export type SignInCredential = {
     email: string
     password: string
+    access_token: string
 }
 
 export type SignInResponse = {

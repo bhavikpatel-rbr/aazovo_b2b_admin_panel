@@ -15,6 +15,8 @@ import type {
 } from '@/@types/auth'
 import type { ReactNode, Ref } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import { authSelector } from '@/reduxtool/auth/authSlice'
 
 type AuthProviderProps = { children: ReactNode }
 
@@ -35,15 +37,16 @@ const IsolatedNavigator = ({ ref }: { ref: Ref<IsolatedNavigatorRef> }) => {
 }
 
 function AuthProvider({ children }: AuthProviderProps) {
-    const signedIn = useSessionUser((state) => state.session.signedIn)
+    // const signedIn = useSessionUser((state) => state.session.signedIn)
     const user = useSessionUser((state) => state.user)
     const setUser = useSessionUser((state) => state.setUser)
     const setSessionSignedIn = useSessionUser(
         (state) => state.setSessionSignedIn,
     )
     const { token, setToken } = useToken()
-
-    const authenticated = Boolean(token && signedIn)
+    const userData = useSelector(authSelector)
+    const authenticated = Boolean(userData.token)
+    const signedIn = userData.token
 
     const navigatorRef = useRef<IsolatedNavigatorRef>(null)
 

@@ -11,6 +11,8 @@ import { z } from 'zod'
 import type { ZodType } from 'zod'
 import type { CommonProps } from '@/@types/common'
 import type { ReactNode } from 'react'
+import { useAppDispatch } from '@/reduxtool/store'
+import { loginUserByEmailAction } from '@/reduxtool/auth/middleware'
 
 interface SignInFormProps extends CommonProps {
     disableSubmit?: boolean
@@ -33,6 +35,7 @@ const validationSchema: ZodType<SignInFormSchema> = z.object({
 })
 
 const SignInForm = (props: SignInFormProps) => {
+    const dispatch = useAppDispatch()
     const [isSubmitting, setSubmitting] = useState<boolean>(false)
 
     const { disableSubmit = false, className, setMessage, passwordHint } = props
@@ -43,27 +46,18 @@ const SignInForm = (props: SignInFormProps) => {
         control,
     } = useForm<SignInFormSchema>({
         defaultValues: {
-            email: 'admin-01@ecme.com',
-            password: '123Qwe',
+            email: '',
+            password: '',
         },
         resolver: zodResolver(validationSchema),
     })
 
-    const { signIn } = useAuth()
-
     const onSignIn = async (values: SignInFormSchema) => {
         const { email, password } = values
-
         if (!disableSubmit) {
             setSubmitting(true)
-
-            const result = await signIn({ email, password })
-
-            if (result?.status === 'failed') {
-                setMessage?.(result.message)
-            }
+            dispatch(loginUserByEmailAction({ email, password }))
         }
-
         setSubmitting(false)
     }
 
