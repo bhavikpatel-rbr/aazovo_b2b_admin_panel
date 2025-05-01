@@ -91,6 +91,7 @@ import {
     PiCircleHalfTiltDuotone,
     PiHouseLineDuotone,
 } from 'react-icons/pi'
+import { TbUserPentagon } from "react-icons/tb";
 import type { JSX } from 'react'
 
 export type NavigationIcons = Record<string, JSX.Element>

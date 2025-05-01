@@ -31,24 +31,24 @@ const businessEntityRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
-    {
-        key: 'businessEntities.subscriber',
-        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/subscriber`,
-        component: lazy(() => import('@/views/business-entities/Subscribers')),
-        authority: [ADMIN, USER],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
-    {
-        key: 'businessEntities.requestFeedback',
-        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/request-feedback`,
-        component: lazy(() => import('@/views/business-entities/RequestFeedback')),
-        authority: [ADMIN, USER],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
+    // {
+    //     key: 'businessEntities.subscriber',
+    //     path: `${BUSINESS_ENTITIES_PREFIX_PATH}/subscriber`,
+    //     component: lazy(() => import('@/views/business-entities/Subscribers')),
+    //     authority: [ADMIN, USER],
+    //     meta: {
+    //         pageContainerType: 'contained',
+    //     },
+    // },
+    // {
+    //     key: 'businessEntities.requestFeedback',
+    //     path: `${BUSINESS_ENTITIES_PREFIX_PATH}/request-feedback`,
+    //     component: lazy(() => import('@/views/business-entities/RequestFeedback')),
+    //     authority: [ADMIN, USER],
+    //     meta: {
+    //         pageContainerType: 'contained',
+    //     },
+    // },
     {
         key: 'businessEntities.allDocuments',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/all-documents`,

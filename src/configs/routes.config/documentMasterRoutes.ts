@@ -5,27 +5,45 @@ import type { Routes } from '@/@types/routes';
 
 const documentMasterRoutes: Routes = [
     {
-        key: 'documentMaster.documentType',
-        path: `${DOCUMENT_MASTER_PREFIX_PATH}/document-type`,
-        component: lazy(() => import('@/views/document-master/Document-Type')),
+        key: 'settings.cmsManagement',
+        path: `${DOCUMENT_MASTER_PREFIX_PATH}/cms-management`,
+        component: lazy(() => import('@/views/settings/Cms-Management')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',
         },
     },
     {
-        key: 'documentMaster.documents',
-        path: `${DOCUMENT_MASTER_PREFIX_PATH}/documents`,
-        component: lazy(() => import('@/views/document-master/Documents')),
+        key: 'master.homeCategoryImage',
+        path: `${DOCUMENT_MASTER_PREFIX_PATH}/home-category-image`,
+        component: lazy(() => import('@/views/master/Home-Category-Image')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',
         },
     },
     {
-        key: 'documentMaster.numberSystem',
-        path: `${DOCUMENT_MASTER_PREFIX_PATH}/number-system`,
-        component: lazy(() => import('@/views/document-master/Number-System')),
+        key: 'master.trendingImage',
+        path: `${DOCUMENT_MASTER_PREFIX_PATH}/trending-image`,
+        component: lazy(() => import('@/views/master/Trending-Image')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'master.sliders',
+        path: `${DOCUMENT_MASTER_PREFIX_PATH}/sliders`,
+        component: lazy(() => import('@/views/master/Sliders')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'marketing.blog',
+        path: `${DOCUMENT_MASTER_PREFIX_PATH}/blog`,
+        component: lazy(() => import('@/views/marketing/blogs')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',

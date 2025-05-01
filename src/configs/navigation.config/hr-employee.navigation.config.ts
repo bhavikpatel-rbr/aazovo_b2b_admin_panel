@@ -70,7 +70,7 @@ const hrEmployeesNavigationConfig: NavigationTree[] = [
             {
                 key: 'hrEmployees.jobPosts',
                 path: `${HR_EMPLOYEES_PREFIX_PATH}/job-posts`,
-                title: 'Job Posts',
+                title: 'Job Listings',
                 translateKey: 'nav.hrEmployees.jobPosts',
                 icon: 'jobPosts',
                 type: NAV_ITEM_TYPE_ITEM,
@@ -83,38 +83,38 @@ const hrEmployeesNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            {
-                key: 'hrEmployees.jobDepartments',
-                path: `${HR_EMPLOYEES_PREFIX_PATH}/job-departments`,
-                title: 'Job Departments',
-                translateKey: 'nav.hrEmployees.jobDepartments',
-                icon: 'jobDepartments',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.hrEmployees.jobDepartmentsDesc',
-                        label: 'Manage job departments',
-                    },
-                },
-                subMenu: [],
-            },
-            {
-                key: 'hrEmployees.jobApplications',
-                path: `${HR_EMPLOYEES_PREFIX_PATH}/job-applications`,
-                title: 'Job Applications',
-                translateKey: 'nav.hrEmployees.jobApplications',
-                icon: 'jobApplications',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.hrEmployees.jobApplicationsDesc',
-                        label: 'Manage job applications',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'hrEmployees.jobDepartments',
+            //     path: `${HR_EMPLOYEES_PREFIX_PATH}/job-departments`,
+            //     title: 'Job Departments',
+            //     translateKey: 'nav.hrEmployees.jobDepartments',
+            //     icon: 'jobDepartments',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN, USER],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.hrEmployees.jobDepartmentsDesc',
+            //             label: 'Manage job departments',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
+            // {
+            //     key: 'hrEmployees.jobApplications',
+            //     path: `${HR_EMPLOYEES_PREFIX_PATH}/job-applications`,
+            //     title: 'Job Applications',
+            //     translateKey: 'nav.hrEmployees.jobApplications',
+            //     icon: 'jobApplications',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN, USER],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.hrEmployees.jobApplicationsDesc',
+            //             label: 'Manage job applications',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
         ],
     },
 ];

@@ -5,9 +5,18 @@ import type { Routes } from '@/@types/routes';
 
 const masterRoutes: Routes = [
     {
-        key: 'master.formBuilder',
-        path: `${MASTER_PREFIX_PATH}/form-builder`,
-        component: lazy(() => import('@/views/master/Form-Builder')),
+        key: 'documentMaster.documentType',
+        path: `${MASTER_PREFIX_PATH}/document-type`,
+        component: lazy(() => import('@/views/document-master/Document-Type')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'documentMaster.documents',
+        path: `${MASTER_PREFIX_PATH}/documents`,
+        component: lazy(() => import('@/views/document-master/Documents')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',
@@ -44,33 +53,6 @@ const masterRoutes: Routes = [
         key: 'master.countries',
         path: `${MASTER_PREFIX_PATH}/countries`,
         component: lazy(() => import('@/views/master/Countries')),
-        authority: [ADMIN],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
-    {
-        key: 'master.homeCategoryImage',
-        path: `${MASTER_PREFIX_PATH}/home-category-image`,
-        component: lazy(() => import('@/views/master/Home-Category-Image')),
-        authority: [ADMIN],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
-    {
-        key: 'master.trendingImage',
-        path: `${MASTER_PREFIX_PATH}/trending-image`,
-        component: lazy(() => import('@/views/master/Trending-Image')),
-        authority: [ADMIN],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
-    {
-        key: 'master.sliders',
-        path: `${MASTER_PREFIX_PATH}/sliders`,
-        component: lazy(() => import('@/views/master/Sliders')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',

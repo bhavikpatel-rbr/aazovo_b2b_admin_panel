@@ -5,6 +5,24 @@ import type { Routes } from '@/@types/routes';
 
 const systemToolsRoutes: Routes = [
     {
+        key: 'settings.rawData',
+        path: `${SYSTEM_TOOLS_PREFIX_PATH}/raw-data`,
+        component: lazy(() => import('@/views/settings/Raw-Data')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'master.formBuilder',
+        path: `${SYSTEM_TOOLS_PREFIX_PATH}/form-builder`,
+        component: lazy(() => import('@/views/master/Form-Builder')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'systemTools.bugReport',
         path: `${SYSTEM_TOOLS_PREFIX_PATH}/bug-report`,
         component: lazy(() => import('@/views/system-tools/Bug-Report')),

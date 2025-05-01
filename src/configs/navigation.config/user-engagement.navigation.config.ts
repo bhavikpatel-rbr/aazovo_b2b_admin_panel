@@ -1,0 +1,59 @@
+import { MARKETING_PREFIX_PATH } from '@/constants/route.constant';
+import { NAV_ITEM_TYPE_ITEM, NAV_ITEM_TYPE_COLLAPSE } from '@/constants/navigation.constant';
+import { ADMIN, USER } from '@/constants/roles.constant';
+import type { NavigationTree } from '@/@types/navigation';
+
+const userengagementNavigationConfig: NavigationTree[] = [
+    {
+            key: 'userengagement',
+            path: '',
+            title: 'User Engagement',
+            translateKey: 'nav.userengagement',
+            icon: 'customerDetails',
+            type: NAV_ITEM_TYPE_COLLAPSE,
+            authority: [ADMIN, USER],
+            meta: {
+                horizontalMenu: {
+                    layout: 'columns',
+                    columns: 2,
+                },
+            },
+            subMenu: [
+              {
+                              key: 'marketing.subscriber',
+                              path: `${MARKETING_PREFIX_PATH}/subscriber`,
+                              title: 'Subscriber',
+                              translateKey: 'nav.marketing.subscriber',
+                              icon: 'subscriber',
+                              type: NAV_ITEM_TYPE_ITEM,
+                              authority: [ADMIN, USER],
+                              meta: {
+                                  description: {
+                                      translateKey: 'nav.marketing.subscriberDesc',
+                                      label: 'Manage subscribers',
+                                  },
+                              },
+                              subMenu: [],
+                          },
+                          {
+                              key: 'marketing.requestFeedback',
+                              path: `${MARKETING_PREFIX_PATH}/request-feedback`,
+                              title: 'Request & Feedback',
+                              translateKey: 'nav.marketing.requestFeedback',
+                              icon: 'requestFeedback',
+                              type: NAV_ITEM_TYPE_ITEM,
+                              authority: [ADMIN, USER],
+                              meta: {
+                                  description: {
+                                      translateKey: 'nav.marketing.requestFeedbackDesc',
+                                      label: 'Handle requests and feedback',
+                                  },
+                              },
+                              subMenu: [],
+                          },  
+            ],
+        },
+        
+];
+
+export default userengagementNavigationConfig;

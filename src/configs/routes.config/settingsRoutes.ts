@@ -32,18 +32,9 @@ const settingsRoutes: Routes = [
         },
     },
     {
-        key: 'settings.cmsManagement',
-        path: `${SETTINGS_PREFIX_PATH}/cms-management`,
-        component: lazy(() => import('@/views/settings/Cms-Management')),
-        authority: [ADMIN],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
-    {
-        key: 'settings.rawData',
-        path: `${SETTINGS_PREFIX_PATH}/raw-data`,
-        component: lazy(() => import('@/views/settings/Raw-Data')),
+        key: 'settings.numberSystem',
+        path: `${SETTINGS_PREFIX_PATH}/number-system`,
+        component: lazy(() => import('@/views/document-master/Number-System')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',

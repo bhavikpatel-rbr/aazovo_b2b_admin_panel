@@ -68,6 +68,22 @@ const businessEntitiesNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
+                key: 'businessEntities.partner',
+                path: `${BUSINESS_ENTITIES_PREFIX_PATH}/partner`,
+                title: 'Inquiries',
+                translateKey: 'nav.businessEntities.partner',
+                icon: 'partner',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.businessEntities.partnerDesc',
+                        label: 'Manage Inquiries',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'businessEntities.allDocuments',
                 path: `${BUSINESS_ENTITIES_PREFIX_PATH}/all-documents`,
                 title: 'All Documents',

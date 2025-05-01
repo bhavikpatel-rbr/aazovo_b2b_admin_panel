@@ -10,6 +10,7 @@ import systemSettingsNavigationConfig from './system-tools.navigation.config'
 import settingsNavigationConfig from './settings.navigatiom.config'
 import masterNavigationConfig from './master.navigation.config'
 import documentMasterNavigationConfig from './document-master.navigation.config'
+import userengagementNavigationConfig from './user-engagement.navigation.config'
 import otherNavigationConfig from './others.navigation.config'
 import conceptNavigationConfig from './concepts.navigation.config'
 import type { NavigationTree } from '@/@types/navigation'
@@ -19,14 +20,15 @@ const navigationConfig: NavigationTree[] = [
     ...businessEntitiesNavigationConfig,
     ...productManagementNavigationConfig,
     ...salesLeadsNavigationConfig,
-    ...marketingNavigationConfig,
+    ...userengagementNavigationConfig,
     ...taskNavigationConfig,
+    ...marketingNavigationConfig,
     ...hrEmployeesNavigationConfig,
     ...accessControlNavigationConfig,
     ...systemSettingsNavigationConfig,
     ...settingsNavigationConfig,
-    ...masterNavigationConfig,
     ...documentMasterNavigationConfig,
+    ...masterNavigationConfig,
     ...otherNavigationConfig,
     // ...uiComponentNavigationConfig,
 ]
