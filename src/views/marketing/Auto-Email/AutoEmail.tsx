@@ -1,6 +1,6 @@
 // src/views/your-path/AutoEmailListing.tsx (Corrected)
 
-import React, { useState, useMemo, useCallback, Ref } from 'react'
+import React, { useState, useMemo, useCallback, Ref, Suspense, lazy } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
 import classNames from 'classnames'
@@ -32,6 +32,7 @@ import {
     TbFilter,
     TbX,
     TbFileText,
+    TbCloudUpload,
 } from 'react-icons/tb'
 
 // Icons
@@ -49,6 +50,12 @@ import {
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+
+// --- Lazy Load CSVLink ---
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
+// --- End Lazy Load ---
 
 // --- Define Item Type ---
 export type AutoEmailItem = {
@@ -424,16 +431,45 @@ const TemplateTableTools = ({
     onSearchChange,
     filterData,
     setFilterData,
+    allAutoEmails
 }: {
     onSearchChange: (query: string) => void
     filterData: FilterFormSchema
     setFilterData: (data: FilterFormSchema) => void
+    allAutoEmails: AutoEmailItem[]
 }) => {
+
+    // Prepare data for CSV
+    const csvData = useMemo(
+        () =>
+            allAutoEmails.map((s) => ({
+                id: s.id,
+                emailType: s.emailType,
+                userName: s.userName,
+                status: s.status,
+            })),
+        [allAutoEmails],
+    )
+    const csvHeaders = [
+        { label: 'ID', key: 'id' },
+        { label: 'Email Type', key: 'emailType' },
+        { label: 'User Name', key: 'userName' },
+        { label: 'Status', key: 'status' },
+    ]
     return (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
             <div className="flex-grow">
                 <TemplateSearch onInputChange={onSearchChange} />
             </div>
+            <Suspense fallback={<Button loading>Loading Export...</Button>}>
+                <CSVLink
+                    filename="AutEmail.csv"
+                    data={csvData}
+                    headers={csvHeaders}
+                >
+                    <Button icon={<TbCloudUpload/>}>Export</Button>
+                </CSVLink>
+            </Suspense>
             <div className="flex-shrink-0">
                 <TemplateFilter
                     filterData={filterData}
@@ -1003,6 +1039,7 @@ const AutoEmailListing = () => {
                         onSearchChange={handleSearchChange}
                         filterData={filterData}
                         setFilterData={handleApplyFilter}
+                        allAutoEmails={templates} // Pass data for export
                     />
                 </div>
 

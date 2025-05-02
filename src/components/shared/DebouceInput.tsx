@@ -21,7 +21,7 @@ const DebouceInput = (props: DebouceInputProps) => {
         debounceFn(e)
     }
 
-    return <Input ref={ref} {...rest} onChange={handleInputChange} />
+    return <Input ref={ref} {...rest} size='xs' onChange={handleInputChange} />
 }
 
 export default DebouceInput

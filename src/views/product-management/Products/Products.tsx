@@ -1,9 +1,13 @@
 // src/views/your-path/Products.tsx
 
-import React, { useState, useMemo, useCallback, Ref } from 'react'
+import React, { useState, useMemo, useCallback, Ref, Suspense, lazy } from 'react'
 import { Link, useNavigate } from 'react-router-dom' // Ensure useNavigate is imported
 import cloneDeep from 'lodash/cloneDeep'
 import classNames from 'classnames' // Import classnames
+import { useForm, Controller } from 'react-hook-form' // Added for filter form
+import { zodResolver } from '@hookform/resolvers/zod' // Added for filter form
+import { z } from 'zod' // Added for filter form
+import type { ZodType } from 'zod' // Added for filter form
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -20,6 +24,9 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import { TbBox } from 'react-icons/tb' // Placeholder icon for product image
+import Checkbox from '@/components/ui/Checkbox' // Added for filter form
+import Input from '@/components/ui/Input' // Added for filter form
+import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // Added for filter form & renamed FormItem
 
 // Icons
 import {
@@ -30,12 +37,38 @@ import {
     TbChecks,
     TbSearch,
     TbCloudDownload,
+    TbFilter,
+    TbCloudUpload,
     TbCategoryPlus, // Using as placeholder for add product
 } from 'react-icons/tb'
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+
+// --- Lazy Load CSVLink ---
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
+// --- End Lazy Load ---
+
+// --- Define FormItem Type (Table Row Data) ---
+export type FormItem = {
+    id: string
+    name: string
+    status: 'active' | 'inactive'
+    // Add fields corresponding to filter schema
+    purchasedProducts?: string // Optional product associated with form
+    purchaseChannel?: string // Optional channel associated with form
+}
+// --- End FormItem Type Definition ---
+
+// --- Define Filter Schema Type (Matches the provided filter component) ---
+type ProductsFilterFormSchema = {
+    purchasedProducts: string | any
+    purchaseChannel: Array<string> | any
+}
+// --- End Filter Schema Type ---
 
 // --- Define Item Type (Table Row Data) ---
 export type ProductItem = {
@@ -211,6 +244,14 @@ const initialDummyProducts: ProductItem[] = [
     },
 ]
 
+// Filter specific constant from the provided filter component
+const channelList = [
+    'Retail Stores',
+    'Online Retailers',
+    'Resellers',
+    'Mobile Apps',
+    'Direct Sales',
+]
 // Tab Definitions
 const TABS = {
     ALL: 'all',
@@ -364,17 +405,180 @@ const ProductSearch = React.forwardRef<HTMLInputElement, ProductSearchProps>(
 ProductSearch.displayName = 'ProductSearch'
 // --- End ProductSearch ---
 
+// --- ProductsTableFilter Component (As provided by user, adapted for props) ---
+const ProductsTableFilter = ({
+    // Mimic the data structure the original hook would provide
+    filterData,
+    setFilterData,
+}: {
+    filterData: ProductsFilterFormSchema
+    setFilterData: (data: ProductsFilterFormSchema) => void
+}) => {
+    const [dialogIsOpen, setIsOpen] = useState(false)
+
+    // Zod validation schema from the provided code
+    const validationSchema: ZodType<ProductsFilterFormSchema> = z.object({
+        purchasedProducts: z.string().optional().default(''), // Made optional for better reset
+        purchaseChannel: z.array(z.string()).optional().default([]), // Made optional for better reset
+    })
+
+    const openDialog = () => {
+        setIsOpen(true)
+    }
+
+    const onDialogClose = () => {
+        setIsOpen(false)
+    }
+
+    const { handleSubmit, reset, control } = useForm<ProductsFilterFormSchema>({
+        // Use the filterData passed from the parent as default values
+        defaultValues: filterData,
+        resolver: zodResolver(validationSchema),
+    })
+
+    // Watch for prop changes to reset the form if external state changes
+    React.useEffect(() => {
+        reset(filterData)
+    }, [filterData, reset])
+
+    const onSubmit = (values: ProductsFilterFormSchema) => {
+        setFilterData(values) // Call the setter function passed from parent
+        setIsOpen(false)
+    }
+
+    const handleReset = () => {
+        // Reset form using react-hook-form's reset
+        const defaultVals = validationSchema.parse({}) // Get default values from schema
+        reset(defaultVals)
+        // Optionally also immediately apply the reset filter state to the parent
+        // setFilterData(defaultVals);
+        // onDialogClose(); // Close after resetting if desired
+    }
+
+    return (
+        <>
+            <Button icon={<TbFilter />} onClick={openDialog} className=''>
+                Filter
+            </Button>
+            <Dialog
+                isOpen={dialogIsOpen}
+                onClose={onDialogClose}
+                onRequestClose={onDialogClose}
+            >
+                <h4 className="mb-4">Filter Forms</h4>
+                <Form onSubmit={handleSubmit(onSubmit)}>
+                    {/* Input from the provided filter component */}
+                    <UiFormItem label="Products">
+                        <Controller
+                            name="purchasedProducts"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="text"
+                                    autoComplete="off"
+                                    placeholder="Search by purchased product"
+                                    {...field}
+                                />
+                            )}
+                        />
+                    </UiFormItem>
+                    {/* Checkboxes from the provided filter component */}
+                    <UiFormItem label="Purchase Channel">
+                        <Controller
+                            name="purchaseChannel"
+                            control={control}
+                            render={({ field }) => (
+                                <Checkbox.Group
+                                    vertical
+                                    value={field.value || []} // Ensure value is array
+                                    onChange={field.onChange}
+                                >
+                                    {channelList.map((source, index) => (
+                                        <Checkbox
+                                            key={source + index}
+                                            // name={field.name} // Not needed when using Controller value/onChange
+                                            value={source}
+                                            className="mb-1" // Use mb-1 for spacing
+                                        >
+                                            {source}
+                                        </Checkbox>
+                                    ))}
+                                </Checkbox.Group>
+                            )}
+                        />
+                    </UiFormItem>
+                    <div className="flex justify-end items-center gap-2 mt-6">
+                        <Button type="button" onClick={handleReset}>
+                            Reset
+                        </Button>
+                        <Button type="submit" variant="solid">
+                            Apply
+                        </Button>
+                    </div>
+                </Form>
+            </Dialog>
+        </>
+    )
+}
+
 // --- ProductTableTools Component ---
 const ProductTableTools = ({
     onSearchChange,
+    filterData,
+    setFilterData,
+    allProducts
 }: {
     onSearchChange: (query: string) => void
+    filterData: ProductsFilterFormSchema
+    setFilterData: (data: ProductsFilterFormSchema) => void // Prop type for setter
+    allProducts: ProductItem[] // Pass all subscribers for export
 }) => {
+
+    // Prepare data for CSV
+    const csvData = useMemo(
+        () =>
+            allProducts.map((s) => ({
+                id: s.id,
+                name: s.name,
+                image: s.image,
+                brandName : s.brandName,
+                categoryName : s.categoryName,
+                subcategoryName : s.subcategoryName,
+                sku: s.sku,
+                status: s.status,
+            })),
+        [allProducts],
+    )
+    const csvHeaders = [
+        { label: 'ID', key: 'id' },
+        { label: 'Name', key: 'name' },
+        { label: 'Image', key: 'image' },
+        { label: 'Brand Name', key: 'brandName' },
+        { label: 'Category Name', key: 'categoryName' },
+        { label: 'Sub Category Name', key: 'subcategoryName' },
+        { label: 'SKU', key: 'sku' },
+        { label: 'status', key: 'status' },
+    ]
+    
     return (
-        <div className="flex items-center w-full">
-            <div className="flex-grow">
-                <ProductSearch onInputChange={onSearchChange} />
-            </div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
+            {/* <div className="flex-grow"> */}
+            <ProductSearch onInputChange={onSearchChange} />
+            <ProductsTableFilter
+                filterData={filterData}
+                setFilterData={setFilterData}
+            />
+            <Button icon={<TbCloudDownload/>}>Import</Button>
+            <Suspense fallback={<Button loading>Loading Export...</Button>}>
+                <CSVLink
+                    filename="Products.csv"
+                    data={csvData}
+                    headers={csvHeaders}
+                >
+                    <Button icon={<TbCloudUpload/>}>Export</Button>
+                </CSVLink>
+            </Suspense>
+            {/* </div> */}
             {/* Filter button could be added here */}
         </div>
     )
@@ -525,6 +729,13 @@ const Products = () => {
     })
     const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([])
     const [currentTab, setCurrentTab] = useState<string>(TABS.ALL)
+
+    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    // State for Filters (matching the provided filter component schema)
+    const [filterData, setFilterData] = useState<ProductsFilterFormSchema>({
+        purchasedProducts: '',
+        purchaseChannel: [],
+    })
     // --- End Lifted State ---
 
     // --- Memoized Data Processing ---
@@ -591,6 +802,12 @@ const Products = () => {
     // --- End Memoized Data Processing ---
 
     // --- Lifted Handlers ---
+    // Handler to update filter state (passed to filter component)
+    const handleApplyFilter = useCallback((newFilterData: ProductsFilterFormSchema) => {
+        setFilterData(newFilterData)
+        setTableData((prevTableData) => ({ ...prevTableData, pageIndex: 1 }))
+        setSelectedForms([])
+    }, []) // No dependencies needed as it only sets state
     const handleSetTableData = useCallback((data: TableQueries) => {
         setTableData(data)
     }, [])
@@ -945,7 +1162,12 @@ const Products = () => {
 
                 {/* Tools Section (Search) */}
                 <div className="mb-4">
-                    <ProductTableTools onSearchChange={handleSearchChange} />
+                    <ProductTableTools 
+                        onSearchChange={handleSearchChange} 
+                        filterData={filterData}
+                        setFilterData={handleApplyFilter} // Pass the handler to update filter state
+                        allProducts={products} // Pass data for export
+                    />
                 </div>
 
                 {/* Table Section */}

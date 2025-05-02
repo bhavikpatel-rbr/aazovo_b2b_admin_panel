@@ -1,11 +1,12 @@
-
-
-
 // src/views/your-path/CategoryListing.tsx (New file name)
 
-import React, { useState, useMemo, useCallback, Ref } from 'react';
+import React, { useState, useMemo, useCallback, Ref, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import cloneDeep from 'lodash/cloneDeep';
+import { useForm, Controller } from 'react-hook-form' // Added for filter form
+import { zodResolver } from '@hookform/resolvers/zod' // Added for filter form
+import { z } from 'zod' // Added for filter form
+import type { ZodType } from 'zod' // Added for filter form
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
@@ -23,6 +24,9 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import StickyFooter from '@/components/shared/StickyFooter';
 import DebouceInput from '@/components/shared/DebouceInput';
 import { HiOutlinePhotograph } from 'react-icons/hi'; // Placeholder icon for image
+import Checkbox from '@/components/ui/Checkbox' // Added for filter form
+import Input from '@/components/ui/Input' // Added for filter form
+import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // Added for filter form & renamed FormItem
 
 // Icons
 import {
@@ -32,14 +36,39 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    TbCloudDownload, // Keep for potential future export
-    TbUserPlus, // Will change icon later
     TbCategoryPlus, // Example replacement icon
+    TbCloudUpload ,
+    TbCloudDownload, // Keep for potential future export
+    TbFilter, // Added for filter button
 } from 'react-icons/tb';
 
 // Types
 import type { OnSortParam, ColumnDef, Row, SortingFnOption } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
+
+// --- Lazy Load CSVLink ---
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
+// --- End Lazy Load ---
+
+// --- Define FormItem Type (Table Row Data) ---
+export type FormItem = {
+    id: string
+    name: string
+    status: 'active' | 'inactive'
+    // Add fields corresponding to filter schema
+    purchasedProducts?: string // Optional product associated with form
+    purchaseChannel?: string // Optional channel associated with form
+}
+// --- End FormItem Type Definition ---
+
+// --- Define Filter Schema Type (Matches the provided filter component) ---
+type CategoryFilterFormSchema = {
+    purchasedProducts: string | any
+    purchaseChannel: Array<string> | any
+}
+// --- End Filter Schema Type ---
 
 // --- Define Item Type (Table Row Data) ---
 export type CategoryItem = {
@@ -75,6 +104,15 @@ const initialDummyCategories: CategoryItem[] = [
     { id: 'CAT014', status: 'active', name: 'Shoes', parentCategoryName: 'Clothing', image: '/img/categories/shoes.jpg' },
     { id: 'CAT015', status: 'inactive', name: 'Audio Equipment', parentCategoryName: 'Electronics', image: null },
 ];
+
+// Filter specific constant from the provided filter component
+const channelList = [
+    'Retail Stores',
+    'Online Retailers',
+    'Resellers',
+    'Mobile Apps',
+    'Direct Sales',
+]
 // --- End Constants ---
 
 // --- Reusable ActionColumn Component ---
@@ -183,17 +221,174 @@ CategorySearch.displayName = 'CategorySearch';
 // --- End CategorySearch ---
 
 
+// --- CategoryTableFilter Component (As provided by user, adapted for props) ---
+const CategoryTableFilter = ({
+    // Mimic the data structure the original hook would provide
+    filterData,
+    setFilterData,
+}: {
+    filterData: CategoryFilterFormSchema
+    setFilterData: (data: CategoryFilterFormSchema) => void
+}) => {
+    const [dialogIsOpen, setIsOpen] = useState(false)
+
+    // Zod validation schema from the provided code
+    const validationSchema: ZodType<CategoryFilterFormSchema> = z.object({
+        purchasedProducts: z.string().optional().default(''), // Made optional for better reset
+        purchaseChannel: z.array(z.string()).optional().default([]), // Made optional for better reset
+    })
+
+    const openDialog = () => {
+        setIsOpen(true)
+    }
+
+    const onDialogClose = () => {
+        setIsOpen(false)
+    }
+
+    const { handleSubmit, reset, control } = useForm<CategoryFilterFormSchema>({
+        // Use the filterData passed from the parent as default values
+        defaultValues: filterData,
+        resolver: zodResolver(validationSchema),
+    })
+
+    // Watch for prop changes to reset the form if external state changes
+    React.useEffect(() => {
+        reset(filterData)
+    }, [filterData, reset])
+
+    const onSubmit = (values: CategoryFilterFormSchema) => {
+        setFilterData(values) // Call the setter function passed from parent
+        setIsOpen(false)
+    }
+
+    const handleReset = () => {
+        // Reset form using react-hook-form's reset
+        const defaultVals = validationSchema.parse({}) // Get default values from schema
+        reset(defaultVals)
+        // Optionally also immediately apply the reset filter state to the parent
+        // setFilterData(defaultVals);
+        // onDialogClose(); // Close after resetting if desired
+    }
+
+    return (
+        <>
+            <Button icon={<TbFilter />} onClick={openDialog} className=''>
+                Filter
+            </Button>
+            <Dialog
+                isOpen={dialogIsOpen}
+                onClose={onDialogClose}
+                onRequestClose={onDialogClose}
+            >
+                <h4 className="mb-4">Filter Forms</h4>
+                <Form onSubmit={handleSubmit(onSubmit)}>
+                    {/* Input from the provided filter component */}
+                    <UiFormItem label="Products">
+                        <Controller
+                            name="purchasedProducts"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="text"
+                                    autoComplete="off"
+                                    placeholder="Search by purchased product"
+                                    {...field}
+                                />
+                            )}
+                        />
+                    </UiFormItem>
+                    {/* Checkboxes from the provided filter component */}
+                    <UiFormItem label="Purchase Channel">
+                        <Controller
+                            name="purchaseChannel"
+                            control={control}
+                            render={({ field }) => (
+                                <Checkbox.Group
+                                    vertical
+                                    value={field.value || []} // Ensure value is array
+                                    onChange={field.onChange}
+                                >
+                                    {channelList.map((source, index) => (
+                                        <Checkbox
+                                            key={source + index}
+                                            // name={field.name} // Not needed when using Controller value/onChange
+                                            value={source}
+                                            className="mb-1" // Use mb-1 for spacing
+                                        >
+                                            {source}
+                                        </Checkbox>
+                                    ))}
+                                </Checkbox.Group>
+                            )}
+                        />
+                    </UiFormItem>
+                    <div className="flex justify-end items-center gap-2 mt-6">
+                        <Button type="button" onClick={handleReset}>
+                            Reset
+                        </Button>
+                        <Button type="submit" variant="solid">
+                            Apply
+                        </Button>
+                    </div>
+                </Form>
+            </Dialog>
+        </>
+    )
+}
+
 // --- CategoryTableTools Component ---
 const CategoryTableTools = ({ // Renamed component
     onSearchChange,
+    filterData,
+    setFilterData,
+    allCategories
 }: {
     onSearchChange: (query: string) => void;
+    filterData: CategoryFilterFormSchema
+    setFilterData: (data: CategoryFilterFormSchema) => void // Prop type for setter
+    allCategories: CategoryItem[] // Pass all subscribers for export
 }) => {
+
+    // Prepare data for CSV
+    const csvData = useMemo(
+        () =>
+            allCategories.map((s) => ({
+                id: s.id,
+                name: s.name,
+                image: s.image,
+                parentCategoryName: s.parentCategoryName,
+                status: s.status,
+            })),
+        [allCategories],
+    )
+    const csvHeaders = [
+        { label: 'ID', key: 'id' },
+        { label: 'Name', key: 'name' },
+        { label: 'Image', key: 'image' },
+        { label: 'Parent Category', key: 'parentCategoryName' },
+        { label: 'status', key: 'status' },
+    ]
+
     return (
-        <div className="flex items-center w-full">
-            <div className="flex-grow">
-                <CategorySearch onInputChange={onSearchChange} />
-            </div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
+            {/* <div className="flex-grow"> */}
+            <CategorySearch onInputChange={onSearchChange} />
+            <CategoryTableFilter
+                filterData={filterData}
+                setFilterData={setFilterData}
+            />
+            <Button icon={<TbCloudDownload/>}>Import</Button>
+            <Suspense fallback={<Button loading>Loading Export...</Button>}>
+                <CSVLink
+                    filename="categories.csv"
+                    data={csvData}
+                    headers={csvHeaders}
+                >
+                    <Button icon={<TbCloudUpload/>}>Export</Button>
+                </CSVLink>
+            </Suspense>
+            {/* </div> */}
             {/* No Filter button in this version */}
         </div>
     );
@@ -296,6 +491,13 @@ const Categories = () => { // Renamed Component
     const [categories, setCategories] = useState<CategoryItem[]>(initialDummyCategories); // Renamed state
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' });
     const [selectedCategories, setSelectedCategories] = useState<CategoryItem[]>([]); // Renamed state
+    
+    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    // State for Filters (matching the provided filter component schema)
+    const [filterData, setFilterData] = useState<CategoryFilterFormSchema>({
+        purchasedProducts: '',
+        purchaseChannel: [],
+    })
     // --- End Lifted State ---
 
     // --- Memoized Data Processing ---
@@ -351,6 +553,12 @@ const Categories = () => { // Renamed Component
 
 
     // --- Lifted Handlers (Update parameter types and state setters) ---
+    // Handler to update filter state (passed to filter component)
+    const handleApplyFilter = useCallback((newFilterData: CategoryFilterFormSchema) => {
+        setFilterData(newFilterData)
+        setTableData((prevTableData) => ({ ...prevTableData, pageIndex: 1 }))
+        setSelectedForms([])
+    }, []) // No dependencies needed as it only sets state
     const handleSetTableData = useCallback((data: TableQueries) => { setTableData(data); }, []);
     const handlePaginationChange = useCallback((page: number) => { handleSetTableData({ ...tableData, pageIndex: page }); }, [tableData, handleSetTableData]);
     const handleSelectChange = useCallback((value: number) => { handleSetTableData({ ...tableData, pageSize: Number(value), pageIndex: 1 }); setSelectedCategories([]); }, [tableData, handleSetTableData]);
@@ -526,7 +734,12 @@ const Categories = () => { // Renamed Component
 
                 {/* Tools Section */}
                 <div className="mb-4">
-                    <CategoryTableTools onSearchChange={handleSearchChange} /> {/* Use updated component */}
+                    <CategoryTableTools 
+                        onSearchChange={handleSearchChange}
+                        filterData={filterData}
+                        setFilterData={handleApplyFilter} // Pass the handler to update filter state
+                        allCategories={categories} // Pass data for export
+                    /> {/* Use updated component */}
                 </div>
 
                 {/* Table Section */}

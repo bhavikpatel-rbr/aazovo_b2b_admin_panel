@@ -1,8 +1,12 @@
 // src/views/your-path/BrandListing.tsx (New file name)
 
-import React, { useState, useMemo, useCallback, Ref } from 'react'
+import React, { useState, useMemo, useCallback, Ref, Suspense, lazy } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
+import { useForm, Controller } from 'react-hook-form' // Added for filter form
+import { zodResolver } from '@hookform/resolvers/zod' // Added for filter form
+import { z } from 'zod' // Added for filter form
+import type { ZodType } from 'zod' // Added for filter form
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -20,6 +24,9 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import { TbBuildingStore } from 'react-icons/tb' // Placeholder icon for brand icon
+import Checkbox from '@/components/ui/Checkbox' // Added for filter form
+import Input from '@/components/ui/Input' // Added for filter form
+import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // Added for filter form & renamed FormItem
 
 // Icons
 import {
@@ -29,8 +36,10 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
+    TbCloudUpload ,
     TbCloudDownload, // Keep for potential future export
     // TbUserPlus, // Replace with a more suitable icon
+    TbFilter, // Added for filter button
 } from 'react-icons/tb'
 
 // Types
@@ -38,9 +47,33 @@ import type {
     OnSortParam,
     ColumnDef,
     Row,
-    SortingFnOption,
+    // SortingFnOption,
 } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+
+// --- Lazy Load CSVLink ---
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
+// --- End Lazy Load ---
+
+// --- Define FormItem Type (Table Row Data) ---
+export type FormItem = {
+    id: string
+    name: string
+    status: 'active' | 'inactive'
+    // Add fields corresponding to filter schema
+    purchasedProducts?: string // Optional product associated with form
+    purchaseChannel?: string // Optional channel associated with form
+}
+// --- End FormItem Type Definition ---
+
+// --- Define Filter Schema Type (Matches the provided filter component) ---
+type BrandFilterFormSchema = {
+    purchasedProducts: string | any
+    purchaseChannel: Array<string> | any
+}
+// --- End Filter Schema Type ---
 
 // --- Define Item Type (Table Row Data) ---
 export type BrandItem = {
@@ -143,6 +176,15 @@ const initialDummyBrands: BrandItem[] = [
         mobileNo: '+1-310-555-3344',
         icon: '/img/brands/mu.svg',
     },
+]
+
+// Filter specific constant from the provided filter component
+const channelList = [
+    'Retail Stores',
+    'Online Retailers',
+    'Resellers',
+    'Mobile Apps',
+    'Direct Sales',
 ]
 // --- End Constants ---
 
@@ -296,91 +338,114 @@ const BrandSearch = React.forwardRef<HTMLInputElement, BrandSearchProps>(
 BrandSearch.displayName = 'BrandSearch'
 // --- End BrandSearch ---
 
-// --- SubscriberFilter Component ---
-const SubscriberFilter = ({
+// --- BrandTableFilter Component (As provided by user, adapted for props) ---
+const BrandTableFilter = ({
+    // Mimic the data structure the original hook would provide
     filterData,
     setFilterData,
 }: {
-    filterData: FilterFormSchema
-    setFilterData: (data: FilterFormSchema) => void
+    filterData: BrandFilterFormSchema
+    setFilterData: (data: BrandFilterFormSchema) => void
 }) => {
     const [dialogIsOpen, setIsOpen] = useState(false)
-    const openDialog = () => setIsOpen(true)
-    const onDialogClose = () => setIsOpen(false)
-    const { control, handleSubmit, reset, watch } = useForm<FilterFormSchema>({
-        defaultValues: filterData,
-        resolver: zodResolver(filterValidationSchema),
+
+    // Zod validation schema from the provided code
+    const validationSchema: ZodType<BrandFilterFormSchema> = z.object({
+        purchasedProducts: z.string().optional().default(''), // Made optional for better reset
+        purchaseChannel: z.array(z.string()).optional().default([]), // Made optional for better reset
     })
-    const dateRange = watch('dateRange')
+
+    const openDialog = () => {
+        setIsOpen(true)
+    }
+
+    const onDialogClose = () => {
+        setIsOpen(false)
+    }
+
+    const { handleSubmit, reset, control } = useForm<BrandFilterFormSchema>({
+        // Use the filterData passed from the parent as default values
+        defaultValues: filterData,
+        resolver: zodResolver(validationSchema),
+    })
+
+    // Watch for prop changes to reset the form if external state changes
     React.useEffect(() => {
         reset(filterData)
     }, [filterData, reset])
-    const onSubmit = (values: FilterFormSchema) => {
-        setFilterData(values)
-        onDialogClose()
+
+    const onSubmit = (values: BrandFilterFormSchema) => {
+        setFilterData(values) // Call the setter function passed from parent
+        setIsOpen(false)
     }
+
     const handleReset = () => {
-        const defaultVals = filterValidationSchema.parse({})
+        // Reset form using react-hook-form's reset
+        const defaultVals = validationSchema.parse({}) // Get default values from schema
         reset(defaultVals)
-        setFilterData(defaultVals)
-        onDialogClose()
+        // Optionally also immediately apply the reset filter state to the parent
+        // setFilterData(defaultVals);
+        // onDialogClose(); // Close after resetting if desired
     }
-    const activeFilterCount =
-        filterData.dateRange?.[0] || filterData.dateRange?.[1] ? 1 : 0
 
     return (
         <>
-            <Button
-                icon={<TbFilter />}
-                onClick={openDialog}
-                className="relative"
-            >
-                <span>Filter</span>{' '}
-                {activeFilterCount > 0 && (
-                    <Badge
-                        content={activeFilterCount}
-                        className="absolute -top-2 -right-2"
-                        innerClass="text-xs"
-                    />
-                )}
+            <Button icon={<TbFilter />} onClick={openDialog} className=''>
+                Filter
             </Button>
             <Dialog
                 isOpen={dialogIsOpen}
                 onClose={onDialogClose}
                 onRequestClose={onDialogClose}
-                width={500}
             >
-                <h4 className="mb-4">Filter Subscribers</h4>
+                <h4 className="mb-4">Filter Forms</h4>
                 <Form onSubmit={handleSubmit(onSubmit)}>
-                    <UiFormItem
-                        label="Subscription Date Range"
-                        className="mb-4"
-                    >
+                    {/* Input from the provided filter component */}
+                    <UiFormItem label="Products">
                         <Controller
-                            name="dateRange"
+                            name="purchasedProducts"
                             control={control}
                             render={({ field }) => (
-                                <DatePicker.RangePicker
-                                    placeholder="Select date range"
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                    inputFormat="YYYY-MM-DD"
-                                    inputPrefix={
-                                        <HiOutlineCalendar className="text-lg" />
-                                    }
+                                <Input
+                                    type="text"
+                                    autoComplete="off"
+                                    placeholder="Search by purchased product"
+                                    {...field}
                                 />
                             )}
                         />
                     </UiFormItem>
-                    {/* Status filter could be added here */}
+                    {/* Checkboxes from the provided filter component */}
+                    <UiFormItem label="Purchase Channel">
+                        <Controller
+                            name="purchaseChannel"
+                            control={control}
+                            render={({ field }) => (
+                                <Checkbox.Group
+                                    vertical
+                                    value={field.value || []} // Ensure value is array
+                                    onChange={field.onChange}
+                                >
+                                    {channelList.map((source, index) => (
+                                        <Checkbox
+                                            key={source + index}
+                                            // name={field.name} // Not needed when using Controller value/onChange
+                                            value={source}
+                                            className="mb-1" // Use mb-1 for spacing
+                                        >
+                                            {source}
+                                        </Checkbox>
+                                    ))}
+                                </Checkbox.Group>
+                            )}
+                        />
+                    </UiFormItem>
                     <div className="flex justify-end items-center gap-2 mt-6">
                         <Button type="button" onClick={handleReset}>
-                            {' '}
-                            Reset{' '}
+                            Reset
                         </Button>
                         <Button type="submit" variant="solid">
-                            {' '}
-                            Apply Filters{' '}
+                            Apply
                         </Button>
                     </div>
                 </Form>
@@ -388,20 +453,59 @@ const SubscriberFilter = ({
         </>
     )
 }
-// --- End SubscriberFilter ---
 
 // --- BrandTableTools Component ---
 const BrandTableTools = ({
     // Renamed component
     onSearchChange,
+    filterData,
+    setFilterData,
+    allBrands,
 }: {
     onSearchChange: (query: string) => void
+    filterData: BrandFilterFormSchema
+    setFilterData: (data: BrandFilterFormSchema) => void // Prop type for setter
+    allBrands: BrandItem[] // Pass all subscribers for export
 }) => {
+
+    // Prepare data for CSV
+    const csvData = useMemo(
+        () =>
+            allBrands.map((s) => ({
+                id: s.id,
+                name: s.name,
+                icon: s.icon,
+                mobileNo: s.mobileNo,
+                status: s.status,
+            })),
+        [allBrands],
+    )
+    const csvHeaders = [
+        { label: 'ID', key: 'id' },
+        { label: 'Name', key: 'name' },
+        { label: 'Icon', key: 'icon' },
+        { label: 'Mobile No', key: 'mobileNo' },
+        { label: 'status', key: 'status' },
+    ]
     return (
-        <div className="flex items-center w-full">
-            <div className="flex-grow">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
+            {/* <div className="flex-grow"> */}
                 <BrandSearch onInputChange={onSearchChange} />
-            </div>
+                <BrandTableFilter
+                    filterData={filterData}
+                    setFilterData={setFilterData}
+                />
+                <Button icon={<TbCloudDownload/>}>Import</Button>
+                <Suspense fallback={<Button loading>Loading Export...</Button>}>
+                    <CSVLink
+                        filename="brands.csv"
+                        data={csvData}
+                        headers={csvHeaders}
+                    >
+                        <Button icon={<TbCloudUpload/>}>Export</Button>
+                    </CSVLink>
+                </Suspense>
+            {/* </div> */}
             {/* Filter button could be added here if needed */}
         </div>
     )
@@ -545,6 +649,13 @@ const Brands = () => {
         query: '',
     })
     const [selectedBrands, setSelectedBrands] = useState<BrandItem[]>([]) // Renamed state
+
+    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    // State for Filters (matching the provided filter component schema)
+    const [filterData, setFilterData] = useState<BrandFilterFormSchema>({
+        purchasedProducts: '',
+        purchaseChannel: [],
+    })
     // --- End Lifted State ---
 
     // --- Memoized Data Processing ---
@@ -603,6 +714,14 @@ const Brands = () => {
     // --- End Memoized Data Processing ---
 
     // --- Lifted Handlers (Update parameter types and state setters) ---
+
+    // Handler to update filter state (passed to filter component)
+    const handleApplyFilter = useCallback((newFilterData: BrandFilterFormSchema) => {
+        setFilterData(newFilterData)
+        setTableData((prevTableData) => ({ ...prevTableData, pageIndex: 1 }))
+        setSelectedForms([])
+    }, []) // No dependencies needed as it only sets state
+
     const handleSetTableData = useCallback((data: TableQueries) => {
         setTableData(data)
     }, [])
@@ -843,13 +962,20 @@ const Brands = () => {
                 <div className="lg:flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Brands</h5>{' '}
                     {/* Updated title */}
-                    <BrandActionTools allBrands={brands} />{' '}
+                    <BrandActionTools 
+                        allBrands={brands} 
+                    />{' '}
                     {/* Use updated component/prop */}
                 </div>
 
                 {/* Tools Section */}
                 <div className="mb-4">
-                    <BrandTableTools onSearchChange={handleSearchChange} />{' '}
+                    <BrandTableTools 
+                        onSearchChange={handleSearchChange}  
+                        filterData={filterData}
+                        setFilterData={handleApplyFilter} // Pass the handler to update filter state
+                        allBrands={brands} // Pass data for export
+                    />{' '}
                     {/* Use updated component */}
                 </div>
 

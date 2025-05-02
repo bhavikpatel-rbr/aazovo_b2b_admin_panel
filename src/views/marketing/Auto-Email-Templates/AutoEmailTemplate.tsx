@@ -1,6 +1,6 @@
 // src/views/your-path/AutoEmailTemplatesListing.tsx (Complete Code)
 
-import React, { useState, useMemo, useCallback, Ref } from 'react'
+import React, { useState, useMemo, useCallback, Ref, Suspense, lazy } from 'react'
 import { Link, useNavigate } from 'react-router-dom' // Ensure react-router-dom is installed
 import cloneDeep from 'lodash/cloneDeep' // Ensure lodash is installed
 import classNames from 'classnames' // Ensure classnames is installed
@@ -42,11 +42,18 @@ import {
     TbX, // Icon for dismissing tags
     TbMailForward, // Icon for add button
     TbFileText, // Icon for Avatar placeholder
+    TbCloudUpload,
 } from 'react-icons/tb' // Ensure react-icons is installed
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common' // Ensure this type path is correct
+
+// --- Lazy Load CSVLink ---
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
+// --- End Lazy Load ---
 
 // --- Define Item Type ---
 export type AutoEmailTemplateItem = {
@@ -424,11 +431,31 @@ const TemplateTableTools = ({
     onSearchChange,
     filterData,
     setFilterData,
+    allAutoEmailTemplates
 }: {
     onSearchChange: (query: string) => void
     filterData: FilterFormSchema
     setFilterData: (data: FilterFormSchema) => void
+    allAutoEmailTemplates: AutoEmailTemplateItem[]
 }) => {
+
+    // Prepare data for CSV
+    const csvData = useMemo(
+        () =>
+            allAutoEmailTemplates.map((s) => ({
+                id: s.id,
+                emailType: s.emailType,
+                categoryName: s.categoryName,
+                departmentName: s.departmentName,
+            })),
+        [allAutoEmailTemplates],
+    )
+    const csvHeaders = [
+        { label: 'ID', key: 'id' },
+        { label: 'Email Type', key: 'emailType' },
+        { label: 'Category', key: 'categoryName' },
+        { label: 'Department', key: 'departmentName' },
+    ]
     return (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
             {' '}
@@ -436,6 +463,15 @@ const TemplateTableTools = ({
             <div className="flex-grow">
                 <TemplateSearch onInputChange={onSearchChange} />
             </div>
+            <Suspense fallback={<Button loading>Loading Export...</Button>}>
+                <CSVLink
+                    filename="AutoEmailTemplates.csv"
+                    data={csvData}
+                    headers={csvHeaders}
+                >
+                    <Button icon={<TbCloudUpload/>}>Export</Button>
+                </CSVLink>
+            </Suspense>
             <div className="flex-shrink-0">
                 <TemplateFilter
                     filterData={filterData}
@@ -948,6 +984,7 @@ const AutoEmailTemplatesListing = () => {
                         onSearchChange={handleSearchChange}
                         filterData={filterData}
                         setFilterData={handleApplyFilter} // Pass filter handler
+                        allAutoEmailTemplates={templates} // Pass data for export
                     />
                 </div>
 
