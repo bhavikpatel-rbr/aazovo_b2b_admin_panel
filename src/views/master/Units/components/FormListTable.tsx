@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Avatar from '@/components/ui/Avatar' // Can remove if forms don't have images
 import Tag from '@/components/ui/Tag'
 import Tooltip from '@/components/ui/Tooltip'
@@ -15,6 +15,12 @@ import {
 } from 'react-icons/tb'
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+import { useAppDispatch } from '@/reduxtool/store'
+import { useSelector } from 'react-redux'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+import { deletUnitAction, getUnitAction } from '@/reduxtool/master/middleware'
+import { Button, Dialog } from '@/components/ui'
+import FormListActionTools from './FormBuilderActionTools'
 
 // --- Define Form Type ---
 export type FormItem = {
@@ -48,7 +54,7 @@ const ActionColumn = ({
         <div className="flex items-center justify-end gap-3">
             {' '}
             {/* Align actions to end */}
-            <Tooltip title="Clone Form">
+            {/* <Tooltip title="Clone Form">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
@@ -56,8 +62,8 @@ const ActionColumn = ({
                 >
                     <TbCopy />
                 </div>
-            </Tooltip>
-            <Tooltip title="Change Status">
+            </Tooltip> */}
+            {/* <Tooltip title="Change Status">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
@@ -65,7 +71,7 @@ const ActionColumn = ({
                 >
                     <TbSwitchHorizontal />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
             <Tooltip title="Edit">
                 {' '}
                 {/* Keep Edit/View if needed */}
@@ -77,7 +83,7 @@ const ActionColumn = ({
                     <TbPencil />
                 </div>
             </Tooltip>
-            <Tooltip title="View">
+            <Tooltip title="delete">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
@@ -113,7 +119,12 @@ const initialDummyForms: FormItem[] = [
 
 const FormListTable = () => {
     const navigate = useNavigate()
-
+    const dispatch = useAppDispatch()
+    const masterData = useSelector(masterSelector)
+    const [isOpen, setIsOpen] = useState(false)
+    const [deleteId, setDeleteId] = useState<string>()
+    const [isOpenEdit, setIsOpenEdit] = useState(false)
+    const [editData, setEditData] = useState<any>()
     // --- Local State for Table Data and Selection ---
     const [isLoading, setIsLoading] = useState(false)
     const [forms, setForms] = useState<FormItem[]>(initialDummyForms) // Make forms stateful
@@ -125,6 +136,10 @@ const FormListTable = () => {
     })
     const [selectedForms, setSelectedForms] = useState<FormItem[]>([]) // Renamed state
     // --- End Local State ---
+
+    useEffect(() => {
+        dispatch(getUnitAction())
+    }, [])
 
     // Simulate data fetching and processing based on tableData
     const { pageData, total } = useMemo(() => {
@@ -173,9 +188,12 @@ const FormListTable = () => {
 
     // --- Action Handlers ---
     const handleEdit = (form: FormItem) => {
-        // Navigate to a hypothetical form edit page
-        console.log('Navigating to edit form:', form.id)
-        // navigate(`/forms/edit/${form.id}`) // Example navigation
+        setIsOpenEdit(true)
+        setEditData(form)
+    }
+    const handleCloseEdit = () => {
+        setIsOpenEdit(false)
+        setEditData(null)
     }
 
     const handleViewDetails = (form: FormItem) => {
@@ -226,26 +244,26 @@ const FormListTable = () => {
             },
             {
                 header: 'Unit Name',
-                accessorKey: 'unitName',
+                accessorKey: 'name',
                 // Enable sorting
                 enableSorting: true,
             },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                // Enable sorting
-                enableSorting: true,
-                cell: (props) => {
-                    const { status } = props.row.original
-                    return (
-                        <div className="flex items-center">
-                            <Tag className={statusColor[status]}>
-                                <span className="capitalize">{status}</span>
-                            </Tag>
-                        </div>
-                    )
-                },
-            },
+            // {
+            //     header: 'Status',
+            //     accessorKey: 'status',
+            //     // Enable sorting
+            //     enableSorting: true,
+            //     cell: (props) => {
+            //         const { status } = props.row.original
+            //         return (
+            //             <div className="flex items-center">
+            //                 <Tag className={statusColor[status]}>
+            //                     <span className="capitalize">{status}</span>
+            //                 </Tag>
+            //             </div>
+            //         )
+            //     },
+            // },
             {
                 header: '', // Keep header empty for actions
                 id: 'action',
@@ -258,9 +276,10 @@ const FormListTable = () => {
                         }
                         // Keep existing handlers if needed
                         onEdit={() => handleEdit(props.row.original)}
-                        onViewDetail={() =>
-                            handleViewDetails(props.row.original)
-                        }
+                        onViewDetail={() => {
+                            setDeleteId(props.row.original.id)
+                            setIsOpen(true)
+                        }}
                     />
                 ),
             },
@@ -333,30 +352,51 @@ const FormListTable = () => {
     // --- End Table Interaction Handlers ---
 
     return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={pageData} // Use processed page data
-            noData={!isLoading && forms.length === 0} // Check stateful forms length
-            // Remove skeleton avatar if not used
-            // skeletonAvatarColumns={[0]}
-            // skeletonAvatarProps={{ width: 28, height: 28 }}
-            loading={isLoading}
-            pagingData={{
-                total: total, // Use calculated total from filtered data
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-            }}
-            checkboxChecked={
-                (row) =>
-                    selectedForms.some((selected) => selected.id === row.id) // Use selectedForms state
-            }
-            onPaginationChange={handlePaginationChange}
-            onSelectChange={handleSelectChange}
-            onSort={handleSort}
-            onCheckBoxChange={handleRowSelect} // Pass correct handler
-            onIndeterminateCheckBoxChange={handleAllRowSelect} // Pass correct handler
-        />
+        <>
+            <DataTable
+                selectable
+                columns={columns}
+                data={masterData.unitData} // Use processed page data
+                noData={!isLoading && forms.length === 0} // Check stateful forms length
+                // Remove skeleton avatar if not used
+                // skeletonAvatarColumns={[0]}
+                // skeletonAvatarProps={{ width: 28, height: 28 }}
+                loading={isLoading}
+                pagingData={{
+                    total: total, // Use calculated total from filtered data
+                    pageIndex: tableData.pageIndex as number,
+                    pageSize: tableData.pageSize as number,
+                }}
+                checkboxChecked={
+                    (row) =>
+                        selectedForms.some((selected) => selected.id === row.id) // Use selectedForms state
+                }
+                onPaginationChange={handlePaginationChange}
+                onSelectChange={handleSelectChange}
+                onSort={handleSort}
+                onCheckBoxChange={handleRowSelect} // Pass correct handler
+                onIndeterminateCheckBoxChange={handleAllRowSelect} // Pass correct handler
+            />
+            <Dialog
+                isOpen={isOpen}
+                onClose={() => setIsOpen(false)}
+                closable
+                width={400}
+            >
+                <p className="text-xl font-semibold mb-4">Are you sure ?</p>
+                <p className="text-md font-semibold mb-4">Want to delete this unit ?</p>
+                <Button className='me-2' onClick={() => {
+                    setDeleteId("")
+                    setIsOpen(false)
+                }}>Cancel</Button>
+                <Button variant='solid' onClick={() => {
+                    dispatch(deletUnitAction({ id: deleteId }))
+                    setDeleteId("")
+                    setIsOpen(false)
+                }}>Delete</Button>
+            </Dialog>
+            <FormListActionTools isEdit isOpenEdit={isOpenEdit} editData={editData} handleCloseEdit={() => handleCloseEdit()}/>
+        </>
     )
 }
 
