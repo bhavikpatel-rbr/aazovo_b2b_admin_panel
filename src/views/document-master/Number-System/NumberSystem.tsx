@@ -235,12 +235,12 @@ const initialDummyData: NumberSystemItem[] = [
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
     onEdit,
-    onClone,
+    // onClone,
     onChangeStatus,
     onDelete,
 }: {
     onEdit: () => void
-    onClone: () => void
+    // onClone: () => void
     onChangeStatus?: () => void // Keep optional
     onDelete: () => void
 }) => {
@@ -249,8 +249,8 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
-            <Tooltip title="Clone Item">
+        <div className="flex items-center justify-center">
+            {/* <Tooltip title="Clone Item">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -263,7 +263,7 @@ const ActionColumn = ({
                     {' '}
                     <TbCopy />{' '}
                 </div>
-            </Tooltip>
+            </Tooltip> */}
             {/* Example: Conditionally render status change if needed */}
             {/* {onChangeStatus && (
                  <Tooltip title="Change Status">
@@ -725,11 +725,12 @@ const NumberSystem = () => {
                 },
             },
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
+                meta: { HeaderClass : "text-center" },
                 cell: (props) => (
                     <ActionColumn
-                        onClone={() => handleClone(props.row.original)}
+                        // onClone={() => handleClone(props.row.original)}
                         // onChangeStatus optional based on ActionColumn definition
                         onEdit={() => handleEdit(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}

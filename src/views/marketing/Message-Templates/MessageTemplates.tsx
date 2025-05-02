@@ -94,7 +94,7 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             {/* Edit Button */}
             <Tooltip title="Edit Template">
                 <div
@@ -185,7 +185,7 @@ const TemplateSearch = React.forwardRef<HTMLInputElement, TemplateSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Templates (ID, Name...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -230,7 +230,7 @@ const TemplateActionTools = ({
                 block
             >
                 {' '}
-                Add new Template{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -514,9 +514,10 @@ const MessageTemplates = () => {
             //    cell: props => { const date = props.row.original.createdDate; return date ? <span>{date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> : <span>-</span>; }
             // },
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
-                width: 100, // Adjusted width for fewer actions
+                size: 100, // Adjusted width for fewer actions
+                meta: {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onEdit={() => handleEdit(props.row.original)}
@@ -536,7 +537,7 @@ const MessageTemplates = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Message Templates Listing</h3>
+                    <h5 className="mb-4 lg:mb-0">Message Templates Listing</h5>
                     <TemplateActionTools allTemplates={templates} />
                 </div>
 

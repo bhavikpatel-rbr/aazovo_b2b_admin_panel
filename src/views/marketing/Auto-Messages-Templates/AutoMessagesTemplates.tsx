@@ -66,20 +66,20 @@ type FilterFormSchema = z.infer<typeof filterValidationSchema>
 
 // --- Constants ---
 const templateStatusColor: Record<MessageTemplateItem['status'], string> = {
-    active: 'bg-emerald-500',
-    inactive: 'bg-amber-500',
-    draft: 'bg-gray-500',
+    active: 'text-green-600 bg-green-200',
+    inactive: 'text-red-600 bg-red-200',
+    draft: 'text-blue-600 bg-blue-200',
 }
 
 // Optional: Tag colors for message types
 const messageTypeColor: Record<MessageTemplateItem['type'], string> = {
-    SMS: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100',
+    SMS: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100 text-[10px]',
     PushNotification:
-        'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-100',
-    InApp: 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-100',
+        'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-100 text-[10px]',
+    InApp: 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-100 text-[10px]',
     Webhook:
-        'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100',
-    Other: 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-100',
+        'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100 text-[10px]',
+    Other: 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-100 text-[10px]',
 }
 
 const initialDummyMessageTemplates: MessageTemplateItem[] = [
@@ -174,8 +174,8 @@ const ActionColumn = ({
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
     return (
-        <div className="flex items-center justify-end gap-2">
-            {onClone && (
+        <div className="flex items-center justify-center">
+            {/* {onClone && (
                 <Tooltip title="Clone Template">
                     <div
                         className={classNames(
@@ -189,7 +189,7 @@ const ActionColumn = ({
                         <TbCopy />
                     </div>
                 </Tooltip>
-            )}
+            )} */}
             <Tooltip title="Change Status">
                 <div
                     className={classNames(
@@ -289,7 +289,7 @@ const TemplateSearch = React.forwardRef<HTMLInputElement, TemplateSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Templates (ID, Name, Type, Trigger...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -551,7 +551,7 @@ const TemplateActionTools = ({
                 block
             >
                 {' '}
-                Add new Message Template{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -923,47 +923,72 @@ const AutoMessagesTemplates = () => {
                 header: 'ID',
                 accessorKey: 'id',
                 enableSorting: true,
-                width: 120,
+                size: 70,
             },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
-            {
-                header: 'Type/Channel',
-                accessorKey: 'type',
-                enableSorting: true,
-                width: 160,
-                cell: (props) => {
-                    const type = props.row.original.type
-                    const displayType = type.replace(/([A-Z])/g, ' $1').trim() // Add spaces
-                    return (
-                        <Tag
-                            className={`${messageTypeColor[type]} font-semibold border ${messageTypeColor[type].replace('bg-', 'border-').replace('/20', '')}`}
-                        >
-                            {displayType}
-                        </Tag>
-                    )
-                },
-            },
+            { header: 'Name', accessorKey: 'name', size: 200, enableSorting: true },
             {
                 header: 'Trigger Event',
                 accessorKey: 'triggerEvent',
                 enableSorting: true,
+                size: 220,
                 cell: (props) => {
                     const displayTrigger = props.row.original.triggerEvent
                         .replace(/_/g, ' ')
                         .replace(/\b\w/g, (l) => l.toUpperCase())
-                    return <span>{displayTrigger}</span>
+                    const type = props.row.original.type
+                    const displayType = type.replace(/([A-Z])/g, ' $1').trim()
+                    return (
+                        <div className=''>
+                            <span className='font-semibold'>{displayTrigger}</span>
+                            <br />
+                            <Tag
+                                className={`${messageTypeColor[type]} mt-1 font-semibold border
+                                ${messageTypeColor[type].replace('bg-', 'border-').replace('/20', '')}`}
+                            >
+                                {displayType}
+                            </Tag>
+                        </div>
+                    )
                 },
             },
+            // {
+            //     header: 'Type/Channel',
+            //     accessorKey: 'type',
+            //     enableSorting: true,
+            //     width: 160,
+            //     cell: (props) => {
+            //         const type = props.row.original.type
+            //         const displayType = type.replace(/([A-Z])/g, ' $1').trim() // Add spaces
+            //         return (
+            //             <Tag
+            //                 className={`${messageTypeColor[type]} font-semibold border ${messageTypeColor[type].replace('bg-', 'border-').replace('/20', '')}`}
+            //             >
+            //                 {displayType}
+            //             </Tag>
+            //         )
+            //     },
+            // },
+            // {
+            //     header: 'Trigger Event',
+            //     accessorKey: 'triggerEvent',
+            //     enableSorting: true,
+            //     cell: (props) => {
+            //         const displayTrigger = props.row.original.triggerEvent
+            //             .replace(/_/g, ' ')
+            //             .replace(/\b\w/g, (l) => l.toUpperCase())
+            //         return <span>{displayTrigger}</span>
+            //     },
+            // },
             {
                 header: 'Status',
                 accessorKey: 'status',
                 enableSorting: true,
-                width: 120,
+                size: 100,
                 cell: (props) => {
                     const { status } = props.row.original
                     return (
                         <Tag
-                            className={`${templateStatusColor[status]} text-white capitalize`}
+                            className={`${templateStatusColor[status]} capitalize`}
                         >
                             {status}
                         </Tag>
@@ -974,7 +999,7 @@ const AutoMessagesTemplates = () => {
                 header: 'Created Date',
                 accessorKey: 'createdDate',
                 enableSorting: true,
-                width: 180,
+                size: 160,
                 cell: (props) => {
                     const date = props.row.original.createdDate
                     return date ? (
@@ -991,12 +1016,13 @@ const AutoMessagesTemplates = () => {
                 },
             },
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
                 width: 130,
+                meta: {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
-                        onClone={() => handleClone(props.row.original)}
+                        // onClone={() => handleClone(props.row.original)}
                         onChangeStatus={() =>
                             handleChangeStatus(props.row.original)
                         }
@@ -1016,7 +1042,7 @@ const AutoMessagesTemplates = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Auto Message Templates</h3>
+                    <h5 className="mb-4 lg:mb-0">Auto Message Templates</h5>
                     <TemplateActionTools allTemplates={templates} />
                 </div>
 

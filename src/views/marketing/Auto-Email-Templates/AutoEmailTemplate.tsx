@@ -176,7 +176,7 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             {onClone && (
                 <Tooltip title="Clone Template">
                     <div
@@ -282,7 +282,7 @@ const TemplateSearch = React.forwardRef<HTMLInputElement, TemplateSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Auto Templates (ID, Type, Category...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -551,7 +551,7 @@ const TemplateActionTools = ({
                 block
             >
                 {' '}
-                Add new Auto Template{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -913,9 +913,10 @@ const AutoEmailTemplatesListing = () => {
             },
             // { header: 'Created Date', accessorKey: 'createdDate', ... }, // Optional
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
                 width: 100,
+                meta : { HeaderClass : "text-center" },
                 cell: (props) => (
                     <ActionColumn
                         onEdit={() => handleEdit(props.row.original)}
@@ -935,7 +936,7 @@ const AutoEmailTemplatesListing = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Auto Email Templates</h3>
+                    <h5 className="mb-4 lg:mb-0">Auto Email Templates</h5>
                     <TemplateActionTools allTemplates={templates} />
                 </div>
 

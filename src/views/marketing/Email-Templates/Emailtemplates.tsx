@@ -62,9 +62,9 @@ export type EmailTemplateItem = {
 
 // --- Constants ---
 const templateStatusColor: Record<EmailTemplateItem['status'], string> = {
-    active: 'bg-emerald-500',
-    inactive: 'bg-amber-500',
-    draft: 'bg-gray-500',
+    active: 'text-green-600 bg-green-200',
+    inactive: 'text-red-600 bg-red-200',
+    draft: 'text-blue-600 bg-blue-200',
 }
 
 const initialDummyTemplates: EmailTemplateItem[] = [
@@ -221,8 +221,8 @@ const ActionColumn = ({
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
     return (
-        <div className="flex items-center justify-end gap-2">
-            {onClone && (
+        <div className="flex items-center justify-center">
+            {/* {onClone && (
                 <Tooltip title="Clone Template">
                     <div
                         className={classNames(
@@ -236,7 +236,7 @@ const ActionColumn = ({
                         <TbCopy />
                     </div>
                 </Tooltip>
-            )}
+            )} */}
             <Tooltip title="Change Status">
                 <div
                     className={classNames(
@@ -336,7 +336,7 @@ const TemplateSearch = React.forwardRef<HTMLInputElement, TemplateSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Templates (Name, ID, Category...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -387,7 +387,7 @@ const TemplateActionTools = ({
             {/* <CSVLink ... /> */}{' '}
             <Button variant="solid" icon={<TbMail />} onClick={handleAdd} block>
                 {' '}
-                Add new Template{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -757,13 +757,28 @@ const Emailtemplates = () => {
     // --- Define Columns ---
     const columns: ColumnDef<EmailTemplateItem>[] = useMemo(
         () => [
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
             {
-                header: 'Template ID',
-                accessorKey: 'templateId',
+                header: 'Template',
+                accessorKey: 'template',
                 enableSorting: true,
-                width: 200,
+                size: 220,
+                cell: (props) => {
+                    const { templateId, name } = props.row.original
+                    return (
+                        <div className='flex flex-col'>
+                            <span className='text-xs font-semibold'>{name}</span>
+                            <span className='text-xs'>{templateId}</span>
+                        </div>
+                    )
+                },
             },
+            // {
+            //     header: 'Template ID',
+            //     accessorKey: 'templateId',
+            //     enableSorting: true,
+            //     width: 200,
+            // },
+            // { header: 'Template Name', accessorKey: 'name', enableSorting: true },
             {
                 header: 'Status',
                 accessorKey: 'status',
@@ -773,7 +788,7 @@ const Emailtemplates = () => {
                     const { status } = props.row.original
                     return (
                         <Tag
-                            className={`${templateStatusColor[status]} text-white capitalize`}
+                            className={`${templateStatusColor[status]} capitalize`}
                         >
                             {status}
                         </Tag>
@@ -784,7 +799,8 @@ const Emailtemplates = () => {
                 header: 'Targeting', // Combine Role/Dept/Designation
                 // Create a combined accessor or use a custom cell
                 id: 'targeting', // Important to have a unique ID if no accessorKey
-                enableSorting: false, // Sorting is complex
+                enableSorting: false, // Sorting is complex,
+                size: 250,
                 cell: (props) => {
                     const { role, department, designation } = props.row.original
                     const items: string[] = []
@@ -797,7 +813,7 @@ const Emailtemplates = () => {
                     return displayString ? (
                         <Tooltip
                             title={displayString}
-                            wrapperClass="whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] block"
+                            wrapperClass="overflow-hidden text-ellipsis max-w-[150px] block"
                         >
                             <span>{displayString}</span>
                         </Tooltip>
@@ -807,32 +823,48 @@ const Emailtemplates = () => {
                 },
             },
             {
-                header: 'Category',
-                accessorKey: 'category',
-                enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.category ?? '-'}</span>
-                ),
+                header: 'Template For',
+                id : "templeteFor",
+                enableSorting : true,
+                size: 250,
+                cell:(props)=>{
+                    const {category, subCategory, brand} = props.row.original
+                    return ( 
+                        <div className='flex flex-col'>
+                            <span className=''>{brand}</span>
+                            <span className='text-xs'>{category}</span>
+                            <span className='text-xs'>{subCategory}</span>
+                        </div>
+                    )
+                }
             },
-            {
-                header: 'Subcategory',
-                accessorKey: 'subCategory',
-                enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.subCategory ?? '-'}</span>
-                ),
-            },
-            {
-                header: 'Brand',
-                accessorKey: 'brand',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.brand ?? '-'}</span>,
-            },
+            // {
+            //     header: 'Category',
+            //     accessorKey: 'category',
+            //     enableSorting: true,
+            //     cell: (props) => (
+            //         <span>{props.row.original.category ?? '-'}</span>
+            //     ),
+            // },
+            // {
+            //     header: 'Subcategory',
+            //     accessorKey: 'subCategory',
+            //     enableSorting: true,
+            //     cell: (props) => (
+            //         <span>{props.row.original.subCategory ?? '-'}</span>
+            //     ),
+            // },
+            // {
+            //     header: 'Brand',
+            //     accessorKey: 'brand',
+            //     enableSorting: true,
+            //     cell: (props) => <span>{props.row.original.brand ?? '-'}</span>,
+            // },
             {
                 header: 'Variables',
                 accessorKey: 'variables',
                 enableSorting: true,
-                width: 100,
+                size: 140,
                 cell: (props) => {
                     const vars = props.row.original.variables
                     const count = vars?.length ?? 0
@@ -866,11 +898,11 @@ const Emailtemplates = () => {
                 header: 'Created Date',
                 accessorKey: 'createdDate',
                 enableSorting: true,
-                width: 180,
+                size: 300,
                 cell: (props) => {
                     const date = props.row.original.createdDate
                     return (
-                        <span>
+                        <span className='text-xs'>
                             {date.toLocaleDateString()}{' '}
                             {date.toLocaleTimeString([], {
                                 hour: '2-digit',
@@ -881,9 +913,10 @@ const Emailtemplates = () => {
                 },
             },
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
                 width: 130,
+                meta : {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onClone={() => handleClone(props.row.original)}
@@ -906,7 +939,7 @@ const Emailtemplates = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Email Templates Listing</h3>
+                    <h5 className="mb-4 lg:mb-0">Email Templates</h5>
                     <TemplateActionTools allTemplates={templates} />
                 </div>
 
