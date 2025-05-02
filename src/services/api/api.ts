@@ -21,9 +21,6 @@ const specificInstance: AxiosInstance = setupInterceptorsTo(instance)
 
 export const isAxiosError = (err: any): ErrorResponse | any => {
   if (axios.isAxiosError(err)) {
-    console.log('====================================');
-    console.log(err?.message );
-    console.log('====================================');
     if (err?.response && err?.response?.data) {
       if (err?.response?.status === 404) return { status: 404, statusText: err?.message } as ErrorResponse
       return err?.response?.data as ErrorResponse

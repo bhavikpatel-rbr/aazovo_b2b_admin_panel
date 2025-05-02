@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Avatar from '@/components/ui/Avatar' // Can remove if forms don't have images
 import Tag from '@/components/ui/Tag'
 import Tooltip from '@/components/ui/Tooltip'
@@ -15,6 +15,8 @@ import {
 } from 'react-icons/tb'
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+import { useDispatch } from 'react-redux'
+import { getUnitAction } from '@/reduxtool/master/middleware'
 
 // --- Define Form Type ---
 export type FormItem = {
@@ -93,26 +95,26 @@ const ActionColumn = ({
 // --- Initial Dummy Data ---
 const initialDummyForms: FormItem[] = [
     { id: 'F001', name: 'Test', status: 'active' },
-    { id: 'F002', name: 'Test', status: 'active'},
+    { id: 'F002', name: 'Test', status: 'active' },
     { id: 'F003', name: 'Test', status: 'active' },
-    { id: 'F004', name: 'Test', status: 'active'},
-    { id: 'F005', name: 'Test', status: 'active'},
-    { id: 'F006', name: 'Test', status: 'active'},
-    { id: 'F007', name: 'Test', status: 'active'},
-    { id: 'F008', name: 'Test', status: 'active'},
-    { id: 'F009', name: 'Test', status: 'active'},
+    { id: 'F004', name: 'Test', status: 'active' },
+    { id: 'F005', name: 'Test', status: 'active' },
+    { id: 'F006', name: 'Test', status: 'active' },
+    { id: 'F007', name: 'Test', status: 'active' },
+    { id: 'F008', name: 'Test', status: 'active' },
+    { id: 'F009', name: 'Test', status: 'active' },
     { id: 'F010', name: 'Test', status: 'active' },
-    { id: 'F011', name: 'Test', status: 'active'},
+    { id: 'F011', name: 'Test', status: 'active' },
     {
         id: 'F012',
-        name: 'Test', status: 'active',
+        name: 'Test',
+        status: 'active',
     },
 ]
 // --- End Dummy Data ---
 
 const FormListTable = () => {
     const navigate = useNavigate()
-
     // --- Local State for Table Data and Selection ---
     const [isLoading, setIsLoading] = useState(false)
     const [forms, setForms] = useState<FormItem[]>(initialDummyForms) // Make forms stateful
@@ -122,6 +124,7 @@ const FormListTable = () => {
         sort: { order: '', key: '' },
         query: '',
     })
+    
     const [selectedForms, setSelectedForms] = useState<FormItem[]>([]) // Renamed state
     // --- End Local State ---
 
