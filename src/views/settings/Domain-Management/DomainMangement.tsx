@@ -75,7 +75,7 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             <Tooltip title="Edit Domain">
                 <div
                     className={classNames(
@@ -163,7 +163,7 @@ const DomainSearch = React.forwardRef<HTMLInputElement, DomainSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Domains (ID, Domain, Country...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -215,7 +215,7 @@ const DomainActionTools = ({ allDomains }: { allDomains: DomainItem[] }) => {
             {/* <CSVLink ... /> */}{' '}
             <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
                 {' '}
-                Add new Domain{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -518,9 +518,10 @@ const DomainManagementListing = () => {
                 },
             },
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
-                width: 100,
+                size: 100,
+                meta:{ HeaderClass: "text-center" },
                 cell: (props) => (
                     <ActionColumn
                         onEdit={() => handleEdit(props.row.original)}
@@ -539,7 +540,7 @@ const DomainManagementListing = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Domain Management</h3>
+                    <h5 className="mb-4 lg:mb-0">Domain Management</h5>
                     <DomainActionTools allDomains={domains} />
                 </div>
 

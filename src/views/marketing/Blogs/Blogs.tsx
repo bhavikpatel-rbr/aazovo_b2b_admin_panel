@@ -65,9 +65,9 @@ type FilterFormSchema = z.infer<typeof filterValidationSchema>
 
 // --- Constants ---
 const blogStatusColor: Record<BlogItem['status'], string> = {
-    published: '!text-green-600 !bg-green-200 rounded-lg py-1 px-2',
-    draft: '!text-blue-600 !bg-blue-200 rounded-lg py-1 px-2',
-    archived: '!text-red-600 !bg-red-200 rounded-lg py-1 px-2',
+    published: 'text-green-600 bg-green-200 rounded-lg py-1 px-2',
+    draft: 'text-blue-600 bg-blue-200 rounded-lg py-1 px-2',
+    archived: 'text-red-600 bg-red-200 rounded-lg py-1 px-2',
 }
 
 const initialDummyBlogs: BlogItem[] = [
@@ -164,7 +164,7 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-start gap-2">
+        <div className="flex items-center justify-center gap-1">
             {onClone && (
                 <Tooltip title="Clone Blog">
                     <div
@@ -777,6 +777,7 @@ const Blogs = () => {
                 header: 'Icon',
                 accessorKey: 'icon',
                 enableSorting: false,
+                size: 100,
                 meta: {HeaderClass :'text-center'},
                 cell: (props) => {
                     const { icon, title } = props.row.original
@@ -797,6 +798,7 @@ const Blogs = () => {
             {
                 header: 'ID',
                 accessorKey: 'id',
+                size: 100,
                 enableSorting: true,
                 meta: {HeaderClass :'text-left'},
             },
@@ -804,14 +806,13 @@ const Blogs = () => {
                 header: 'Status',
                 accessorKey: 'status',
                 enableSorting: true,
-                meta: {HeaderClass :'text-center'},
+                size: 100,
                 cell: (props) => {
                     const { status } = props.row.original
                     return (
-                        <span className='!
-                        -center'>
+                        <span>
                         <Tag
-                            className={`${blogStatusColor[status]} text-white capitalize`}
+                            className={`${blogStatusColor[status]} capitalize`}
                         >
                             {status}
                         </Tag>
@@ -840,6 +841,7 @@ const Blogs = () => {
             {
                 header: 'Action',
                 id: 'action',
+                meta: { HeaderClass : "text-center" },
                 cell: (props) => (
                     <ActionColumn
                         // onClone={() => handleClone(props.row.original)}

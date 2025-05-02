@@ -29,8 +29,8 @@ export type FormItem = {
 
 // --- Updated Status Colors ---
 const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-emerald-200 dark:bg-emerald-200 text-gray-900 dark:text-gray-900',
-    inactive: 'bg-amber-200 dark:bg-amber-200 text-gray-900 dark:text-gray-900', // Example color for inactive
+    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
+    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
 }
 
 // --- ActionColumn Component ---
@@ -47,10 +47,10 @@ const ActionColumn = ({
     onChangeStatus: () => void
 }) => {
     return (
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-center gap-1">
             {' '}
             {/* Align actions to end */}
-            <Tooltip title="Clone Form">
+            {/* <Tooltip title="Clone Form">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
@@ -58,7 +58,7 @@ const ActionColumn = ({
                 >
                     <TbCopy />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
             <Tooltip title="Change Status">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
@@ -250,8 +250,9 @@ const FormListTable = () => {
                 },
             },
             {
-                header: '', // Keep header empty for actions
+                header: 'Action', // Keep header empty for actions
                 id: 'action',
+                meta: { HeaderClass : "text-center" },
                 cell: (props) => (
                     <ActionColumn
                         // Pass new handlers
