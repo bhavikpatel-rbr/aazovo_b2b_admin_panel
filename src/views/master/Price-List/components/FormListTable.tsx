@@ -37,8 +37,8 @@ export type FormItem = {
 
 // --- Updated Status Colors ---
 const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-emerald-200 dark:bg-emerald-200 text-gray-900 dark:text-gray-900',
-    inactive: 'bg-amber-200 dark:bg-amber-200 text-gray-900 dark:text-gray-900', // Example color for inactive
+    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
+    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
 }
 
 // --- ActionColumn Component ---
@@ -55,10 +55,10 @@ const ActionColumn = ({
     onChangeStatus: () => void
 }) => {
     return (
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-center gap-1">
             {' '}
             {/* Align actions to end */}
-            <Tooltip title="Clone Form">
+            {/* <Tooltip title="Clone Form">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
@@ -66,7 +66,7 @@ const ActionColumn = ({
                 >
                     <TbCopy />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
             <Tooltip title="Change Status">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
@@ -249,6 +249,7 @@ const FormListTable = () => {
                 accessorKey: 'id',
                 // Simple cell to display ID, enable sorting
                 enableSorting: true,
+                size:70,
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
@@ -256,66 +257,103 @@ const FormListTable = () => {
                 accessorKey: 'productName',
                 // Enable sorting
                 enableSorting: true,
+                size:260
             },
             {
-                header: 'Base Page',
-                accessorKey: 'basePrice',
-                // Enable sorting
+                header: 'Price Breakup',
+                id: 'pricing',
                 enableSorting: true,
+                size:260,
+                cell: (props) => {
+                    const {basePrice, gstPrice, usd } = props.row.original
+                    return (
+                        <div className='flex flex-col'>
+                            <span className='font-semibold'>Base Price: {basePrice}</span>
+                            <span className='text-xs'>GST: {gstPrice}</span>
+                            <span className='text-xs'>IN USD: {usd}</span>
+                        </div>
+                    )
+                }
             },
             {
-                header: 'GST Price',
-                accessorKey: 'gstPrice',
-                // Enable sorting
+                header: 'Cost Split',
+                id: 'costsplit',
                 enableSorting: true,
+                size:260,
+                cell: (props) => {
+                    const {expance, margin, interest, nlc } = props.row.original
+                    return (
+                        <div className='flex flex-col'>
+                            <span className='font-semibold'>Expance: {expance}</span>
+                            <span className='text-xs'>Margin: {margin}</span>
+                            <span className='text-xs'>Interest: {interest}</span>
+                            <span className='text-xs'>NLC: {nlc}</span>
+                        </div>
+                    )
+                }
             },
-            {
-                header: 'USD',
-                accessorKey: 'usd',
-                // Enable sorting
-                enableSorting: true,
-            },
-            {
-                header: 'Expance',
-                accessorKey: 'expance',
-                // Enable sorting
-                enableSorting: true,
-            },
-            {
-                header: 'Margin',
-                accessorKey: 'margin',
-                // Enable sorting
-                enableSorting: true,
-            },
-            {
-                header: 'Interest',
-                accessorKey: 'interest',
-                // Enable sorting
-                enableSorting: true,
-            },
-            {
-                header: 'NLC',
-                accessorKey: 'nlc',
-                // Enable sorting
-                enableSorting: true,
-            },
+            // {
+            //     header: 'Base Page',
+            //     accessorKey: 'basePrice',
+            //     // Enable sorting
+            //     enableSorting: true,
+            // },
+            // {
+            //     header: 'GST Price',
+            //     accessorKey: 'gstPrice',
+            //     // Enable sorting
+            //     enableSorting: true,
+            // },
+            // {
+            //     header: 'USD',
+            //     accessorKey: 'usd',
+            //     // Enable sorting
+            //     enableSorting: true,
+            // },
+            // {
+            //     header: 'Expance',
+            //     accessorKey: 'expance',
+            //     // Enable sorting
+            //     enableSorting: true,
+            // },
+            // {
+            //     header: 'Margin',
+            //     accessorKey: 'margin',
+            //     // Enable sorting
+            //     enableSorting: true,
+            // },
+            // {
+            //     header: 'Interest',
+            //     accessorKey: 'interest',
+            //     // Enable sorting
+            //     enableSorting: true,
+            // },
+            // {
+            //     header: 'NLC',
+            //     accessorKey: 'nlc',
+            //     // Enable sorting
+            //     enableSorting: true,
+            // },
             {
                 header: 'Sales Price',
                 accessorKey: 'salesPrice',
                 // Enable sorting
                 enableSorting: true,
+                size:220
             },
             {
                 header: 'Qty',
                 accessorKey: 'qty',
                 // Enable sorting
                 enableSorting: true,
+                size:100
             },
             {
                 header: 'Status',
                 accessorKey: 'status',
                 // Enable sorting
                 enableSorting: true,
+                size:120,
                 cell: (props) => {
                     const { status } = props.row.original
                     return (
@@ -328,8 +366,10 @@ const FormListTable = () => {
                 },
             },
             {
-                header: '', // Keep header empty for actions
+                header: 'Action', // Keep header empty for actions
                 id: 'action',
+                size: 160, // Adjust width for actions
+                meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         // Pass new handlers

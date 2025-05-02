@@ -19,6 +19,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
+import { IoEyeOutline } from "react-icons/io5";
 
 // Icons
 import {
@@ -37,7 +38,6 @@ import type {
     OnSortParam,
     ColumnDef,
     Row,
-    SortingFnOption,
 } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
 
@@ -169,22 +169,21 @@ const initialDummyData: ExportMappingItem[] = [
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
     onEdit,
-    onClone, // Keep clone? Might not be relevant for exports. Remove if not needed.
-    // onChangeStatus removed
-    onDelete,
+    // onClone, 
+    // onDelete,
 }: {
     onEdit: () => void
-    onClone?: () => void // Make clone optional
-    onDelete: () => void
+    // onClone?: () => void 
+    // onDelete: () => void
 }) => {
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             {/* Optional Clone Button */}
-            {onClone && (
+            {/* {onClone && (
                 <Tooltip title="Clone Record (if applicable)">
                     <div
                         className={classNames(
@@ -199,8 +198,8 @@ const ActionColumn = ({
                         <TbCopy />{' '}
                     </div>
                 </Tooltip>
-            )}
-            <Tooltip title="Edit Record">
+            )} */}
+            <Tooltip title="View Record">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -211,10 +210,10 @@ const ActionColumn = ({
                     onClick={onEdit}
                 >
                     {' '}
-                    <TbPencil />{' '}
+                    <IoEyeOutline />{' '}
                 </div>
             </Tooltip>
-            <Tooltip title="Delete Record">
+            {/* <Tooltip title="Delete Record">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -227,7 +226,7 @@ const ActionColumn = ({
                     {' '}
                     <TbTrash />{' '}
                 </div>
-            </Tooltip>
+            </Tooltip> */}
         </div>
     )
 }
@@ -293,7 +292,7 @@ const ExportMappingSearch = React.forwardRef<
     return (
         <DebouceInput
             ref={ref}
-            placeholder="Search Exports (User, Role, File, Reason...)" // Updated placeholder
+            placeholder="Quick Search..." // Updated placeholder
             suffix={<TbSearch className="text-lg" />}
             onChange={(e) => onInputChange(e.target.value)}
         />
@@ -668,26 +667,57 @@ const ExportMapping = () => {
     const columns: ColumnDef<ExportMappingItem>[] = useMemo(
         () => [
             {
-                header: 'User Name',
-                accessorKey: 'userName',
+                header: 'Exported By',
+                id: 'exported',
                 enableSorting: true,
+                size:100,
+                cell: (props) => {
+                    const {userName, userRole} = props.row.original
+                    return (
+                        <div className='flex flex-col'>
+                            <span className='font-semibold'> {userName}</span>
+                            <span className='text-xs'>{userRole}</span>
+                        </div>
+                    )
+                }
             },
-            { header: 'Role', accessorKey: 'userRole', enableSorting: true },
             {
-                header: 'Exported From',
-                accessorKey: 'exportFrom',
+                header: 'Exported',
+                id: 'exportFrom',
                 enableSorting: true,
+                size:200,
+                cell: (props) => {
+                    const {exportFrom, fileName} = props.row.original
+                    return (
+                        <div className='flex flex-col'>
+                            <span className='font-semibold'> {exportFrom}</span>
+                            <span className='text-xs'>{fileName}</span>
+                        </div>
+                    )
+                }
             },
-            {
-                header: 'File Name',
-                accessorKey: 'fileName',
-                enableSorting: true,
-            },
-            { header: 'Reason', accessorKey: 'reason', enableSorting: false }, // Maybe don't sort reason?
+            // {
+            //     header: 'User Name',
+            //     accessorKey: 'userName',
+            //     enableSorting: true,
+            // },
+            // { header: 'Role', accessorKey: 'userRole', enableSorting: true },
+            // {
+            //     header: 'Exported',
+            //     accessorKey: 'exportFrom',
+            //     enableSorting: true,
+            // },
+            // {
+            //     header: 'File Name',
+            //     accessorKey: 'fileName',
+            //     enableSorting: true,
+            // },
+            { header: 'Reason', accessorKey: 'reason', enableSorting: false, size:200 }, // Maybe don't sort reason?
             {
                 header: 'Date',
                 accessorKey: 'exportDate',
                 enableSorting: true,
+                size:200,
                 // Format the date for display
                 cell: (props) => {
                     const date = props.row.original.exportDate
@@ -705,6 +735,22 @@ const ExportMapping = () => {
                 //     return timeA - timeB;
                 // }
             },
+            {
+                header: 'Action',
+                id: 'action',
+                width: 80, // Adjust width for actions
+                meta:{HeaderClass: "text-center"},
+                cell: (props) => (
+                    <ActionColumn
+                        // onClone={() => handleClone(props.row.original)}
+                        // onChangeStatus={() =>
+                        //     handleChangeStatus(props.row.original)
+                        // }
+                        onEdit={() => handleEdit(props.row.original)}
+                        // onDelete={() => handleDelete(props.row.original)}
+                    />
+                ),
+            },
         ],
         [handleClone, handleEdit, handleDelete], // Update dependencies
     )
@@ -716,7 +762,7 @@ const ExportMapping = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Export Mappings</h3>{' '}
+                    <h5 className="mb-4 lg:mb-0">Export Mappings</h5>{' '}
                     {/* Updated title */}
                     <ExportMappingActionTools
                         allMappings={exportMappings}

@@ -64,8 +64,8 @@ type FilterFormSchema = {
 
 // --- Constants ---
 const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-emerald-200 dark:bg-emerald-200 text-gray-900 dark:text-gray-900',
-    inactive: 'bg-amber-200 dark:bg-amber-200 text-gray-900 dark:text-gray-900',
+    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
+    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600',
 }
 
 const initialDummyForms: FormItem[] = [
@@ -157,8 +157,8 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
-            <Tooltip title="Clone Form">
+        <div className="flex items-center justify-center">
+            {/* <Tooltip title="Clone Form">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -170,7 +170,7 @@ const ActionColumn = ({
                 >
                     <TbCopy />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
             <Tooltip title="Change Status">
                 <div
                     className={classNames(
@@ -752,13 +752,14 @@ const Documents = () => {
     // --- Define Columns in Parent ---
     const columns: ColumnDef<FormItem>[] = useMemo(
         () => [
-            { header: 'ID', accessorKey: 'id', enableSorting: true },
-            { header: 'Form Name', accessorKey: 'name', enableSorting: true },
+            { header: 'ID', accessorKey: 'id', enableSorting: true, size:70 },
+            { header: 'Documents Name', accessorKey: 'name', enableSorting: true, size:260 },
             // Example column using one of the new fields
             {
-                header: 'Channel',
+                header: 'Documents Type',
                 accessorKey: 'purchaseChannel',
                 enableSorting: true,
+                size:160
             },
             {
                 header: 'Status',
@@ -776,8 +777,10 @@ const Documents = () => {
                 },
             },
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
+                size: 100, // Adjust width for actions
+                meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onClone={() => handleCloneForm(props.row.original)}
