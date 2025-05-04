@@ -32,25 +32,33 @@ export const addUnitAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addUnitAsync(data)
       if (response?.data?.status === true) {
-        
         dispatch(getUnitAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
             type: "success",
             messageText: response?.data?.message || "success",
           }))
+        // Return the successful payload
         return response?.data?.data
       }
+      // If status is not true, dispatch error message and reject
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
           messageText: response?.data?.message || "failed",
         }))
-      return rejectWithValue(response)
+      // Reject with the response data for potential use in the component
+      return rejectWithValue(response?.data)
     } catch (error: unknown) {
+       // Handle network or other errors
+       dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: "An unexpected error occurred.", // Generic message for catch block
+        }))
       return rejectWithValue(error as Error)
     }
   }
