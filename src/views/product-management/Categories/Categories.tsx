@@ -40,6 +40,7 @@ import {
     TbCloudUpload ,
     TbCloudDownload, // Keep for potential future export
     TbFilter, // Added for filter button
+    TbPlus
 } from 'react-icons/tb';
 
 // Types
@@ -427,7 +428,7 @@ const CategoryActionTools = ({ allCategories }: { allCategories: CategoryItem[] 
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbCategoryPlus className="text-xl" />} // Changed icon
+                icon={<TbPlus className="text-xl" />} // Changed icon
                 onClick={() => console.log('Navigate to Add New Category page')}
                 // onClick={() => navigate('/categories/create')}
                 block

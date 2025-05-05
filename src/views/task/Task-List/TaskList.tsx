@@ -80,7 +80,7 @@ const TaskList = () => {
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">{pageTitle}</h3>
+                    <h5 className="mb-4 lg:mb-0">{pageTitle}</h5>
                     <TaskActionTools allTasks={tasks} pageTitle={pageTitle} />
                 </div>
                 <div className="mb-2">

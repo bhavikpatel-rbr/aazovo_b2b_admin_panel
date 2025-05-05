@@ -35,7 +35,9 @@ import {
     TbSearch,
     TbCloudDownload,
     TbUserPlus,
-    TbFilter, // Added for filter button
+    TbFilter,
+    TbPlus,
+    TbCloudUpload, // Added for filter button
 } from 'react-icons/tb'
 
 // Types
@@ -421,6 +423,7 @@ const FormListTableTools = ({
                 filterData={filterData}
                 setFilterData={setFilterData}
             />
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
 }
@@ -451,7 +454,7 @@ const FormListActionTools = ({ allForms }: { allForms: FormItem[] }) => {
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbUserPlus />}
+                icon={<TbPlus />}
                 onClick={() => console.log('Navigate to Add New Form page')}
                 block
             >

@@ -18,7 +18,7 @@ import Dialog from '@/components/ui/Dialog' // Needed for viewing details
 import ConfirmDialog from '@/components/shared/ConfirmDialog' // Keep if bulk delete is wanted
 import StickyFooter from '@/components/shared/StickyFooter' // Keep if bulk delete is wanted
 import DebouceInput from '@/components/shared/DebouceInput'
-import { TbEye, TbMail, TbFileText } from 'react-icons/tb' // View icon
+import { TbEye, TbMail, TbFileText, TbFilter, TbCloudUpload } from 'react-icons/tb' // View icon
 
 // Icons
 import {
@@ -190,10 +190,14 @@ const CampaignTableTools = ({
     onSearchChange: (query: string) => void
 }) => {
     return (
-        <div className="flex items-center w-full">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <div className="flex-grow">
                 <CampaignSearch onInputChange={onSearchChange} />
             </div>
+            <Button icon={<TbFilter />} className=''>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
 }
@@ -230,7 +234,7 @@ const CampaignActionTools = ({
         <div className="flex flex-col md:flex-row gap-3">
             {' '}
             {/* <CSVLink ... /> */}{' '}
-            <Button variant="solid" icon={<TbMail />} onClick={handleAdd} block>
+            <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
                 {' '}
                 Create Campaign{' '}
             </Button>{' '}

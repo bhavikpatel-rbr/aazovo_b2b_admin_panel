@@ -37,7 +37,8 @@ import {
     TbSearch,
     TbCloudDownload,
     TbPlus,
-    TbFilter, // Added for filter button
+    TbFilter,
+    TbCloudUpload, // Added for filter button
 } from 'react-icons/tb'
 
 // Types
@@ -64,8 +65,8 @@ type FilterFormSchema = {
 
 // --- Constants ---
 const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-green-200 dark:bg-green-200 text-green-900 dark:text-green-900',
-    inactive: 'bg-red-200 dark:bg-red-200 text-red-900 dark:text-red-900',
+    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
+    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600',
 }
 
 const initialDummyForms: FormItem[] = [
@@ -417,6 +418,7 @@ const FormListTableTools = ({
                 filterData={filterData}
                 setFilterData={setFilterData}
             />
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
 }

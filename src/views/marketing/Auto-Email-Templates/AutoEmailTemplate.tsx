@@ -457,11 +457,17 @@ const TemplateTableTools = ({
         { label: 'Department', key: 'departmentName' },
     ]
     return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             {' '}
             {/* Increased gap */}
             <div className="flex-grow">
                 <TemplateSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex-shrink-0">
+                <TemplateFilter
+                    filterData={filterData}
+                    setFilterData={setFilterData}
+                />
             </div>
             <Suspense fallback={<Button loading>Loading Export...</Button>}>
                 <CSVLink
@@ -472,12 +478,6 @@ const TemplateTableTools = ({
                     <Button icon={<TbCloudUpload/>}>Export</Button>
                 </CSVLink>
             </Suspense>
-            <div className="flex-shrink-0">
-                <TemplateFilter
-                    filterData={filterData}
-                    setFilterData={setFilterData}
-                />
-            </div>
         </div>
     )
 }
@@ -582,7 +582,7 @@ const TemplateActionTools = ({
             {/* <CSVLink ... /> */}{' '}
             <Button
                 variant="solid"
-                icon={<TbMailForward />}
+                icon={<TbPlus />}
                 onClick={handleAdd}
                 block
             >

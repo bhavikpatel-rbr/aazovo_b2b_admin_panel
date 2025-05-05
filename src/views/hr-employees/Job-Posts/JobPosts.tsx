@@ -24,6 +24,8 @@ import {
     TbMapPin,
     TbUsers,
     TbFileDescription,
+    TbFilter,
+    TbCloudUpload,
 } from 'react-icons/tb' // Icons
 
 // Icons
@@ -157,8 +159,8 @@ const ActionColumn = ({
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
     return (
-        <div className="flex items-center justify-end gap-2">
-            {onClone && (
+        <div className="flex items-center justify-center">
+            {/* {onClone && (
                 <Tooltip title="Clone Job Post">
                     <div
                         className={classNames(
@@ -172,7 +174,7 @@ const ActionColumn = ({
                         <TbCopy />
                     </div>
                 </Tooltip>
-            )}
+            )} */}
             <Tooltip title="Change Status">
                 <div
                     className={classNames(
@@ -272,7 +274,7 @@ const JobPostSearch = React.forwardRef<HTMLInputElement, JobPostSearchProps>(
         return (
             <DebouceInput
                 ref={ref}
-                placeholder="Search Job Posts (Title, Dept, Location...)"
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
             />
@@ -289,10 +291,14 @@ const JobPostTableTools = ({
     onSearchChange: (query: string) => void
 }) => {
     return (
-        <div className="flex items-center w-full">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <div className="flex-grow">
                 <JobPostSearch onInputChange={onSearchChange} />
             </div>
+            <Button icon={<TbFilter />} className=''>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
     // Filter button could be added here
@@ -321,7 +327,7 @@ const JobPostActionTools = ({ allPosts }: { allPosts: JobPostItem[] }) => {
             {/* <CSVLink ... /> */}{' '}
             <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
                 {' '}
-                Add new Job Post{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -674,6 +680,7 @@ const JobPostsListing = () => {
             {
                 header: 'Job Title',
                 accessorKey: 'jobTitle',
+                size:120,
                 enableSorting: true,
             },
             {
@@ -685,13 +692,13 @@ const JobPostsListing = () => {
                 header: 'Description',
                 accessorKey: 'description',
                 enableSorting: false, // Sorting by long text is usually not helpful
-                width: 300, // You might need to adjust this width
+                size: 300, // You might need to adjust this width
                 cell: (props) => (
-                    <Tooltip title={props.row.original.description} wrap>
+                    <Tooltip title={props.row.original.description} >
                         {' '}
                         {/* Tooltip shows full description */}
                         {/* Span displays truncated text */}
-                        <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-xs md:max-w-sm lg:max-w-md">
+                        <span className="block whitespace-nowrap overflow-hidden text-ellipsis w-xs md:w-sm lg:w-xs">
                             {' '}
                             {/* Adjust max-w-* as needed */}
                             {props.row.original.description}
@@ -717,9 +724,10 @@ const JobPostsListing = () => {
             },
             // { header: 'Created Date', ... }, // Optional
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
-                width: 130,
+                size: 130,
+                meta : {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onEdit={() => handleEdit(props.row.original)}
@@ -742,7 +750,7 @@ const JobPostsListing = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Job Posts Listing</h3>
+                    <h5 className="mb-4 lg:mb-0">Job Posts Listing</h5>
                     <JobPostActionTools allPosts={jobPosts} />
                 </div>
 

@@ -18,7 +18,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { TbBriefcase } from 'react-icons/tb' // Placeholder icon
+import { TbBriefcase, TbCloudUpload, TbFilter } from 'react-icons/tb' // Placeholder icon
 
 // Icons
 import {
@@ -76,7 +76,7 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-center">
             {/* Edit Button */}
             <Tooltip title="Edit Departments">
                 <div
@@ -167,7 +167,7 @@ const DesignationSearch = React.forwardRef<
     return (
         <DebouceInput
             ref={ref}
-            placeholder="Search Departments (ID, Name...)"
+            placeholder="Quick Search..."
             suffix={<TbSearch className="text-lg" />}
             onChange={(e) => onInputChange(e.target.value)}
         />
@@ -183,10 +183,14 @@ const DesignationTableTools = ({
     onSearchChange: (query: string) => void
 }) => {
     return (
-        <div className="flex items-center w-full">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <div className="flex-grow">
                 <DesignationSearch onInputChange={onSearchChange} />
             </div>
+            <Button icon={<TbFilter />} className=''>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
     // Filter component removed
@@ -216,7 +220,7 @@ const DesignationActionTools = ({
             {/* <CSVLink ... /> */}{' '}
             <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
                 {' '}
-                Add new Departments{' '}
+                Add New{' '}
             </Button>{' '}
         </div>
     )
@@ -495,9 +499,10 @@ const Departments = () => {
             { header: 'Name', accessorKey: 'name', enableSorting: true },
             // Add other columns like description if needed
             {
-                header: '',
+                header: 'Action',
                 id: 'action',
                 width: 100,
+                meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onEdit={() => handleEdit(props.row.original)}
@@ -516,7 +521,7 @@ const Departments = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h3 className="mb-4 lg:mb-0">Departments Listing</h3>
+                    <h5 className="mb-4 lg:mb-0">Departments Listing</h5>
                     <DesignationActionTools allDesignations={designations} />
                 </div>
 
