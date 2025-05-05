@@ -23,7 +23,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { TbBuildingStore } from 'react-icons/tb' // Placeholder icon for brand icon
+import { TbBuildingStore, TbPlus } from 'react-icons/tb' // Placeholder icon for brand icon
 import Checkbox from '@/components/ui/Checkbox' // Added for filter form
 import Input from '@/components/ui/Input' // Added for filter form
 import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // Added for filter form & renamed FormItem
@@ -543,7 +543,7 @@ const BrandActionTools = ({ allBrands }: { allBrands: BrandItem[] }) => {
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbBuildingStore className="text-lg" />} // Changed icon
+                icon={<TbPlus className="text-lg" />} // Changed icon
                 onClick={() => console.log('Navigate to Add New Brand page')}
                 // onClick={() => navigate('/brands/create')}
                 block

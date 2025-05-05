@@ -63,7 +63,7 @@ const ActionColumn = ({
             </Tooltip> */}
             <Tooltip title="Edit">
                 <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
                     role="button"
                     onClick={onEdit}
                 >
@@ -72,7 +72,7 @@ const ActionColumn = ({
             </Tooltip>
             <Tooltip title="Delete">
                 <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
                     role="button"
                     onClick={onDelete}
                 >

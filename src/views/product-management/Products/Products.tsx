@@ -39,7 +39,7 @@ import {
     TbCloudDownload,
     TbFilter,
     TbCloudUpload,
-    TbCategoryPlus, // Using as placeholder for add product
+    TbPlus, // Using as placeholder for add product
 } from 'react-icons/tb'
 
 // Types
@@ -627,7 +627,7 @@ const ProductActionTools = ({
             </CSVLink> */}
             <Button
                 variant="solid"
-                icon={<TbBox className="text-lg" />}
+                icon={<TbPlus className="text-lg" />}
                 onClick={handleAddProduct}
                 block
             >

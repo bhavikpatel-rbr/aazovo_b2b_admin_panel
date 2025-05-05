@@ -369,17 +369,17 @@ const SubscriberTableTools = ({
             </div>
             {/* Filter button and Export button grouped */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-shrink-0">
-                <SubscriberFilter
+                {/* <SubscriberFilter
                     filterData={filterData}
                     setFilterData={setFilterData}
-                />
+                /> */}
                 <Suspense fallback={<Button loading>Loading Export...</Button>}>
                     <CSVLink
                         filename="subscribers.csv"
                         data={csvData}
                         headers={csvHeaders}
                     >
-                        <Button icon={<TbCloudDownload />}> Export CSV </Button>
+                        <Button icon={<TbCloudDownload />}> Export </Button>
                     </CSVLink>
                 </Suspense>
             </div>

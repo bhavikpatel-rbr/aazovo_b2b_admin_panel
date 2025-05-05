@@ -26,7 +26,7 @@ import DebouceInput from '@/components/shared/DebouceInput'
 import Checkbox from '@/components/ui/Checkbox'
 import { Form, FormItem as UiFormItem } from '@/components/ui/Form'
 import Badge from '@/components/ui/Badge'
-import { TbMessageChatbot, TbFilter, TbX } from 'react-icons/tb' // Icons
+import { TbMessageChatbot, TbFilter, TbX, TbCloudUpload } from 'react-icons/tb' // Icons
 
 // Icons
 import {
@@ -433,7 +433,7 @@ const TemplateTableTools = ({
     setFilterData: (data: FilterFormSchema) => void
 }) => {
     return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <div className="flex-grow">
                 <TemplateSearch onInputChange={onSearchChange} />
             </div>
@@ -443,6 +443,7 @@ const TemplateTableTools = ({
                     setFilterData={setFilterData}
                 />
             </div>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
 }
@@ -546,7 +547,7 @@ const TemplateActionTools = ({
             {/* <CSVLink ... /> */}{' '}
             <Button
                 variant="solid"
-                icon={<TbMessageChatbot />}
+                icon={<TbPlus />}
                 onClick={handleAdd}
                 block
             >

@@ -28,7 +28,7 @@ const FormListActionTools = () => {
                 icon={<TbPlus className="text-lg" />}
                 onClick={() => navigate('/concepts/customers/customer-create')}
             >
-                Add new Unit
+                Add New
             </Button>
         </div>
     )

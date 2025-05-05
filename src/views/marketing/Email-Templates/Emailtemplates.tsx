@@ -19,7 +19,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { TbMail, TbVariable } from 'react-icons/tb' // Placeholder icons
+import { TbCloudUpload, TbFilter, TbMail, TbVariable } from 'react-icons/tb' // Placeholder icons
 
 // Icons
 import {
@@ -353,10 +353,14 @@ const TemplateTableTools = ({
     onSearchChange: (query: string) => void
 }) => {
     return (
-        <div className="flex items-center w-full">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <div className="flex-grow">
                 <TemplateSearch onInputChange={onSearchChange} />
             </div>
+            <Button icon={<TbFilter />} className=''>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
 }
@@ -385,7 +389,7 @@ const TemplateActionTools = ({
         <div className="flex flex-col md:flex-row gap-3">
             {' '}
             {/* <CSVLink ... /> */}{' '}
-            <Button variant="solid" icon={<TbMail />} onClick={handleAdd} block>
+            <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
                 {' '}
                 Add New{' '}
             </Button>{' '}

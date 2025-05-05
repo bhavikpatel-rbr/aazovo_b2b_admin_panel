@@ -457,7 +457,7 @@ const TemplateTableTools = ({
         { label: 'Status', key: 'status' },
     ]
     return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <div className="flex-grow">
                 <TemplateSearch onInputChange={onSearchChange} />
             </div>
@@ -578,7 +578,7 @@ const TemplateActionTools = ({
             {/* <CSVLink ... /> */}{' '}
             <Button
                 variant="solid"
-                icon={<TbMailForward />}
+                icon={<TbPlus />}
                 onClick={handleAdd}
                 block
             >

@@ -37,6 +37,7 @@ import {
     TbChecks,
     TbSearch,
     TbCloudDownload,
+    TbCloudUpload,
     TbPlus,
 } from 'react-icons/tb';
 
@@ -79,8 +80,8 @@ export const ActionColumn = ({ onEdit, onChangeStatus, onDelete, onClone }: { on
     const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
     return (
-        <div className="flex items-center justify-end gap-2">
-            {onClone && ( <Tooltip title="Clone Task"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400')} role="button" onClick={onClone}><TbCopy /></div></Tooltip> )}
+        <div className="flex items-center justify-center">
+            {/* {onClone && ( <Tooltip title="Clone Task"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400')} role="button" onClick={onClone}><TbCopy /></div></Tooltip> )} */}
             <Tooltip title="Change Status"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400')} role="button" onClick={onChangeStatus}><TbSwitchHorizontal /></div></Tooltip>
             <Tooltip title="Edit Task"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
             <Tooltip title="Delete Task"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
@@ -104,7 +105,7 @@ export const TaskTable = ({ columns, data, loading, pagingData, selectedTasks, o
 // --- TaskSearch Component ---
 type TaskSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 export const TaskSearch = React.forwardRef<HTMLInputElement, TaskSearchProps>(({ onInputChange }, ref) => {
-    return <DebouceInput ref={ref} placeholder="Search Tasks (ID, Note, User...)" suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />;
+    return <DebouceInput ref={ref} placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />;
 });
 TaskSearch.displayName = 'TaskSearch';
 // --- End TaskSearch ---
@@ -146,7 +147,16 @@ export const TaskFilter = ({ filterData, setFilterData, uniqueAssignees, uniqueS
 
 // --- TaskTableTools Component ---
 export const TaskTableTools = ({ onSearchChange, filterData, setFilterData, uniqueAssignees, uniqueStatuses }: { onSearchChange: (query: string) => void; filterData: FilterFormSchema; setFilterData: (data: FilterFormSchema) => void; uniqueAssignees: string[]; uniqueStatuses: TaskItemStatus[]; }) => {
-    return ( <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full"> <div className="flex-grow"><TaskSearch onInputChange={onSearchChange} /></div> <div className="flex-shrink-0"><TaskFilter filterData={filterData} setFilterData={setFilterData} uniqueAssignees={uniqueAssignees} uniqueStatuses={uniqueStatuses} /></div> </div> );
+    return ( 
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full"> 
+        <div className="flex-grow">
+            <TaskSearch onInputChange={onSearchChange} />
+        </div> 
+        <div className="flex-shrink-0">
+            <TaskFilter filterData={filterData} setFilterData={setFilterData} uniqueAssignees={uniqueAssignees} uniqueStatuses={uniqueStatuses} />
+        </div>
+        <Button icon={<TbCloudUpload/>}>Export</Button>
+    </div> );
 };
 // --- End TaskTableTools ---
 
@@ -176,7 +186,7 @@ export const TaskActionTools = ({ allTasks, pageTitle }: { allTasks: TaskItem[],
     const csvHeaders = [ { label: "ID", key: "id" }, { label: "Status", key: "status" }, { label: "Note", key: "note" }, { label: "Assigned To", key: "assignTo" }, { label: "Created By", key: "createdBy" }, { label: "Created Date", key: "createdDate" } ];
     const handleAdd = () => console.log(`Navigate to Add New ${pageTitle} page`); // Adjust route as needed
 
-    return ( <div className="flex flex-col md:flex-row gap-3"> {/* <CSVLink ... /> */} <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block> Add new Task </Button> </div> );
+    return ( <div className="flex flex-col md:flex-row gap-3"> {/* <CSVLink ... /> */} <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block> Add New </Button> </div> );
 };
 // --- End TaskActionTools ---
 
@@ -246,11 +256,11 @@ export const useTaskListingLogic = (initialData: TaskItem[]) => {
 
     const columns: ColumnDef<TaskItem>[] = useMemo(() => [
         { header: 'Status', accessorKey: 'status', enableSorting: true, width: 140, cell: props => { const { status } = props.row.original; const displayStatus = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); return ( <Tag className={`${taskStatusColor[status]} text-white capitalize`}>{displayStatus}</Tag> ); } },
-        { header: 'Note', accessorKey: 'note', enableSorting: false, cell: props => (<span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">{props.row.original.note}</span>) }, // Truncate long notes
-        { header: 'Assigned To', accessorKey: 'assignTo', enableSorting: true, cell: props => (<div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span>{props.row.original.assignTo}</span></div>) },
-        { header: 'Created By', accessorKey: 'createdBy', enableSorting: true, cell: props => (<div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span>{props.row.original.createdBy}</span></div>) },
-        { header: 'Created Date', accessorKey: 'createdDate', enableSorting: true, width: 180, cell: props => { const date = props.row.original.createdDate; return <span>{date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>; } },
-        { header: '', id: 'action', width: 130, cell: (props) => ( <ActionColumn onEdit={() => handleEdit(props.row.original)} onDelete={() => handleDelete(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} onClone={() => handleClone(props.row.original)} /> ), },
+        { header: 'Note', accessorKey: 'note', enableSorting: false, size: 250, cell: props => (<span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">{props.row.original.note}</span>) }, // Truncate long notes
+        { header: 'Assigned To', accessorKey: 'assignTo', enableSorting: true, size:200, cell: props => (<div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span>{props.row.original.assignTo}</span></div>) },
+        { header: 'Created By', accessorKey: 'createdBy', enableSorting: true,size:200, cell: props => (<div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span>{props.row.original.createdBy}</span></div>) },
+        { header: 'Created Date', accessorKey: 'createdDate', enableSorting: true, size: 180, cell: props => { const date = props.row.original.createdDate; return <span>{date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>; } },
+        { header: 'Action', id: 'action', meta :{HeaderClass: "text-center"}, size: 130, cell: (props) => ( <ActionColumn onEdit={() => handleEdit(props.row.original)} onDelete={() => handleDelete(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} onClone={() => handleClone(props.row.original)} /> ), },
     ], [handleEdit, handleDelete, handleChangeStatus, handleClone]); // Include handlers
 
     return {

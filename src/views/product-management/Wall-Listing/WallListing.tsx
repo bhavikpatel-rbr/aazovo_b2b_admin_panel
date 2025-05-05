@@ -29,12 +29,15 @@ import {
     TbChecks,
     TbSearch,
     TbCloudDownload,
+    TbCloudUpload,
+    TbFilter,
     TbPlus, // Generic add icon
 } from 'react-icons/tb';
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
+import { CSVLink } from 'react-csv';
 
 // --- Define Item Type (Table Row Data) ---
 export type WallItem = {
@@ -99,12 +102,12 @@ const ActionColumn = ({
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
 
     return (
-        <div className="flex items-center justify-end gap-2">
-            {onClone && (
+        <div className="flex items-center justify-center">
+            {/* {onClone && (
                 <Tooltip title="Clone Record">
                     <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400' )} role="button" onClick={onClone} > <TbCopy /> </div>
                 </Tooltip>
-             )}
+             )} */}
             <Tooltip title="Change Status">
                 <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400' )} role="button" onClick={onChangeStatus} > <TbSwitchHorizontal /> </div>
             </Tooltip>
@@ -190,25 +193,12 @@ ItemSearch.displayName = 'ItemSearch';
 // --- ItemTableTools Component ---
 const ItemTableTools = ({ // Renamed component
     onSearchChange,
+    allItems
 }: {
-    onSearchChange: (query: string) => void;
+    onSearchChange: (query: string) => void,
+    allItems: WallItem[]
 }) => {
-    return (
-        <div className="flex items-center w-full">
-            <div className="flex-grow">
-                <ItemSearch onInputChange={onSearchChange} />
-            </div>
-            {/* Filter button could be added here */}
-        </div>
-    );
-};
-// --- End ItemTableTools ---
-
-
-// --- ItemActionTools Component ---
-const ItemActionTools = ({ allItems }: { allItems: WallItem[] }) => { // Renamed prop and component
-    const navigate = useNavigate();
-
+    
     // Prepare data for CSV
     const csvData = useMemo(() => {
         return allItems.map(item => ({
@@ -226,12 +216,33 @@ const ItemActionTools = ({ allItems }: { allItems: WallItem[] }) => { // Renamed
         { label: "Product Status", key: "productStatus" }, { label: "Intent", key: "intent" },
         { label: "Created Date", key: "createdDate" },
       ];
+    
+    return (
+        <div className="flex md:flex-row md:items-center md:justify-between gap-2 w-full">
+            <div className="flex-grow">
+                <ItemSearch onInputChange={onSearchChange} />
+            </div>
+            {/* Filter button could be added here */}
+            <Button icon={<TbFilter />} className=''>
+                Filter
+            </Button>
+            <Button icon={<TbCloudDownload/>}>Import</Button>
+            <CSVLink filename="wall_items.csv" data={csvData} headers={csvHeaders} >
+                <Button icon={<TbCloudUpload />} className="w-full" block> Export </Button>
+            </CSVLink>
+        </div>
+    );
+};
+// --- End ItemTableTools ---
+
+
+// --- ItemActionTools Component ---
+const ItemActionTools = ({ allItems }: { allItems: WallItem[] }) => { // Renamed prop and component
+    const navigate = useNavigate();
+
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/* <CSVLink filename="wall_items.csv" data={csvData} headers={csvHeaders} >
-                <Button icon={<TbCloudDownload />} className="w-full" block> Download </Button>
-            </CSVLink> */}
             <Button
                 variant="solid"
                 icon={<TbPlus className="text-lg" />} // Generic Add
@@ -459,7 +470,7 @@ const WallListing = () => { // Renamed Component
                      const { productName, productImage } = props.row.original;
                      return (
                          <div className="flex items-center gap-2">
-                             <Avatar size={30} shape="square" src={productImage} icon={<TbBox />} />
+                             <Avatar size={30} shape="circle" src={productImage} icon={<TbBox />} />
                              <span className="font-semibold">{productName}</span>
                          </div>
                      )
@@ -494,7 +505,8 @@ const WallListing = () => { // Renamed Component
                 }
             },
             {
-                header: '', id: 'action', width: 130,
+                header: 'Action', id: 'action', width: 130,
+                meta : {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         onClone={() => handleClone(props.row.original)}
@@ -522,7 +534,7 @@ const WallListing = () => { // Renamed Component
 
                 {/* Tools Section */}
                 <div className="mb-4">
-                    <ItemTableTools onSearchChange={handleSearchChange} />
+                    <ItemTableTools onSearchChange={handleSearchChange} allItems={initialDummyWallItems}/>
                 </div>
 
                 {/* Table Section */}

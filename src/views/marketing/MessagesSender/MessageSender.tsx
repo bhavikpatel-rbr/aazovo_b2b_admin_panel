@@ -26,7 +26,9 @@ import {
     TbBrandWhatsapp,
     TbAppWindow,
     TbAlertTriangle,
-    TbCircleCheck, // Icons
+    TbCircleCheck,
+    TbFilter,
+    TbCloudUpload, // Icons
 } from 'react-icons/tb'
 
 // Icons
@@ -302,10 +304,14 @@ const SenderTableTools = ({
     onSearchChange: (query: string) => void
 }) => {
     return (
-        <div className="flex items-center w-full">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <div className="flex-grow">
                 <SenderSearch onInputChange={onSearchChange} />
             </div>
+            <Button icon={<TbFilter />} className=''>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
     // Filters could be added here

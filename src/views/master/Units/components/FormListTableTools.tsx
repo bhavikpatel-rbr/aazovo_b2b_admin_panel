@@ -1,5 +1,7 @@
 import cloneDeep from 'lodash/cloneDeep';
 import FormListSearch from './FormListSearch'; // Assuming FormListSearch uses DebouceInput correctly
+import { Button } from '@/components/ui';
+import { TbCloudUpload, TbFilter } from 'react-icons/tb';
 
 // Define props including the search handler
 type FormListTableToolsProps = {
@@ -24,6 +26,10 @@ const FormListTableTools = ({ onSearch, initialQuery = '' }: FormListTableToolsP
                 // value={initialQuery}
             />
             {/* <FormListTableFilter /> */} {/* Keep filters if you have them */}
+            <Button icon={<TbFilter />} className=''>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     );
 };
