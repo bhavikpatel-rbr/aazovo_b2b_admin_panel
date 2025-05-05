@@ -8,6 +8,7 @@ import * as Yup from 'yup'
 import { Form } from 'formik'
 import { useAppDispatch } from '@/reduxtool/store'
 import { addUnitAction, editUnitAction } from '@/reduxtool/master/middleware'
+import { unwrapResult } from '@reduxjs/toolkit'
 
 type FormDataEdit = {
     isEdit?: boolean,
@@ -23,19 +24,30 @@ const FormListActionTools = ({
     handleCloseEdit
 }: FormDataEdit) => {
     const [isOpen, setIsOpen] = useState(false)
+    const [isLoading, setIsLoading] = useState(false); // Add loading state, initially false
     const dispatch = useAppDispatch()
-    const handleSubmit = (values: { name: string; }) => {
-        if (!isEdit) {
-            const result =  dispatch(addUnitAction(values))
-            console.log("result",result);
-            setIsOpen(false)
-        } else {
-            const result = dispatch(editUnitAction({ name: values.name, id: editData?.id }))
-console.log(result);
-
-            handleCloseEdit?.()
+    const handleSubmit = async (values: { name: string; }) => {
+        setIsLoading(true); // <-- Show loader
+        try {
+            if (!isEdit) {
+                const actionResult = await dispatch(addUnitAction(values));
+                unwrapResult(actionResult); // Check for success/failure
+                console.log("Add Unit Action Successful");
+                setIsOpen(false); // Close modal on success
+            } else {
+                const actionResult = await dispatch(editUnitAction({ name: values.name, id: editData?.id }));
+                unwrapResult(actionResult); // Check for success/failure
+                console.log("Edit Unit Action Successful");
+                handleCloseEdit?.(); // Close edit modal on success
+            }
+        } catch (error) {
+            // Action was rejected, error message handled in thunk
+            console.error("Action Failed:", error);
+            // Do NOT close the modal here
+        } finally {
+            setIsLoading(false); // <-- Hide loader regardless of success/failure
         }
-    }
+    };
     const { customerList } = useCustomerList()
 
     const validationSchema = Yup.object({
@@ -94,6 +106,7 @@ console.log(result);
                                 >
                                     Submit
                                 </button>
+                                
                             </div>
                         </Form>
                     )}

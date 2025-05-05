@@ -5,6 +5,7 @@ export interface CommonProps {
     className?: string
     children?: ReactNode
     style?: CSSProperties
+    
 }
 
 export type TableQueries = {
@@ -12,6 +13,7 @@ export type TableQueries = {
     pageIndex?: number
     pageSize?: number
     query?: string
+    
     sort?: {
         order: 'asc' | 'desc' | ''
         key: string | number
