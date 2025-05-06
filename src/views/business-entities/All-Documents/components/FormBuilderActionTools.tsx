@@ -63,9 +63,9 @@ const FormListActionTools = ({
                 icon={<TbPlus className="text-lg" />}
                 onClick={() => setIsOpen(true)}
             >
-                Add Currency
+                Add Document
             </Button>}
-            <Dialog
+            {/* <Dialog
                 isOpen={isOpen || isOpenEdit}
                 onClose={() => {
                     setIsOpen(false)
@@ -74,7 +74,7 @@ const FormListActionTools = ({
                 closable
                 width={400}
             >
-                <h2 className="text-xl font-semibold mb-4">Add Currency</h2>
+                <h2 className="text-xl font-semibold mb-4">Add Document</h2>
 
                 <Formik
                     initialValues={{ name: editData?.name || '' }}
@@ -84,23 +84,21 @@ const FormListActionTools = ({
                     {({ isSubmitting, isValid }) => (
                         <Form className="flex flex-col gap-4">
                             <div>
-                                <label className="block mb-1 font-medium" htmlFor="currencySymbol">
-                                    Currency Symbol
+                                <label className="block mb-1 font-medium" htmlFor="name">
+                                    Name
                                 </label>
                                 <Field
-                                    id="currencySymbol"
-                                    name="currencySymbol"
+                                    id="name"
+                                    name="name"
                                     className="w-full border border-gray-300 rounded px-3 py-2"
-                                    placeholder="Enter your Currency Symbol"
+                                    placeholder="Enter your document name"
                                 />
                                 <ErrorMessage
-                                    name="currencySymbol"
+                                    name="name"
                                     component="div"
                                     className="text-red-500 text-sm mt-1"
                                 />
                             </div>
-
-                            
 
                             <div className="flex justify-end mt-4">
                                 <button
@@ -115,7 +113,7 @@ const FormListActionTools = ({
                         </Form>
                     )}
                 </Formik>
-            </Dialog>
+            </Dialog> */}
         </div>
     )
 }

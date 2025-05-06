@@ -63,9 +63,9 @@ const FormListActionTools = ({
                 icon={<TbPlus className="text-lg" />}
                 onClick={() => setIsOpen(true)}
             >
-                Add Currency
+                Add Partner
             </Button>}
-            <Dialog
+            {/* <Dialog
                 isOpen={isOpen || isOpenEdit}
                 onClose={() => {
                     setIsOpen(false)
@@ -115,7 +115,7 @@ const FormListActionTools = ({
                         </Form>
                     )}
                 </Formik>
-            </Dialog>
+            </Dialog> */}
         </div>
     )
 }
