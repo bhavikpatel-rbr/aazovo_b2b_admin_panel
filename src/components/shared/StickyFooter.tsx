@@ -58,7 +58,8 @@ const StickyFooter = (props: StickyFooterProps) => {
             className={classNames(
                 'static -bottom-[1px]',
                 className,
-                isSticky ? classNames(stickyClass, 'sticky') : defaultClass,
+                // isSticky ? classNames(stickyClass, 'sticky') : defaultClass,
+                classNames(stickyClass, 'sticky')
             )}
             {...rest}
         >

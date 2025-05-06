@@ -41,8 +41,9 @@ import type {
     Row,
 } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
-import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
+import { Card, Drawer, Tag, Form, FormItem, Input, Select, DatePicker } from '@/components/ui'
 import { Controller, useForm } from 'react-hook-form'
+import { DatePickerRangeProps } from '@/components/ui/DatePicker/DatePickerRange'
 
 // --- Define Item Type (Table Row Data) ---
 export type ExportMappingItem = {
@@ -171,14 +172,8 @@ const initialDummyData: ExportMappingItem[] = [
 
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
-    // onEdit,
-    // onClone, 
-    // onDelete,
     data
 }: {
-    // onEdit: () => void
-    // onClone?: () => void 
-    // onDelete: () => void
     data : ExportMappingItem
 }) => {
     
@@ -379,22 +374,57 @@ const ExportMappingTableTools = ({
 }: {
     onSearchChange: (query: string) => void
 }) => {
-
+    
+    const { DatePickerRange } = DatePicker
     type ExportMappingFilterSchema = {
-        userRole : String,
-        exportFrom : String,
-        exportDate : Date
+        userRole : object,
+        exportFrom : object,
+        fileExtensions: object,
+        exportDate : DatePickerRangeProps,
     }
-
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
     const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
     const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
 
-    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>({
+        defaultValues : {
+            userRole : [],
+            exportFrom : [],
+            fileExtensions: [],
+            exportDate : ""
+        }
+    })
 
     const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
         console.log("filter data", data)
     }
+    const userRoles = [
+        { value : "Admin", label: "Admin"},
+        { value : "Manager", label: "Manager"},
+        { value : "Support Agent", label: "Support Agent"},
+        { value : "Sales Rep", label: "Sales Rep"},
+        { value : "Analyst", label: "Analyst"},
+        { value : "Developer", label: "Developer"},
+        { value : "Marketing", label: "Marketing"},
+        { value : "HR Manager", label: "HR Manager"},
+    ]
+    const exportFrom = [
+        {value : "User List", label: "User List"},
+        {value : "Order History", label: "Order History"},
+        {value : "Support Tickets", label: "Support Tickets"},
+        {value : "Product Catalog", label: "Product Catalog"},
+        {value : "Customer List", label: "Customer List"},
+        {value : "API Logs", label: "API Logs"},
+    ]
+    // const fileExtensions = [".csv",".xlsx",".json",".pdf",".log",".bak"]
+    const fileExtensions = [
+        {value:".csv",label:".csv"},
+        {value:".xlsx",label:".xlsx"},
+        {value:".json",label:".json"},
+        {value:".pdf",label:".pdf"},
+        {value:".log",label:".log"},
+        {value:".bak",label:".bak"},
+    ]
 
     return (
         <div className="flex items-center w-full gap-2">
@@ -410,28 +440,79 @@ const ExportMappingTableTools = ({
                 isOpen={isFilterDrawerOpen}
                 onClose={closeFilterDrawer}
                 onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                bodyClass=""
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='grid grid-rows-[auto_80px]'>
+                    <div ClassName="overflow-scroll">
+                        <FormItem label='User Role'>
+                            <Controller
+                                control={control}
+                                name='userRole'
+                                render={({field})=>{
+                                    return <Select 
+                                        isMulti
+                                        options={userRoles}
+                                        onChange={(selected) => {
+                                            const values = selected.map(option => option.value)
+                                            field.onChange(values)
+                                        }}
+                                    />
+                                }}
+                            />
+                        </FormItem>
+                        <FormItem label='Export From'>
+                            <Controller
+                                control={control}
+                                name='exportFrom'
+                                render={({field})=>(
+                                    <Select 
+                                        isMulti
+                                        options={exportFrom}
+                                        onChange={(selected) => {
+                                            const values = selected.map(option => option.value)
+                                            field.onChange(values)
+                                        }}
+                                    />
+                                )}
+                            />
+                        </FormItem>
+                        <FormItem label='File Type'>
+                            <Controller
+                                control={control}
+                                name='fileExtensions'
+                                render={({field})=>(
+                                    <Select 
+                                        isMulti
+                                        options={fileExtensions}
+                                        onChange={(selected) => {
+                                            const values = selected.map(option => option.value)
+                                            field.onChange(values)
+                                        }}
+                                    />
+                                )}
+                            />
+                        </FormItem>
+                        <FormItem label='Export Date'>
+                            <Controller
+                                control={control}
+                                name='exportDate'
+                                render={({field})=>(
+                                    <DatePickerRange
+                                        placeholder="Select dates range"
+                                        {...field}
+                                    />
+                                )}
+                            />
+                        </FormItem>
+                    </div>
+                    <div className="text-right border-t border-t-gray-200 w-full absolute bottom-0 py-4 right-0 pr-6 bg-white dark:bg-gray-700">
+                        <Button size="sm" className="mr-2" type='button' onClick={closeFilterDrawer}>
                             Cancel
                         </Button>
-                    </div>  
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Curreny Symbol'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Currency Symbol"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
+                        <Button size="sm" variant="solid" type='submit'>
+                            Save
+                        </Button>
+                    </div> 
                 </Form>
             </Drawer>
         </div>
@@ -513,7 +594,7 @@ const ExportMappingSelected = ({
     return (
         <>
             <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
+                className="flex items-center m-0 justify-between py-4 bg-white dark:bg-gray-800"
                 stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
             >
                 <div className="flex items-center justify-between w-full px-4 sm:px-8">
@@ -538,7 +619,7 @@ const ExportMappingSelected = ({
                         <Button
                             size="sm"
                             variant="plain"
-                            className="text-red-600 hover:text-red-500"
+                            className="text-red-500 border-2 border-red-400 hover:text-red-500"
                             onClick={handleDeleteClick}
                         >
                             {' '}
@@ -557,9 +638,9 @@ const ExportMappingSelected = ({
                 onConfirm={handleConfirmDelete}
             >
                 <p>
-                    Are you sure you want to delete the selected export record
-                    {selectedMappings.length > 1 ? 's' : ''}? This action cannot
-                    be undone.
+                    Are you sure you want to delete the selected item(s) ?
+                    {/* {selectedMappings.length > 1 ? 's' : ''}? This action cannot */}
+                    {/* be undone. */}
                 </p>
             </ConfirmDialog>
         </>
@@ -724,52 +805,6 @@ const ExportMapping = () => {
         [],
     ) // Add setSelectedMappings if linting complains
 
-    const handleEdit = useCallback(
-        (mapping: ExportMappingItem) => {
-            // Use new type
-            console.log('Edit mapping:', mapping.id)
-            // navigate(`/export-mappings/edit/${mapping.id}`);
-        },
-        [navigate],
-    )
-
-    const handleClone = useCallback((mappingToClone: ExportMappingItem) => {
-        // Use new type
-        console.log('Cloning mapping:', mappingToClone.id)
-        // Decide if cloning makes sense and implement logic if kept
-        // const newId = `EM${Math.floor(Math.random() * 9000) + 1000}`;
-        // const clonedMapping: ExportMappingItem = { ... };
-        // setExportMappings((prev) => [clonedMapping, ...prev]);
-        toast.push(
-            <Notification
-                title="Clone not implemented"
-                type="info"
-                duration={2000}
-            />,
-        )
-    }, []) // Add setExportMappings if cloning implemented
-
-    const handleDelete = useCallback((mappingToDelete: ExportMappingItem) => {
-        // Use new type
-        console.log('Deleting mapping:', mappingToDelete.id)
-        setExportMappings(
-            (
-                currentMappings, // Use new state setter
-            ) =>
-                currentMappings.filter(
-                    (mapping) => mapping.id !== mappingToDelete.id,
-                ),
-        )
-        setSelectedMappings(
-            (
-                prevSelected, // Use new state setter
-            ) =>
-                prevSelected.filter(
-                    (mapping) => mapping.id !== mappingToDelete.id,
-                ),
-        )
-    }, []) // Add setExportMappings, setSelectedMappings if linting complains
-
     const handleDeleteSelected = useCallback(() => {
         console.log(
             'Deleting selected mappings:',
@@ -790,7 +825,7 @@ const ExportMapping = () => {
                 header: 'Exported By',
                 id: 'exported',
                 enableSorting: true,
-                size:100,
+                size:180,
                 cell: (props) => {
                     const {userName, userRole} = props.row.original
                     return (
@@ -816,29 +851,12 @@ const ExportMapping = () => {
                     )
                 }
             },
-            // {
-            //     header: 'User Name',
-            //     accessorKey: 'userName',
-            //     enableSorting: true,
-            // },
-            // { header: 'Role', accessorKey: 'userRole', enableSorting: true },
-            // {
-            //     header: 'Exported',
-            //     accessorKey: 'exportFrom',
-            //     enableSorting: true,
-            // },
-            // {
-            //     header: 'File Name',
-            //     accessorKey: 'fileName',
-            //     enableSorting: true,
-            // },
             { header: 'Reason', accessorKey: 'reason', enableSorting: false, size:200 }, // Maybe don't sort reason?
             {
                 header: 'Date',
                 accessorKey: 'exportDate',
                 enableSorting: true,
                 size:200,
-                // Format the date for display
                 cell: (props) => {
                     const date = props.row.original.exportDate
                     return (
@@ -848,12 +866,6 @@ const ExportMapping = () => {
                         </span>
                     )
                 },
-                // Sorting logic is handled in useMemo or can use a sortingFn:
-                // sortingFn: (rowA, rowB, columnId) => {
-                //     const timeA = rowA.original[columnId].getTime();
-                //     const timeB = rowB.original[columnId].getTime();
-                //     return timeA - timeB;
-                // }
             },
             {
                 header: 'Action',
@@ -862,17 +874,12 @@ const ExportMapping = () => {
                 meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
-                        // onClone={() => handleClone(props.row.original)}
-                        // onChangeStatus={() =>
-                        //     handleChangeStatus(props.row.original)
-                        // }
-                        // onDelete={() => handleDelete(props.row.original)}
                         data={props.row.original}
                     />
                 ),
             },
         ],
-        [handleClone, handleEdit, handleDelete], // Update dependencies
+        [], // Update dependencies
     )
     // --- End Define Columns ---
 
@@ -884,10 +891,6 @@ const ExportMapping = () => {
                 <div className="lg:flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Export Mapping</h5>{' '}
                     {/* Updated title */}
-                    {/* <ExportMappingActionTools
-                        allMappings={exportMappings}
-                    />{' '} */}
-                    {/* Use updated component/prop */}
                 </div>
 
                 {/* Tools Section */}

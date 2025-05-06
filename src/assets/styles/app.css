@@ -13,7 +13,7 @@
     opacity: 0;
 }
 
-table tr th,
-table tr td{
+.table-default tr th,
+.table-default tr td{
     padding : 8px 0 8px 20px;
 }
