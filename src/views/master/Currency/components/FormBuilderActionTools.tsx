@@ -8,6 +8,25 @@ const FormListActionTools = () => {
     const navigate = useNavigate()
 
     const { customerList } = useCustomerList()
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
+
+    const { handleSubmit, control} = useForm<AddCurrencyFormSchema>({
+        defaultValues: {
+            symbol: '',
+            code: '',
+            status: '',
+        },
+    })
+
+    const addCurrencySubmitHandler = async (data: AddCurrencyFormSchema) =>{
+        console.log("DAta is ", data)
+    }
+
+    type AddCurrencyFormSchema = {
+        symbol: string,
+        code: string
+        status: string
+    }
 
     return (
         <div className="flex flex-col md:flex-row gap-3">

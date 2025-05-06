@@ -31,8 +31,9 @@ import {
     TbSearch,
     TbCloudDownload, // Keep for potential future export
     TbUserPlus,
+    TbFilter,
 } from 'react-icons/tb'
-
+import userIcon from "/img/avatars/thumb-1.jpg"
 // Types
 import type {
     OnSortParam,
@@ -40,6 +41,8 @@ import type {
     Row,
 } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
+import { Controller, useForm } from 'react-hook-form'
 
 // --- Define Item Type (Table Row Data) ---
 export type ExportMappingItem = {
@@ -168,14 +171,21 @@ const initialDummyData: ExportMappingItem[] = [
 
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
-    onEdit,
+    // onEdit,
     // onClone, 
     // onDelete,
+    data
 }: {
-    onEdit: () => void
+    // onEdit: () => void
     // onClone?: () => void 
     // onDelete: () => void
+    data : ExportMappingItem
 }) => {
+    
+    const [isViewDrawerOpen , setIsViewDrawerOpen] = useState<boolean>(false)
+    const openViewDrawer = ()=> setIsViewDrawerOpen(true)
+    const closeViewDrawer = ()=> setIsViewDrawerOpen(false)
+
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -207,12 +217,73 @@ const ActionColumn = ({
                         'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400',
                     )}
                     role="button"
-                    onClick={onEdit}
+                    // onClick={onView}
+                    onClick={openViewDrawer}
                 >
                     {' '}
                     <IoEyeOutline />{' '}
                 </div>
             </Tooltip>
+              
+            <Drawer
+                title="Export Mapping"
+                isOpen={isViewDrawerOpen}
+                onClose={closeViewDrawer}
+                onRequestClose={closeViewDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeViewDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <div className=''>
+                    <h6 className="text-base font-semibold">Exported By</h6>
+
+                    <figure className='flex gap-2 items-center mt-2'>
+                        <img src={userIcon} alt="" className='h-9 w-9 rounded-full'/>
+                        <figcaption className='flex flex-col'>
+                            <span className='font-semibold text-black dark:text-white'>{data.userName}</span>
+                            <span className='text-xs'>{data.userRole}</span>
+                        </figcaption>
+                    </figure>
+
+                    <h6 className="text-base font-semibold mt-4">Exported From</h6>
+                    
+                    <p className='mb-2 mt-1'>
+                        <span className='font-semibold text-black  dark:text-white'>File Name: </span>
+                        <span>{data.fileName}</span>
+                    </p>
+                    
+                    <Tag className='border border-emerald-600 text-emerald-600 bg-transparent inline w-auto'>User List</Tag>
+                    
+                    <br />
+                    <br />
+
+                    <Card className='!mt-5 bg-gray-100 dark:bg-gray-700 border-none'>
+                        <h6 className="text-base font-semibold ">Exported Log</h6>
+
+                        <p className='mt-2'>
+                            <span className='font-semibold  text-black  dark:text-white'>Date: </span>
+                            <span>Sat, 09 Mar 2025</span>
+                        </p>
+
+                        <p className=''>
+                            <span className='font-semibold text-black  dark:text-white'>File Name: </span>
+                            <span>{data.fileName}</span>
+                        </p>
+
+                        <h6 className="text-sm font-semibold text-black  dark:text-white mt-1">Reason:</h6>
+                        <p>{data.reason}</p>
+
+
+                    </Card>
+
+                </div>
+
+
+            </Drawer>
             {/* <Tooltip title="Delete Record">
                 <div
                     className={classNames(
@@ -308,12 +379,61 @@ const ExportMappingTableTools = ({
 }: {
     onSearchChange: (query: string) => void
 }) => {
+
+    type ExportMappingFilterSchema = {
+        userRole : String,
+        exportFrom : String,
+        exportDate : Date
+    }
+
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+
+    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+
+    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+        console.log("filter data", data)
+    }
+
     return (
-        <div className="flex items-center w-full">
+        <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
                 <ExportMappingSearch onInputChange={onSearchChange} />
             </div>
             {/* Filter component removed */}
+            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                Filter
+            </Button>
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Curreny Symbol'>
+                        {/* <Controller
+                            control={control}
+                            name='userRole'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Currency Symbol"
+                                    {...field}
+                                />
+                            )}
+                        /> */}
+                    </FormItem>
+                </Form>
+            </Drawer>
         </div>
     )
 }
@@ -360,7 +480,7 @@ const ExportMappingActionTools = ({
                 }
                 block
             >
-                Create Export Record {/* Updated Text */}
+                Add New {/* Updated Text */}
             </Button>
         </div>
     )
@@ -746,8 +866,8 @@ const ExportMapping = () => {
                         // onChangeStatus={() =>
                         //     handleChangeStatus(props.row.original)
                         // }
-                        onEdit={() => handleEdit(props.row.original)}
                         // onDelete={() => handleDelete(props.row.original)}
+                        data={props.row.original}
                     />
                 ),
             },
@@ -762,11 +882,11 @@ const ExportMapping = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Export Mappings</h5>{' '}
+                    <h5 className="mb-4 lg:mb-0">Export Mapping</h5>{' '}
                     {/* Updated title */}
-                    <ExportMappingActionTools
+                    {/* <ExportMappingActionTools
                         allMappings={exportMappings}
-                    />{' '}
+                    />{' '} */}
                     {/* Use updated component/prop */}
                 </div>
 
