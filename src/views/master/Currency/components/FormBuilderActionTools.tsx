@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import useCustomerList from '@/views/concepts/customers/CustomerList/hooks/useCustomerList'
 import { CSVLink } from 'react-csv'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
+import { Drawer, Form, FormItem, Input, Radio } from '@/components/ui'
 
 const FormListActionTools = () => {
     const navigate = useNavigate()
@@ -39,7 +40,7 @@ const FormListActionTools = () => {
             <Button
                 variant="solid"
                 icon={<TbPlus className="text-lg" />}
-                
+                onClick={openAddDrawer}
             >
                 Add New
             </Button>
