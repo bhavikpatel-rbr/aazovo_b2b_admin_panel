@@ -19,9 +19,13 @@ const FormListActionTools = () => {
             status: '',
         },
     })
+    const closeAddDrawer = ()=> setIsAddDrawerOpen(false)
+    const openAddDrawer = ()=> setIsAddDrawerOpen(true)
 
     const addCurrencySubmitHandler = async (data: AddCurrencyFormSchema) =>{
         console.log("DAta is ", data)
+
+        closeAddDrawer()
     }
 
     type AddCurrencyFormSchema = {
@@ -55,8 +59,8 @@ const FormListActionTools = () => {
             <Drawer
                 title="Add Currency"
                 isOpen={isAddDrawerOpen}
-                onClose={()=>setIsAddDrawerOpen(false)}
-                onRequestClose={()=>setIsAddDrawerOpen(false)}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
                 className=""
             >
                 <Form size='sm' onSubmit={handleSubmit(addCurrencySubmitHandler)} containerClassName='flex flex-col'>
@@ -103,10 +107,10 @@ const FormListActionTools = () => {
                     </FormItem>
 
                     <div className="text-right w-full absolute bottom-4 right-6">
-                        <Button size="sm" className="mr-2" type='button' onClick={() => setIsAddDrawerOpen(false)}>
+                        <Button size="sm" className="mr-2" type='button' onClick={closeAddDrawer}>
                             Cancel
                         </Button>
-                        <Button size="sm" variant="solid" type='submit' onClick={() => setIsAddDrawerOpen(false)}>
+                        <Button size="sm" variant="solid" type='submit'>
                             Save
                         </Button>
                     </div>
