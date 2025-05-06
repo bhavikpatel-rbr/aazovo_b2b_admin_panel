@@ -20,7 +20,7 @@ const FormListActionTools = () => {
         },
     })
 
-    const addCurrencySubmitHandler = (data: AddCurrencyFormSchema) =>{
+    const addCurrencySubmitHandler = async (data: AddCurrencyFormSchema) =>{
         console.log("DAta is ", data)
     }
 
