@@ -18,17 +18,15 @@ import type { TableQueries } from '@/@types/common'
 
 // --- Define Form Type ---
 export type FormItem = {
-    id: string
-    billingStatus: string // Added billing status
-    companyName: string // Added company name
-    companyId: string // Added company ID
-    gstNumber: string // Added GST number
-    panNumber: string // Added PAN number
-    photo: string // Added photo URL
-    expiryDate: string // Added expiry date
-    status: 'active' | 'inactive' // Changed status options
-    // Add other form-specific fields if needed later
-}
+    id: string;
+    name: string; // Name
+    email: string; // Email
+    phone: string; // Phone
+    quantity: string; // Quantity
+    requirements: string; // Requirements
+    date: string; // Date
+    status: 'active' | 'inactive'; // Status
+};
 // --- End Form Type Definition ---
 
 // --- Updated Status Colors ---
@@ -100,60 +98,55 @@ const ActionColumn = ({
 const initialDummyForms: FormItem[] = [
     {
         id: 'F001',
-        billingStatus: 'true',
-        companyName: 'ABC Pvt Ltd',
-        companyId: 'C001',
-        gstNumber: '27AAAPL1234C1ZP',
-        panNumber: 'AAAPL1234C',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2025-12-31',
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        phone: '+1-123-456-7890',
+        quantity: '10',
+        requirements: 'Product A, Product B',
+        date: '2023-05-01',
         status: 'active',
     },
     {
         id: 'F002',
-        billingStatus: 'false',
-        companyName: 'XYZ Pvt Ltd',
-        companyId: 'C002',
-        gstNumber: '27BBAPL5678D1ZP',
-        panNumber: 'BBAPL5678D',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2026-06-30',
+        name: 'Jane Smith',
+        email: 'jane.smith@example.com',
+        phone: '+1-987-654-3210',
+        quantity: '20',
+        requirements: 'Product C',
+        date: '2023-05-02',
         status: 'inactive',
     },
     {
         id: 'F003',
-        billingStatus: 'true',
-        companyName: 'PQR Ltd',
-        companyId: 'C003',
-        gstNumber: '27CCAPL9101E1ZP',
-        panNumber: 'CCAPL9101E',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2024-11-15',
+        name: 'Michael Johnson',
+        email: 'michael.johnson@example.com',
+        phone: '+44-20-7946-0958',
+        quantity: '15',
+        requirements: 'Product D, Product E',
+        date: '2023-05-03',
         status: 'active',
     },
     {
         id: 'F004',
-        billingStatus: 'false',
-        companyName: 'LMN Corp',
-        companyId: 'C004',
-        gstNumber: '27DDAPL2345F1ZP',
-        panNumber: 'DDAPL2345F',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2023-08-20',
+        name: 'Emily Davis',
+        email: 'emily.davis@example.com',
+        phone: '+91-98765-43210',
+        quantity: '5',
+        requirements: 'Product F',
+        date: '2023-05-04',
         status: 'inactive',
     },
     {
         id: 'F005',
-        billingStatus: 'true',
-        companyName: 'EFG Enterprises',
-        companyId: 'C005',
-        gstNumber: '27EEAPL6789G1ZP',
-        panNumber: 'EEAPL6789G',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2027-01-10',
+        name: 'William Brown',
+        email: 'william.brown@example.com',
+        phone: '+81-3-1234-5678',
+        quantity: '25',
+        requirements: 'Product G, Product H',
+        date: '2023-05-05',
         status: 'active',
     },
-]
+];
 // --- End Dummy Data ---
 
 const FormListTable = () => {
@@ -181,13 +174,12 @@ const FormListTable = () => {
             filteredData = forms.filter(
                 (form) =>
                     form.id.toLowerCase().includes(query) ||
-                    form.billingStatus.toLowerCase().includes(query) ||
-                    form.companyName.toLowerCase().includes(query) ||
-                    form.companyId.toLowerCase().includes(query) ||
-                    form.gstNumber.toLowerCase().includes(query) ||
-                    form.panNumber.toLowerCase().includes(query) ||
-                    form.photo.toLowerCase().includes(query) ||
-                    form.expiryDate.toLowerCase().includes(query) ||
+                    form.name.toLowerCase().includes(query) ||
+                    form.email.toLowerCase().includes(query) ||
+                    form.phone.toLowerCase().includes(query) ||
+                    form.quantity.toLowerCase().includes(query) ||
+                    form.requirements.toLowerCase().includes(query) ||
+                    form.date.toLowerCase().includes(query) ||
                     form.status.toLowerCase().includes(query)
             );
         }
@@ -236,24 +228,20 @@ const FormListTable = () => {
     }
 
     const handleCloneForm = (form: FormItem) => {
-        // Example: Add a cloned item locally for demo
-        const newId = `F${Math.floor(Math.random() * 9000) + 1000}` // Generate pseudo-random ID
+        const newId = `F${Math.floor(Math.random() * 9000) + 1000}`;
         const clonedForm: FormItem = {
             ...form,
             id: newId,
-            billingStatus: `${form.billingStatus} (Clone)`,
-            companyName: `${form.companyName} (Clone)`,
-            companyId: `${form.companyId} (Clone)`,
-            gstNumber: `${form.gstNumber} (Clone)`,
-            panNumber: `${form.panNumber} (Clone)`,
-            photo: `${form.photo}`, // Keep the same photo URL
-            expiryDate: `${form.expiryDate}`, // Keep the same expiry date
+            name: `${form.name} (Clone)`,
+            email: form.email,
+            phone: form.phone,
+            quantity: form.quantity,
+            requirements: form.requirements,
+            date: form.date,
             status: 'inactive', // Cloned forms start as inactive
         };
-        setForms((prev) => [clonedForm, ...prev]) // Add to the beginning of the list
-        // Optionally navigate to the edit page of the cloned form
-        // navigate(`/forms/edit/${newId}`)
-    }
+        setForms((prev) => [clonedForm, ...prev]);
+    };
 
     const handleChangeStatus = (form: FormItem) => {
         // Logic to change the status (e.g., API call and update state)
@@ -281,53 +269,40 @@ const FormListTable = () => {
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
-                header: 'Enable Billing Status',
-                accessorKey: 'billingStatus',
+                header: 'Name',
+                accessorKey: 'name',
                 enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.billingStatus ? 'Enabled' : 'Disabled'}</span>
-                ),
+                cell: (props) => <span>{props.row.original.name}</span>,
             },
             {
-                header: 'Company Name',
-                accessorKey: 'companyName',
+                header: 'Email',
+                accessorKey: 'email',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.companyName}</span>,
+                cell: (props) => <span>{props.row.original.email}</span>,
             },
             {
-                header: 'Company ID',
-                accessorKey: 'companyId',
+                header: 'Phone',
+                accessorKey: 'phone',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.companyId}</span>,
+                cell: (props) => <span>{props.row.original.phone}</span>,
             },
             {
-                header: 'GST Number',
-                accessorKey: 'gstNumber',
+                header: 'Quantity',
+                accessorKey: 'quantity',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.gstNumber}</span>,
+                cell: (props) => <span>{props.row.original.quantity}</span>,
             },
             {
-                header: 'PAN Number',
-                accessorKey: 'panNumber',
+                header: 'Requirements',
+                accessorKey: 'requirements',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.panNumber}</span>,
+                cell: (props) => <span>{props.row.original.requirements}</span>,
             },
             {
-                header: 'Photo',
-                accessorKey: 'photo',
-                cell: (props) => (
-                    <Avatar
-                        src={props.row.original.photo}
-                        alt="Company Photo"
-                        size="sm"
-                    />
-                ),
-            },
-            {
-                header: 'Expiry Date',
-                accessorKey: 'expiryDate',
+                header: 'Date',
+                accessorKey: 'date',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.expiryDate}</span>,
+                cell: (props) => <span>{props.row.original.date}</span>,
             },
             {
                 header: 'Status',

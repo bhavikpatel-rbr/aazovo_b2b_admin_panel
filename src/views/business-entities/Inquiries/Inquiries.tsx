@@ -5,7 +5,7 @@ import FormListSelected from './components/FormListSelected'
 import FormListTable from './components/FormListTable'
 import FormListTableTools from './components/FormListTableTools'
 
-const RequestAndFeedback = () => {
+const Inquiries = () => {
     
     return (
         <>
@@ -13,7 +13,7 @@ const RequestAndFeedback = () => {
             <AdaptiveCard>
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                        <h5>Request and feedback!</h5>
+                        <h5>Inquiries!</h5>
                         <FormListActionTools />
                     </div>
                     <FormListTableTools />
@@ -26,4 +26,4 @@ const RequestAndFeedback = () => {
     )
 }
 
-export default RequestAndFeedback
+export default Inquiries

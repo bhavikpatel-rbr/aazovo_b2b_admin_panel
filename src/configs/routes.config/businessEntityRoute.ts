@@ -31,6 +31,15 @@ const businessEntityRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
+    {
+        key: 'businessEntities.inquiries',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/inquiries`,
+        component: lazy(() => import('@/views/business-entities/Inquiries')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
     // {
     //     key: 'businessEntities.subscriber',
     //     path: `${BUSINESS_ENTITIES_PREFIX_PATH}/subscriber`,

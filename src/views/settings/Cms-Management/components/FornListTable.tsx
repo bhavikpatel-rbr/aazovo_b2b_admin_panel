@@ -12,8 +12,8 @@ import type { Customer } from '@/views/concepts/customers/CustomerList/types'
 import type { TableQueries } from '@/@types/common'
 
 const statusColor: Record<string, string> = {
-    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
-    blocked: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600',
+    active: 'bg-emerald-200 dark:bg-emerald-200 text-gray-900 dark:text-gray-900',
+    blocked: 'bg-red-200 dark:bg-red-200 text-gray-900 dark:text-gray-900',
 }
 
 const NameColumn = ({ row }: { row: Customer }) => {
