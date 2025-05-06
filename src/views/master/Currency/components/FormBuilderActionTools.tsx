@@ -19,9 +19,13 @@ const FormListActionTools = () => {
             status: '',
         },
     })
+    const closeAddDrawer = ()=> setIsAddDrawerOpen(false)
+    const openAddDrawer = ()=> setIsAddDrawerOpen(true)
 
     const addCurrencySubmitHandler = async (data: AddCurrencyFormSchema) =>{
         console.log("DAta is ", data)
+
+        closeAddDrawer()
     }
 
     type AddCurrencyFormSchema = {
@@ -39,6 +43,66 @@ const FormListActionTools = () => {
             >
                 Add New
             </Button>
+            <Drawer
+                title="Add Currency"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
+                className=""
+            >
+                <Form size='sm' onSubmit={handleSubmit(addCurrencySubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Curreny Symbol'>
+                        <Controller
+                            control={control}
+                            name='symbol'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Currency Symbol"
+                                    {...field}
+                                />
+                            )}
+                        />
+                    </FormItem>
+                    <FormItem label='Curreny Code'>
+                        <Controller
+                            control={control}
+                            name='code'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Currency Code"
+                                    {...field}
+                                />
+                            )}
+                        />
+                    </FormItem>
+                    <FormItem label='Status'>
+                        <Controller
+                            control={control}
+                            name='status'
+                            render={({field})=>(
+                            <Radio.Group
+                                radioClass="text-green-500"
+                                {...field}
+                            >
+                                <Radio radioClass='text-green-600' value="Active" name='status'>Active</Radio>
+                                <Radio radioClass='text-red-600' value="Inactive" name='status'>Inactive</Radio>
+                            </Radio.Group>
+                            )}
+                        />
+                    </FormItem>
+
+                    <div className="text-right w-full absolute bottom-4 right-6">
+                        <Button size="sm" className="mr-2" type='button' onClick={closeAddDrawer}>
+                            Cancel
+                        </Button>
+                        <Button size="sm" variant="solid" type='submit'>
+                            Save
+                        </Button>
+                    </div>
+                </Form>
+            </Drawer>
         </div>
     )
 }
