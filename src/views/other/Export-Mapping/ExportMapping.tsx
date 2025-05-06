@@ -510,7 +510,7 @@ const ExportMappingTableTools = ({
                             Cancel
                         </Button>
                         <Button size="sm" variant="solid" type='submit'>
-                            Save
+                            Apply
                         </Button>
                     </div> 
                 </Form>
