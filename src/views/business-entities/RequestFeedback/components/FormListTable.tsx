@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import Avatar from '@/components/ui/Avatar' // Can remove if forms don't have productNames
+import Avatar from '@/components/ui/Avatar' // Can remove if forms don't have images
 import Tag from '@/components/ui/Tag'
 import Tooltip from '@/components/ui/Tooltip'
 import DataTable from '@/components/shared/DataTable'
@@ -18,14 +18,12 @@ import type { TableQueries } from '@/@types/common'
 
 // --- Define Form Type ---
 export type FormItem = {
-    id: string
-    billingStatus: string // Added billing status
-    companyName: string // Added company name
-    companyId: string // Added company ID
-    gstNumber: string // Added GST number
-    panNumber: string // Added PAN number
-    photo: string // Added photo URL
-    expiryDate: string // Added expiry date
+    id: string;
+    name: string; // Name
+    email: string; // Email
+    phone: string; // Phone
+    from: string; // From
+    date: string; // Date
     status: 'active' | 'inactive' // Changed status options
     // Add other form-specific fields if needed later
 }
@@ -33,12 +31,11 @@ export type FormItem = {
 
 // --- Updated Status Colors ---
 const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
-    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
+    active: 'bg-emerald-200 dark:bg-emerald-200 text-gray-900 dark:text-gray-900',
+    inactive: 'bg-amber-200 dark:bg-amber-200 text-gray-900 dark:text-gray-900', // Example color for inactive
 }
 
 // --- ActionColumn Component ---
-// Added onClone and onChangeStatus props
 const ActionColumn = ({
     onEdit,
     onViewDetail,
@@ -51,10 +48,10 @@ const ActionColumn = ({
     onChangeStatus: () => void
 }) => {
     return (
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-end gap-3">
             {' '}
             {/* Align actions to end */}
-            {/* <Tooltip title="Clone Form">
+            <Tooltip title="Clone Form">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
@@ -62,10 +59,10 @@ const ActionColumn = ({
                 >
                     <TbCopy />
                 </div>
-            </Tooltip> */}
+            </Tooltip>
             <Tooltip title="Change Status">
                 <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400`}
+                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
                     onClick={onChangeStatus}
                 >
@@ -76,7 +73,7 @@ const ActionColumn = ({
                 {' '}
                 {/* Keep Edit/View if needed */}
                 <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
                     onClick={onEdit}
                 >
@@ -85,7 +82,7 @@ const ActionColumn = ({
             </Tooltip>
             <Tooltip title="View">
                 <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
                     onClick={onViewDetail}
                 >
@@ -100,60 +97,50 @@ const ActionColumn = ({
 const initialDummyForms: FormItem[] = [
     {
         id: 'F001',
-        billingStatus: 'true',
-        companyName: 'ABC Pvt Ltd',
-        companyId: 'C001',
-        gstNumber: '27AAAPL1234C1ZP',
-        panNumber: 'AAAPL1234C',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2025-12-31',
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        phone: '+1-123-456-7890',
+        from: 'USA',
+        date: '2023-05-01',
         status: 'active',
     },
     {
         id: 'F002',
-        billingStatus: 'false',
-        companyName: 'XYZ Pvt Ltd',
-        companyId: 'C002',
-        gstNumber: '27BBAPL5678D1ZP',
-        panNumber: 'BBAPL5678D',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2026-06-30',
-        status: 'inactive',
+        name: 'Jane Smith',
+        email: 'jane.smith@example.com',
+        phone: '+1-987-654-3210',
+        from: 'Canada',
+        date: '2023-05-02',
+        status: 'active',
     },
     {
         id: 'F003',
-        billingStatus: 'true',
-        companyName: 'PQR Ltd',
-        companyId: 'C003',
-        gstNumber: '27CCAPL9101E1ZP',
-        panNumber: 'CCAPL9101E',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2024-11-15',
+        name: 'Michael Johnson',
+        email: 'michael.johnson@example.com',
+        phone: '+44-20-7946-0958',
+        from: 'UK',
+        date: '2023-05-03',
         status: 'active',
     },
     {
         id: 'F004',
-        billingStatus: 'false',
-        companyName: 'LMN Corp',
-        companyId: 'C004',
-        gstNumber: '27DDAPL2345F1ZP',
-        panNumber: 'DDAPL2345F',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2023-08-20',
-        status: 'inactive',
+        name: 'Emily Davis',
+        email: 'emily.davis@example.com',
+        phone: '+91-98765-43210',
+        from: 'India',
+        date: '2023-05-04',
+        status: 'active',
     },
     {
         id: 'F005',
-        billingStatus: 'true',
-        companyName: 'EFG Enterprises',
-        companyId: 'C005',
-        gstNumber: '27EEAPL6789G1ZP',
-        panNumber: 'EEAPL6789G',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2027-01-10',
+        name: 'William Brown',
+        email: 'william.brown@example.com',
+        phone: '+81-3-1234-5678',
+        from: 'Japan',
+        date: '2023-05-05',
         status: 'active',
     },
-]
+];
 // --- End Dummy Data ---
 
 const FormListTable = () => {
@@ -177,19 +164,13 @@ const FormListTable = () => {
 
         // --- Filtering ---
         if (tableData.query) {
-            const query = tableData.query.toLowerCase();
+            const query = tableData.query.toLowerCase()
             filteredData = forms.filter(
                 (form) =>
                     form.id.toLowerCase().includes(query) ||
-                    form.billingStatus.toLowerCase().includes(query) ||
-                    form.companyName.toLowerCase().includes(query) ||
-                    form.companyId.toLowerCase().includes(query) ||
-                    form.gstNumber.toLowerCase().includes(query) ||
-                    form.panNumber.toLowerCase().includes(query) ||
-                    form.photo.toLowerCase().includes(query) ||
-                    form.expiryDate.toLowerCase().includes(query) ||
-                    form.status.toLowerCase().includes(query)
-            );
+                    form.name.toLowerCase().includes(query) ||
+                    form.status.toLowerCase().includes(query),
+            )
         }
 
         // --- Sorting ---
@@ -236,20 +217,15 @@ const FormListTable = () => {
     }
 
     const handleCloneForm = (form: FormItem) => {
+        // Logic to clone the form (e.g., API call or local duplication)
         // Example: Add a cloned item locally for demo
         const newId = `F${Math.floor(Math.random() * 9000) + 1000}` // Generate pseudo-random ID
         const clonedForm: FormItem = {
             ...form,
             id: newId,
-            billingStatus: `${form.billingStatus} (Clone)`,
-            companyName: `${form.companyName} (Clone)`,
-            companyId: `${form.companyId} (Clone)`,
-            gstNumber: `${form.gstNumber} (Clone)`,
-            panNumber: `${form.panNumber} (Clone)`,
-            photo: `${form.photo}`, // Keep the same photo URL
-            expiryDate: `${form.expiryDate}`, // Keep the same expiry date
+            // Add other necessary fields for the cloned form
             status: 'inactive', // Cloned forms start as inactive
-        };
+        }
         setForms((prev) => [clonedForm, ...prev]) // Add to the beginning of the list
         // Optionally navigate to the edit page of the cloned form
         // navigate(`/forms/edit/${newId}`)
@@ -277,64 +253,43 @@ const FormListTable = () => {
                 accessorKey: 'id',
                 // Simple cell to display ID, enable sorting
                 enableSorting: true,
-                size:70,
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
-                header: 'Enable Billing Status',
-                accessorKey: 'billingStatus',
+                header: 'Name',
+                accessorKey: 'name',
                 enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.billingStatus ? 'Enabled' : 'Disabled'}</span>
-                ),
+                cell: (props) => <span>{props.row.original.name}</span>,
             },
             {
-                header: 'Company Name',
-                accessorKey: 'companyName',
+                header: 'Email',
+                accessorKey: 'email',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.companyName}</span>,
+                cell: (props) => <span>{props.row.original.email}</span>,
             },
             {
-                header: 'Company ID',
-                accessorKey: 'companyId',
+                header: 'Phone',
+                accessorKey: 'phone',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.companyId}</span>,
+                cell: (props) => <span>{props.row.original.phone}</span>,
             },
             {
-                header: 'GST Number',
-                accessorKey: 'gstNumber',
+                header: 'From',
+                accessorKey: 'from',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.gstNumber}</span>,
+                cell: (props) => <span>{props.row.original.from}</span>,
             },
             {
-                header: 'PAN Number',
-                accessorKey: 'panNumber',
+                header: 'Date',
+                accessorKey: 'date',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.panNumber}</span>,
-            },
-            {
-                header: 'Photo',
-                accessorKey: 'photo',
-                cell: (props) => (
-                    <Avatar
-                        src={props.row.original.photo}
-                        alt="Company Photo"
-                        size="sm"
-                    />
-                ),
-            },
-            {
-                header: 'Expiry Date',
-                accessorKey: 'expiryDate',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.expiryDate}</span>,
+                cell: (props) => <span>{props.row.original.date}</span>,
             },
             {
                 header: 'Status',
                 accessorKey: 'status',
                 // Enable sorting
                 enableSorting: true,
-                size:120,
                 cell: (props) => {
                     const { status } = props.row.original
                     return (
@@ -347,10 +302,8 @@ const FormListTable = () => {
                 },
             },
             {
-                header: 'Action', // Keep header empty for actions
+                header: '', // Keep header empty for actions
                 id: 'action',
-                size: 160, // Adjust width for actions
-                meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         // Pass new handlers

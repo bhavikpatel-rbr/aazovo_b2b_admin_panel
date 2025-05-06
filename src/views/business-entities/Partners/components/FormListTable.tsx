@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import Avatar from '@/components/ui/Avatar' // Can remove if forms don't have images
+import Avatar from '@/components/ui/Avatar' // Can remove if forms don't have productNames
 import Tag from '@/components/ui/Tag'
 import Tooltip from '@/components/ui/Tooltip'
 import DataTable from '@/components/shared/DataTable'
@@ -18,7 +18,7 @@ import type { TableQueries } from '@/@types/common'
 
 // --- Define Form Type ---
 export type FormItem = {
-    id: string;
+    id: string
     kycVerification: boolean; // KYC Verification Status
     partnerId: string; // Partner ID
     companyId: string; // Company ID
@@ -26,14 +26,15 @@ export type FormItem = {
     partnerName: string; // Partner Name
     email: string; // Email Address
     phone: string; // Phone Number
-    status: 'active' | 'inactive'; // Status
-};
+    status: 'active' | 'inactive' // Changed status options
+    // Add other form-specific fields if needed later
+}
 // --- End Form Type Definition ---
 
 // --- Updated Status Colors ---
 const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-emerald-200 dark:bg-emerald-200 text-gray-900 dark:text-gray-900',
-    inactive: 'bg-amber-200 dark:bg-amber-200 text-gray-900 dark:text-gray-900', // Example color for inactive
+    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
+    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
 }
 
 // --- ActionColumn Component ---
@@ -50,10 +51,10 @@ const ActionColumn = ({
     onChangeStatus: () => void
 }) => {
     return (
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-center gap-1">
             {' '}
             {/* Align actions to end */}
-            <Tooltip title="Clone Form">
+            {/* <Tooltip title="Clone Form">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
@@ -61,10 +62,10 @@ const ActionColumn = ({
                 >
                     <TbCopy />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
             <Tooltip title="Change Status">
                 <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400`}
                     role="button"
                     onClick={onChangeStatus}
                 >
@@ -75,7 +76,7 @@ const ActionColumn = ({
                 {' '}
                 {/* Keep Edit/View if needed */}
                 <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
                     role="button"
                     onClick={onEdit}
                 >
@@ -84,7 +85,7 @@ const ActionColumn = ({
             </Tooltip>
             <Tooltip title="View">
                 <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
                     role="button"
                     onClick={onViewDetail}
                 >
@@ -176,13 +177,18 @@ const FormListTable = () => {
 
         // --- Filtering ---
         if (tableData.query) {
-            const query = tableData.query.toLowerCase()
+            const query = tableData.query.toLowerCase();
             filteredData = forms.filter(
                 (form) =>
                     form.id.toLowerCase().includes(query) ||
                     form.partnerId.toLowerCase().includes(query) ||
-                    form.status.toLowerCase().includes(query),
-            )
+                    form.companyId.toLowerCase().includes(query) ||
+                    form.companyName.toLowerCase().includes(query) ||
+                    form.partnerName.toLowerCase().includes(query) ||
+                    form.email.toLowerCase().includes(query) ||
+                    form.phone.toLowerCase().includes(query) ||
+                    form.status.toLowerCase().includes(query)
+            );
         }
 
         // --- Sorting ---
@@ -229,20 +235,30 @@ const FormListTable = () => {
     }
 
     const handleCloneForm = (form: FormItem) => {
-        // Example: Add a cloned item locally for demo
-        const newId = `F${Math.floor(Math.random() * 9000) + 1000}` // Generate pseudo-random ID
+        // Generate a new unique ID for the cloned form
+        const newId = `F${Math.floor(Math.random() * 9000) + 1000}`;
+    
+        // Create a cloned form with updated fields
         const clonedForm: FormItem = {
             ...form,
-            id: newId,
-            email: form.email, // Keep original email
-            phone: form.phone, // Keep original phone
-            // Add other necessary fields for the cloned form
+            id: newId, // Assign the new ID
+            partnerId: `${form.partnerId} (Clone)`, // Append "(Clone)" to the partner ID
+            companyId: `${form.companyId} (Clone)`, // Append "(Clone)" to the company ID
+            companyName: `${form.companyName} (Clone)`, // Append "(Clone)" to the company name
+            partnerName: `${form.partnerName} (Clone)`, // Append "(Clone)" to the partner name
+            email: form.email, // Keep the same email
+            phone: form.phone, // Keep the same phone number
+            kycVerification: false, // Reset KYC verification for the cloned form
             status: 'inactive', // Cloned forms start as inactive
-        }
-        setForms((prev) => [clonedForm, ...prev]) // Add to the beginning of the list
+        };
+    
+        // Add the cloned form to the beginning of the forms list
+        setForms((prev) => [clonedForm, ...prev]);
+    
         // Optionally navigate to the edit page of the cloned form
-        // navigate(`/forms/edit/${newId}`)
-    }
+        console.log(`Cloned form created with ID: ${newId}`);
+        // navigate(`/forms/edit/${newId}`); // Uncomment if navigation is required
+    };
 
     const handleChangeStatus = (form: FormItem) => {
         // Logic to change the status (e.g., API call and update state)
@@ -264,7 +280,9 @@ const FormListTable = () => {
             {
                 header: 'ID',
                 accessorKey: 'id',
+                // Simple cell to display ID, enable sorting
                 enableSorting: true,
+                size:70,
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
@@ -314,33 +332,44 @@ const FormListTable = () => {
             {
                 header: 'Status',
                 accessorKey: 'status',
+                // Enable sorting
                 enableSorting: true,
+                size:120,
                 cell: (props) => {
-                    const { status } = props.row.original;
+                    const { status } = props.row.original
                     return (
                         <div className="flex items-center">
                             <Tag className={statusColor[status]}>
                                 <span className="capitalize">{status}</span>
                             </Tag>
                         </div>
-                    );
+                    )
                 },
             },
             {
-                header: '', // Action column
+                header: 'Action', // Keep header empty for actions
                 id: 'action',
+                size: 160, // Adjust width for actions
+                meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
+                        // Pass new handlers
                         onClone={() => handleCloneForm(props.row.original)}
-                        onChangeStatus={() => handleChangeStatus(props.row.original)}
+                        onChangeStatus={() =>
+                            handleChangeStatus(props.row.original)
+                        }
+                        // Keep existing handlers if needed
                         onEdit={() => handleEdit(props.row.original)}
-                        onViewDetail={() => handleViewDetails(props.row.original)}
+                        onViewDetail={() =>
+                            handleViewDetails(props.row.original)
+                        }
                     />
                 ),
             },
         ],
-        []
-    );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [], // Handlers are defined outside, state dependency handled by component re-render
+    )
     // --- End Columns Definition ---
 
     // --- Table Interaction Handlers (Pagination, Selection, etc.) ---

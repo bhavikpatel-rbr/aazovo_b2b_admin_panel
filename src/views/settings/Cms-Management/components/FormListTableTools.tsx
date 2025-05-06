@@ -3,8 +3,6 @@ import useCustomerList from '@/views/concepts/customers/CustomerList/hooks/useCu
 import cloneDeep from 'lodash/cloneDeep'
 import FormListSearch from './FormListSearch'
 import FormListTableFilter from './FormListTableFilter'
-import { Button } from '@/components/ui'
-import { TbCloudUpload, TbFilter } from 'react-icons/tb'
 
 const FormListTableTools = () => {
     const { tableData, setTableData } = useCustomerList()
@@ -26,10 +24,6 @@ const FormListTableTools = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <FormListSearch onInputChange={handleInputChange} />
             {/* <FormListTableFilter /> */}
-            <Button icon={<TbFilter />} className=''>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
         </div>
     )
 }
