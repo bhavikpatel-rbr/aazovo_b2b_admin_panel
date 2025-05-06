@@ -11,7 +11,7 @@ const FormListActionTools = () => {
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {!isEdit && <Button
+            <Button
                 variant="solid"
                 icon={<TbPlus className="text-lg" />}
                 onClick={() => navigate('/concepts/customers/customer-create')}
