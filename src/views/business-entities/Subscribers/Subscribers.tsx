@@ -477,9 +477,10 @@ const SubscriberFilter = ({
                 isOpen={isFilterDrawerOpen}
                 onClose={closeFilterDrawer}
                 onRequestClose={closeFilterDrawer}
+                bodyClass=""
             >
                 <Form size='sm' onSubmit={handleSubmit(filterFormSubmit)} containerClassName='grid grid-rows-[auto_80px]'>
-                    <div className="overflow-auto">
+                    <div>
                         <FormItem label="Status">
                             <Controller
                                 name='status'
@@ -524,6 +525,7 @@ const SubscriberFilter = ({
                                 name='subscribedDate'
                                 render={({field})=>(
                                     <DatePickerRange
+                                        className=''
                                         placeholder="Select date range"
                                         {...field}
                                     />
