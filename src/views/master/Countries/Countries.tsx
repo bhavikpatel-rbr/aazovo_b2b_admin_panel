@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
-// import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
+import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
 // import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
 // import { z } from 'zod' // No longer needed
 // import type { ZodType } from 'zod' // No longer needed
@@ -18,6 +18,8 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
+import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
+
 // import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
 // import Input from '@/components/ui/Input' // No longer needed for filter form
 // import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
@@ -48,7 +50,11 @@ import { masterSelector } from '@/reduxtool/master/masterSlice'
 // --- Define FormItem Type (Table Row Data) ---
 export type FormItem = {
     id: string
+    continent_id: string
     name: string
+    iso: string
+    phonecode: string
+
 }
 // --- End FormItem Type Definition ---
 
@@ -183,13 +189,19 @@ const FormListTableTools = ({
 // --- FormListActionTools Component (No functional changes needed for filter removal) ---
 const FormListActionTools = ({
     allFormsData,
+    openAddDrawer,
 }: {
-    allFormsData: FormItem[]
+    allFormsData: FormItem[];
+    openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
     const csvHeaders = [
         { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'name' },
+        { label: 'Continent', key: 'continent_id' },
+        { label: 'Country', key: 'name' },
+        { label: 'Short Code', key: 'iso' },
+        { label: 'Phone Code', key: 'phonecode' },
+
     ]
 
     return (
@@ -209,9 +221,7 @@ const FormListActionTools = ({
             <Button
                 variant="solid"
                 icon={<TbPlus />}
-                onClick={() =>
-                    console.log('Navigate to Add New Document Type page')
-                }
+                onClick={openAddDrawer}
                 block
             >
                 Add New
@@ -295,6 +305,30 @@ const FormListSelected = ({
 
 // --- Main Continents Component ---
 const Countries = () => {
+
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+
+    const openEditDrawer = (item: FormItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null); // Clear any selected item
+        setIsAddDrawerOpen(true); // Open the add drawer
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false); // Close the add drawer
+    };
+
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
 
@@ -344,15 +378,13 @@ const Countries = () => {
             const query = tableData.query.toLowerCase().trim()
             console.log('[Memo] Applying search query:', query)
             processedData = processedData.filter((item: FormItem) => {
-                const itemNameLower = item.name?.trim().toLowerCase() ?? ''
-                const isoLower = item.iso?.trim().toLowerCase() ?? ''
-                const continentNameLower = item.name?.trim().toLowerCase() ?? ''
+                const itemNameLower = item.iso?.trim().toLowerCase() ?? ''
+                const continentNameLower = item.iso?.trim().toLowerCase() ?? ''
                 const itemIdString = String(item.id ?? '').trim()
                 const itemIdLower = itemIdString.toLowerCase()
                 return (
                     itemNameLower.includes(query) ||
                     itemIdLower.includes(query) ||
-                    isoLower.includes(query) ||
                     continentNameLower.includes(query)
                 )
             })
@@ -475,7 +507,7 @@ const Countries = () => {
             console.log('Edit item (requires navigation/modal):', form.id)
             toast.push(
                 <Notification title="Edit Action" type="info">
-                    Edit action for "{form.name}" (ID: {form.id}). Implement
+                    Edit action for "{form.iso}" (ID: {form.id}). Implement
                     navigation or modal.
                 </Notification>,
             )
@@ -487,14 +519,14 @@ const Countries = () => {
         console.log(
             'Delete item (needs Redux action):',
             formToDelete.id,
-            formToDelete.name,
+            formToDelete.iso,
         )
         setSelectedForms((prevSelected) =>
             prevSelected.filter((form) => form.id !== formToDelete.id),
         )
         toast.push(
             <Notification title="Delete Action" type="warning">
-                Delete action for "{formToDelete.name}" (ID: {formToDelete.id}).
+                Delete action for "{formToDelete.iso}" (ID: {formToDelete.id}).
                 Implement Redux deletion.
             </Notification>,
         )
@@ -554,7 +586,7 @@ const Countries = () => {
                 meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
@@ -564,46 +596,171 @@ const Countries = () => {
     )
 
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full">
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Countries</h5>
-                    <FormListActionTools allFormsData={processedDataForCsv} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h5 className="mb-4 lg:mb-0">Countries</h5>
+                        <FormListActionTools
+                            allFormsData={processedDataForCsv}
+                            openAddDrawer={openAddDrawer} // Pass the function as a prop
+                        />
+                    </div>
 
-                <div className="mb-4 w-full">
-                    <FormListTableTools
-                        onSearchChange={handleSearchChange}
-                        // filterData and setFilterData props removed
+                    <div className="mb-4 w-full">
+                        <FormListTableTools
+                            onSearchChange={handleSearchChange}
+                            // filterData and setFilterData props removed
+                        />
+                    </div>
+
+                    <FormListTable
+                        columns={columns}
+                        data={pageData}
+                        loading={
+                            localIsLoading || masterLoadingStatus === 'loading'
+                        }
+                        pagingData={{
+                            total: total,
+                            pageIndex: tableData.pageIndex as number,
+                            pageSize: tableData.pageSize as number,
+                        }}
+                        selectedForms={selectedForms}
+                        onPaginationChange={handlePaginationChange}
+                        onSelectChange={handleSelectChange}
+                        onSort={handleSort}
+                        onRowSelect={handleRowSelect}
+                        onAllRowSelect={handleAllRowSelect}
                     />
-                </div>
+                </AdaptiveCard>
 
-                <FormListTable
-                    columns={columns}
-                    data={pageData}
-                    loading={
-                        localIsLoading || masterLoadingStatus === 'loading'
-                    }
-                    pagingData={{
-                        total: total,
-                        pageIndex: tableData.pageIndex as number,
-                        pageSize: tableData.pageSize as number,
-                    }}
+                <FormListSelected
                     selectedForms={selectedForms}
-                    onPaginationChange={handlePaginationChange}
-                    onSelectChange={handleSelectChange}
-                    onSort={handleSort}
-                    onRowSelect={handleRowSelect}
-                    onAllRowSelect={handleAllRowSelect}
+                    setSelectedForms={setSelectedForms}
+                    onDeleteSelected={handleDeleteSelected}
                 />
-            </AdaptiveCard>
+            </Container>
+            <Drawer
+                    title="Edit Country"
+                    isOpen={isEditDrawerOpen}
+                    onClose={closeEditDrawer}
+                    onRequestClose={closeEditDrawer}
+                    footer={
+                        <div className="text-right w-full">
+                            <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                                Cancel
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="solid"
+                                onClick={() => {
+                                    console.log('Updated Country:', selectedItem);
+                                    closeEditDrawer();
+                                }}
+                            >
+                                Save
+                            </Button>
+                        </div>
+                    }
+                >
+                    <Form size="sm" containerClassName="flex flex-col">
+                        <FormItem label="ID">
+                            <Input
+                                placeholder="ID"
+                                value={selectedItem?.id || ''} // Populate with selected item's ID
+                                readOnly // Make the ID field read-only
+                            />
+                        </FormItem>
+                        <FormItem label="Continent">
+                            <Input
+                                placeholder="Enter Continent"
+                                value={selectedItem?.continent_id || ''} // Populate with selected item's continent
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', continent_id: '', name: '', iso: '', phonecode: '' }),
+                                        continent_id: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                        <FormItem label="Country">
+                            <Input
+                                placeholder="Enter Country"
+                                value={selectedItem?.name || ''} // Populate with selected item's country
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', continent_id: '', name: '', iso: '', phonecode: '' }),
+                                        name: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                        <FormItem label="Short Code">
+                            <Input
+                                placeholder="Enter Short Code"
+                                value={selectedItem?.iso || ''} // Populate with selected item's short code
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', continent_id: '', name: '', iso: '', phonecode: '' }),
+                                        iso: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                        <FormItem label="Phone Code">
+                            <Input
+                                placeholder="Enter Phone Code"
+                                value={selectedItem?.phonecode || ''} // Populate with selected item's phone code
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', continent_id: '', name: '', iso: '', phonecode: '' }),
+                                        phonecode: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                    </Form>
+                </Drawer>
 
-            <FormListSelected
-                selectedForms={selectedForms}
-                setSelectedForms={setSelectedForms}
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
+                <Drawer
+                    title="Add New Country"
+                    isOpen={isAddDrawerOpen}
+                    onClose={closeAddDrawer}
+                    onRequestClose={closeAddDrawer}
+                    footer={
+                        <div className="text-right w-full">
+                            <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                                Cancel
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="solid"
+                                onClick={() => {
+                                    console.log('New Country Added');
+                                    closeAddDrawer();
+                                }}
+                            >
+                                Add
+                            </Button>
+                        </div>
+                    }
+                >
+                    <Form size="sm" containerClassName="flex flex-col">
+                        <FormItem label="Continent">
+                            <Input placeholder="Enter Continent" />
+                        </FormItem>
+                        <FormItem label="Country">
+                            <Input placeholder="Enter Country" />
+                        </FormItem>
+                        <FormItem label="Short Code">
+                            <Input placeholder="Enter Short Code" />
+                        </FormItem>
+                        <FormItem label="Phone Code">
+                            <Input placeholder="Enter Phone Code" />
+                        </FormItem>
+                    </Form>
+                </Drawer>
+        </>
     )
 }
 

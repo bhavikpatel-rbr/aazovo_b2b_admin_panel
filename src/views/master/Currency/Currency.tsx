@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
-// import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
+import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
 // import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
 // import { z } from 'zod' // No longer needed
 // import type { ZodType } from 'zod' // No longer needed
@@ -18,6 +18,9 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
+import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
+import { CSVLink } from 'react-csv'
+
 // import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
 // import Input from '@/components/ui/Input' // No longer needed for filter form
 // import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
@@ -28,7 +31,8 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    // TbFilter, // Filter icon removed
+    TbFilter, // Filter icon removed
+    TbCloudUpload,
     TbPlus,
 } from 'react-icons/tb'
 
@@ -48,6 +52,7 @@ import { masterSelector } from '@/reduxtool/master/masterSlice'
 export type FormItem = {
     id: string
     currency_code: string
+    currency_symbol: string
 }
 // --- End FormItem Type Definition ---
 
@@ -179,16 +184,109 @@ const FormListTableTools = ({
 }
 // --- End FormListTableTools ---
 
+// --- ExportMappingSearch Component ---
+type ExportMappingSearchProps = {
+    // Renamed component
+    onInputChange: (value: string) => void
+    ref?: Ref<HTMLInputElement>
+}
+const ExportMappingSearch = React.forwardRef<
+    HTMLInputElement,
+    ExportMappingSearchProps
+>(({ onInputChange }, ref) => {
+    return (
+        <DebouceInput
+            ref={ref}
+            placeholder="Quick Search..." // Updated placeholder
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(e) => onInputChange(e.target.value)}
+        />
+    )
+})
+ExportMappingSearch.displayName = 'ExportMappingSearch'
+// --- End ExportMappingSearch ---
+
+// --- ExportMappingTableTools Component ---
+const ExportMappingTableTools = ({
+    // Renamed component
+    onSearchChange,
+}: {
+    onSearchChange: (query: string) => void
+}) => {
+
+    type ExportMappingFilterSchema = {
+        userRole : String,
+        exportFrom : String,
+        exportDate : Date
+    }
+
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+
+    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+
+    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+        console.log("filter data", data)
+    }
+
+    return (
+        <div className="flex items-center w-full gap-2">
+            <div className="flex-grow">
+                <ExportMappingSearch onInputChange={onSearchChange} />
+            </div>
+            {/* Filter component removed */}
+            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Currency Name'>
+                        {/* <Controller
+                            control={control}
+                            name='userRole'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Currency Name"
+                                    {...field}
+                                />
+                            )}
+                        /> */}
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </div>
+    )
+}
+// --- End ExportMappingTableTools ---
+
 // --- FormListActionTools Component (No functional changes needed for filter removal) ---
 const FormListActionTools = ({
     allFormsData,
+    openAddDrawer,
 }: {
-    allFormsData: FormItem[]
+    allFormsData: FormItem[];
+    openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
     const csvHeaders = [
         { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'currency_code' },
+        { label: 'Currency Symbol', key: 'currency_symbol' },
+        { label: 'Currency Name', key: 'currency_code' },
     ]
 
     return (
@@ -208,9 +306,7 @@ const FormListActionTools = ({
             <Button
                 variant="solid"
                 icon={<TbPlus />}
-                onClick={() =>
-                    console.log('Navigate to Add New Document Type page')
-                }
+                onClick={openAddDrawer}
                 block
             >
                 Add New
@@ -294,6 +390,30 @@ const FormListSelected = ({
 
 // --- Main Currency Component ---
 const Currency = () => {
+
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+
+    const openEditDrawer = (item: FormItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null); // Clear any selected item
+        setIsAddDrawerOpen(true); // Open the add drawer
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false); // Close the add drawer
+    };
+
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
 
@@ -529,7 +649,7 @@ const Currency = () => {
                 meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
@@ -539,19 +659,23 @@ const Currency = () => {
     )
 
     return (
+        <>
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full">
                 <div className="lg:flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Currency</h5>
-                    <FormListActionTools allFormsData={processedDataForCsv} />
-                </div>
-
-                <div className="mb-4 w-full">
-                    <FormListTableTools
-                        onSearchChange={handleSearchChange}
-                        // filterData and setFilterData props removed
+                    <FormListActionTools
+                        allFormsData={processedDataForCsv}
+                        openAddDrawer={openAddDrawer} // Pass the function as a prop
                     />
                 </div>
+
+                <div className="mb-4">
+                    <ExportMappingTableTools
+                                onSearchChange={handleSearchChange}
+                            />{' '}
+                            {/* Use updated component */}
+                        </div>
 
                 <FormListTable
                     columns={columns}
@@ -579,6 +703,92 @@ const Currency = () => {
                 onDeleteSelected={handleDeleteSelected}
             />
         </Container>
+        {/* Edit Drawer */}
+        <Drawer
+            title="Edit Currency"
+            isOpen={isEditDrawerOpen}
+            onClose={closeEditDrawer}
+            onRequestClose={closeEditDrawer}
+            footer={
+                <div className="text-right w-full">
+                    <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                        Cancel
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="solid"
+                        onClick={() => {
+                            console.log('Updated Currency:', selectedItem);
+                            closeEditDrawer();
+                        }}
+                    >
+                        Save
+                    </Button>
+                </div>
+            }
+        >
+            <Form size="sm" containerClassName="flex flex-col">
+                <FormItem label="Currency Code">
+                    <Input
+                        placeholder="Enter Currency Code"
+                        value={selectedItem?.currency_code || ''} // Populate with selected item's currency code
+                        onChange={(e) =>
+                            setSelectedItem((prev) => ({
+                                ...(prev || { id: '', currency_code: '', currency_symbol: '' }), // Handle null case
+                                currency_code: e.target.value,
+                            }))
+                        }
+                    />
+                </FormItem>
+                <FormItem label="Currency Symbol">
+                    <Input
+                        placeholder="Enter Currency Symbol"
+                        value={selectedItem?.currency_symbol || ''} // Populate with selected item's currency symbol
+                        onChange={(e) =>
+                            setSelectedItem((prev) => ({
+                                ...(prev || { id: '', currency_code: '', currency_symbol: '' }), // Handle null case
+                                currency_symbol: e.target.value,
+                            }))
+                        }
+                    />
+                </FormItem>
+            </Form>
+        </Drawer>
+
+        {/* Add New Drawer */}
+        <Drawer
+            title="Add New Currency"
+            isOpen={isAddDrawerOpen}
+            onClose={closeAddDrawer}
+            onRequestClose={closeAddDrawer}
+            footer={
+                <div className="text-right w-full">
+                    <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                        Cancel
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="solid"
+                        onClick={() => {
+                            console.log('New Currency Added');
+                            closeAddDrawer();
+                        }}
+                    >
+                        Add
+                    </Button>
+                </div>
+            }
+        >
+            <Form size="sm" containerClassName="flex flex-col">
+                <FormItem label="Currency Code">
+                    <Input placeholder="Enter Currency Code" />
+                </FormItem>
+                <FormItem label="Currency Symbol">
+                    <Input placeholder="Enter Currency Symbol" />
+                </FormItem>
+            </Form>
+        </Drawer>
+        </>
     )
 }
 
