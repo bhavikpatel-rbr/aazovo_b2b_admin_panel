@@ -21,7 +21,6 @@ import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag'
 import Button from '@/components/ui/Button'
 import Dialog from '@/components/ui/Dialog'
 import Avatar from '@/components/ui/Avatar'
@@ -31,9 +30,8 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import Checkbox from '@/components/ui/Checkbox'
-import { Form, FormItem as UiFormItem } from '@/components/ui/Form'
 import Badge from '@/components/ui/Badge'
-import DatePicker from '@/components/ui/DatePicker'
+import { Card, Drawer, Tag, Form, FormItem, Input, Select, DatePicker, Table, Dropdown } from '@/components/ui'
 import { HiOutlineCalendar } from 'react-icons/hi'
 import {
     TbMail,
@@ -49,8 +47,12 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
+    TbEdit,
     TbPlus, // Keep if Add button might be needed later
 } from 'react-icons/tb'
+import { SlOptionsVertical } from "react-icons/sl";
+
+import userIcon from "/img/avatars/thumb-1.jpg"
 
 // --- Lazy Load CSVLink ---
 const CSVLink = lazy(() =>
@@ -65,12 +67,20 @@ import type { TableQueries } from '@/@types/common'
 // --- Define Item Type ---
 export type SubscriberItem = {
     id: string
+    name : string
     email: string
     subscribedDate: Date
     // status?: 'subscribed' | 'unsubscribed';
-    // source?: string;
+    status: string
+    source?: string
 }
 // --- End Item Type ---
+// --- Updated Status Colors ---
+const statusColor: Record<SubscriberItem['status'], string> = {
+    Active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
+    Inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
+    Unsubscriber: 'bg-orange-200 dark:bg-orange-200 text-orange-600 dark:text-orange-600', // Example color for inactive
+}
 
 // --- Define Filter Schema ---
 const filterValidationSchema = z.object({
@@ -87,43 +97,67 @@ const initialDummySubscribers: SubscriberItem[] = [
     // ... (dummy data remains the same)
     {
         id: 'SUB001',
+        name: "Alice",
         email: 'alice.subscriber@email.com',
         subscribedDate: new Date(2023, 10, 1, 9, 0),
+        status: "Active",
+        source: "Website" ,
     },
     {
         id: 'SUB002',
+        name: "Bob",
         email: 'bob.fan@mail.net',
         subscribedDate: new Date(2023, 9, 15, 14, 30),
+        status: "Inactive",
+        source: "Manual" ,
     },
     {
         id: 'SUB003',
+        name: "charlie",
         email: 'charlie.reader@domain.org',
         subscribedDate: new Date(2023, 8, 20, 11, 5),
+        status: "Unsubscriber",
+        source: "Manual" ,
     },
     {
         id: 'SUB004',
+        name: "Diana",
         email: 'diana.interested@web.co',
         subscribedDate: new Date(2023, 7, 10, 16, 0),
+        status: "Active",
+        source: "Website" ,
     },
     {
         id: 'SUB005',
+        name: "Ethan",
         email: 'ethan.updates@email.io',
         subscribedDate: new Date(2023, 10, 5, 8, 45),
+        status: "Active",
+        source: "Website" ,
     },
     {
         id: 'SUB006',
+        name: "Fiona",
         email: 'fiona.news@mail.co',
         subscribedDate: new Date(2023, 6, 5, 10, 0),
+        status: "Active",
+        source: "Website" ,
     },
     {
         id: 'SUB007',
+        name: "George",
         email: 'george.alerts@domain.com',
         subscribedDate: new Date(2023, 9, 1, 13, 20),
+        status: "Active",
+        source: "Website" ,
     },
     {
         id: 'SUB008',
+        name: "Heidi",
         email: 'heidi.insider@email.com',
         subscribedDate: new Date(2023, 8, 1, 17, 10),
+        status: "Active",
+        source: "Website" ,
     },
 ]
 
@@ -132,10 +166,23 @@ const initialDummySubscribers: SubscriberItem[] = [
 // --- End Constants ---
 
 // --- Reusable ActionColumn Component ---
-const ActionColumn = ({ onDelete }: { onDelete: () => void }) => {
+const ActionColumn = ({ onDelete, data }: { onDelete: () => void, data: SubscriberItem }) => {
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
+
+    const [isViewDrawerOpen , setIsViewDrawerOpen] = useState<boolean>(false)
+    const openViewDrawer = ()=> setIsViewDrawerOpen(true)
+    const closeViewDrawer = ()=> setIsViewDrawerOpen(false)
+
+    const { Tr, Th, Td, THead, TBody } = Table
+
+    const moreOptionsDropdown = [
+        { key: 'welcome', name: 'Welcome' },
+        { key: 'reminder', name: 'Reminder' },
+        { key: 'newsletter', name: 'Newsletter' },
+    ]
+
     return (
         <div className="flex items-center justify-center">
             <Tooltip title="View Subscriber">
@@ -145,8 +192,142 @@ const ActionColumn = ({ onDelete }: { onDelete: () => void }) => {
                         hoverBgClass,
                         'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-600',
                     )}
+                    onClick={openViewDrawer}
                     role="button">
                     <IoEyeOutline />
+                </div>
+            </Tooltip>
+            <Drawer
+                width={600}
+                title="Subscriber Details"
+                isOpen={isViewDrawerOpen}
+                onClose={closeViewDrawer}
+                onRequestClose={closeViewDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeViewDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <div className=''>
+                    <Card className='bg-gray-100 dark:bg-gray-700 border-none flex flex-col gap-2'>
+                        {/* <h6 className="text-base font-semibold ">Exported Log</h6> */}
+                        <div className="flex flex-col gap-2">
+                            <figure className='flex gap-3 mt-2 items-center'>
+                                <img src={userIcon} alt="icon" className='border h-10 w-10 aspect-square rounded-full'/>
+                                <figcaption className='flex flex-col gap-1'>
+                                    <div className="flex gap-2">
+                                        <h6 className='font-semibold text-black dark:text-white'>{data.name}</h6>
+                                        <Tag className={` ${statusColor[data.status]} text-xs inline w-auto`}>{data.status}</Tag>
+                                    </div>
+                                    <span className="text-xs">{data?.email}</span>
+
+                                </figcaption>
+                            </figure>
+                            <div className="mt-1">
+                                <p className='text-xs'>
+                                    <span className='font-semibold text-black  dark:text-white'>Subscribed Date: </span>
+                                    <span>{data?.subscribedDate?.toLocaleDateString()+" "+"20:00 PM"}</span>
+                                </p>
+                                <p className='text-xs' >
+                                    <span className='font-semibold text-black  dark:text-white'>Source: </span>
+                                    <span>{data?.source}</span>
+                                </p>
+                                <p className='text-xs' >
+                                    <span className='font-semibold text-black  dark:text-white'>Note: </span>
+                                    <span>{data?.note}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                    
+                    <Card className="mt-4">
+                        <h5>Mail History</h5>
+                        <Table className="mt-4 w-full">
+                            <THead>
+                                <Tr>
+                                    <Th>Template</Th>
+                                    <Th>Type</Th>
+                                    <Th>Status</Th>
+                                    <Th>Sent at</Th>
+                                    <Th>Action</Th>
+                                </Tr>
+                            </THead>
+                            <TBody>
+                                <Tr>
+                                    <Td>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">Welcome Email</span>
+                                            <span className="text-xs">welcome_email_001</span>
+                                        </div>
+                                    </Td>
+                                    <td>Auto</td>
+                                    <td><Tag>Sent</Tag></td>
+                                    <td className="text-xs">07 May, 2025 16:00 PM</td>
+                                    <td>
+                                        <Button size="xs">Resend</Button>
+                                    </td>
+                                </Tr>
+                                <Tr>
+                                    <Td>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">Welcome Email</span>
+                                            <span className="text-xs">welcome_email_001</span>
+                                        </div>
+                                    </Td>
+                                    <td>Auto</td>
+                                    <td><Tag>Sent</Tag></td>
+                                    <td className="text-xs">07 May, 2025 16:00 PM</td>
+                                    <td>
+                                        <Button size="xs">Resend</Button>
+                                    </td>
+                                </Tr>
+                                <Tr>
+                                    <Td>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">Welcome Email</span>
+                                            <span className="text-xs">welcome_email_001</span>
+                                        </div>
+                                    </Td>
+                                    <td>Auto</td>
+                                    <td><Tag>Sent</Tag></td>
+                                    <td className="text-xs">07 May, 2025 16:00 PM</td>
+                                    <td>
+                                        <Button size="xs">Resend</Button>
+                                    </td>
+                                </Tr>
+                                <Tr>
+                                    <Td>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">Welcome Email</span>
+                                            <span className="text-xs">welcome_email_001</span>
+                                        </div>
+                                    </Td>
+                                    <td>Auto</td>
+                                    <td><Tag>Sent</Tag></td>
+                                    <td className="text-xs">07 May, 2025 16:00 PM</td>
+                                    <td>
+                                        <Button size="xs">Resend</Button>
+                                    </td>
+                                </Tr>
+                            </TBody>
+                        </Table>
+                    </Card>
+                </div>
+            </Drawer>
+
+            <Tooltip title="Edit Subscriber">
+                <div
+                    className={classNames(
+                        iconButtonClass,
+                        hoverBgClass,
+                        'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400',
+                    )}
+                    role="button"
+                >
+                    <TbEdit />
                 </div>
             </Tooltip>
             <Tooltip title="Delete Subscriber">
@@ -162,6 +343,12 @@ const ActionColumn = ({ onDelete }: { onDelete: () => void }) => {
                     <TbTrash />
                 </div>
             </Tooltip>
+            <Dropdown renderTitle={<SlOptionsVertical className="mx-1 hover:text-blue-600 cursor-pointer"/>} >
+                <Dropdown.Item key="welcome" eventKey="welcome" className="!text-xs !h-8">Welcome</Dropdown.Item>
+                <Dropdown.Item key="reminder" eventKey="reminder" className="!text-xs !h-8">Reminder</Dropdown.Item>
+                <Dropdown.Item key="newsletter" eventKey="newsletter" className="!text-xs !h-8">Newsletter</Dropdown.Item>
+            </Dropdown>
+
         </div>
         
     )
@@ -182,6 +369,16 @@ const SubscriberTable = ({
     onAllRowSelect,
 }: {
     /* ... props ... */
+    columns: ColumnDef<SubscriberItem>[]
+    data: SubscriberItem[]
+    loading: boolean
+    pagingData: { total: number; pageIndex: number; pageSize: number }
+    selectedSubscribers: SubscriberItem[] // Use new type
+    onPaginationChange: (page: number) => void
+    onSelectChange: (value: number) => void
+    onSort: (sort: OnSortParam) => void
+    onRowSelect: (checked: boolean, row: SubscriberItem) => void // Use new type
+    onAllRowSelect: (checked: boolean, rows: Row<SubscriberItem>[]) => void // Use new type
 }) => {
     return (
         <DataTable
@@ -246,87 +443,104 @@ const SubscriberFilter = ({
     filterData: FilterFormSchema
     setFilterData: (data: FilterFormSchema) => void
 }) => {
-    const [dialogIsOpen, setIsOpen] = useState(false)
-    const openDialog = () => setIsOpen(true)
-    const onDialogClose = () => setIsOpen(false)
-    const { control, handleSubmit, reset, watch } = useForm<FilterFormSchema>({
-        defaultValues: filterData,
-        resolver: zodResolver(filterValidationSchema),
-    })
-    const dateRange = watch('dateRange')
-    React.useEffect(() => {
-        reset(filterData)
-    }, [filterData, reset])
-    const onSubmit = (values: FilterFormSchema) => {
-        setFilterData(values)
-        onDialogClose()
-    }
-    const handleReset = () => {
-        const defaultVals = filterValidationSchema.parse({})
-        reset(defaultVals)
-        setFilterData(defaultVals)
-        onDialogClose()
-    }
-    const activeFilterCount =
-        filterData.dateRange?.[0] || filterData.dateRange?.[1] ? 1 : 0
 
+    const [isFilterDrawerOpen , setIsFilterDrawerOpen] = useState<boolean>(false)
+    const {control, handleSubmit}  = useForm()
+    const { DatePickerRange } = DatePicker
+    const statusOptions = [{label:"Active",value:"Active"}, {label:"Inactive", value:"Inactive"} , {label:"Unsubscribed",value:"Unsubscribed"}]
+    const sourceOptions = [{label:"Manual", value:"Manual"}, {label:"Website",value:"Website"}]
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    
+    type FilterFormSchema = {
+        status : object
+        source : object
+        subscriberDate : object
+    } 
+
+    const filterFormSubmit = async (data: FilterFormSchema)=>{
+        console.log("filters", data)
+        setFilterData(data)
+        closeFilterDrawer()
+    }
     return (
         <>
             <Button
                 icon={<TbFilter />}
-                onClick={openDialog}
                 className="relative"
+                onClick={openFilterDrawer}
             >
                 <span>Filter</span>{' '}
-                {activeFilterCount > 0 && (
-                    <Badge
-                        content={activeFilterCount}
-                        className="absolute -top-2 -right-2"
-                        innerClass="text-xs"
-                    />
-                )}
             </Button>
-            <Dialog
-                isOpen={dialogIsOpen}
-                onClose={onDialogClose}
-                onRequestClose={onDialogClose}
-                width={500}
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
             >
-                <h4 className="mb-4">Filter Subscribers</h4>
-                <Form onSubmit={handleSubmit(onSubmit)}>
-                    <UiFormItem
-                        label="Subscription Date Range"
-                        className="mb-4"
-                    >
-                        <Controller
-                            name="dateRange"
-                            control={control}
-                            render={({ field }) => (
-                                <DatePicker.RangePicker
-                                    placeholder="Select date range"
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                    inputFormat="YYYY-MM-DD"
-                                    inputPrefix={
-                                        <HiOutlineCalendar className="text-lg" />
-                                    }
-                                />
-                            )}
-                        />
-                    </UiFormItem>
-                    {/* Status filter could be added here */}
-                    <div className="flex justify-end items-center gap-2 mt-6">
-                        <Button type="button" onClick={handleReset}>
-                            {' '}
-                            Reset{' '}
-                        </Button>
-                        <Button type="submit" variant="solid">
-                            {' '}
-                            Apply Filters{' '}
-                        </Button>
+                <Form size='sm' onSubmit={handleSubmit(filterFormSubmit)} containerClassName='grid grid-rows-[auto_80px]'>
+                    <div className="overflow-auto">
+                        <FormItem label="Status">
+                            <Controller
+                                name='status'
+                                control={control}
+                                render={({field})=>{
+                                    return (
+                                        <Select
+                                            placeholder="Select Status"
+                                            isMulti={true}
+                                            options={statusOptions}
+                                            onChange={(options)=>{
+                                                const values = options.map(option => option.value)
+                                                field.onChange(values)
+                                            }}
+                                        />
+                                    )
+                                }}
+                            />
+                        </FormItem>
+                        <FormItem label="Source">
+                            <Controller
+                                name='source'
+                                control={control}
+                                render={({field})=>{
+                                    return (
+                                        <Select
+                                            placeholder="Select Source"
+                                            isMulti={true}
+                                            options={sourceOptions}
+                                            onChange={(options)=>{
+                                                const values = options.map(option => option.value)
+                                                field.onChange(values)
+                                            }}
+                                        />
+                                    )
+                                }}
+                            />
+                        </FormItem>
+                        <FormItem label='Date range'>
+                            <Controller
+                                control={control}
+                                name='subscribedDate'
+                                render={({field})=>(
+                                    <DatePickerRange
+                                        placeholder="Select date range"
+                                        {...field}
+                                    />
+                                )}
+                            />
+                        </FormItem>
                     </div>
+                    <div className="text-right border-t border-t-gray-200 w-full absolute bottom-0 py-4 right-0 pr-6 bg-white dark:bg-gray-700">
+                        <Button size="sm" className="mr-2" type='button' onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                        <Button size="sm" variant="solid" type='submit'>
+                            Apply
+                        </Button>
+                    </div> 
                 </Form>
-            </Dialog>
+            </Drawer>
         </>
     )
 }
@@ -362,17 +576,17 @@ const SubscriberTableTools = ({
 
     return (
         // Use flex row, align items vertically, add gap
-        <div className="flex flex-col md:flex-row md:items-center gap-4 w-full">
+        <div className="flex flex-col md:flex-row md:items-center gap-2 w-full">
             {/* Search takes most space */}
-            <div className="flex-grow">
+            <div className="flex-grow"> 
                 <SubscriberSearch onInputChange={onSearchChange} />
             </div>
             {/* Filter button and Export button grouped */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-shrink-0">
-                {/* <SubscriberFilter
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-shrink-0">
+                <SubscriberFilter
                     filterData={filterData}
                     setFilterData={setFilterData}
-                /> */}
+                />
                 <Suspense fallback={<Button loading>Loading Export...</Button>}>
                     <CSVLink
                         filename="subscribers.csv"
@@ -446,11 +660,131 @@ const SubscriberActionTools = () => {
     const navigate = useNavigate()
     const handleAdd = () => console.log('Add Subscriber action needed') // navigate('/subscribers/add');
 
+    const [isAddNewDrawerOpen , setIsAddNewDrawerOpen] = useState<boolean>(false)
+    const {control, handleSubmit}  = useForm()
+    const statusOptions = [{label:"Active",value:"Active"}, {label:"Inactive", value:"Inactive"} , {label:"Unsubscribed",value:"Unsubscribed"}]
+    const sourceOptions = [{label:"Manual", value:"Manual"}, {label:"Website",value:"Website"}]
+    const openAddNewDrawer = ()=> setIsAddNewDrawerOpen(true)
+    const closeAddNewDrawer = ()=> setIsAddNewDrawerOpen(false)
+    
+    const AddNewFormSubmit = async (data: SubscriberItem)=>{
+        console.log("Add New Form Data", data)
+        closeAddNewDrawer()
+    }
+
     // Decide if manual adding is needed. If not, this component can be removed.
     return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/* <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block> Add Subscriber </Button> */}
-        </div>
+        <>
+            <div className="flex flex-col md:flex-row gap-3">
+                <Button variant="solid" icon={<TbPlus />} onClick={openAddNewDrawer} block> Add New </Button>
+            </div>
+            <Drawer
+                title="Add New Subscriber"
+                isOpen={isAddNewDrawerOpen}
+                onClose={closeAddNewDrawer}
+                onRequestClose={closeAddNewDrawer}
+            >
+                <Form size='sm' onSubmit={handleSubmit(AddNewFormSubmit)} containerClassName='grid grid-rows-[auto_80px]'>
+                    <div className="overflow-auto">
+                        <FormItem label="Name">
+                            <Controller
+                                name="name"
+                                control={control}
+                                render={({field})=>(
+                                    <Input
+                                        type="text"
+                                        placeholder="Enter Name"
+                                        {...field}
+                                    />
+                                )}
+                            />
+                        </FormItem>
+                        <FormItem label="Email">
+                            <Controller
+                                name="email"
+                                control={control}
+                                render={({field})=>(
+                                    <Input
+                                        type="text"
+                                        placeholder="Enter Email"
+                                        {...field}
+                                    />
+                                )}
+                            />
+                        </FormItem>
+                        <div className="flex flex-col lg:flex-row gap-2">
+                            <FormItem label="Status" className="w-1/2">
+                                <Controller
+                                    name='status'
+                                    control={control}
+                                    render={({field})=>{
+                                        return (
+                                            <Select
+                                                placeholder="Select Status"
+                                                options={statusOptions}
+                                                onChange={(option)=>{
+                                                    field.onChange(option.value)
+                                                }}
+                                            />
+                                        )
+                                    }}
+                                />
+                            </FormItem>
+                            <FormItem label="Source" className="w-1/2">
+                                <Controller
+                                    name='source'
+                                    control={control}
+                                    render={({field})=>{
+                                        return (
+                                            <Select
+                                                placeholder="Select Source"
+                                                options={sourceOptions}
+                                                onChange={(option)=>{
+                                                    field.onChange(option.value)
+                                                }}
+                                            />
+                                        )
+                                    }}
+                                />
+                            </FormItem>
+                        </div>
+                        <FormItem label='Subscribed Date'>
+                            <Controller
+                                control={control}
+                                name='dataRange'
+                                render={({field})=>(
+                                    <DatePicker
+                                        placeholder="Select date range"
+                                        {...field}
+                                    />
+                                )}
+                            />
+                        </FormItem>
+                        <FormItem label='Notes'>
+                            <Controller
+                                control={control}
+                                name='note'
+                                render={({field})=>(
+                                    <Input
+                                        textArea
+                                        placeholder="Add Note..."
+                                        {...field}
+                                    />
+                                )}
+                            />
+                        </FormItem>
+                    </div>
+                    <div className="text-right border-t border-t-gray-200 w-full absolute bottom-0 py-4 right-0 pr-6 bg-white dark:bg-gray-700">
+                        <Button size="sm" className="mr-2" type='button' onClick={closeAddNewDrawer}>
+                            Cancel
+                        </Button>
+                        <Button size="sm" variant="solid" type='submit'>
+                            Apply
+                        </Button>
+                    </div> 
+                </Form>
+            </Drawer>
+        </>
     )
 }
 // --- End SubscriberActionTools ---
@@ -574,7 +908,10 @@ const SubscribersListing = () => {
     )
     const handleSort = useCallback(
         (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
+            // handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
+            const newTableData = cloneDeep(tableData)
+            newTableData.sort = sort
+            handleSetTableData(newTableData)
         },
         [tableData, handleSetTableData],
     )
@@ -592,24 +929,24 @@ const SubscribersListing = () => {
         },
         [tableData, handleSetTableData],
     )
-    const handleRemoveFilter = useCallback(
-        (key: keyof FilterFormSchema, value: any) => {
-            setFilterData((prev) => {
-                let newValues
-                if (key === 'dateRange') {
-                    newValues = [null, null]
-                } else {
-                    const currentValues = prev[key] || []
-                    newValues = currentValues.filter((item) => item !== value)
-                }
-                const updatedFilterData = { ...prev, [key]: newValues }
-                handleSetTableData({ ...tableData, pageIndex: 1 })
-                setSelectedSubscribers([])
-                return updatedFilterData
-            })
-        },
-        [tableData, handleSetTableData],
-    )
+    // const handleRemoveFilter = useCallback(
+    //     (key: keyof FilterFormSchema, value: any) => {
+    //         setFilterData((prev) => {
+    //             let newValues
+    //             if (key === 'dateRange') {
+    //                 newValues = [null, null]
+    //             } else {
+    //                 const currentValues = prev[key] || []
+    //                 newValues = currentValues.filter((item) => item !== value)
+    //             }
+    //             const updatedFilterData = { ...prev, [key]: newValues }
+    //             handleSetTableData({ ...tableData, pageIndex: 1 })
+    //             setSelectedSubscribers([])
+    //             return updatedFilterData
+    //         })
+    //     },
+    //     [tableData, handleSetTableData],
+    // )
     const handleClearAllFilters = useCallback(() => {
         const defaultFilters = filterValidationSchema.parse({})
         setFilterData(defaultFilters)
@@ -645,7 +982,26 @@ const SubscribersListing = () => {
     const columns: ColumnDef<SubscriberItem>[] = useMemo(
         () => [
             // { header: 'ID', accessorKey: 'id', ... }, // Optional ID
-            { header: 'Email', accessorKey: 'email', enableSorting: true, meta: {HeaderClass :'text-left'}, },
+            { header: 'Name', accessorKey: 'name', enableSorting: true, size:120 },
+            { header: 'Email', accessorKey: 'email', enableSorting: true, size: 200, meta: {HeaderClass :'text-left'}, },
+            { header: 'Source', accessorKey: 'source', enableSorting: true, size: 90 },
+            {
+                header: 'Status',
+                accessorKey: 'status',
+                // Enable sorting
+                enableSorting: true,
+                size:120, 
+                cell: (props) => {
+                    const { status } = props.row.original
+                    return (
+                        <div className="flex items-center">
+                            <Tag className={statusColor[status]}>
+                                <span className="capitalize">{status}</span>
+                            </Tag>
+                        </div>
+                    )
+                },
+            },
             {
                 header: 'Subscribed Date',
                 accessorKey: 'subscribedDate',
@@ -672,6 +1028,7 @@ const SubscribersListing = () => {
                 cell: (props) => (
                     <ActionColumn
                         onDelete={() => handleDelete(props.row.original)}
+                        data={props.row.original}
                     />
                 ),
             },
@@ -685,10 +1042,10 @@ const SubscribersListing = () => {
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
-                <div className="lg:flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Subscribers</h5>
                     {/* Action Tools removed from header, Export moved to Table Tools */}
-                    {/* <SubscriberActionTools allSubscribers={subscribers} /> */}
+                    <SubscriberActionTools />
                 </div>
 
                 {/* Tools - Search, Filter, Export */}
@@ -702,11 +1059,11 @@ const SubscribersListing = () => {
                 </div>
 
                 {/* Active Filters Display Area */}
-                <ActiveFiltersDisplay
+                {/* <ActiveFiltersDisplay
                     filterData={filterData}
                     onRemoveFilter={handleRemoveFilter}
                     onClearAll={handleClearAllFilters}
-                />
+                /> */}
 
                 {/* Table */}
                 <div className="flex-grow overflow-auto">
