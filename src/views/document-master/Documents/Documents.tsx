@@ -21,6 +21,7 @@ import DebouceInput from '@/components/shared/DebouceInput'
 // import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
 // import Input from '@/components/ui/Input' // No longer needed for filter form
 // import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
+import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
 
 // Icons
 import {
@@ -178,8 +179,10 @@ const FormListTableTools = ({
 // --- FormListActionTools Component (No functional changes needed for filter removal) ---
 const FormListActionTools = ({
     allFormsData,
+    openAddDrawer,
 }: {
-    allFormsData: FormItem[]
+    allFormsData: FormItem[];
+    openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
     const csvHeaders = [
@@ -204,9 +207,7 @@ const FormListActionTools = ({
             <Button
                 variant="solid"
                 icon={<TbPlus />}
-                onClick={() =>
-                    console.log('Navigate to Add New Document Type page')
-                }
+                onClick={openAddDrawer}
                 block
             >
                 Add New
@@ -289,7 +290,31 @@ const FormListSelected = ({
 }
 
 // --- Main Documentmaster Component ---
-const Document = () => {
+const Documents = () => {
+
+        const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+        const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+        const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+
+    const openEditDrawer = (item: FormItem) => {
+        setSelectedItem(item);
+        setIsEditDrawerOpen(true);
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null);
+        setIsEditDrawerOpen(false);
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null);
+        setIsAddDrawerOpen(true);
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false);
+    };
+
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
 
@@ -515,7 +540,7 @@ const Document = () => {
                 meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
@@ -525,11 +550,12 @@ const Document = () => {
     )
 
     return (
+        <>
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full">
                 <div className="lg:flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Document List</h5>
-                    <FormListActionTools allFormsData={processedDataForCsv} />
+                    <FormListActionTools allFormsData={processedDataForCsv}  openAddDrawer={openAddDrawer}  />
                 </div>
 
                 <div className="mb-4 w-full">
@@ -565,10 +591,73 @@ const Document = () => {
                 onDeleteSelected={handleDeleteSelected}
             />
         </Container>
+        {/* Edit Drawer */}
+        <Drawer title="Edit Document" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} 
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => {
+                                console.log('Updated Document:', selectedItem);
+                                closeEditDrawer();
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                } onRequestClose={closeEditDrawer}>
+        <Form>
+        <FormItem label="Name">
+            <Input
+                value={selectedItem?.name || ''}
+                onChange={(e) =>
+                    setSelectedItem((prev) => ({
+                        ...(prev || { id: '', name: '' }), // Provide default values for `id` and `name`
+                        name: e.target.value,
+                    }))
+                }
+            />
+        </FormItem>
+        </Form>
+    </Drawer>
+
+    {/* Add New Drawer */}
+    <Drawer title="Add New Document" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                            Cancel
+                        </Button>
+                        <Button size="sm" variant="solid" onClick={() => console.log('Document Added')}>
+                            Add
+                        </Button>
+                    </div>
+                }>
+        <Form
+            onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                const newItem: FormItem = {
+                    id: `${forms.length + 1}`,
+                    name: formData.get('name') as string,
+                };
+                // handleAdd(newItem);
+            }}
+        >
+            <FormItem label="Name">
+                <Input name="name" placeholder="Enter Document Name" />
+            </FormItem>
+            {/* <Button type="submit">Add</Button> */}
+        </Form>
+    </Drawer>
+        </>
     )
 }
 
-export default Document
+export default Documents
 
 // Helper
 function classNames(...classes: (string | boolean | undefined)[]) {

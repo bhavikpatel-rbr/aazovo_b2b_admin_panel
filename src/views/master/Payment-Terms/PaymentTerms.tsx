@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
-// import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
+import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
 // import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
 // import { z } from 'zod' // No longer needed
 // import type { ZodType } from 'zod' // No longer needed
@@ -18,6 +18,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
+import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
 // import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
 // import Input from '@/components/ui/Input' // No longer needed for filter form
 // import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
@@ -28,7 +29,8 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    // TbFilter, // Filter icon removed
+    TbFilter, // Filter icon removed
+    TbCloudUpload,
     TbPlus,
 } from 'react-icons/tb'
 
@@ -97,6 +99,8 @@ const ActionColumn = ({
 }
 // --- End ActionColumn ---
 
+
+
 // --- FormListTable Component (No changes) ---
 const FormListTable = ({
     columns,
@@ -141,82 +145,154 @@ const FormListTable = ({
     )
 }
 
-// --- FormListSearch Component (No changes) ---
-type FormListSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const FormListSearch = React.forwardRef<HTMLInputElement, FormListSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                className="w-full "
-                placeholder="Quick search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-FormListSearch.displayName = 'FormListSearch'
-
 // FormListTableFilter component removed
 
 // --- FormListTableTools Component (Simplified) ---
-const FormListTableTools = ({
+// const FormListTableTools = ({
+//     onSearchChange,
+// }: {
+//     onSearchChange: (query: string) => void
+// }) => {
+//     return (
+//         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
+//             <FormListSearch onInputChange={onSearchChange} />
+//             {/* Filter button/component removed */}
+//         </div>
+//     )
+// }
+// // --- End FormListTableTools ---
+
+// --- ExportMappingSearch Component ---
+type ExportMappingSearchProps = {
+    // Renamed component
+    onInputChange: (value: string) => void
+    ref?: Ref<HTMLInputElement>
+}
+const ExportMappingSearch = React.forwardRef<
+    HTMLInputElement,
+    ExportMappingSearchProps
+>(({ onInputChange }, ref) => {
+    return (
+        <DebouceInput
+            ref={ref}
+            placeholder="Quick Search..." // Updated placeholder
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(e) => onInputChange(e.target.value)}
+        />
+    )
+})
+ExportMappingSearch.displayName = 'ExportMappingSearch'
+// --- End ExportMappingSearch ---
+
+// --- ExportMappingTableTools Component ---
+const ExportMappingTableTools = ({
+    // Renamed component
     onSearchChange,
 }: {
     onSearchChange: (query: string) => void
 }) => {
+
+    type ExportMappingFilterSchema = {
+        userRole : String,
+        exportFrom : String,
+        exportDate : Date
+    }
+
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+
+    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+
+    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+        console.log("filter data", data)
+    }
+
     return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <FormListSearch onInputChange={onSearchChange} />
-            {/* Filter button/component removed */}
+        <div className="flex items-center w-full gap-2">
+            <div className="flex-grow">
+                <ExportMappingSearch onInputChange={onSearchChange} />
+            </div>
+            {/* Filter component removed */}
+            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Document Name'>
+                        {/* <Controller
+                            control={control}
+                            name='userRole'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Document Name"
+                                    {...field}
+                                />
+                            )}
+                        /> */}
+                    </FormItem>
+                </Form>
+            </Drawer>
         </div>
     )
 }
-// --- End FormListTableTools ---
+// --- End ExportMappingTableTools ---
+
+// // --- FormListTableTools Component (Simplified) ---
+// const FormListTableTools = ({
+//     onSearchChange,
+// }: {
+//     onSearchChange: (query: string) => void
+// }) => {
+//     return (
+//         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
+//             <FormListSearch onInputChange={onSearchChange} />
+//             {/* Filter button/component removed */}
+//         </div>
+//     )
+// }
+// // --- End FormListTableTools ---
 
 // --- FormListActionTools Component (No functional changes needed for filter removal) ---
 const FormListActionTools = ({
     allFormsData,
+    openAddDrawer,
 }: {
-    allFormsData: FormItem[]
+    allFormsData: FormItem[];
+    openAddDrawer: () => void; // Accept function as a prop
 }) => {
-    const navigate = useNavigate()
     const csvHeaders = [
         { label: 'ID', key: 'id' },
         { label: 'Name', key: 'term_name' },
-    ]
+    ];
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
-                </Button>
-            </CSVLink>
-            */}
             <Button
                 variant="solid"
                 icon={<TbPlus />}
-                onClick={() =>
-                    console.log('Navigate to Add New Document Type page')
-                }
+                onClick={openAddDrawer} // Open the add drawer
                 block
             >
                 Add New
             </Button>
         </div>
-    )
-}
+    );
+};
 
 // --- FormListSelected Component (No functional changes needed for filter removal) ---
 const FormListSelected = ({
@@ -293,6 +369,30 @@ const FormListSelected = ({
 
 // --- Main PaymentTerms Component ---
 const PaymentTerms = () => {
+
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+
+    const openEditDrawer = (item: FormItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null); // Clear any selected item
+        setIsAddDrawerOpen(true); // Open the add drawer
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false); // Close the add drawer
+    };
+
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
 
@@ -518,7 +618,7 @@ const PaymentTerms = () => {
                 meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
@@ -528,19 +628,23 @@ const PaymentTerms = () => {
     )
 
     return (
+        <>
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full">
                 <div className="lg:flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Payment Terms</h5>
-                    <FormListActionTools allFormsData={processedDataForCsv} />
-                </div>
-
-                <div className="mb-4 w-full">
-                    <FormListTableTools
-                        onSearchChange={handleSearchChange}
-                        // filterData and setFilterData props removed
+                    <FormListActionTools
+                        allFormsData={processedDataForCsv}
+                        openAddDrawer={openAddDrawer} // Pass the function as a prop
                     />
                 </div>
+
+                <div className="mb-4">
+                    <ExportMappingTableTools
+                                onSearchChange={handleSearchChange}
+                            />{' '}
+                            {/* Use updated component */}
+                        </div>
 
                 <FormListTable
                     columns={columns}
@@ -568,6 +672,77 @@ const PaymentTerms = () => {
                 onDeleteSelected={handleDeleteSelected}
             />
         </Container>
+        {/* Edit Drawer */}
+            <Drawer
+                title="Edit Payment Term"
+                isOpen={isEditDrawerOpen}
+                onClose={closeEditDrawer}
+                onRequestClose={closeEditDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => {
+                                console.log('Updated Payment Term:', selectedItem);
+                                closeEditDrawer();
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                }
+            >
+                <Form size="sm" containerClassName="flex flex-col">
+                    <FormItem label="Term Name">
+                        <Input
+                            placeholder="Enter Term Name"
+                            value={selectedItem?.term_name || ''} // Populate with selected item's term name
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', term_name: '' }), // Handle null case
+                                    term_name: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+
+            {/* Add New Drawer */}
+            <Drawer
+                title="Add New Payment Term"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => {
+                                console.log('New Payment Term Added');
+                                closeAddDrawer();
+                            }}
+                        >
+                            Add
+                        </Button>
+                    </div>
+                }
+            >
+                <Form size="sm" containerClassName="flex flex-col">
+                    <FormItem label="Term Name">
+                        <Input placeholder="Enter Term Name" />
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </>
     )
 }
 

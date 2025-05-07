@@ -18,6 +18,8 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
+import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
+import { Controller, useForm } from 'react-hook-form'
 // import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
 // import Input from '@/components/ui/Input' // No longer needed for filter form
 // import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
@@ -28,7 +30,8 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    // TbFilter, // Filter icon removed
+    TbFilter, // Filter icon removed
+    TbCloudUpload,
     TbPlus,
 } from 'react-icons/tb'
 
@@ -48,6 +51,7 @@ export type FormItem = {
 // --- End FormItem Type Definition ---
 
 // FilterFormSchema and channelList removed
+
 
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
@@ -161,25 +165,118 @@ FormListSearch.displayName = 'FormListSearch'
 // FormListTableFilter component removed
 
 // --- FormListTableTools Component (Simplified) ---
-const FormListTableTools = ({
+// const FormListTableTools = ({
+//     onSearchChange,
+// }: {
+//     onSearchChange: (query: string) => void
+// }) => {
+//     return (
+//         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
+//             <FormListSearch onInputChange={onSearchChange} />
+//             {/* Filter button/component removed */}
+//         </div>
+//     )
+// }
+// // --- End FormListTableTools ---
+
+// --- ExportMappingSearch Component ---
+type ExportMappingSearchProps = {
+    // Renamed component
+    onInputChange: (value: string) => void
+    ref?: Ref<HTMLInputElement>
+}
+const ExportMappingSearch = React.forwardRef<
+    HTMLInputElement,
+    ExportMappingSearchProps
+>(({ onInputChange }, ref) => {
+    return (
+        <DebouceInput
+            ref={ref}
+            placeholder="Quick Search..." // Updated placeholder
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(e) => onInputChange(e.target.value)}
+        />
+    )
+})
+ExportMappingSearch.displayName = 'ExportMappingSearch'
+// --- End ExportMappingSearch ---
+
+// --- ExportMappingTableTools Component ---
+const ExportMappingTableTools = ({
+    // Renamed component
     onSearchChange,
 }: {
     onSearchChange: (query: string) => void
 }) => {
+
+    type ExportMappingFilterSchema = {
+        userRole : String,
+        exportFrom : String,
+        exportDate : Date
+    }
+
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+
+    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+
+    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+        console.log("filter data", data)
+    }
+
     return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <FormListSearch onInputChange={onSearchChange} />
-            {/* Filter button/component removed */}
+        <div className="flex items-center w-full gap-2">
+            <div className="flex-grow">
+                <ExportMappingSearch onInputChange={onSearchChange} />
+            </div>
+            {/* Filter component removed */}
+            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Document Name'>
+                        {/* <Controller
+                            control={control}
+                            name='userRole'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Document Name"
+                                    {...field}
+                                />
+                            )}
+                        /> */}
+                    </FormItem>
+                </Form>
+            </Drawer>
         </div>
     )
 }
-// --- End FormListTableTools ---
+// --- End ExportMappingTableTools ---
+
 
 // --- FormListActionTools Component (No functional changes needed for filter removal) ---
 const FormListActionTools = ({
     allFormsData,
+    openAddDocumentDrawer,
 }: {
-    allFormsData: FormItem[]
+    allFormsData: FormItem[];
+    openAddDocumentDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
     const csvHeaders = [
@@ -204,9 +301,7 @@ const FormListActionTools = ({
             <Button
                 variant="solid"
                 icon={<TbPlus />}
-                onClick={() =>
-                    console.log('Navigate to Add New Document Type page')
-                }
+                onClick={openAddDocumentDrawer}
                 block
             >
                 Add New
@@ -292,10 +387,27 @@ const FormListSelected = ({
 const Documentmaster = () => {
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
+    const [isAddDocumentDrawerOpen, setIsAddDocumentDrawerOpen] = useState(false);
 
+    const openAddDocumentDrawer = () => setIsAddDocumentDrawerOpen(true);
+    const closeAddDocumentDrawer = () => setIsAddDocumentDrawerOpen(false);
     useEffect(() => {
         dispatch(getDocumentTypeAction())
     }, [dispatch])
+
+
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+
+    const openEditDrawer = (item: FormItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
 
     const { DocumentTypeData = [], status: masterLoadingStatus = 'idle' } =
         useSelector(masterSelector)
@@ -515,7 +627,7 @@ const Documentmaster = () => {
                 meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
@@ -525,46 +637,114 @@ const Documentmaster = () => {
     )
 
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full">
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Document Types</h5>
-                    <FormListActionTools allFormsData={processedDataForCsv} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h5 className="mb-4 lg:mb-0">Document Types</h5>
+                        <FormListActionTools allFormsData={processedDataForCsv}
+                        openAddDocumentDrawer={openAddDocumentDrawer} />
+                    </div>
 
-                <div className="mb-4 w-full">
-                    <FormListTableTools
-                        onSearchChange={handleSearchChange}
-                        // filterData and setFilterData props removed
+                    <div className="mb-4">
+                    <ExportMappingTableTools
+                                onSearchChange={handleSearchChange}
+                            />{' '}
+                            {/* Use updated component */}
+                        </div>
+
+                    <FormListTable
+                        columns={columns}
+                        data={pageData}
+                        loading={
+                            localIsLoading || masterLoadingStatus === 'loading'
+                        }
+                        pagingData={{
+                            total: total,
+                            pageIndex: tableData.pageIndex as number,
+                            pageSize: tableData.pageSize as number,
+                        }}
+                        selectedForms={selectedForms}
+                        onPaginationChange={handlePaginationChange}
+                        onSelectChange={handleSelectChange}
+                        onSort={handleSort}
+                        onRowSelect={handleRowSelect}
+                        onAllRowSelect={handleAllRowSelect}
                     />
-                </div>
+                </AdaptiveCard>
 
-                <FormListTable
-                    columns={columns}
-                    data={pageData}
-                    loading={
-                        localIsLoading || masterLoadingStatus === 'loading'
-                    }
-                    pagingData={{
-                        total: total,
-                        pageIndex: tableData.pageIndex as number,
-                        pageSize: tableData.pageSize as number,
-                    }}
+                <FormListSelected
                     selectedForms={selectedForms}
-                    onPaginationChange={handlePaginationChange}
-                    onSelectChange={handleSelectChange}
-                    onSort={handleSort}
-                    onRowSelect={handleRowSelect}
-                    onAllRowSelect={handleAllRowSelect}
+                    setSelectedForms={setSelectedForms}
+                    onDeleteSelected={handleDeleteSelected}
                 />
-            </AdaptiveCard>
-
-            <FormListSelected
-                selectedForms={selectedForms}
-                setSelectedForms={setSelectedForms}
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
+            </Container>
+            <Drawer
+                title="Add Document"
+                isOpen={isAddDocumentDrawerOpen}
+                onClose={closeAddDocumentDrawer}
+                onRequestClose={closeAddDocumentDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeAddDocumentDrawer}>
+                            Cancel
+                        </Button>
+                        <Button size="sm" variant="solid" onClick={() => console.log('Document Added')}>
+                            Add
+                        </Button>
+                    </div>
+                }
+            >
+                <Form size="sm" containerClassName="flex flex-col">
+                    <FormItem label="Document Name">
+                        <Input placeholder="Enter Document Name" />
+                    </FormItem>
+                    {/* <FormItem label="Description">
+                        <Input placeholder="Enter Description" />
+                    </FormItem> */}
+                    {/* Add more fields as needed */}
+                </Form>
+            </Drawer>
+            <Drawer
+                title="Edit Document"
+                isOpen={isEditDrawerOpen}
+                onClose={closeEditDrawer}
+                onRequestClose={closeEditDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => {
+                                console.log('Updated Document:', selectedItem);
+                                closeEditDrawer();
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                }
+            >
+                <Form size="sm" containerClassName="flex flex-col">
+                    <FormItem label="Document Name">
+                        <Input
+                            placeholder="Enter Document Name"
+                            value={selectedItem?.name || ''} // Populate with selected item's name
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', name: '' }), // Handle null case by providing default values
+                                    name: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    {/* Add more fields as needed */}
+                </Form>
+            </Drawer>
+        </>
     )
 }
 
