@@ -1,9 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addUnitAction, deletUnitAction, editUnitAction, getUnitAction } from "./middleware"
+import { addUnitAction, deletUnitAction, editUnitAction, getBrandAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getPaymentTermAction, getUnitAction } from "./middleware"
 
 const INITIAL_STATE: any = {
-  unitData: "", 
+  unitData: "",
 }
 
 const masterSlice = createSlice({
@@ -16,13 +16,41 @@ const masterSlice = createSlice({
       unitData: payload
     }))
     builder.addCase(addUnitAction.fulfilled, (state, { payload }) => ({
-      ...state, 
+      ...state,
     }))
     builder.addCase(deletUnitAction.fulfilled, (state, { payload }) => ({
-      ...state, 
+      ...state,
     }))
     builder.addCase(editUnitAction.fulfilled, (state, { payload }) => ({
-      ...state, 
+      ...state,
+    }))
+    builder.addCase(getDocumentTypeAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      DocumentTypeData: payload
+    }))
+    builder.addCase(getPaymentTermAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      PaymentTermsData: payload
+    }))
+    builder.addCase(getCurrencyAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      CurrencyData: payload
+    }))
+    builder.addCase(getContinentsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      ContinentsData: payload
+    }))
+    builder.addCase(getCountriesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      CountriesData: payload
+    }))
+    builder.addCase(getDocumentListAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      DocumentListData: payload
+    }))
+    builder.addCase(getBrandAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      BrandData: payload
     }))
   },
 })

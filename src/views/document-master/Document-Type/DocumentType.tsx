@@ -1,155 +1,60 @@
-import React, { useState, useMemo, useCallback, Ref } from 'react'
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form' // Added for filter form
-import { zodResolver } from '@hookform/resolvers/zod' // Added for filter form
-import { z } from 'zod' // Added for filter form
-import type { ZodType } from 'zod' // Added for filter form
+// import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
+// import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
+// import { z } from 'zod' // No longer needed
+// import type { ZodType } from 'zod' // No longer needed
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag'
 import Button from '@/components/ui/Button'
-import Dialog from '@/components/ui/Dialog'
-import Avatar from '@/components/ui/Avatar'
+// import Dialog from '@/components/ui/Dialog' // No longer needed for filter dialog
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
-import RichTextEditor from '@/components/shared/RichTextEditor'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import Checkbox from '@/components/ui/Checkbox' // Added for filter form
-import Input from '@/components/ui/Input' // Added for filter form
-import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // Added for filter form & renamed FormItem
+// import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
+// import Input from '@/components/ui/Input' // No longer needed for filter form
+// import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
 
 // Icons
 import {
     TbPencil,
-    TbCopy,
-    TbSwitchHorizontal,
     TbTrash,
     TbChecks,
     TbSearch,
-    TbCloudDownload,
-    TbUserPlus,
-    TbFilter,
+    // TbFilter, // Filter icon removed
     TbPlus,
-    TbCloudUpload, // Added for filter button
 } from 'react-icons/tb'
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+import { useAppDispatch } from '@/reduxtool/store'
+import { getDocumentTypeAction } from '@/reduxtool/master/middleware'
+import { useSelector } from 'react-redux'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
 
 // --- Define FormItem Type (Table Row Data) ---
 export type FormItem = {
     id: string
     name: string
-    status: 'active' | 'inactive'
-    // Add fields corresponding to filter schema
-    purchasedProducts?: string | any // Optional product associated with form
-    purchaseChannel?: string | any // Optional channel associated with form
 }
 // --- End FormItem Type Definition ---
 
-// --- Define Filter Schema Type (Matches the provided filter component) ---
-type FilterFormSchema = {
-    purchasedProducts: string | any
-    purchaseChannel: Array<string> | any
-}
-// --- End Filter Schema Type ---
-
-// --- Constants ---
-const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
-    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600',
-}
-
-const initialDummyForms: FormItem[] = [
-    {
-        id: 'F001',
-        name: 'User Registration Form',
-        status: 'active',
-        purchasedProducts: 'Premium Plan',
-        purchaseChannel: 'Online Retailers',
-    },
-    {
-        id: 'F002',
-        name: 'Contact Request',
-        status: 'active',
-        purchaseChannel: 'Direct Sales',
-    },
-    {
-        id: 'F003',
-        name: 'Product Feedback Survey',
-        status: 'inactive',
-        purchasedProducts: 'Basic Widget',
-    },
-    {
-        id: 'F004',
-        name: 'Support Ticket Submission',
-        status: 'active',
-        purchaseChannel: 'Mobile Apps',
-    },
-    {
-        id: 'F005',
-        name: 'Newsletter Subscription',
-        status: 'active',
-        purchaseChannel: 'Online Retailers',
-    },
-    { id: 'F006', name: 'Job Application Portal', status: 'inactive' },
-    {
-        id: 'F007',
-        name: 'Event Registration',
-        status: 'active',
-        purchaseChannel: 'Resellers',
-    },
-    { id: 'F008', name: 'Password Recovery', status: 'active' },
-    {
-        id: 'F009',
-        name: 'Feature Suggestion Box',
-        status: 'inactive',
-        purchasedProducts: 'Advanced Gadget',
-    },
-    {
-        id: 'F010',
-        name: 'Beta Program Application',
-        status: 'active',
-        purchaseChannel: 'Direct Sales',
-    },
-    { id: 'F011', name: 'Company Onboarding', status: 'active' },
-    {
-        id: 'F012',
-        name: 'Satisfaction Poll',
-        status: 'inactive',
-        purchasedProducts: 'Premium Plan',
-        purchaseChannel: 'Mobile Apps',
-    },
-]
-
-// Filter specific constant from the provided filter component
-const channelList = [
-    'Retail Stores',
-    'Online Retailers',
-    'Resellers',
-    'Mobile Apps',
-    'Direct Sales',
-]
-// --- End Constants ---
+// FilterFormSchema and channelList removed
 
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
     onEdit,
-    onClone,
-    onChangeStatus,
     onDelete,
 }: {
     onEdit: () => void
-    onClone: () => void
-    onChangeStatus: () => void
     onDelete: () => void
 }) => {
     const iconButtonClass =
@@ -158,32 +63,6 @@ const ActionColumn = ({
 
     return (
         <div className="flex items-center justify-center">
-            {/* <Tooltip title="Clone Form">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400',
-                    )}
-                    role="button"
-                    onClick={onClone}
-                >
-                    <TbCopy />
-                </div>
-            </Tooltip> */}
-            <Tooltip title="Change Status">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400',
-                    )}
-                    role="button"
-                    onClick={onChangeStatus}
-                >
-                    <TbSwitchHorizontal />
-                </div>
-            </Tooltip>
             <Tooltip title="Edit">
                 <div
                     className={classNames(
@@ -215,7 +94,7 @@ const ActionColumn = ({
 }
 // --- End ActionColumn ---
 
-// --- FormListTable Component ---
+// --- FormListTable Component (No changes) ---
 const FormListTable = ({
     columns,
     data,
@@ -258,9 +137,8 @@ const FormListTable = ({
         />
     )
 }
-// --- End FormListTable ---
 
-// --- FormListSearch Component ---
+// --- FormListSearch Component (No changes) ---
 type FormListSearchProps = {
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
@@ -279,183 +157,56 @@ const FormListSearch = React.forwardRef<HTMLInputElement, FormListSearchProps>(
     },
 )
 FormListSearch.displayName = 'FormListSearch'
-// --- End FormListSearch ---
 
-// --- FormListTableFilter Component (As provided by user, adapted for props) ---
-const FormListTableFilter = ({
-    // Mimic the data structure the original hook would provide
-    filterData,
-    setFilterData,
-}: {
-    filterData: FilterFormSchema
-    setFilterData: (data: FilterFormSchema) => void
-}) => {
-    const [dialogIsOpen, setIsOpen] = useState(false)
+// FormListTableFilter component removed
 
-    // Zod validation schema from the provided code
-    const validationSchema: ZodType<FilterFormSchema> = z.object({
-        // .default('') handles cases where purchasedProducts is missing or undefined
-        purchasedProducts: z.string().default(''),
-
-        // .default([]) handles cases where purchaseChannel is missing or undefined
-        purchaseChannel: z.array(z.string()).default([]),
-    })
-
-    const openDialog = () => {
-        setIsOpen(true)
-    }
-
-    const onDialogClose = () => {
-        setIsOpen(false)
-    }
-
-    const { control, handleSubmit, reset } = useForm<FilterFormSchema>({
-        resolver: zodResolver(validationSchema),
-        // defaultValues should match the type (and usually the schema defaults)
-        defaultValues: {
-            purchasedProducts: '',
-            purchaseChannel: [],
-        },
-        // Or fetch initial data and pass it here, Zod will still apply defaults if fields are missing/undefined
-    })
-    // Watch for prop changes to reset the form if external state changes
-    React.useEffect(() => {
-        reset(filterData)
-    }, [filterData, reset])
-
-    const onSubmit = (values: FilterFormSchema) => {
-        setFilterData(values) // Call the setter function passed from parent
-        setIsOpen(false)
-    }
-
-    const handleReset = () => {
-        // Reset form using react-hook-form's reset
-        const defaultVals = validationSchema.parse({}) // Get default values from schema
-        reset(defaultVals)
-        // Optionally also immediately apply the reset filter state to the parent
-        // setFilterData(defaultVals);
-        // onDialogClose(); // Close after resetting if desired
-    }
-
-    return (
-        <>
-            <Button icon={<TbFilter />} onClick={openDialog}>
-                Filter
-            </Button>
-            <Dialog
-                isOpen={dialogIsOpen}
-                onClose={onDialogClose}
-                onRequestClose={onDialogClose}
-            >
-                <h4 className="mb-4">Filter Forms</h4>
-                <Form onSubmit={handleSubmit(onSubmit)}>
-                    {/* Input from the provided filter component */}
-                    <UiFormItem label="Products">
-                        <Controller
-                            name="purchasedProducts"
-                            control={control}
-                            render={({ field }) => (
-                                <Input
-                                    type="text"
-                                    autoComplete="off"
-                                    placeholder="Search by purchased product"
-                                    {...field}
-                                />
-                            )}
-                        />
-                    </UiFormItem>
-                    {/* Checkboxes from the provided filter component */}
-                    <UiFormItem label="Purchase Channel">
-                        <Controller
-                            name="purchaseChannel"
-                            control={control}
-                            render={({ field }) => (
-                                <Checkbox.Group
-                                    vertical
-                                    value={field.value || []} // Ensure value is array
-                                    onChange={field.onChange}
-                                >
-                                    {channelList.map((source, index) => (
-                                        <Checkbox
-                                            key={source + index}
-                                            // name={field.name} // Not needed when using Controller value/onChange
-                                            value={source}
-                                            className="mb-1" // Use mb-1 for spacing
-                                        >
-                                            {source}
-                                        </Checkbox>
-                                    ))}
-                                </Checkbox.Group>
-                            )}
-                        />
-                    </UiFormItem>
-                    <div className="flex justify-end items-center gap-2 mt-6">
-                        <Button type="button" onClick={handleReset}>
-                            Reset
-                        </Button>
-                        <Button type="submit" variant="solid">
-                            Apply
-                        </Button>
-                    </div>
-                </Form>
-            </Dialog>
-        </>
-    )
-}
-// --- End FormListTableFilter ---
-
-// --- FormListTableTools Component ---
-// Passes filter state and setter down to FormListTableFilter
+// --- FormListTableTools Component (Simplified) ---
 const FormListTableTools = ({
     onSearchChange,
-    filterData,
-    setFilterData, // Pass the setter down
 }: {
     onSearchChange: (query: string) => void
-    filterData: FilterFormSchema
-    setFilterData: (data: FilterFormSchema) => void // Prop type for setter
 }) => {
     return (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <FormListSearch onInputChange={onSearchChange} />
-            {/* Render the filter component, passing props */}
-            <FormListTableFilter
-                filterData={filterData}
-                setFilterData={setFilterData}
-            />
-            <Button icon={<TbCloudUpload/>}>Export</Button>
+            {/* Filter button/component removed */}
         </div>
     )
 }
 // --- End FormListTableTools ---
 
-// --- FormListActionTools Component ---
-const FormListActionTools = ({ allForms }: { allForms: FormItem[] }) => {
+// --- FormListActionTools Component (No functional changes needed for filter removal) ---
+const FormListActionTools = ({
+    allFormsData,
+}: {
+    allFormsData: FormItem[]
+}) => {
     const navigate = useNavigate()
     const csvHeaders = [
         { label: 'ID', key: 'id' },
         { label: 'Name', key: 'name' },
-        { label: 'Status', key: 'status' },
-        { label: 'Associated Product', key: 'purchasedProducts' },
-        { label: 'Purchase Channel', key: 'purchaseChannel' },
     ]
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/* <CSVLink
+            {/*
+            <CSVLink
                 className="w-full"
-                filename="formList.csv"
-                data={allForms}
+                filename="documentTypeList.csv"
+                data={allFormsData}
                 headers={csvHeaders}
             >
                 <Button icon={<TbCloudDownload />} className="w-full" block>
                     Download
                 </Button>
-            </CSVLink> */}
+            </CSVLink>
+            */}
             <Button
                 variant="solid"
                 icon={<TbPlus />}
-                onClick={() => console.log('Navigate to Add New Form page')}
+                onClick={() =>
+                    console.log('Navigate to Add New Document Type page')
+                }
                 block
             >
                 Add New
@@ -463,9 +214,8 @@ const FormListActionTools = ({ allForms }: { allForms: FormItem[] }) => {
         </div>
     )
 }
-// --- End FormListActionTools ---
 
-// --- FormListSelected Component ---
+// --- FormListSelected Component (No functional changes needed for filter removal) ---
 const FormListSelected = ({
     selectedForms,
     setSelectedForms,
@@ -502,7 +252,7 @@ const FormListSelected = ({
                                 {selectedForms.length}
                             </span>
                             <span>
-                                Form{selectedForms.length > 1 ? 's' : ''}{' '}
+                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
                                 selected
                             </span>
                         </span>
@@ -522,14 +272,14 @@ const FormListSelected = ({
             <ConfirmDialog
                 isOpen={deleteConfirmationOpen}
                 type="danger"
-                title={`Delete ${selectedForms.length} Form${selectedForms.length > 1 ? 's' : ''}`}
+                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
                 onClose={handleCancelDelete}
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
             >
                 <p>
-                    Are you sure you want to delete the selected form
+                    Are you sure you want to delete the selected item
                     {selectedForms.length > 1 ? 's' : ''}? This action cannot be
                     undone.
                 </p>
@@ -537,15 +287,22 @@ const FormListSelected = ({
         </>
     )
 }
-// --- End FormListSelected ---
 
-// --- Main Continents Component ---
-const Continents = () => {
+// --- Main Documentmaster Component ---
+const Documentmaster = () => {
     const navigate = useNavigate()
+    const dispatch = useAppDispatch()
 
-    // --- Lifted State ---
-    const [isLoading, setIsLoading] = useState(false)
-    const [forms, setForms] = useState<FormItem[]>(initialDummyForms)
+    useEffect(() => {
+        dispatch(getDocumentTypeAction())
+    }, [dispatch])
+
+    const { DocumentTypeData = [], status: masterLoadingStatus = 'idle' } =
+        useSelector(masterSelector)
+
+    const [localIsLoading, setLocalIsLoading] = useState(false)
+    const [forms, setForms] = useState<FormItem[]>([]) // Remains for potential local ops, not table data source
+
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
         pageSize: 10,
@@ -553,277 +310,241 @@ const Continents = () => {
         query: '',
     })
     const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
-    // State for Filters (matching the provided filter component schema)
-    const [filterData, setFilterData] = useState<FilterFormSchema>({
-        purchasedProducts: '',
-        purchaseChannel: [],
-    })
-    // --- End Lifted State ---
+    // filterData state and handleApplyFilter removed
 
-    // --- Memoized Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...forms]
+    console.log('Raw DocumentTypeData from Redux:', DocumentTypeData)
 
-        // --- Apply Filtering ---
-        // Filter by Purchase Channel (multi-select)
-        if (
-            filterData.purchaseChannel &&
-            filterData.purchaseChannel.length > 0
-        ) {
-            const channelSet = new Set(filterData.purchaseChannel)
-            processedData = processedData.filter(
-                (form) =>
-                    form.purchaseChannel &&
-                    channelSet.has(form.purchaseChannel),
+    const { pageData, total, processedDataForCsv } = useMemo(() => {
+        console.log(
+            '[Memo] Recalculating. Query:',
+            tableData.query,
+            'Sort:',
+            tableData.sort,
+            'Page:',
+            tableData.pageIndex,
+            // 'Filters:' removed from log
+            'Input Data (DocumentTypeData) Length:',
+            DocumentTypeData?.length ?? 0,
+        )
+
+        const sourceData: FormItem[] = Array.isArray(DocumentTypeData)
+            ? DocumentTypeData
+            : []
+        let processedData: FormItem[] = cloneDeep(sourceData)
+
+        // Product and Channel filtering logic removed
+
+        // 1. Apply Search Query (on id and name)
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim()
+            console.log('[Memo] Applying search query:', query)
+            processedData = processedData.filter((item: FormItem) => {
+                const itemNameLower = item.name?.trim().toLowerCase() ?? ''
+                const itemIdString = String(item.id ?? '').trim()
+                const itemIdLower = itemIdString.toLowerCase()
+                return (
+                    itemNameLower.includes(query) || itemIdLower.includes(query)
+                )
+            })
+            console.log(
+                '[Memo] After search query filter. Count:',
+                processedData.length,
             )
         }
-        // Filter by Purchased Product (text search)
-        if (filterData.purchasedProducts) {
-            const productQuery = filterData.purchasedProducts.toLowerCase()
-            processedData = processedData.filter((form) =>
-                form.purchasedProducts?.toLowerCase().includes(productQuery),
-            )
-        }
 
-        // --- Apply Search (on remaining fields) ---
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase()
-            processedData = processedData.filter(
-                (form) =>
-                    form.id.toLowerCase().includes(query) ||
-                    form.name.toLowerCase().includes(query) ||
-                    form.status.toLowerCase().includes(query),
-            )
-        }
-
-        // --- Apply Sorting ---
+        // 2. Apply Sorting (on id and name)
         const { order, key } = tableData.sort as OnSortParam
-        if (order && key) {
+        if (
+            order &&
+            key &&
+            (key === 'id' || key === 'name') &&
+            processedData.length > 0
+        ) {
+            console.log('[Memo] Applying sort. Key:', key, 'Order:', order)
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
-                const aValue = a[key as keyof FormItem] ?? ''
-                const bValue = b[key as keyof FormItem] ?? ''
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
-                }
-                return 0
+                // Ensure values are strings for localeCompare, default to empty string if not
+                const aValue = String(a[key as keyof FormItem] ?? '')
+                const bValue = String(b[key as keyof FormItem] ?? '')
+
+                return order === 'asc'
+                    ? aValue.localeCompare(bValue)
+                    : bValue.localeCompare(aValue)
             })
             processedData = sortedData
         }
 
-        // --- Apply Pagination ---
+        const dataBeforePagination = [...processedData] // For CSV export
+
+        // 3. Apply Pagination
+        const currentTotal = processedData.length
         const pageIndex = tableData.pageIndex as number
         const pageSize = tableData.pageSize as number
-        const dataTotal = processedData.length
         const startIndex = (pageIndex - 1) * pageSize
         const dataForPage = processedData.slice(
             startIndex,
             startIndex + pageSize,
         )
 
-        return { pageData: dataForPage, total: dataTotal }
-    }, [forms, tableData, filterData]) // Added filterData dependency
-    // --- End Memoized Data Processing ---
+        console.log(
+            '[Memo] Returning. PageData Length:',
+            dataForPage.length,
+            'Total Items (after all filters/sort):',
+            currentTotal,
+        )
+        return {
+            pageData: dataForPage,
+            total: currentTotal,
+            processedDataForCsv: dataBeforePagination,
+        }
+    }, [DocumentTypeData, tableData]) // filterData removed from dependencies
 
-    // --- Lifted Handlers ---
-    // Handler to update filter state (passed to filter component)
-    const handleApplyFilter = useCallback((newFilterData: FilterFormSchema) => {
-        setFilterData(newFilterData)
-        setTableData((prevTableData) => ({ ...prevTableData, pageIndex: 1 }))
-        setSelectedForms([])
-    }, []) // No dependencies needed as it only sets state
+    // --- Handlers ---
+    // handleApplyFilter removed
 
-    const handleSetTableData = useCallback((data: TableQueries) => {
-        setTableData(data)
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
+        setTableData((prev) => ({ ...prev, ...data }))
     }, [])
 
     const handlePaginationChange = useCallback(
-        (page: number) => {
-            handleSetTableData({ ...tableData, pageIndex: page })
-        },
-        [tableData, handleSetTableData],
+        (page: number) => handleSetTableData({ pageIndex: page }),
+        [handleSetTableData],
     )
-
     const handleSelectChange = useCallback(
         (value: number) => {
-            handleSetTableData({
-                ...tableData,
-                pageSize: Number(value),
-                pageIndex: 1,
-            })
+            handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
             setSelectedForms([])
         },
-        [tableData, handleSetTableData],
+        [handleSetTableData],
     )
-
     const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
+        (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
+        [handleSetTableData],
     )
-
     const handleSearchChange = useCallback(
-        (query: string) => {
-            handleSetTableData({ ...tableData, query: query, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData], // Depend on tableData
+        (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
+        [handleSetTableData],
     )
 
     const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
         setSelectedForms((prev) => {
-            if (checked) {
+            if (checked)
                 return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
-            } else {
-                return prev.filter((f) => f.id !== row.id)
-            }
+            return prev.filter((f) => f.id !== row.id)
         })
     }, [])
 
     const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<FormItem>[]) => {
-            const rowIds = new Set(rows.map((r) => r.original.id))
+        (checked: boolean, currentRows: Row<FormItem>[]) => {
+            const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
-                const originalRows = rows.map((row) => row.original)
-                setSelectedForms((prev) => {
-                    const existingIds = new Set(prev.map((f) => f.id))
-                    const newSelection = originalRows.filter(
-                        (f) => !existingIds.has(f.id),
+                setSelectedForms((prevSelected) => {
+                    const prevSelectedIds = new Set(
+                        prevSelected.map((f) => f.id),
                     )
-                    return [...prev, ...newSelection]
+                    const newRowsToAdd = currentPageRowOriginals.filter(
+                        (r) => !prevSelectedIds.has(r.id),
+                    )
+                    return [...prevSelected, ...newRowsToAdd]
                 })
             } else {
-                setSelectedForms((prev) =>
-                    prev.filter((f) => !rowIds.has(f.id)),
+                const currentPageRowIds = new Set(
+                    currentPageRowOriginals.map((r) => r.id),
+                )
+                setSelectedForms((prevSelected) =>
+                    prevSelected.filter((f) => !currentPageRowIds.has(f.id)),
                 )
             }
         },
         [],
     )
 
+    // --- Action Handlers (remain the same, need Redux integration for persistence) ---
     const handleEdit = useCallback(
         (form: FormItem) => {
-            console.log('Edit form:', form.id)
-            // navigate(`/forms/edit/${form.id}`);
+            console.log('Edit item (requires navigation/modal):', form.id)
+            toast.push(
+                <Notification title="Edit Action" type="info">
+                    Edit action for "{form.name}" (ID: {form.id}). Implement
+                    navigation or modal.
+                </Notification>,
+            )
         },
         [navigate],
     )
 
-    const handleCloneForm = useCallback((form: FormItem) => {
-        console.log('Cloning form:', form.id, form.name)
-        const newId = `F${Math.floor(Math.random() * 9000) + 1000}`
-        const clonedForm: FormItem = {
-            ...form,
-            id: newId,
-            name: `${form.name} (Clone)`,
-            status: 'inactive',
-        }
-        setForms((prev) => [clonedForm, ...prev])
-    }, [])
-
-    const handleChangeStatus = useCallback((form: FormItem) => {
-        const newStatus = form.status === 'active' ? 'inactive' : 'active'
-        console.log(`Changing status of form ${form.id} to ${newStatus}`)
-        setForms((currentForms) =>
-            currentForms.map((f) =>
-                f.id === form.id ? { ...f, status: newStatus } : f,
-            ),
-        )
-    }, [])
-
     const handleDelete = useCallback((formToDelete: FormItem) => {
-        console.log('Deleting form:', formToDelete.id, formToDelete.name)
-        setForms((currentForms) =>
-            currentForms.filter((form) => form.id !== formToDelete.id),
+        console.log(
+            'Delete item (needs Redux action):',
+            formToDelete.id,
+            formToDelete.name,
         )
         setSelectedForms((prevSelected) =>
             prevSelected.filter((form) => form.id !== formToDelete.id),
+        )
+        toast.push(
+            <Notification title="Delete Action" type="warning">
+                Delete action for "{formToDelete.name}" (ID: {formToDelete.id}).
+                Implement Redux deletion.
+            </Notification>,
         )
     }, [])
 
     const handleDeleteSelected = useCallback(() => {
         console.log(
-            'Deleting selected forms:',
+            'Deleting selected items (needs Redux action):',
             selectedForms.map((f) => f.id),
         )
-        const selectedIds = new Set(selectedForms.map((f) => f.id))
-        setForms((currentForms) =>
-            currentForms.filter((f) => !selectedIds.has(f.id)),
-        )
         setSelectedForms([])
+        toast.push(
+            <Notification title="Selected Items Delete Action" type="warning">
+                {selectedForms.length} item(s) delete action. Implement Redux
+                deletion.
+            </Notification>,
+        )
     }, [selectedForms])
-    // --- End Lifted Handlers ---
+    // --- End Action Handlers ---
 
-    // --- Define Columns in Parent ---
     const columns: ColumnDef<FormItem>[] = useMemo(
         () => [
-            { header: 'ID', accessorKey: 'id', enableSorting: true, size: 70 },
-            { header: 'Form Name', accessorKey: 'name', enableSorting: true },
-            // Example column using one of the new fields
-            {
-                header: 'Channel',
-                accessorKey: 'purchaseChannel',
-                enableSorting: true,
-            },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                size: 100,
-                cell: (props) => {
-                    const { status } = props.row.original
-                    return (
-                        <div className="flex items-center">
-                            <Tag className={statusColor[status]}>
-                                <span className="capitalize">{status}</span>
-                            </Tag>
-                        </div>
-                    )
-                },
-            },
+            { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
+            { header: 'Name', accessorKey: 'name', enableSorting: true },
             {
                 header: 'Action',
                 id: 'action',
-                meta: { HeaderClass : "text-center" },
+                meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onClone={() => handleCloneForm(props.row.original)}
-                        onChangeStatus={() =>
-                            handleChangeStatus(props.row.original)
-                        }
                         onEdit={() => handleEdit(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
             },
         ],
-        [handleCloneForm, handleChangeStatus, handleEdit, handleDelete],
+        [handleEdit, handleDelete],
     )
-    // --- End Define Columns ---
 
-    // --- Render Main Component ---
     return (
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full">
                 <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Document Type</h5>
-                    <FormListActionTools allForms={forms} />
+                    <h5 className="mb-4 lg:mb-0">Document Types</h5>
+                    <FormListActionTools allFormsData={processedDataForCsv} />
                 </div>
 
                 <div className="mb-4 w-full">
                     <FormListTableTools
                         onSearchChange={handleSearchChange}
-                        filterData={filterData}
-                        setFilterData={handleApplyFilter} // Pass the handler to update filter state
+                        // filterData and setFilterData props removed
                     />
                 </div>
 
                 <FormListTable
                     columns={columns}
                     data={pageData}
-                    loading={isLoading}
+                    loading={
+                        localIsLoading || masterLoadingStatus === 'loading'
+                    }
                     pagingData={{
                         total: total,
                         pageIndex: tableData.pageIndex as number,
@@ -846,9 +567,8 @@ const Continents = () => {
         </Container>
     )
 }
-// --- End Main Component ---
 
-export default Continents
+export default Documentmaster
 
 // Helper
 function classNames(...classes: (string | boolean | undefined)[]) {
