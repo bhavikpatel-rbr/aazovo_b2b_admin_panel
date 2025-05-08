@@ -46,7 +46,7 @@ import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
 // --- Define FormItem Type (Table Row Data) ---
-export type FormItem = {
+export type PaymentTermsItem = {
     id: string
     term_name: string
 }
@@ -114,16 +114,16 @@ const FormListTable = ({
     onRowSelect,
     onAllRowSelect,
 }: {
-    columns: ColumnDef<FormItem>[]
-    data: FormItem[]
+    columns: ColumnDef<PaymentTermsItem>[]
+    data: PaymentTermsItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: FormItem[]
+    selectedForms: PaymentTermsItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: FormItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<FormItem>[]) => void
+    onRowSelect: (checked: boolean, row: PaymentTermsItem) => void
+    onAllRowSelect: (checked: boolean, rows: Row<PaymentTermsItem>[]) => void
 }) => {
     return (
         <DataTable
@@ -162,15 +162,15 @@ const FormListTable = ({
 // }
 // // --- End FormListTableTools ---
 
-// --- ExportMappingSearch Component ---
-type ExportMappingSearchProps = {
+// --- PaymentTermsSearch Component ---
+type PaymentTermsSearchProps = {
     // Renamed component
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
 }
-const ExportMappingSearch = React.forwardRef<
+const PaymentTermsSearch = React.forwardRef<
     HTMLInputElement,
-    ExportMappingSearchProps
+    PaymentTermsSearchProps
 >(({ onInputChange }, ref) => {
     return (
         <DebouceInput
@@ -181,18 +181,18 @@ const ExportMappingSearch = React.forwardRef<
         />
     )
 })
-ExportMappingSearch.displayName = 'ExportMappingSearch'
-// --- End ExportMappingSearch ---
+PaymentTermsSearch.displayName = 'PaymentTermsSearch'
+// --- End PaymentTermsSearch ---
 
-// --- ExportMappingTableTools Component ---
-const ExportMappingTableTools = ({
+// --- PaymentTermsTableTools Component ---
+const PaymentTermsTableTools = ({
     // Renamed component
     onSearchChange,
 }: {
     onSearchChange: (query: string) => void
 }) => {
 
-    type ExportMappingFilterSchema = {
+    type PaymentTermsFilterSchema = {
         userRole : String,
         exportFrom : String,
         exportDate : Date
@@ -202,16 +202,16 @@ const ExportMappingTableTools = ({
     const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
     const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
 
-    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+    const {control, handleSubmit} = useForm<PaymentTermsFilterSchema>()
 
-    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+    const exportFiltersSubmitHandler = (data : PaymentTermsFilterSchema) => {
         console.log("filter data", data)
     }
 
     return (
         <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
-                <ExportMappingSearch onInputChange={onSearchChange} />
+                <PaymentTermsSearch onInputChange={onSearchChange} />
             </div>
             {/* Filter component removed */}
             <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
@@ -250,7 +250,7 @@ const ExportMappingTableTools = ({
         </div>
     )
 }
-// --- End ExportMappingTableTools ---
+// --- End PaymentTermsTableTools ---
 
 // // --- FormListTableTools Component (Simplified) ---
 // const FormListTableTools = ({
@@ -272,7 +272,7 @@ const FormListActionTools = ({
     allFormsData,
     openAddDrawer,
 }: {
-    allFormsData: FormItem[];
+    allFormsData: PaymentTermsItem[];
     openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const csvHeaders = [
@@ -300,8 +300,8 @@ const FormListSelected = ({
     setSelectedForms,
     onDeleteSelected,
 }: {
-    selectedForms: FormItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<FormItem[]>>
+    selectedForms: PaymentTermsItem[]
+    setSelectedForms: React.Dispatch<React.SetStateAction<PaymentTermsItem[]>>
     onDeleteSelected: () => void
 }) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
@@ -372,9 +372,9 @@ const PaymentTerms = () => {
 
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<PaymentTermsItem | null>(null);
 
-    const openEditDrawer = (item: FormItem) => {
+    const openEditDrawer = (item: PaymentTermsItem) => {
         setSelectedItem(item); // Set the selected item's data
         setIsEditDrawerOpen(true); // Open the edit drawer
     };
@@ -404,7 +404,7 @@ const PaymentTerms = () => {
         useSelector(masterSelector)
 
     const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<FormItem[]>([]) // Remains for potential local ops, not table data source
+    const [forms, setForms] = useState<PaymentTermsItem[]>([]) // Remains for potential local ops, not table data source
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -412,7 +412,7 @@ const PaymentTerms = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    const [selectedForms, setSelectedForms] = useState<PaymentTermsItem[]>([])
     // filterData state and handleApplyFilter removed
 
     console.log('Raw PaymentTermsData from Redux:', PaymentTermsData)
@@ -430,10 +430,10 @@ const PaymentTerms = () => {
             PaymentTermsData?.length ?? 0,
         )
 
-        const sourceData: FormItem[] = Array.isArray(PaymentTermsData)
+        const sourceData: PaymentTermsItem[] = Array.isArray(PaymentTermsData)
             ? PaymentTermsData
             : []
-        let processedData: FormItem[] = cloneDeep(sourceData)
+        let processedData: PaymentTermsItem[] = cloneDeep(sourceData)
 
         // Product and Channel filtering logic removed
 
@@ -441,7 +441,7 @@ const PaymentTerms = () => {
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
             console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: FormItem) => {
+            processedData = processedData.filter((item: PaymentTermsItem) => {
                 const itemNameLower = item.term_name?.trim().toLowerCase() ?? ''
                 const itemIdString = String(item.id ?? '').trim()
                 const itemIdLower = itemIdString.toLowerCase()
@@ -467,8 +467,8 @@ const PaymentTerms = () => {
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
                 // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof FormItem] ?? '')
-                const bValue = String(b[key as keyof FormItem] ?? '')
+                const aValue = String(a[key as keyof PaymentTermsItem] ?? '')
+                const bValue = String(b[key as keyof PaymentTermsItem] ?? '')
 
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
@@ -529,7 +529,7 @@ const PaymentTerms = () => {
         [handleSetTableData],
     )
 
-    const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
+    const handleRowSelect = useCallback((checked: boolean, row: PaymentTermsItem) => {
         setSelectedForms((prev) => {
             if (checked)
                 return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
@@ -538,7 +538,7 @@ const PaymentTerms = () => {
     }, [])
 
     const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<FormItem>[]) => {
+        (checked: boolean, currentRows: Row<PaymentTermsItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
                 setSelectedForms((prevSelected) => {
@@ -564,7 +564,7 @@ const PaymentTerms = () => {
 
     // --- Action Handlers (remain the same, need Redux integration for persistence) ---
     const handleEdit = useCallback(
-        (form: FormItem) => {
+        (form: PaymentTermsItem) => {
             console.log('Edit item (requires navigation/modal):', form.id)
             toast.push(
                 <Notification title="Edit Action" type="info">
@@ -576,7 +576,7 @@ const PaymentTerms = () => {
         [navigate],
     )
 
-    const handleDelete = useCallback((formToDelete: FormItem) => {
+    const handleDelete = useCallback((formToDelete: PaymentTermsItem) => {
         console.log(
             'Delete item (needs Redux action):',
             formToDelete.id,
@@ -608,7 +608,7 @@ const PaymentTerms = () => {
     }, [selectedForms])
     // --- End Action Handlers ---
 
-    const columns: ColumnDef<FormItem>[] = useMemo(
+    const columns: ColumnDef<PaymentTermsItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
             { header: 'Terms', accessorKey: 'term_name', enableSorting: true },
@@ -640,7 +640,7 @@ const PaymentTerms = () => {
                 </div>
 
                 <div className="mb-4">
-                    <ExportMappingTableTools
+                    <PaymentTermsTableTools
                                 onSearchChange={handleSearchChange}
                             />{' '}
                             {/* Use updated component */}

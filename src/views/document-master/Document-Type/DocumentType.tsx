@@ -44,7 +44,7 @@ import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
 // --- Define FormItem Type (Table Row Data) ---
-export type FormItem = {
+export type DocumentItem = {
     id: string
     name: string
 }
@@ -111,16 +111,16 @@ const FormListTable = ({
     onRowSelect,
     onAllRowSelect,
 }: {
-    columns: ColumnDef<FormItem>[]
-    data: FormItem[]
+    columns: ColumnDef<DocumentItem>[]
+    data: DocumentItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: FormItem[]
+    selectedForms: DocumentItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: FormItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<FormItem>[]) => void
+    onRowSelect: (checked: boolean, row: DocumentItem) => void
+    onAllRowSelect: (checked: boolean, rows: Row<DocumentItem>[]) => void
 }) => {
     return (
         <DataTable
@@ -179,15 +179,15 @@ FormListSearch.displayName = 'FormListSearch'
 // }
 // // --- End FormListTableTools ---
 
-// --- ExportMappingSearch Component ---
-type ExportMappingSearchProps = {
+// --- DocumentTypeSearch Component ---
+type DocumentTypeSearchProps = {
     // Renamed component
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
 }
-const ExportMappingSearch = React.forwardRef<
+const DocumentTypeSearch = React.forwardRef<
     HTMLInputElement,
-    ExportMappingSearchProps
+    DocumentTypeSearchProps
 >(({ onInputChange }, ref) => {
     return (
         <DebouceInput
@@ -198,18 +198,18 @@ const ExportMappingSearch = React.forwardRef<
         />
     )
 })
-ExportMappingSearch.displayName = 'ExportMappingSearch'
-// --- End ExportMappingSearch ---
+DocumentTypeSearch.displayName = 'DocumentTypeSearch'
+// --- End DocumentTypeSearch ---
 
-// --- ExportMappingTableTools Component ---
-const ExportMappingTableTools = ({
+// --- DocumentTypeTableTools Component ---
+const DocumentTypeTableTools = ({
     // Renamed component
     onSearchChange,
 }: {
     onSearchChange: (query: string) => void
 }) => {
 
-    type ExportMappingFilterSchema = {
+    type DocumentTypeFilterSchema = {
         userRole : String,
         exportFrom : String,
         exportDate : Date
@@ -219,16 +219,16 @@ const ExportMappingTableTools = ({
     const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
     const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
 
-    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+    const {control, handleSubmit} = useForm<DocumentTypeFilterSchema>()
 
-    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+    const exportFiltersSubmitHandler = (data : DocumentTypeFilterSchema) => {
         console.log("filter data", data)
     }
 
     return (
         <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
-                <ExportMappingSearch onInputChange={onSearchChange} />
+                <DocumentTypeSearch onInputChange={onSearchChange} />
             </div>
             {/* Filter component removed */}
             <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
@@ -267,7 +267,7 @@ const ExportMappingTableTools = ({
         </div>
     )
 }
-// --- End ExportMappingTableTools ---
+// --- End DocumentTypeTableTools ---
 
 
 // --- FormListActionTools Component (No functional changes needed for filter removal) ---
@@ -275,7 +275,7 @@ const FormListActionTools = ({
     allFormsData,
     openAddDocumentDrawer,
 }: {
-    allFormsData: FormItem[];
+    allFormsData: DocumentItem[];
     openAddDocumentDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
@@ -316,8 +316,8 @@ const FormListSelected = ({
     setSelectedForms,
     onDeleteSelected,
 }: {
-    selectedForms: FormItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<FormItem[]>>
+    selectedForms: DocumentItem[]
+    setSelectedForms: React.Dispatch<React.SetStateAction<DocumentItem[]>>
     onDeleteSelected: () => void
 }) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
@@ -397,9 +397,9 @@ const Documentmaster = () => {
 
 
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<DocumentItem | null>(null);
 
-    const openEditDrawer = (item: FormItem) => {
+    const openEditDrawer = (item: DocumentItem) => {
         setSelectedItem(item); // Set the selected item's data
         setIsEditDrawerOpen(true); // Open the edit drawer
     };
@@ -413,7 +413,7 @@ const Documentmaster = () => {
         useSelector(masterSelector)
 
     const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<FormItem[]>([]) // Remains for potential local ops, not table data source
+    const [forms, setForms] = useState<DocumentItem[]>([]) // Remains for potential local ops, not table data source
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -421,7 +421,7 @@ const Documentmaster = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    const [selectedForms, setSelectedForms] = useState<DocumentItem[]>([])
     // filterData state and handleApplyFilter removed
 
     console.log('Raw DocumentTypeData from Redux:', DocumentTypeData)
@@ -439,10 +439,10 @@ const Documentmaster = () => {
             DocumentTypeData?.length ?? 0,
         )
 
-        const sourceData: FormItem[] = Array.isArray(DocumentTypeData)
+        const sourceData: DocumentItem[] = Array.isArray(DocumentTypeData)
             ? DocumentTypeData
             : []
-        let processedData: FormItem[] = cloneDeep(sourceData)
+        let processedData: DocumentItem[] = cloneDeep(sourceData)
 
         // Product and Channel filtering logic removed
 
@@ -450,7 +450,7 @@ const Documentmaster = () => {
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
             console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: FormItem) => {
+            processedData = processedData.filter((item: DocumentItem) => {
                 const itemNameLower = item.name?.trim().toLowerCase() ?? ''
                 const itemIdString = String(item.id ?? '').trim()
                 const itemIdLower = itemIdString.toLowerCase()
@@ -476,8 +476,8 @@ const Documentmaster = () => {
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
                 // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof FormItem] ?? '')
-                const bValue = String(b[key as keyof FormItem] ?? '')
+                const aValue = String(a[key as keyof DocumentItem] ?? '')
+                const bValue = String(b[key as keyof DocumentItem] ?? '')
 
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
@@ -538,7 +538,7 @@ const Documentmaster = () => {
         [handleSetTableData],
     )
 
-    const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
+    const handleRowSelect = useCallback((checked: boolean, row: DocumentItem) => {
         setSelectedForms((prev) => {
             if (checked)
                 return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
@@ -547,7 +547,7 @@ const Documentmaster = () => {
     }, [])
 
     const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<FormItem>[]) => {
+        (checked: boolean, currentRows: Row<DocumentItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
                 setSelectedForms((prevSelected) => {
@@ -573,7 +573,7 @@ const Documentmaster = () => {
 
     // --- Action Handlers (remain the same, need Redux integration for persistence) ---
     const handleEdit = useCallback(
-        (form: FormItem) => {
+        (form: DocumentItem) => {
             console.log('Edit item (requires navigation/modal):', form.id)
             toast.push(
                 <Notification title="Edit Action" type="info">
@@ -585,7 +585,7 @@ const Documentmaster = () => {
         [navigate],
     )
 
-    const handleDelete = useCallback((formToDelete: FormItem) => {
+    const handleDelete = useCallback((formToDelete: DocumentItem) => {
         console.log(
             'Delete item (needs Redux action):',
             formToDelete.id,
@@ -617,7 +617,7 @@ const Documentmaster = () => {
     }, [selectedForms])
     // --- End Action Handlers ---
 
-    const columns: ColumnDef<FormItem>[] = useMemo(
+    const columns: ColumnDef<DocumentItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
             { header: 'Name', accessorKey: 'name', enableSorting: true },
@@ -647,7 +647,7 @@ const Documentmaster = () => {
                     </div>
 
                     <div className="mb-4">
-                    <ExportMappingTableTools
+                    <DocumentTypeTableTools
                                 onSearchChange={handleSearchChange}
                             />{' '}
                             {/* Use updated component */}

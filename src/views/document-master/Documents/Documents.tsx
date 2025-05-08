@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
-// import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
+import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
 // import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
 // import { z } from 'zod' // No longer needed
 // import type { ZodType } from 'zod' // No longer needed
@@ -29,7 +29,8 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    // TbFilter, // Filter icon removed
+    TbFilter, // Filter icon removed
+    TbCloudUpload,
     TbPlus,
 } from 'react-icons/tb'
 
@@ -42,7 +43,7 @@ import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
 // --- Define FormItem Type (Table Row Data) ---
-export type FormItem = {
+export type DocumentItem = {
     id: string
     name: string
 }
@@ -95,6 +96,96 @@ const ActionColumn = ({
 }
 // --- End ActionColumn ---
 
+// --- DocumentsSearch Component ---
+type DocumentsSearchProps = {
+    // Renamed component
+    onInputChange: (value: string) => void
+    ref?: Ref<HTMLInputElement>
+}
+const DocumentsSearch = React.forwardRef<
+    HTMLInputElement,
+    DocumentsSearchProps
+>(({ onInputChange }, ref) => {
+    return (
+        <DebouceInput
+            ref={ref}
+            placeholder="Quick Search..." // Updated placeholder
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(e) => onInputChange(e.target.value)}
+        />
+    )
+})
+DocumentsSearch.displayName = 'DocumentsSearch'
+// --- End DocumentsSearch ---
+
+// --- DocumentsTableTools Component ---
+const DocumentsTableTools = ({
+    // Renamed component
+    onSearchChange,
+}: {
+    onSearchChange: (query: string) => void
+}) => {
+
+    type DocumentsFilterSchema = {
+        userRole : String,
+        exportFrom : String,
+        exportDate : Date
+    }
+
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+
+    const {control, handleSubmit} = useForm<DocumentsFilterSchema>()
+
+    const exportFiltersSubmitHandler = (data : DocumentsFilterSchema) => {
+        console.log("filter data", data)
+    }
+
+    return (
+        <div className="flex items-center w-full gap-2">
+            <div className="flex-grow">
+                <DocumentsSearch onInputChange={onSearchChange} />
+            </div>
+            {/* Filter component removed */}
+            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Document Name'>
+                        {/* <Controller
+                            control={control}
+                            name='userRole'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Document Name"
+                                    {...field}
+                                />
+                            )}
+                        /> */}
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </div>
+    )
+}
+// --- End DocumentsTableTools ---
+
 // --- FormListTable Component (No changes) ---
 const FormListTable = ({
     columns,
@@ -108,16 +199,16 @@ const FormListTable = ({
     onRowSelect,
     onAllRowSelect,
 }: {
-    columns: ColumnDef<FormItem>[]
-    data: FormItem[]
+    columns: ColumnDef<DocumentItem>[]
+    data: DocumentItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: FormItem[]
+    selectedForms: DocumentItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: FormItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<FormItem>[]) => void
+    onRowSelect: (checked: boolean, row: DocumentItem) => void
+    onAllRowSelect: (checked: boolean, rows: Row<DocumentItem>[]) => void
 }) => {
     return (
         <DataTable
@@ -181,7 +272,7 @@ const FormListActionTools = ({
     allFormsData,
     openAddDrawer,
 }: {
-    allFormsData: FormItem[];
+    allFormsData: DocumentItem[];
     openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
@@ -222,8 +313,8 @@ const FormListSelected = ({
     setSelectedForms,
     onDeleteSelected,
 }: {
-    selectedForms: FormItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<FormItem[]>>
+    selectedForms: DocumentItem[]
+    setSelectedForms: React.Dispatch<React.SetStateAction<DocumentItem[]>>
     onDeleteSelected: () => void
 }) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
@@ -294,9 +385,9 @@ const Documents = () => {
 
         const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
         const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-        const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+        const [selectedItem, setSelectedItem] = useState<DocumentItem | null>(null);
 
-    const openEditDrawer = (item: FormItem) => {
+    const openEditDrawer = (item: DocumentItem) => {
         setSelectedItem(item);
         setIsEditDrawerOpen(true);
     };
@@ -326,7 +417,7 @@ const Documents = () => {
         useSelector(masterSelector)
 
     const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<FormItem[]>([]) // Remains for potential local ops, not table data source
+    const [forms, setForms] = useState<DocumentItem[]>([]) // Remains for potential local ops, not table data source
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -334,7 +425,7 @@ const Documents = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    const [selectedForms, setSelectedForms] = useState<DocumentItem[]>([])
     // filterData state and handleApplyFilter removed
 
     console.log('Raw DocumentListData from Redux:', DocumentListData)
@@ -352,10 +443,10 @@ const Documents = () => {
             DocumentListData?.length ?? 0,
         )
 
-        const sourceData: FormItem[] = Array.isArray(DocumentListData)
+        const sourceData: DocumentItem[] = Array.isArray(DocumentListData)
             ? DocumentListData
             : []
-        let processedData: FormItem[] = cloneDeep(sourceData)
+        let processedData: DocumentItem[] = cloneDeep(sourceData)
 
         // Product and Channel filtering logic removed
 
@@ -363,7 +454,7 @@ const Documents = () => {
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
             console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: FormItem) => {
+            processedData = processedData.filter((item: DocumentItem) => {
                 const itemNameLower = item.name?.trim().toLowerCase() ?? ''
                 const itemIdString = String(item.id ?? '').trim()
                 const itemIdLower = itemIdString.toLowerCase()
@@ -389,8 +480,8 @@ const Documents = () => {
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
                 // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof FormItem] ?? '')
-                const bValue = String(b[key as keyof FormItem] ?? '')
+                const aValue = String(a[key as keyof DocumentItem] ?? '')
+                const bValue = String(b[key as keyof DocumentItem] ?? '')
 
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
@@ -451,7 +542,7 @@ const Documents = () => {
         [handleSetTableData],
     )
 
-    const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
+    const handleRowSelect = useCallback((checked: boolean, row: DocumentItem) => {
         setSelectedForms((prev) => {
             if (checked)
                 return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
@@ -460,7 +551,7 @@ const Documents = () => {
     }, [])
 
     const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<FormItem>[]) => {
+        (checked: boolean, currentRows: Row<DocumentItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
                 setSelectedForms((prevSelected) => {
@@ -486,7 +577,7 @@ const Documents = () => {
 
     // --- Action Handlers (remain the same, need Redux integration for persistence) ---
     const handleEdit = useCallback(
-        (form: FormItem) => {
+        (form: DocumentItem) => {
             console.log('Edit item (requires navigation/modal):', form.id)
             toast.push(
                 <Notification title="Edit Action" type="info">
@@ -498,7 +589,7 @@ const Documents = () => {
         [navigate],
     )
 
-    const handleDelete = useCallback((formToDelete: FormItem) => {
+    const handleDelete = useCallback((formToDelete: DocumentItem) => {
         console.log(
             'Delete item (needs Redux action):',
             formToDelete.id,
@@ -530,7 +621,7 @@ const Documents = () => {
     }, [selectedForms])
     // --- End Action Handlers ---
 
-    const columns: ColumnDef<FormItem>[] = useMemo(
+    const columns: ColumnDef<DocumentItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
             { header: 'Name', accessorKey: 'name', enableSorting: true },
@@ -558,12 +649,12 @@ const Documents = () => {
                     <FormListActionTools allFormsData={processedDataForCsv}  openAddDrawer={openAddDrawer}  />
                 </div>
 
-                <div className="mb-4 w-full">
-                    <FormListTableTools
-                        onSearchChange={handleSearchChange}
-                        // filterData and setFilterData props removed
-                    />
-                </div>
+                <div className="mb-4">
+                    <DocumentsTableTools
+                            onSearchChange={handleSearchChange}
+                        />{' '}
+                        {/* Use updated component */}
+                    </div>
 
                 <FormListTable
                     columns={columns}
@@ -640,7 +731,7 @@ const Documents = () => {
             onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target as HTMLFormElement);
-                const newItem: FormItem = {
+                const newItem: DocumentItem = {
                     id: `${forms.length + 1}`,
                     name: formData.get('name') as string,
                 };

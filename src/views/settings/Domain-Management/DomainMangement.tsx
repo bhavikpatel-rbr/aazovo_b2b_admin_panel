@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback, Ref } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
 import classNames from 'classnames'
-
+import { useForm, Controller } from 'react-hook-form'
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
@@ -19,6 +19,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import { TbWorldWww } from 'react-icons/tb' // Icon for domain
+import { Card, Drawer, Form, FormItem, Input, } from '@/components/ui'
 
 // Icons
 import {
@@ -26,7 +27,9 @@ import {
     TbTrash, // Delete
     TbChecks, // Selected Footer
     TbSearch,
-    TbCloudDownload, // Optional export
+    TbFilter, // Filter
+    TbCloudUpload, // Optional import for export
+    // TbCloudDownload, // Optional export
     TbPlus, // Add
 } from 'react-icons/tb'
 
@@ -179,19 +182,74 @@ const DomainTableTools = ({
 }: {
     onSearchChange: (query: string) => void
 }) => {
-    return (
-        <div className="flex items-center w-full">
-            <div className="flex-grow">
-                <DomainSearch onInputChange={onSearchChange} />
-            </div>
-        </div>
-    )
+        type DomainManagementFilterSchema = {
+            userRole : String,
+            exportFrom : String,
+            exportDate : Date
+        }
+        const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+       const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+       const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+   
+       const {control, handleSubmit} = useForm<DomainManagementFilterSchema>()
+   
+       const exportFiltersSubmitHandler = (data : DomainManagementFilterSchema) => {
+           console.log("filter data", data)
+       }
+   
+       return (
+           <div className="flex items-center w-full gap-2">
+               <div className="flex-grow">
+                   <DomainSearch onInputChange={onSearchChange} />
+               </div>
+               {/* Filter component removed */}
+               <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                   Filter
+               </Button>
+               <Button icon={<TbCloudUpload/>}>Export</Button>
+               <Drawer
+                   title="Filters"
+                   isOpen={isFilterDrawerOpen}
+                   onClose={closeFilterDrawer}
+                   onRequestClose={closeFilterDrawer}
+                   footer={
+                       <div className="text-right w-full">
+                           <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                               Cancel
+                           </Button>
+                       </div>  
+                   }
+               >
+                   <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                       <FormItem label='Document Name'>
+                           {/* <Controller
+                               control={control}
+                               name='userRole'
+                               render={({field})=>(
+                                   <Input
+                                       type="text"
+                                       placeholder="Enter Document Name"
+                                       {...field}
+                                   />
+                               )}
+                           /> */}
+                       </FormItem>
+                   </Form>
+               </Drawer>
+           </div>
+       )
     // Filter could be added here (e.g., by country, status)
 }
 // --- End DomainTableTools ---
 
 // --- DomainActionTools Component ---
-const DomainActionTools = ({ allDomains }: { allDomains: DomainItem[] }) => {
+const DomainActionTools = ({ 
+    allDomains, 
+    openAddDrawer 
+}: { 
+    allDomains: DomainItem[]; 
+    openAddDrawer: () => void; // Accept function as a prop
+ }) => {
     const navigate = useNavigate()
     const csvData = useMemo(
         () =>
@@ -213,7 +271,7 @@ const DomainActionTools = ({ allDomains }: { allDomains: DomainItem[] }) => {
         <div className="flex flex-col md:flex-row gap-3">
             {' '}
             {/* <CSVLink ... /> */}{' '}
-            <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} block>
                 {' '}
                 Add New{' '}
             </Button>{' '}
@@ -297,6 +355,28 @@ const DomainSelected = ({
 
 // --- Main DomainManagementListing Component ---
 const DomainManagementListing = () => {
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<DomainItem | null>(null);
+
+    const openEditDrawer = (item: DomainItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null); // Clear any selected item
+        setIsAddDrawerOpen(true); // Open the add drawer
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false); // Close the add drawer
+    };
     const navigate = useNavigate()
 
     // --- State ---
@@ -524,7 +604,7 @@ const DomainManagementListing = () => {
                 meta:{ HeaderClass: "text-center" },
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
@@ -536,12 +616,13 @@ const DomainManagementListing = () => {
 
     // --- Render Main Component ---
     return (
+        <>
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header */}
                 <div className="lg:flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Domain Management</h5>
-                    <DomainActionTools allDomains={domains} />
+                    <DomainActionTools allDomains={domains} openAddDrawer={openAddDrawer} />
                 </div>
 
                 {/* Tools */}
@@ -578,6 +659,103 @@ const DomainManagementListing = () => {
                 onDeleteSelected={handleDeleteSelected}
             />
         </Container>
+        <Drawer
+            title="Edit Domain"
+            isOpen={isEditDrawerOpen}
+            onClose={closeEditDrawer}
+            onRequestClose={closeEditDrawer}
+            footer={
+                <div className="text-right w-full">
+                    <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                        Cancel
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="solid"
+                        onClick={() => {
+                            console.log('Updated Domain:', selectedItem);
+                            closeEditDrawer();
+                        }}
+                    >
+                        Save
+                    </Button>
+                </div>
+            }
+        >
+            <Form>
+                <FormItem label="Domain Name">
+                    <Input
+                        value={selectedItem?.domain || ''}
+                        onChange={(e) =>
+                            setSelectedItem((prev) => ({
+                                ...(prev || { id: '', domain: '', countries: [] }),
+                                domain: e.target.value,
+                            }))
+                        }
+                    />
+                </FormItem>
+                <FormItem label="Countries">
+                    <Input
+                        value={selectedItem?.countries.join(', ') || ''}
+                        onChange={(e) =>
+                            setSelectedItem((prev) => ({
+                                ...(prev || { id: '', domain: '', countries: [] }),
+                                countries: e.target.value.split(',').map((c) => c.trim()),
+                            }))
+                        }
+                        placeholder="Enter countries separated by commas (e.g., US, UK, IN)"
+                    />
+                </FormItem>
+            </Form>
+        </Drawer>
+        
+        <Drawer
+            title="Add New Domain"
+            isOpen={isAddDrawerOpen}
+            onClose={closeAddDrawer}
+            onRequestClose={closeAddDrawer}
+            footer={
+                <div className="text-right w-full">
+                    <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                        Cancel
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="solid"
+                        onClick={() => console.log('Domain Added')}
+                    >
+                        Add
+                    </Button>
+                </div>
+            }
+        >
+            <Form
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.target as HTMLFormElement);
+                    const newItem: DomainItem = {
+                        id: `${domains.length + 1}`,
+                        domain: formData.get('domain') as string,
+                        countries: (formData.get('countries') as string)
+                            .split(',')
+                            .map((c) => c.trim()),
+                    };
+                    console.log('New Domain:', newItem);
+                    // handleAdd(newItem);
+                }}
+            >
+                <FormItem label="Domain Name">
+                    <Input name="domain" placeholder="Enter Domain Name (e.g., example.com)" />
+                </FormItem>
+                <FormItem label="Countries">
+                    <Input
+                        name="countries"
+                        placeholder="Enter countries separated by commas (e.g., US, UK, IN)"
+                    />
+                </FormItem>
+            </Form>
+        </Drawer>
+        </>
     )
 }
 // --- End Main Component ---

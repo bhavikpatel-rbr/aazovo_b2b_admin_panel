@@ -46,12 +46,12 @@ import {
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-// --- Define FormItem Type (Table Row Data) ---
-export type FormItem = {
+// --- Define ContinentItem Type (Table Row Data) ---
+export type ContinentItem = {
     id: string
     name: string
 }
-// --- End FormItem Type Definition ---
+// --- End ContinentItem Type Definition ---
 
 // FilterFormSchema and channelList removed
 
@@ -113,16 +113,16 @@ const FormListTable = ({
     onRowSelect,
     onAllRowSelect,
 }: {
-    columns: ColumnDef<FormItem>[]
-    data: FormItem[]
+    columns: ColumnDef<ContinentItem>[]
+    data: ContinentItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: FormItem[]
+    selectedForms: ContinentItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: FormItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<FormItem>[]) => void
+    onRowSelect: (checked: boolean, row: ContinentItem) => void
+    onAllRowSelect: (checked: boolean, rows: Row<ContinentItem>[]) => void
 }) => {
     return (
         <DataTable
@@ -166,15 +166,15 @@ FormListSearch.displayName = 'FormListSearch'
 
 // FormListTableFilter component removed
 
-// --- ExportMappingSearch Component ---
-type ExportMappingSearchProps = {
+// --- ContinentsSearch Component ---
+type ContinentsSearchProps = {
     // Renamed component
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
 }
-const ExportMappingSearch = React.forwardRef<
+const ContinentsSearch = React.forwardRef<
     HTMLInputElement,
-    ExportMappingSearchProps
+    ContinentsSearchProps
 >(({ onInputChange }, ref) => {
     return (
         <DebouceInput
@@ -185,18 +185,18 @@ const ExportMappingSearch = React.forwardRef<
         />
     )
 })
-ExportMappingSearch.displayName = 'ExportMappingSearch'
-// --- End ExportMappingSearch ---
+ContinentsSearch.displayName = 'ContinentsSearch'
+// --- End ContinentsSearch ---
 
-// --- ExportMappingTableTools Component ---
-const ExportMappingTableTools = ({
+// --- ContinentsTableTools Component ---
+const ContinentsTableTools = ({
     // Renamed component
     onSearchChange,
 }: {
     onSearchChange: (query: string) => void
 }) => {
 
-    type ExportMappingFilterSchema = {
+    type ContinentsFilterSchema = {
         userRole : String,
         exportFrom : String,
         exportDate : Date
@@ -206,16 +206,16 @@ const ExportMappingTableTools = ({
     const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
     const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
 
-    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+    const {control, handleSubmit} = useForm<ContinentsFilterSchema>()
 
-    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+    const exportFiltersSubmitHandler = (data : ContinentsFilterSchema) => {
         console.log("filter data", data)
     }
 
     return (
         <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
-                <ExportMappingSearch onInputChange={onSearchChange} />
+                <ContinentsSearch onInputChange={onSearchChange} />
             </div>
             {/* Filter component removed */}
             <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
@@ -254,7 +254,7 @@ const ExportMappingTableTools = ({
         </div>
     )
 }
-// --- End ExportMappingTableTools ---
+// --- End ContinentsTableTools ---
 
 // --- FormListTableTools Component (Simplified) ---
 const FormListTableTools = ({
@@ -276,7 +276,7 @@ const FormListActionTools = ({
     allFormsData,
     openAddDrawer,
 }: {
-    allFormsData: FormItem[];
+    allFormsData: ContinentItem[];
     openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
@@ -317,8 +317,8 @@ const FormListSelected = ({
     setSelectedForms,
     onDeleteSelected,
 }: {
-    selectedForms: FormItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<FormItem[]>>
+    selectedForms: ContinentItem[]
+    setSelectedForms: React.Dispatch<React.SetStateAction<ContinentItem[]>>
     onDeleteSelected: () => void
 }) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
@@ -389,9 +389,9 @@ const Continents = () => {
 
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<ContinentItem | null>(null);
 
-    const openEditDrawer = (item: FormItem) => {
+    const openEditDrawer = (item: ContinentItem) => {
         setSelectedItem(item); // Set the selected item's data
         setIsEditDrawerOpen(true); // Open the edit drawer
     };
@@ -421,7 +421,7 @@ const Continents = () => {
         useSelector(masterSelector)
 
     const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<FormItem[]>([]) // Remains for potential local ops, not table data source
+    const [forms, setForms] = useState<ContinentItem[]>([]) // Remains for potential local ops, not table data source
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -429,7 +429,7 @@ const Continents = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    const [selectedForms, setSelectedForms] = useState<ContinentItem[]>([])
     // filterData state and handleApplyFilter removed
 
     console.log('Raw ContinentsData from Redux:', ContinentsData)
@@ -447,10 +447,10 @@ const Continents = () => {
             ContinentsData?.length ?? 0,
         )
 
-        const sourceData: FormItem[] = Array.isArray(ContinentsData)
+        const sourceData: ContinentItem[] = Array.isArray(ContinentsData)
             ? ContinentsData
             : []
-        let processedData: FormItem[] = cloneDeep(sourceData)
+        let processedData: ContinentItem[] = cloneDeep(sourceData)
 
         // Product and Channel filtering logic removed
 
@@ -458,7 +458,7 @@ const Continents = () => {
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
             console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: FormItem) => {
+            processedData = processedData.filter((item: ContinentItem) => {
                 const itemNameLower = item.name?.trim().toLowerCase() ?? ''
                 const itemIdString = String(item.id ?? '').trim()
                 const itemIdLower = itemIdString.toLowerCase()
@@ -484,8 +484,8 @@ const Continents = () => {
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
                 // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof FormItem] ?? '')
-                const bValue = String(b[key as keyof FormItem] ?? '')
+                const aValue = String(a[key as keyof ContinentItem] ?? '')
+                const bValue = String(b[key as keyof ContinentItem] ?? '')
 
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
@@ -546,7 +546,7 @@ const Continents = () => {
         [handleSetTableData],
     )
 
-    const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
+    const handleRowSelect = useCallback((checked: boolean, row: ContinentItem) => {
         setSelectedForms((prev) => {
             if (checked)
                 return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
@@ -555,7 +555,7 @@ const Continents = () => {
     }, [])
 
     const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<FormItem>[]) => {
+        (checked: boolean, currentRows: Row<ContinentItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
                 setSelectedForms((prevSelected) => {
@@ -581,7 +581,7 @@ const Continents = () => {
 
     // --- Action Handlers (remain the same, need Redux integration for persistence) ---
     const handleEdit = useCallback(
-        (form: FormItem) => {
+        (form: ContinentItem) => {
             console.log('Edit item (requires navigation/modal):', form.id)
             toast.push(
                 <Notification title="Edit Action" type="info">
@@ -593,7 +593,7 @@ const Continents = () => {
         [navigate],
     )
 
-    const handleDelete = useCallback((formToDelete: FormItem) => {
+    const handleDelete = useCallback((formToDelete: ContinentItem) => {
         console.log(
             'Delete item (needs Redux action):',
             formToDelete.id,
@@ -625,7 +625,7 @@ const Continents = () => {
     }, [selectedForms])
     // --- End Action Handlers ---
 
-    const columns: ColumnDef<FormItem>[] = useMemo(
+    const columns: ColumnDef<ContinentItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
             { header: 'Name', accessorKey: 'name', enableSorting: true },
@@ -657,7 +657,7 @@ const Continents = () => {
                     </div>
 
                     <div className="mb-4">
-                    <ExportMappingTableTools
+                    <ContinentsTableTools
                             onSearchChange={handleSearchChange}
                         />{' '}
                         {/* Use updated component */}

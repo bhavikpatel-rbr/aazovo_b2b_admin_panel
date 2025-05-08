@@ -1,49 +1,54 @@
-// src/views/your-path/Blogs.tsx (New file name)
-
-import React, { useState, useMemo, useCallback, Ref } from 'react'
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
-import classNames from 'classnames' // Ensure classnames is installed or helper is defined
-import { useForm, Controller } from 'react-hook-form' // For filter form
-import { zodResolver } from '@hookform/resolvers/zod' // For filter form
-import { z } from 'zod' // For filter form
-import type { ZodType } from 'zod' // For filter form
+import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
+// import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
+import { z } from 'zod' // No longer needed
+// import type { ZodType } from 'zod' // No longer needed
+import Avatar from '@/components/ui/Avatar' // For Icon column
 
-// UI Components (Ensure these paths are correct for your project)
+// UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag'
 import Button from '@/components/ui/Button'
-import Dialog from '@/components/ui/Dialog'
-import Avatar from '@/components/ui/Avatar' // For Icon column
+// import Dialog from '@/components/ui/Dialog' // No longer needed for filter dialog
 import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast' // Ensure toast setup exists
+import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import Checkbox from '@/components/ui/Checkbox' // For filter form
-// import Input from '@/components/ui/Input'; // Not needed for status filter
-import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // For filter form
+import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
 import { TbPhoto, TbFileText } from 'react-icons/tb' // Placeholder icons
+
+// import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
+// import Input from '@/components/ui/Input' // No longer needed for filter form
+// import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
 
 // Icons
 import {
     TbPencil,
-    TbCopy, // Optional: Clone action
-    TbSwitchHorizontal, // For status change
     TbTrash,
     TbChecks,
     TbSearch,
-    TbCloudDownload,
+    TbFilter, // Filter icon removed
+    TbCloudUpload,
     TbPlus,
-    TbFilter, // Filter Icon
-} from 'react-icons/tb' // Ensure react-icons is installed
+} from 'react-icons/tb'
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common' // Ensure this type path is correct
+import type { TableQueries } from '@/@types/common'
+import { useAppDispatch } from '@/reduxtool/store'
+import {
+    getContinentsAction,
+    getCountriesAction,
+    getDocumentTypeAction,
+    getPaymentTermAction,
+} from '@/reduxtool/master/middleware'
+import { useSelector } from 'react-redux'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
 
 // --- Define Item Type (Table Row Data) ---
 export type BlogItem = {
@@ -69,6 +74,10 @@ const blogStatusColor: Record<BlogItem['status'], string> = {
     draft: 'text-blue-600 bg-blue-200 rounded-lg py-1 px-2',
     archived: 'text-red-600 bg-red-200 rounded-lg py-1 px-2',
 }
+
+// Filter specific constant
+const statusList: BlogItem['status'][] = ['published', 'draft', 'archived']
+// --- End Constants ---
 
 const initialDummyBlogs: BlogItem[] = [
     {
@@ -143,10 +152,6 @@ const initialDummyBlogs: BlogItem[] = [
     },
 ]
 
-// Filter specific constant
-const statusList: BlogItem['status'][] = ['published', 'draft', 'archived']
-// --- End Constants ---
-
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
     onEdit,
@@ -160,45 +165,17 @@ const ActionColumn = ({
     onDelete: () => void
 }) => {
     const iconButtonClass =
-        'text-lg rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
+        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
 
     return (
-        <div className="flex items-center justify-center gap-1">
-            {onClone && (
-                <Tooltip title="Clone Blog">
-                    <div
-                        className={classNames(
-                            iconButtonClass,
-                            hoverBgClass,
-                            'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400',
-                        )}
-                        role="button"
-                        onClick={onClone}
-                    >
-                        <TbCopy />
-                    </div>
-                </Tooltip>
-            )}
-            <Tooltip title="Change Status">
+        <div className="flex items-center justify-center">
+            <Tooltip title="Edit">
                 <div
                     className={classNames(
                         iconButtonClass,
                         hoverBgClass,
-                        'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400',
-                    )}
-                    role="button"
-                    onClick={onChangeStatus}
-                >
-                    <TbSwitchHorizontal />
-                </div>
-            </Tooltip>
-            <Tooltip title="Edit Blog">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400',
+                        'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400',
                     )}
                     role="button"
                     onClick={onEdit}
@@ -206,12 +183,12 @@ const ActionColumn = ({
                     <TbPencil />
                 </div>
             </Tooltip>
-            <Tooltip title="Delete Blog">
+            <Tooltip title="Delete">
                 <div
                     className={classNames(
                         iconButtonClass,
                         hoverBgClass,
-                        'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400',
+                        'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400',
                     )}
                     role="button"
                     onClick={onDelete}
@@ -224,65 +201,151 @@ const ActionColumn = ({
 }
 // --- End ActionColumn ---
 
-// --- BlogTable Component ---
-const BlogTable = ({
+// --- ExportMappingSearch Component ---
+type ExportMappingSearchProps = {
+    // Renamed component
+    onInputChange: (value: string) => void
+    ref?: Ref<HTMLInputElement>
+}
+const ExportMappingSearch = React.forwardRef<
+    HTMLInputElement,
+    ExportMappingSearchProps
+>(({ onInputChange }, ref) => {
+    return (
+        <DebouceInput
+            ref={ref}
+            placeholder="Quick Search..." // Updated placeholder
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(e) => onInputChange(e.target.value)}
+        />
+    )
+})
+ExportMappingSearch.displayName = 'ExportMappingSearch'
+// --- End ExportMappingSearch ---
+
+// --- ExportMappingTableTools Component ---
+const ExportMappingTableTools = ({
+    // Renamed component
+    onSearchChange,
+}: {
+    onSearchChange: (query: string) => void
+}) => {
+
+    type ExportMappingFilterSchema = {
+        userRole : String,
+        exportFrom : String,
+        exportDate : Date
+    }
+
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+
+    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+
+    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+        console.log("filter data", data)
+    }
+
+    return (
+        <div className="flex items-center w-full gap-2">
+            <div className="flex-grow">
+                <ExportMappingSearch onInputChange={onSearchChange} />
+            </div>
+            {/* Filter component removed */}
+            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Document Name'>
+                        {/* <Controller
+                            control={control}
+                            name='userRole'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Document Name"
+                                    {...field}
+                                />
+                            )}
+                        /> */}
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </div>
+    )
+}
+// --- End ExportMappingTableTools ---
+
+// --- FormListTable Component (No changes) ---
+const FormListTable = ({
     columns,
     data,
     loading,
     pagingData,
-    selectedBlogs,
+    selectedForms,
     onPaginationChange,
     onSelectChange,
     onSort,
     onRowSelect,
     onAllRowSelect,
 }: {
-    /* ... props ... */
+    columns: ColumnDef<BlogItem>[]
+    data: BlogItem[]
+    loading: boolean
+    pagingData: { total: number; pageIndex: number; pageSize: number }
+    selectedForms: BlogItem[]
+    onPaginationChange: (page: number) => void
+    onSelectChange: (value: number) => void
+    onSort: (sort: OnSortParam) => void
+    onRowSelect: (checked: boolean, row: BlogItem) => void
+    onAllRowSelect: (checked: boolean, rows: Row<BlogItem>[]) => void
 }) => {
     return (
         <DataTable
             selectable
             columns={columns}
             data={data}
+            noData={!loading && data.length === 0}
             loading={loading}
             pagingData={pagingData}
             checkboxChecked={(row) =>
-                selectedBlogs.some((selected) => selected.id === row.id)
+                selectedForms.some((selected) => selected.id === row.id)
             }
             onPaginationChange={onPaginationChange}
             onSelectChange={onSelectChange}
             onSort={onSort}
             onCheckBoxChange={onRowSelect}
             onIndeterminateCheckBoxChange={onAllRowSelect}
-            noData={!loading && data.length === 0}
         />
     )
 }
-// Type definition for BlogTable props
-type BlogTableProps = {
-    columns: ColumnDef<BlogItem>[]
-    data: BlogItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedBlogs: BlogItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: BlogItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<BlogItem>[]) => void
-}
-// --- End BlogTable ---
 
-// --- BlogSearch Component ---
-type BlogSearchProps = {
+// --- FormListSearch Component (No changes) ---
+type FormListSearchProps = {
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
 }
-const BlogSearch = React.forwardRef<HTMLInputElement, BlogSearchProps>(
+const FormListSearch = React.forwardRef<HTMLInputElement, FormListSearchProps>(
     ({ onInputChange }, ref) => {
         return (
             <DebouceInput
                 ref={ref}
+                className="w-full "
                 placeholder="Quick search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e) => onInputChange(e.target.value)}
@@ -290,169 +353,76 @@ const BlogSearch = React.forwardRef<HTMLInputElement, BlogSearchProps>(
         )
     },
 )
-BlogSearch.displayName = 'BlogSearch'
-// --- End BlogSearch ---
+FormListSearch.displayName = 'FormListSearch'
 
-// --- BlogFilter Component ---
-const BlogFilter = ({
-    filterData,
-    setFilterData,
-}: {
-    filterData: FilterFormSchema
-    setFilterData: (data: FilterFormSchema) => void
-}) => {
-    const [dialogIsOpen, setIsOpen] = useState(false)
-    const openDialog = () => setIsOpen(true)
-    const onDialogClose = () => setIsOpen(false)
+// FormListTableFilter component removed
 
-    const { control, handleSubmit, reset } = useForm<FilterFormSchema>({
-        defaultValues: filterData,
-        resolver: zodResolver(filterValidationSchema),
-    })
-
-    React.useEffect(() => {
-        reset(filterData)
-    }, [filterData, reset])
-
-    const onSubmit = (values: FilterFormSchema) => {
-        setFilterData(values)
-        onDialogClose()
-    }
-    const handleReset = () => {
-        const defaultVals = filterValidationSchema.parse({})
-        reset(defaultVals) /* setFilterData(defaultVals); */
-    }
-
-    return (
-        <>
-            <Button icon={<TbFilter />} onClick={openDialog}>
-                {' '}
-                Filter{' '}
-            </Button>
-            <Dialog
-                isOpen={dialogIsOpen}
-                onClose={onDialogClose}
-                onRequestClose={onDialogClose}
-            >
-                <h4 className="mb-4">Filter Blogs</h4>
-                <Form onSubmit={handleSubmit(onSubmit)}>
-                    <UiFormItem label="Status">
-                        <Controller
-                            name="status"
-                            control={control}
-                            render={({ field }) => (
-                                <Checkbox.Group
-                                    vertical
-                                    value={field.value || []}
-                                    onChange={field.onChange}
-                                >
-                                    {statusList.map((stat) => (
-                                        <Checkbox
-                                            key={stat}
-                                            value={stat}
-                                            className="mb-1 capitalize"
-                                        >
-                                            {stat}
-                                        </Checkbox>
-                                    ))}
-                                </Checkbox.Group>
-                            )}
-                        />
-                    </UiFormItem>
-                    <div className="flex justify-end items-center gap-2 mt-6">
-                        <Button type="button" onClick={handleReset}>
-                            {' '}
-                            Reset{' '}
-                        </Button>
-                        <Button type="submit" variant="solid">
-                            {' '}
-                            Apply{' '}
-                        </Button>
-                    </div>
-                </Form>
-            </Dialog>
-        </>
-    )
-}
-// --- End BlogFilter ---
-
-// --- BlogTableTools Component ---
-const BlogTableTools = ({
+// --- FormListTableTools Component (Simplified) ---
+const FormListTableTools = ({
     onSearchChange,
-    filterData,
-    setFilterData,
 }: {
     onSearchChange: (query: string) => void
-    filterData: FilterFormSchema
-    setFilterData: (data: FilterFormSchema) => void
 }) => {
     return (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <div className="flex-grow">
-                <BlogSearch onInputChange={onSearchChange} />
-            </div>
-            <div>
-                <BlogFilter
-                    filterData={filterData}
-                    setFilterData={setFilterData}
-                />
-            </div>
+            <FormListSearch onInputChange={onSearchChange} />
+            {/* Filter button/component removed */}
         </div>
     )
 }
-// --- End BlogTableTools ---
+// --- End FormListTableTools ---
 
-// --- BlogActionTools Component ---
-const BlogActionTools = ({ allBlogs }: { allBlogs: BlogItem[] }) => {
+// --- FormListActionTools Component (No functional changes needed for filter removal) ---
+const FormListActionTools = ({
+    allFormsData,
+    openAddDrawer,
+}: {
+    allFormsData: BlogItem[];
+    openAddDrawer: () => void; // Accept function as a prop
+}) => {
     const navigate = useNavigate()
-    const csvData = useMemo(
-        () =>
-            allBlogs.map((b) => ({
-                id: b.id,
-                title: b.title,
-                status: b.status,
-                createdDate: b.createdDate.toISOString(),
-                iconUrl: b.icon ?? 'N/A',
-            })),
-        [allBlogs],
-    )
     const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Title', key: 'title' },
-        { label: 'Status', key: 'status' },
-        { label: 'Created Date', key: 'createdDate' },
-        { label: 'Icon URL', key: 'iconUrl' },
+
     ]
-    const handleAdd = () => navigate('/blogs/create') // Adjust route
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/* <CSVLink filename="blogs.csv" data={csvData} headers={csvHeaders}><Button icon={<TbCloudDownload />} block>Download</Button></CSVLink> */}
+            {/*
+            <CSVLink
+                className="w-full"
+                filename="documentTypeList.csv"
+                data={allFormsData}
+                headers={csvHeaders}
+            >
+                <Button icon={<TbCloudDownload />} className="w-full" block>
+                    Download
+                </Button>
+            </CSVLink>
+            */}
             <Button
                 variant="solid"
-                icon={<TbFileText />}
-                onClick={handleAdd}
+                icon={<TbPlus />}
+                onClick={openAddDrawer}
                 block
             >
-                {' '}
-                Add New{' '}
+                Add New
             </Button>
         </div>
     )
 }
-// --- End BlogActionTools ---
 
-// --- BlogSelected Component ---
-const BlogSelected = ({
-    selectedBlogs,
-    setSelectedBlogs,
+// --- FormListSelected Component (No functional changes needed for filter removal) ---
+const FormListSelected = ({
+    selectedForms,
+    setSelectedForms,
     onDeleteSelected,
 }: {
-    selectedBlogs: BlogItem[]
-    setSelectedBlogs: React.Dispatch<React.SetStateAction<BlogItem[]>>
+    selectedForms: BlogItem[]
+    setSelectedForms: React.Dispatch<React.SetStateAction<BlogItem[]>>
     onDeleteSelected: () => void
 }) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
+
     const handleDeleteClick = () => setDeleteConfirmationOpen(true)
     const handleCancelDelete = () => setDeleteConfirmationOpen(false)
     const handleConfirmDelete = () => {
@@ -460,7 +430,7 @@ const BlogSelected = ({
         setDeleteConfirmationOpen(false)
     }
 
-    if (selectedBlogs.length === 0) return null
+    if (selectedForms.length === 0) return null
 
     return (
         <>
@@ -475,10 +445,10 @@ const BlogSelected = ({
                         </span>
                         <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
                             <span className="heading-text">
-                                {selectedBlogs.length}
+                                {selectedForms.length}
                             </span>
                             <span>
-                                Blog{selectedBlogs.length > 1 ? 's' : ''}{' '}
+                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
                                 selected
                             </span>
                         </span>
@@ -498,208 +468,340 @@ const BlogSelected = ({
             <ConfirmDialog
                 isOpen={deleteConfirmationOpen}
                 type="danger"
-                title={`Delete ${selectedBlogs.length} Blog${selectedBlogs.length > 1 ? 's' : ''}`}
+                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
                 onClose={handleCancelDelete}
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
-                confirmButtonColor="red-600"
             >
                 <p>
-                    Are you sure you want to delete the selected blog post
-                    {selectedBlogs.length > 1 ? 's' : ''}? This action cannot be
+                    Are you sure you want to delete the selected item
+                    {selectedForms.length > 1 ? 's' : ''}? This action cannot be
                     undone.
                 </p>
             </ConfirmDialog>
         </>
     )
 }
-// --- End BlogSelected ---
 
-// --- Main Blogs Component ---
+// --- Main Continents Component ---
 const Blogs = () => {
-    const navigate = useNavigate()
-
-    // --- Lifted State ---
-    const [isLoading, setIsLoading] = useState(false)
     const [blogs, setBlogs] = useState<BlogItem[]>(initialDummyBlogs)
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-    const [selectedBlogs, setSelectedBlogs] = useState<BlogItem[]>([])
-    const [filterData, setFilterData] = useState<FilterFormSchema>(
-        filterValidationSchema.parse({}),
-    )
-    // --- End Lifted State ---
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<BlogItem | null>(null);
 
-    // --- Memoized Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...blogs]
+    const openEditDrawer = (item: BlogItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
 
-        // Apply Filtering by Status
-        if (filterData.status && filterData.status.length > 0) {
-            const statusSet = new Set(filterData.status)
-            processedData = processedData.filter((blog) =>
-                statusSet.has(blog.status),
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null); // Clear any selected item
+        setIsAddDrawerOpen(true); // Open the add drawer
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false); // Close the add drawer
+    };
+
+    const navigate = useNavigate()
+    const dispatch = useAppDispatch()
+
+    useEffect(() => {
+        dispatch(getCountriesAction())
+    }, [dispatch])
+
+    const { BlogsData = [], status: masterLoadingStatus = 'idle' } =
+        useSelector(masterSelector)
+ // Use the provided dummy data
+
+// --- Initial Dummy Data ---
+const initialDummyForms: BlogItem[] = [
+    {
+        id: 'BLOG001',
+        status: 'published',
+        title: 'Getting Started with Our Platform',
+        icon: '/img/blogs/getting_started.jpg',
+        createdDate: new Date(2023, 10, 1, 10, 0),
+    },
+    {
+        id: 'BLOG002',
+        status: 'draft',
+        title: 'Advanced Features Deep Dive',
+        icon: null,
+        createdDate: new Date(2023, 10, 3, 14, 30),
+    },
+    {
+        id: 'BLOG003',
+        status: 'published',
+        title: 'Top 5 Security Tips for 2023',
+        icon: '/img/blogs/security.png',
+        createdDate: new Date(2023, 9, 28, 9, 15),
+    },
+    {
+        id: 'BLOG004',
+        status: 'archived',
+        title: 'Old Announcement: Summer Sale',
+        icon: null,
+        createdDate: new Date(2023, 6, 15, 11, 0),
+    },
+    {
+        id: 'BLOG005',
+        status: 'published',
+        title: 'Understanding Our New API',
+        icon: '/img/blogs/api.svg',
+        createdDate: new Date(2023, 9, 20, 16, 45),
+    },
+    {
+        id: 'BLOG006',
+        status: 'draft',
+        title: 'Case Study: Company X Success',
+        icon: null,
+        createdDate: new Date(2023, 10, 4, 9, 0),
+    },
+    {
+        id: 'BLOG007',
+        status: 'published',
+        title: 'How to Integrate with Zapier',
+        icon: '/img/blogs/zapier.png',
+        createdDate: new Date(2023, 9, 10, 13, 25),
+    },
+    {
+        id: 'BLOG008',
+        status: 'archived',
+        title: 'Welcome Blog Post (2022)',
+        icon: null,
+        createdDate: new Date(2022, 0, 15, 10, 0),
+    },
+    {
+        id: 'BLOG009',
+        status: 'published',
+        title: 'Mobile App Update v2.1 Released',
+        icon: '/img/blogs/mobile_app.jpg',
+        createdDate: new Date(2023, 10, 2, 11, 5),
+    },
+    {
+        id: 'BLOG010',
+        status: 'draft',
+        title: 'Year-End Review Planning',
+        icon: null,
+        createdDate: new Date(2023, 10, 5, 10, 30),
+    },
+]
+// --- End Dummy Data ---
+
+const [forms, setForms] = useState<BlogItem[]>(initialDummyForms); // Initialize with dummy data
+const [tableData, setTableData] = useState<TableQueries>({
+    pageIndex: 1,
+    pageSize: 10,
+    sort: { order: '', key: '' },
+    query: '',
+});
+const [selectedForms, setSelectedForms] = useState<BlogItem[]>([]);
+    const [localIsLoading, setLocalIsLoading] = useState(false)
+    // filterData state and handleApplyFilter removed
+
+    console.log('Raw CountriesData from Redux:', BlogsData)
+
+    const { pageData, total, processedDataForCsv } = useMemo(() => {
+        console.log(
+            '[Memo] Recalculating. Query:',
+            tableData.query,
+            'Sort:',
+            tableData.sort,
+            'Page:',
+            tableData.pageIndex,
+            // 'Filters:' removed from log
+            'Input Data (CountriesData) Length:',
+            BlogsData?.length ?? 0,
+        )
+
+        const sourceData: BlogItem[] = Array.isArray(BlogsData)
+            ? BlogsData
+            : []
+        let processedData: BlogItem[] = cloneDeep(sourceData)
+
+        // Product and Channel filtering logic removed
+
+        // 1. Apply Search Query (on id and name)
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim()
+            console.log('[Memo] Applying search query:', query)
+            processedData = processedData.filter((item: BlogItem) => {
+                const itemNameLower = item.title?.trim().toLowerCase() ?? ''
+                const continentNameLower = item.title?.trim().toLowerCase() ?? ''
+                const itemIdString = String(item.id ?? '').trim()
+                const itemIdLower = itemIdString.toLowerCase()
+                return (
+                    itemNameLower.includes(query) ||
+                    itemIdLower.includes(query) ||
+                    continentNameLower.includes(query)
+                )
+            })
+            console.log(
+                '[Memo] After search query filter. Count:',
+                processedData.length,
             )
         }
 
-        // Apply Search
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase()
-            processedData = processedData.filter(
-                (blog) =>
-                    blog.id.toLowerCase().includes(query) ||
-                    blog.title.toLowerCase().includes(query) ||
-                    blog.status.toLowerCase().includes(query),
-            )
-        }
-
-        // Apply Sorting
+        // 2. Apply Sorting (on id and name)
         const { order, key } = tableData.sort as OnSortParam
-        if (order && key) {
+        if (
+            order &&
+            key &&
+            (key === 'id' || key === 'name') &&
+            processedData.length > 0
+        ) {
+            console.log('[Memo] Applying sort. Key:', key, 'Order:', order)
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
-                if (key === 'createdDate') {
-                    const timeA = a.createdDate.getTime()
-                    const timeB = b.createdDate.getTime()
-                    return order === 'asc' ? timeA - timeB : timeB - timeA
-                }
-                const aValue = a[key as keyof BlogItem] ?? ''
-                const bValue = b[key as keyof BlogItem] ?? ''
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
-                }
-                return 0
+                // Ensure values are strings for localeCompare, default to empty string if not
+                const aValue = String(a[key as keyof BlogItem] ?? '')
+                const bValue = String(b[key as keyof BlogItem] ?? '')
+
+                return order === 'asc'
+                    ? aValue.localeCompare(bValue)
+                    : bValue.localeCompare(aValue)
             })
             processedData = sortedData
         }
 
-        // Apply Pagination
+        const dataBeforePagination = [...processedData] // For CSV export
+
+        // 3. Apply Pagination
+        const currentTotal = processedData.length
         const pageIndex = tableData.pageIndex as number
         const pageSize = tableData.pageSize as number
-        const dataTotal = processedData.length
         const startIndex = (pageIndex - 1) * pageSize
         const dataForPage = processedData.slice(
             startIndex,
             startIndex + pageSize,
         )
 
-        return { pageData: dataForPage, total: dataTotal }
-    }, [blogs, tableData, filterData]) // Added filterData dependency
-    // --- End Memoized Data Processing ---
+        console.log(
+            '[Memo] Returning. PageData Length:',
+            dataForPage.length,
+            'Total Items (after all filters/sort):',
+            currentTotal,
+        )
+        return {
+            pageData: dataForPage,
+            total: currentTotal,
+            processedDataForCsv: dataBeforePagination,
+        }
+    }, [BlogsData, tableData]) // filterData removed from dependencies
 
-    // --- Lifted Handlers ---
-    const handleSetTableData = useCallback((data: TableQueries) => {
-        setTableData(data)
+    // --- Handlers ---
+    // handleApplyFilter removed
+
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
+        setTableData((prev) => ({ ...prev, ...data }))
     }, [])
+
     const handlePaginationChange = useCallback(
-        (page: number) => {
-            handleSetTableData({ ...tableData, pageIndex: page })
-        },
-        [tableData, handleSetTableData],
+        (page: number) => handleSetTableData({ pageIndex: page }),
+        [handleSetTableData],
     )
     const handleSelectChange = useCallback(
         (value: number) => {
-            handleSetTableData({
-                ...tableData,
-                pageSize: Number(value),
-                pageIndex: 1,
-            })
-            setSelectedBlogs([])
+            handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
+            setSelectedForms([])
         },
-        [tableData, handleSetTableData],
+        [handleSetTableData],
     )
     const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
+        (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
+        [handleSetTableData],
     )
     const handleSearchChange = useCallback(
-        (query: string) => {
-            handleSetTableData({ ...tableData, query: query, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
+        (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
+        [handleSetTableData],
     )
-    const handleApplyFilter = useCallback(
-        (newFilterData: FilterFormSchema) => {
-            setFilterData(newFilterData)
-            handleSetTableData({ ...tableData, pageIndex: 1 })
-            setSelectedBlogs([])
-        },
-        [tableData, handleSetTableData],
-    ) // Reset page on filter apply
 
-    const handleRowSelect = useCallback(
-        (checked: boolean, row: BlogItem) => {
-            setSelectedBlogs((prev) => {
-                if (checked) {
-                    return prev.some((b) => b.id === row.id)
-                        ? prev
-                        : [...prev, row]
-                } else {
-                    return prev.filter((b) => b.id !== row.id)
-                }
-            })
-        },
-        [setSelectedBlogs],
-    )
+    const handleRowSelect = useCallback((checked: boolean, row: BlogItem) => {
+        setSelectedForms((prev) => {
+            if (checked)
+                return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
+            return prev.filter((f) => f.id !== row.id)
+        })
+    }, [])
 
     const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<BlogItem>[]) => {
-            const rowIds = new Set(rows.map((r) => r.original.id))
-            setSelectedBlogs((prev) => {
-                if (checked) {
-                    const originalRows = rows.map((row) => row.original)
-                    const existingIds = new Set(prev.map((b) => b.id))
-                    const newSelection = originalRows.filter(
-                        (b) => !existingIds.has(b.id),
+        (checked: boolean, currentRows: Row<BlogItem>[]) => {
+            const currentPageRowOriginals = currentRows.map((r) => r.original)
+            if (checked) {
+                setSelectedForms((prevSelected) => {
+                    const prevSelectedIds = new Set(
+                        prevSelected.map((f) => f.id),
                     )
-                    return [...prev, ...newSelection]
-                } else {
-                    return prev.filter((b) => !rowIds.has(b.id))
-                }
-            })
+                    const newRowsToAdd = currentPageRowOriginals.filter(
+                        (r) => !prevSelectedIds.has(r.id),
+                    )
+                    return [...prevSelected, ...newRowsToAdd]
+                })
+            } else {
+                const currentPageRowIds = new Set(
+                    currentPageRowOriginals.map((r) => r.id),
+                )
+                setSelectedForms((prevSelected) =>
+                    prevSelected.filter((f) => !currentPageRowIds.has(f.id)),
+                )
+            }
         },
-        [setSelectedBlogs],
+        [],
     )
 
+    // --- Action Handlers (remain the same, need Redux integration for persistence) ---
     const handleEdit = useCallback(
-        (blog: BlogItem) => {
-            console.log('Edit blog:', blog.id)
-            navigate(`/blogs/edit/${blog.id}`) // Adjust route
+        (form: BlogItem) => {
+            console.log('Edit item (requires navigation/modal):', form.id)
+            toast.push(
+                <Notification title="Edit Action" type="info">
+                    Edit action for "{form.title}" (ID: {form.id}). Implement
+                    navigation or modal.
+                </Notification>,
+            )
         },
         [navigate],
     )
 
-    const handleClone = useCallback(
-        (blogToClone: BlogItem) => {
-            console.log('Cloning blog:', blogToClone.id)
-            const newId = `BLOG${Math.floor(Math.random() * 9000) + 1000}`
-            const clonedBlog: BlogItem = {
-                ...blogToClone,
-                id: newId,
-                title: `${blogToClone.title} (Clone)`,
-                status: 'draft',
-                createdDate: new Date(),
-            }
-            setBlogs((prev) => [clonedBlog, ...prev])
-            toast.push(
-                <Notification
-                    title="Blog Cloned"
-                    type="success"
-                    duration={2000}
-                />,
-            )
-        },
-        [setBlogs],
-    )
+    const handleDelete = useCallback((formToDelete: BlogItem) => {
+        console.log(
+            'Delete item (needs Redux action):',
+            formToDelete.id,
+            formToDelete.title,
+        )
+        setSelectedForms((prevSelected) =>
+            prevSelected.filter((form) => form.id !== formToDelete.id),
+        )
+        toast.push(
+            <Notification title="Delete Action" type="warning">
+                Delete action for "{formToDelete.title}" (ID: {formToDelete.id}).
+                Implement Redux deletion.
+            </Notification>,
+        )
+    }, [])
+
+    const handleDeleteSelected = useCallback(() => {
+        console.log(
+            'Deleting selected items (needs Redux action):',
+            selectedForms.map((f) => f.id),
+        )
+        setSelectedForms([])
+        toast.push(
+            <Notification title="Selected Items Delete Action" type="warning">
+                {selectedForms.length} item(s) delete action. Implement Redux
+                deletion.
+            </Notification>,
+        )
+    }, [selectedForms])
+    // --- End Action Handlers ---
 
     const handleChangeStatus = useCallback(
         (blog: BlogItem) => {
@@ -730,47 +832,6 @@ const Blogs = () => {
         [setBlogs],
     )
 
-    const handleDelete = useCallback(
-        (blogToDelete: BlogItem) => {
-            console.log('Deleting blog:', blogToDelete.id)
-            setBlogs((currentBlogs) =>
-                currentBlogs.filter((blog) => blog.id !== blogToDelete.id),
-            )
-            setSelectedBlogs((prevSelected) =>
-                prevSelected.filter((blog) => blog.id !== blogToDelete.id),
-            )
-            toast.push(
-                <Notification
-                    title="Blog Deleted"
-                    type="success"
-                    duration={2000}
-                >{`Blog '${blogToDelete.title}' deleted.`}</Notification>,
-            )
-        },
-        [setBlogs, setSelectedBlogs],
-    )
-
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected blogs:',
-            selectedBlogs.map((b) => b.id),
-        )
-        const selectedIds = new Set(selectedBlogs.map((b) => b.id))
-        setBlogs((currentBlogs) =>
-            currentBlogs.filter((b) => !selectedIds.has(b.id)),
-        )
-        setSelectedBlogs([])
-        toast.push(
-            <Notification
-                title="Blogs Deleted"
-                type="success"
-                duration={2000}
-            >{`${selectedIds.size} blog post(s) deleted.`}</Notification>,
-        )
-    }, [selectedBlogs, setBlogs, setSelectedBlogs])
-    // --- End Lifted Handlers ---
-
-    // --- Define Columns in Parent ---
     const columns: ColumnDef<BlogItem>[] = useMemo(
         () => [
             {
@@ -786,7 +847,7 @@ const Blogs = () => {
                         <Avatar
                             size={40}
                             shape="circle"
-                            src={icon}
+                            // src={icon}
                             icon={<TbFileText />}
                         >
                             {!icon ? title.charAt(0).toUpperCase() : ''}
@@ -848,73 +909,230 @@ const Blogs = () => {
                         onChangeStatus={() =>
                             handleChangeStatus(props.row.original)
                         }
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
             },
         ],
-        [ 
-            // handleClone, 
-            handleChangeStatus, handleEdit, handleDelete],
+        [handleEdit, handleDelete],
     )
-    // --- End Define Columns ---
 
-    // --- Render Main Component ---
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header Section */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Blogs</h5>
-                    <BlogActionTools allBlogs={blogs} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h5 className="mb-4 lg:mb-0">Blogs</h5>
+                        <FormListActionTools
+                            allFormsData={forms}
+                            openAddDrawer={openAddDrawer} // Pass the function as a prop
+                        />
+                    </div>
 
-                {/* Tools Section */}
-                <div className="mb-4">
-                    {/* Pass filter state and handler */}
-                    <BlogTableTools
-                        onSearchChange={handleSearchChange}
-                        filterData={filterData}
-                        setFilterData={handleApplyFilter}
-                    />
-                </div>
+                    <div className="mb-4">
+                        <ExportMappingTableTools
+                            onSearchChange={(query) =>
+                                setTableData((prev) => ({ ...prev, query }))
+                            }
+                        />
+                    </div>
 
-                {/* Table Section */}
-                <div className="flex-grow overflow-auto">
-                    <BlogTable
+                    <FormListTable
                         columns={columns}
-                        data={pageData}
-                        loading={isLoading}
+                        data={forms}
+                        loading={false}
                         pagingData={{
-                            total,
+                            total: forms.length,
                             pageIndex: tableData.pageIndex as number,
                             pageSize: tableData.pageSize as number,
                         }}
-                        selectedBlogs={selectedBlogs}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
+                        selectedForms={selectedForms}
+                        onPaginationChange={(page) =>
+                            setTableData((prev) => ({ ...prev, pageIndex: page }))
+                        }
+                        onSelectChange={(value) =>
+                            setTableData((prev) => ({
+                                ...prev,
+                                pageSize: Number(value),
+                                pageIndex: 1,
+                            }))
+                        }
+                        onSort={(sort) =>
+                            setTableData((prev) => ({ ...prev, sort }))
+                        }
+                        onRowSelect={(checked, row) =>
+                            setSelectedForms((prev) =>
+                                checked
+                                    ? [...prev, row]
+                                    : prev.filter((form) => form.id !== row.id)
+                            )
+                        }
+                        onAllRowSelect={(checked, rows) => {
+                            const rowIds = rows.map((row) => row.original.id);
+                            setSelectedForms((prev) =>
+                                checked
+                                    ? [...prev, ...rows.map((row) => row.original)]
+                                    : prev.filter((form) => !rowIds.includes(form.id))
+                            );
+                        }}
                     />
-                </div>
-            </AdaptiveCard>
+                </AdaptiveCard>
 
-            {/* Selected Actions Footer */}
-            <BlogSelected
-                selectedBlogs={selectedBlogs}
-                setSelectedBlogs={setSelectedBlogs}
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
+                <FormListSelected
+                    selectedForms={selectedForms}
+                    setSelectedForms={setSelectedForms}
+                    onDeleteSelected={() =>
+                        setForms((prev) =>
+                            prev.filter(
+                                (form) =>
+                                    !selectedForms.some(
+                                        (selected) => selected.id === form.id
+                                    )
+                            )
+                        )
+                    }
+                />
+            </Container>
+
+            {/* Edit Drawer */}
+            <Drawer
+                title="Edit Blog"
+                isOpen={isEditDrawerOpen}
+                onClose={closeEditDrawer}
+                onRequestClose={closeEditDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => {
+                                console.log('Updated Blog:', selectedItem);
+                                closeEditDrawer();
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                }
+            >
+                <Form>
+                    <FormItem label="Title">
+                        <Input
+                            value={selectedItem?.title || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'draft', title: '', icon: null, createdDate: new Date() }),
+                                    title: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Icon URL">
+                        <Input
+                            value={selectedItem?.icon || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'draft', title: '', icon: null, createdDate: new Date() }),
+                                    icon: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Status">
+                        <select
+                            value={selectedItem?.status || 'draft'}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'draft', title: '', icon: null, createdDate: new Date() }),
+                                    status: e.target.value as 'published' | 'draft' | 'archived',
+                                }))
+                            }
+                        >
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </FormItem>
+                    <FormItem label="Created Date">
+                        <Input
+                            type="date"
+                            value={selectedItem?.createdDate?.toISOString().split('T')[0] || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'draft', title: '', icon: null, createdDate: new Date() }),
+                                    createdDate: new Date(e.target.value),
+                                }))
+                            }
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+
+
+            <Drawer
+                title="Add New Blog"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => console.log('Blog Added')}
+                        >
+                            Add
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target as HTMLFormElement);
+                        const newItem: BlogItem = {
+                            id: `${blogs.length + 1}`,
+                            title: formData.get('title') as string,
+                            icon: formData.get('icon') as string | null,
+                            status: formData.get('status') as 'published' | 'draft' | 'archived',
+                            createdDate: new Date(formData.get('createdDate') as string),
+                        };
+                        console.log('New Blog:', newItem);
+                        // handleAdd(newItem);
+                    }}
+                >
+                    <FormItem label="Title">
+                        <Input name="title" placeholder="Enter Blog Title" />
+                    </FormItem>
+                    <FormItem label="Icon URL">
+                        <Input name="icon" placeholder="Enter Icon URL" />
+                    </FormItem>
+                    <FormItem label="Status">
+                        <select name="status" defaultValue="draft">
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </FormItem>
+                    <FormItem label="Created Date">
+                        <Input name="createdDate" type="date" />
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </>
     )
 }
-// --- End Main Component ---
 
-export default Blogs // Updated export name
+export default Blogs
 
-// Helper Function (ensure defined or imported)
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//     return classes.filter(Boolean).join(' ');
-// }
+// Helper
+function classNames(...classes: (string | boolean | undefined)[]) {
+    return classes.filter(Boolean).join(' ')
+}
