@@ -17,7 +17,8 @@ import RichTextEditor from '@/components/shared/RichTextEditor' // Keep if neede
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-
+import { Card, Drawer, Form, FormItem, Input, } from '@/components/ui'
+import { useForm, Controller } from 'react-hook-form'
 // Icons
 import {
     TbPencil,
@@ -26,6 +27,8 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
+    TbFilter,
+    TbCloudUpload,
     TbCloudDownload, // Keep for potential future export
     TbPlus,
 } from 'react-icons/tb'
@@ -35,7 +38,7 @@ import type {
     OnSortParam,
     ColumnDef,
     Row,
-    SortingFnOption,
+    // SortingFnOption,
 } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
 
@@ -371,16 +374,64 @@ ItemListSearch.displayName = 'ItemListSearch'
 // --- ItemListTableTools Component ---
 const ItemListTableTools = ({
     onSearchChange,
+
 }: {
     onSearchChange: (query: string) => void
 }) => {
+    type GlobalSettingFilterSchema = {
+        userRole : String,
+        exportFrom : String,
+        exportDate : Date
+    }
+
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+
+    const {control, handleSubmit} = useForm<GlobalSettingFilterSchema>()
+
+    const exportFiltersSubmitHandler = (data : GlobalSettingFilterSchema) => {
+        console.log("filter data", data)
+    }
     return (
-        <div className="flex items-center w-full">
-            {/* Search takes full width */}
+        <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
                 <ItemListSearch onInputChange={onSearchChange} />
             </div>
-            {/* No Filter button */}
+            {/* Filter component removed */}
+            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Document Name'>
+                        {/* <Controller
+                            control={control}
+                            name='userRole'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Document Name"
+                                    {...field}
+                                />
+                            )}
+                        /> */}
+                    </FormItem>
+                </Form>
+            </Drawer>
         </div>
     )
 }
@@ -389,8 +440,10 @@ const ItemListTableTools = ({
 // --- ItemListActionTools Component ---
 const ItemListActionTools = ({
     allItems,
+    openAddDrawer 
 }: {
     allItems: NumberSystemItem[]
+    openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
 
@@ -414,17 +467,10 @@ const ItemListActionTools = ({
             {/* <CSVLink filename="numberSystemList.csv" data={csvData} headers={csvHeaders} >
                 <Button icon={<TbCloudDownload />} className="w-full" block> Download </Button>
             </CSVLink> */}
-            <Button
-                variant="solid"
-                icon={<TbPlus className="text-lg" />}
-                onClick={() =>
-                    console.log('Navigate to Add New Number System page')
-                } // Replace with actual navigation
-                // onClick={() => navigate('/number-systems/create')}
-                block // Ensure button takes full width if needed in flex-col
-            >
-                Add New
-            </Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} block>
+                {' '}
+                Add New{' '}
+            </Button>{' '}
         </div>
     )
 }
@@ -496,7 +542,7 @@ const ItemListSelected = ({
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
-                confirmButtonColor="red-600"
+                // confirmButtonColor="red-600"
             >
                 <p>
                     Are you sure you want to delete the selected item
@@ -511,6 +557,28 @@ const ItemListSelected = ({
 
 // --- Main NumberSystem Component ---
 const NumberSystem = () => {
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<NumberSystemItem | null>(null);
+
+    const openEditDrawer = (item: NumberSystemItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null); // Clear any selected item
+        setIsAddDrawerOpen(true); // Open the add drawer
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false); // Close the add drawer
+    };
     const navigate = useNavigate()
 
     // --- Lifted State ---
@@ -710,7 +778,7 @@ const NumberSystem = () => {
                             title={
                                 count > 0 ? countryList : 'No countries listed'
                             }
-                            wrap
+                            // wrap
                         >
                             <span className="cursor-default whitespace-nowrap">
                                 {count} {count === 1 ? 'Country' : 'Countries'}
@@ -718,11 +786,11 @@ const NumberSystem = () => {
                         </Tooltip>
                     )
                 },
-                sortingFn: (rowA, rowB, columnId) => {
-                    const lenA = rowA.original[columnId]?.length ?? 0
-                    const lenB = rowB.original[columnId]?.length ?? 0
-                    return lenA - lenB
-                },
+                // sortingFn: (rowA, rowB, columnId) => {
+                //     const lenA = rowA.original[columnId]?.length ?? 0
+                //     const lenB = rowB.original[columnId]?.length ?? 0
+                //     return lenA - lenB
+                // },
             },
             {
                 header: 'Action',
@@ -732,7 +800,7 @@ const NumberSystem = () => {
                     <ActionColumn
                         // onClone={() => handleClone(props.row.original)}
                         // onChangeStatus optional based on ActionColumn definition
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
@@ -744,49 +812,146 @@ const NumberSystem = () => {
 
     // --- Render Main Component ---
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {' '}
-                {/* Ensure flex column */}
-                {/* Header Section */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Number System Management</h5>
-                    <ItemListActionTools allItems={items} />
-                </div>
-                {/* Tools Section */}
-                <div className="mb-4">
-                    <ItemListTableTools onSearchChange={handleSearchChange} />
-                </div>
-                {/* Table Section - Allow table to grow */}
-                <div className="flex-grow overflow-auto">
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     {' '}
-                    {/* Add overflow for safety */}
-                    <ItemListTable
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{
-                            total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedItems={selectedItems}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
+                    {/* Ensure flex column */}
+                    {/* Header Section */}
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h5 className="mb-4 lg:mb-0">Number System Management</h5>
+                        <ItemListActionTools allItems={items} openAddDrawer={openAddDrawer}/>
+                    </div>
+                    {/* Tools Section */}
+                    <div className="mb-4">
+                        <ItemListTableTools onSearchChange={handleSearchChange} />
+                    </div>
+                    {/* Table Section - Allow table to grow */}
+                    <div className="flex-grow overflow-auto">
+                        {' '}
+                        {/* Add overflow for safety */}
+                        <ItemListTable
+                            columns={columns}
+                            data={pageData}
+                            loading={isLoading}
+                            pagingData={{
+                                total,
+                                pageIndex: tableData.pageIndex as number,
+                                pageSize: tableData.pageSize as number,
+                            }}
+                            selectedItems={selectedItems}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectChange}
+                            onSort={handleSort}
+                            onRowSelect={handleRowSelect}
+                            onAllRowSelect={handleAllRowSelect}
+                        />
+                    </div>
+                </AdaptiveCard>
 
-            {/* Selected Actions Footer */}
-            <ItemListSelected
-                selectedItems={selectedItems}
-                setSelectedItems={setSelectedItems}
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
+                {/* Selected Actions Footer */}
+                <ItemListSelected
+                    selectedItems={selectedItems}
+                    setSelectedItems={setSelectedItems}
+                    onDeleteSelected={handleDeleteSelected}
+                />
+            </Container>
+            <Drawer
+                title="Edit Number System"
+                isOpen={isEditDrawerOpen}
+                onClose={closeEditDrawer}
+                onRequestClose={closeEditDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => {
+                                console.log('Updated Number System:', selectedItem);
+                                closeEditDrawer();
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                }
+            >
+                <Form>
+                    <FormItem label="Name">
+                        <Input
+                            value={selectedItem?.name || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', name: '', countries: [] }),
+                                    name: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Countries">
+                        <Input
+                            value={selectedItem?.countries.join(', ') || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', name: '', countries: [] }),
+                                    countries: e.target.value.split(',').map((c) => c.trim()),
+                                }))
+                            }
+                            placeholder="Enter countries separated by commas (e.g., USA, Canada, Mexico)"
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+            <Drawer
+                title="Add New Number System"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => console.log('Number System Added')}
+                        >
+                            Add
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target as HTMLFormElement);
+                        const newItem: NumberSystemItem = {
+                            id: `${items.length + 1}`,
+                            name: formData.get('name') as string,
+                            countries: (formData.get('countries') as string)
+                                .split(',')
+                                .map((c) => c.trim()),
+                        };
+                        console.log('New Number System:', newItem);
+                        // handleAdd(newItem);
+                    }}
+                >
+                    <FormItem label="Name">
+                        <Input name="name" placeholder="Enter Name" />
+                    </FormItem>
+                    <FormItem label="Countries">
+                        <Input
+                            name="countries"
+                            placeholder="Enter countries separated by commas (e.g., USA, Canada, Mexico)"
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </>
     )
 }
 // --- End Main Component ---

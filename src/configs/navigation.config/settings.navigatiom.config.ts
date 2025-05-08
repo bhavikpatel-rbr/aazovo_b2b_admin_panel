@@ -68,16 +68,16 @@ const settingsNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'documentMaster.numberSystem',
+                key: 'settings.numberSystem',
                 path: `${SETTINGS_PREFIX_PATH}/number-system`,
                 title: 'Number System',
-                translateKey: 'nav.documentMaster.numberSystem',
+                translateKey: 'nav.settings.numberSystem',
                 icon: 'numberSystem',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN],
                 meta: {
                     description: {
-                        translateKey: 'nav.documentMaster.numberSystemDesc',
+                        translateKey: 'nav.settings.numberSystemDesc',
                         label: 'Manage number systems',
                     },
                 },

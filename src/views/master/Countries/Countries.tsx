@@ -30,7 +30,8 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    // TbFilter, // Filter icon removed
+    TbFilter, // Filter icon removed
+    TbCloudUpload,
     TbPlus,
 } from 'react-icons/tb'
 
@@ -48,7 +49,7 @@ import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
 // --- Define FormItem Type (Table Row Data) ---
-export type FormItem = {
+export type CountryItem = {
     id: string
     continent_id: string
     name: string
@@ -105,6 +106,96 @@ const ActionColumn = ({
 }
 // --- End ActionColumn ---
 
+// --- CountrySearch Component ---
+type CountrySearchProps = {
+    // Renamed component
+    onInputChange: (value: string) => void
+    ref?: Ref<HTMLInputElement>
+}
+const CountrySearch = React.forwardRef<
+    HTMLInputElement,
+    CountrySearchProps
+>(({ onInputChange }, ref) => {
+    return (
+        <DebouceInput
+            ref={ref}
+            placeholder="Quick Search..." // Updated placeholder
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(e) => onInputChange(e.target.value)}
+        />
+    )
+})
+CountrySearch.displayName = 'CountrySearch'
+// --- End CountrySearch ---
+
+// --- CountryTableTools Component ---
+const CountryTableTools = ({
+    // Renamed component
+    onSearchChange,
+}: {
+    onSearchChange: (query: string) => void
+}) => {
+
+    type CountryFilterSchema = {
+        userRole : String,
+        exportFrom : String,
+        exportDate : Date
+    }
+
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+
+    const {control, handleSubmit} = useForm<CountryFilterSchema>()
+
+    const exportFiltersSubmitHandler = (data : CountryFilterSchema) => {
+        console.log("filter data", data)
+    }
+
+    return (
+        <div className="flex items-center w-full gap-2">
+            <div className="flex-grow">
+                <CountrySearch onInputChange={onSearchChange} />
+            </div>
+            {/* Filter component removed */}
+            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+                Filter
+            </Button>
+            <Button icon={<TbCloudUpload/>}>Export</Button>
+            <Drawer
+                title="Filters"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                    </div>  
+                }
+            >
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+                    <FormItem label='Document Name'>
+                        {/* <Controller
+                            control={control}
+                            name='userRole'
+                            render={({field})=>(
+                                <Input
+                                    type="text"
+                                    placeholder="Enter Document Name"
+                                    {...field}
+                                />
+                            )}
+                        /> */}
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </div>
+    )
+}
+// --- End CountryTableTools ---
+
 // --- FormListTable Component (No changes) ---
 const FormListTable = ({
     columns,
@@ -118,16 +209,16 @@ const FormListTable = ({
     onRowSelect,
     onAllRowSelect,
 }: {
-    columns: ColumnDef<FormItem>[]
-    data: FormItem[]
+    columns: ColumnDef<CountryItem>[]
+    data: CountryItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: FormItem[]
+    selectedForms: CountryItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: FormItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<FormItem>[]) => void
+    onRowSelect: (checked: boolean, row: CountryItem) => void
+    onAllRowSelect: (checked: boolean, rows: Row<CountryItem>[]) => void
 }) => {
     return (
         <DataTable
@@ -191,7 +282,7 @@ const FormListActionTools = ({
     allFormsData,
     openAddDrawer,
 }: {
-    allFormsData: FormItem[];
+    allFormsData: CountryItem[];
     openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
@@ -236,8 +327,8 @@ const FormListSelected = ({
     setSelectedForms,
     onDeleteSelected,
 }: {
-    selectedForms: FormItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<FormItem[]>>
+    selectedForms: CountryItem[]
+    setSelectedForms: React.Dispatch<React.SetStateAction<CountryItem[]>>
     onDeleteSelected: () => void
 }) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
@@ -308,9 +399,9 @@ const Countries = () => {
 
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<CountryItem | null>(null);
 
-    const openEditDrawer = (item: FormItem) => {
+    const openEditDrawer = (item: CountryItem) => {
         setSelectedItem(item); // Set the selected item's data
         setIsEditDrawerOpen(true); // Open the edit drawer
     };
@@ -340,7 +431,7 @@ const Countries = () => {
         useSelector(masterSelector)
 
     const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<FormItem[]>([]) // Remains for potential local ops, not table data source
+    const [forms, setForms] = useState<CountryItem[]>([]) // Remains for potential local ops, not table data source
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -348,7 +439,7 @@ const Countries = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    const [selectedForms, setSelectedForms] = useState<CountryItem[]>([])
     // filterData state and handleApplyFilter removed
 
     console.log('Raw CountriesData from Redux:', CountriesData)
@@ -366,10 +457,10 @@ const Countries = () => {
             CountriesData?.length ?? 0,
         )
 
-        const sourceData: FormItem[] = Array.isArray(CountriesData)
+        const sourceData: CountryItem[] = Array.isArray(CountriesData)
             ? CountriesData
             : []
-        let processedData: FormItem[] = cloneDeep(sourceData)
+        let processedData: CountryItem[] = cloneDeep(sourceData)
 
         // Product and Channel filtering logic removed
 
@@ -377,7 +468,7 @@ const Countries = () => {
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
             console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: FormItem) => {
+            processedData = processedData.filter((item: CountryItem) => {
                 const itemNameLower = item.iso?.trim().toLowerCase() ?? ''
                 const continentNameLower = item.iso?.trim().toLowerCase() ?? ''
                 const itemIdString = String(item.id ?? '').trim()
@@ -406,8 +497,8 @@ const Countries = () => {
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
                 // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof FormItem] ?? '')
-                const bValue = String(b[key as keyof FormItem] ?? '')
+                const aValue = String(a[key as keyof CountryItem] ?? '')
+                const bValue = String(b[key as keyof CountryItem] ?? '')
 
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
@@ -468,7 +559,7 @@ const Countries = () => {
         [handleSetTableData],
     )
 
-    const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
+    const handleRowSelect = useCallback((checked: boolean, row: CountryItem) => {
         setSelectedForms((prev) => {
             if (checked)
                 return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
@@ -477,7 +568,7 @@ const Countries = () => {
     }, [])
 
     const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<FormItem>[]) => {
+        (checked: boolean, currentRows: Row<CountryItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
                 setSelectedForms((prevSelected) => {
@@ -503,7 +594,7 @@ const Countries = () => {
 
     // --- Action Handlers (remain the same, need Redux integration for persistence) ---
     const handleEdit = useCallback(
-        (form: FormItem) => {
+        (form: CountryItem) => {
             console.log('Edit item (requires navigation/modal):', form.id)
             toast.push(
                 <Notification title="Edit Action" type="info">
@@ -515,7 +606,7 @@ const Countries = () => {
         [navigate],
     )
 
-    const handleDelete = useCallback((formToDelete: FormItem) => {
+    const handleDelete = useCallback((formToDelete: CountryItem) => {
         console.log(
             'Delete item (needs Redux action):',
             formToDelete.id,
@@ -547,7 +638,7 @@ const Countries = () => {
     }, [selectedForms])
     // --- End Action Handlers ---
 
-    const columns: ColumnDef<FormItem>[] = useMemo(
+    const columns: ColumnDef<CountryItem>[] = useMemo(
         () => [
             {
                 header: 'ID',
@@ -607,11 +698,11 @@ const Countries = () => {
                         />
                     </div>
 
-                    <div className="mb-4 w-full">
-                        <FormListTableTools
+                    <div className="mb-4">
+                    <CountryTableTools
                             onSearchChange={handleSearchChange}
-                            // filterData and setFilterData props removed
-                        />
+                        />{' '}
+                        {/* Use updated component */}
                     </div>
 
                     <FormListTable
