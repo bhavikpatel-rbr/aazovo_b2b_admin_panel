@@ -687,7 +687,7 @@ const SubscriberActionTools = () => {
                 onRequestClose={closeAddNewDrawer}
             >
                 <Form size='sm' onSubmit={handleSubmit(AddNewFormSubmit)} containerClassName='grid grid-rows-[auto_80px]'>
-                    <div className="overflow-auto">
+                    <div className="">
                         <FormItem label="Name">
                             <Controller
                                 name="name"
