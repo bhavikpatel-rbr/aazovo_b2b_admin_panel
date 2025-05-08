@@ -45,6 +45,9 @@ import {
     TbSearch,
     TbCloudDownload,
     TbPlus,
+    TbSend2,
+    TbReload,
+    TbEye
 } from 'react-icons/tb'
 
 // Types
@@ -61,7 +64,10 @@ const CSVLink = lazy(() =>
 export type AutoEmailItem = {
     id: string
     emailType: string
+    templateId: string
+    templateName: string
     userName: string
+    recipient: string
     status: 'active' | 'inactive' | 'draft'
     createdDate?: Date
 }
@@ -90,6 +96,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'Alice Marketing',
         status: 'active',
         createdDate: new Date(2023, 9, 1),
+        templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
     {
         id: 'AE002',
@@ -97,6 +106,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'Bob Product',
         status: 'draft',
         createdDate: new Date(2023, 9, 15),
+        templateId: 'T004',
+        templateName: 'Cart Reminder 1hr',
+        recipientName: 'Abandoned Cart Users',
     },
     {
         id: 'AE003',
@@ -104,6 +116,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'Alice Marketing',
         status: 'active',
         createdDate: new Date(2023, 8, 20),
+        templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
     {
         id: 'AE004',
@@ -111,6 +126,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'Charlie Sales',
         status: 'active',
         createdDate: new Date(2023, 10, 1),
+         templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
     {
         id: 'AE005',
@@ -118,6 +136,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'Bob Product',
         status: 'inactive',
         createdDate: new Date(2023, 9, 25),
+         templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
     {
         id: 'AE006',
@@ -125,6 +146,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'Finance Team',
         status: 'active',
         createdDate: new Date(2023, 8, 10),
+         templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
     {
         id: 'AE007',
@@ -132,6 +156,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'Charlie Sales',
         status: 'active',
         createdDate: new Date(2023, 10, 5),
+        templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
     {
         id: 'AE008',
@@ -139,6 +166,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'HR Dept',
         status: 'draft',
         createdDate: new Date(2023, 7, 1),
+        templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
     {
         id: 'AE009',
@@ -146,6 +176,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'IT Security',
         status: 'active',
         createdDate: new Date(2023, 6, 1),
+        templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
     {
         id: 'AE010',
@@ -153,6 +186,9 @@ const initialDummyAutoEmails: AutoEmailItem[] = [
         userName: 'Logistics Bot',
         status: 'active',
         createdDate: new Date(2023, 5, 15),
+        templateId: 'T003',
+        templateName: 'Weekly Digest V1',
+        recipientName: 'Subscribed Users',
     },
 ]
 
@@ -182,22 +218,44 @@ const ActionColumn = ({
 
     return (
         <div className="flex items-center justify-center">
-            {/* {onClone && (
-                <Tooltip title="Clone Template">
-                    <div
-                        className={classNames(
-                            iconButtonClass,
-                            hoverBgClass,
-                            'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400',
-                        )}
-                        role="button"
-                        onClick={onClone}
-                    >
-                        <TbCopy />
-                    </div>
-                </Tooltip>
-            )} */}
-            <Tooltip title="Change Status">
+            <Tooltip title="View">
+                <div
+                    className={classNames(
+                        iconButtonClass,
+                        hoverBgClass,
+                        'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400',
+                    )}
+                    role="button"
+                >
+                    <TbEye />
+                </div>
+            </Tooltip>
+            <Tooltip title="Resend">
+                <div
+                    className={classNames(
+                        iconButtonClass,
+                        hoverBgClass,
+                        'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400',
+                    )}
+                    role="button"
+                >
+                    <TbSend2 />
+                </div>
+            </Tooltip>
+            <Tooltip title="Retry">
+                <div
+                    className={classNames(
+                        iconButtonClass,
+                        hoverBgClass,
+                        'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400',
+                    )}
+                    role="button"
+                >
+                    <TbReload />
+                </div>
+            </Tooltip>
+            
+            {/* <Tooltip title="Change Status">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -209,8 +267,8 @@ const ActionColumn = ({
                 >
                     <TbSwitchHorizontal />
                 </div>
-            </Tooltip>
-            <Tooltip title="Edit Template">
+            </Tooltip> */}
+            <Tooltip title="Edit">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -223,7 +281,7 @@ const ActionColumn = ({
                     <TbPencil />
                 </div>
             </Tooltip>
-            <Tooltip title="Delete Template">
+            <Tooltip title="Delete">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -964,26 +1022,63 @@ const AutoEmailListing = () => {
                 enableSorting: true,
                 size: 70,
             },
+            // {
+            //     header: 'Email Type',
+            //     accessorKey: 'emailType',
+            //     enableSorting: true,
+            //     size: 250,
+            // },
             {
-                header: 'Email Type',
-                accessorKey: 'emailType',
+                header: 'Template',
+                accessorKey: 'templateId',
                 enableSorting: true,
-                size: 250,
+                size: 200,
+                cell: (props) => {
+                    return (
+                        <div className='flex flex-col'>
+                            <b>{props.row.original?.templateId}</b>
+                            <span>{props.row.original?.templateName}</span>
+                        </div>
+                    )
+                },
             },
+            // {
+            //     header: 'User Name',
+            //     accessorKey: 'userName',
+            //     enableSorting: true,
+            //     cell: (props) => (
+            //         <div className="flex items-center gap-2">
+            //             <Avatar
+            //                 size={28}
+            //                 shape="circle"
+            //                 icon={<TbUserCircle />}
+            //             />
+            //             <span>{props.row.original.userName}</span>
+            //         </div>
+            //     ),
+            // },
             {
-                header: 'User Name',
+                header: 'Recipient',
                 accessorKey: 'userName',
                 enableSorting: true,
-                cell: (props) => (
-                    <div className="flex items-center gap-2">
-                        <Avatar
-                            size={28}
-                            shape="circle"
-                            icon={<TbUserCircle />}
-                        />
-                        <span>{props.row.original.userName}</span>
-                    </div>
-                ),
+            },
+            {
+                header: 'Sent At',
+                accessorKey: 'createdDate',
+                enableSorting: true,
+                meta : {HeaderClass : "text-right"},
+                cell: (props) => {
+                    const date = props.row.original.createdDate
+                    return (
+                        <span className='text-right block whitespace-nowrap'>
+                            {date.toLocaleDateString()}{' '}
+                            {date.toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            })}
+                        </span>
+                    )
+                },
             },
             {
                 header: 'Status',
