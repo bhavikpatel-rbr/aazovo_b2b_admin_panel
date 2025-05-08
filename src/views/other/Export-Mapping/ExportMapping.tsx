@@ -443,7 +443,7 @@ const ExportMappingTableTools = ({
                 bodyClass=""
             >
                 <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='grid grid-rows-[auto_80px]'>
-                    <div ClassName="overflow-scroll">
+                    <div>
                         <FormItem label='User Role'>
                             <Controller
                                 control={control}

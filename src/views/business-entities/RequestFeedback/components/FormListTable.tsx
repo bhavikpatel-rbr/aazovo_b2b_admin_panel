@@ -1,6 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import { ReactElement, useState, useMemo, useCallback } from 'react'
 import Avatar from '@/components/ui/Avatar' // Can remove if forms don't have images
-import Tag from '@/components/ui/Tag'
 import Tooltip from '@/components/ui/Tooltip'
 import DataTable from '@/components/shared/DataTable'
 import { Link, useNavigate } from 'react-router-dom'
@@ -10,19 +9,35 @@ import {
     TbPencil,
     TbEye,
     TbCopy,
+    TbUser,
     TbSwitchHorizontal,
     TbTrash,
+    TbSend2,
+    TbMessageReply,
 } from 'react-icons/tb'
+import { IoEyeOutline } from "react-icons/io5";
+
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+
+import { Button, Drawer, Form, FormItem, Input, Card, Tag } from '@/components/ui'
+import { Controller, useForm } from 'react-hook-form'
+import { LuForward, LuReply } from 'react-icons/lu'
+import { MdNotificationAdd } from 'react-icons/md'
+
+import userIcon from "/img/avatars/thumb-1.jpg"
 
 // --- Define Form Type ---
 export type FormItem = {
     id: string;
+    memberId: string,
     name: string; // Name
+    tokenNumber: string,
+    from: string,
+    type: string; // From
+    department: string,
     email: string; // Email
     phone: string; // Phone
-    from: string; // From
     date: string; // Date
     status: 'active' | 'inactive' // Changed status options
     // Add other form-specific fields if needed later
@@ -31,35 +46,44 @@ export type FormItem = {
 
 // --- Updated Status Colors ---
 const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-emerald-200 dark:bg-emerald-200 text-gray-900 dark:text-gray-900',
-    inactive: 'bg-amber-200 dark:bg-amber-200 text-gray-900 dark:text-gray-900', // Example color for inactive
+    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
+    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
+}
+
+// Helper Function
+function classNames(...classes: (string | boolean | undefined)[]) {
+    return classes.filter(Boolean).join(' ')
 }
 
 // --- ActionColumn Component ---
 const ActionColumn = ({
-    onEdit,
-    onViewDetail,
+    // onEdit,
+    // onViewDetail,
     onClone,
+    View,
+    Reply,
+    Notify,
     onChangeStatus,
 }: {
-    onEdit: () => void
-    onViewDetail: () => void
+    // onEdit: () => void
+    // onViewDetail: () => void
     onClone: () => void
+    View: () => ReactElement
+    Reply: () => ReactElement
+    Notify: () => ReactElement
     onChangeStatus: () => void
 }) => {
+
+    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
+    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
+
     return (
-        <div className="flex items-center justify-end gap-3">
-            {' '}
-            {/* Align actions to end */}
-            <Tooltip title="Clone Form">
-                <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
-                    role="button"
-                    onClick={onClone}
-                >
-                    <TbCopy />
-                </div>
-            </Tooltip>
+        <div className="flex items-center justify-center gap-2">
+
+            {/* <View/> */}
+            <View />
+
+            {/* Change status */}
             <Tooltip title="Change Status">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
@@ -69,22 +93,18 @@ const ActionColumn = ({
                     <TbSwitchHorizontal />
                 </div>
             </Tooltip>
-            <Tooltip title="Edit">
-                {' '}
-                {/* Keep Edit/View if needed */}
+
+            {/* Reply */}
+            <Reply/>
+            
+            {/* Forward */}
+            <Notify/>
+
+            {/* Delete */}
+            <Tooltip title="Delete">
                 <div
                     className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
                     role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
-            <Tooltip title="View">
-                <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
-                    role="button"
-                    onClick={onViewDetail}
                 >
                     <TbTrash />
                 </div>
@@ -97,46 +117,66 @@ const ActionColumn = ({
 const initialDummyForms: FormItem[] = [
     {
         id: 'F001',
+        memberId: 'M001',
         name: 'John Doe',
+        tokenNumber: 'T001',
+        from: 'Request',
+        type: 'Website',
+        department: 'Sales',
         email: 'john.doe@example.com',
         phone: '+1-123-456-7890',
-        from: 'USA',
         date: '2023-05-01',
         status: 'active',
     },
     {
         id: 'F002',
+        memberId: 'M002',
         name: 'Jane Smith',
+        tokenNumber: 'T002',
+        from: 'Feedback',
+        type: 'Inquiry',
+        department: 'Marketing',
         email: 'jane.smith@example.com',
         phone: '+1-987-654-3210',
-        from: 'Canada',
         date: '2023-05-02',
         status: 'active',
     },
     {
         id: 'F003',
+        memberId: 'M003',
         name: 'Michael Johnson',
+        tokenNumber: 'T003',
+        from: 'Request',
+        type: 'New Product',
+        department: 'Support',
         email: 'michael.johnson@example.com',
         phone: '+44-20-7946-0958',
-        from: 'UK',
         date: '2023-05-03',
         status: 'active',
     },
     {
         id: 'F004',
+        memberId: 'M004',
         name: 'Emily Davis',
+        tokenNumber: 'T004',
+        from: 'Feedback',
+        type: 'Website',
+        department: 'Development',
         email: 'emily.davis@example.com',
         phone: '+91-98765-43210',
-        from: 'India',
         date: '2023-05-04',
         status: 'active',
     },
     {
         id: 'F005',
+        memberId: 'M005',
         name: 'William Brown',
+        tokenNumber: 'T005',
+        from: 'Request',
+        type: 'Inquiry',
+        department: 'HR',
         email: 'william.brown@example.com',
         phone: '+81-3-1234-5678',
-        from: 'Japan',
         date: '2023-05-05',
         status: 'active',
     },
@@ -210,10 +250,266 @@ const FormListTable = () => {
         // navigate(`/forms/edit/${form.id}`) // Example navigation
     }
 
+    const View = ({ data }) => {
+
+        const [isViewDrawerOpen, setIsViewDrawerOpen] = useState<boolean>(false)
+        const openViewDrawer = () => setIsViewDrawerOpen(true)
+        const closeViewDrawer = () => setIsViewDrawerOpen(false)
+
+        return (
+            <>
+                <Tooltip title="View Record">
+                    <div
+                        className='text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
+                        role="button"
+                        onClick={openViewDrawer}
+                    >
+                        {' '}
+                        <TbEye />{' '}
+                    </div>
+                </Tooltip>
+                <Drawer
+                    title="View"
+                    isOpen={isViewDrawerOpen}
+                    onClose={closeViewDrawer}
+                    onRequestClose={closeViewDrawer}
+                    footer={
+                        <div className="text-right w-full">
+                            <Button size="sm" className="mr-2" onClick={closeViewDrawer}>
+                                Cancel
+                            </Button>
+                        </div>
+                    }
+                >
+                    <Card>
+                        <div className="flex justify-between">
+                            <Tag className="h-7">Token: #{data?.tokenNumber}</Tag>
+                            <div className="flex gap-4">
+                                <b className="text-xs flex items-center h-7">Assigned to</b>
+                                <Tag className="flex gap-1">
+                                    <Tooltip title="Tushar Joshi">
+                                        <img src={userIcon} alt="icon" className='border h-5 w-5 aspect-square rounded-full' />
+                                    </Tooltip>
+                                    <Tooltip title="Rahul Bayad">
+                                        <img src={userIcon} alt="icon" className='border h-5 w-5 aspect-square rounded-full' />
+                                    </Tooltip>
+                                </Tag>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 mt-2">
+                            <figure className='flex gap-3 mt-2 items-start'>
+                                <img src={userIcon} alt="icon" className='border h-10 w-10 aspect-square rounded-full' />
+                                <figcaption className='flex flex-col'>
+                                    <div className="flex gap-2">
+                                        <h6 className='font-semibold text-black dark:text-white'>{data?.memberId}</h6> |
+                                        <h6 className='font-semibold text-black dark:text-white'>{data?.name}</h6>
+                                        {/* <Tag className={` ${statusColor[data?.status]} text-xs inline w-auto`}>{data?.status}</Tag> */}
+                                    </div>
+                                    <span className="text-xs">{data?.email} | {data?.phone}</span>
+                                </figcaption>
+                            </figure>
+                            <div className="mt-1">
+                                <p className='text-xs'>
+                                    <span className='font-semibold text-black  dark:text-white'>From: </span>
+                                    <span>{data?.from}</span>
+                                </p>
+                                <p className='text-xs'>
+                                    <span className='font-semibold text-black  dark:text-white'>Type: </span>
+                                    <span>{data?.type}</span>
+                                </p>
+                                <p className='text-xs' >
+                                    <span className='font-semibold text-black  dark:text-white'>Department: </span>
+                                    <span>{data?.department}</span>
+                                </p>
+                                <p className='text-xs'>
+                                    <span className='font-semibold text-black  dark:text-white'>Date: </span>
+                                    <span>{data?.subscribedDate?.toLocaleDateString() + " " + "20:00 PM"}</span>
+                                </p>
+                                <p className='text-xs'>
+                                    <span className='font-semibold text-black  dark:text-white'>Status: </span>
+                                    <Tag className={`${statusColor[data?.status]} text-xs w-auto`}>{data?.status}</Tag>
+                                </p>
+                                <p className='text-xs mt-1'>
+                                    <span className='font-semibold text-black  dark:text-white'>Message: </span>
+                                    <p>My name is john doe, I work in IT Department. I find a bug in your website, which i can help to solve this.</p>
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                    <div className="mt-2">
+                        <Input textArea placeholder="Write a reply"/>
+                        <Button icon={<TbSend2/>} className="relative float-right">Send</Button>
+                    </div>
+                </Drawer>
+            </>
+        )
+    }
+
+    const Reply = ({ data }) => {
+
+        const [isReplyDrawerOpen, setIsReplyDrawerOpen] = useState<boolean>(false)
+        const openReplyDrawer = () => setIsReplyDrawerOpen(true)
+        const closeReplyDrawer = () => setIsReplyDrawerOpen(false)
+
+        return (
+            <>
+                <Tooltip title="Reply">
+                    <div
+                        className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
+                        role="button"
+                        onClick={openReplyDrawer}
+                    >
+                        <TbMessageReply />
+                    </div>
+                </Tooltip>
+                <Drawer
+                    title="Reply"
+                    isOpen={isReplyDrawerOpen}
+                    onClose={closeReplyDrawer}
+                    onRequestClose={closeReplyDrawer}
+                    footer={
+                        <>
+                            <Button size="sm" className="" onClick={closeReplyDrawer}>
+                                Cancel
+                            </Button>
+                            <Button icon={<TbSend2/>} size="sm" className="" onClick={closeReplyDrawer}>
+                                Reply
+                            </Button>
+                        </>
+                    }
+                >
+                    <Card>
+                        <div className="flex justify-between">
+                            <Tag className="h-7">Token: #{data?.tokenNumber}</Tag>
+                            <div className="flex gap-4">
+                                <b className="text-xs flex items-center h-7">Assigned to</b>
+                                <Tag className="flex gap-1">
+                                    <Tooltip title="Tushar Joshi">
+                                        <img src={userIcon} alt="icon" className='border h-5 w-5 aspect-square rounded-full' />
+                                    </Tooltip>
+                                    <Tooltip title="Rahul Bayad">
+                                        <img src={userIcon} alt="icon" className='border h-5 w-5 aspect-square rounded-full' />
+                                    </Tooltip>
+                                </Tag>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 mt-2">
+                            <figure className='flex gap-3 mt-2 items-start'>
+                                <img src={userIcon} alt="icon" className='border h-10 w-10 aspect-square rounded-full' />
+                                <figcaption className='flex flex-col'>
+                                    <div className="flex gap-2">
+                                        <h6 className='font-semibold text-black dark:text-white'>{data?.memberId}</h6> |
+                                        <h6 className='font-semibold text-black dark:text-white'>{data?.name}</h6>
+                                        {/* <Tag className={` ${statusColor[data?.status]} text-xs inline w-auto`}>{data?.status}</Tag> */}
+                                    </div>
+                                    <span className="text-xs">{data?.email} | {data?.phone}</span>
+                                </figcaption>
+                            </figure>
+                            <div className="mt-1">
+                                <p className='text-xs mt-1'>
+                                    <span className='font-semibold text-black  dark:text-white'>Message: </span>
+                                    <p>My name is john doe, I work in IT Department. I find a bug in your website, which i can help to solve this.</p>
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                    <div className="mt-2">
+                        <Input textArea placeholder="Write a reply"/>
+                    </div>
+                </Drawer>
+            </>
+        )
+    }
+
+    const Notify = ({ data }) => {
+        const [assignedMember, setAssignedMember] = useState([])
+        const [isNotifyDrawerOpen, setIsNotifyDrawerOpen] = useState<boolean>(false)
+        const openNotifyDrawer = () => setIsNotifyDrawerOpen(true)
+        const closeNotifyDrawer = () => setIsNotifyDrawerOpen(false)
+
+
+
+        return (
+            <>
+                <Tooltip title="Notify">
+                    <div
+                        className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
+                        role="button"
+                        onClick={openNotifyDrawer}
+                    >
+                        <MdNotificationAdd />
+                    </div>
+                </Tooltip>
+                <Drawer
+                    title="Notify"
+                    isOpen={isNotifyDrawerOpen}
+                    onClose={closeNotifyDrawer}
+                    onRequestClose={closeNotifyDrawer}
+                    footer={
+                        <div className="text-right w-full">
+                            <Button size="sm" onClick={closeNotifyDrawer}>
+                                Cancel
+                            </Button>
+                        </div> 
+                    }
+                >
+                    <Input type="search" placeholder="Quick Search Team Member" />
+
+                    <div className='text-xs font-semibold !my-2 pl-1'>15 TEAM MEMBERS AVAILABLE</div>
+                    <ul className='mt-4 flex flex-col'>
+                        <li className="flex justify-between items-center py-2">
+                            <figure className="flex gap-3 items-center">
+                                <img src={userIcon} alt="" className='h-10 w-10 rounded-full'/>
+                                <figcaption>Angelina Gotelli</figcaption>
+                            </figure>
+                            <Button>Assign</Button>
+                        </li>
+                        <li className="flex justify-between items-center py-2">
+                            <figure className="flex gap-3 items-center">
+                                <img src={userIcon} alt="" className='h-10 w-10 rounded-full'/>
+                                <figcaption>Angelina Gotelli</figcaption>
+                            </figure>
+                            <Button className='border-1 border-red-500 text-red-500  hover:shadow-none'>Remove</Button>
+                        </li>
+                        <li className="flex justify-between items-center py-2">
+                            <figure className="flex gap-3 items-center">
+                                <img src={userIcon} alt="" className='h-10 w-10 rounded-full'/>
+                                <figcaption>Angelina Gotelli</figcaption>
+                            </figure>
+                            <Button>Assign</Button>
+                        </li>
+                        <li className="flex justify-between items-center py-2">
+                            <figure className="flex gap-3 items-center">
+                                <img src={userIcon} alt="" className='h-10 w-10 rounded-full'/>
+                                <figcaption>Angelina Gotelli</figcaption>
+                            </figure>
+                            <Button>Assign</Button>
+                        </li>
+                        <li className="flex justify-between items-center py-2">
+                            <figure className="flex gap-3 items-center">
+                                <img src={userIcon} alt="" className='h-10 w-10 rounded-full'/>
+                                <figcaption>Angelina Gotelli</figcaption>
+                            </figure>
+                            <Button>Assign</Button>
+                        </li>
+                        <li className="flex justify-between items-center py-2">
+                            <figure className="flex gap-3 items-center">
+                                <img src={userIcon} alt="" className='h-10 w-10 rounded-full'/>
+                                <figcaption>Angelina Gotelli</figcaption>
+                            </figure>
+                            <Button>Assign</Button>
+                        </li>
+                    </ul>
+                </Drawer>
+            </>
+        )
+    }
+
     const handleViewDetails = (form: FormItem) => {
         // Navigate to a hypothetical form details page
         console.log('Navigating to view form:', form.id)
         // navigate(`/forms/details/${form.id}`) // Example navigation
+
     }
 
     const handleCloneForm = (form: FormItem) => {
@@ -251,43 +547,52 @@ const FormListTable = () => {
             {
                 header: 'ID',
                 accessorKey: 'id',
+                size: 50,
                 // Simple cell to display ID, enable sorting
                 enableSorting: true,
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
-                header: 'Name',
+                header: 'Member',
                 accessorKey: 'name',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.name}</span>,
+                cell: (props) => {
+                    return (
+                        <div className='flex flex-col'>
+                            <span><b>Member Id:</b> {props.row.original.memberId}</span>
+                            <span><b>Name:</b> {props.row.original.name}</span>
+                            <span><b>Email:</b> {props.row.original.email}</span>
+                            <span><b>Phone:</b> {props.row.original.phone}</span>
+                        </div>
+                    )
+                }
             },
             {
-                header: 'Email',
-                accessorKey: 'email',
+                header: 'Request/Feedback',
+                accessorKey: 'tokenNumber',
                 enableSorting: true,
-                cell: (props) => <span>{props.row.original.email}</span>,
-            },
-            {
-                header: 'Phone',
-                accessorKey: 'phone',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.phone}</span>,
-            },
-            {
-                header: 'From',
-                accessorKey: 'from',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.from}</span>,
+                cell: (props) => {
+                    return (
+                        <div className='flex flex-col'>
+                            <span><b>Token:</b> {props.row.original.tokenNumber}</span>
+                            <span><b>From:</b> {props.row.original.from}</span>
+                            <span><b>Department:</b> {props.row.original.department}</span>
+                            <span><b>Type:</b> {props.row.original.type}</span>
+                        </div>
+                    )
+                }
             },
             {
                 header: 'Date',
                 accessorKey: 'date',
+                size: 90,
                 enableSorting: true,
                 cell: (props) => <span>{props.row.original.date}</span>,
             },
             {
                 header: 'Status',
                 accessorKey: 'status',
+                size: 80,
                 // Enable sorting
                 enableSorting: true,
                 cell: (props) => {
@@ -302,8 +607,10 @@ const FormListTable = () => {
                 },
             },
             {
-                header: '', // Keep header empty for actions
+                header: 'Action', // Keep header empty for actions
                 id: 'action',
+                size: 120,
+                meta: { HeaderClass: "text-center" },
                 cell: (props) => (
                     <ActionColumn
                         // Pass new handlers
@@ -313,9 +620,12 @@ const FormListTable = () => {
                         }
                         // Keep existing handlers if needed
                         onEdit={() => handleEdit(props.row.original)}
-                        onViewDetail={() =>
-                            handleViewDetails(props.row.original)
-                        }
+                        // onViewDetail={() =>
+                        //     handleViewDetails(props.row.original)
+                        // }
+                        View={() => <View data={props.row.original} />}
+                        Reply={() => <Reply data={props.row.original} />}
+                        Notify={() => <Notify data={props.row.original} />}
                     />
                 ),
             },
