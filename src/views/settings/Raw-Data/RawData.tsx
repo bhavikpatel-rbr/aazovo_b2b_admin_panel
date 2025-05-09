@@ -19,6 +19,8 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import { TbBriefcase, TbCloudUpload, TbFilter } from 'react-icons/tb' // Placeholder icon
+import { Card, Drawer, FormItem, Input, } from '@/components/ui'
+import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // For filter form
 
 // Icons
 import {
@@ -37,30 +39,132 @@ import type { TableQueries } from '@/@types/common'
 // --- Define Item Type ---
 export type DesignationItem = {
     id: string // Unique Designation ID
-    name: string // e.g., "Software Engineer", "Marketing Manager", "Sales Representative"
-    // Optional: Add description or other relevant fields later
-    // description?: string;
-    // createdDate?: Date;
+    country?: string // Optional: e.g., "USA", "Canada", etc.
+    category?: string // Optional: e.g., "Engineering", "Marketing", etc.
+    brand?: string // Optional: e.g., "Brand A", "Brand B", etc.
+    mobile?: string // Optional: e.g., "+1-234-567-8900"
+    quality?: string // Optional: e.g., "High", "Medium", "Low"
+    // status only hold and identified
+    status?: 'hold' | 'identified' // Optional: e.g., "active", "inactive", etc.
+    remark?: string // Optional: e.g., "Urgent", "Pending", etc.
+    date?: string // Optional: e.g., "2023-10-01"
 }
 // --- End Item Type ---
 
 // --- Constants ---
 const initialDummyDepartments: DesignationItem[] = [
-    { id: 'DEPT001', name: 'Engineering' },
-    { id: 'DEPT002', name: 'Marketing' },
-    { id: 'DEPT003', name: 'Sales' },
-    { id: 'DEPT004', name: 'Human Resources (HR)' },
-    { id: 'DEPT005', name: 'Operations' },
-    { id: 'DEPT006', name: 'Finance' },
-    { id: 'DEPT007', name: 'Customer Support' },
-    { id: 'DEPT008', name: 'Product Management' },
-    { id: 'DEPT009', name: 'Design' },
-    { id: 'DEPT010', name: 'Data Science & Analytics' },
-    { id: 'DEPT011', name: 'Information Technology (IT)' },
-    { id: 'DEPT012', name: 'Legal' },
-    { id: 'DEPT013', name: 'Administration' },
-    { id: 'DEPT014', name: 'Research & Development (R&D)' },
-]
+    {
+      id: 'DES001',
+      country: 'India',
+      category: 'Engineering',
+      brand: 'Brand A',
+      mobile: '+91-9876543210',
+      quality: 'High',
+      status: 'identified',
+      remark: 'Urgent',
+      date: '2025-05-06',
+    },
+    {
+      id: 'DES002',
+      country: 'USA',
+      category: 'Marketing',
+      brand: 'Brand B',
+      mobile: '+1-234-567-8900',
+      quality: 'Medium',
+      status: 'hold',
+      remark: 'Pending approval',
+      date: '2025-05-05',
+    },
+    {
+      id: 'DES003',
+      country: 'Canada',
+      category: 'Sales',
+      brand: 'Brand C',
+      mobile: '+1-987-654-3210',
+      quality: 'Low',
+      status: 'identified',
+      remark: 'Follow-up needed',
+      date: '2025-05-04',
+    },
+    {
+      id: 'DES004',
+      country: 'Germany',
+      category: 'Human Resources (HR)',
+      brand: 'Brand D',
+      mobile: '+49-123-456789',
+      quality: 'High',
+      status: 'hold',
+      remark: 'On hold for review',
+      date: '2025-05-03',
+    },
+    {
+      id: 'DES005',
+      country: 'UK',
+      category: 'Operations',
+      brand: 'Brand E',
+      mobile: '+44-20-7946-0958',
+      quality: 'Medium',
+      status: 'identified',
+      remark: 'Reviewed',
+      date: '2025-05-02',
+    },
+    {
+      id: 'DES006',
+      country: 'Australia',
+      category: 'Finance',
+      brand: 'Brand F',
+      mobile: '+61-2-1234-5678',
+      quality: 'Low',
+      status: 'hold',
+      remark: 'Awaiting confirmation',
+      date: '2025-05-01',
+    },
+    {
+      id: 'DES007',
+      country: 'India',
+      category: 'Customer Support',
+      brand: 'Brand G',
+      mobile: '+91-7000000000',
+      quality: 'High',
+      status: 'identified',
+      remark: 'Escalated',
+      date: '2025-04-30',
+    },
+    {
+      id: 'DES008',
+      country: 'USA',
+      category: 'Product Management',
+      brand: 'Brand H',
+      mobile: '+1-555-678-1234',
+      quality: 'Medium',
+      status: 'hold',
+      remark: 'In progress',
+      date: '2025-04-29',
+    },
+    {
+      id: 'DES009',
+      country: 'France',
+      category: 'Design',
+      brand: 'Brand I',
+      mobile: '+33-1-2345-6789',
+      quality: 'High',
+      status: 'identified',
+      remark: 'Priority',
+      date: '2025-04-28',
+    },
+    {
+      id: 'DES010',
+      country: 'Singapore',
+      category: 'Data Science & Analytics',
+      brand: 'Brand J',
+      mobile: '+65-6123-4567',
+      quality: 'Medium',
+      status: 'hold',
+      remark: 'Awaiting data',
+      date: '2025-04-27',
+    }
+  ];
+  
 // --- End Constants ---
 
 // --- Reusable ActionColumn Component ---
@@ -200,12 +304,14 @@ const DesignationTableTools = ({
 // --- DesignationActionTools Component ---
 const DesignationActionTools = ({
     allDesignations,
+    openAddDrawer,
 }: {
-    allDesignations: DesignationItem[]
+    allDesignations: DesignationItem[];
+    openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
     const csvData = useMemo(
-        () => allDesignations.map((d) => ({ id: d.id, name: d.name })),
+        () => allDesignations.map((d) => ({ id: d.id, name: d.mobile })),
         [allDesignations],
     )
     const csvHeaders = [
@@ -218,7 +324,7 @@ const DesignationActionTools = ({
         <div className="flex flex-col md:flex-row gap-3">
             {' '}
             {/* <CSVLink ... /> */}{' '}
-            <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} block>
                 {' '}
                 Add New{' '}
             </Button>{' '}
@@ -307,6 +413,28 @@ const DesignationSelected = ({
 
 // --- Main DesignationListing Component ---
 const RawData = () => {
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<DesignationItem | null>(null);
+
+    const openEditDrawer = (item: DesignationItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null); // Clear any selected item
+        setIsAddDrawerOpen(true); // Open the add drawer
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false); // Close the add drawer
+    };
     const navigate = useNavigate()
 
     // --- State ---
@@ -334,8 +462,7 @@ const RawData = () => {
             const query = tableData.query.toLowerCase()
             processedData = processedData.filter(
                 (d) =>
-                    d.id.toLowerCase().includes(query) ||
-                    d.name.toLowerCase().includes(query),
+                    d.id.toLowerCase().includes(query)
             )
         }
 
@@ -461,7 +588,7 @@ const RawData = () => {
                     title="Departments Deleted"
                     type="success"
                     duration={2000}
-                >{`Departments '${designationToDelete.name}' deleted.`}</Notification>,
+                >{`Departments '${designationToDelete.mobile}' deleted.`}</Notification>,
             )
         },
         [setDesignations, setSelectedDesignations],
@@ -495,8 +622,47 @@ const RawData = () => {
                 accessorKey: 'id',
                 enableSorting: true,
                 width: 120,
-            },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
+              },
+              {
+                header: 'Country',
+                accessorKey: 'country',
+                enableSorting: true,
+              },
+              {
+                header: 'Category',
+                accessorKey: 'category',
+                enableSorting: true,
+              },
+              {
+                header: 'Brand',
+                accessorKey: 'brand',
+                enableSorting: true,
+              },
+              {
+                header: 'Mobile',
+                accessorKey: 'mobile',
+                enableSorting: false,
+              },
+              {
+                header: 'Quality',
+                accessorKey: 'quality',
+                enableSorting: true,
+              },
+              {
+                header: 'Status',
+                accessorKey: 'status',
+                enableSorting: true,
+              },
+              {
+                header: 'Remark',
+                accessorKey: 'remark',
+                enableSorting: false,
+              },
+              {
+                header: 'Date',
+                accessorKey: 'date',
+                enableSorting: true,
+              },
             // Add other columns like description if needed
             {
                 header: 'Action',
@@ -505,7 +671,7 @@ const RawData = () => {
                 meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
@@ -517,50 +683,238 @@ const RawData = () => {
 
     // --- Render Main Component ---
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Departments Listing</h5>
-                    <DesignationActionTools allDesignations={designations} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+                    {/* Header */}
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h5 className="mb-4 lg:mb-0">Departments Listing</h5>
+                        <DesignationActionTools allDesignations={designations} openAddDrawer={openAddDrawer} />
+                    </div>
 
-                {/* Tools */}
-                <div className="mb-4">
-                    <DesignationTableTools
-                        onSearchChange={handleSearchChange}
-                    />
-                    {/* Filter component removed */}
-                </div>
+                    {/* Tools */}
+                    <div className="mb-4">
+                        <DesignationTableTools
+                            onSearchChange={handleSearchChange}
+                        />
+                        {/* Filter component removed */}
+                    </div>
 
-                {/* Table */}
-                <div className="flex-grow overflow-auto">
-                    <DesignationTable
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{
-                            total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedDesignations={selectedDesignations}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
+                    {/* Table */}
+                    <div className="flex-grow overflow-auto">
+                        <DesignationTable
+                            columns={columns}
+                            data={pageData}
+                            loading={isLoading}
+                            pagingData={{
+                                total,
+                                pageIndex: tableData.pageIndex as number,
+                                pageSize: tableData.pageSize as number,
+                            }}
+                            selectedDesignations={selectedDesignations}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectChange}
+                            onSort={handleSort}
+                            onRowSelect={handleRowSelect}
+                            onAllRowSelect={handleAllRowSelect}
+                        />
+                    </div>
+                </AdaptiveCard>
 
-            {/* Selected Footer */}
-            <DesignationSelected
-                selectedDesignations={selectedDesignations}
-                setSelectedDesignations={setSelectedDesignations}
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
+                {/* Selected Footer */}
+                <DesignationSelected
+                    selectedDesignations={selectedDesignations}
+                    setSelectedDesignations={setSelectedDesignations}
+                    onDeleteSelected={handleDeleteSelected}
+                />
+            </Container>
+            <Drawer
+                title="Edit Designation"
+                isOpen={isEditDrawerOpen}
+                onClose={closeEditDrawer}
+                onRequestClose={closeEditDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => {
+                                console.log('Updated Designation:', selectedItem);
+                                closeEditDrawer();
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                }
+            >
+                <Form>
+                    <FormItem label="Country">
+                        <Input
+                            value={selectedItem?.country || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', country: '', category: '', brand: '', mobile: '', quality: '', status: 'hold', remark: '', date: '' }),
+                                    country: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Category">
+                        <Input
+                            value={selectedItem?.category || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', country: '', category: '', brand: '', mobile: '', quality: '', status: 'hold', remark: '', date: '' }),
+                                    category: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Brand">
+                        <Input
+                            value={selectedItem?.brand || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', country: '', category: '', brand: '', mobile: '', quality: '', status: 'hold', remark: '', date: '' }),
+                                    brand: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Mobile">
+                        <Input
+                            value={selectedItem?.mobile || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', country: '', category: '', brand: '', mobile: '', quality: '', status: 'hold', remark: '', date: '' }),
+                                    mobile: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Quality">
+                        <Input
+                            value={selectedItem?.quality || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', country: '', category: '', brand: '', mobile: '', quality: '', status: 'hold', remark: '', date: '' }),
+                                    quality: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Status">
+                        <select
+                            value={selectedItem?.status || 'hold'}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', country: '', category: '', brand: '', mobile: '', quality: '', status: 'hold', remark: '', date: '' }),
+                                    status: e.target.value as 'hold' | 'identified',
+                                }))
+                            }
+                        >
+                            <option value="hold">Hold</option>
+                            <option value="identified">Identified</option>
+                        </select>
+                    </FormItem>
+                    <FormItem label="Remark">
+                        <Input
+                            value={selectedItem?.remark || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', country: '', category: '', brand: '', mobile: '', quality: '', status: 'hold', remark: '', date: '' }),
+                                    remark: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Date">
+                        <Input
+                            type="date"
+                            value={selectedItem?.date || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', country: '', category: '', brand: '', mobile: '', quality: '', status: 'hold', remark: '', date: '' }),
+                                    date: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+            <Drawer
+                title="Add New Designation"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => console.log('Designation Added')}
+                        >
+                            Add
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target as HTMLFormElement);
+                        const newItem: DesignationItem = {
+                            id: `${designations.length + 1}`,
+                            country: formData.get('country') as string,
+                            category: formData.get('category') as string,
+                            brand: formData.get('brand') as string,
+                            mobile: formData.get('mobile') as string,
+                            quality: formData.get('quality') as string,
+                            status: formData.get('status') as 'hold' | 'identified',
+                            remark: formData.get('remark') as string,
+                            date: formData.get('date') as string,
+                        };
+                        console.log('New Designation:', newItem);
+                        // handleAdd(newItem);
+                    }}
+                >
+                    <FormItem label="Country">
+                        <Input name="country" placeholder="Enter Country" />
+                    </FormItem>
+                    <FormItem label="Category">
+                        <Input name="category" placeholder="Enter Category" />
+                    </FormItem>
+                    <FormItem label="Brand">
+                        <Input name="brand" placeholder="Enter Brand" />
+                    </FormItem>
+                    <FormItem label="Mobile">
+                        <Input name="mobile" placeholder="Enter Mobile" />
+                    </FormItem>
+                    <FormItem label="Quality">
+                        <Input name="quality" placeholder="Enter Quality" />
+                    </FormItem>
+                    <FormItem label="Status">
+                        <select name="status" defaultValue="hold">
+                            <option value="hold">Hold</option>
+                            <option value="identified">Identified</option>
+                        </select>
+                    </FormItem>
+                    <FormItem label="Remark">
+                        <Input name="remark" placeholder="Enter Remark" />
+                    </FormItem>
+                    <FormItem label="Date">
+                        <Input name="date" type="date" />
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </>
     )
 }
 // --- End Main Component ---

@@ -48,13 +48,13 @@ import {
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-// --- Define FormItem Type (Table Row Data) ---
-export type FormItem = {
+// --- Define CurrencyItem Type (Table Row Data) ---
+export type CurrencyItem = {
     id: string
     currency_code: string
     currency_symbol: string
 }
-// --- End FormItem Type Definition ---
+// --- End CurrencyItem Type Definition ---
 
 // FilterFormSchema and channelList removed
 
@@ -116,16 +116,16 @@ const FormListTable = ({
     onRowSelect,
     onAllRowSelect,
 }: {
-    columns: ColumnDef<FormItem>[]
-    data: FormItem[]
+    columns: ColumnDef<CurrencyItem>[]
+    data: CurrencyItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: FormItem[]
+    selectedForms: CurrencyItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: FormItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<FormItem>[]) => void
+    onRowSelect: (checked: boolean, row: CurrencyItem) => void
+    onAllRowSelect: (checked: boolean, rows: Row<CurrencyItem>[]) => void
 }) => {
     return (
         <DataTable
@@ -184,15 +184,15 @@ const FormListTableTools = ({
 }
 // --- End FormListTableTools ---
 
-// --- ExportMappingSearch Component ---
-type ExportMappingSearchProps = {
+// --- CurrencySearch Component ---
+type CurrencySearchProps = {
     // Renamed component
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
 }
-const ExportMappingSearch = React.forwardRef<
+const CurrencySearch = React.forwardRef<
     HTMLInputElement,
-    ExportMappingSearchProps
+    CurrencySearchProps
 >(({ onInputChange }, ref) => {
     return (
         <DebouceInput
@@ -203,18 +203,18 @@ const ExportMappingSearch = React.forwardRef<
         />
     )
 })
-ExportMappingSearch.displayName = 'ExportMappingSearch'
-// --- End ExportMappingSearch ---
+CurrencySearch.displayName = 'CurrencySearch'
+// --- End CurrencySearch ---
 
-// --- ExportMappingTableTools Component ---
-const ExportMappingTableTools = ({
+// --- CurrencyTableTools Component ---
+const CurrencyTableTools = ({
     // Renamed component
     onSearchChange,
 }: {
     onSearchChange: (query: string) => void
 }) => {
 
-    type ExportMappingFilterSchema = {
+    type CurrencyFilterSchema = {
         userRole : String,
         exportFrom : String,
         exportDate : Date
@@ -224,16 +224,16 @@ const ExportMappingTableTools = ({
     const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
     const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
 
-    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>()
+    const {control, handleSubmit} = useForm<CurrencyFilterSchema>()
 
-    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
+    const exportFiltersSubmitHandler = (data : CurrencyFilterSchema) => {
         console.log("filter data", data)
     }
 
     return (
         <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
-                <ExportMappingSearch onInputChange={onSearchChange} />
+                <CurrencySearch onInputChange={onSearchChange} />
             </div>
             {/* Filter component removed */}
             <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
@@ -272,14 +272,14 @@ const ExportMappingTableTools = ({
         </div>
     )
 }
-// --- End ExportMappingTableTools ---
+// --- End CurrencyTableTools ---
 
 // --- FormListActionTools Component (No functional changes needed for filter removal) ---
 const FormListActionTools = ({
     allFormsData,
     openAddDrawer,
 }: {
-    allFormsData: FormItem[];
+    allFormsData: CurrencyItem[];
     openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
@@ -321,8 +321,8 @@ const FormListSelected = ({
     setSelectedForms,
     onDeleteSelected,
 }: {
-    selectedForms: FormItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<FormItem[]>>
+    selectedForms: CurrencyItem[]
+    setSelectedForms: React.Dispatch<React.SetStateAction<CurrencyItem[]>>
     onDeleteSelected: () => void
 }) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
@@ -393,9 +393,9 @@ const Currency = () => {
 
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<FormItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<CurrencyItem | null>(null);
 
-    const openEditDrawer = (item: FormItem) => {
+    const openEditDrawer = (item: CurrencyItem) => {
         setSelectedItem(item); // Set the selected item's data
         setIsEditDrawerOpen(true); // Open the edit drawer
     };
@@ -425,7 +425,7 @@ const Currency = () => {
         useSelector(masterSelector)
 
     const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<FormItem[]>([]) // Remains for potential local ops, not table data source
+    const [forms, setForms] = useState<CurrencyItem[]>([]) // Remains for potential local ops, not table data source
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -433,7 +433,7 @@ const Currency = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
+    const [selectedForms, setSelectedForms] = useState<CurrencyItem[]>([])
     // filterData state and handleApplyFilter removed
 
     console.log('Raw CurrencyData from Redux:', CurrencyData)
@@ -451,10 +451,10 @@ const Currency = () => {
             CurrencyData?.length ?? 0,
         )
 
-        const sourceData: FormItem[] = Array.isArray(CurrencyData)
+        const sourceData: CurrencyItem[] = Array.isArray(CurrencyData)
             ? CurrencyData
             : []
-        let processedData: FormItem[] = cloneDeep(sourceData)
+        let processedData: CurrencyItem[] = cloneDeep(sourceData)
 
         // Product and Channel filtering logic removed
 
@@ -462,7 +462,7 @@ const Currency = () => {
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
             console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: FormItem) => {
+            processedData = processedData.filter((item: CurrencyItem) => {
                 const itemNameLower =
                     item.currency_code?.trim().toLowerCase() ?? ''
                 const itemIdString = String(item.id ?? '').trim()
@@ -489,8 +489,8 @@ const Currency = () => {
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
                 // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof FormItem] ?? '')
-                const bValue = String(b[key as keyof FormItem] ?? '')
+                const aValue = String(a[key as keyof CurrencyItem] ?? '')
+                const bValue = String(b[key as keyof CurrencyItem] ?? '')
 
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
@@ -551,7 +551,7 @@ const Currency = () => {
         [handleSetTableData],
     )
 
-    const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
+    const handleRowSelect = useCallback((checked: boolean, row: CurrencyItem) => {
         setSelectedForms((prev) => {
             if (checked)
                 return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
@@ -560,7 +560,7 @@ const Currency = () => {
     }, [])
 
     const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<FormItem>[]) => {
+        (checked: boolean, currentRows: Row<CurrencyItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
                 setSelectedForms((prevSelected) => {
@@ -586,7 +586,7 @@ const Currency = () => {
 
     // --- Action Handlers (remain the same, need Redux integration for persistence) ---
     const handleEdit = useCallback(
-        (form: FormItem) => {
+        (form: CurrencyItem) => {
             console.log('Edit item (requires navigation/modal):', form.id)
             toast.push(
                 <Notification title="Edit Action" type="info">
@@ -598,7 +598,7 @@ const Currency = () => {
         [navigate],
     )
 
-    const handleDelete = useCallback((formToDelete: FormItem) => {
+    const handleDelete = useCallback((formToDelete: CurrencyItem) => {
         console.log(
             'Delete item (needs Redux action):',
             formToDelete.id,
@@ -630,7 +630,7 @@ const Currency = () => {
     }, [selectedForms])
     // --- End Action Handlers ---
 
-    const columns: ColumnDef<FormItem>[] = useMemo(
+    const columns: ColumnDef<CurrencyItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
             {
@@ -671,7 +671,7 @@ const Currency = () => {
                 </div>
 
                 <div className="mb-4">
-                    <ExportMappingTableTools
+                    <CurrencyTableTools
                                 onSearchChange={handleSearchChange}
                             />{' '}
                             {/* Use updated component */}

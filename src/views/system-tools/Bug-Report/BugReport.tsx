@@ -27,6 +27,7 @@ import Checkbox from '@/components/ui/Checkbox' // For filter form
 import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // For filter form
 import Badge from '@/components/ui/Badge'
 import { TbBug, TbFilter, TbX, TbUserCircle } from 'react-icons/tb' // Icons
+import { Card, Drawer, FormItem, Input, } from '@/components/ui'
 
 // Icons
 import {
@@ -36,6 +37,7 @@ import {
     TbSwitchHorizontal, // Change Status
     TbChecks, // Selected Footer
     TbSearch,
+    TbCloudUpload,
     TbCloudDownload,
     TbPlus,
 } from 'react-icons/tb'
@@ -414,29 +416,64 @@ const BugReportFilter = ({
 // --- End BugReportFilter ---
 
 // --- BugReportTableTools Component ---
-const BugReportTableTools = ({
-    onSearchChange,
-    filterData,
-    setFilterData,
-}: {
-    onSearchChange: (query: string) => void
-    filterData: FilterFormSchema
-    setFilterData: (data: FilterFormSchema) => void
-}) => {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
-            <div className="flex-grow">
-                <BugReportSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex-shrink-0">
-                <BugReportFilter
-                    filterData={filterData}
-                    setFilterData={setFilterData}
-                />
-            </div>
-        </div>
-    )
-}
+const BugReportTableTools = ({ onSearchChange, filterData, setFilterData }: { onSearchChange: (query: string) => void; filterData: FilterFormSchema; setFilterData: (data: FilterFormSchema) => void; }) => {
+    type BugReportFilterSchema = {
+         userRole : String,
+         exportFrom : String,
+         exportDate : Date
+     }
+ 
+     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+     const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
+     const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+ 
+     const {control, handleSubmit} = useForm<BugReportFilterSchema>()
+ 
+     const exportFiltersSubmitHandler = (data : BugReportFilterSchema) => {
+         console.log("filter data", data)
+     }
+ return (
+     <div className="flex items-center w-full gap-2">
+     <div className="flex-grow">
+         <BugReportSearch onInputChange={onSearchChange} />
+     </div>
+     {/* Filter component removed */}
+     <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+         Filter
+     </Button>
+     <Button icon={<TbCloudUpload/>}>Export</Button>
+     <Drawer
+         title="Filters"
+         isOpen={isFilterDrawerOpen}
+         onClose={closeFilterDrawer}
+         onRequestClose={closeFilterDrawer}
+         footer={
+             <div className="text-right w-full">
+                 <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
+                     Cancel
+                 </Button>
+             </div>  
+         }
+     >
+         <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
+             <FormItem label='Document Name'>
+                 {/* <Controller
+                     control={control}
+                     name='userRole'
+                     render={({field})=>(
+                         <Input
+                             type="text"
+                             placeholder="Enter Document Name"
+                             {...field}
+                         />
+                     )}
+                 /> */}
+             </FormItem>
+         </Form>
+     </Drawer>
+ </div>
+ );
+};
 // --- End BugReportTableTools ---
 
 // --- ActiveFiltersDisplay Component ---
@@ -493,8 +530,11 @@ const ActiveFiltersDisplay = ({
 // --- BugReportActionTools Component ---
 const BugReportActionTools = ({
     allReports,
+    openAddDrawer,
+    
 }: {
-    allReports: BugReportItem[]
+    allReports: BugReportItem[];
+    openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
     const csvData = useMemo(
@@ -510,7 +550,7 @@ const BugReportActionTools = ({
         <div className="flex flex-col md:flex-row gap-3">
             {' '}
             {/* <CSVLink ... /> */}{' '}
-            <Button variant="solid" icon={<TbBug />} onClick={handleAdd} block>
+            <Button variant="solid" icon={<TbBug />} onClick={openAddDrawer} block>
                 {' '}
                 Report New Bug{' '}
             </Button>{' '}
@@ -658,6 +698,29 @@ const DetailViewDialog = ({
 
 // --- Main BugReportListing Component ---
 const BugReportListing = () => {
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<BugReportItem | null>(null);
+
+    const openEditDrawer = (item: BugReportItem) => {
+        setSelectedItem(item); // Set the selected item's data
+        setIsEditDrawerOpen(true); // Open the edit drawer
+    };
+
+    const closeEditDrawer = () => {
+        setSelectedItem(null); // Clear the selected item's data
+        setIsEditDrawerOpen(false); // Close the edit drawer
+    };
+
+    const openAddDrawer = () => {
+        setSelectedItem(null); // Clear any selected item
+        setIsAddDrawerOpen(true); // Open the add drawer
+    };
+
+    const closeAddDrawer = () => {
+        setIsAddDrawerOpen(false); // Close the add drawer
+    };
+    
     const navigate = useNavigate()
 
     // --- State ---
@@ -1025,7 +1088,7 @@ const BugReportListing = () => {
                 cell: (props) => (
                     <ActionColumn
                         onView={() => handleViewDetails(props.row.original)}
-                        onEdit={() => handleEdit(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
                         onChangeStatus={() =>
                             handleChangeStatus(props.row.original)
                         }
@@ -1040,65 +1103,250 @@ const BugReportListing = () => {
 
     // --- Render Main Component ---
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Bug Reports</h5>
-                    <BugReportActionTools allReports={reports} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+                    {/* Header */}
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h5 className="mb-4 lg:mb-0">Bug Reports</h5>
+                        <BugReportActionTools allReports={reports} openAddDrawer={openAddDrawer}  />
+                    </div>
 
-                {/* Tools */}
-                <div className="mb-2">
-                    <BugReportTableTools
-                        onSearchChange={handleSearchChange}
+                    {/* Tools */}
+                    <div className="mb-2">
+                        <BugReportTableTools
+                            onSearchChange={handleSearchChange}
+                            filterData={filterData}
+                            setFilterData={handleApplyFilter}
+                        />
+                    </div>
+
+                    {/* Active Filters Display Area */}
+                    <ActiveFiltersDisplay
                         filterData={filterData}
-                        setFilterData={handleApplyFilter}
+                        onRemoveFilter={handleRemoveFilter}
+                        onClearAll={handleClearAllFilters}
                     />
-                </div>
 
-                {/* Active Filters Display Area */}
-                <ActiveFiltersDisplay
-                    filterData={filterData}
-                    onRemoveFilter={handleRemoveFilter}
-                    onClearAll={handleClearAllFilters}
+                    {/* Table */}
+                    <div className="flex-grow overflow-auto">
+                        <BugReportTable
+                            columns={columns}
+                            data={pageData}
+                            loading={isLoading}
+                            pagingData={{
+                                total,
+                                pageIndex: tableData.pageIndex as number,
+                                pageSize: tableData.pageSize as number,
+                            }}
+                            selectedReports={selectedReports}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectChange}
+                            onSort={handleSort}
+                            onRowSelect={handleRowSelect}
+                            onAllRowSelect={handleAllRowSelect}
+                        />
+                    </div>
+                </AdaptiveCard>
+
+                {/* Selected Footer */}
+                <BugReportSelected
+                    selectedReports={selectedReports}
+                    setSelectedReports={setSelectedReports}
+                    onDeleteSelected={handleDeleteSelected}
                 />
 
-                {/* Table */}
-                <div className="flex-grow overflow-auto">
-                    <BugReportTable
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{
-                            total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedReports={selectedReports}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
-
-            {/* Selected Footer */}
-            <BugReportSelected
-                selectedReports={selectedReports}
-                setSelectedReports={setSelectedReports}
-                onDeleteSelected={handleDeleteSelected}
-            />
-
-            {/* Detail View Dialog */}
-            <DetailViewDialog
-                isOpen={detailViewOpen}
-                onClose={handleCloseDetailView}
-                report={currentItem}
-            />
-        </Container>
+                {/* Detail View Dialog */}
+                <DetailViewDialog
+                    isOpen={detailViewOpen}
+                    onClose={handleCloseDetailView}
+                    report={currentItem}
+                />
+            </Container>
+            <Drawer
+                title="Edit Bug Report"
+                isOpen={isEditDrawerOpen}
+                onClose={closeEditDrawer}
+                onRequestClose={closeEditDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => {
+                                console.log('Updated Bug Report:', selectedItem);
+                                closeEditDrawer();
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                }
+            >
+                <Form>
+                    <FormItem label="Status">
+                        <select
+                            value={selectedItem?.status || 'new'}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'new', name: '', email: '', phone: null, reportedBy: '', date: new Date(), description: '' }),
+                                    status: e.target.value as BugStatus,
+                                }))
+                            }
+                        >
+                            <option value="new">New</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                            <option value="wont_fix">Won't Fix</option>
+                        </select>
+                    </FormItem>
+                    <FormItem label="Name">
+                        <Input
+                            value={selectedItem?.name || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'new', name: '', email: '', phone: null, reportedBy: '', date: new Date(), description: '' }),
+                                    name: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Email">
+                        <Input
+                            value={selectedItem?.email || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'new', name: '', email: '', phone: null, reportedBy: '', date: new Date(), description: '' }),
+                                    email: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Phone">
+                        <Input
+                            value={selectedItem?.phone || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'new', name: '', email: '', phone: null, reportedBy: '', date: new Date(), description: '' }),
+                                    phone: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Reported By">
+                        <Input
+                            value={selectedItem?.reportedBy || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'new', name: '', email: '', phone: null, reportedBy: '', date: new Date(), description: '' }),
+                                    reportedBy: e.target.value,
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Date">
+                        <Input
+                            type="datetime-local"
+                            value={selectedItem?.date.toISOString().slice(0, 16) || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'new', name: '', email: '', phone: null, reportedBy: '', date: new Date(), description: '' }),
+                                    date: new Date(e.target.value),
+                                }))
+                            }
+                        />
+                    </FormItem>
+                    <FormItem label="Description">
+                        <textarea
+                            value={selectedItem?.description || ''}
+                            onChange={(e) =>
+                                setSelectedItem((prev) => ({
+                                    ...(prev || { id: '', status: 'new', name: '', email: '', phone: null, reportedBy: '', date: new Date(), description: '' }),
+                                    description: e.target.value,
+                                }))
+                            }
+                            className="input"
+                            placeholder="Enter description"
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+            <Drawer
+                title="Add New Bug Report"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            onClick={() => console.log('Bug Report Added')}
+                        >
+                            Add
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target as HTMLFormElement);
+                        const newItem: BugReportItem = {
+                            id: `${reports.length + 1}`,
+                            status: formData.get('status') as BugStatus,
+                            name: formData.get('name') as string,
+                            email: formData.get('email') as string,
+                            phone: formData.get('phone') as string | null,
+                            reportedBy: formData.get('reportedBy') as string,
+                            date: new Date(formData.get('date') as string),
+                            description: formData.get('description') as string,
+                        };
+                        console.log('New Bug Report:', newItem);
+                        // handleAdd(newItem);
+                    }}
+                >
+                    <FormItem label="Status">
+                        <select name="status" defaultValue="new">
+                            <option value="new">New</option>
+                            <option value="investigating">Investigating</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                            <option value="wont_fix">Won't Fix</option>
+                        </select>
+                    </FormItem>
+                    <FormItem label="Name">
+                        <Input name="name" placeholder="Enter Name" />
+                    </FormItem>
+                    <FormItem label="Email">
+                        <Input name="email" placeholder="Enter Email" />
+                    </FormItem>
+                    <FormItem label="Phone">
+                        <Input name="phone" placeholder="Enter Phone" />
+                    </FormItem>
+                    <FormItem label="Reported By">
+                        <Input name="reportedBy" placeholder="Enter Reporter Name" />
+                    </FormItem>
+                    <FormItem label="Date">
+                        <Input name="date" type="datetime-local" />
+                    </FormItem>
+                    <FormItem label="Description">
+                        <textarea name="description" className="input" placeholder="Enter description" />
+                    </FormItem>
+                </Form>
+            </Drawer>
+        </>
     )
 }
 // --- End Main Component ---
