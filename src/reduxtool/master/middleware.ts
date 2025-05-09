@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { addUnitAsync, deletUnitAsync, editUnitAsync, getBrandAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getPaymentTermAsync, getUnitAsync } from "./services"
+import { addUnitAsync, deleteAllUnitAsync, deletUnitAsync, editUnitAsync, getBrandAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getPaymentTermAsync, getUnitAsync } from "./services"
 import { AxiosResponse } from "axios"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
@@ -89,6 +89,35 @@ export const deletUnitAction = createAsyncThunk<any, any>(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deletUnitAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getUnitAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deletAllUnitAction = createAsyncThunk<any, any>(
+  "auth/delete",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllUnitAsync(data)
       if (response?.data?.status === true) {
         console.log(response?.data);
         dispatch(getUnitAction())

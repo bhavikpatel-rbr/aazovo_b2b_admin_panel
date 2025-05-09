@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addUnitAction, deletUnitAction, editUnitAction, getBrandAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getPaymentTermAction, getUnitAction } from "./middleware"
+import { addUnitAction, deletAllUnitAction, deletUnitAction, editUnitAction, getBrandAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getPaymentTermAction, getUnitAction } from "./middleware"
 
 const INITIAL_STATE: any = {
   unitData: "",
@@ -22,6 +22,9 @@ const masterSlice = createSlice({
       ...state,
     }))
     builder.addCase(editUnitAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(deletAllUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
     }))
     builder.addCase(getDocumentTypeAction.fulfilled, (state, { payload }) => ({
