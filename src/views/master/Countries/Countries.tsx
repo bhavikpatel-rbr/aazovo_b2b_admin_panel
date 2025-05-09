@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, Ref, useEffect, lazy, Suspense } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
 import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
@@ -33,6 +33,7 @@ import {
     TbFilter, // Filter icon removed
     TbCloudUpload,
     TbPlus,
+    TbCloudDownload
 } from 'react-icons/tb'
 
 // Types
@@ -47,6 +48,10 @@ import {
 } from '@/reduxtool/master/middleware'
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
+
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
 
 // --- Define FormItem Type (Table Row Data) ---
 export type CountryItem = {
@@ -132,8 +137,10 @@ CountrySearch.displayName = 'CountrySearch'
 const CountryTableTools = ({
     // Renamed component
     onSearchChange,
+    allFormsData,
 }: {
     onSearchChange: (query: string) => void
+    allFormsData: CountryItem[]
 }) => {
 
     type CountryFilterSchema = {
@@ -152,6 +159,14 @@ const CountryTableTools = ({
         console.log("filter data", data)
     }
 
+    const csvHeaders = [
+        { label: 'ID', key: 'id' },
+        { label: 'Continent', key: 'continent_id' },
+        { label: 'Country', key: 'name' },
+        { label: 'Short Code', key: 'iso' },
+        { label: 'Phone Code', key: 'phonecode' },
+    ]
+
     return (
         <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
@@ -161,7 +176,6 @@ const CountryTableTools = ({
             <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
                 Filter
             </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
             <Drawer
                 title="Filters"
                 isOpen={isFilterDrawerOpen}
@@ -191,6 +205,18 @@ const CountryTableTools = ({
                     </FormItem>
                 </Form>
             </Drawer>
+            
+            <CSVLink
+                className=""
+                filename="documentTypeList.csv"
+                data={allFormsData}
+                headers={csvHeaders}
+            >
+                <Button icon={<TbCloudDownload />} className="w-full" block>
+                    Export
+                </Button>
+            </CSVLink>
+           
         </div>
     )
 }
@@ -286,29 +312,10 @@ const FormListActionTools = ({
     openAddDrawer: () => void; // Accept function as a prop
 }) => {
     const navigate = useNavigate()
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Continent', key: 'continent_id' },
-        { label: 'Country', key: 'name' },
-        { label: 'Short Code', key: 'iso' },
-        { label: 'Phone Code', key: 'phonecode' },
-
-    ]
-
+   
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
-                </Button>
-            </CSVLink>
-            */}
+            
             <Button
                 variant="solid"
                 icon={<TbPlus />}
@@ -701,6 +708,7 @@ const Countries = () => {
                     <div className="mb-4">
                     <CountryTableTools
                             onSearchChange={handleSearchChange}
+                            allFormsData={processedDataForCsv}
                         />{' '}
                         {/* Use updated component */}
                     </div>

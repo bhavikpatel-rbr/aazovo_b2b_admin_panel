@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, Ref, useEffect, lazy, Suspense } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
 import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
@@ -18,7 +18,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
+import { Card, Drawer, Tag, Form, FormItem, Input, Select } from '@/components/ui'
 
 // import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
 // import Input from '@/components/ui/Input' // No longer needed for filter form
@@ -33,6 +33,7 @@ import {
     TbFilter, // Filter icon removed
     TbCloudUpload,
     TbPlus,
+    TbCloudDownload,
 } from 'react-icons/tb'
 
 // Types
@@ -47,6 +48,10 @@ import {
 } from '@/reduxtool/master/middleware'
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
+
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
 
 // --- Define FormItem Type (Table Row Data) ---
 export type PriceListItem = {
@@ -140,25 +145,43 @@ PriceListSearch.displayName = 'PriceListSearch'
 const PriceListTableTools = ({
     // Renamed component
     onSearchChange,
+    allFormsData,
 }: {
     onSearchChange: (query: string) => void
+    allFormsData: PriceListItem[];
 }) => {
 
     type PriceListFilterSchema = {
-        userRole : String,
-        exportFrom : String,
-        exportDate : Date
+        userRole: String,
+        exportFrom: String,
+        exportDate: Date
     }
 
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
+    const openFilterDrawer = () => setIsFilterDrawerOpen(true)
 
-    const {control, handleSubmit} = useForm<PriceListFilterSchema>()
+    const { control, handleSubmit } = useForm<PriceListFilterSchema>()
 
-    const exportFiltersSubmitHandler = (data : PriceListFilterSchema) => {
+    const exportFiltersSubmitHandler = (data: PriceListFilterSchema) => {
         console.log("filter data", data)
     }
+
+    const csvHeaders = [
+        { label: 'ID', key: 'id' },
+        { label: 'Product Name', key: 'productName' },
+        { label: 'Price', key: 'price' },
+        { label: 'Base Price', key: 'basePrice' },
+        { label: 'GST Price', key: 'gstPrice' },
+        { label: 'USD', key: 'usd' },
+        { label: 'Expance', key: 'expance' },
+        { label: 'Margin', key: 'margin' },
+        { label: 'Interest', key: 'interest' },
+        { label: 'NLC', key: 'nlc' },
+        { label: 'Sales Price', key: 'salesPrice' },
+        { label: 'Qty', key: 'qty' },
+        { label: 'Status', key: 'status' },
+    ]
 
     return (
         <div className="flex items-center w-full gap-2">
@@ -169,7 +192,19 @@ const PriceListTableTools = ({
             <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
                 Filter
             </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
+            {/* <Button icon={<TbCloudUpload/>}>Export</Button> */}
+
+            <CSVLink
+                className=""
+                filename="documentTypeList.csv"
+                data={allFormsData}
+                headers={csvHeaders}
+            >
+                <Button icon={<TbCloudDownload />} className="w-full" block>
+                    Export
+                </Button>
+            </CSVLink>
+
             <Drawer
                 title="Filters"
                 isOpen={isFilterDrawerOpen}
@@ -180,23 +215,51 @@ const PriceListTableTools = ({
                         <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
                             Cancel
                         </Button>
-                    </div>  
+                    </div>
                 }
             >
                 <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Document Name"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
+                    <div>
+                        <FormItem label='Category'>
+                            <Select
+                                isMulti
+                                options={[
+                                    { label: "Electronics", value: "Electronics" },
+                                    { label: "Food", value: "Food" },
+                                    { label: "Industrial Equipment", value: "Industrial Equipment" },
+                                ]}
+                            />
+                        </FormItem>
+                        <FormItem label='Brand'>
+                            <Select
+                                isMulti
+                                options={[
+                                    { label: "Apple", value: "Apple" },
+                                    { label: "Samsung", value: "Samsung" },
+                                    { label: "Xiaomi", value: "Xiaomi" },
+                                    { label: "LG", value: "LG" },
+                                ]}
+                            />
+                        </FormItem>
+                        <FormItem label='Type'>
+                            <Select
+                                isMulti
+                                options={[
+                                    { label: "SmartPhone", value: "SmartPhone" },
+                                    { label: "Tablet", value: "Tablet" },
+                                    { label: "Laptop", value: "Laptop" },
+                                ]}
+                            />
+                        </FormItem>
+                    </div>
+                    <div className="text-right border-t border-t-gray-200 w-full absolute bottom-0 py-4 right-0 pr-6 bg-white dark:bg-gray-700">
+                        <Button size="sm" className="mr-2" type='button' onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                        <Button size="sm" variant="solid" type='submit'>
+                            Apply
+                        </Button>
+                    </div>
                 </Form>
             </Drawer>
         </div>
@@ -300,18 +363,7 @@ const FormListActionTools = ({
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
-                </Button>
-            </CSVLink>
-            */}
+
             <Button
                 variant="solid"
                 icon={<TbPlus />}
@@ -432,33 +484,33 @@ const PriceList = () => {
 
     const { PriceListData = [], status: masterLoadingStatus = 'idle' } =
         useSelector(masterSelector)
- // Use the provided dummy data
+    // Use the provided dummy data
 
-// --- Initial Dummy Data ---
-const initialDummyForms: PriceListItem[] = [
-    { id: 'F001', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active' },
-    { id: 'F002', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-    { id: 'F003', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active' },
-    { id: 'F004', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-    { id: 'F005', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-    { id: 'F006', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-    { id: 'F007', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-    { id: 'F008', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-    { id: 'F009', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-    { id: 'F010', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active' },
-    { id: 'F011', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-    { id: 'F012', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price' , qty: '10', status: 'active'},
-];
-// --- End Dummy Data ---
+    // --- Initial Dummy Data ---
+    const initialDummyForms: PriceListItem[] = [
+        { id: 'F001', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F002', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F003', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F004', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F005', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F006', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F007', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F008', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F009', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F010', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F011', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+        { id: 'F012', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
+    ];
+    // --- End Dummy Data ---
 
-const [forms, setForms] = useState<PriceListItem[]>(initialDummyForms); // Initialize with dummy data
-const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: '', key: '' },
-    query: '',
-});
-const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
+    const [forms, setForms] = useState<PriceListItem[]>(initialDummyForms); // Initialize with dummy data
+    const [tableData, setTableData] = useState<TableQueries>({
+        pageIndex: 1,
+        pageSize: 10,
+        sort: { order: '', key: '' },
+        query: '',
+    });
+    const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
     const [localIsLoading, setLocalIsLoading] = useState(false)
     // filterData state and handleApplyFilter removed
 
@@ -665,7 +717,7 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
                 accessorKey: 'id',
                 // Simple cell to display ID, enable sorting
                 enableSorting: true,
-                size:70,
+                size: 70,
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
@@ -673,15 +725,15 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
                 accessorKey: 'productName',
                 // Enable sorting
                 enableSorting: true,
-                size:260
+                size: 260
             },
             {
                 header: 'Price Breakup',
-                id: 'pricing',
+                accessorKey: 'basePrice',
                 enableSorting: true,
-                size:260,
+                size: 260,
                 cell: (props) => {
-                    const {basePrice, gstPrice, usd } = props.row.original
+                    const { basePrice, gstPrice, usd } = props.row.original
                     return (
                         <div className='flex flex-col'>
                             <span className='font-semibold'>Base Price: {basePrice}</span>
@@ -693,11 +745,11 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
             },
             {
                 header: 'Cost Split',
-                id: 'costsplit',
+                accessorKey: 'expance',
                 enableSorting: true,
-                size:260,
+                size: 260,
                 cell: (props) => {
-                    const {expance, margin, interest, nlc } = props.row.original
+                    const { expance, margin, interest, nlc } = props.row.original
                     return (
                         <div className='flex flex-col'>
                             <span className='font-semibold'>Expance: {expance}</span>
@@ -713,14 +765,14 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
                 accessorKey: 'salesPrice',
                 // Enable sorting
                 enableSorting: true,
-                size:220
+                size: 220
             },
             {
                 header: 'Qty',
                 accessorKey: 'qty',
                 // Enable sorting
                 enableSorting: true,
-                size:100
+                size: 100
             },
             {
                 header: 'Status',
@@ -757,7 +809,7 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">CMS Management</h5>
+                        <h5 className="mb-4 lg:mb-0">Price List</h5>
                         <FormListActionTools
                             allFormsData={forms}
                             openAddDrawer={openAddDrawer} // Pass the function as a prop
@@ -769,6 +821,7 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
                             onSearchChange={(query) =>
                                 setTableData((prev) => ({ ...prev, query }))
                             }
+                            allFormsData={forms}
                         />
                     </div>
 
@@ -831,7 +884,7 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
 
             {/* Edit Drawer */}
             <Drawer
-                title="Edit Price List Item"
+                title="Edit Price List"
                 isOpen={isEditDrawerOpen}
                 onClose={closeEditDrawer}
                 onRequestClose={closeEditDrawer}
@@ -855,146 +908,148 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
             >
                 <Form>
                     <FormItem label="Product Name">
-                        <Input
-                            value={selectedItem?.productName || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    productName: e.target.value,
-                                }))
-                            }
+                        <Select
+                            options={[
+                                { label: "Iphone 16", value: "Iphone 16" },
+                                { label: "Poco M4 Pro 6GB 128GB", value: "Poco M4 Pro 6GB 128GB" },
+                                { label: "Xiaomi 15 12GB 512GB", value: "Xiaomi 15 12GB 512GB" },
+                            ]}
                         />
                     </FormItem>
-                    <FormItem label="Price">
-                        <Input
-                            value={selectedItem?.price || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    price: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Base Price">
-                        <Input
-                            value={selectedItem?.basePrice || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    basePrice: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="GST Price">
-                        <Input
-                            value={selectedItem?.gstPrice || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    gstPrice: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="USD">
-                        <Input
-                            value={selectedItem?.usd || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    usd: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Expense">
-                        <Input
-                            value={selectedItem?.expance || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    expance: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Margin">
-                        <Input
-                            value={selectedItem?.margin || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    margin: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Interest">
-                        <Input
-                            value={selectedItem?.interest || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    interest: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="NLC">
-                        <Input
-                            value={selectedItem?.nlc || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    nlc: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Sales Price">
-                        <Input
-                            value={selectedItem?.salesPrice || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    salesPrice: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Quantity">
-                        <Input
-                            value={selectedItem?.qty || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    qty: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
+                    <div className="flex gap-2">
+                        <FormItem label="Price" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.price || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        price: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                        <FormItem label="Base Price" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.basePrice || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        basePrice: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                    </div>
+                    <div className="flex gap-2">
+                        <FormItem label="GST Price" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.gstPrice || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        gstPrice: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                        <FormItem label="USD" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.usd || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        usd: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                    </div>
+                    <div className="flex gap-2">
+                        <FormItem label="Expense" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.expance || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        expance: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                        <FormItem label="Margin" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.margin || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        margin: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                    </div>
+                    <div className="flex gap-2">
+                        <FormItem label="Interest" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.interest || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        interest: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                        <FormItem label="NLC" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.nlc || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        nlc: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                    </div>
+                    <div className="flex gap-2">
+                        <FormItem label="Sales Price" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.salesPrice || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        salesPrice: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                        <FormItem label="Quantity" className="w-full lg:w-1/2">
+                            <Input
+                                value={selectedItem?.qty || ''}
+                                onChange={(e) =>
+                                    setSelectedItem((prev) => ({
+                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
+                                        qty: e.target.value,
+                                    }))
+                                }
+                            />
+                        </FormItem>
+                    </div>
                     <FormItem label="Status">
-                        <select
-                            value={selectedItem?.status || 'active'}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                    status: e.target.value as 'active' | 'inactive',
-                                }))
-                            }
-                        >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
+                        <Select
+                            options={[
+                                { label: "Active", value: "Active" },
+                                { label: "Inactive", value: "Inactive" },
+                            ]}
+                        />
                     </FormItem>
                 </Form>
             </Drawer>
 
 
             <Drawer
-                title="Add New Price List Item"
+                title="Add Price List"
                 isOpen={isAddDrawerOpen}
                 onClose={closeAddDrawer}
                 onRequestClose={closeAddDrawer}
@@ -1008,7 +1063,7 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
                             variant="solid"
                             onClick={() => console.log('Price List Item Added')}
                         >
-                            Add
+                            Save
                         </Button>
                     </div>
                 }
@@ -1037,43 +1092,64 @@ const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
                     }}
                 >
                     <FormItem label="Product Name">
-                        <Input name="productName" placeholder="Enter Product Name" />
+                        <Select
+                            options={[
+                                { label: "Iphone 16", value: "Iphone 16" },
+                                { label: "Poco M4 Pro 6GB 128GB", value: "Poco M4 Pro 6GB 128GB" },
+                                { label: "Xiaomi 15 12GB 512GB", value: "Xiaomi 15 12GB 512GB" },
+                            ]}
+                        />
                     </FormItem>
-                    <FormItem label="Price">
-                        <Input name="price" placeholder="Enter Price" />
-                    </FormItem>
-                    <FormItem label="Base Price">
-                        <Input name="basePrice" placeholder="Enter Base Price" />
-                    </FormItem>
-                    <FormItem label="GST Price">
-                        <Input name="gstPrice" placeholder="Enter GST Price" />
-                    </FormItem>
-                    <FormItem label="USD">
-                        <Input name="usd" placeholder="Enter USD" />
-                    </FormItem>
-                    <FormItem label="Expense">
-                        <Input name="expance" placeholder="Enter Expense" />
-                    </FormItem>
-                    <FormItem label="Margin">
-                        <Input name="margin" placeholder="Enter Margin" />
-                    </FormItem>
-                    <FormItem label="Interest">
-                        <Input name="interest" placeholder="Enter Interest" />
-                    </FormItem>
-                    <FormItem label="NLC">
-                        <Input name="nlc" placeholder="Enter NLC" />
-                    </FormItem>
-                    <FormItem label="Sales Price">
-                        <Input name="salesPrice" placeholder="Enter Sales Price" />
-                    </FormItem>
-                    <FormItem label="Quantity">
-                        <Input name="qty" placeholder="Enter Quantity" />
-                    </FormItem>
+                    <div className="flex gap-2">
+                        <FormItem label="Price" className="w-full lg:w-1/2">
+                            <Input name="price" placeholder="Enter Price" />
+                        </FormItem>
+                        <FormItem label="Base Price" className="w-full lg:w-1/2">
+                            <Input name="basePrice" placeholder="Enter Base Price" />
+                        </FormItem>
+                    </div>
+                    <div className="flex gap-2">
+                        <FormItem label="GST Price" className="w-full lg:w-1/2">
+                            <Input name="gstPrice" placeholder="Enter GST Price" />
+                        </FormItem>
+                        <FormItem label="USD" className="w-full lg:w-1/2">
+                            <Input name="usd" placeholder="Enter USD" />
+                        </FormItem>
+                    </div>
+                    <div className="flex gap-2">
+                        <FormItem label="Expense" className="w-full lg:w-1/2">
+                            <Input name="expance" placeholder="Enter Expense" />
+                        </FormItem>
+                        <FormItem label="Margin" className="w-full lg:w-1/2">
+                            <Input name="margin" placeholder="Enter Margin" />
+                        </FormItem>
+                    </div>
+                    <div className="flex gap-2" >
+                        <FormItem label="Interest" className="w-full lg:w-1/2">
+                            <Input name="interest" placeholder="Enter Interest" />
+                        </FormItem>
+                        <FormItem label="NLC" className="w-full lg:w-1/2">
+                            <Input name="nlc" placeholder="Enter NLC" />
+                        </FormItem>
+                    </div>
+                    <div className="flex gap-2">
+                        <FormItem label="Sales Price" className="w-full lg:w-1/2">
+                            <Input name="salesPrice" placeholder="Enter Sales Price" />
+                        </FormItem>
+                        <FormItem label="Quantity" className="w-full lg:w-1/2">
+                            <Input name="qty" placeholder="Enter Quantity" />
+                        </FormItem>
+                    </div>
                     <FormItem label="Status">
-                        <select name="status" defaultValue="active">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
+                        <Select
+                            options={[
+                                { label: "Active", value: "Active" },
+                                { label: "Inactive", value: "Inactive" },
+                            ]}
+                            onChange={(option) => {
+                                field.onChange(option.value)
+                            }}
+                        />
                     </FormItem>
                 </Form>
             </Drawer>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, Ref, useEffect, Suspense, lazy } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
 import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
@@ -21,7 +21,7 @@ import DebouceInput from '@/components/shared/DebouceInput'
 // import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
 // import Input from '@/components/ui/Input' // No longer needed for filter form
 // import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
-import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
+import { Card, Drawer, Tag, Form, FormItem, Input, Select } from '@/components/ui'
 
 // Icons
 import {
@@ -31,6 +31,7 @@ import {
     TbSearch,
     TbFilter, // Filter icon removed
     TbCloudUpload,
+    TbCloudDownload,
     TbPlus,
 } from 'react-icons/tb'
 
@@ -42,10 +43,15 @@ import { getDocumentListAction, getDocumentTypeAction } from '@/reduxtool/master
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
+
 // --- Define FormItem Type (Table Row Data) ---
 export type DocumentItem = {
     id: string
     name: string
+    category: string
 }
 // --- End FormItem Type Definition ---
 
@@ -122,8 +128,10 @@ DocumentsSearch.displayName = 'DocumentsSearch'
 const DocumentsTableTools = ({
     // Renamed component
     onSearchChange,
+    allFormsData,
 }: {
     onSearchChange: (query: string) => void
+    allFormsData: DocumentItem[];
 }) => {
 
     type DocumentsFilterSchema = {
@@ -142,6 +150,11 @@ const DocumentsTableTools = ({
         console.log("filter data", data)
     }
 
+    const csvHeaders = [
+        { label: 'ID', key: 'id' },
+        { label: 'Name', key: 'name' },
+    ]
+
     return (
         <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
@@ -151,7 +164,15 @@ const DocumentsTableTools = ({
             <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
                 Filter
             </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
+            <CSVLink
+                filename="documentTypeList.csv"
+                data={allFormsData}
+                headers={csvHeaders}
+            >
+                <Button icon={<TbCloudDownload />} className="w-full" block>
+                    Export
+                </Button>
+            </CSVLink>
             <Drawer
                 title="Filters"
                 isOpen={isFilterDrawerOpen}
@@ -165,20 +186,44 @@ const DocumentsTableTools = ({
                     </div>  
                 }
             >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Document Name"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
+                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='grid grid-rows-[auto_80px]'>
+                    <div className="">
+                        <FormItem label='Document Category'>
+                            <Controller
+                                control={control}
+                                name='userRole'
+                                render={({field})=>(
+                                    <Select
+                                        isMulti
+                                        options={[
+                                            {label: "Tax Document", value: "Tax Document"},
+                                            {label: "ID Proofs", value: "ID Proofs"},
+                                            {label: "Business Registrations", value: "Business Registrations"},
+                                            {label: "Address Proofs", value: "Address Proofs"},
+                                            {label: "Bank and Finance", value: "Bank and Finance"},
+                                            {label: "Legal Documents", value: "Legal Documents"},
+                                            {label: "Complication and certificate", value: "Complication and certificate"},
+                                            {label: "Employees", value: "Employees"},
+                                            {label: "Finance & Loans", value: "Finance & Loans"},
+                                            {label: "Visual/Branding", value: "Visual/Branding"},
+                                        ]}
+                                        onChange={(option)=>{
+                                            field.onChange(option.value)
+                                        }}
+                                    />
+                                )}
+                            />
+                        </FormItem>
+                    </div>
+
+                    <div className="text-right border-t border-t-gray-200 w-full absolute bottom-0 py-4 right-0 pr-6 bg-white dark:bg-gray-700">
+                        <Button size="sm" className="mr-2" type='button' onClick={closeFilterDrawer}>
+                            Cancel
+                        </Button>
+                        <Button size="sm" variant="solid" type='submit'>
+                            Apply
+                        </Button>
+                    </div> 
                 </Form>
             </Drawer>
         </div>
@@ -258,10 +303,13 @@ const FormListTableTools = ({
 }: {
     onSearchChange: (query: string) => void
 }) => {
+    const navigate = useNavigate()
+    
     return (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <FormListSearch onInputChange={onSearchChange} />
             {/* Filter button/component removed */}
+            
         </div>
     )
 }
@@ -275,26 +323,13 @@ const FormListActionTools = ({
     allFormsData: DocumentItem[];
     openAddDrawer: () => void; // Accept function as a prop
 }) => {
-    const navigate = useNavigate()
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'name' },
-    ]
+    
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
-                </Button>
-            </CSVLink>
-            */}
+            
+            
+           
             <Button
                 variant="solid"
                 icon={<TbPlus />}
@@ -624,7 +659,8 @@ const Documents = () => {
     const columns: ColumnDef<DocumentItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
+            { header: 'Document Name', accessorKey: 'name', enableSorting: true },
+            { header: 'Document Category', accessorKey: 'name', enableSorting: true },
             {
                 header: 'Action',
                 id: 'action',
@@ -646,12 +682,13 @@ const Documents = () => {
             <AdaptiveCard className="h-full" bodyClass="h-full">
                 <div className="lg:flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Document List</h5>
-                    <FormListActionTools allFormsData={processedDataForCsv}  openAddDrawer={openAddDrawer}  />
+                    <FormListActionTools   openAddDrawer={openAddDrawer}  />
                 </div>
 
                 <div className="mb-4">
                     <DocumentsTableTools
                             onSearchChange={handleSearchChange}
+                            allFormsData={processedDataForCsv}
                         />{' '}
                         {/* Use updated component */}
                     </div>
@@ -702,31 +739,50 @@ const Documents = () => {
                     </div>
                 } onRequestClose={closeEditDrawer}>
         <Form>
-        <FormItem label="Name">
-            <Input
-                value={selectedItem?.name || ''}
-                onChange={(e) =>
-                    setSelectedItem((prev) => ({
-                        ...(prev || { id: '', name: '' }), // Provide default values for `id` and `name`
-                        name: e.target.value,
-                    }))
-                }
-            />
-        </FormItem>
+            <FormItem label="Document Name">
+                <Input
+                    value={selectedItem?.name || ''}
+                    onChange={(e) =>
+                        setSelectedItem((prev) => ({
+                            ...(prev || { id: '', name: '' }), // Provide default values for `id` and `name`
+                            name: e.target.value,
+                        }))
+                    }
+                />
+            </FormItem>
+            <FormItem label="Document Category">
+                <Select
+                    options={[
+                        {label: "Tax Document", value: "Tax Document"},
+                        {label: "ID Proofs", value: "ID Proofs"},
+                        {label: "Business Registrations", value: "Business Registrations"},
+                        {label: "Address Proofs", value: "Address Proofs"},
+                        {label: "Bank and Finance", value: "Bank and Finance"},
+                        {label: "Legal Documents", value: "Legal Documents"},
+                        {label: "Complication and certificate", value: "Complication and certificate"},
+                        {label: "Employees", value: "Employees"},
+                        {label: "Finance & Loans", value: "Finance & Loans"},
+                        {label: "Visual/Branding", value: "Visual/Branding"},
+                    ]}
+                    onChange={(option)=>{
+                        field.onChange(option.value)
+                    }}
+                />
+            </FormItem>
         </Form>
     </Drawer>
 
     {/* Add New Drawer */}
-    <Drawer title="Add New Document" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
-                            Cancel
-                        </Button>
-                        <Button size="sm" variant="solid" onClick={() => console.log('Document Added')}>
-                            Add
-                        </Button>
-                    </div>
-                }>
+        <Drawer title="Add New Document" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} footer={
+            <div className="text-right w-full">
+                <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                    Cancel
+                </Button>
+                <Button size="sm" variant="solid" onClick={() => console.log('Document Added')}>
+                    Save
+                </Button>
+            </div>
+        }>
         <Form
             onSubmit={(e) => {
                 e.preventDefault();
@@ -738,8 +794,27 @@ const Documents = () => {
                 // handleAdd(newItem);
             }}
         >
-            <FormItem label="Name">
+            <FormItem label="Document Name">
                 <Input name="name" placeholder="Enter Document Name" />
+            </FormItem>
+            <FormItem label="Document Category">
+                <Select
+                    options={[
+                        {label: "Tax Document", value: "Tax Document"},
+                        {label: "ID Proofs", value: "ID Proofs"},
+                        {label: "Business Registrations", value: "Business Registrations"},
+                        {label: "Address Proofs", value: "Address Proofs"},
+                        {label: "Bank and Finance", value: "Bank and Finance"},
+                        {label: "Legal Documents", value: "Legal Documents"},
+                        {label: "Complication and certificate", value: "Complication and certificate"},
+                        {label: "Employees", value: "Employees"},
+                        {label: "Finance & Loans", value: "Finance & Loans"},
+                        {label: "Visual/Branding", value: "Visual/Branding"},
+                    ]}
+                    onChange={(option)=>{
+                        field.onChange(option.value)
+                    }}
+                />
             </FormItem>
             {/* <Button type="submit">Add</Button> */}
         </Form>

@@ -1,6 +1,6 @@
 // src/views/your-path/ExportMapping.tsx (Renamed file) 
 
-import React, { useState, useMemo, useCallback, Ref } from 'react'
+import React, { useState, useMemo, useCallback, Ref, Suspense, lazy } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 // import cloneDeep from 'lodash/cloneDeep'
 
@@ -11,7 +11,7 @@ import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
 // import Tag from '@/components/ui/Tag'; // Likely not needed now
 import Button from '@/components/ui/Button'
-// import Dialog from '@/components/ui/Dialog' // Keep for potential edit/view modals
+import Dialog from '@/components/ui/Dialog' // Keep for potential edit/view modals
 // import Avatar from '@/components/ui/Avatar' // Keep if userName might link to profile
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
@@ -29,7 +29,7 @@ import {
     // TbTrash,
     TbChecks,
     TbSearch,
-    // TbCloudDownload, // Keep for potential future export
+    TbCloudDownload, // Keep for potential future export
     TbUserPlus,
     TbFilter,
 } from 'react-icons/tb'
@@ -44,6 +44,12 @@ import type { TableQueries } from '@/@types/common'
 import { Card, Drawer, Tag, Form, FormItem, Input, Select, DatePicker } from '@/components/ui'
 import { Controller, useForm } from 'react-hook-form'
 import { DatePickerRangeProps } from '@/components/ui/DatePicker/DatePickerRange'
+
+
+// --- Lazy Load CSVLink ---
+const CSVLink = lazy(() =>
+    import('react-csv').then((module) => ({ default: module.CSVLink })),
+)
 
 // --- Define Item Type (Table Row Data) ---
 export type ExportMappingItem = {
@@ -371,8 +377,10 @@ ExportMappingSearch.displayName = 'ExportMappingSearch'
 const ExportMappingTableTools = ({
     // Renamed component
     onSearchChange,
+    allExportMappings
 }: {
     onSearchChange: (query: string) => void
+    allExportMappings: ExportMappingItem[]
 }) => {
     
     const { DatePickerRange } = DatePicker
@@ -425,7 +433,7 @@ const ExportMappingTableTools = ({
         {value:".log",label:".log"},
         {value:".bak",label:".bak"},
     ]
-
+   
     return (
         <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
@@ -515,13 +523,14 @@ const ExportMappingTableTools = ({
                     </div> 
                 </Form>
             </Drawer>
+            <ExportMappingExport allMappings={allExportMappings}/>
         </div>
     )
 }
 // --- End ExportMappingTableTools ---
 
 // --- ExportMappingActionTools Component ---
-const ExportMappingActionTools = ({
+const ExportMappingExport = ({
     allMappings,
 }: {
     allMappings: ExportMappingItem[]
@@ -548,21 +557,15 @@ const ExportMappingActionTools = ({
         { label: 'Date', key: 'exportDate' },
     ]
 
+    const [dialogIsOpen, setIsOpen] = useState<boolean>(false)
+    const openDialog = () => setIsOpen(true)
+    const closeDialog = () => setIsOpen(false)
+
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/* <CSVLink filename="export_mappings.csv" data={csvData} headers={csvHeaders} >
-                <Button icon={<TbCloudDownload />} className="w-full" block> Download </Button>
-            </CSVLink> */}
-            <Button
-                variant="solid"
-                icon={<TbUserPlus />} // Icon might need changing e.g., TbFileExport
-                onClick={() =>
-                    console.log('Navigate to Create Export Mapping page')
-                }
-                block
-            >
-                Add New {/* Updated Text */}
-            </Button>
+            <CSVLink filename="export_mappings.csv" data={csvData} headers={csvHeaders} >
+                <Button icon={<TbCloudDownload />} className="w-full" onClick={openDialog}> Export </Button>
+            </CSVLink>
         </div>
     )
 }
@@ -667,6 +670,7 @@ const ExportMapping = () => {
         ExportMappingItem[]
     >([]) // Renamed state
     // Filter state removed
+
     // --- End Lifted State ---
 
     // --- Memoized Data Processing ---
@@ -823,7 +827,7 @@ const ExportMapping = () => {
         () => [
             {
                 header: 'Exported By',
-                id: 'exported',
+                accessorKey: 'userName',
                 enableSorting: true,
                 size:180,
                 cell: (props) => {
@@ -837,8 +841,8 @@ const ExportMapping = () => {
                 }
             },
             {
-                header: 'Exported',
-                id: 'exportFrom',
+                header: 'Exported From',
+                accessorKey: 'exportFrom',
                 enableSorting: true,
                 size:200,
                 cell: (props) => {
@@ -851,7 +855,7 @@ const ExportMapping = () => {
                     )
                 }
             },
-            { header: 'Reason', accessorKey: 'reason', enableSorting: false, size:200 }, // Maybe don't sort reason?
+            { header: 'Reason', accessorKey: 'reason', enableSorting: true, size:200 }, // Maybe don't sort reason?
             {
                 header: 'Date',
                 accessorKey: 'exportDate',
@@ -897,6 +901,7 @@ const ExportMapping = () => {
                 <div className="mb-4">
                     <ExportMappingTableTools
                         onSearchChange={handleSearchChange}
+                        allExportMappings={exportMappings} // Pass data for export
                     />{' '}
                     {/* Use updated component */}
                 </div>
