@@ -833,7 +833,7 @@ const Units = () => {
                             onClick={openAddDrawer}
                         >
                             {' '}
-                            Add Unit{' '}
+                            Add New{' '}
                         </Button>
                     </div>
                     <UnitsTableTools
@@ -900,7 +900,7 @@ const Units = () => {
                             }
                         >
                             {' '}
-                            {isSubmitting ? 'Adding...' : 'Add Unit'}{' '}
+                            {isSubmitting ? 'Adding...' : 'Save'}{' '}
                         </Button>{' '}
                     </div>
                 }
@@ -960,7 +960,7 @@ const Units = () => {
                             }
                         >
                             {' '}
-                            {isSubmitting ? 'Saving...' : 'Save Changes'}{' '}
+                            {isSubmitting ? 'Saving...' : 'Save'}{' '}
                         </Button>{' '}
                     </div>
                 }
@@ -1005,7 +1005,7 @@ const Units = () => {
                             onClick={onClearFilters}
                         >
                             {' '}
-                            Clear Filters{' '}
+                            Clear{' '}
                         </Button>{' '}
                         <Button
                             size="sm"
@@ -1014,7 +1014,7 @@ const Units = () => {
                             type="submit"
                         >
                             {' '}
-                            Apply Filters{' '}
+                            Apply{' '}
                         </Button>{' '}
                     </div>
                 }
@@ -1071,8 +1071,7 @@ const Units = () => {
                 <p>
                     {' '}
                     Are you sure you want to delete the unit "
-                    <strong>{unitToDelete?.name}</strong>"? This action cannot
-                    be undone.{' '}
+                    <strong>{unitToDelete?.name}</strong>"? {' '}
                 </p>
             </ConfirmDialog>
         </>
