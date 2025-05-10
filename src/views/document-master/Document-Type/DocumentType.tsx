@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+// import { Link, useNavigate } from 'react-router-dom'; // useNavigate was unused, Link might be if not used in breadcrumbs
 import cloneDeep from 'lodash/cloneDeep'
-// import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
-// import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
-// import { z } from 'zod' // No longer needed
-// import type { ZodType } from 'zod' // No longer needed
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -12,17 +11,13 @@ import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
-// import Dialog from '@/components/ui/Dialog' // No longer needed for filter dialog
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
-import { Controller, useForm } from 'react-hook-form'
-// import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
-// import Input from '@/components/ui/Input' // No longer needed for filter form
-// import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
+import Select from '@/components/ui/Select' // Added for filter drawer
+import { Drawer, Form, FormItem, Input } from '@/components/ui'
 
 // Icons
 import {
@@ -30,30 +25,107 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    TbFilter, // Filter icon removed
-    TbCloudUpload,
+    TbFilter,
     TbPlus,
+    TbCloudUpload,
 } from 'react-icons/tb'
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
 import { useAppDispatch } from '@/reduxtool/store'
-import { getDocumentTypeAction } from '@/reduxtool/master/middleware'
+import {
+    getDocumentTypeAction,
+    addDocumentTypeAction,    // Ensure these actions exist or are created
+    editDocumentTypeAction,   // Ensure these actions exist or are created
+    deleteDocumentTypeAction, // Ensure these actions exist or are created
+    deleteAllDocumentTypeAction, // Ensure these actions exist or are created
+} from '@/reduxtool/master/middleware' // Adjust path and action names as needed
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-// --- Define FormItem Type (Table Row Data) ---
+// --- Define DocumentItem Type ---
 export type DocumentItem = {
-    id: string
+    id: string | number // Allow number for consistency if backend might send it
     name: string
 }
-// --- End FormItem Type Definition ---
 
-// FilterFormSchema and channelList removed
+// --- Zod Schema for Add/Edit Document Type Form ---
+const documentTypeFormSchema = z.object({
+    name: z
+        .string()
+        .min(1, 'Document type name is required.')
+        .max(100, 'Name cannot exceed 100 characters.'),
+})
+type DocumentTypeFormData = z.infer<typeof documentTypeFormSchema>
 
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
+    filterNames: z
+        .array(z.object({ value: z.string(), label: z.string() }))
+        .optional(),
+})
+type FilterFormData = z.infer<typeof filterFormSchema>
 
-// --- Reusable ActionColumn Component ---
+// --- CSV Exporter Utility ---
+const CSV_HEADERS_DOC_TYPE = ['ID', 'Document Type Name']
+const CSV_KEYS_DOC_TYPE: (keyof DocumentItem)[] = ['id', 'name']
+
+function exportToCsvDocType(filename: string, rows: DocumentItem[]) {
+    if (!rows || !rows.length) {
+        toast.push(
+            <Notification title="No Data" type="info">
+                Nothing to export.
+            </Notification>,
+        )
+        return false
+    }
+    const separator = ','
+
+    const csvContent =
+        CSV_HEADERS_DOC_TYPE.join(separator) +
+        '\n' +
+        rows
+            .map((row) => {
+                return CSV_KEYS_DOC_TYPE.map((k) => {
+                    let cell = row[k]
+                    if (cell === null || cell === undefined) {
+                        cell = ''
+                    } else {
+                        cell = String(cell).replace(/"/g, '""')
+                    }
+                    if (String(cell).search(/("|,|\n)/g) >= 0) {
+                        cell = `"${cell}"`
+                    }
+                    return cell
+                }).join(separator)
+            })
+            .join('\n')
+
+    const blob = new Blob(['\ufeff' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+    })
+    const link = document.createElement('a')
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', filename)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        return true
+    }
+    toast.push(
+        <Notification title="Export Failed" type="danger">
+            Browser does not support this feature.
+        </Notification>,
+    )
+    return false
+}
+
+// --- ActionColumn Component ---
 const ActionColumn = ({
     onEdit,
     onDelete,
@@ -64,9 +136,8 @@ const ActionColumn = ({
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-
     return (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center gap-3">
             <Tooltip title="Edit">
                 <div
                     className={classNames(
@@ -96,92 +167,9 @@ const ActionColumn = ({
         </div>
     )
 }
-// --- End ActionColumn ---
 
-// --- FormListTable Component (No changes) ---
-const FormListTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedForms,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<DocumentItem>[]
-    data: DocumentItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: DocumentItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: DocumentItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<DocumentItem>[]) => void
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedForms.some((selected) => selected.id === row.id)
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-        />
-    )
-}
-
-// --- FormListSearch Component (No changes) ---
-type FormListSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const FormListSearch = React.forwardRef<HTMLInputElement, FormListSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                className="w-full "
-                placeholder="Quick search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-FormListSearch.displayName = 'FormListSearch'
-
-// FormListTableFilter component removed
-
-// --- FormListTableTools Component (Simplified) ---
-// const FormListTableTools = ({
-//     onSearchChange,
-// }: {
-//     onSearchChange: (query: string) => void
-// }) => {
-//     return (
-//         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-//             <FormListSearch onInputChange={onSearchChange} />
-//             {/* Filter button/component removed */}
-//         </div>
-//     )
-// }
-// // --- End FormListTableTools ---
-
-// --- DocumentTypeSearch Component ---
+// --- DocumentTypeSearch Component (was FormListSearch) ---
 type DocumentTypeSearchProps = {
-    // Renamed component
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
 }
@@ -192,145 +180,112 @@ const DocumentTypeSearch = React.forwardRef<
     return (
         <DebouceInput
             ref={ref}
-            placeholder="Quick Search..." // Updated placeholder
+            className="w-full" // Use w-full for better layout in TableTools
+            placeholder="Quick search document types..."
             suffix={<TbSearch className="text-lg" />}
             onChange={(e) => onInputChange(e.target.value)}
         />
     )
 })
 DocumentTypeSearch.displayName = 'DocumentTypeSearch'
-// --- End DocumentTypeSearch ---
 
-// --- DocumentTypeTableTools Component ---
+// --- DocumentTypeTableTools Component (Patterned after UnitsTableTools) ---
 const DocumentTypeTableTools = ({
-    // Renamed component
     onSearchChange,
+    onFilter,
+    onExport,
 }: {
     onSearchChange: (query: string) => void
+    onFilter: () => void
+    onExport: () => void
 }) => {
-
-    type DocumentTypeFilterSchema = {
-        userRole : String,
-        exportFrom : String,
-        exportDate : Date
-    }
-
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
-
-    const {control, handleSubmit} = useForm<DocumentTypeFilterSchema>()
-
-    const exportFiltersSubmitHandler = (data : DocumentTypeFilterSchema) => {
-        console.log("filter data", data)
-    }
-
     return (
-        <div className="flex items-center w-full gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
             <div className="flex-grow">
                 <DocumentTypeSearch onInputChange={onSearchChange} />
             </div>
-            {/* Filter component removed */}
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                    </div>  
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Document Name"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
-                </Form>
-            </Drawer>
-        </div>
-    )
-}
-// --- End DocumentTypeTableTools ---
-
-
-// --- FormListActionTools Component (No functional changes needed for filter removal) ---
-const FormListActionTools = ({
-    allFormsData,
-    openAddDocumentDrawer,
-}: {
-    allFormsData: DocumentItem[];
-    openAddDocumentDrawer: () => void; // Accept function as a prop
-}) => {
-    const navigate = useNavigate()
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'name' },
-    ]
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button
+                    icon={<TbFilter />}
+                    onClick={onFilter}
+                    className="w-full sm:w-auto"
+                >
+                    Filter
                 </Button>
-            </CSVLink>
-            */}
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={openAddDocumentDrawer}
-                block
-            >
-                Add New
-            </Button>
+                <Button
+                    icon={<TbCloudUpload />}
+                    onClick={onExport}
+                    className="w-full sm:w-auto"
+                >
+                    Export
+                </Button>
+            </div>
         </div>
     )
 }
 
-// --- FormListSelected Component (No functional changes needed for filter removal) ---
-const FormListSelected = ({
-    selectedForms,
-    setSelectedForms,
-    onDeleteSelected,
-}: {
-    selectedForms: DocumentItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<DocumentItem[]>>
-    onDeleteSelected: () => void
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
+// --- DocumentTypeTable Component (was FormListTable) ---
+type DocumentTypeTableProps = {
+    columns: ColumnDef<DocumentItem>[]
+    data: DocumentItem[]
+    loading: boolean
+    pagingData: { total: number; pageIndex: number; pageSize: number }
+    selectedItems: DocumentItem[] // Renamed from selectedForms
+    onPaginationChange: (page: number) => void
+    onSelectChange: (value: number) => void
+    onSort: (sort: OnSortParam) => void
+    onRowSelect: (checked: boolean, row: DocumentItem) => void
+    onAllRowSelect: (checked: boolean, rows: Row<DocumentItem>[]) => void
+}
+const DocumentTypeTable = ({
+    columns,
+    data,
+    loading,
+    pagingData,
+    selectedItems,
+    onPaginationChange,
+    onSelectChange,
+    onSort,
+    onRowSelect,
+    onAllRowSelect,
+}: DocumentTypeTableProps) => {
+    return (
+        <DataTable
+            selectable
+            columns={columns}
+            data={data}
+            noData={!loading && data.length === 0}
+            loading={loading}
+            pagingData={pagingData}
+            checkboxChecked={(row) =>
+                selectedItems.some((selected) => selected.id === row.id)
+            }
+            onPaginationChange={onPaginationChange}
+            onSelectChange={onSelectChange}
+            onSort={onSort}
+            onCheckBoxChange={onRowSelect}
+            onIndeterminateCheckBoxChange={onAllRowSelect}
+        />
+    )
+}
 
+// --- DocumentTypeSelectedFooter Component (was FormListSelected) ---
+type DocumentTypeSelectedFooterProps = {
+    selectedItems: DocumentItem[] // Renamed from selectedForms
+    onDeleteSelected: () => void
+}
+const DocumentTypeSelectedFooter = ({
+    selectedItems,
+    onDeleteSelected,
+}: DocumentTypeSelectedFooterProps) => {
+    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
     const handleDeleteClick = () => setDeleteConfirmationOpen(true)
     const handleCancelDelete = () => setDeleteConfirmationOpen(false)
     const handleConfirmDelete = () => {
         onDeleteSelected()
         setDeleteConfirmationOpen(false)
     }
-
-    if (selectedForms.length === 0) return null
-
+    if (selectedItems.length === 0) return null
     return (
         <>
             <StickyFooter
@@ -344,10 +299,10 @@ const FormListSelected = ({
                         </span>
                         <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
                             <span className="heading-text">
-                                {selectedForms.length}
+                                {selectedItems.length}
                             </span>
                             <span>
-                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
+                                Item{selectedItems.length > 1 ? 's' : ''}{' '}
                                 selected
                             </span>
                         </span>
@@ -359,7 +314,7 @@ const FormListSelected = ({
                             className="text-red-600 hover:text-red-500"
                             onClick={handleDeleteClick}
                         >
-                            Delete
+                            Delete Selected
                         </Button>
                     </div>
                 </div>
@@ -367,15 +322,15 @@ const FormListSelected = ({
             <ConfirmDialog
                 isOpen={deleteConfirmationOpen}
                 type="danger"
-                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
+                title={`Delete ${selectedItems.length} Document Type${selectedItems.length > 1 ? 's' : ''}`}
                 onClose={handleCancelDelete}
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
             >
                 <p>
-                    Are you sure you want to delete the selected item
-                    {selectedForms.length > 1 ? 's' : ''}? This action cannot be
+                    Are you sure you want to delete the selected document type
+                    {selectedItems.length > 1 ? 's' : ''}? This action cannot be
                     undone.
                 </p>
             </ConfirmDialog>
@@ -385,35 +340,303 @@ const FormListSelected = ({
 
 // --- Main Documentmaster Component ---
 const Documentmaster = () => {
-    const navigate = useNavigate()
     const dispatch = useAppDispatch()
-    const [isAddDocumentDrawerOpen, setIsAddDocumentDrawerOpen] = useState(false);
+    // const navigate = useNavigate(); // Uncomment if navigation on edit/add is needed
 
-    const openAddDocumentDrawer = () => setIsAddDocumentDrawerOpen(true);
-    const closeAddDocumentDrawer = () => setIsAddDocumentDrawerOpen(false);
-    useEffect(() => {
-        dispatch(getDocumentTypeAction())
-    }, [dispatch])
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
+    const [editingDocumentType, setEditingDocumentType] =
+        useState<DocumentItem | null>(null)
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
 
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
 
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<DocumentItem | null>(null);
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] =
+        useState(false)
+    const [documentTypeToDelete, setDocumentTypeToDelete] =
+        useState<DocumentItem | null>(null)
 
-    const openEditDrawer = (item: DocumentItem) => {
-        setSelectedItem(item); // Set the selected item's data
-        setIsEditDrawerOpen(true); // Open the edit drawer
-    };
-
-    const closeEditDrawer = () => {
-        setSelectedItem(null); // Clear the selected item's data
-        setIsEditDrawerOpen(false); // Close the edit drawer
-    };
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
+        filterNames: [],
+    })
 
     const { DocumentTypeData = [], status: masterLoadingStatus = 'idle' } =
         useSelector(masterSelector)
 
-    const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<DocumentItem[]>([]) // Remains for potential local ops, not table data source
+    useEffect(() => {
+        dispatch(getDocumentTypeAction())
+    }, [dispatch])
+
+    const addFormMethods = useForm<DocumentTypeFormData>({
+        resolver: zodResolver(documentTypeFormSchema),
+        defaultValues: { name: '' },
+        mode: 'onChange',
+    })
+    const editFormMethods = useForm<DocumentTypeFormData>({
+        resolver: zodResolver(documentTypeFormSchema),
+        defaultValues: { name: '' },
+        mode: 'onChange',
+    })
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria,
+    })
+
+    const openAddDrawer = () => {
+        addFormMethods.reset({ name: '' })
+        setIsAddDrawerOpen(true)
+    }
+    const closeAddDrawer = () => {
+        addFormMethods.reset({ name: '' })
+        setIsAddDrawerOpen(false)
+    }
+    const onAddDocumentTypeSubmit = async (data: DocumentTypeFormData) => {
+        setIsSubmitting(true)
+        try {
+            await dispatch(addDocumentTypeAction({ name: data.name })).unwrap()
+            toast.push(
+                <Notification
+                    title="Document Type Added"
+                    type="success"
+                    duration={2000}
+                >
+                    Document Type "{data.name}" added.
+                </Notification>,
+            )
+            closeAddDrawer()
+            dispatch(getDocumentTypeAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Add"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || 'Could not add document type.'}
+                </Notification>,
+            )
+            console.error('Add Document Type Error:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const openEditDrawer = (docType: DocumentItem) => {
+        setEditingDocumentType(docType)
+        editFormMethods.setValue('name', docType.name) // Set form value for editing
+        setIsEditDrawerOpen(true)
+    }
+    const closeEditDrawer = () => {
+        setEditingDocumentType(null)
+        editFormMethods.reset({ name: '' })
+        setIsEditDrawerOpen(false)
+    }
+    const onEditDocumentTypeSubmit = async (data: DocumentTypeFormData) => {
+        if (
+            !editingDocumentType ||
+            editingDocumentType.id === undefined ||
+            editingDocumentType.id === null
+        ) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot edit: Document Type ID is missing.
+                </Notification>,
+            )
+            setIsSubmitting(false)
+            return
+        }
+        setIsSubmitting(true)
+        try {
+            await dispatch(
+                editDocumentTypeAction({
+                    id: editingDocumentType.id,
+                    name: data.name,
+                }),
+            ).unwrap()
+            toast.push(
+                <Notification
+                    title="Document Type Updated"
+                    type="success"
+                    duration={2000}
+                >
+                    Document Type "{data.name}" updated.
+                </Notification>,
+            )
+            closeEditDrawer()
+            dispatch(getDocumentTypeAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Update"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || 'Could not update document type.'}
+                </Notification>,
+            )
+            console.error('Edit Document Type Error:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleDeleteClick = (docType: DocumentItem) => {
+        if (docType.id === undefined || docType.id === null) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot delete: Document Type ID is missing.
+                </Notification>,
+            )
+            return
+        }
+        setDocumentTypeToDelete(docType)
+        setSingleDeleteConfirmOpen(true)
+    }
+    const onConfirmSingleDelete = async () => {
+        if (
+            !documentTypeToDelete ||
+            documentTypeToDelete.id === undefined ||
+            documentTypeToDelete.id === null
+        ) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot delete: Document Type ID is missing.
+                </Notification>,
+            )
+            setIsDeleting(false)
+            setDocumentTypeToDelete(null)
+            setSingleDeleteConfirmOpen(false)
+            return
+        }
+        setIsDeleting(true)
+        setSingleDeleteConfirmOpen(false)
+        try {
+            await dispatch(
+                deleteDocumentTypeAction(documentTypeToDelete),
+            ).unwrap() // Ensure action takes correct payload
+            toast.push(
+                <Notification
+                    title="Document Type Deleted"
+                    type="success"
+                    duration={2000}
+                >
+                    Document Type "{documentTypeToDelete.name}" deleted.
+                </Notification>,
+            )
+            setSelectedItems((prev) =>
+                prev.filter((item) => item.id !== documentTypeToDelete!.id),
+            )
+            dispatch(getDocumentTypeAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Delete"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || `Could not delete document type.`}
+                </Notification>,
+            )
+            console.error('Delete Document Type Error:', error)
+        } finally {
+            setIsDeleting(false)
+            setDocumentTypeToDelete(null)
+        }
+    }
+    const handleDeleteSelected = async () => {
+        if (selectedItems.length === 0) {
+            toast.push(
+                <Notification title="No Selection" type="info">
+                    Please select items to delete.
+                </Notification>,
+            )
+            return
+        }
+        setIsDeleting(true)
+
+        const validItemsToDelete = selectedItems.filter(
+            (item) => item.id !== undefined && item.id !== null,
+        )
+
+        if (validItemsToDelete.length !== selectedItems.length) {
+            const skippedCount =
+                selectedItems.length - validItemsToDelete.length
+            toast.push(
+                <Notification
+                    title="Deletion Warning"
+                    type="warning"
+                    duration={3000}
+                >
+                    {skippedCount} item(s) could not be processed due to
+                    missing IDs and were skipped.
+                </Notification>,
+            )
+        }
+
+        if (validItemsToDelete.length === 0) {
+            toast.push(
+                <Notification title="No Valid Items" type="info">
+                    No valid items to delete.
+                </Notification>,
+            )
+            setIsDeleting(false)
+            return
+        }
+
+        const idsToDelete = validItemsToDelete.map((item) => item.id)
+        const commaSeparatedIds = idsToDelete.join(',')
+
+        try {
+            await dispatch(
+                deleteAllDocumentTypeAction({ ids: commaSeparatedIds }),
+            ).unwrap()
+            toast.push(
+                <Notification
+                    title="Deletion Successful"
+                    type="success"
+                    duration={2000}
+                >
+                    {validItemsToDelete.length} document type(s) successfully
+                    processed for deletion.
+                </Notification>,
+            )
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Deletion Failed"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message ||
+                        'Failed to delete selected document types.'}
+                </Notification>,
+            )
+            console.error('Delete selected document types error:', error)
+        } finally {
+            setSelectedItems([])
+            dispatch(getDocumentTypeAction())
+            setIsDeleting(false)
+        }
+    }
+
+    const openFilterDrawer = () => {
+        filterFormMethods.reset(filterCriteria) // Reset form with current criteria
+        setIsFilterDrawerOpen(true)
+    }
+    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
+    const onApplyFiltersSubmit = (data: FilterFormData) => {
+        setFilterCriteria({ filterNames: data.filterNames || [] })
+        handleSetTableData({ pageIndex: 1 }) // Reset to first page on filter change
+        closeFilterDrawer()
+    }
+    const onClearFilters = () => {
+        const defaultFilters = { filterNames: [] }
+        filterFormMethods.reset(defaultFilters)
+        setFilterCriteria(defaultFilters)
+        handleSetTableData({ pageIndex: 1 }) // Reset to first page
+        // Optionally close drawer: closeFilterDrawer();
+    }
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -421,35 +644,41 @@ const Documentmaster = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<DocumentItem[]>([])
-    // filterData state and handleApplyFilter removed
+    const [selectedItems, setSelectedItems] = useState<DocumentItem[]>([]) // Renamed from selectedForms
 
-    console.log('Raw DocumentTypeData from Redux:', DocumentTypeData)
-
-    const { pageData, total, processedDataForCsv } = useMemo(() => {
-        console.log(
-            '[Memo] Recalculating. Query:',
-            tableData.query,
-            'Sort:',
-            tableData.sort,
-            'Page:',
-            tableData.pageIndex,
-            // 'Filters:' removed from log
-            'Input Data (DocumentTypeData) Length:',
-            DocumentTypeData?.length ?? 0,
+    const documentTypeNameOptions = useMemo(() => {
+        if (!Array.isArray(DocumentTypeData)) return []
+        const uniqueNames = new Set(
+            DocumentTypeData.map((docType) => docType.name),
         )
+        return Array.from(uniqueNames).map((name) => ({
+            value: name,
+            label: name,
+        }))
+    }, [DocumentTypeData])
 
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         const sourceData: DocumentItem[] = Array.isArray(DocumentTypeData)
             ? DocumentTypeData
             : []
         let processedData: DocumentItem[] = cloneDeep(sourceData)
 
-        // Product and Channel filtering logic removed
+        if (
+            filterCriteria.filterNames &&
+            filterCriteria.filterNames.length > 0
+        ) {
+            const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
+                opt.value.toLowerCase(),
+            )
+            processedData = processedData.filter((item: DocumentItem) =>
+                selectedFilterNames.includes(
+                    item.name?.trim().toLowerCase() ?? '',
+                ),
+            )
+        }
 
-        // 1. Apply Search Query (on id and name)
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
-            console.log('[Memo] Applying search query:', query)
             processedData = processedData.filter((item: DocumentItem) => {
                 const itemNameLower = item.name?.trim().toLowerCase() ?? ''
                 const itemIdString = String(item.id ?? '').trim()
@@ -458,13 +687,7 @@ const Documentmaster = () => {
                     itemNameLower.includes(query) || itemIdLower.includes(query)
                 )
             })
-            console.log(
-                '[Memo] After search query filter. Count:',
-                processedData.length,
-            )
         }
-
-        // 2. Apply Sorting (on id and name)
         const { order, key } = tableData.sort as OnSortParam
         if (
             order &&
@@ -472,13 +695,10 @@ const Documentmaster = () => {
             (key === 'id' || key === 'name') &&
             processedData.length > 0
         ) {
-            console.log('[Memo] Applying sort. Key:', key, 'Order:', order)
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
-                // Ensure values are strings for localeCompare, default to empty string if not
                 const aValue = String(a[key as keyof DocumentItem] ?? '')
                 const bValue = String(b[key as keyof DocumentItem] ?? '')
-
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
                     : bValue.localeCompare(aValue)
@@ -486,9 +706,8 @@ const Documentmaster = () => {
             processedData = sortedData
         }
 
-        const dataBeforePagination = [...processedData] // For CSV export
+        const dataToExport = [...processedData]
 
-        // 3. Apply Pagination
         const currentTotal = processedData.length
         const pageIndex = tableData.pageIndex as number
         const pageSize = tableData.pageSize as number
@@ -497,27 +716,30 @@ const Documentmaster = () => {
             startIndex,
             startIndex + pageSize,
         )
-
-        console.log(
-            '[Memo] Returning. PageData Length:',
-            dataForPage.length,
-            'Total Items (after all filters/sort):',
-            currentTotal,
-        )
         return {
             pageData: dataForPage,
             total: currentTotal,
-            processedDataForCsv: dataBeforePagination,
+            allFilteredAndSortedData: dataToExport,
         }
-    }, [DocumentTypeData, tableData]) // filterData removed from dependencies
+    }, [DocumentTypeData, tableData, filterCriteria])
 
-    // --- Handlers ---
-    // handleApplyFilter removed
+    const handleExportData = () => {
+        const success = exportToCsvDocType(
+            'document_types_export.csv',
+            allFilteredAndSortedData,
+        )
+        if (success) {
+            toast.push(
+                <Notification title="Export Successful" type="success">
+                    Data exported.
+                </Notification>,
+            )
+        }
+    }
 
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
         setTableData((prev) => ({ ...prev, ...data }))
     }, [])
-
     const handlePaginationChange = useCallback(
         (page: number) => handleSetTableData({ pageIndex: page }),
         [handleSetTableData],
@@ -525,34 +747,36 @@ const Documentmaster = () => {
     const handleSelectChange = useCallback(
         (value: number) => {
             handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-            setSelectedForms([])
+            setSelectedItems([])
         },
         [handleSetTableData],
     )
     const handleSort = useCallback(
-        (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
+        (sort: OnSortParam) => {
+            handleSetTableData({ sort: sort, pageIndex: 1 })
+        },
         [handleSetTableData],
     )
     const handleSearchChange = useCallback(
         (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
         [handleSetTableData],
     )
-
     const handleRowSelect = useCallback((checked: boolean, row: DocumentItem) => {
-        setSelectedForms((prev) => {
+        setSelectedItems((prev) => {
             if (checked)
-                return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
-            return prev.filter((f) => f.id !== row.id)
+                return prev.some((item) => item.id === row.id)
+                    ? prev
+                    : [...prev, row]
+            return prev.filter((item) => item.id !== row.id)
         })
     }, [])
-
     const handleAllRowSelect = useCallback(
         (checked: boolean, currentRows: Row<DocumentItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
-                setSelectedForms((prevSelected) => {
+                setSelectedItems((prevSelected) => {
                     const prevSelectedIds = new Set(
-                        prevSelected.map((f) => f.id),
+                        prevSelected.map((item) => item.id),
                     )
                     const newRowsToAdd = currentPageRowOriginals.filter(
                         (r) => !prevSelectedIds.has(r.id),
@@ -563,187 +787,287 @@ const Documentmaster = () => {
                 const currentPageRowIds = new Set(
                     currentPageRowOriginals.map((r) => r.id),
                 )
-                setSelectedForms((prevSelected) =>
-                    prevSelected.filter((f) => !currentPageRowIds.has(f.id)),
+                setSelectedItems((prevSelected) =>
+                    prevSelected.filter(
+                        (item) => !currentPageRowIds.has(item.id),
+                    ),
                 )
             }
         },
         [],
     )
 
-    // --- Action Handlers (remain the same, need Redux integration for persistence) ---
-    const handleEdit = useCallback(
-        (form: DocumentItem) => {
-            console.log('Edit item (requires navigation/modal):', form.id)
-            toast.push(
-                <Notification title="Edit Action" type="info">
-                    Edit action for "{form.name}" (ID: {form.id}). Implement
-                    navigation or modal.
-                </Notification>,
-            )
-        },
-        [navigate],
-    )
-
-    const handleDelete = useCallback((formToDelete: DocumentItem) => {
-        console.log(
-            'Delete item (needs Redux action):',
-            formToDelete.id,
-            formToDelete.name,
-        )
-        setSelectedForms((prevSelected) =>
-            prevSelected.filter((form) => form.id !== formToDelete.id),
-        )
-        toast.push(
-            <Notification title="Delete Action" type="warning">
-                Delete action for "{formToDelete.name}" (ID: {formToDelete.id}).
-                Implement Redux deletion.
-            </Notification>,
-        )
-    }, [])
-
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected items (needs Redux action):',
-            selectedForms.map((f) => f.id),
-        )
-        setSelectedForms([])
-        toast.push(
-            <Notification title="Selected Items Delete Action" type="warning">
-                {selectedForms.length} item(s) delete action. Implement Redux
-                deletion.
-            </Notification>,
-        )
-    }, [selectedForms])
-    // --- End Action Handlers ---
-
     const columns: ColumnDef<DocumentItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
             {
-                header: 'Action',
+                header: 'Document Type Name',
+                accessorKey: 'name',
+                enableSorting: true,
+            },
+            {
+                header: 'Actions',
                 id: 'action',
                 meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
                         onEdit={() => openEditDrawer(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
+                        onDelete={() => handleDeleteClick(props.row.original)}
                     />
                 ),
             },
         ],
-        [handleEdit, handleDelete],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [], // openEditDrawer and handleDeleteClick are stable
     )
 
     return (
         <>
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">Document Types</h5>
-                        <FormListActionTools allFormsData={processedDataForCsv}
-                        openAddDocumentDrawer={openAddDocumentDrawer} />
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h5 className="mb-2 sm:mb-0">Document Types</h5>
+                        <Button
+                            variant="solid"
+                            icon={<TbPlus />}
+                            onClick={openAddDrawer}
+                        >
+                            Add New
+                        </Button>
                     </div>
-
-                    <div className="mb-4">
                     <DocumentTypeTableTools
-                                onSearchChange={handleSearchChange}
-                            />{' '}
-                            {/* Use updated component */}
-                        </div>
-
-                    <FormListTable
-                        columns={columns}
-                        data={pageData}
-                        loading={
-                            localIsLoading || masterLoadingStatus === 'loading'
-                        }
-                        pagingData={{
-                            total: total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedForms={selectedForms}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
+                        onSearchChange={handleSearchChange}
+                        onFilter={openFilterDrawer}
+                        onExport={handleExportData}
                     />
-                </AdaptiveCard>
-
-                <FormListSelected
-                    selectedForms={selectedForms}
-                    setSelectedForms={setSelectedForms}
-                    onDeleteSelected={handleDeleteSelected}
-                />
-            </Container>
-            <Drawer
-                title="Add Document"
-                isOpen={isAddDocumentDrawerOpen}
-                onClose={closeAddDocumentDrawer}
-                onRequestClose={closeAddDocumentDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDocumentDrawer}>
-                            Cancel
-                        </Button>
-                        <Button size="sm" variant="solid" onClick={() => console.log('Document Added')}>
-                            Add
-                        </Button>
+                    <div className="mt-4">
+                        <DocumentTypeTable
+                            columns={columns}
+                            data={pageData}
+                            loading={
+                                masterLoadingStatus === 'loading' ||
+                                isSubmitting ||
+                                isDeleting
+                            }
+                            pagingData={{
+                                total: total,
+                                pageIndex: tableData.pageIndex as number,
+                                pageSize: tableData.pageSize as number,
+                            }}
+                            selectedItems={selectedItems}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectChange}
+                            onSort={handleSort}
+                            onRowSelect={handleRowSelect}
+                            onAllRowSelect={handleAllRowSelect}
+                        />
                     </div>
-                }
-            >
-                <Form size="sm" containerClassName="flex flex-col">
-                    <FormItem label="Document Name">
-                        <Input placeholder="Enter Document Name" />
-                    </FormItem>
-                    {/* <FormItem label="Description">
-                        <Input placeholder="Enter Description" />
-                    </FormItem> */}
-                    {/* Add more fields as needed */}
-                </Form>
-            </Drawer>
+                </AdaptiveCard>
+            </Container>
+
+            <DocumentTypeSelectedFooter
+                selectedItems={selectedItems}
+                onDeleteSelected={handleDeleteSelected}
+            />
+
+            {/* Add Drawer */}
             <Drawer
-                title="Edit Document"
-                isOpen={isEditDrawerOpen}
-                onClose={closeEditDrawer}
-                onRequestClose={closeEditDrawer}
+                title="Add Document Type"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={closeAddDrawer}
+                            disabled={isSubmitting}
+                        >
                             Cancel
                         </Button>
                         <Button
                             size="sm"
                             variant="solid"
-                            onClick={() => {
-                                console.log('Updated Document:', selectedItem);
-                                closeEditDrawer();
-                            }}
+                            form="addDocumentTypeForm"
+                            type="submit"
+                            loading={isSubmitting}
+                            disabled={
+                                !addFormMethods.formState.isValid ||
+                                isSubmitting
+                            }
                         >
-                            Save
+                            {isSubmitting ? 'Adding...' : 'Save'}
                         </Button>
                     </div>
                 }
             >
-                <Form size="sm" containerClassName="flex flex-col">
-                    <FormItem label="Document Name">
-                        <Input
-                            placeholder="Enter Document Name"
-                            value={selectedItem?.name || ''} // Populate with selected item's name
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '' }), // Handle null case by providing default values
-                                    name: e.target.value,
-                                }))
-                            }
+                <Form
+                    id="addDocumentTypeForm"
+                    onSubmit={addFormMethods.handleSubmit(
+                        onAddDocumentTypeSubmit,
+                    )}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem
+                        label="Document Type Name"
+                        invalid={!!addFormMethods.formState.errors.name}
+                        errorMessage={
+                            addFormMethods.formState.errors.name?.message
+                        }
+                    >
+                        <Controller
+                            name="name"
+                            control={addFormMethods.control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    placeholder="Enter Document Type Name"
+                                />
+                            )}
                         />
                     </FormItem>
-                    {/* Add more fields as needed */}
                 </Form>
             </Drawer>
+
+            {/* Edit Drawer */}
+            <Drawer
+                title="Edit Document Type"
+                isOpen={isEditDrawerOpen}
+                onClose={closeEditDrawer}
+                onRequestClose={closeEditDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={closeEditDrawer}
+                            disabled={isSubmitting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            form="editDocumentTypeForm"
+                            type="submit"
+                            loading={isSubmitting}
+                            disabled={
+                                !editFormMethods.formState.isValid ||
+                                isSubmitting
+                            }
+                        >
+                            {isSubmitting ? 'Saving...' : 'Save'}
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    id="editDocumentTypeForm"
+                    onSubmit={editFormMethods.handleSubmit(
+                        onEditDocumentTypeSubmit,
+                    )}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem
+                        label="Document Type Name"
+                        invalid={!!editFormMethods.formState.errors.name}
+                        errorMessage={
+                            editFormMethods.formState.errors.name?.message
+                        }
+                    >
+                        <Controller
+                            name="name"
+                            control={editFormMethods.control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    placeholder="Enter Document Type Name"
+                                />
+                            )}
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+
+            {/* Filter Drawer */}
+            <Drawer
+                title="Filter Document Types"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={onClearFilters}
+                        >
+                            Clear
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            form="filterDocumentTypeForm"
+                            type="submit"
+                        >
+                            Apply
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    id="filterDocumentTypeForm"
+                    onSubmit={filterFormMethods.handleSubmit(
+                        onApplyFiltersSubmit,
+                    )}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem label="Filter by Document Type Name(s)">
+                        <Controller
+                            name="filterNames"
+                            control={filterFormMethods.control}
+                            render={({ field }) => (
+                                <Select
+                                    isMulti
+                                    placeholder="Select document type names..."
+                                    options={documentTypeNameOptions}
+                                    value={field.value || []}
+                                    onChange={(selectedVal) =>
+                                        field.onChange(selectedVal || [])
+                                    }
+                                />
+                            )}
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+
+            {/* Single Delete Confirmation */}
+            <ConfirmDialog
+                isOpen={singleDeleteConfirmOpen}
+                type="danger"
+                title="Delete Document Type"
+                onClose={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setDocumentTypeToDelete(null)
+                }}
+                onRequestClose={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setDocumentTypeToDelete(null)
+                }}
+                onCancel={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setDocumentTypeToDelete(null)
+                }}
+                onConfirm={onConfirmSingleDelete}
+                // loading={isDeleting} // Add if your ConfirmDialog supports it
+            >
+                <p>
+                    Are you sure you want to delete the document type "
+                    <strong>{documentTypeToDelete?.name}</strong>"?
+                </p>
+            </ConfirmDialog>
         </>
     )
 }

@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addUnitAction, deletAllUnitAction, deletUnitAction, editUnitAction, getBrandAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getUnitAction } from "./middleware"
+import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addUnitAction, deletAllUnitAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editUnitAction, getBrandAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getUnitAction } from "./middleware"
+import { deletPaymentTermAsync } from "./services"
 
 const INITIAL_STATE: any = {
   unitData: "",
@@ -31,21 +32,72 @@ const masterSlice = createSlice({
       ...state,
       DocumentTypeData: payload
     }))
+    builder.addCase(addDocumentTypeAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(deleteDocumentTypeAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(editDocumentTypeAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    // builder.addCase(deleteAllDocumentTypeAction.fulfilled, (state, { payload }) => ({
+    //   ...state,
+    // }))
     builder.addCase(getPaymentTermAction.fulfilled, (state, { payload }) => ({
       ...state,
       PaymentTermsData: payload
     }))
+    builder.addCase(addPaymentTermAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(deletePaymentTermAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(editPaymentTermAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    // builder.addCase(deleteAllDocumentTypeAction.fulfilled, (state, { payload }) => ({
+    //   ...state,
+    // }))
     builder.addCase(getCurrencyAction.fulfilled, (state, { payload }) => ({
       ...state,
       CurrencyData: payload
+    }))
+    builder.addCase(addCurrencyAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(deleteCurrencyAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(editCurrencyAction.fulfilled, (state, { payload }) => ({
+      ...state,
     }))
     builder.addCase(getContinentsAction.fulfilled, (state, { payload }) => ({
       ...state,
       ContinentsData: payload
     }))
+    builder.addCase(addContinentAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(deleteContinentAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(editContinentAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
     builder.addCase(getCountriesAction.fulfilled, (state, { payload }) => ({
       ...state,
       CountriesData: payload
+    }))
+    builder.addCase(addCountryAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(deleteCountryAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(editCountryAction.fulfilled, (state, { payload }) => ({
+      ...state,
     }))
     builder.addCase(getDocumentListAction.fulfilled, (state, { payload }) => ({
       ...state,

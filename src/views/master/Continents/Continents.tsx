@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+// import { Link, useNavigate } from 'react-router-dom'; // Link/useNavigate not used in this pattern
 import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
-// import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
-// import { z } from 'zod' // No longer needed
-// import type { ZodType } from 'zod' // No longer needed
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -12,16 +11,14 @@ import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
-// import Dialog from '@/components/ui/Dialog' // No longer needed for filter dialog
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-// import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
-// import Input from '@/components/ui/Input' // No longer needed for filter form
-// import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
-import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
+import Select from '@/components/ui/Select'
+import { Drawer, Form, FormItem, Input } from '@/components/ui'
+// import { CSVLink } from 'react-csv' // Removed as custom export is used
 
 // Icons
 import {
@@ -29,9 +26,9 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    TbFilter, // Filter icon removed
-    TbCloudUpload,
+    TbFilter,
     TbPlus,
+    TbCloudUpload,
 } from 'react-icons/tb'
 
 // Types
@@ -40,22 +37,96 @@ import type { TableQueries } from '@/@types/common'
 import { useAppDispatch } from '@/reduxtool/store'
 import {
     getContinentsAction,
-    getDocumentTypeAction,
-    getPaymentTermAction,
-} from '@/reduxtool/master/middleware'
+    addContinentAction,    // Ensure these actions exist or are created
+    editContinentAction,   // Ensure these actions exist or are created
+    deleteContinentAction, // Ensure these actions exist or are created
+    deleteAllContinentsAction, // Ensure these actions exist or are created
+} from '@/reduxtool/master/middleware' // Adjust path and action names as needed
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-// --- Define ContinentItem Type (Table Row Data) ---
+// --- Define ContinentItem Type ---
 export type ContinentItem = {
-    id: string
+    id: string | number
     name: string
 }
-// --- End ContinentItem Type Definition ---
 
-// FilterFormSchema and channelList removed
+// --- Zod Schema for Add/Edit Continent Form ---
+const continentFormSchema = z.object({
+    name: z
+        .string()
+        .min(1, 'Continent name is required.')
+        .max(100, 'Name cannot exceed 100 characters.'),
+})
+type ContinentFormData = z.infer<typeof continentFormSchema>
 
-// --- Reusable ActionColumn Component ---
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
+    filterNames: z
+        .array(z.object({ value: z.string(), label: z.string() }))
+        .optional(),
+})
+type FilterFormData = z.infer<typeof filterFormSchema>
+
+// --- CSV Exporter Utility ---
+const CSV_HEADERS_CONTINENT = ['ID', 'Continent Name']
+const CSV_KEYS_CONTINENT: (keyof ContinentItem)[] = ['id', 'name']
+
+function exportToCsvContinent(filename: string, rows: ContinentItem[]) {
+    if (!rows || !rows.length) {
+        toast.push(
+            <Notification title="No Data" type="info">
+                Nothing to export.
+            </Notification>,
+        )
+        return false
+    }
+    const separator = ','
+
+    const csvContent =
+        CSV_HEADERS_CONTINENT.join(separator) +
+        '\n' +
+        rows
+            .map((row) => {
+                return CSV_KEYS_CONTINENT.map((k) => {
+                    let cell = row[k]
+                    if (cell === null || cell === undefined) {
+                        cell = ''
+                    } else {
+                        cell = String(cell).replace(/"/g, '""')
+                    }
+                    if (String(cell).search(/("|,|\n)/g) >= 0) {
+                        cell = `"${cell}"`
+                    }
+                    return cell
+                }).join(separator)
+            })
+            .join('\n')
+
+    const blob = new Blob(['\ufeff' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+    })
+    const link = document.createElement('a')
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', filename)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        return true
+    }
+    toast.push(
+        <Notification title="Export Failed" type="danger">
+            Browser does not support this feature.
+        </Notification>,
+    )
+    return false
+}
+
+// --- ActionColumn Component (No changes needed) ---
 const ActionColumn = ({
     onEdit,
     onDelete,
@@ -66,9 +137,8 @@ const ActionColumn = ({
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-
     return (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center gap-3">
             <Tooltip title="Edit">
                 <div
                     className={classNames(
@@ -98,32 +168,88 @@ const ActionColumn = ({
         </div>
     )
 }
-// --- End ActionColumn ---
 
-// --- FormListTable Component (No changes) ---
-const FormListTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedForms,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
+// --- ContinentSearch Component ---
+type ContinentSearchProps = {
+    onInputChange: (value: string) => void
+    ref?: Ref<HTMLInputElement>
+}
+const ContinentSearch = React.forwardRef<
+    HTMLInputElement,
+    ContinentSearchProps
+>(({ onInputChange }, ref) => {
+    return (
+        <DebouceInput
+            ref={ref}
+            className="w-full"
+            placeholder="Quick search continents..."
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(e) => onInputChange(e.target.value)}
+        />
+    )
+})
+ContinentSearch.displayName = 'ContinentSearch'
+
+// --- ContinentTableTools Component ---
+const ContinentTableTools = ({
+    onSearchChange,
+    onFilter,
+    onExport,
 }: {
+    onSearchChange: (query: string) => void
+    onFilter: () => void
+    onExport: () => void
+}) => {
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+            <div className="flex-grow">
+                <ContinentSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button
+                    icon={<TbFilter />}
+                    onClick={onFilter}
+                    className="w-full sm:w-auto"
+                >
+                    Filter
+                </Button>
+                <Button
+                    icon={<TbCloudUpload />}
+                    onClick={onExport}
+                    className="w-full sm:w-auto"
+                >
+                    Export
+                </Button>
+            </div>
+        </div>
+    )
+}
+
+// --- ContinentTable Component ---
+type ContinentTableProps = {
     columns: ColumnDef<ContinentItem>[]
     data: ContinentItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: ContinentItem[]
+    selectedItems: ContinentItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
     onRowSelect: (checked: boolean, row: ContinentItem) => void
     onAllRowSelect: (checked: boolean, rows: Row<ContinentItem>[]) => void
-}) => {
+}
+const ContinentTable = ({
+    columns,
+    data,
+    loading,
+    pagingData,
+    selectedItems,
+    onPaginationChange,
+    onSelectChange,
+    onSort,
+    onRowSelect,
+    onAllRowSelect,
+}: ContinentTableProps) => {
     return (
         <DataTable
             selectable
@@ -133,7 +259,7 @@ const FormListTable = ({
             loading={loading}
             pagingData={pagingData}
             checkboxChecked={(row) =>
-                selectedForms.some((selected) => selected.id === row.id)
+                selectedItems.some((selected) => selected.id === row.id)
             }
             onPaginationChange={onPaginationChange}
             onSelectChange={onSelectChange}
@@ -144,194 +270,23 @@ const FormListTable = ({
     )
 }
 
-// --- FormListSearch Component (No changes) ---
-type FormListSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const FormListSearch = React.forwardRef<HTMLInputElement, FormListSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                className="w-full "
-                placeholder="Quick search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-FormListSearch.displayName = 'FormListSearch'
-
-// FormListTableFilter component removed
-
-// --- ContinentsSearch Component ---
-type ContinentsSearchProps = {
-    // Renamed component
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const ContinentsSearch = React.forwardRef<
-    HTMLInputElement,
-    ContinentsSearchProps
->(({ onInputChange }, ref) => {
-    return (
-        <DebouceInput
-            ref={ref}
-            placeholder="Quick Search..." // Updated placeholder
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
-})
-ContinentsSearch.displayName = 'ContinentsSearch'
-// --- End ContinentsSearch ---
-
-// --- ContinentsTableTools Component ---
-const ContinentsTableTools = ({
-    // Renamed component
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-
-    type ContinentsFilterSchema = {
-        userRole : String,
-        exportFrom : String,
-        exportDate : Date
-    }
-
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
-
-    const {control, handleSubmit} = useForm<ContinentsFilterSchema>()
-
-    const exportFiltersSubmitHandler = (data : ContinentsFilterSchema) => {
-        console.log("filter data", data)
-    }
-
-    return (
-        <div className="flex items-center w-full gap-2">
-            <div className="flex-grow">
-                <ContinentsSearch onInputChange={onSearchChange} />
-            </div>
-            {/* Filter component removed */}
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                    </div>  
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Document Name"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
-                </Form>
-            </Drawer>
-        </div>
-    )
-}
-// --- End ContinentsTableTools ---
-
-// --- FormListTableTools Component (Simplified) ---
-const FormListTableTools = ({
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <FormListSearch onInputChange={onSearchChange} />
-            {/* Filter button/component removed */}
-        </div>
-    )
-}
-// --- End FormListTableTools ---
-
-// --- FormListActionTools Component (No functional changes needed for filter removal) ---
-const FormListActionTools = ({
-    allFormsData,
-    openAddDrawer,
-}: {
-    allFormsData: ContinentItem[];
-    openAddDrawer: () => void; // Accept function as a prop
-}) => {
-    const navigate = useNavigate()
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'name' },
-    ]
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
-                </Button>
-            </CSVLink>
-            */}
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={openAddDrawer}
-                block
-            >
-                Add New
-            </Button>
-        </div>
-    )
-}
-
-// --- FormListSelected Component (No functional changes needed for filter removal) ---
-const FormListSelected = ({
-    selectedForms,
-    setSelectedForms,
-    onDeleteSelected,
-}: {
-    selectedForms: ContinentItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<ContinentItem[]>>
+// --- ContinentSelectedFooter Component ---
+type ContinentSelectedFooterProps = {
+    selectedItems: ContinentItem[]
     onDeleteSelected: () => void
-}) => {
+}
+const ContinentSelectedFooter = ({
+    selectedItems,
+    onDeleteSelected,
+}: ContinentSelectedFooterProps) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-
     const handleDeleteClick = () => setDeleteConfirmationOpen(true)
     const handleCancelDelete = () => setDeleteConfirmationOpen(false)
     const handleConfirmDelete = () => {
         onDeleteSelected()
         setDeleteConfirmationOpen(false)
     }
-
-    if (selectedForms.length === 0) return null
-
+    if (selectedItems.length === 0) return null
     return (
         <>
             <StickyFooter
@@ -345,10 +300,10 @@ const FormListSelected = ({
                         </span>
                         <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
                             <span className="heading-text">
-                                {selectedForms.length}
+                                {selectedItems.length}
                             </span>
                             <span>
-                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
+                                Item{selectedItems.length > 1 ? 's' : ''}{' '}
                                 selected
                             </span>
                         </span>
@@ -360,7 +315,7 @@ const FormListSelected = ({
                             className="text-red-600 hover:text-red-500"
                             onClick={handleDeleteClick}
                         >
-                            Delete
+                            Delete Selected
                         </Button>
                     </div>
                 </div>
@@ -368,15 +323,15 @@ const FormListSelected = ({
             <ConfirmDialog
                 isOpen={deleteConfirmationOpen}
                 type="danger"
-                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
+                title={`Delete ${selectedItems.length} Continent${selectedItems.length > 1 ? 's' : ''}`}
                 onClose={handleCancelDelete}
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
             >
                 <p>
-                    Are you sure you want to delete the selected item
-                    {selectedForms.length > 1 ? 's' : ''}? This action cannot be
+                    Are you sure you want to delete the selected continent
+                    {selectedItems.length > 1 ? 's' : ''}? This action cannot be
                     undone.
                 </p>
             </ConfirmDialog>
@@ -386,42 +341,300 @@ const FormListSelected = ({
 
 // --- Main Continents Component ---
 const Continents = () => {
-
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<ContinentItem | null>(null);
-
-    const openEditDrawer = (item: ContinentItem) => {
-        setSelectedItem(item); // Set the selected item's data
-        setIsEditDrawerOpen(true); // Open the edit drawer
-    };
-
-    const closeEditDrawer = () => {
-        setSelectedItem(null); // Clear the selected item's data
-        setIsEditDrawerOpen(false); // Close the edit drawer
-    };
-
-    const openAddDrawer = () => {
-        setSelectedItem(null); // Clear any selected item
-        setIsAddDrawerOpen(true); // Open the add drawer
-    };
-
-    const closeAddDrawer = () => {
-        setIsAddDrawerOpen(false); // Close the add drawer
-    };
-
-    const navigate = useNavigate()
     const dispatch = useAppDispatch()
+
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
+    const [editingContinent, setEditingContinent] =
+        useState<ContinentItem | null>(null)
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] =
+        useState(false)
+    const [continentToDelete, setContinentToDelete] =
+        useState<ContinentItem | null>(null)
+
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
+        filterNames: [],
+    })
+
+    const { ContinentsData = [], status: masterLoadingStatus = 'idle' } =
+        useSelector(masterSelector)
 
     useEffect(() => {
         dispatch(getContinentsAction())
     }, [dispatch])
 
-    const { ContinentsData = [], status: masterLoadingStatus = 'idle' } =
-        useSelector(masterSelector)
+    const addFormMethods = useForm<ContinentFormData>({
+        resolver: zodResolver(continentFormSchema),
+        defaultValues: { name: '' },
+        mode: 'onChange',
+    })
+    const editFormMethods = useForm<ContinentFormData>({
+        resolver: zodResolver(continentFormSchema),
+        defaultValues: { name: '' },
+        mode: 'onChange',
+    })
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria,
+    })
 
-    const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<ContinentItem[]>([]) // Remains for potential local ops, not table data source
+    const openAddDrawer = () => {
+        addFormMethods.reset({ name: '' })
+        setIsAddDrawerOpen(true)
+    }
+    const closeAddDrawer = () => {
+        addFormMethods.reset({ name: '' })
+        setIsAddDrawerOpen(false)
+    }
+    const onAddContinentSubmit = async (data: ContinentFormData) => {
+        setIsSubmitting(true)
+        try {
+            await dispatch(addContinentAction({ name: data.name })).unwrap()
+            toast.push(
+                <Notification
+                    title="Continent Added"
+                    type="success"
+                    duration={2000}
+                >
+                    Continent "{data.name}" added.
+                </Notification>,
+            )
+            closeAddDrawer()
+            dispatch(getContinentsAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Add"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || 'Could not add continent.'}
+                </Notification>,
+            )
+            console.error('Add Continent Error:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const openEditDrawer = (continent: ContinentItem) => {
+        setEditingContinent(continent)
+        editFormMethods.setValue('name', continent.name)
+        setIsEditDrawerOpen(true)
+    }
+    const closeEditDrawer = () => {
+        setEditingContinent(null)
+        editFormMethods.reset({ name: '' })
+        setIsEditDrawerOpen(false)
+    }
+    const onEditContinentSubmit = async (data: ContinentFormData) => {
+        if (
+            !editingContinent ||
+            editingContinent.id === undefined ||
+            editingContinent.id === null
+        ) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot edit: Continent ID is missing.
+                </Notification>,
+            )
+            setIsSubmitting(false)
+            return
+        }
+        setIsSubmitting(true)
+        try {
+            await dispatch(
+                editContinentAction({
+                    id: editingContinent.id,
+                    name: data.name,
+                }),
+            ).unwrap()
+            toast.push(
+                <Notification
+                    title="Continent Updated"
+                    type="success"
+                    duration={2000}
+                >
+                    Continent "{data.name}" updated.
+                </Notification>,
+            )
+            closeEditDrawer()
+            dispatch(getContinentsAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Update"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || 'Could not update continent.'}
+                </Notification>,
+            )
+            console.error('Edit Continent Error:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleDeleteClick = (continent: ContinentItem) => {
+        if (continent.id === undefined || continent.id === null) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot delete: Continent ID is missing.
+                </Notification>,
+            )
+            return
+        }
+        setContinentToDelete(continent)
+        setSingleDeleteConfirmOpen(true)
+    }
+
+    const onConfirmSingleDelete = async () => {
+        if (
+            !continentToDelete ||
+            continentToDelete.id === undefined ||
+            continentToDelete.id === null
+        ) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot delete: Continent ID is missing.
+                </Notification>,
+            )
+            setIsDeleting(false)
+            setContinentToDelete(null)
+            setSingleDeleteConfirmOpen(false)
+            return
+        }
+        setIsDeleting(true)
+        setSingleDeleteConfirmOpen(false)
+        try {
+            await dispatch(deleteContinentAction(continentToDelete)).unwrap()
+            toast.push(
+                <Notification
+                    title="Continent Deleted"
+                    type="success"
+                    duration={2000}
+                >
+                    Continent "{continentToDelete.name}" deleted.
+                </Notification>,
+            )
+            setSelectedItems((prev) =>
+                prev.filter((item) => item.id !== continentToDelete!.id),
+            )
+            dispatch(getContinentsAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Delete"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || `Could not delete continent.`}
+                </Notification>,
+            )
+            console.error('Delete Continent Error:', error)
+        } finally {
+            setIsDeleting(false)
+            setContinentToDelete(null)
+        }
+    }
+    const handleDeleteSelected = async () => {
+        if (selectedItems.length === 0) {
+            toast.push(
+                <Notification title="No Selection" type="info">
+                    Please select items to delete.
+                </Notification>,
+            )
+            return
+        }
+        setIsDeleting(true)
+
+        const validItemsToDelete = selectedItems.filter(
+            (item) => item.id !== undefined && item.id !== null,
+        )
+
+        if (validItemsToDelete.length !== selectedItems.length) {
+            const skippedCount =
+                selectedItems.length - validItemsToDelete.length
+            toast.push(
+                <Notification
+                    title="Deletion Warning"
+                    type="warning"
+                    duration={3000}
+                >
+                    {skippedCount} item(s) could not be processed due to
+                    missing IDs and were skipped.
+                </Notification>,
+            )
+        }
+
+        if (validItemsToDelete.length === 0) {
+            toast.push(
+                <Notification title="No Valid Items" type="info">
+                    No valid items to delete.
+                </Notification>,
+            )
+            setIsDeleting(false)
+            return
+        }
+
+        const idsToDelete = validItemsToDelete.map((item) => item.id)
+        const commaSeparatedIds = idsToDelete.join(',')
+
+        try {
+            await dispatch(
+                deleteAllContinentsAction({ ids: commaSeparatedIds }),
+            ).unwrap()
+            toast.push(
+                <Notification
+                    title="Deletion Successful"
+                    type="success"
+                    duration={2000}
+                >
+                    {validItemsToDelete.length} continent(s) successfully
+                    processed for deletion.
+                </Notification>,
+            )
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Deletion Failed"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message ||
+                        'Failed to delete selected continents.'}
+                </Notification>,
+            )
+            console.error('Delete selected continents error:', error)
+        } finally {
+            setSelectedItems([])
+            dispatch(getContinentsAction())
+            setIsDeleting(false)
+        }
+    }
+
+    const openFilterDrawer = () => {
+        filterFormMethods.reset(filterCriteria)
+        setIsFilterDrawerOpen(true)
+    }
+    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
+    const onApplyFiltersSubmit = (data: FilterFormData) => {
+        setFilterCriteria({ filterNames: data.filterNames || [] })
+        handleSetTableData({ pageIndex: 1 })
+        closeFilterDrawer()
+    }
+    const onClearFilters = () => {
+        const defaultFilters = { filterNames: [] }
+        filterFormMethods.reset(defaultFilters)
+        setFilterCriteria(defaultFilters)
+        handleSetTableData({ pageIndex: 1 })
+    }
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -429,50 +642,49 @@ const Continents = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<ContinentItem[]>([])
-    // filterData state and handleApplyFilter removed
+    const [selectedItems, setSelectedItems] = useState<ContinentItem[]>([])
 
-    console.log('Raw ContinentsData from Redux:', ContinentsData)
-
-    const { pageData, total, processedDataForCsv } = useMemo(() => {
-        console.log(
-            '[Memo] Recalculating. Query:',
-            tableData.query,
-            'Sort:',
-            tableData.sort,
-            'Page:',
-            tableData.pageIndex,
-            // 'Filters:' removed from log
-            'Input Data (ContinentsData) Length:',
-            ContinentsData?.length ?? 0,
+    const continentNameOptions = useMemo(() => {
+        if (!Array.isArray(ContinentsData)) return []
+        const uniqueNames = new Set(
+            ContinentsData.map((continent) => continent.name),
         )
+        return Array.from(uniqueNames).map((name) => ({
+            value: name,
+            label: name,
+        }))
+    }, [ContinentsData])
 
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         const sourceData: ContinentItem[] = Array.isArray(ContinentsData)
             ? ContinentsData
             : []
         let processedData: ContinentItem[] = cloneDeep(sourceData)
 
-        // Product and Channel filtering logic removed
-
-        // 1. Apply Search Query (on id and name)
-        if (tableData.query && tableData.query.trim() !== '') {
-            const query = tableData.query.toLowerCase().trim()
-            console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: ContinentItem) => {
-                const itemNameLower = item.name?.trim().toLowerCase() ?? ''
-                const itemIdString = String(item.id ?? '').trim()
-                const itemIdLower = itemIdString.toLowerCase()
-                return (
-                    itemNameLower.includes(query) || itemIdLower.includes(query)
-                )
-            })
-            console.log(
-                '[Memo] After search query filter. Count:',
-                processedData.length,
+        if (
+            filterCriteria.filterNames &&
+            filterCriteria.filterNames.length > 0
+        ) {
+            const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
+                opt.value.toLowerCase(),
+            )
+            processedData = processedData.filter((item: ContinentItem) =>
+                selectedFilterNames.includes(
+                    item.name?.trim().toLowerCase() ?? '',
+                ),
             )
         }
 
-        // 2. Apply Sorting (on id and name)
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim()
+            processedData = processedData.filter((item: ContinentItem) => {
+                const itemNameLower = item.name?.trim().toLowerCase() ?? ''
+                const itemIdString = String(item.id ?? '').trim().toLowerCase()
+                return (
+                    itemNameLower.includes(query) || itemIdString.includes(query)
+                )
+            })
+        }
         const { order, key } = tableData.sort as OnSortParam
         if (
             order &&
@@ -480,13 +692,10 @@ const Continents = () => {
             (key === 'id' || key === 'name') &&
             processedData.length > 0
         ) {
-            console.log('[Memo] Applying sort. Key:', key, 'Order:', order)
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
-                // Ensure values are strings for localeCompare, default to empty string if not
                 const aValue = String(a[key as keyof ContinentItem] ?? '')
                 const bValue = String(b[key as keyof ContinentItem] ?? '')
-
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
                     : bValue.localeCompare(aValue)
@@ -494,9 +703,8 @@ const Continents = () => {
             processedData = sortedData
         }
 
-        const dataBeforePagination = [...processedData] // For CSV export
+        const dataToExport = [...processedData]
 
-        // 3. Apply Pagination
         const currentTotal = processedData.length
         const pageIndex = tableData.pageIndex as number
         const pageSize = tableData.pageSize as number
@@ -505,27 +713,30 @@ const Continents = () => {
             startIndex,
             startIndex + pageSize,
         )
-
-        console.log(
-            '[Memo] Returning. PageData Length:',
-            dataForPage.length,
-            'Total Items (after all filters/sort):',
-            currentTotal,
-        )
         return {
             pageData: dataForPage,
             total: currentTotal,
-            processedDataForCsv: dataBeforePagination,
+            allFilteredAndSortedData: dataToExport,
         }
-    }, [ContinentsData, tableData]) // filterData removed from dependencies
+    }, [ContinentsData, tableData, filterCriteria])
 
-    // --- Handlers ---
-    // handleApplyFilter removed
+    const handleExportData = () => {
+        const success = exportToCsvContinent(
+            'continents_export.csv',
+            allFilteredAndSortedData,
+        )
+        if (success) {
+            toast.push(
+                <Notification title="Export Successful" type="success">
+                    Data exported.
+                </Notification>,
+            )
+        }
+    }
 
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
         setTableData((prev) => ({ ...prev, ...data }))
     }, [])
-
     const handlePaginationChange = useCallback(
         (page: number) => handleSetTableData({ pageIndex: page }),
         [handleSetTableData],
@@ -533,34 +744,36 @@ const Continents = () => {
     const handleSelectChange = useCallback(
         (value: number) => {
             handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-            setSelectedForms([])
+            setSelectedItems([])
         },
         [handleSetTableData],
     )
     const handleSort = useCallback(
-        (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
+        (sort: OnSortParam) => {
+            handleSetTableData({ sort: sort, pageIndex: 1 })
+        },
         [handleSetTableData],
     )
     const handleSearchChange = useCallback(
         (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
         [handleSetTableData],
     )
-
     const handleRowSelect = useCallback((checked: boolean, row: ContinentItem) => {
-        setSelectedForms((prev) => {
+        setSelectedItems((prev) => {
             if (checked)
-                return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
-            return prev.filter((f) => f.id !== row.id)
+                return prev.some((item) => item.id === row.id)
+                    ? prev
+                    : [...prev, row]
+            return prev.filter((item) => item.id !== row.id)
         })
     }, [])
-
     const handleAllRowSelect = useCallback(
         (checked: boolean, currentRows: Row<ContinentItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
-                setSelectedForms((prevSelected) => {
+                setSelectedItems((prevSelected) => {
                     const prevSelectedIds = new Set(
-                        prevSelected.map((f) => f.id),
+                        prevSelected.map((item) => item.id),
                     )
                     const newRowsToAdd = currentPageRowOriginals.filter(
                         (r) => !prevSelectedIds.has(r.id),
@@ -571,124 +784,146 @@ const Continents = () => {
                 const currentPageRowIds = new Set(
                     currentPageRowOriginals.map((r) => r.id),
                 )
-                setSelectedForms((prevSelected) =>
-                    prevSelected.filter((f) => !currentPageRowIds.has(f.id)),
+                setSelectedItems((prevSelected) =>
+                    prevSelected.filter(
+                        (item) => !currentPageRowIds.has(item.id),
+                    ),
                 )
             }
         },
         [],
     )
 
-    // --- Action Handlers (remain the same, need Redux integration for persistence) ---
-    const handleEdit = useCallback(
-        (form: ContinentItem) => {
-            console.log('Edit item (requires navigation/modal):', form.id)
-            toast.push(
-                <Notification title="Edit Action" type="info">
-                    Edit action for "{form.name}" (ID: {form.id}). Implement
-                    navigation or modal.
-                </Notification>,
-            )
-        },
-        [navigate],
-    )
-
-    const handleDelete = useCallback((formToDelete: ContinentItem) => {
-        console.log(
-            'Delete item (needs Redux action):',
-            formToDelete.id,
-            formToDelete.name,
-        )
-        setSelectedForms((prevSelected) =>
-            prevSelected.filter((form) => form.id !== formToDelete.id),
-        )
-        toast.push(
-            <Notification title="Delete Action" type="warning">
-                Delete action for "{formToDelete.name}" (ID: {formToDelete.id}).
-                Implement Redux deletion.
-            </Notification>,
-        )
-    }, [])
-
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected items (needs Redux action):',
-            selectedForms.map((f) => f.id),
-        )
-        setSelectedForms([])
-        toast.push(
-            <Notification title="Selected Items Delete Action" type="warning">
-                {selectedForms.length} item(s) delete action. Implement Redux
-                deletion.
-            </Notification>,
-        )
-    }, [selectedForms])
-    // --- End Action Handlers ---
-
     const columns: ColumnDef<ContinentItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
             {
-                header: 'Action',
+                header: 'Continent Name',
+                accessorKey: 'name',
+                enableSorting: true,
+            },
+            {
+                header: 'Actions',
                 id: 'action',
                 meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
-                        onDelete={() => handleDelete(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
+                        onDelete={() => handleDeleteClick(props.row.original)}
                     />
                 ),
             },
         ],
-        [handleEdit, handleDelete],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [], 
     )
 
     return (
         <>
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">Continents</h5>
-                        <FormListActionTools
-                            allFormsData={processedDataForCsv}
-                            openAddDrawer={openAddDrawer} // Pass the function as a prop
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h5 className="mb-2 sm:mb-0">Continents</h5>
+                        <Button
+                            variant="solid"
+                            icon={<TbPlus />}
+                            onClick={openAddDrawer}
+                        >
+                            Add New
+                        </Button>
+                    </div>
+                    <ContinentTableTools
+                        onSearchChange={handleSearchChange}
+                        onFilter={openFilterDrawer}
+                        onExport={handleExportData}
+                    />
+                    <div className="mt-4">
+                        <ContinentTable
+                            columns={columns}
+                            data={pageData}
+                            loading={
+                                masterLoadingStatus === 'loading' ||
+                                isSubmitting ||
+                                isDeleting
+                            }
+                            pagingData={{
+                                total: total,
+                                pageIndex: tableData.pageIndex as number,
+                                pageSize: tableData.pageSize as number,
+                            }}
+                            selectedItems={selectedItems}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectChange}
+                            onSort={handleSort}
+                            onRowSelect={handleRowSelect}
+                            onAllRowSelect={handleAllRowSelect}
                         />
                     </div>
-
-                    <div className="mb-4">
-                    <ContinentsTableTools
-                            onSearchChange={handleSearchChange}
-                        />{' '}
-                        {/* Use updated component */}
-                    </div>
-
-                    <FormListTable
-                        columns={columns}
-                        data={pageData}
-                        loading={
-                            localIsLoading || masterLoadingStatus === 'loading'
-                        }
-                        pagingData={{
-                            total: total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedForms={selectedForms}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
                 </AdaptiveCard>
-
-                <FormListSelected
-                    selectedForms={selectedForms}
-                    setSelectedForms={setSelectedForms}
-                    onDeleteSelected={handleDeleteSelected}
-                />
             </Container>
+
+            <ContinentSelectedFooter
+                selectedItems={selectedItems}
+                onDeleteSelected={handleDeleteSelected}
+            />
+
+            <Drawer
+                title="Add Continent"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={closeAddDrawer}
+                            disabled={isSubmitting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            form="addContinentForm"
+                            type="submit"
+                            loading={isSubmitting}
+                            disabled={
+                                !addFormMethods.formState.isValid ||
+                                isSubmitting
+                            }
+                        >
+                            {isSubmitting ? 'Adding...' : 'Save'}
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    id="addContinentForm"
+                    onSubmit={addFormMethods.handleSubmit(onAddContinentSubmit)}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem
+                        label="Continent Name"
+                        invalid={!!addFormMethods.formState.errors.name}
+                        errorMessage={
+                            addFormMethods.formState.errors.name?.message
+                        }
+                    >
+                        <Controller
+                            name="name"
+                            control={addFormMethods.control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    placeholder="Enter Continent Name"
+                                />
+                            )}
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+
             <Drawer
                 title="Edit Continent"
                 isOpen={isEditDrawerOpen}
@@ -696,66 +931,130 @@ const Continents = () => {
                 onRequestClose={closeEditDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={closeEditDrawer}
+                            disabled={isSubmitting}
+                        >
                             Cancel
                         </Button>
                         <Button
                             size="sm"
                             variant="solid"
-                            onClick={() => {
-                                console.log('Updated Continent:', selectedItem);
-                                closeEditDrawer();
-                            }}
+                            form="editContinentForm"
+                            type="submit"
+                            loading={isSubmitting}
+                            disabled={
+                                !editFormMethods.formState.isValid ||
+                                isSubmitting
+                            }
                         >
-                            Save
+                            {isSubmitting ? 'Saving...' : 'Save'}
                         </Button>
                     </div>
                 }
             >
-                <Form size="sm" containerClassName="flex flex-col">
-                    <FormItem label="Continent Name">
-                        <Input
-                            placeholder="Enter Continent Name"
-                            value={selectedItem?.name || ''} // Populate with selected item's name
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '' }), // Handle null case
-                                    name: e.target.value,
-                                }))
-                            }
+                <Form
+                    id="editContinentForm"
+                    onSubmit={editFormMethods.handleSubmit(onEditContinentSubmit)}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem
+                        label="Continent Name"
+                        invalid={!!editFormMethods.formState.errors.name}
+                        errorMessage={
+                            editFormMethods.formState.errors.name?.message
+                        }
+                    >
+                        <Controller
+                            name="name"
+                            control={editFormMethods.control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    placeholder="Enter Continent Name"
+                                />
+                            )}
                         />
                     </FormItem>
                 </Form>
             </Drawer>
+
             <Drawer
-                title="Add New Continent"
-                isOpen={isAddDrawerOpen}
-                onClose={closeAddDrawer}
-                onRequestClose={closeAddDrawer}
+                title="Filter Continents"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
-                            Cancel
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={onClearFilters}
+                        >
+                            Clear
                         </Button>
                         <Button
                             size="sm"
                             variant="solid"
-                            onClick={() => {
-                                console.log('New Continent Added');
-                                closeAddDrawer();
-                            }}
+                            form="filterContinentForm"
+                            type="submit"
                         >
-                            Add
+                            Apply
                         </Button>
                     </div>
                 }
             >
-                <Form size="sm" containerClassName="flex flex-col">
-                    <FormItem label="Continent Name">
-                        <Input placeholder="Enter Continent Name" />
+                <Form
+                    id="filterContinentForm"
+                    onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem label="Filter by Continent Name(s)">
+                        <Controller
+                            name="filterNames"
+                            control={filterFormMethods.control}
+                            render={({ field }) => (
+                                <Select
+                                    isMulti
+                                    placeholder="Select continent names..."
+                                    options={continentNameOptions}
+                                    value={field.value || []}
+                                    onChange={(selectedVal) =>
+                                        field.onChange(selectedVal || [])
+                                    }
+                                />
+                            )}
+                        />
                     </FormItem>
                 </Form>
             </Drawer>
+
+            <ConfirmDialog
+                isOpen={singleDeleteConfirmOpen}
+                type="danger"
+                title="Delete Continent"
+                onClose={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setContinentToDelete(null)
+                }}
+                onRequestClose={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setContinentToDelete(null)
+                }}
+                onCancel={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setContinentToDelete(null)
+                }}
+                onConfirm={onConfirmSingleDelete}
+                loading={isDeleting}
+            >
+                <p>
+                    Are you sure you want to delete the continent "
+                    <strong>{continentToDelete?.name}</strong>"?
+                </p>
+            </ConfirmDialog>
         </>
     )
 }
