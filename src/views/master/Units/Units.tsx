@@ -13,9 +13,7 @@ import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
-import ConfirmDialog, {
-    ConfirmDialogProps,
-} from '@/components/shared/ConfirmDialog' // Import Props
+import ConfirmDialog from '@/components/shared/ConfirmDialog' // Import Props
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'

@@ -42,9 +42,9 @@ export const deletUnitAsync = async (unitData: any) => {
 
 export const deleteAllUnitAsync = async (unitData: any) => {
   try {
-    console.log("unitData",unitData);
-    
-    const response = await axiosInstance.post(`${config.apiURL}/master/unit/delete` ,unitData)
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/master/unit/delete`, unitData)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -113,5 +113,16 @@ export const getBrandAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+
+export const getExportMappingsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/other/export_mapping`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 
 
