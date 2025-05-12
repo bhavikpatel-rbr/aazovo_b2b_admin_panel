@@ -16,7 +16,7 @@ import type { StatisticData, Period, StatisticCategory } from '../types'
 import { COLORS } from '@/constants/chart.constant'
 import { Tag } from '@/components/ui'
 import IndiaIcon from "/img/countries/IN.png"
-import { MdOutlineBusinessCenter } from 'react-icons/md'
+import { MdCancel, MdCheckCircle, MdOutlineBusinessCenter } from 'react-icons/md'
 import { DataTable } from '@/components/shared'
 import { FaCircle } from 'react-icons/fa'
 
@@ -129,145 +129,147 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     const isFirstRender = useRef(true)
 
     const companyData = [
-    {
-        name: 'Global Tech Supplies',
-        type: 'Manufacture',
-        interested: 'Sell',
-        category: 'Electronics',
-        brands: ['Apple', 'Samsung'],
-        country: 'India',
-        trustRatio: '87%',
-        successRatio: '87%',
-        noOfMember: 12,
-        wallCount: 3,
-        success: 3,
-        lost: 4,
-        buy: 2,
-        sell: 1,
-        opportunity: 7,
-        offers: 3,
-        demands: 4,
-        leads: 14,
-        deals: 6,
-        risk: 'Low',
-        action: 'View',
-        status: 'Active',
-        progress: 85,
-    },
-    {
-        name: 'Nova Agro Imports',
-        type: 'Distributor',
-        interested: 'Buy',
-        category: 'Agriculture',
-        brands: ['Bayer', 'Syngenta'],
-        country: 'Brazil',
-        trustRatio: '92%',
-        successRatio: '90%',
-        noOfMember: 8,
-        wallCount: 2,
-        success: 5,
-        lost: 1,
-        buy: 3,
-        sell: 0,
-        opportunity: 6,
-        offers: 2,
-        demands: 4,
-        leads: 11,
-        deals: 7,
-        risk: 'Very Low',
-        action: 'View',
-        status: 'Active',
-        progress: 78,
-    },
-    {
-        name: 'IronShield Industries',
-        type: 'Manufacturer',
-        interested: 'Sell',
-        category: 'Metals',
-        brands: ['JSW', 'Tata Steel'],
-        country: 'India',
-        trustRatio: '80%',
-        successRatio: '76%',
-        noOfMember: 15,
-        wallCount: 4,
-        success: 6,
-        lost: 3,
-        buy: 0,
-        sell: 4,
-        opportunity: 9,
-        offers: 5,
-        demands: 4,
-        leads: 18,
-        deals: 9,
-        risk: 'Medium',
-        action: 'View',
-        status: 'Pending',
-        progress: 68,
-    },
-    {
-        name: 'Medico HealthCare Pvt Ltd',
-        type: 'Retailer',
-        interested: 'Buy',
-        category: 'Pharmaceuticals',
-        brands: ['Cipla', 'Dr. Reddy'],
-        country: 'India',
-        trustRatio: '85%',
-        successRatio: '82%',
-        noOfMember: 6,
-        wallCount: 1,
-        success: 2,
-        lost: 2,
-        buy: 2,
-        sell: 0,
-        opportunity: 4,
-        offers: 1,
-        demands: 3,
-        leads: 6,
-        deals: 3,
-        risk: 'Low',
-        action: 'View',
-        status: 'Active',
-        progress: 71,
-    },
-    {
-        name: 'AutoTech Exporters Ltd',
-        type: 'Exporter',
-        interested: 'Sell',
-        category: 'Automobile Parts',
-        brands: ['Bosch', 'Denso'],
-        country: 'Germany',
-        trustRatio: '90%',
-        successRatio: '88%',
-        noOfMember: 10,
-        wallCount: 2,
-        success: 7,
-        lost: 2,
-        buy: 1,
-        sell: 5,
-        opportunity: 10,
-        offers: 6,
-        demands: 4,
-        leads: 20,
-        deals: 12,
-        risk: 'Very Low',
-        action: 'View',
-        status: 'Inactive',
-        progress: 89,
-    },
-];
-
+        {
+            name: 'Global Tech Supplies',
+            type: 'Manufacture',
+            interested: 'Sell',
+            category: 'Electronics',
+            brands: ['Apple', 'Samsung'],
+            country: 'India',
+            trustRatio: '87%',
+            successRatio: '87%',
+            noOfMember: 12,
+            wallCount: 3,
+            success: 3,
+            lost: 4,
+            buy: 2,
+            sell: 1,
+            opportunity: 7,
+            offers: 3,
+            demands: 4,
+            leads: 14,
+            deals: 6,
+            risk: 'Low',
+            action: 'View',
+            status: 'Active',
+            progress: 85,
+        },
+        {
+            name: 'Nova Agro Imports',
+            type: 'Distributor',
+            interested: 'Buy',
+            category: 'Agriculture',
+            brands: ['Bayer', 'Syngenta'],
+            country: 'Brazil',
+            trustRatio: '92%',
+            successRatio: '90%',
+            noOfMember: 8,
+            wallCount: 2,
+            success: 5,
+            lost: 1,
+            buy: 3,
+            sell: 0,
+            opportunity: 6,
+            offers: 2,
+            demands: 4,
+            leads: 11,
+            deals: 7,
+            risk: 'Very Low',
+            action: 'View',
+            status: 'Active',
+            progress: 78,
+        },
+        {
+            name: 'IronShield Industries',
+            type: 'Manufacturer',
+            interested: 'Sell',
+            category: 'Metals',
+            brands: ['JSW', 'Tata Steel'],
+            country: 'India',
+            trustRatio: '80%',
+            successRatio: '76%',
+            noOfMember: 15,
+            wallCount: 4,
+            success: 6,
+            lost: 3,
+            buy: 0,
+            sell: 4,
+            opportunity: 9,
+            offers: 5,
+            demands: 4,
+            leads: 18,
+            deals: 9,
+            risk: 'Medium',
+            action: 'View',
+            status: 'Pending',
+            progress: 68,
+        },
+        {
+            name: 'Medico HealthCare Pvt Ltd',
+            type: 'Retailer',
+            interested: 'Buy',
+            category: 'Pharmaceuticals',
+            brands: ['Cipla', 'Dr. Reddy'],
+            country: 'India',
+            trustRatio: '85%',
+            successRatio: '82%',
+            noOfMember: 6,
+            wallCount: 1,
+            success: 2,
+            lost: 2,
+            buy: 2,
+            sell: 0,
+            opportunity: 4,
+            offers: 1,
+            demands: 3,
+            leads: 6,
+            deals: 3,
+            risk: 'Low',
+            action: 'View',
+            status: 'Active',
+            progress: 71,
+        },
+        {
+            name: 'AutoTech Exporters Ltd',
+            type: 'Exporter',
+            interested: 'Sell',
+            category: 'Automobile Parts',
+            brands: ['Bosch', 'Denso'],
+            country: 'Germany',
+            trustRatio: '90%',
+            successRatio: '88%',
+            noOfMember: 10,
+            wallCount: 2,
+            success: 7,
+            lost: 2,
+            buy: 1,
+            sell: 5,
+            opportunity: 10,
+            offers: 6,
+            demands: 4,
+            leads: 20,
+            deals: 12,
+            risk: 'Very Low',
+            action: 'View',
+            status: 'Inactive',
+            progress: 89,
+        },
+    ];
 
     const companyColumns = [
         {
             header: 'Company Info',
             accessorKey: 'name',
-            enableSorting:true,
+            enableSorting: true,
             size: 230,
             cell: props => (
                 <div className='flex flex-col gap-1'>
-                    <h6 className="text-sm">{props.getValue()}</h6>
+                    <h6 className="text-xs">{props.getValue()}</h6>
                     <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Type:</h6> {props.row.original.type}
+                        ({"Phone/Email"})
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Phone :</h6> {props.row.original.type}
                     </span>
                     <span className="text-xs flex gap-1">
                         <h6 className="text-xs">Country:</h6> {props.row.original.country}
@@ -305,17 +307,19 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                     <span className="flex gap-1">
                         <h6 className="text-sm">Members:</h6> {props.row.original.noOfMember}
                     </span>
-                    <div className='flex gap-1'>
-                        <Tooltip title="GST" className='text-xs'><FaCircle className='text-green-500'/></Tooltip>
-                        <Tooltip title="PAN" className='text-xs'><FaCircle className='text-red-500'/></Tooltip>
-                        <Tooltip title="KYC" className='text-xs'><FaCircle className='text-green-500'/></Tooltip>
-                        <Tooltip title="Bank" className='text-xs'><FaCircle className='text-red-500'/></Tooltip>
-                        <Tooltip title="Certificates" className='text-xs'><FaCircle className='text-green-500'/></Tooltip>
+                    <div className='flex gap-1 items-center'>
+                        <Tooltip title="KYC Verification" className='text-xs'>
+                            <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
+                                <MdCheckCircle className='text-green-500 text-lg' />
+                                <span>13/27</span>
+                            </div>
+                        </Tooltip>
+                        <Tooltip title="Enable Billing" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
                     </div>
                     <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
-                        <div className='h-1.5 w-28 rounded-full bg-gray-400'>
-                            <div className={`font-bold rounded-full h-1.5 bg-blue-400 heading-text mt-1`}
-                                style={{width : props.row.original.progress+"%"}}
+                        <div className='h-1.5 w-28 rounded-full bg-gray-300'>
+                            <div className={`font-bold rounded-full h-1.5 bg-blue-500 heading-text mt-1`}
+                                style={{ width: props.row.original.progress + "%" }}
                             ></div>
                         </div>
                     </Tooltip>
@@ -380,57 +384,962 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                     <span className="flex gap-1 text-xs">
                         <h6 className="text-xs">Trust:</h6> {props.getValue()}
                     </span>
+                    <span className="flex gap-1 text-xs flex-wrap">
+                        <h6 className="text-xs">Avg Score:</h6> 80%
+                    </span>
                 </div>
             )
         },
-        
+
     ]
 
-    // const companyData = [
-    //     {   rank: 1, company: "ABC Exports Pvt Ltd",type: "Seller",deals:218,transactionValue: "3.8 Cr",
-    //         rating:4.8, kycStatus: "Verified", lastOrder: "08 May 2025", contactPerson : "Raj Mehta"
-    //     },
-    //     {   rank: 2, company: "Zed Global Traders",type: "Buyer",deals:205,transactionValue: "3.2 Cr",
-    //         rating:4.5, kycStatus: "Verified", lastOrder: "06 May 2025", contactPerson : "Kavita Sharma"
-    //     },
-    //     {   rank: 3, company: "TradeLink Logistics",type: "Both",deals:190,transactionValue: "2.7 Cr",
-    //         rating:4.6, kycStatus: "Verified", lastOrder: "07 May 2025", contactPerson : "S. Iqbal"
-    //     },
-    //     {   rank: 4, company: "DuraSteel Supplies",type: "Seller",deals:170,transactionValue: "2.4 Cr",
-    //         rating:4.4, kycStatus: "Pending", lastOrder: "05 May 2025", contactPerson : "Nidhi Bansal"
-    //     },
-    //     {   rank: 5, company: "Nova Wholesale Hub",type: "Buyer",deals:165,transactionValue: "2.0 Cr",
-    //         rating:4.3, kycStatus: "Verified", lastOrder: "04 May 2025", contactPerson : "Akshay Jha"
-    //     },
-    // ]
+    const memberData = [
+        {
+            name: 'Global Tech Supplies',
+            type: 'Manufacture',
+            interested: 'Sell',
+            category: 'Electronics',
+            brands: ['Apple', 'Samsung'],
+            country: 'India',
+            trustRatio: '87%',
+            successRatio: '87%',
+            noOfMember: 12,
+            wallCount: 3,
+            success: 3,
+            lost: 4,
+            buy: 2,
+            sell: 1,
+            opportunity: 7,
+            offers: 3,
+            demands: 4,
+            leads: 14,
+            deals: 6,
+            risk: 'Low',
+            action: 'View',
+            status: 'Active',
+            progress: 85,
+        },
+        {
+            name: 'Nova Agro Imports',
+            type: 'Distributor',
+            interested: 'Buy',
+            category: 'Agriculture',
+            brands: ['Bayer', 'Syngenta'],
+            country: 'Brazil',
+            trustRatio: '92%',
+            successRatio: '90%',
+            noOfMember: 8,
+            wallCount: 2,
+            success: 5,
+            lost: 1,
+            buy: 3,
+            sell: 0,
+            opportunity: 6,
+            offers: 2,
+            demands: 4,
+            leads: 11,
+            deals: 7,
+            risk: 'Very Low',
+            action: 'View',
+            status: 'Active',
+            progress: 78,
+        },
+        {
+            name: 'IronShield Industries',
+            type: 'Manufacturer',
+            interested: 'Sell',
+            category: 'Metals',
+            brands: ['JSW', 'Tata Steel'],
+            country: 'India',
+            trustRatio: '80%',
+            successRatio: '76%',
+            noOfMember: 15,
+            wallCount: 4,
+            success: 6,
+            lost: 3,
+            buy: 0,
+            sell: 4,
+            opportunity: 9,
+            offers: 5,
+            demands: 4,
+            leads: 18,
+            deals: 9,
+            risk: 'Medium',
+            action: 'View',
+            status: 'Pending',
+            progress: 68,
+        },
+        {
+            name: 'Medico HealthCare Pvt Ltd',
+            type: 'Retailer',
+            interested: 'Buy',
+            category: 'Pharmaceuticals',
+            brands: ['Cipla', 'Dr. Reddy'],
+            country: 'India',
+            trustRatio: '85%',
+            successRatio: '82%',
+            noOfMember: 6,
+            wallCount: 1,
+            success: 2,
+            lost: 2,
+            buy: 2,
+            sell: 0,
+            opportunity: 4,
+            offers: 1,
+            demands: 3,
+            leads: 6,
+            deals: 3,
+            risk: 'Low',
+            action: 'View',
+            status: 'Active',
+            progress: 71,
+        },
+        {
+            name: 'AutoTech Exporters Ltd',
+            type: 'Exporter',
+            interested: 'Sell',
+            category: 'Automobile Parts',
+            brands: ['Bosch', 'Denso'],
+            country: 'Germany',
+            trustRatio: '90%',
+            successRatio: '88%',
+            noOfMember: 10,
+            wallCount: 2,
+            success: 7,
+            lost: 2,
+            buy: 1,
+            sell: 5,
+            opportunity: 10,
+            offers: 6,
+            demands: 4,
+            leads: 20,
+            deals: 12,
+            risk: 'Very Low',
+            action: 'View',
+            status: 'Inactive',
+            progress: 89,
+        },
+    ];
 
-    // const companyColumns = [
-    //     {   header: '🏆 Rank',accessorKey: 'rank', enableSorting: false, size: 80, 
-    //         cell : (props) => <span className='text-center block'>{props.getValue(0)}</span>
-    //     },
-    //     {   header: '🏢 Company',accessorKey: 'company', enableSorting: false, size: 150},
-    //     {   header: '📂 Type',accessorKey: 'type', enableSorting: false, size: 90, meta : {HeaderClass : "text-center"},
-    //         cell : (props) => <span className='text-center block'>{props.getValue(0)}</span>
-    //     },
-    //     {   header: '📦 Deals',accessorKey: 'deals', enableSorting: false, size: 80, meta : {HeaderClass : "text-center"},
-    //         cell : (props) => <span className='text-center block'>{props.getValue(0)}</span>
-    //     },
-    //     { header: '💰 Transaction',accessorKey: 'transactionValue', enableSorting: false, meta : {HeaderClass : "text-center"},
-    //         cell : (props) => <span className='text-center block'>{props.getValue(0)}</span>
-    //     },
-    //     { header: '⭐ Rating',accessorKey: 'rating', enableSorting: false, size: 80,
-    //         cell : (props) => <span className='text-center block'>{props.getValue(0)}</span>
-    //     },
-    //     { header: '🧾 KYC',accessorKey: 'kycStatus', enableSorting: false, size: 70, meta : {HeaderClass : "text-center"},
-    //         cell : (props) => <span className='text-center block'>{props.getValue(0)}</span>
-    //     },
-    //     { header: '📅 Last Order',accessorKey: 'lastOrder', enableSorting: false, size: 120,  meta : {HeaderClass : "text-center"},
-    //         cell : (props) => <span className='text-center block'>{props.getValue(0)}</span>
-    //     },
-    //     { header: '👤 Contact Person',accessorKey: 'contactPerson', enableSorting: false,
-    //         cell : (props) => <span className=' block'>{props.getValue(0)}</span>
-    //     },
-    // ]
+    const memberColumns = [
+        {
+            header: 'Member Info',
+            accessorKey: 'name',
+            enableSorting: true,
+            size: 230,
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <h6 className="text-xs">{props.getValue()}</h6>
+                    <span className="text-xs flex">
+                        <h6 className="text-xs"></h6> ({"XYZ Company Name"})
+                    </span>
+                    <span className="text-xs flex gap-1">9582850192</span>
+                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
+                    <span className="text-xs">
+                        <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
+                    </span>
+                    {/* <span >Status: {props.row.original.status}</span> */}
+                </div>
+            )
+        },
+        {
+            header: 'Preferences',
+            accessorKey: 'brands',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
+                            return <span>{val}, </span>
+                        })}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Team & Verified', accessorKey: 'verified',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-black dark:text-white text-xs font-semibold">INS - PREMIUM</span>
+                    <div className='flex gap-1 items-center'>
+                        <Tooltip title="KYC Verification" className='text-xs'>
+                            <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
+                                <MdCheckCircle className='text-green-500 text-lg' />
+                                <span>13/27</span>
+                            </div>
+                        </Tooltip>
+                        <Tooltip title="Email Verification" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
+                    </div>
+                    <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
+                        <div className='h-1.5 w-28 rounded-full bg-gray-300'>
+                            <div className={`font-bold rounded-full h-1.5 bg-blue-500 heading-text mt-1`}
+                                style={{ width: props.row.original.progress + "%" }}
+                            ></div>
+                        </div>
+                    </Tooltip>
+                </div>
+            )
+        },
+        {
+            header: 'Wall Count', accessorKey: 'wallCount',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Total:</h6> {props.getValue()}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Buy:</h6> {props.row.original.buy}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Sell:</h6> {props.row.original.sell}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Opportunities', accessorKey: 'opportunity',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Total:</h6> {props.getValue()}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Offers:</h6> {props.row.original.offers}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Demands:</h6> {props.row.original.demands}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Leads', accessorKey: 'leads',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Total:</h6> {props.getValue()}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Success:</h6> {props.row.original.success}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Lost:</h6> {props.row.original.lost}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Ratio', accessorKey: 'trustRatio',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Success:</h6> {props.row.original.successRatio}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Trust:</h6> {props.getValue()}
+                    </span>
+                    <span className="flex gap-1 text-xs flex-wrap">
+                        <h6 className="text-xs">Activity Score:</h6> 80%
+                    </span>
+                </div>
+            )
+        },
+
+    ]
+
+    const productData = [
+        {
+            name: 'Global Tech Supplies',
+            type: 'Manufacture',
+            interested: 'Sell',
+            category: 'Electronics',
+            brands: ['Apple', 'Samsung'],
+            country: 'India',
+            trustRatio: '87%',
+            successRatio: '87%',
+            noOfMember: 12,
+            wallCount: 3,
+            success: 3,
+            lost: 4,
+            buy: 2,
+            sell: 1,
+            opportunity: 7,
+            offers: 3,
+            demands: 4,
+            leads: 14,
+            deals: 6,
+            risk: 'Low',
+            action: 'View',
+            status: 'Active',
+            progress: 85,
+        },
+        {
+            name: 'Nova Agro Imports',
+            type: 'Distributor',
+            interested: 'Buy',
+            category: 'Agriculture',
+            brands: ['Bayer', 'Syngenta'],
+            country: 'Brazil',
+            trustRatio: '92%',
+            successRatio: '90%',
+            noOfMember: 8,
+            wallCount: 2,
+            success: 5,
+            lost: 1,
+            buy: 3,
+            sell: 0,
+            opportunity: 6,
+            offers: 2,
+            demands: 4,
+            leads: 11,
+            deals: 7,
+            risk: 'Very Low',
+            action: 'View',
+            status: 'Active',
+            progress: 78,
+        },
+        {
+            name: 'IronShield Industries',
+            type: 'Manufacturer',
+            interested: 'Sell',
+            category: 'Metals',
+            brands: ['JSW', 'Tata Steel'],
+            country: 'India',
+            trustRatio: '80%',
+            successRatio: '76%',
+            noOfMember: 15,
+            wallCount: 4,
+            success: 6,
+            lost: 3,
+            buy: 0,
+            sell: 4,
+            opportunity: 9,
+            offers: 5,
+            demands: 4,
+            leads: 18,
+            deals: 9,
+            risk: 'Medium',
+            action: 'View',
+            status: 'Pending',
+            progress: 68,
+        },
+        {
+            name: 'Medico HealthCare Pvt Ltd',
+            type: 'Retailer',
+            interested: 'Buy',
+            category: 'Pharmaceuticals',
+            brands: ['Cipla', 'Dr. Reddy'],
+            country: 'India',
+            trustRatio: '85%',
+            successRatio: '82%',
+            noOfMember: 6,
+            wallCount: 1,
+            success: 2,
+            lost: 2,
+            buy: 2,
+            sell: 0,
+            opportunity: 4,
+            offers: 1,
+            demands: 3,
+            leads: 6,
+            deals: 3,
+            risk: 'Low',
+            action: 'View',
+            status: 'Active',
+            progress: 71,
+        },
+        {
+            name: 'AutoTech Exporters Ltd',
+            type: 'Exporter',
+            interested: 'Sell',
+            category: 'Automobile Parts',
+            brands: ['Bosch', 'Denso'],
+            country: 'Germany',
+            trustRatio: '90%',
+            successRatio: '88%',
+            noOfMember: 10,
+            wallCount: 2,
+            success: 7,
+            lost: 2,
+            buy: 1,
+            sell: 5,
+            opportunity: 10,
+            offers: 6,
+            demands: 4,
+            leads: 20,
+            deals: 12,
+            risk: 'Very Low',
+            action: 'View',
+            status: 'Inactive',
+            progress: 89,
+        },
+    ];
+
+    const productColumns = [
+        {
+            header: 'Product Info',
+            accessorKey: 'name',
+            enableSorting: true,
+            size: 230,
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    {/* Product Name */}
+                    <div className="flex items-start gap-2">
+                        <Avatar src={IndiaIcon} size="sm" />
+                        <div>
+                            <h6 className="text-xs mb-0.5">Product Name</h6>
+                            <span className="text-xs">
+                                <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
+                            </span>
+                        </div>
+                    </div>
+                    {/* <span >Status: {props.row.original.status}</span> */}
+                </div>
+            )
+        },
+        {
+            header: 'Brand/Category',
+            accessorKey: 'brand',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
+                            return <span>{val}, </span>
+                        })}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Subcategory:</h6> {props.row.original.interested}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Wall Count', accessorKey: 'wallCount',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Total:</h6> {props.getValue()}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Buy:</h6> {props.row.original.buy}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Sell:</h6> {props.row.original.sell}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Opportunities', accessorKey: 'opportunity',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Total:</h6> {props.getValue()}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Offers:</h6> {props.row.original.offers}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Demands:</h6> {props.row.original.demands}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Leads', accessorKey: 'leads',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Total:</h6> {props.getValue()}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Success:</h6> {props.row.original.success}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Lost:</h6> {props.row.original.lost}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Ratio', accessorKey: 'trustRatio',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Success:</h6> {props.row.original.successRatio}
+                    </span>
+                    <span className="flex gap-1 text-xs flex-wrap">
+                        <h6 className="text-xs">Engagement:</h6> 80%
+                    </span>
+                </div>
+            )
+        },
+
+    ]
+
+    const wallListingData = [
+        {
+            name: 'Global Tech Supplies',
+            type: 'Manufacture',
+            interested: 'Sell',
+            category: 'Electronics',
+            brands: ['Apple', 'Samsung'],
+            country: 'India',
+            trustRatio: '87%',
+            successRatio: '87%',
+            noOfMember: 12,
+            wallCount: 3,
+            success: 3,
+            lost: 4,
+            buy: 2,
+            sell: 1,
+            opportunity: 7,
+            offers: 3,
+            demands: 4,
+            leads: 14,
+            deals: 6,
+            risk: 'Low',
+            action: 'View',
+            status: 'Active',
+            progress: 85,
+        },
+        {
+            name: 'Nova Agro Imports',
+            type: 'Distributor',
+            interested: 'Buy',
+            category: 'Agriculture',
+            brands: ['Bayer', 'Syngenta'],
+            country: 'Brazil',
+            trustRatio: '92%',
+            successRatio: '90%',
+            noOfMember: 8,
+            wallCount: 2,
+            success: 5,
+            lost: 1,
+            buy: 3,
+            sell: 0,
+            opportunity: 6,
+            offers: 2,
+            demands: 4,
+            leads: 11,
+            deals: 7,
+            risk: 'Very Low',
+            action: 'View',
+            status: 'Active',
+            progress: 78,
+        },
+        {
+            name: 'IronShield Industries',
+            type: 'Manufacturer',
+            interested: 'Sell',
+            category: 'Metals',
+            brands: ['JSW', 'Tata Steel'],
+            country: 'India',
+            trustRatio: '80%',
+            successRatio: '76%',
+            noOfMember: 15,
+            wallCount: 4,
+            success: 6,
+            lost: 3,
+            buy: 0,
+            sell: 4,
+            opportunity: 9,
+            offers: 5,
+            demands: 4,
+            leads: 18,
+            deals: 9,
+            risk: 'Medium',
+            action: 'View',
+            status: 'Pending',
+            progress: 68,
+        },
+        {
+            name: 'Medico HealthCare Pvt Ltd',
+            type: 'Retailer',
+            interested: 'Buy',
+            category: 'Pharmaceuticals',
+            brands: ['Cipla', 'Dr. Reddy'],
+            country: 'India',
+            trustRatio: '85%',
+            successRatio: '82%',
+            noOfMember: 6,
+            wallCount: 1,
+            success: 2,
+            lost: 2,
+            buy: 2,
+            sell: 0,
+            opportunity: 4,
+            offers: 1,
+            demands: 3,
+            leads: 6,
+            deals: 3,
+            risk: 'Low',
+            action: 'View',
+            status: 'Active',
+            progress: 71,
+        },
+        {
+            name: 'AutoTech Exporters Ltd',
+            type: 'Exporter',
+            interested: 'Sell',
+            category: 'Automobile Parts',
+            brands: ['Bosch', 'Denso'],
+            country: 'Germany',
+            trustRatio: '90%',
+            successRatio: '88%',
+            noOfMember: 10,
+            wallCount: 2,
+            success: 7,
+            lost: 2,
+            buy: 1,
+            sell: 5,
+            opportunity: 10,
+            offers: 6,
+            demands: 4,
+            leads: 20,
+            deals: 12,
+            risk: 'Very Low',
+            action: 'View',
+            status: 'Inactive',
+            progress: 89,
+        },
+    ];
+
+    const wallListingColumns = [
+        {
+            header: 'Member Info',
+            accessorKey: 'name',
+            enableSorting: true,
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <h6 className="text-xs">{props.getValue()}</h6>
+                    <span className="text-xs flex">
+                        <h6 className="text-xs"></h6> ({"XYZ Company Name"})
+                    </span>
+                    <span className="text-xs flex gap-1">9582850192</span>
+                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
+                </div>
+            )
+        },
+        {
+            header: 'Frequent Walls',
+            accessorKey: 'brand',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="text-xs flex gap-1">
+                        <b className="text-xs text-black dark:text-white font-semibold">Brands:</b> {props.row.original.brands?.map(val => {
+                            return <span>{val}, </span>
+                        })}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <b className="text-xs text-black dark:text-white font-semibold">Category:</b> {props.row.original.category}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <b className="text-xs text-black dark:text-white font-semibold">Subcategory:</b> {props.row.original.interested}
+                    </span>
+                    <span className="text-xs  gap-1">
+                        <b className="text-xs text-black dark:text-white font-semibold">Products: </b>Iphone 14, Samsung s25
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Wall Count & Qty', accessorKey: 'wallCount',
+            cell: props => (
+                <div className='flex flex-col gap-0.5'>
+                    <span className="text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold">Total Count:</b> {props.getValue()}
+                    </span>
+                    <span className="text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Total Qty:</b> {props.getValue()}
+                    </span>
+                    <span className="text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold">Buy Count:</b> {props.row.original.buy}
+                    </span>
+                    <span className="text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Buy Qty:</b> {props.row.original.buy}
+                    </span>
+                    <span className="text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold">Sell Count:</b> {props.row.original.sell}
+                    </span>
+                    <span className="text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Sell Qty:</b> {props.row.original.sell}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Connect', accessorKey: 'leads',
+            cell: props => (
+                <div className='flex flex-col gap-0.5'>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold">For Buy: </b> {props.getValue()}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold">For Sell: </b>{props.row.original.success}
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold">Enquiry:</b> {props.row.original.lost} 
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Share:</b> {props.row.original.lost} 
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Bookmark:</b> {props.row.original.lost} 
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Opportunity', accessorKey: 'verified',
+            cell: props => (
+                <div className='flex flex-col gap-0.5'>
+                    <div className='flex gap-1 items-center mb-0.5'>
+                        <Tooltip title="High" className='text-xs'>
+                            <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
+                                <MdCheckCircle className='text-green-500 text-lg' />
+                                <span>13/27</span>
+                            </div>
+                        </Tooltip>
+                    </div>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Offers:</b> {props.row.original.offers} 
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Demands:</b> {props.row.original.demands} 
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Leads:</b> {props.row.original.leads} 
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <b className="text-xs text-black dark:text-white font-semibold"> Deals:</b> {props.row.original.deals} 
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Ratio', accessorKey: 'trustRatio',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs flex-wrap">
+                        <h6 className="text-xs">Approach:</h6> 80%
+                    </span>
+                    <span className="flex gap-1 text-xs">
+                        <h6 className="text-xs">Conversion:</h6> {props.row.original.successRatio}
+                    </span>
+                    <span className="flex gap-1 text-xs flex-wrap">
+                        Minimum Buying strong seller profile, focus on selling
+                    </span>
+                </div>
+            )
+        },
+
+    ]
+    const partnerColumns = [
+        {
+            header: 'Partner Info',
+            accessorKey: 'name',
+            enableSorting: true,
+            size: 230,
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <h6 className="text-xs">{props.getValue()}</h6>
+                    <span className="text-xs flex">
+                        <h6 className="text-xs"></h6> ({"XYZ Company Name"})
+                    </span>
+                    <span className="text-xs flex gap-1">{props.row.original.type}</span>
+                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
+                    <span className="text-xs flex gap-1">India</span>
+                </div>
+            )
+        },
+        {
+            header: 'Preferences',
+            accessorKey: 'brands',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
+                            return <span>{val}, </span>
+                        })}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Status',
+            accessorKey: 'status',
+            cell: props => (
+                <span className="text-xs">
+                    <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
+                </span>
+            )
+        },
+        {
+            header: 'Verified',
+            accessorKey: 'status',
+            size: 100,
+            cell: props => (
+                <span className="text-xs">
+                    <Tag className={statusColor[props.row.original.status]}> Yes</Tag>
+                </span>
+            )
+        },
+        {
+            header: 'Team',
+            accessorKey: 'status',
+            size: 80,
+            cell: props => (
+                <span className="text-xs">7</span>
+            )
+        },
+        {
+            header: 'Joined Date',
+            accessorKey: 'status',
+            cell: props => (
+                <span className="text-xs">10 May, 2025</span>
+            )
+        },
+        {
+            header: 'Score', accessorKey: 'trustRatio',
+            size: 180,
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="flex gap-1 text-xs flex-wrap">
+                        <h6 className="text-xs">Trust Score:</h6> 80%
+                    </span>
+                    <span className="flex gap-1 text-xs flex-wrap">
+                        Minimum Buying strong seller profile, focus on selling
+                    </span>
+                </div>
+            )
+        },
+
+    ]
+    const teamColumns = [
+        {
+            header: 'Team Info',
+            accessorKey: 'name',
+            enableSorting: true,
+            size: 190,
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <h6 className="text-xs">{props.getValue()}</h6>
+                    <span className="text-xs flex">
+                        <h6 className="text-xs"></h6> {"IT Department"}
+                    </span>
+                    <span className="text-xs flex gap-1">Frontend Developer</span>
+                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
+                    <span className="text-xs flex gap-1">+91 8923572494</span>
+                </div>
+            )
+        },
+        {
+            header: 'Assigned',
+            accessorKey: 'brands',
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
+                            return <span>{val}, </span>
+                        })}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Subcategory:</h6> {props.row.original.subcategory}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Country:</h6> {props.row.original.country}
+                    </span>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Product:</h6> {props.row.original.product}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: 'Status',
+            accessorKey: 'status',
+            cell: props => (
+                <span className="text-xs">
+                    <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
+                    <span className="text-xs">
+                        <h6 className="text-xs mt-1">Joining Date:</h6> 10 Mar, 2025
+                    </span>
+                    <Tooltip title="Upcoming Birthday">
+                        <Tag className="bg-red-500 text-[10px] text-white">Birthday : 23 March</Tag>
+                    </Tooltip>
+                </span>
+            )
+        },
+        {
+            header: 'Activity',
+            accessorKey: 'status',
+            size: 100,
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="text-xs">
+                       <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
+                    </span>
+                    <span className="text-xs flex gap-0.5">
+                        <h6 className="text-xs">Leaves:</h6> 2
+                    </span>
+                    <span className="text-xs flex gap-0.5">
+                        <h6 className="text-xs">Present :</h6> 23
+                    </span>
+                    
+                </div>
+            )
+        },
+        {
+            header: 'Performance',
+            accessorKey: 'status',
+            size: 200,
+            cell: props => (
+                <div className='flex flex-col gap-1'>
+                    <span className="text-xs flex ">
+                        <h6 className="text-xs">Completed Task :</h6> 23
+                    </span>
+                    <span className="text-xs flex flex-wrap">
+                        <h6 className="text-xs">Pending Task :</h6> 4
+                    </span>
+                    <span className="text-xs flex flex-wrap">
+                        <h6 className="text-xs">Listing (T/S/B) :</h6>
+                        <span> 23/12/11</span>
+                    </span>
+                    <span className="text-xs flex flex-wrap">
+                        <h6 className="text-xs">Offer & Demand (T/O/D) :</h6>
+                        <span> 23/12/11</span>
+                    </span>
+                    <span className="text-xs flex flex-wrap">
+                        <h6 className="text-xs">Lead (T/S/L) :</h6>
+                        <span> 14/4/10</span>
+                    </span>
+                    <span className="text-xs flex flex-wrap">
+                        <h6 className="text-xs">Performance Score : </h6>
+                        <span> 79%</span>
+                    </span>
+                </div>
+            )
+        },
+
+    ]
 
     useEffect(() => {
         if (!sideNavCollapse && isFirstRender.current) {
@@ -639,14 +1548,15 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             />
                         </div>
 
+                        {/* Company Starts */}
                         {selectedCategory === 'Companies' && (
                             <div>
-                                <div className='flex gap-2 justify-between mt-4'>
+                                <div className='lg:flex  gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <h3>22%</h3>
                                     </div>
-                                    <div className="pl-4 flex items-center gap-1 w-full">
+                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Total"
                                             percent={20}
@@ -711,26 +1621,557 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 </div>
 
                                 <div className='mt-8 block  gap-2'>
-                                    <h6 className='mb-6'>Company Leaderboard</h6>
+                                    <div className='flex justify-between items-center'>
+                                        <h6 className='mb-6'>Company Leaderboard</h6>
+                                        <div className='flex gap-2 items-center text-sm'>
+                                            <h6 className='text-sm'>Average Score</h6>
+                                            <Select
+                                                className="min-w-[140px]"
+                                                size="sm"
+                                                defaultValue={{ label: "All", value: "All" }}
+                                                options={[
+                                                    { label: "75% - 100%", value: "75-100" },
+                                                    { label: "50% - 74%", value: "50-74" },
+                                                    { label: "25% - 49%", value: "25-49" },
+                                                    { label: "0% - 24%", value: "0-24" },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
                                     <DataTable
                                         columns={companyColumns}
                                         data={companyData}
                                     // loading={isLoading}
                                     />
+
+                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
+                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
                                 </div>
                             </div>
 
                         )}
+                        {/* Company Ends */}
+
+                        {/* Members  */}
                         {selectedCategory === 'Members' && (
-                            <div className='flex gap-2 w-full mt-4'>
+                            <div>
+                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                        <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
+                                        <h3>22%</h3>
+                                    </div>
+                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
+                                        <Bar
+                                            field="Total"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Verified"
+                                            percent={20}
+                                            color='text-[#2ecc71]'
+                                            className="bg-[#2ecc71] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Unverified"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Active"
+                                            percent={20}
+                                            color='text-[#28a745]'
+                                            className="bg-[#28a745] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Inactive"
+                                            percent={28}
+                                            color='text-[#6c757d]'
+                                            className="bg-[#6c757d] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Listers"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="New Lister"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Zero Listers"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Activity Score"
+                                            percent={20}
+                                            color='text-gray-500'
+                                            className="bg-gray-500 dark:opacity-70"
+                                        />
+                                    </div>
+                                </div>
 
+                                <div className='mt-8 block  gap-2'>
+                                    <div className='flex justify-between items-center'>
+                                        <h6 className='mb-6'>Members Leaderboard</h6>
+                                        <div className='flex gap-2 items-center text-sm'>
+                                            <h6 className='text-sm'>Activity Score</h6>
+                                            <Select
+                                                className="min-w-[140px]"
+                                                size="sm"
+                                                defaultValue={{ label: "All", value: "All" }}
+                                                options={[
+                                                    { label: "75% - 100%", value: "75-100" },
+                                                    { label: "50% - 74%", value: "50-74" },
+                                                    { label: "25% - 49%", value: "25-49" },
+                                                    { label: "0% - 24%", value: "0-24" },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                    <DataTable
+                                        columns={memberColumns}
+                                        data={memberData}
+                                    // loading={isLoading}
+                                    />
+
+                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
+                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
+                                </div>
                             </div>
                         )}
+                        {/* Members Ends */}
+
+                        {/* Products  */}
                         {selectedCategory === 'Products' && (
-                            <div className='flex gap-2 w-full mt-4'>
+                            <div>
+                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                        <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
+                                        <h3>22%</h3>
+                                    </div>
+                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
+                                        <Bar
+                                            field="Total"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Active"
+                                            percent={20}
+                                            color='text-[#28a745]'
+                                            className="bg-[#28a745] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Inactive"
+                                            percent={28}
+                                            color='text-[#6c757d]'
+                                            className="bg-[#6c757d] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Categories(3/5)"
+                                            percent={20}
+                                            color='text-[#2ecc71]'
+                                            className="bg-[#2ecc71] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Brands(2/6)"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Products (Wall)"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Products (Leads)"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Opportunity"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Activity Score"
+                                            percent={20}
+                                            color='text-gray-500'
+                                            className="bg-gray-500 dark:opacity-70"
+                                        />
+                                    </div>
+                                </div>
 
+                                <div className='mt-8 block  gap-2'>
+                                    <div className='flex justify-between items-center'>
+                                        <h6 className='mb-6'>Products Leaderboard</h6>
+                                        <div className='flex gap-2 items-center text-sm'>
+                                            <h6 className='text-sm'>Engagement Score</h6>
+                                            <Select
+                                                className="min-w-[140px]"
+                                                size="sm"
+                                                defaultValue={{ label: "All", value: "All" }}
+                                                options={[
+                                                    { label: "75% - 100%", value: "75-100" },
+                                                    { label: "50% - 74%", value: "50-74" },
+                                                    { label: "25% - 49%", value: "25-49" },
+                                                    { label: "0% - 24%", value: "0-24" },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                    <DataTable
+                                        columns={productColumns}
+                                        data={productData}
+                                    // loading={isLoading}
+                                    />
+
+                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
+                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
+                                </div>
                             </div>
                         )}
+                        {/* Products Ends */}
+
+                        {/* Wall Listing  */}
+                        {selectedCategory === 'Wall Listings' && (
+                            <div>
+                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                        <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
+                                        <h3>22%</h3>
+                                    </div>
+                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
+                                        <Bar
+                                            field="Total"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Buy"
+                                            percent={20}
+                                            color='text-[#28a745]'
+                                            className="bg-[#28a745] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Sell"
+                                            percent={28}
+                                            color='text-[#6c757d]'
+                                            className="bg-[#6c757d] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Active"
+                                            percent={20}
+                                            color='text-[#2ecc71]'
+                                            className="bg-[#2ecc71] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Inactive"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Pending"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Reject"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Category"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Subcat"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Brand"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Product"
+                                            percent={20}
+                                            color='text-gray-500'
+                                            className="bg-gray-500 dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Members"
+                                            percent={20}
+                                            color='text-gray-500'
+                                            className="bg-gray-500 dark:opacity-70"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className='mt-8 block  gap-2'>
+                                    <div className='flex justify-between items-center'>
+                                        <h6 className='mb-6'>Wall Listings Leaderboard</h6>
+                                        <div className='flex gap-2 items-center text-sm'>
+                                            <h6 className='text-sm'>Conversion Ratio</h6>
+                                            <Select
+                                                className="min-w-[140px]"
+                                                size="sm"
+                                                defaultValue={{ label: "All", value: "All" }}
+                                                options={[
+                                                    { label: "High", value: "" },
+                                                    { label: "Medium", value: "" },
+                                                    { label: "Low", value: "" },
+                                                    { label: "High Buyers", value: "" },
+                                                    { label: "Pure Seller", value: "" },
+                                                    { label: "Balanced", value: "" },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                    <DataTable
+                                        columns={wallListingColumns}
+                                        data={wallListingData}
+                                    // loading={isLoading}
+                                    />
+
+                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
+                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
+                                </div>
+                            </div>
+                        )}
+                        {/* Wall Listing Ends */}
+                        {/* Partners  */}
+                        {selectedCategory === 'Partners' && (
+                            <div>
+                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                        <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
+                                        <h3>22%</h3>
+                                    </div>
+                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
+                                        <Bar
+                                            field="Total"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Verified"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Active"
+                                            percent={20}
+                                            color='text-[#2ecc71]'
+                                            className="bg-[#2ecc71] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Inactive"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                         <Bar
+                                            field="Pending"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Blocked"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Category"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Type"
+                                            percent={20}
+                                            color='text-[#28a745]'
+                                            className="bg-[#28a745] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Recent"
+                                            percent={28}
+                                            color='text-[#6c757d]'
+                                            className="bg-[#6c757d] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="International"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="National"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className='mt-8 block  gap-2'>
+                                    <div className='flex justify-between items-center'>
+                                        <h6 className='mb-6'>Partners Leaderboard</h6>
+                                        <div className='flex gap-2 items-center text-sm'>
+                                            <h6 className='text-sm'>Trust Score</h6>
+                                            <Select
+                                                className="min-w-[140px]"
+                                                size="sm"
+                                                defaultValue={{ label: "All", value: "All" }}
+                                                options={[
+                                                    { label: "75% - 100%", value: "75-100" },
+                                                    { label: "50% - 74%", value: "50-74" },
+                                                    { label: "25% - 49%", value: "25-49" },
+                                                    { label: "0% - 24%", value: "0-24" },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                    <DataTable
+                                        columns={partnerColumns}
+                                        data={wallListingData}
+                                    // loading={isLoading}
+                                    />
+
+                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
+                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
+                                </div>
+                            </div>
+                        )}
+                        {/* Partners */}
+                        {/* Teams  */}
+                        {selectedCategory === 'Teams' && (
+                            <div>
+                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                        <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
+                                        <h3>22%</h3>
+                                    </div>
+                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
+                                        <Bar
+                                            field="Total"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Active"
+                                            percent={20}
+                                            color='text-[#2ecc71]'
+                                            className="bg-[#2ecc71] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Inactive"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                         <Bar
+                                            field="On Leave"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Unapproved"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="New Joinee"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Resigned"
+                                            percent={20}
+                                            color='text-[#28a745]'
+                                            className="bg-[#28a745] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Departments"
+                                            percent={28}
+                                            color='text-[#6c757d]'
+                                            className="bg-[#6c757d] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Task"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Performance"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className='mt-8 block  gap-2'>
+                                    <div className='flex justify-between items-center'>
+                                        <h6 className='mb-6'>Team Leaderboard</h6>
+                                        <div className='flex gap-2 items-center text-sm'>
+                                            <h6 className='text-sm'>Performance Score</h6>
+                                            <Select
+                                                className="min-w-[140px]"
+                                                size="sm"
+                                                defaultValue={{ label: "All", value: "All" }}
+                                                options={[
+                                                    { label: "75% - 100%", value: "75-100" },
+                                                    { label: "50% - 74%", value: "50-74" },
+                                                    { label: "25% - 49%", value: "25-49" },
+                                                    { label: "0% - 24%", value: "0-24" },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                    <DataTable
+                                        columns={teamColumns}
+                                        data={wallListingData}
+                                    // loading={isLoading}
+                                    />
+
+                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
+                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
+                                </div>
+                            </div>
+                        )}
+                        {/* Teams */}
 
 
                     </Card>
