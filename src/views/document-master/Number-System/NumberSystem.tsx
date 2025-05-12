@@ -1,290 +1,178 @@
-import React, { useState, useMemo, useCallback, Ref } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
+// import { Link, useNavigate } from 'react-router-dom';
 import cloneDeep from 'lodash/cloneDeep'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag' // Keep if needed for future use (e.g., status)
 import Button from '@/components/ui/Button'
-import Dialog from '@/components/ui/Dialog' // Keep if needed (e.g., edit dialog)
-import Avatar from '@/components/ui/Avatar' // Keep if needed
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
-import RichTextEditor from '@/components/shared/RichTextEditor' // Keep if needed (e.g., message dialog)
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { Card, Drawer, Form, FormItem, Input, } from '@/components/ui'
-import { useForm, Controller } from 'react-hook-form'
+import Select from '@/components/ui/Select' // Assuming your Select supports multi-select
+import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui'
+
 // Icons
 import {
     TbPencil,
-    TbCopy,
-    TbSwitchHorizontal, // Keep if status might be added later
     TbTrash,
     TbChecks,
     TbSearch,
     TbFilter,
-    TbCloudUpload,
-    TbCloudDownload, // Keep for potential future export
     TbPlus,
+    TbCloudUpload,
+    TbSettingsCog, // Icon for Number System
 } from 'react-icons/tb'
 
 // Types
-import type {
-    OnSortParam,
-    ColumnDef,
-    Row,
-    // SortingFnOption,
-} from '@/components/shared/DataTable'
+import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+// Redux (Keep commented if using local state first)
+// import { useAppDispatch } from '@/reduxtool/store';
+// import { getNumberSystemsAction, addNumberSystemAction, ... } from '@/reduxtool/numberSystem/middleware';
+// import { numberSystemSelector } from '@/reduxtool/numberSystem/numberSystemSlice';
 
-// --- Define Item Type (Table Row Data) ---
-export type NumberSystemItem = {
-    id: string
-    name: string
-    countries: string[] // Array of country names
-}
-// --- End Item Type Definition ---
 
 // --- Constants ---
-const initialDummyData: NumberSystemItem[] = [
-    {
-        id: 'NS001',
-        name: 'North America Region',
-        countries: ['USA', 'Canada', 'Mexico'],
-    },
-    {
-        id: 'NS002',
-        name: 'European Union System',
-        countries: [
-            'Germany',
-            'France',
-            'Italy',
-            'Spain',
-            'Poland',
-            'Romania',
-            'Netherlands',
-            'Belgium',
-            'Greece',
-            'Portugal',
-            'Sweden',
-            'Hungary',
-            'Austria',
-            'Bulgaria',
-            'Denmark',
-            'Finland',
-            'Slovakia',
-            'Ireland',
-            'Croatia',
-            'Lithuania',
-            'Slovenia',
-            'Latvia',
-            'Estonia',
-            'Cyprus',
-            'Luxembourg',
-            'Malta',
-        ],
-    }, // Truncated for brevity
-    {
-        id: 'NS003',
-        name: 'ASEAN Bloc',
-        countries: [
-            'Indonesia',
-            'Malaysia',
-            'Philippines',
-            'Singapore',
-            'Thailand',
-            'Vietnam',
-            'Brunei',
-            'Cambodia',
-            'Laos',
-            'Myanmar',
-        ],
-    },
-    {
-        id: 'NS004',
-        name: 'South American Alliance',
-        countries: [
-            'Brazil',
-            'Argentina',
-            'Colombia',
-            'Peru',
-            'Chile',
-            'Ecuador',
-            'Bolivia',
-            'Paraguay',
-            'Uruguay',
-            'Guyana',
-            'Suriname',
-            'Venezuela',
-        ],
-    },
-    {
-        id: 'NS005',
-        name: 'African Union',
-        countries: [
-            'Nigeria',
-            'Ethiopia',
-            'Egypt',
-            'DR Congo',
-            'Tanzania',
-            'South Africa',
-            'Kenya',
-            'Uganda',
-            'Algeria',
-            'Sudan',
-            'Morocco',
-            'Angola',
-            'Ghana',
-            'Mozambique',
-            'Madagascar' /* ... many more */,
-        ],
-    }, // Truncated
-    {
-        id: 'NS006',
-        name: 'Oceania Cooperative',
-        countries: [
-            'Australia',
-            'Papua New Guinea',
-            'New Zealand',
-            'Fiji',
-            'Solomon Islands',
-            'Vanuatu',
-            'Samoa',
-            'Kiribati',
-            'Tonga',
-            'Micronesia',
-            'Palau',
-            'Marshall Islands',
-            'Tuvalu',
-            'Nauru',
-        ],
-    },
-    {
-        id: 'NS007',
-        name: 'Central Asian Network',
-        countries: [
-            'Kazakhstan',
-            'Uzbekistan',
-            'Turkmenistan',
-            'Kyrgyzstan',
-            'Tajikistan',
-        ],
-    },
-    {
-        id: 'NS008',
-        name: 'Middle East Consortium',
-        countries: [
-            'Saudi Arabia',
-            'Iran',
-            'Turkey',
-            'Iraq',
-            'UAE',
-            'Israel',
-            'Jordan',
-            'Lebanon',
-            'Oman',
-            'Kuwait',
-            'Qatar',
-            'Bahrain',
-            'Yemen',
-            'Syria',
-            'Palestine',
-        ],
-    }, // Political grouping may vary
-    {
-        id: 'NS009',
-        name: 'East Asia Economic Zone',
-        countries: ['China', 'Japan', 'South Korea'],
-    },
-    {
-        id: 'NS010',
-        name: 'Caribbean Community (CARICOM)',
-        countries: [
-            'Jamaica',
-            'Trinidad and Tobago',
-            'Haiti',
-            'Bahamas',
-            'Barbados',
-            'St. Lucia',
-            'Guyana',
-            'Suriname',
-            'Belize',
-            'Grenada',
-            'St. Vincent',
-            'Antigua and Barbuda',
-            'Dominica',
-            'St. Kitts and Nevis',
-            'Montserrat',
-        ],
-    },
-    {
-        id: 'NS011',
-        name: 'Nordic Council',
-        countries: ['Sweden', 'Denmark', 'Finland', 'Norway', 'Iceland'],
-    },
-    {
-        id: 'NS012',
-        name: 'Visegrád Group',
-        countries: ['Poland', 'Hungary', 'Czech Republic', 'Slovakia'],
-    },
-]
-// --- End Constants ---
+// Example list of countries for multi-select. In a real app, this would come from an API or a larger constant file.
+const ALL_AVAILABLE_COUNTRIES = [
+    { value: 'USA', label: 'United States' }, { value: 'CAN', label: 'Canada' }, { value: 'MEX', label: 'Mexico' },
+    { value: 'GBR', label: 'United Kingdom' }, { value: 'DEU', label: 'Germany' }, { value: 'FRA', label: 'France' },
+    { value: 'JPN', label: 'Japan' }, { value: 'AUS', label: 'Australia' }, { value: 'IND', label: 'India' },
+    { value: 'BRA', label: 'Brazil' }, { value: 'ZAF', label: 'South Africa' },
+    // ...add more countries as needed
+];
+const countryValues = ALL_AVAILABLE_COUNTRIES.map(c => c.value) as [string, ...string[]];
 
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    // onClone,
-    onChangeStatus,
-    onDelete,
-}: {
-    onEdit: () => void
-    // onClone: () => void
-    onChangeStatus?: () => void // Keep optional
-    onDelete: () => void
-}) => {
+
+// --- Define NumberSystemItem Type ---
+export type NumberSystemItem = {
+    id: string | number
+    name: string
+    // KYC Member Numbering
+    kycPrefix?: string
+    kycStartNumber: number
+    kycCurrentNumber: number
+    // Temporary Member Numbering
+    tempStartNumber: number
+    tempCurrentNumber: number
+    countries: string[] // Array of country codes (e.g., ['USA', 'CAN'])
+    // status?: 'active' | 'inactive' // Optional: if you need a status
+}
+
+// --- Zod Schema for Add/Edit Form ---
+const numberSystemFormSchema = z.object({
+    name: z.string().min(1, 'Name is required.').max(100, 'Name too long.'),
+    kycPrefix: z.string().max(10, 'KYC Prefix too long.').optional().or(z.literal('')),
+    kycStartNumber: z.coerce.number().int().min(0, 'KYC Start Number must be non-negative.'),
+    kycCurrentNumber: z.coerce.number().int().min(0, 'KYC Current Number must be non-negative.'),
+    tempStartNumber: z.coerce.number().int().min(0, 'Temp Start Number must be non-negative.'),
+    tempCurrentNumber: z.coerce.number().int().min(0, 'Temp Current Number must be non-negative.'),
+    countries: z.array(z.string()) // Or z.array(z.enum(countryValues)) if using enum for validation
+                 .min(1, 'At least one country must be selected.'),
+}).superRefine((data, ctx) => {
+    if (data.kycCurrentNumber < data.kycStartNumber) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'KYC Current Number cannot be less than KYC Start Number.',
+            path: ['kycCurrentNumber'],
+        });
+    }
+    if (data.tempCurrentNumber < data.tempStartNumber) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Temp Current Number cannot be less than Temp Start Number.',
+            path: ['tempCurrentNumber'],
+        });
+    }
+});
+type NumberSystemFormData = z.infer<typeof numberSystemFormSchema>
+
+// --- Initial Dummy Data ---
+const initialDummyNumberSystems: NumberSystemItem[] = [
+    {
+        id: 'NS001', name: 'North America Region',
+        kycPrefix: 'NA-K', kycStartNumber: 1000, kycCurrentNumber: 1050,
+        tempStartNumber: 500, tempCurrentNumber: 520,
+        countries: ['USA', 'CAN', 'MEX'],
+    },
+    {
+        id: 'NS002', name: 'European Union System',
+        kycPrefix: 'EU-K', kycStartNumber: 20000, kycCurrentNumber: 20345,
+        tempStartNumber: 1000, tempCurrentNumber: 1100,
+        countries: ['DEU', 'FRA'], // Using codes now
+    },
+];
+
+// --- CSV Exporter ---
+const CSV_HEADERS_NS = ['ID', 'Name', 'KYC Prefix', 'KYC Start No.', 'KYC Current No.', 'Temp Start No.', 'Temp Current No.', 'Countries (Codes)'];
+const CSV_KEYS_NS: (keyof NumberSystemItem | 'countriesString')[] = ['id', 'name', 'kycPrefix', 'kycStartNumber', 'kycCurrentNumber', 'tempStartNumber', 'tempCurrentNumber', 'countriesString'];
+
+function exportNumberSystemsToCsv(filename: string, rows: NumberSystemItem[]) {
+    // ... (Similar exportToCsv logic, prepare rows by joining country codes)
+    if (!rows || !rows.length) {
+        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+        return false;
+    }
+     const preparedRows = rows.map(row => ({
+        ...row,
+        countriesString: row.countries.join('; ')
+    }));
+
+    const separator = ',';
+    const csvContent =
+        CSV_HEADERS_NS.join(separator) + '\n' +
+        preparedRows.map((row: any) => CSV_KEYS_NS.map(k => {
+            let cell: any = row[k];
+            if (cell === null || cell === undefined) cell = '';
+            else cell = String(cell).replace(/"/g, '""');
+            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+            return cell;
+        }).join(separator)).join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return true;
+    }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+    return false;
+}
+
+// --- ActionColumn (Reusable) ---
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => {
+    // ... (ActionColumn component remains the same)
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-
     return (
-        <div className="flex items-center justify-center">
-            {/* <Tooltip title="Clone Item">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400',
-                    )}
-                    role="button"
-                    onClick={onClone}
-                >
-                    {' '}
-                    <TbCopy />{' '}
-                </div>
-            </Tooltip> */}
-            {/* Example: Conditionally render status change if needed */}
-            {/* {onChangeStatus && (
-                 <Tooltip title="Change Status">
-                    <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400' )} role="button" onClick={onChangeStatus} > <TbSwitchHorizontal /> </div>
-                 </Tooltip>
-            )} */}
+        <div className="flex items-center justify-center gap-3">
             <Tooltip title="Edit">
                 <div
                     className={classNames(
                         iconButtonClass,
                         hoverBgClass,
-                        'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400',
+                        'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400',
                     )}
                     role="button"
                     onClick={onEdit}
                 >
-                    {' '}
-                    <TbPencil />{' '}
+                    <TbPencil />
                 </div>
             </Tooltip>
             <Tooltip title="Delete">
@@ -292,673 +180,474 @@ const ActionColumn = ({
                     className={classNames(
                         iconButtonClass,
                         hoverBgClass,
-                        'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400',
+                        'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400',
                     )}
                     role="button"
                     onClick={onDelete}
                 >
-                    {' '}
-                    <TbTrash />{' '}
+                    <TbTrash />
                 </div>
             </Tooltip>
         </div>
     )
-}
-// --- End ActionColumn ---
+};
 
-// --- ItemListTable Component ---
-const ItemListTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedItems,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<NumberSystemItem>[]
-    data: NumberSystemItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedItems: NumberSystemItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: NumberSystemItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<NumberSystemItem>[]) => void
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedItems.some((selected) => selected.id === row.id)
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-        />
+// --- Search and TableTools ---
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; }
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
+    ({ onInputChange }, ref) => (
+        <DebouceInput ref={ref} className="w-full" placeholder="Search by name or ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
     )
-}
-// --- End ItemListTable ---
+);
+ItemSearch.displayName = 'ItemSearch';
 
-// --- ItemListSearch Component ---
-type ItemListSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const ItemListSearch = React.forwardRef<HTMLInputElement, ItemListSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                placeholder="Quick search..." // Updated placeholder
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-ItemListSearch.displayName = 'ItemListSearch'
-// --- End ItemListSearch ---
-
-// --- ItemListTableTools Component ---
-const ItemListTableTools = ({
-    onSearchChange,
-
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-    type GlobalSettingFilterSchema = {
-        userRole : String,
-        exportFrom : String,
-        exportDate : Date
-    }
-
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
-
-    const {control, handleSubmit} = useForm<GlobalSettingFilterSchema>()
-
-    const exportFiltersSubmitHandler = (data : GlobalSettingFilterSchema) => {
-        console.log("filter data", data)
-    }
-    return (
-        <div className="flex items-center w-full gap-2">
-            <div className="flex-grow">
-                <ItemListSearch onInputChange={onSearchChange} />
-            </div>
-            {/* Filter component removed */}
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                    </div>  
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Document Name"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
-                </Form>
-            </Drawer>
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }
+const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => (
+    // ... (ItemTableTools remains largely the same, filter button can be adapted)
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex-grow">
+            <ItemSearch onInputChange={onSearchChange} />
         </div>
-    )
-}
-// --- End ItemListTableTools ---
-
-// --- ItemListActionTools Component ---
-const ItemListActionTools = ({
-    allItems,
-    openAddDrawer 
-}: {
-    allItems: NumberSystemItem[]
-    openAddDrawer: () => void; // Accept function as a prop
-}) => {
-    const navigate = useNavigate()
-
-    // Prepare data for CSV, joining the countries array
-    const csvData = useMemo(() => {
-        return allItems.map((item) => ({
-            ...item,
-            countries: item.countries.join('; '), // Join array with semicolon+space for CSV
-        }))
-    }, [allItems])
-
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'name' },
-        { label: 'Countries', key: 'countries' }, // Header matches the transformed key
-    ]
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/* Uncomment CSVLink if needed */}
-            {/* <CSVLink filename="numberSystemList.csv" data={csvData} headers={csvHeaders} >
-                <Button icon={<TbCloudDownload />} className="w-full" block> Download </Button>
-            </CSVLink> */}
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} block>
-                {' '}
-                Add New{' '}
-            </Button>{' '}
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
         </div>
-    )
-}
-// --- End ItemListActionTools ---
+    </div>
+);
 
-// --- ItemListSelected Component ---
-const ItemListSelected = ({
-    selectedItems,
-    setSelectedItems,
-    onDeleteSelected,
-}: {
-    selectedItems: NumberSystemItem[]
-    setSelectedItems: React.Dispatch<React.SetStateAction<NumberSystemItem[]>>
-    onDeleteSelected: () => void
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
-    }
-
-    // Don't render if nothing is selected
-    if (selectedItems.length === 0) {
-        return null
-    }
-
-    return (
-        <>
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-            >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            {' '}
-                            <TbChecks />{' '}
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedItems.length}
-                            </span>
-                            <span>
-                                Item{selectedItems.length > 1 ? 's' : ''}{' '}
-                                selected
-                            </span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-600 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                        >
-                            Delete
-                        </Button>
-                        {/* Add other bulk actions here if needed */}
-                    </div>
-                </div>
-            </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedItems.length} Item${selectedItems.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-                // confirmButtonColor="red-600"
-            >
-                <p>
-                    Are you sure you want to delete the selected item
-                    {selectedItems.length > 1 ? 's' : ''}? This action cannot be
-                    undone.
-                </p>
-            </ConfirmDialog>
-        </>
-    )
-}
-// --- End ItemListSelected ---
-
-// --- Main NumberSystem Component ---
-const NumberSystem = () => {
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+// --- Main Component: NumberSystems ---
+const NumberSystems = () => {
+    const [numberSystemsData, setNumberSystemsData] = useState<NumberSystemItem[]>(initialDummyNumberSystems);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<NumberSystemItem | null>(null);
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<NumberSystemItem | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<NumberSystemItem | null>(null);
+
+    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' });
+    const [selectedItems, setSelectedItems] = useState<NumberSystemItem[]>([]);
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+    const [filterCriteria, setFilterCriteria] = useState<{ filterCountries?: any[] }>({}); // Example filter
+
+    const formMethods = useForm<NumberSystemFormData>({
+        resolver: zodResolver(numberSystemFormSchema),
+        defaultValues: {
+            name: '',
+            kycPrefix: '',
+            kycStartNumber: 0,
+            kycCurrentNumber: 0,
+            tempStartNumber: 0,
+            tempCurrentNumber: 0,
+            countries: [],
+        },
+        mode: 'onChange',
+    });
+
+    const filterForm = useForm<{ filterCountries?: any[] }>({ defaultValues: {} });
+
+
+    // --- CRUD Handlers ---
+    const openAddDrawer = () => {
+        formMethods.reset({ // Reset with default or empty values
+            name: '', kycPrefix: '', kycStartNumber: 0, kycCurrentNumber: 0,
+            tempStartNumber: 0, tempCurrentNumber: 0, countries: [],
+        });
+        setIsAddDrawerOpen(true);
+    };
+    const closeAddDrawer = () => setIsAddDrawerOpen(false);
 
     const openEditDrawer = (item: NumberSystemItem) => {
-        setSelectedItem(item); // Set the selected item's data
-        setIsEditDrawerOpen(true); // Open the edit drawer
+        setEditingItem(item);
+        formMethods.reset({
+            name: item.name,
+            kycPrefix: item.kycPrefix || '',
+            kycStartNumber: item.kycStartNumber,
+            kycCurrentNumber: item.kycCurrentNumber,
+            tempStartNumber: item.tempStartNumber,
+            tempCurrentNumber: item.tempCurrentNumber,
+            countries: item.countries,
+        });
+        setIsEditDrawerOpen(true);
     };
+    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingItem(null); };
 
-    const closeEditDrawer = () => {
-        setSelectedItem(null); // Clear the selected item's data
-        setIsEditDrawerOpen(false); // Close the edit drawer
-    };
+    const onSubmit = async (data: NumberSystemFormData) => {
+        setIsSubmitting(true);
+        setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-    const openAddDrawer = () => {
-        setSelectedItem(null); // Clear any selected item
-        setIsAddDrawerOpen(true); // Open the add drawer
-    };
+        try {
+            // Map selected country objects back to string array if Select returns objects
+            const countriesData = data.countries.map((country: any) => typeof country === 'object' ? country.value : country);
 
-    const closeAddDrawer = () => {
-        setIsAddDrawerOpen(false); // Close the add drawer
-    };
-    const navigate = useNavigate()
+            const payload = { ...data, countries: countriesData };
 
-    // --- Lifted State ---
-    const [isLoading, setIsLoading] = useState(false)
-    const [items, setItems] = useState<NumberSystemItem[]>(initialDummyData)
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-    const [selectedItems, setSelectedItems] = useState<NumberSystemItem[]>([])
-    // --- End Lifted State ---
-
-    // --- Memoized Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...items]
-
-        // Apply Search
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase()
-            processedData = processedData.filter(
-                (item) =>
-                    item.id.toLowerCase().includes(query) ||
-                    item.name.toLowerCase().includes(query) ||
-                    item.countries.some((country) =>
-                        country.toLowerCase().includes(query),
-                    ),
-            )
-        }
-
-        // Apply Sorting
-        const { order, key } = tableData.sort as OnSortParam
-        if (order && key) {
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                if (key === 'countries') {
-                    const lenA = a.countries?.length ?? 0
-                    const lenB = b.countries?.length ?? 0
-                    return order === 'asc' ? lenA - lenB : lenB - lenA
-                }
-                const aValue = a[key as keyof NumberSystemItem] ?? ''
-                const bValue = b[key as keyof NumberSystemItem] ?? ''
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
-                }
-                return 0
-            })
-            processedData = sortedData
-        }
-
-        // Apply Pagination
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const dataTotal = processedData.length
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
-
-        return { pageData: dataForPage, total: dataTotal }
-    }, [items, tableData])
-    // --- End Memoized Data Processing ---
-
-    // --- Lifted Handlers ---
-    const handleSetTableData = useCallback((data: TableQueries) => {
-        setTableData(data)
-    }, [])
-    const handlePaginationChange = useCallback(
-        (page: number) => {
-            handleSetTableData({ ...tableData, pageIndex: page })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({
-                ...tableData,
-                pageSize: Number(value),
-                pageIndex: 1,
-            })
-            setSelectedItems([])
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => {
-            handleSetTableData({ ...tableData, query: query, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-
-    const handleRowSelect = useCallback(
-        (checked: boolean, row: NumberSystemItem) => {
-            setSelectedItems((prev) => {
-                if (checked) {
-                    return prev.some((i) => i.id === row.id)
-                        ? prev
-                        : [...prev, row]
-                } else {
-                    return prev.filter((i) => i.id !== row.id)
-                }
-            })
-        },
-        [],
-    )
-
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<NumberSystemItem>[]) => {
-            const rowIds = new Set(rows.map((r) => r.original.id))
-            if (checked) {
-                const originalRows = rows.map((row) => row.original)
-                setSelectedItems((prev) => {
-                    const existingIds = new Set(prev.map((i) => i.id))
-                    const newSelection = originalRows.filter(
-                        (i) => !existingIds.has(i.id),
-                    )
-                    return [...prev, ...newSelection]
-                })
+            if (editingItem) {
+                const updatedItem: NumberSystemItem = { ...editingItem, ...payload };
+                setNumberSystemsData(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+                toast.push(<Notification title="Number System Updated" type="success">System updated.</Notification>);
+                closeEditDrawer();
             } else {
-                setSelectedItems((prev) =>
-                    prev.filter((i) => !rowIds.has(i.id)),
-                )
+                const newItem: NumberSystemItem = { ...payload, id: `NS${Date.now()}` };
+                setNumberSystemsData(prev => [...prev, newItem]);
+                toast.push(<Notification title="Number System Added" type="success">New system added.</Notification>);
+                closeAddDrawer();
             }
-        },
-        [], // Might need setSelectedItems if linting complains
-    )
-
-    const handleEdit = useCallback(
-        (item: NumberSystemItem) => {
-            console.log('Edit item:', item.id)
-            // Example navigation: navigate(`/number-systems/edit/${item.id}`);
-        },
-        [navigate],
-    )
-
-    const handleClone = useCallback((itemToClone: NumberSystemItem) => {
-        console.log('Cloning item:', itemToClone.id, itemToClone.name)
-        const newId = `NS${Math.floor(Math.random() * 9000) + 1000}`
-        const clonedItem: NumberSystemItem = {
-            ...itemToClone,
-            id: newId,
-            name: `${itemToClone.name} (Clone)`,
-            countries: [...itemToClone.countries], // Clone the array
+        } catch (error: any) {
+            toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger">{error?.message || 'Operation failed.'}</Notification>);
+        } finally {
+            setIsSubmitting(false);
+            setMasterLoadingStatus('idle');
         }
-        setItems((prev) => [clonedItem, ...prev]) // Add to list
-    }, []) // Add setItems if linting complains
+    };
 
-    const handleDelete = useCallback((itemToDelete: NumberSystemItem) => {
-        // Add confirmation dialog in real app before deleting
-        console.log('Deleting item:', itemToDelete.id, itemToDelete.name)
-        setItems((currentItems) =>
-            currentItems.filter((item) => item.id !== itemToDelete.id),
-        )
-        setSelectedItems((prevSelected) =>
-            prevSelected.filter((item) => item.id !== itemToDelete.id),
-        )
-    }, []) // Add setItems, setSelectedItems if linting complains
+    const handleDeleteClick = (item: NumberSystemItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
+    const onConfirmSingleDelete = async () => {
+        // ... (delete logic similar to previous components, adapt for numberSystemsData)
+        if (!itemToDelete) return;
+        setIsDeleting(true);
+        setMasterLoadingStatus('loading');
+        setSingleDeleteConfirmOpen(false);
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected items:',
-            selectedItems.map((i) => i.id),
-        )
-        const selectedIds = new Set(selectedItems.map((i) => i.id))
-        setItems((currentItems) =>
-            currentItems.filter((i) => !selectedIds.has(i.id)),
-        )
-        setSelectedItems([])
-    }, [selectedItems]) // Add setItems, setSelectedItems if linting complains
-    // --- End Lifted Handlers ---
+        try {
+            setNumberSystemsData(prev => prev.filter(item => item.id !== itemToDelete!.id));
+            toast.push(<Notification title="Number System Deleted" type="success">{`System "${itemToDelete.name}" deleted.`}</Notification>);
+            setSelectedItems(prev => prev.filter(item => item.id !== itemToDelete!.id));
+        } catch (error: any) {
+            toast.push(<Notification title="Delete Failed" type="danger">{error?.message || 'Could not delete item.'}</Notification>);
+        } finally {
+            setIsDeleting(false);
+            setMasterLoadingStatus('idle');
+            setItemToDelete(null);
+        }
+    };
+    const handleDeleteSelected = async () => {
+        // ... (delete selected logic, adapt for numberSystemsData)
+        if (selectedItems.length === 0) return;
+        setIsDeleting(true);
+        setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            const idsToDelete = selectedItems.map(item => item.id);
+            setNumberSystemsData(prev => prev.filter(item => !idsToDelete.includes(item.id)));
+            toast.push(<Notification title="Deletion Successful" type="success">{selectedItems.length} system(s) deleted.</Notification>);
+            setSelectedItems([]);
+        } catch (error: any) {
+            toast.push(<Notification title="Deletion Failed" type="danger">{error?.message || 'Failed to delete selected items.'}</Notification>);
+        } finally {
+            setIsDeleting(false);
+            setMasterLoadingStatus('idle');
+        }
+    };
 
-    // --- Define Columns in Parent ---
+    // --- Filter Handlers ---
+    const openFilterDrawer = () => { filterForm.reset(filterCriteria); setIsFilterDrawerOpen(true); };
+    const onApplyFiltersSubmit = (data: { filterCountries?: any[] }) => {
+        setFilterCriteria(data);
+        setTableData(prev => ({ ...prev, pageIndex: 1 }));
+        setIsFilterDrawerOpen(false);
+    };
+    const onClearFilters = () => { filterForm.reset({}); setFilterCriteria({}); setTableData(prev => ({ ...prev, pageIndex: 1 })); };
+
+    // --- Data Processing (Memoized) ---
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+        let processedData: NumberSystemItem[] = cloneDeep(numberSystemsData);
+        // Apply Filters (example for countries)
+        if (filterCriteria.filterCountries && filterCriteria.filterCountries.length > 0) {
+            const selectedCountryCodes = filterCriteria.filterCountries.map((opt: any) => opt.value);
+            processedData = processedData.filter(item =>
+                item.countries.some(countryCode => selectedCountryCodes.includes(countryCode))
+            );
+        }
+        // Apply Search Query
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(item =>
+                item.name.toLowerCase().includes(query) ||
+                String(item.id).toLowerCase().includes(query) ||
+                (item.kycPrefix && item.kycPrefix.toLowerCase().includes(query))
+            );
+        }
+        // Apply Sorting
+        const { order, key } = tableData.sort as OnSortParam;
+        if (order && key && ['id', 'name', 'kycPrefix', 'countriesCount'].includes(key)) { // Added countriesCount for sorting
+            processedData.sort((a, b) => {
+                let aVal, bVal;
+                if (key === 'countriesCount') {
+                    aVal = a.countries.length;
+                    bVal = b.countries.length;
+                } else {
+                    aVal = a[key as keyof Omit<NumberSystemItem, 'countries'>]; // Exclude 'countries' array itself from direct sort
+                    bVal = b[key as keyof Omit<NumberSystemItem, 'countries'>];
+                }
+
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return order === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+                const aStr = String(aVal ?? '').toLowerCase();
+                const bStr = String(bVal ?? '').toLowerCase();
+                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+            });
+        }
+
+        const dataToExport = [...processedData];
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number;
+        const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+
+        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+    }, [numberSystemsData, tableData, filterCriteria]);
+
+    const handleExportData = () => {
+        const success = exportNumberSystemsToCsv('number_systems.csv', allFilteredAndSortedData);
+        if (success) toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
+    };
+
+    // --- Table Interaction Handlers ---
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: NumberSystemItem) => {
+        // ... (standard row select)
+        setSelectedItems(prev => {
+            if (checked) return prev.some(item => item.id === row.id) ? prev : [...prev, row];
+            return prev.filter(item => item.id !== row.id);
+        });
+    }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<NumberSystemItem>[]) => {
+        // ... (standard all row select)
+        const originals = currentRows.map(r => r.original);
+        if (checked) {
+            setSelectedItems(prev => {
+                const prevIds = new Set(prev.map(item => item.id));
+                const newToAdd = originals.filter(r => !prevIds.has(r.id));
+                return [...prev, ...newToAdd];
+            });
+        } else {
+            const currentIds = new Set(originals.map(r => r.id));
+            setSelectedItems(prev => prev.filter(item => !currentIds.has(item.id)));
+        }
+    }, []);
+
+    // --- Column Definitions ---
     const columns: ColumnDef<NumberSystemItem>[] = useMemo(
         () => [
-            { header: 'ID', accessorKey: 'id', enableSorting: true },
-            { header: 'Name', accessorKey: 'name', enableSorting: true },
+            { header: 'ID', accessorKey: 'id', enableSorting: true, size: 80 },
+            { header: 'Name', accessorKey: 'name', enableSorting: true, size: 200,
+              cell: props => <span className="font-semibold">{props.row.original.name}</span>
+            },
+            { header: 'KYC Prefix', accessorKey: 'kycPrefix', enableSorting: true, size: 120 },
             {
                 header: 'Countries',
-                accessorKey: 'countries',
-                enableSorting: true,
+                accessorKey: 'countries', // Keep this to allow access in cell
+                id: 'countriesCount', // Use a different id for sorting if sorting by count
+                enableSorting: true, // Enable sorting by count
+                size: 150,
                 cell: (props) => {
-                    const countries = props.row.original.countries
-                    const count = countries.length
-                    const countryList = countries.join(', ')
+                    const count = props.row.original.countries.length;
+                    const countryLabels = props.row.original.countries
+                        .map(code => ALL_AVAILABLE_COUNTRIES.find(c => c.value === code)?.label || code)
+                        .join(', ');
                     return (
-                        <Tooltip
-                            title={
-                                count > 0 ? countryList : 'No countries listed'
-                            }
-                            // wrap
-                        >
-                            <span className="cursor-default whitespace-nowrap">
-                                {count} {count === 1 ? 'Country' : 'Countries'}
-                            </span>
+                        <Tooltip title={count > 0 ? countryLabels : 'No countries'}>
+                            <span className="cursor-default">{count} {count === 1 ? 'Country' : 'Countries'}</span>
                         </Tooltip>
-                    )
+                    );
                 },
-                // sortingFn: (rowA, rowB, columnId) => {
-                //     const lenA = rowA.original[columnId]?.length ?? 0
-                //     const lenB = rowB.original[columnId]?.length ?? 0
-                //     return lenA - lenB
-                // },
             },
+            // Optional: Add Status column if needed
             {
-                header: 'Action',
-                id: 'action',
-                meta: { HeaderClass : "text-center" },
-                cell: (props) => (
-                    <ActionColumn
-                        // onClone={() => handleClone(props.row.original)}
-                        // onChangeStatus optional based on ActionColumn definition
-                        onEdit={() => openEditDrawer(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                    />
-                ),
+                header: 'Actions', id: 'action', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100,
+                cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
             },
         ],
-        [handleClone, handleEdit, handleDelete], // Ensure handlers are dependencies
-    )
-    // --- End Define Columns ---
+        [], // openEditDrawer, handleDeleteClick are stable
+    );
 
-    // --- Render Main Component ---
+    // --- Render Form for Drawer ---
+    const renderDrawerForm = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem label="Name" className="md:col-span-2" invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}>
+                <Controller name="name" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., European KYC System" />} />
+            </FormItem>
+
+            <div className="md:col-span-2 border-t pt-4 mt-2">
+                <h6 className="text-sm font-medium mb-2">Numbering System For KYC Member</h6>
+            </div>
+            <FormItem label="Prefix For KYC" invalid={!!formMethods.formState.errors.kycPrefix} errorMessage={formMethods.formState.errors.kycPrefix?.message}>
+                <Controller name="kycPrefix" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., EU-K-" />} />
+            </FormItem>
+            <div /> {/* Spacer for grid */}
+            <FormItem label="Member ID Starting Number" invalid={!!formMethods.formState.errors.kycStartNumber} errorMessage={formMethods.formState.errors.kycStartNumber?.message}>
+                <Controller name="kycStartNumber" control={formMethods.control} render={({ field }) => <Input {...field} type="number" placeholder="e.g., 10001" />} />
+            </FormItem>
+            <FormItem label="Member ID Current Number" invalid={!!formMethods.formState.errors.kycCurrentNumber} errorMessage={formMethods.formState.errors.kycCurrentNumber?.message}>
+                <Controller name="kycCurrentNumber" control={formMethods.control} render={({ field }) => <Input {...field} type="number" placeholder="e.g., 10500" />} />
+            </FormItem>
+
+            <div className="md:col-span-2 border-t pt-4 mt-2">
+                <h6 className="text-sm font-medium mb-2">Numbering System For Temporary Member</h6>
+            </div>
+            <FormItem label="Member ID Starting Number" invalid={!!formMethods.formState.errors.tempStartNumber} errorMessage={formMethods.formState.errors.tempStartNumber?.message}>
+                <Controller name="tempStartNumber" control={formMethods.control} render={({ field }) => <Input {...field} type="number" placeholder="e.g., 5001" />} />
+            </FormItem>
+            <FormItem label="Member ID Current Number" invalid={!!formMethods.formState.errors.tempCurrentNumber} errorMessage={formMethods.formState.errors.tempCurrentNumber?.message}>
+                <Controller name="tempCurrentNumber" control={formMethods.control} render={({ field }) => <Input {...field} type="number" placeholder="e.g., 5250" />} />
+            </FormItem>
+
+            <FormItem label="Countries (Multi-select)" className="md:col-span-2" invalid={!!formMethods.formState.errors.countries} errorMessage={formMethods.formState.errors.countries?.message as string}>
+                <Controller
+                    name="countries"
+                    control={formMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            isMulti
+                            placeholder="Select countries..."
+                            options={ALL_AVAILABLE_COUNTRIES}
+                            // The value for react-select (if it's your Select component) needs to be an array of option objects
+                            value={ALL_AVAILABLE_COUNTRIES.filter(opt => field.value?.includes(opt.value))}
+                            onChange={(selectedOptions) => field.onChange(selectedOptions ? selectedOptions.map((opt: any) => opt.value) : [])}
+                        />
+                    )}
+                />
+            </FormItem>
+        </div>
+    );
+
+
     return (
         <>
             <Container className="h-full">
-                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                    {' '}
-                    {/* Ensure flex column */}
-                    {/* Header Section */}
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">Number System Management</h5>
-                        <ItemListActionTools allItems={items} openAddDrawer={openAddDrawer}/>
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbSettingsCog /> Number System Configuration</h3>
+                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New System</Button>
                     </div>
-                    {/* Tools Section */}
-                    <div className="mb-4">
-                        <ItemListTableTools onSearchChange={handleSearchChange} />
-                    </div>
-                    {/* Table Section - Allow table to grow */}
-                    <div className="flex-grow overflow-auto">
-                        {' '}
-                        {/* Add overflow for safety */}
-                        <ItemListTable
+                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+                    <div className="mt-4">
+                        <DataTable
                             columns={columns}
                             data={pageData}
-                            loading={isLoading}
-                            pagingData={{
-                                total,
-                                pageIndex: tableData.pageIndex as number,
-                                pageSize: tableData.pageSize as number,
-                            }}
-                            selectedItems={selectedItems}
+                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
+                            pagingData={{total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number}}
+                            selectable
+                            checkboxChecked={(row: NumberSystemItem) => selectedItems.some(selected => selected.id === row.id)}
                             onPaginationChange={handlePaginationChange}
                             onSelectChange={handleSelectChange}
                             onSort={handleSort}
-                            onRowSelect={handleRowSelect}
-                            onAllRowSelect={handleAllRowSelect}
+                            onCheckBoxChange={handleRowSelect}
+                            onIndeterminateCheckBoxChange={handleAllRowSelect}
                         />
                     </div>
                 </AdaptiveCard>
-
-                {/* Selected Actions Footer */}
-                <ItemListSelected
-                    selectedItems={selectedItems}
-                    setSelectedItems={setSelectedItems}
-                    onDeleteSelected={handleDeleteSelected}
-                />
             </Container>
+
+            <StickyFooter /* For Selected Items Actions */
+                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
+                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
+                hidden={selectedItems.length === 0}
+            >
+                <div className="flex items-center justify-between w-full px-4 sm:px-8">
+                    <span className="flex items-center gap-2">
+                        <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
+                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
+                            <span className="heading-text">{selectedItems.length}</span>
+                            <span>System{selectedItems.length > 1 ? 's' : ''} selected</span>
+                        </span>
+                    </span>
+                    <div className="flex items-center gap-3">
+                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteSelected}>
+                            Delete Selected
+                        </Button>
+                    </div>
+                </div>
+            </StickyFooter>
+
+            {/* Add/Edit Drawer */}
             <Drawer
-                title="Edit Number System"
-                isOpen={isEditDrawerOpen}
-                onClose={closeEditDrawer}
-                onRequestClose={closeEditDrawer}
+                title={editingItem ? "Edit Number System" : "Add New Number System"}
+                isOpen={isAddDrawerOpen || isEditDrawerOpen}
+                onClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                width={700} // Increased width for more fields
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => {
-                                console.log('Updated Number System:', selectedItem);
-                                closeEditDrawer();
-                            }}
-                        >
-                            Save
+                        <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
+                        <Button size="sm" variant="solid" form="numberSystemForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
+                            {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add System')}
                         </Button>
                     </div>
                 }
             >
-                <Form>
-                    <FormItem label="Name">
-                        <Input
-                            value={selectedItem?.name || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', countries: [] }),
-                                    name: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Countries">
-                        <Input
-                            value={selectedItem?.countries.join(', ') || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', countries: [] }),
-                                    countries: e.target.value.split(',').map((c) => c.trim()),
-                                }))
-                            }
-                            placeholder="Enter countries separated by commas (e.g., USA, Canada, Mexico)"
-                        />
-                    </FormItem>
+                <Form id="numberSystemForm" onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+                    {renderDrawerForm()}
                 </Form>
             </Drawer>
+
+            {/* Filter Drawer */}
             <Drawer
-                title="Add New Number System"
-                isOpen={isAddDrawerOpen}
-                onClose={closeAddDrawer}
-                onRequestClose={closeAddDrawer}
+                title="Filter Number Systems"
+                isOpen={isFilterDrawerOpen}
+                onClose={() => setIsFilterDrawerOpen(false)}
+                onRequestClose={() => setIsFilterDrawerOpen(false)}
                 footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => console.log('Number System Added')}
-                        >
-                            Add
-                        </Button>
+                     <div className="flex justify-between w-full">
+                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
+                        <div>
+                            <Button size="sm" className="mr-2" onClick={() => setIsFilterDrawerOpen(false)} type="button">Cancel</Button>
+                            <Button size="sm" variant="solid" form="filterForm" type="submit">Apply Filters</Button>
+                        </div>
                     </div>
                 }
             >
-                <Form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.target as HTMLFormElement);
-                        const newItem: NumberSystemItem = {
-                            id: `${items.length + 1}`,
-                            name: formData.get('name') as string,
-                            countries: (formData.get('countries') as string)
-                                .split(',')
-                                .map((c) => c.trim()),
-                        };
-                        console.log('New Number System:', newItem);
-                        // handleAdd(newItem);
-                    }}
-                >
-                    <FormItem label="Name">
-                        <Input name="name" placeholder="Enter Name" />
+                <Form id="filterForm" onSubmit={filterForm.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Filter by Countries">
+                        <Controller name="filterCountries" control={filterForm.control} render={({ field }) => (
+                            <Select
+                                isMulti
+                                placeholder="Select countries to filter by..."
+                                options={ALL_AVAILABLE_COUNTRIES}
+                                value={ALL_AVAILABLE_COUNTRIES.filter(opt => field.value?.includes(opt.value))}
+                                onChange={(selectedOptions) => field.onChange(selectedOptions ? selectedOptions.map((opt: any) => opt.value) : [])}
+                            />
+                        )} />
                     </FormItem>
-                    <FormItem label="Countries">
-                        <Input
-                            name="countries"
-                            placeholder="Enter countries separated by commas (e.g., USA, Canada, Mexico)"
-                        />
-                    </FormItem>
+                    {/* Add other filters if needed, e.g., by KYC Prefix */}
                 </Form>
             </Drawer>
+
+            {/* Single Delete Confirmation */}
+            <ConfirmDialog
+                isOpen={singleDeleteConfirmOpen}
+                type="danger"
+                title="Delete Number System"
+                onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                confirmButtonColor="red-600"
+                onConfirm={onConfirmSingleDelete}
+                loading={isDeleting}
+            >
+                <p>
+                    Are you sure you want to delete the number system "<strong>{itemToDelete?.name}</strong>"?
+                    This action cannot be undone.
+                </p>
+            </ConfirmDialog>
         </>
-    )
-}
-// --- End Main Component ---
+    );
+};
 
-export default NumberSystem
+export default NumberSystems;
 
-// Helper Function
+// Helper
 function classNames(...classes: (string | boolean | undefined)[]) {
-    return classes.filter(Boolean).join(' ')
+    return classes.filter(Boolean).join(' ');
 }
