@@ -1,3 +1,3 @@
-import ExportMapping from './ExportMapping'
+import ExportMapping from './exportMappping'
 
 export default ExportMapping

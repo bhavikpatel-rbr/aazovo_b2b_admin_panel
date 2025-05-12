@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addUnitAction, deletAllUnitAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getUnitAction } from "./middleware"
+import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addUnitAction, deletAllUnitAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getUnitAction, getWallItemsAction } from "./middleware"
 import { deletPaymentTermAsync } from "./services"
 
 const INITIAL_STATE: any = {
@@ -115,9 +115,13 @@ const masterSlice = createSlice({
       ...state,
       exportMappingData: payload
     }))
-     builder.addCase(getCategoriesAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getCategoriesAction.fulfilled, (state, { payload }) => ({
       ...state,
       CategoriesData: payload
+    }))
+    builder.addCase(getWallItemsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      wallItemsData: payload
     }))
   },
 })

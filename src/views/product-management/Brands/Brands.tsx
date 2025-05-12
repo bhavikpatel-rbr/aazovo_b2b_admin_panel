@@ -92,6 +92,7 @@ export type BrandItem = {
     createdAt: string
     updatedAt: string
     mobileNo: string | null
+    processedData:any
 }
 
 
@@ -480,18 +481,18 @@ const Brands = () => {
     }, [mappedBrands]);
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        let processedData: BrandItem[] = cloneDeep(mappedBrands);
+        let processedData: any = cloneDeep(mappedBrands);
         if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
             const selectedNames = filterCriteria.filterNames.map(opt => opt.value.toLowerCase());
-            processedData = processedData.filter(item => selectedNames.includes(item.name.toLowerCase()));
+            processedData = processedData.filter((item:any) => selectedNames.includes(item.name.toLowerCase()));
         }
         if (filterCriteria.filterStatuses && filterCriteria.filterStatuses.length > 0) {
             const selectedStatuses = filterCriteria.filterStatuses.map(opt => opt.value); // 'active' or 'inactive'
-            processedData = processedData.filter(item => selectedStatuses.includes(item.status));
+            processedData = processedData.filter((item:any) => selectedStatuses.includes(item.status));
         }
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim();
-            processedData = processedData.filter(item =>
+            processedData = processedData.filter((item:any) =>
                 item.name?.toLowerCase().includes(query) ||
                 item.slug?.toLowerCase().includes(query) ||
                 String(item.id).toLowerCase().includes(query) ||
