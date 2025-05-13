@@ -38,11 +38,11 @@ const dashboardsNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'dashboard.trending',
-                path: `${DASHBOARDS_PREFIX_PATH}/trending`,
-                title: 'Trending',
-                translateKey: 'nav.dashboard.trending',
-                icon: 'trending',
+                key: 'dashboard.active',
+                path: `${DASHBOARDS_PREFIX_PATH}/active`,
+                title: 'Active',
+                translateKey: 'nav.dashboard.active',
+                icon: 'active',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN, USER],
                 meta: {
