@@ -1,9 +1,19 @@
-// src/views/your-path/LeadsListing.tsx (New file name)
+// src/views/your-path/LeadsListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
+// import { Link, useNavigate } from 'react-router-dom';
 import cloneDeep from 'lodash/cloneDeep';
-import classNames from 'classnames'; // Ensure classnames is imported or helper is defined
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+
+dayjs.extend(isBetween);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
@@ -13,532 +23,778 @@ import Tooltip from '@/components/ui/Tooltip';
 import Tag from '@/components/ui/Tag';
 import Button from '@/components/ui/Button';
 import Dialog from '@/components/ui/Dialog';
-import Avatar from '@/components/ui/Avatar'; // For Product image placeholder
+import Avatar from '@/components/ui/Avatar';
 import Notification from '@/components/ui/Notification';
-import toast from '@/components/ui/toast'; // Ensure toast is configured
+import toast from '@/components/ui/toast';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import StickyFooter from '@/components/shared/StickyFooter';
 import DebouceInput from '@/components/shared/DebouceInput';
-import { TbBox, TbFileText, TbCurrencyDollar } from 'react-icons/tb'; // Placeholder icons
+import InputNumber from '@/components/ui/Input/InputNumber';
+import { Drawer, Form, FormItem, Input, Select as UiSelect, DatePicker } from '@/components/ui';
 
 // Icons
 import {
-    TbPencil,
-    // TbCopy, // Clone might not be typical for leads
-    // TbSwitchHorizontal, // Status change might be complex, handled differently
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbCloudDownload,
-    TbPlus, // Generic add icon
+    TbPencil, TbTrash, TbChecks, TbSearch, TbCloudUpload, TbFilter, TbPlus, TbBox,
+    TbSwitchHorizontal, TbEye, TbLink, TbCloudDownload, TbUserPlus, TbArrowRightCircle, TbCurrencyDollar,
+    TbPalette, TbTruckDelivery, TbFileDescription, TbMapPin, TbDeviceMobile, TbClockHour4, TbCreditCard,
+    TbBuildingSkyscraper, // For Supplier/Company
+    TbUserCircle, // For Sales Person or Member
+    TbClipboardList, // For Product Spec
+    TbShoppingCart, // For Qty/Intent
+    TbHelpOctagon, // For Enquiry Type
+    TbTag, // For Lead Number
 } from 'react-icons/tb';
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
+import type { OnSortParam, ColumnDef, Row, CellContext } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
+import Textarea from '@/views/ui-components/forms/Input/Textarea';
 
-// --- Define Item Type (Table Row Data) ---
-export type LeadItem = {
-    id: string; // Unique Lead ID / Lead Number
-    status: 'new' | 'contacted' | 'qualified' | 'lost' | 'won' | 'follow_up'; // Lead lifecycle statuses
-    enquiryType: 'product_info' | 'quote_request' | 'demo_request' | 'support' | 'partnership' | 'other';
-    leadNumber: string; // Explicit lead number field
-    productName: string | null; // Product of interest
-    productImage?: string | null; // Optional product image
-    memberId: string; // ID of the lead/member
-    intent: 'buy' | 'sell' | 'inquire' | 'partner'; // Lead's primary goal
-    qty: number | null;
-    targetPrice: number | null; // Target price if applicable
-    salesPerson: string | null; // Assigned sales representative
-    createdDate: Date;
-};
-// --- End Item Type Definition ---
+// --- Define Lead Types ---
+export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Follow Up' | 'Lost' | 'Won' | string;
+export type EnquiryType = 'Product Info' | 'Quote Request' | 'Demo Request' | 'Support' | 'Partnership' | 'Sourcing' | 'Other' | string;
+export type LeadIntent = 'Buy' | 'Sell' | 'Inquire' | 'Partner' | string; // For the lead itself
+export type ProductCondition = 'New' | 'Used' | 'Refurbished' | string; // For the product in the lead form
 
-
-// --- Constants ---
-const leadStatusColor: Record<LeadItem['status'], string> = {
-    new: 'bg-blue-500',
-    contacted: 'bg-cyan-500',
-    qualified: 'bg-indigo-500',
-    follow_up: 'bg-amber-500',
-    won: 'bg-emerald-500',
-    lost: 'bg-red-500',
-};
-
-// Optional: Colors for enquiry types or intents
-const enquiryTypeTagColor: Record<LeadItem['enquiryType'], string> = {
-    product_info: 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-100',
-    quote_request: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100',
-    demo_request: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-100',
-    support: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-    partnership: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-    other: 'bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-100',
+// This represents the data displayed in the LEADS LISTING table
+export type LeadListItem = {
+    id: string | number;
+    leadNumber: string;
+    status: LeadStatus;
+    enquiryType: EnquiryType;
+    productName?: string | null; // Product of interest for the lead
+    memberId: string; // ID of the lead/member/customer associated
+    memberName?: string; // Display name of the member
+    intent?: LeadIntent; // Lead's primary goal
+    qty?: number | null;
+    targetPrice?: number | null;
+    salesPersonId?: string | number | null; // ID of assigned salesperson
+    salesPersonName?: string | null;
+    createdAt: Date;
+    // Store the detailed form data separately if needed, or flatten for display
+    // This is for complex leads that might have been created via the detailed form
+    sourcingDetails?: LeadFormData; // Optional: if a lead was created with the detailed form
 };
 
+// This represents the data for the ADD/EDIT LEAD form (which is more like a sourcing/supply request)
+export type LeadFormData = {
+    // Fields from your "add edit field" list
+    supplierId?: string | number | null; // Selection
+    productId?: number | null;         // Selection
+    qty?: number | null;
+    productStatus?: string | null;     // Selection (e.g., 'In Stock', 'Available on Order')
+    productSpecId?: number | null;     // Selection
+    internalRemarks?: string | null;
+    deviceType?: string | null;        // Text input
+    price?: number | null;
+    color?: string | null;
+    cartoonTypeId?: number | null;     // Selection
+    dispatchStatus?: string | null;    // Text input
+    paymentTermId?: number | null;     // Selection
+    deviceCondition?: ProductCondition | null; // Selection (New/Used)
+    eta?: string | null;               // Text input
+    location?: string | null;          // Text input
 
-const initialDummyLeads: LeadItem[] = [
-    { id: 'LEAD-001', status: 'new', enquiryType: 'quote_request', leadNumber: 'L20231101', productName: 'Gaming Laptop RTX 4070', productImage: '/img/products/laptop_gaming.jpg', memberId: 'BuyerA', intent: 'buy', qty: 1, targetPrice: 1800, salesPerson: null, createdDate: new Date(2023, 10, 1, 9, 30) },
-    { id: 'LEAD-002', status: 'contacted', enquiryType: 'product_info', leadNumber: 'L20231101-2', productName: 'Wireless Mouse MX', productImage: '/img/products/mouse_mx.jpg', memberId: 'BuyerB', intent: 'inquire', qty: 2, targetPrice: null, salesPerson: 'John Doe', createdDate: new Date(2023, 10, 1, 11, 0) },
-    { id: 'LEAD-003', status: 'qualified', enquiryType: 'demo_request', leadNumber: 'L20231030', productName: 'CRM Software Suite', productImage: null, memberId: 'CompanyC', intent: 'buy', qty: 1, targetPrice: 5000, salesPerson: 'Jane Smith', createdDate: new Date(2023, 9, 30, 14, 15) },
-    { id: 'LEAD-004', status: 'follow_up', enquiryType: 'quote_request', leadNumber: 'L20231029', productName: 'Office Chair Ergonomic', productImage: null, memberId: 'BuyerD', intent: 'buy', qty: 10, targetPrice: 150, salesPerson: 'John Doe', createdDate: new Date(2023, 9, 29, 10, 0) },
-    { id: 'LEAD-005', status: 'won', enquiryType: 'product_info', leadNumber: 'L20230915', productName: 'Bulk USB Cables', productImage: null, memberId: 'CompanyE', intent: 'buy', qty: 500, targetPrice: 0.8, salesPerson: 'Jane Smith', createdDate: new Date(2023, 8, 15, 16, 45) },
-    { id: 'LEAD-006', status: 'lost', enquiryType: 'quote_request', leadNumber: 'L20230910', productName: 'Custom Server Rack', productImage: null, memberId: 'CompanyF', intent: 'buy', qty: 1, targetPrice: 2500, salesPerson: 'Peter Jones', createdDate: new Date(2023, 8, 10, 13, 20) },
-    { id: 'LEAD-007', status: 'new', enquiryType: 'partnership', leadNumber: 'L20231102', productName: null, productImage: null, memberId: 'PartnerG', intent: 'partner', qty: null, targetPrice: null, salesPerson: null, createdDate: new Date(2023, 10, 2, 15, 0) },
-    { id: 'LEAD-008', status: 'contacted', enquiryType: 'support', leadNumber: 'L20231028', productName: 'Laptop Pro 15"', productImage: '/img/products/laptop_pro.jpg', memberId: 'BuyerH', intent: 'inquire', qty: null, targetPrice: null, salesPerson: 'Support Team', createdDate: new Date(2023, 9, 28, 9, 55) },
+    // Core lead fields that might also be on this detailed form
+    leadStatus?: LeadStatus; // Status of this lead/request
+    enquiryType?: EnquiryType;
+    leadIntent?: LeadIntent;
+    targetPriceForm?: number | null; // Differentiate from listing targetPrice if needed
+    assignedSalesPersonId?: string | number | null;
+    // For linking to an existing member or creating a new one
+    memberInfo?: {
+        id?: string; // Existing member ID
+        name: string;
+        email: string;
+        phone?: string;
+    };
+};
+
+
+// --- Zod Schema for Add/Edit Lead Form (Detailed Form) ---
+const leadFormSchema = z.object({
+    supplierId: z.union([z.string(), z.number()]).nullable().optional(),
+    productId: z.number({ errorMap: () => ({ message: "Product selection is required." }) }).nullable().optional(),
+    qty: z.number().min(1, "Quantity must be at least 1.").nullable().optional(),
+    productStatus: z.string().nullable().optional(),
+    productSpecId: z.number().nullable().optional(),
+    internalRemarks: z.string().nullable().optional(),
+    deviceType: z.string().max(100).nullable().optional(),
+    price: z.number().min(0, "Price cannot be negative.").nullable().optional(),
+    color: z.string().max(50).nullable().optional(),
+    cartoonTypeId: z.number().nullable().optional(),
+    dispatchStatus: z.string().max(100).nullable().optional(),
+    paymentTermId: z.number().nullable().optional(),
+    deviceCondition: z.string().nullable().optional(),
+    eta: z.string().max(100).nullable().optional(),
+    location: z.string().max(100).nullable().optional(),
+
+    // Core lead fields
+    leadStatus: z.string().min(1, "Lead status is required."),
+    enquiryType: z.string().min(1, "Enquiry type is required."),
+    leadIntent: z.string().min(1, "Lead intent is required."),
+    targetPriceForm: z.number().min(0).nullable().optional(),
+    assignedSalesPersonId: z.union([z.string(), z.number()]).nullable().optional(),
+    memberInfo: z.object({
+        id: z.string().optional(), // Optional if creating new member
+        name: z.string().min(1, "Member name is required."),
+        email: z.string().email("Invalid email address for member.").min(1, "Member email is required."),
+        phone: z.string().nullable().optional(),
+    }),
+});
+// type LeadFormData inferred from schema is already correct
+
+// --- Zod Schema for Filter Form (for Leads Listing) ---
+const selectOptionSchema = z.object({ value: z.any(), label: z.string() });
+const filterFormSchema = z.object({
+    filterStatuses: z.array(selectOptionSchema).optional().default([]),
+    filterEnquiryTypes: z.array(selectOptionSchema).optional().default([]),
+    filterIntents: z.array(selectOptionSchema).optional().default([]),
+    filterProductIds: z.array(selectOptionSchema).optional().default([]), // Assuming product can be linked to a lead
+    filterSalesPersonIds: z.array(selectOptionSchema).optional().default([]),
+    dateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
+
+// --- UI Constants ---
+const leadStatusColor: Record<LeadStatus, string> = {
+    New: 'bg-sky-100 text-sky-700',
+    Contacted: 'bg-blue-100 text-blue-700',
+    Qualified: 'bg-indigo-100 text-indigo-700',
+    'Proposal Sent': 'bg-purple-100 text-purple-700',
+    Negotiation: 'bg-violet-100 text-violet-700',
+    'Follow Up': 'bg-amber-100 text-amber-700',
+    Won: 'bg-emerald-100 text-emerald-700',
+    Lost: 'bg-red-100 text-red-700',
+};
+const enquiryTypeColor: Record<EnquiryType, string> = {
+    'Product Info': 'bg-gray-100 text-gray-700',
+    'Quote Request': 'bg-cyan-100 text-cyan-700',
+    'Demo Request': 'bg-teal-100 text-teal-700',
+    Support: 'bg-pink-100 text-pink-700',
+    Partnership: 'bg-lime-100 text-lime-700',
+    Sourcing: 'bg-fuchsia-100 text-fuchsia-700',
+    Other: 'bg-stone-100 text-stone-700',
+};
+const leadStatusOptions = Object.keys(leadStatusColor).map(s => ({ value: s, label: s }));
+const enquiryTypeOptions = Object.keys(enquiryTypeColor).map(s => ({ value: s, label: s }));
+const leadIntentOptions = [{value: 'Buy', label: 'Buy'}, {value: 'Sell', label: 'Sell'}, {value: 'Inquire', label: 'Inquire'}, {value: 'Partner', label: 'Partner'}];
+const productStatusOptionsForm = [{value: 'In Stock', label: 'In Stock'}, {value: 'Available on Order', label: 'Available on Order'}, {value: 'Low Stock', label: 'Low Stock'}];
+const deviceConditionOptionsForm = [{value: 'New', label: 'New'}, {value: 'Used', label: 'Used'}, {value: 'Refurbished', label: 'Refurbished'}];
+
+// --- Dummy Data for Selects in Form (Replace with actual data) ---
+const dummySuppliers = [{id: 'SUP001', name: 'Supplier Alpha'}, {id: 'SUP002', name: 'Supplier Beta'}];
+const dummyProducts = [{ id: 1, name: "iPhone 15 Pro" }, { id: 2, name: "Samsung Galaxy S24 Ultra" }, {id: 3, name: "MacBook Air M3"}];
+const dummyProductSpecs = [{ id: 1, name: "256GB, Blue", productId: 1 }, { id: 2, name: "512GB, Black", productId: 2 }, {id: 3, name: "16GB RAM, 512GB SSD", productId: 3}];
+const dummyCartoonTypes = [{id: 1, name: 'Master Carton'}, {id: 2, name: 'Inner Box'}];
+const dummyPaymentTerms = [{id: 1, name: 'Net 30'}, {id: 2, name: 'COD'}, {id: 3, name: 'Advance'}];
+const dummySalesPersons = [{id: 'SP001', name: 'Alice Wonder'}, {id: 'SP002', name: 'Bob The Builder'}];
+
+
+// --- Initial Dummy Leads Data ---
+const initialDummyLeads: LeadListItem[] = [
+    { id: 'L001', leadNumber: "LD2024001", status: 'New', enquiryType: 'Quote Request', productName: 'iPhone 15 Pro', memberId: 'CUST101', memberName: 'John Doe', intent: 'Buy', qty: 10, targetPrice: 950, salesPersonId: 'SP001', salesPersonName: 'Alice Wonder', createdAt: dayjs().subtract(1, 'day').toDate(), sourcingDetails: { productId: 1, productSpecId: 1, qty: 10, price: 950, deviceCondition: 'New', internalRemarks: 'Urgent request' } },
+    { id: 'L002', leadNumber: "LD2024002", status: 'Contacted', enquiryType: 'Product Info', productName: 'Samsung S24 Ultra', memberId: 'CUST102', memberName: 'Jane Smith', intent: 'Inquire', salesPersonId: 'SP002', salesPersonName: 'Bob The Builder', createdAt: dayjs().subtract(2, 'day').toDate() },
+    { id: 'L003', leadNumber: "LD2024003", status: 'Qualified', enquiryType: 'Sourcing', productName: 'MacBook Air M3', memberId: 'CUST103', memberName: 'Alex Buyer', intent: 'Buy', qty: 5, salesPersonId: 'SP001', salesPersonName: 'Alice Wonder', createdAt: dayjs().subtract(3, 'day').toDate(), sourcingDetails: { productId: 3, productSpecId: 3, qty: 5, deviceCondition: 'New', location: 'Dubai' } },
+    { id: 'L004', leadNumber: "LD2024004", status: 'Won', enquiryType: 'Quote Request', productName: 'iPhone 15 Pro', memberId: 'CUST101', memberName: 'John Doe', intent: 'Buy', qty: 5, targetPrice: 960, salesPersonId: 'SP001', salesPersonName: 'Alice Wonder', createdAt: dayjs().subtract(10, 'day').toDate() },
 ];
-// --- End Constants ---
 
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    // onClone removed for leads
-    // onChangeStatus removed for leads (handled differently)
-    onDelete,
-}: {
-    onEdit: () => void;
-    // onClone?: () => void;
-    // onChangeStatus?: () => void;
-    onDelete: () => void;
+// CSV Exporter
+const CSV_LEAD_HEADERS = ['ID', 'Lead Number', 'Status', 'Enquiry Type', 'Product Name', 'Member ID', 'Member Name', 'Intent', 'Qty', 'Target Price', 'Sales Person', 'Created At'];
+const CSV_LEAD_KEYS: (keyof LeadListItem)[] = ['id', 'leadNumber', 'status', 'enquiryType', 'productName', 'memberId', 'memberName', 'intent', 'qty', 'targetPrice', 'salesPersonName', 'createdAt'];
+
+function exportLeadsToCsv(filename: string, rows: LeadListItem[]) {
+    // ... (Standard CSV export logic, adapt keys and headers)
+    if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
+    const separator = ',';
+    const csvContent = CSV_LEAD_HEADERS.join(separator) + '\n' + rows.map(row => {
+        return CSV_LEAD_KEYS.map(k => {
+            let cell = row[k];
+            if (cell === null || cell === undefined) cell = '';
+            else if (cell instanceof Date) cell = dayjs(cell).format('YYYY-MM-DD HH:mm:ss');
+            else cell = String(cell).replace(/"/g, '""');
+            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+            return cell;
+        }).join(separator);
+    }).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+        return true;
+    }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+    return false;
+}
+
+
+// --- ActionColumn, Search, TableTools, DataTable, SelectedFooter ---
+// ActionColumn
+const ActionColumn = ({ onView, onDelete, onAssign, onChangeStatus, onConvertToOpportunity }: {
+    onView: () => void; onDelete: () => void; onAssign: () => void; onChangeStatus: () => void; onConvertToOpportunity: () => void;
 }) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
-
+    const iconBtnClass = "text-lg p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700";
     return (
-        <div className="flex items-center justify-end gap-2">
-            {/* Edit Button */}
-            <Tooltip title="Edit Lead">
-                <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400' )} role="button" onClick={onEdit} > <TbPencil /> </div>
-            </Tooltip>
-             {/* Delete Button */}
-            <Tooltip title="Delete Lead">
-                <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400' )} role="button" onClick={onDelete} > <TbTrash /> </div>
-            </Tooltip>
-             {/* Add other relevant lead actions here e.g., Assign, Convert */}
+        <div className="flex items-center justify-center gap-0.5">
+            <Tooltip title="View Details"><Button shape="circle" variant="plain" size="sm" icon={<TbEye />} onClick={onView} className={iconBtnClass}/></Tooltip>
+            <Tooltip title="Assign Lead"><Button shape="circle" variant="plain" size="sm" icon={<TbUserPlus />} onClick={onAssign} className={`${iconBtnClass} hover:text-blue-500`}/></Tooltip>
+            <Tooltip title="Change Status"><Button shape="circle" variant="plain" size="sm" icon={<TbSwitchHorizontal />} onClick={onChangeStatus} className={`${iconBtnClass} hover:text-amber-500`}/></Tooltip>
+            <Tooltip title="Convert to Opportunity"><Button shape="circle" variant="plain" size="sm" icon={<TbArrowRightCircle />} onClick={onConvertToOpportunity} className={`${iconBtnClass} hover:text-emerald-500`}/></Tooltip>
+            <Tooltip title="Delete"><Button shape="circle" variant="plain" size="sm" icon={<TbTrash />} onClick={onDelete} className={`${iconBtnClass} hover:text-red-500`}/></Tooltip>
         </div>
     );
 };
-// --- End ActionColumn ---
 
-
-// --- LeadTable Component ---
-const LeadTable = ({ // Renamed component
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedLeads, // Renamed prop
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<LeadItem>[];
-    data: LeadItem[];
-    loading: boolean;
-    pagingData: { total: number; pageIndex: number; pageSize: number };
-    selectedLeads: LeadItem[]; // Use new type
-    onPaginationChange: (page: number) => void;
-    onSelectChange: (value: number) => void;
-    onSort: (sort: OnSortParam) => void;
-    onRowSelect: (checked: boolean, row: LeadItem) => void; // Use new type
-    onAllRowSelect: (checked: boolean, rows: Row<LeadItem>[]) => void; // Use new type
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedLeads.some((selected) => selected.id === row.id) // Use selectedLeads
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-        />
-    );
-};
-// --- End LeadTable ---
-
-
-// --- LeadSearch Component ---
-type LeadSearchProps = { // Renamed component
-    onInputChange: (value: string) => void;
-    ref?: Ref<HTMLInputElement>;
-};
+// Search
+type LeadSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement> };
 const LeadSearch = React.forwardRef<HTMLInputElement, LeadSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                placeholder="Quick search..." // Updated placeholder
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        );
-    }
+    ({ onInputChange }, ref) => <DebouceInput ref={ref} className="w-full" placeholder="Search leads..." suffix={<TbSearch />} onChange={e => onInputChange(e.target.value)} />
 );
 LeadSearch.displayName = 'LeadSearch';
-// --- End LeadSearch ---
 
-
-// --- LeadTableTools Component ---
-const LeadTableTools = ({ // Renamed component
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void;
-}) => {
-    return (
-        <div className="flex items-center w-full">
-            <div className="flex-grow">
-                <LeadSearch onInputChange={onSearchChange} />
-            </div>
-            {/* Add Filter button here if needed */}
+// TableTools
+const LeadTableTools = ({ onSearchChange, onFilter, onExport, onAddNew }: {
+    onSearchChange: (q: string) => void; onFilter: () => void; onExport: () => void; onAddNew: () => void;
+}) => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex-grow"><LeadSearch onInputChange={onSearchChange} /></div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+           
+            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
         </div>
-    );
+    </div>
+);
+
+// DataTable
+type LeadTableProps = {
+    columns: ColumnDef<LeadListItem>[]; data: LeadListItem[]; loading: boolean;
+    pagingData: { total: number; pageIndex: number; pageSize: number };
+    selectedItems: LeadListItem[];
+    onPaginationChange: (p: number) => void; onSelectChange: (v: number) => void;
+    onSort: (s: OnSortParam) => void;
+    onRowSelect: (c: boolean, r: LeadListItem) => void; onAllRowSelect: (c: boolean, rs: Row<LeadListItem>[]) => void;
 };
-// --- End LeadTableTools ---
+const LeadTable = (props: LeadTableProps) => (
+    <DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData}
+        checkboxChecked={(row) => props.selectedItems.some(s => s.id === row.id)}
+        onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange}
+        onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect}
+        noData={!props.loading && props.data.length === 0}
+    />
+);
 
-
-// --- LeadActionTools Component ---
-const LeadActionTools = ({ allLeads }: { allLeads: LeadItem[] }) => { // Renamed prop and component
-    const navigate = useNavigate();
-
-    // Prepare data for CSV
-    const csvData = useMemo(() => {
-        return allLeads.map(item => ({
-             id: item.id, status: item.status, enquiryType: item.enquiryType, leadNumber: item.leadNumber,
-             productName: item.productName ?? 'N/A', memberId: item.memberId, intent: item.intent,
-             qty: item.qty ?? '', targetPrice: item.targetPrice ?? '', // Handle null numbers for CSV
-             salesPerson: item.salesPerson ?? 'Unassigned', createdDate: item.createdDate.toISOString(),
-        }));
-    }, [allLeads]);
-
-    const csvHeaders = [
-        { label: "Lead ID", key: "id" }, { label: "Status", key: "status" },
-        { label: "Enquiry Type", key: "enquiryType" }, { label: "Lead Number", key: "leadNumber" },
-        { label: "Product", key: "productName" }, { label: "Member ID", key: "memberId" },
-        { label: "Intent", key: "intent" }, { label: "Qty", key: "qty" },
-        { label: "Target Price", key: "targetPrice" }, { label: "Sales Person", key: "salesPerson" },
-        { label: "Created Date", key: "createdDate" },
-      ];
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/* <CSVLink filename="leads.csv" data={csvData} headers={csvHeaders} >
-                <Button icon={<TbCloudDownload />} className="w-full" block> Download </Button>
-            </CSVLink> */}
-            <Button
-                variant="solid"
-                icon={<TbPlus className="text-lg" />}
-                onClick={() => console.log('Navigate to Add New Lead page')}
-                // onClick={() => navigate('/leads/create')}
-                block
-            >
-                Add New{/* Updated Text */}
-            </Button>
-        </div>
-    );
-};
-// --- End LeadActionTools ---
-
-
-// --- LeadSelected Component ---
-const LeadSelected = ({ // Renamed component
-    selectedLeads, // Renamed prop
-    setSelectedLeads, // Renamed prop
-    onDeleteSelected,
-}: {
-    selectedLeads: LeadItem[]; // Use new type
-    setSelectedLeads: React.Dispatch<React.SetStateAction<LeadItem[]>>; // Use new type
-    onDeleteSelected: () => void;
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-    const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmationOpen(false); };
-
-    if (selectedLeads.length === 0) return null;
-
+// SelectedFooter
+type LeadSelectedFooterProps = { selectedItems: LeadListItem[]; onDeleteSelected: () => void; };
+const LeadSelectedFooter = ({ selectedItems, onDeleteSelected }: LeadSelectedFooterProps) => {
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    if (selectedItems.length === 0) return null;
     return (
         <>
-            <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8" >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                     <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400"> <TbChecks /> </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">{selectedLeads.length}</span> {/* Use selectedLeads */}
-                            <span>Lead{selectedLeads.length > 1 ? 's' : ''} selected</span> {/* Updated text */}
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick}> Delete </Button>
-                         {/* Add other bulk lead actions: Assign, Change Status, etc. */}
-                    </div>
+            <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t px-8">
+                <div className="flex items-center justify-between w-full">
+                    <span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500" /><span className="font-semibold">{selectedItems.length} lead{selectedItems.length > 1 ? 's' : ''} selected</span></span>
+                    <Button size="sm" variant="plain" className="text-red-500 hover:text-red-700" onClick={() => setDeleteOpen(true)}>Delete Selected</Button>
                 </div>
             </StickyFooter>
-            <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedLeads.length} Lead${selectedLeads.length > 1 ? 's' : ''}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} confirmButtonColor="red-600">
-                <p>Are you sure you want to delete the selected lead{selectedLeads.length > 1 ? 's' : ''}? This action cannot be undone.</p>
+            <ConfirmDialog isOpen={deleteOpen} type="danger" title={`Delete ${selectedItems.length} leads?`}
+                onClose={() => setDeleteOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteOpen(false); }}
+                onCancel={() => setDeleteOpen(false)}>
+                <p>This action cannot be undone.</p>
             </ConfirmDialog>
         </>
     );
 };
-// --- End LeadSelected ---
 
 
-// --- Main Leads Component ---
-const Leads = () => { // Renamed Component
-    const navigate = useNavigate();
+// --- Main LeadsListing Component ---
+const LeadsListing = () => {
+    const [allLeads, setAllLeads] = useState<LeadListItem[]>(initialDummyLeads);
+    const [loadingStatus, setLoadingStatus] = useState<'idle' | 'loading' | 'succeeded' | 'failed'>('idle');
 
-    // --- Lifted State ---
-    const [isLoading, setIsLoading] = useState(false);
-    const [leads, setLeads] = useState<LeadItem[]>(initialDummyLeads); // Renamed state
-    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' });
-    const [selectedLeads, setSelectedLeads] = useState<LeadItem[]>([]); // Renamed state
-    // --- End Lifted State ---
+    const dispatchSimulated = useCallback(async (action: { type: string; payload?: any }) => {
+        setLoadingStatus('loading');
+        await new Promise(res => setTimeout(res, 300));
+        try {
+            switch (action.type) {
+                case 'leads/get': setAllLeads(initialDummyLeads); break;
+                case 'leads/add':
+                    const newLead: LeadListItem = {
+                        id: `L${Date.now()}`,
+                        leadNumber: `LD${Date.now().toString().slice(-7)}`,
+                        status: action.payload.leadStatus,
+                        enquiryType: action.payload.enquiryType,
+                        productName: dummyProducts.find(p => p.id === action.payload.productId)?.name,
+                        memberId: action.payload.memberInfo.id || `NEW_MEM_${Date.now()}`, // Generate if new
+                        memberName: action.payload.memberInfo.name,
+                        intent: action.payload.leadIntent,
+                        qty: action.payload.qty,
+                        targetPrice: action.payload.targetPriceForm,
+                        salesPersonId: action.payload.assignedSalesPersonId,
+                        salesPersonName: dummySalesPersons.find(sp => sp.id === action.payload.assignedSalesPersonId)?.name,
+                        createdAt: new Date(),
+                        sourcingDetails: { ...action.payload } // Store all form data in sourcingDetails
+                    };
+                    setAllLeads(prev => [newLead, ...prev]);
+                    break;
+                case 'leads/edit': // Edit might be complex, focusing on status/assignment for now
+                     setAllLeads(prev => prev.map(lead => lead.id === action.payload.id ? { ...lead, ...action.payload.data, updatedAt: new Date() } : lead));
+                    break;
+                case 'leads/delete':
+                    setAllLeads(prev => prev.filter(lead => lead.id !== action.payload.id));
+                    break;
+                case 'leads/deleteAll':
+                    const idsToDelete = new Set((action.payload.ids as string).split(','));
+                    setAllLeads(prev => prev.filter(lead => !idsToDelete.has(String(lead.id))));
+                    break;
+                // Add cases for assign, changeStatus, convertToOpportunity
+                case 'leads/assign':
+                     setAllLeads(prev => prev.map(lead => lead.id === action.payload.id ? {...lead, salesPersonId: action.payload.salesPersonId, salesPersonName: dummySalesPersons.find(sp=>sp.id === action.payload.salesPersonId)?.name, updatedAt: new Date()} : lead));
+                    break;
+                case 'leads/changeStatus':
+                     setAllLeads(prev => prev.map(lead => lead.id === action.payload.id ? {...lead, status: action.payload.newStatus, updatedAt: new Date()} : lead));
+                    break;
+                default: console.warn('Unknown action for leads');
+            }
+            setLoadingStatus('succeeded');
+            return { unwrap: () => Promise.resolve() };
+        } catch (e) { setLoadingStatus('failed'); return { unwrap: () => Promise.reject(e) }; }
+    }, []);
 
-    // --- Memoized Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...leads]; // Use leads state
+    useEffect(() => { dispatchSimulated({ type: 'leads/get' }); }, [dispatchSimulated]);
 
-        // Apply Search
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase();
-            processedData = processedData.filter(
-                (lead) =>
-                    lead.id.toLowerCase().includes(query) ||
-                    lead.status.toLowerCase().includes(query) ||
-                    lead.enquiryType.toLowerCase().includes(query) ||
-                    lead.leadNumber.toLowerCase().includes(query) ||
-                    (lead.productName?.toLowerCase().includes(query) ?? false) ||
-                    lead.memberId.toLowerCase().includes(query) ||
-                    lead.intent.toLowerCase().includes(query) ||
-                    (lead.salesPerson?.toLowerCase().includes(query) ?? false)
+    const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState(false);
+    const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+    const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState(false);
+    const [isChangeStatusDrawerOpen, setIsChangeStatusDrawerOpen] = useState(false);
+
+    const [editingLead, setEditingLead] = useState<LeadListItem | null>(null); // For Add/Edit/View/Assign/StatusChange
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<LeadListItem | null>(null);
+
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
+    const [tableData, setTableData] = useState<TableQueries>({
+        pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'createdAt' }, query: '',
+    });
+    const [selectedItems, setSelectedItems] = useState<LeadListItem[]>([]);
+
+    const formMethods = useForm<LeadFormData>({ resolver: zodResolver(leadFormSchema) });
+    const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
+    const assignFormMethods = useForm<{ salesPersonId: string | number | null }>({ defaultValues: { salesPersonId: null }});
+    const statusFormMethods = useForm<{ newStatus: LeadStatus }>({ defaultValues: { newStatus: 'New' }});
+
+
+    const openAddDrawer = useCallback(() => {
+        setEditingLead(null);
+        formMethods.reset({ // Default values for the detailed LeadFormData
+            supplierId: null, productId: null, qty: null, productStatus: productStatusOptionsForm[0]?.value,
+            productSpecId: null, internalRemarks: null, deviceType: null, price: null, color: null,
+            cartoonTypeId: null, dispatchStatus: null, paymentTermId: null, deviceCondition: deviceConditionOptionsForm[0]?.value,
+            eta: null, location: null,
+            leadStatus: leadStatusOptions[0]?.value, enquiryType: enquiryTypeOptions[0]?.value, leadIntent: leadIntentOptions[0]?.value,
+            targetPriceForm: null, assignedSalesPersonId: null,
+            memberInfo: { name: '', email: '', phone: '' }
+        });
+        setIsAddEditDrawerOpen(true);
+    }, [formMethods]);
+
+    // For EDIT: The edit form might be simpler, focusing on core lead fields rather than all sourcing details.
+    // Or, it could load the sourcingDetails into the full form if a lead was created that way.
+    const openEditDrawer = useCallback((lead: LeadListItem) => {
+        setEditingLead(lead);
+        formMethods.reset({ // Populate with existing lead data, including sourcingDetails if present
+            ...(lead.sourcingDetails || {}), // Spread sourcing details first
+            leadStatus: lead.status,
+            enquiryType: lead.enquiryType,
+            leadIntent: lead.intent,
+            targetPriceForm: lead.targetPrice,
+            assignedSalesPersonId: lead.salesPersonId,
+            memberInfo: { id: lead.memberId, name: lead.memberName || '', email: '', phone: '' } // Need to fetch/have member email/phone
+        });
+        setIsAddEditDrawerOpen(true);
+    }, [formMethods]);
+
+    const closeAddEditDrawer = useCallback(() => { setIsAddEditDrawerOpen(false); setEditingLead(null); }, []);
+    const openViewDrawer = useCallback((lead: LeadListItem) => { setEditingLead(lead); setIsViewDrawerOpen(true); }, []);
+    const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingLead(null); }, []);
+
+    const openAssignDrawer = useCallback((lead: LeadListItem) => {
+        setEditingLead(lead);
+        assignFormMethods.reset({ salesPersonId: lead.salesPersonId || null });
+        setIsAssignDrawerOpen(true);
+    }, [assignFormMethods]);
+    const closeAssignDrawer = useCallback(() => { setIsAssignDrawerOpen(false); setEditingLead(null);}, []);
+
+    const openChangeStatusDrawer = useCallback((lead: LeadListItem) => {
+        setEditingLead(lead);
+        statusFormMethods.reset({ newStatus: lead.status });
+        setIsChangeStatusDrawerOpen(true);
+    }, [statusFormMethods]);
+    const closeChangeStatusDrawer = useCallback(() => { setIsChangeStatusDrawerOpen(false); setEditingLead(null);}, []);
+
+
+    const onFormSubmit = useCallback(async (data: LeadFormData) => { // For Add/Edit Lead
+        setIsSubmitting(true);
+        try {
+            if (editingLead && editingLead.id) { // Editing existing lead
+                // For edit, decide which fields are updatable.
+                // The simulated dispatch for edit is very basic currently.
+                await dispatchSimulated({ type: 'leads/edit', payload: { id: editingLead.id, data: data } }).unwrap();
+                toast.push(<Notification title="Success" type="success">Lead updated.</Notification>);
+            } else { // Adding new lead
+                await dispatchSimulated({ type: 'leads/add', payload: data }).unwrap();
+                toast.push(<Notification title="Success" type="success">New lead created.</Notification>);
+            }
+            closeAddEditDrawer();
+        } catch (error: any) { toast.push(<Notification title="Error" type="danger">{error.message || "Operation failed."}</Notification>); }
+        finally { setIsSubmitting(false); }
+    }, [dispatchSimulated, editingLead, closeAddEditDrawer]);
+
+    const onAssignSubmit = useCallback(async (data: { salesPersonId: string | number | null }) => {
+        if (!editingLead) return;
+        setIsSubmitting(true);
+        try {
+            await dispatchSimulated({ type: 'leads/assign', payload: { id: editingLead.id, salesPersonId: data.salesPersonId } }).unwrap();
+            toast.push(<Notification title="Success" type="success">Lead assigned.</Notification>);
+            closeAssignDrawer();
+        } catch (error: any) { toast.push(<Notification title="Error" type="danger">Assignment failed.</Notification>);}
+        finally { setIsSubmitting(false); }
+    }, [dispatchSimulated, editingLead, closeAssignDrawer]);
+
+    const onChangeStatusSubmit = useCallback(async (data: { newStatus: LeadStatus }) => {
+        if (!editingLead) return;
+        setIsSubmitting(true);
+        try {
+            await dispatchSimulated({ type: 'leads/changeStatus', payload: { id: editingLead.id, newStatus: data.newStatus } }).unwrap();
+            toast.push(<Notification title="Success" type="success">Status updated.</Notification>);
+            closeChangeStatusDrawer();
+        } catch (error: any) { toast.push(<Notification title="Error" type="danger">Status update failed.</Notification>);}
+        finally { setIsSubmitting(false); }
+    }, [dispatchSimulated, editingLead, closeChangeStatusDrawer]);
+
+    const handleConvertToOpportunity = useCallback((lead: LeadListItem) => {
+        // Logic to convert lead to opportunity
+        // This might involve creating a new opportunity record, updating lead status, etc.
+        toast.push(<Notification title="Convert" type="info">{`Converting lead ${lead.leadNumber} to opportunity... (Not Implemented)`}</Notification>);
+        // Example: dispatchSimulated({ type: 'leads/convertToOpportunity', payload: { id: lead.id } });
+    }, []);
+
+
+    const handleDeleteClick = useCallback((item: LeadListItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const onConfirmSingleDelete = useCallback(async () => {
+        if (!itemToDelete) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false);
+        try {
+            await dispatchSimulated({ type: 'leads/delete', payload: { id: itemToDelete.id } }).unwrap();
+            toast.push(<Notification title="Deleted" type="success">Lead deleted.</Notification>);
+            setSelectedItems((prev) => prev.filter(i => i.id !== itemToDelete.id));
+        } catch (e:any) { toast.push(<Notification title="Error" type="danger">{e.message || "Delete failed."}</Notification>); }
+        finally { setIsDeleting(false); setItemToDelete(null); }
+    }, [dispatchSimulated, itemToDelete]);
+
+    const onDeleteSelected = useCallback(async () => {
+        if(selectedItems.length === 0) return; setIsDeleting(true);
+        const ids = selectedItems.map(item => item.id).join(',');
+        try {
+            await dispatchSimulated({ type: 'leads/deleteAll', payload: { ids } }).unwrap();
+            toast.push(<Notification title="Success" type="success">{selectedItems.length} leads deleted.</Notification>);
+            setSelectedItems([]);
+        } catch (e:any) { toast.push(<Notification title="Error" type="danger">{e.message || "Bulk delete failed."}</Notification>); }
+        finally { setIsDeleting(false); }
+    }, [dispatchSimulated, selectedItems]);
+
+    // Filter Drawer handlers
+    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
+    const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+
+    // Table data processing
+    type ProcessedDataType = { pageData: LeadListItem[]; total: number; allFilteredAndSortedData: LeadListItem[]; };
+    const { pageData, total, allFilteredAndSortedData } = useMemo((): ProcessedDataType => {
+        let processedData: LeadListItem[] = cloneDeep(allLeads);
+        // Apply Filters (based on LeadListItem fields)
+        if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) {
+            const [startDate, endDate] = filterCriteria.dateRange;
+            const start = startDate ? dayjs(startDate).startOf('day') : null;
+            const end = endDate ? dayjs(endDate).endOf('day') : null;
+            processedData = processedData.filter(item => {
+                const itemDate = dayjs(item.createdAt);
+                if (start && end) return itemDate.isBetween(start, end, null, '[]');
+                if (start) return itemDate.isSameOrAfter(start, 'day');
+                if (end) return itemDate.isSameOrBefore(end, 'day');
+                return true;
+            });
+        }
+        if (filterCriteria.filterStatuses && filterCriteria.filterStatuses.length > 0) {
+            const statuses = new Set(filterCriteria.filterStatuses.map(opt => opt.value));
+            processedData = processedData.filter(item => statuses.has(item.status));
+        }
+        if (filterCriteria.filterEnquiryTypes && filterCriteria.filterEnquiryTypes.length > 0) {
+            const types = new Set(filterCriteria.filterEnquiryTypes.map(opt => opt.value));
+            processedData = processedData.filter(item => types.has(item.enquiryType));
+        }
+        if (filterCriteria.filterIntents && filterCriteria.filterIntents.length > 0) {
+            const intents = new Set(filterCriteria.filterIntents.map(opt => opt.value));
+            processedData = processedData.filter(item => item.intent && intents.has(item.intent));
+        }
+        if (filterCriteria.filterProductIds && filterCriteria.filterProductIds.length > 0) {
+            const productIds = new Set(filterCriteria.filterProductIds.map(opt => opt.value));
+            processedData = processedData.filter(item => item.sourcingDetails?.productId && productIds.has(item.sourcingDetails.productId));
+        }
+        if (filterCriteria.filterSalesPersonIds && filterCriteria.filterSalesPersonIds.length > 0) {
+            const spIds = new Set(filterCriteria.filterSalesPersonIds.map(opt => opt.value));
+            processedData = processedData.filter(item => item.salesPersonId && spIds.has(item.salesPersonId));
+        }
+
+
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(item =>
+                String(item.id).toLowerCase().includes(query) ||
+                item.leadNumber.toLowerCase().includes(query) ||
+                (item.productName && item.productName.toLowerCase().includes(query)) ||
+                (item.memberName && item.memberName.toLowerCase().includes(query)) ||
+                item.memberId.toLowerCase().includes(query) ||
+                (item.salesPersonName && item.salesPersonName.toLowerCase().includes(query)) ||
+                item.status.toLowerCase().includes(query) ||
+                item.enquiryType.toLowerCase().includes(query)
             );
         }
-
-        // Apply Sorting
         const { order, key } = tableData.sort as OnSortParam;
-        if (order && key) {
-            const sortedData = [...processedData];
-            sortedData.sort((a, b) => {
-                 if (key === 'createdDate') {
-                    const timeA = a.createdDate.getTime(); const timeB = b.createdDate.getTime();
-                    return order === 'asc' ? timeA - timeB : timeB - timeA;
+        if (order && key && processedData.length > 0) {
+            processedData.sort((a, b) => {
+                let aVal = a[key as keyof LeadListItem];
+                let bVal = b[key as keyof LeadListItem];
+                if (key === 'createdAt') { // Date sorting
+                    return order === 'asc' ? dayjs(aVal as Date).valueOf() - dayjs(bVal as Date).valueOf() : dayjs(bVal as Date).valueOf() - dayjs(aVal as Date).valueOf();
                 }
-                if (key === 'qty' || key === 'targetPrice') { // Handle number sorting
-                    const numA = a[key] ?? (order === 'asc' ? Infinity : -Infinity); // Handle nulls based on sort order
-                    const numB = b[key] ?? (order === 'asc' ? Infinity : -Infinity);
-                     return order === 'asc' ? numA - numB : numB - numA;
-                }
-                 // Handle nulls for productName, salesPerson
-                 if (key === 'productName' || key === 'salesPerson') {
-                     const aValue = a[key] ?? ''; const bValue = b[key] ?? '';
-                     if (aValue === null && bValue === null) return 0;
-                     if (aValue === null) return order === 'asc' ? -1 : 1;
-                     if (bValue === null) return order === 'asc' ? 1 : -1;
-                     return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-                 }
-
-                // Default string sort
-                const aValue = a[key as keyof LeadItem] ?? '';
-                const bValue = b[key as keyof LeadItem] ?? '';
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-                }
-                return 0;
+                if (typeof aVal === 'number' && typeof bVal === 'number') return order === 'asc' ? aVal - bVal : bVal - aVal;
+                return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? ''));
             });
-            processedData = sortedData;
         }
-
-        // Apply Pagination
+        const currentTotal = processedData.length;
         const pageIndex = tableData.pageIndex as number;
         const pageSize = tableData.pageSize as number;
-        const dataTotal = processedData.length;
         const startIndex = (pageIndex - 1) * pageSize;
-        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+        return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
+    }, [allLeads, tableData, filterCriteria]);
 
-        return { pageData: dataForPage, total: dataTotal };
-    }, [leads, tableData]); // Use leads state
-    // --- End Memoized Data Processing ---
-
-
-    // --- Lifted Handlers (Update parameter types and state setters) ---
-    const handleSetTableData = useCallback((data: TableQueries) => { setTableData(data); }, []);
-    const handlePaginationChange = useCallback((page: number) => { handleSetTableData({ ...tableData, pageIndex: page }); }, [tableData, handleSetTableData]);
-    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ ...tableData, pageSize: Number(value), pageIndex: 1 }); setSelectedLeads([]); }, [tableData, handleSetTableData]);
-    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 }); }, [tableData, handleSetTableData]);
-    const handleSearchChange = useCallback((query: string) => { handleSetTableData({ ...tableData, query: query, pageIndex: 1 }); }, [tableData, handleSetTableData]);
-
-    const handleRowSelect = useCallback((checked: boolean, row: LeadItem) => {
-        setSelectedLeads((prev) => {
-            if (checked) { return prev.some((i) => i.id === row.id) ? prev : [...prev, row]; }
-            else { return prev.filter((i) => i.id !== row.id); }
-        });
-    }, [setSelectedLeads]);
-
-    const handleAllRowSelect = useCallback((checked: boolean, rows: Row<LeadItem>[]) => {
-        const rowIds = new Set(rows.map(r => r.original.id));
-         setSelectedLeads(prev => {
-             if (checked) {
-                 const originalRows = rows.map((row) => row.original);
-                 const existingIds = new Set(prev.map(i => i.id));
-                 const newSelection = originalRows.filter(i => !existingIds.has(i.id));
-                 return [...prev, ...newSelection];
-             } else {
-                 return prev.filter(i => !rowIds.has(i.id));
-             }
-         });
-    }, [setSelectedLeads]);
-
-    const handleEdit = useCallback((lead: LeadItem) => {
-        console.log('Edit lead:', lead.id);
-        navigate(`/leads/edit/${lead.id}`); // Adjust route
-    }, [navigate]);
-
-    // Removed handleClone for leads
-
-    // Removed handleChangeStatus for leads (would likely involve a modal/dropdown)
-
-    const handleDelete = useCallback((leadToDelete: LeadItem) => {
-        console.log('Deleting lead:', leadToDelete.id);
-        setLeads((currentLeads) => currentLeads.filter((lead) => lead.id !== leadToDelete.id));
-        setSelectedLeads((prevSelected) => prevSelected.filter((lead) => lead.id !== leadToDelete.id));
-        toast.push(<Notification title="Lead Deleted" type="success" duration={2000}>{`Lead ${leadToDelete.leadNumber} deleted.`}</Notification>);
-    }, [setLeads, setSelectedLeads]);
-
-     const handleDeleteSelected = useCallback(() => {
-        console.log('Deleting selected leads:', selectedLeads.map(i => i.id));
-        const selectedIds = new Set(selectedLeads.map(i => i.id));
-        setLeads(currentLeads => currentLeads.filter(i => !selectedIds.has(i.id)));
-        setSelectedLeads([]);
-        toast.push(<Notification title="Leads Deleted" type="success" duration={2000}>{`${selectedIds.size} lead(s) deleted.`}</Notification>);
-    }, [selectedLeads, setLeads, setSelectedLeads]);
-    // --- End Lifted Handlers ---
+    const handleExportData = useCallback(() => exportLeadsToCsv('leads_export.csv', allFilteredAndSortedData), [allFilteredAndSortedData]);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handlePageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: LeadListItem) => setSelectedItems(prev => checked ? (prev.some(i => i.id === row.id) ? prev : [...prev, row]) : prev.filter(i => i.id !== row.id)), []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<LeadListItem>[]) => {
+        const originals = currentRows.map(r => r.original);
+        if (checked) setSelectedItems(prev => { const oldIds = new Set(prev.map(i => i.id)); return [...prev, ...originals.filter(o => !oldIds.has(o.id))]; });
+        else { const currentIds = new Set(originals.map(o => o.id)); setSelectedItems(prev => prev.filter(i => !currentIds.has(i.id))); }
+    }, []);
 
 
-    // --- Define Columns in Parent ---
-    const columns: ColumnDef<LeadItem>[] = useMemo(
-        () => [
-            {
-                header: 'Status', accessorKey: 'status', enableSorting: true, width: 120,
-                cell: props => { const { status } = props.row.original; return ( <Tag className={`${leadStatusColor[status]} text-white capitalize`}>{status}</Tag> ); }
-            },
-            {
-                header: 'Enquiry Type', accessorKey: 'enquiryType', enableSorting: true, width: 150,
-                cell: props => {
-                     const { enquiryType } = props.row.original;
-                     const displayType = enquiryType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                     return ( <Tag className={`${enquiryTypeTagColor[enquiryType]} font-semibold border ${enquiryTypeTagColor[enquiryType].replace('bg-', 'border-').replace('/20', '')}`}>{displayType}</Tag> );
-                }
-            },
-            { header: 'Lead Number', accessorKey: 'leadNumber', enableSorting: true, width: 150 },
-             {
-                header: 'Product', accessorKey: 'productName', enableSorting: true,
-                cell: props => {
-                     const { productName, productImage } = props.row.original;
-                     return productName ? (
-                         <div className="flex items-center gap-2">
-                             <Avatar size={30} shape="square" src={productImage} icon={<TbBox />} />
-                             <span className="font-semibold">{productName}</span>
-                         </div>
-                     ) : (<span>-</span>)
-                 }
-            },
-            { header: 'Member ID', accessorKey: 'memberId', enableSorting: true, width: 120 },
-            {
-                header: 'Intent', accessorKey: 'intent', enableSorting: true, width: 100,
-                 cell: props => {
-                     const displayIntent = props.row.original.intent.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                     return <span>{displayIntent}</span>;
-                 }
-             },
-            { header: 'Qty', accessorKey: 'qty', enableSorting: true, width: 80, cell: props => <span>{props.row.original.qty ?? '-'}</span> },
-            {
-                header: 'Target Price', accessorKey: 'targetPrice', enableSorting: true, width: 120,
-                cell: props => {
-                    const price = props.row.original.targetPrice;
-                    // Basic currency formatting (adapt as needed)
-                    return <span>{price !== null ? `$${price.toFixed(2)}` : '-'}</span>;
-                 }
-             },
-             {
-                 header: 'Sales Person', accessorKey: 'salesPerson', enableSorting: true, width: 150,
-                 cell: props => <span>{props.row.original.salesPerson ?? 'Unassigned'}</span>
-            },
-            {
-                header: 'Created Date', accessorKey: 'createdDate', enableSorting: true, width: 180,
-                cell: props => { const date = props.row.original.createdDate; return <span>{date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>; }
-            },
-            {
-                header: '', id: 'action', width: 100, // Adjusted width for fewer actions
-                cell: (props) => (
-                    <ActionColumn
-                        // Pass only relevant actions
-                        onEdit={() => handleEdit(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                    />
-                ),
-            },
-        ],
-        // Update dependencies
-        [handleEdit, handleDelete] // Removed clone/status change handlers
-    );
-    // --- End Define Columns ---
+    const columns: ColumnDef<LeadListItem>[] = useMemo(() => [
+        { header: 'Status', accessorKey: 'status', size: 120, cell: (props: CellContext<LeadListItem, any>) => <Tag className={`${leadStatusColor[props.row.original.status] || 'bg-gray-200 text-gray-700'} text-white capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag> },
+        { header: 'Enquiry Type', accessorKey: 'enquiryType', size: 140, cell: (props: CellContext<LeadListItem, any>) => <Tag className={`${enquiryTypeColor[props.row.original.enquiryType] || 'bg-gray-100'} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiryType}</Tag> },
+        { header: 'Lead Number', accessorKey: 'leadNumber', size: 130 },
+        { header: 'Product', accessorKey: 'productName', size: 180, cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || '-' },
+        { header: 'Member', accessorKey: 'memberName', size: 150, cell: (props: CellContext<LeadListItem, any>) => props.row.original.memberName || props.row.original.memberId },
+        { header: 'Intent', accessorKey: 'intent', size: 90, cell: (props: CellContext<LeadListItem, any>) => props.row.original.intent || '-' },
+        { header: 'Qty', accessorKey: 'qty', size: 70, cell: (props: CellContext<LeadListItem, any>) => props.row.original.qty ?? '-' },
+        { header: 'Target Price', accessorKey: 'targetPrice', size: 110, cell: (props: CellContext<LeadListItem, any>) => props.row.original.targetPrice !== null ? `$${props.row.original.targetPrice}` : '-' },
+        { header: 'Sales Person', accessorKey: 'salesPersonName', size: 140, cell: (props: CellContext<LeadListItem, any>) => props.row.original.salesPersonName || 'Unassigned' },
+        { header: 'Created At', accessorKey: 'createdAt', size: 160, cell: (props: CellContext<LeadListItem, any>) => dayjs(props.row.original.createdAt).format('YYYY-MM-DD HH:mm') },
+        { header: 'Actions', id: 'actions', size: 200, meta: { HeaderClass: 'text-center' }, cell: (props: CellContext<LeadListItem, any>) => <ActionColumn onView={() => openViewDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onAssign={() => openAssignDrawer(props.row.original)} onChangeStatus={() => openChangeStatusDrawer(props.row.original)} onConvertToOpportunity={() => handleConvertToOpportunity(props.row.original)} /> },
+    ], [openViewDrawer, handleDeleteClick, openAssignDrawer, openChangeStatusDrawer, handleConvertToOpportunity]);
 
-
-    // --- Render Main Component ---
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header Section */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Leads</h5> {/* Updated title */}
-                    <LeadActionTools allLeads={leads} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                   
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                                            <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
+                                            <Button
+                                                                        variant="solid"
+                                                                        icon={<TbPlus />}
+                                                                        onClick={openAddDrawer}
+                                                                    >
+                                                                        {' '}
+                                                                        Add New{' '}
+                                                                    </Button>
+                                        </div>
+                    <LeadTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onAddNew={openAddDrawer} />
+                    <div className="mt-4">
+                        <LeadTable columns={columns} data={pageData} loading={loadingStatus === 'loading' || isSubmitting || isDeleting}
+                            pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
+                            selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange}
+                            onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect}
+                        />
+                    </div>
+                </AdaptiveCard>
+            </Container>
+            <LeadSelectedFooter selectedItems={selectedItems} onDeleteSelected={onDeleteSelected} />
 
-                {/* Tools Section */}
-                <div className="mb-4">
-                    <LeadTableTools onSearchChange={handleSearchChange} />
-                </div>
+            {/* Add/Edit Lead Drawer (Detailed Form) */}
+            <Drawer
+                title={editingLead?.id ? 'Edit Lead Details' : 'Add New Lead'}
+                isOpen={isAddEditDrawerOpen}
+                onClose={closeAddEditDrawer}
+                onRequestClose={closeAddEditDrawer}
+                width={800} // Wider for the detailed form
+                
+            >
+                <Form id="leadForm" onSubmit={formMethods.handleSubmit(onFormSubmit)} className="flex flex-col gap-y-4 h-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto p-1">
+                        {/* Member Info Section */}
+                        <FormItem label="Member Name" className="lg:col-span-1" invalid={!!formMethods.formState.errors.memberInfo?.name} errorMessage={formMethods.formState.errors.memberInfo?.name?.message}>
+                            <Controller name="memberInfo.name" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Enter member's full name" />} />
+                        </FormItem>
+                        <FormItem label="Member Email" className="lg:col-span-1" invalid={!!formMethods.formState.errors.memberInfo?.email} errorMessage={formMethods.formState.errors.memberInfo?.email?.message}>
+                            <Controller name="memberInfo.email" control={formMethods.control} render={({ field }) => <Input {...field} type="email" placeholder="member@example.com" />} />
+                        </FormItem>
+                        <FormItem label="Member Phone (Optional)" className="lg:col-span-1">
+                            <Controller name="memberInfo.phone" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Enter member's phone" />} />
+                        </FormItem>
 
-                {/* Table Section */}
-                <div className="flex-grow overflow-auto">
-                    <LeadTable
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-                        selectedLeads={selectedLeads} // Use updated prop
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
+                        {/* Lead Core Info */}
+                        <FormItem label="Lead Status" invalid={!!formMethods.formState.errors.leadStatus} errorMessage={formMethods.formState.errors.leadStatus?.message}>
+                            <Controller name="leadStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={leadStatusOptions} value={leadStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Lead Status" /> )} />
+                        </FormItem>
+                         <FormItem label="Enquiry Type" invalid={!!formMethods.formState.errors.enquiryType} errorMessage={formMethods.formState.errors.enquiryType?.message}>
+                            <Controller name="enquiryType" control={formMethods.control} render={({ field }) => (<UiSelect options={enquiryTypeOptions} value={enquiryTypeOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Enquiry Type" /> )} />
+                        </FormItem>
+                         <FormItem label="Lead Intent" invalid={!!formMethods.formState.errors.leadIntent} errorMessage={formMethods.formState.errors.leadIntent?.message}>
+                            <Controller name="leadIntent" control={formMethods.control} render={({ field }) => (<UiSelect options={leadIntentOptions} value={leadIntentOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Lead Intent" /> )} />
+                        </FormItem>
 
-            {/* Selected Actions Footer */}
-            <LeadSelected
-                selectedLeads={selectedLeads} // Use updated prop
-                setSelectedLeads={setSelectedLeads} // Use updated prop
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
+                        {/* Sourcing/Product Details Section */}
+                        <h6 className="md:col-span-2 lg:col-span-3 text-md font-semibold mt-3 mb-1 border-b">Product/Sourcing Details (Optional)</h6>
+                         <FormItem label="Supplier (Optional)" >
+                            <Controller name="supplierId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummySuppliers.map(s=>({value: s.id, label: s.name}))} value={dummySuppliers.map(s=>({value: s.id, label: s.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Supplier" isClearable /> )} />
+                        </FormItem>
+                        <FormItem label="Product (Optional)" invalid={!!formMethods.formState.errors.productId} errorMessage={formMethods.formState.errors.productId?.message}>
+                            <Controller name="productId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyProducts.map(p=>({value: p.id, label: p.name}))} value={dummyProducts.map(p=>({value: p.id, label: p.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product" isClearable /> )} />
+                        </FormItem>
+                        <FormItem label="Product Spec (Optional)" invalid={!!formMethods.formState.errors.productSpecId} errorMessage={formMethods.formState.errors.productSpecId?.message}>
+                            <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyProductSpecs.filter(s => s.productId === formMethods.watch('productId')).map(s=>({value: s.id, label: s.name}))} value={dummyProductSpecs.map(s=>({value: s.id, label: s.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Specification" isDisabled={!formMethods.watch('productId')} isClearable /> )} />
+                        </FormItem>
+                         <FormItem label="Quantity (Optional)" invalid={!!formMethods.formState.errors.qty} errorMessage={formMethods.formState.errors.qty?.message}>
+                            <Controller name="qty" control={formMethods.control} render={({ field }) => <InputNumber {...field} placeholder="Enter Quantity" min={1} />} />
+                        </FormItem>
+                        <FormItem label="Product Status (Optional)" invalid={!!formMethods.formState.errors.productStatus} errorMessage={formMethods.formState.errors.productStatus?.message}>
+                            <Controller name="productStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={productStatusOptionsForm} value={productStatusOptionsForm.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product Status" isClearable /> )} />
+                        </FormItem>
+                         <FormItem label="Target/Quoted Price (Optional)" invalid={!!formMethods.formState.errors.price} errorMessage={formMethods.formState.errors.price?.message}>
+                             <Controller name="price" control={formMethods.control} render={({ field }) => <InputNumber {...field} placeholder="Enter Price" prefix="$" min={0} precision={2} />} />
+                        </FormItem>
+                        <FormItem label="Color (Optional)"> <Controller name="color" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Blue" />} /> </FormItem>
+                        <FormItem label="Cartoon Type (Optional)"> <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCartoonTypes.map(ct=>({value: ct.id, label: ct.name}))} value={dummyCartoonTypes.map(ct=>({value: ct.id, label: ct.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Cartoon Type" isClearable /> )} /> </FormItem>
+                        <FormItem label="Dispatch Status (Optional)"> <Controller name="dispatchStatus" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Ready, Pending" />} /> </FormItem>
+                        <FormItem label="Payment Term (Optional)"> <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyPaymentTerms.map(pt=>({value: pt.id, label: pt.name}))} value={dummyPaymentTerms.map(pt=>({value: pt.id, label: pt.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Payment Term" isClearable /> )} /> </FormItem>
+                        <FormItem label="Device Condition (Optional)"> <Controller name="deviceCondition" control={formMethods.control} render={({ field }) => (<UiSelect options={deviceConditionOptionsForm} value={deviceConditionOptionsForm.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Device Condition" isClearable /> )} /> </FormItem>
+                        <FormItem label="ETA (Optional)"> <Controller name="eta" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., 2-3 days" />} /> </FormItem>
+                        <FormItem label="Location (Optional)"> <Controller name="location" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Dubai Warehouse" />} /> </FormItem>
+                        <FormItem label="Device Type (Optional)"> <Controller name="deviceType" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Smartphone, Laptop" />} /> </FormItem>
+                        <FormItem label="Assigned Sales Person (Optional)">
+                            <Controller name="assignedSalesPersonId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummySalesPersons.map(sp=>({value: sp.id, label: sp.name}))} value={dummySalesPersons.map(sp=>({value: sp.id, label: sp.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Assign Sales Person" isClearable /> )} />
+                        </FormItem>
+                        <FormItem label="Internal Remarks (Optional)" className="md:col-span-2 lg:col-span-3">
+                            <Controller name="internalRemarks" control={formMethods.control} render={({ field }) => <Textarea {...field} rows={3} placeholder="Internal notes about this lead or sourcing request..." />} />
+                        </FormItem>
+                    </div>
+                </Form>
+            </Drawer>
+
+            {/* View Drawer */}
+            <Drawer title="View Lead Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} width={700}>
+                {editingLead && (
+                    <div className="p-4 space-y-3">
+                        <h6 className="text-lg font-semibold border-b pb-2 mb-3">Lead #: {editingLead.leadNumber} (ID: {editingLead.id})</h6>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                            <div><strong>Status:</strong> <Tag className={`${leadStatusColor[editingLead.status] || ''} text-white capitalize px-2 py-1 text-xs`}>{editingLead.status}</Tag></div>
+                            <div><strong>Enquiry Type:</strong> <Tag className={`${enquiryTypeColor[editingLead.enquiryType] || ''} capitalize px-2 py-1 text-xs`}>{editingLead.enquiryType}</Tag></div>
+                            <div><strong>Member:</strong> {editingLead.memberName || editingLead.memberId}</div>
+                            <div><strong>Intent:</strong> {editingLead.intent || '-'}</div>
+                            <div><strong>Product of Interest:</strong> {editingLead.productName || '-'}</div>
+                            <div><strong>Quantity:</strong> {editingLead.qty ?? '-'}</div>
+                            <div><strong>Target Price:</strong> {editingLead.targetPrice !== null ? `$${editingLead.targetPrice}` : '-'}</div>
+                            <div><strong>Assigned To:</strong> {editingLead.salesPersonName || 'Unassigned'}</div>
+                            <div><strong>Created At:</strong> {dayjs(editingLead.createdAt).format('YYYY-MM-DD HH:mm')}</div>
+                        </div>
+                        {editingLead.sourcingDetails && (
+                            <div className="mt-3 pt-3 border-t">
+                                <h6 className="font-semibold mb-2">Sourcing Details:</h6>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                                    {editingLead.sourcingDetails.supplierId && <div><strong>Supplier:</strong> {dummySuppliers.find(s=>s.id === editingLead.sourcingDetails!.supplierId)?.name || editingLead.sourcingDetails.supplierId}</div>}
+                                    {editingLead.sourcingDetails.productId && <div><strong>Product:</strong> {dummyProducts.find(p=>p.id === editingLead.sourcingDetails!.productId)?.name || `ID ${editingLead.sourcingDetails.productId}`}</div>}
+                                    {editingLead.sourcingDetails.productSpecId && <div><strong>Spec:</strong> {dummyProductSpecs.find(s=>s.id === editingLead.sourcingDetails!.productSpecId)?.name || `ID ${editingLead.sourcingDetails.productSpecId}`}</div>}
+                                    {editingLead.sourcingDetails.qty && <div><strong>Sourcing Qty:</strong> {editingLead.sourcingDetails.qty}</div>}
+                                    {editingLead.sourcingDetails.productStatus && <div><strong>Sourcing Product Status:</strong> {editingLead.sourcingDetails.productStatus}</div>}
+                                    {editingLead.sourcingDetails.price && <div><strong>Sourcing Price:</strong> ${editingLead.sourcingDetails.price}</div>}
+                                    {/* Add more sourcing details here */}
+                                </div>
+                                {editingLead.sourcingDetails.internalRemarks && <div className="mt-2"><strong>Internal Remarks:</strong> <p className="whitespace-pre-wrap text-sm">{editingLead.sourcingDetails.internalRemarks}</p></div>}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Drawer>
+
+            {/* Assign Lead Drawer */}
+            <Drawer title="Assign Lead" isOpen={isAssignDrawerOpen} onClose={closeAssignDrawer} width={400}
+                footer={<div className="text-right"><Button size="sm" className="mr-2" onClick={closeAssignDrawer}>Cancel</Button><Button size="sm" variant="solid" form="assignLeadForm" type="submit" loading={isSubmitting}>Assign</Button></div>}>
+                <Form id="assignLeadForm" onSubmit={assignFormMethods.handleSubmit(onAssignSubmit)} className="p-1">
+                    <p className="mb-4">Assign lead <strong>{editingLead?.leadNumber}</strong> to a sales person.</p>
+                    <FormItem label="Sales Person">
+                        <Controller name="salesPersonId" control={assignFormMethods.control} render={({field}) => <UiSelect options={dummySalesPersons.map(sp=>({value: sp.id, label: sp.name}))} value={dummySalesPersons.find(sp=>sp.id===field.value)} onChange={opt=>field.onChange(opt?.value)} placeholder="Select Sales Person"/>} />
+                    </FormItem>
+                </Form>
+            </Drawer>
+
+            {/* Change Status Drawer */}
+            <Drawer title="Change Lead Status" isOpen={isChangeStatusDrawerOpen} onClose={closeChangeStatusDrawer} width={400}
+                footer={<div className="text-right"><Button size="sm" className="mr-2" onClick={closeChangeStatusDrawer}>Cancel</Button><Button size="sm" variant="solid" form="changeStatusForm" type="submit" loading={isSubmitting}>Update Status</Button></div>}>
+                 <Form id="changeStatusForm" onSubmit={statusFormMethods.handleSubmit(onChangeStatusSubmit)} className="p-1">
+                    <p className="mb-4">Change status for lead <strong>{editingLead?.leadNumber}</strong>.</p>
+                    <FormItem label="New Status">
+                        <Controller name="newStatus" control={statusFormMethods.control} render={({field}) => <UiSelect options={leadStatusOptions} value={leadStatusOptions.find(opt=>opt.value===field.value)} onChange={opt=>field.onChange(opt?.value as LeadStatus)} placeholder="Select New Status"/>} />
+                    </FormItem>
+                </Form>
+            </Drawer>
+
+
+            {/* Filter Drawer */}
+            <Drawer title="Filter Leads" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer}
+                footer={<div className="text-right"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button></div>}>
+                <Form id="filterLeadForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 h-full">
+                    <div className="flex-grow overflow-y-auto p-1">
+                        <FormItem label="Lead Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select statuses..." options={leadStatusOptions} {...field} />)} /></FormItem>
+                        <FormItem label="Enquiry Type"><Controller name="filterEnquiryTypes" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select enquiry types..." options={enquiryTypeOptions} {...field} />)} /></FormItem>
+                        <FormItem label="Lead Intent"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={leadIntentOptions} {...field} />)} /></FormItem>
+                        <FormItem label="Product"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={dummyProducts.map(p=>({value: p.id, label:p.name}))} {...field} />)} /></FormItem>
+                        <FormItem label="Sales Person"><Controller name="filterSalesPersonIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select sales persons..." options={dummySalesPersons.map(p=>({value: p.id, label:p.name}))} {...field} />)} /></FormItem>
+                        <FormItem label="Created Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date|null,Date|null]|null|undefined} onChange={field.onChange} placeholder="Select date range"/>)} /></FormItem>
+                    </div>
+                </Form>
+            </Drawer>
+
+            <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Lead"
+                onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onConfirm={onConfirmSingleDelete} loading={isDeleting}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}>
+                <p>Are you sure you want to delete lead <strong>{itemToDelete?.leadNumber}</strong>?</p>
+            </ConfirmDialog>
+        </>
     );
 };
-// --- End Main Component ---
 
-export default Leads; // Updated export name
-
-// Helper Function
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//     return classes.filter(Boolean).join(' ');
-// }
+export default LeadsListing;

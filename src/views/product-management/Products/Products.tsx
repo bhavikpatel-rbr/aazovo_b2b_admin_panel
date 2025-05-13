@@ -1,1210 +1,555 @@
 // src/views/your-path/Products.tsx
 
-import React, { useState, useMemo, useCallback, Ref, Suspense, lazy } from 'react'
-import { Link, useNavigate } from 'react-router-dom' // Ensure useNavigate is imported
-import cloneDeep from 'lodash/cloneDeep'
-import classNames from 'classnames' // Import classnames
-import { useForm, Controller } from 'react-hook-form' // Added for filter form
-import { zodResolver } from '@hookform/resolvers/zod' // Added for filter form
-import { z } from 'zod' // Added for filter form
-import type { ZodType } from 'zod' // Added for filter form
+import React, { useState, useMemo, useCallback, Ref, useEffect, Suspense, lazy } from 'react';
+// import { Link, useNavigate } from 'react-router-dom'; // useNavigate for add/edit navigation if not using drawers
+import cloneDeep from 'lodash/cloneDeep';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import dayjs from 'dayjs'; // For any date handling if needed in future
 
 // UI Components
-import AdaptiveCard from '@/components/shared/AdaptiveCard'
-import Container from '@/components/shared/Container'
-import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag'
-import Button from '@/components/ui/Button'
-import Dialog from '@/components/ui/Dialog'
-import Avatar from '@/components/ui/Avatar'
-import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast' // Make sure toast is configured in your app
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import { TbBox } from 'react-icons/tb' // Placeholder icon for product image
-import Checkbox from '@/components/ui/Checkbox' // Added for filter form
-import Input from '@/components/ui/Input' // Added for filter form
-import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // Added for filter form & renamed FormItem
+import AdaptiveCard from '@/components/shared/AdaptiveCard';
+import Container from '@/components/shared/Container';
+import DataTable from '@/components/shared/DataTable';
+import Tooltip from '@/components/ui/Tooltip';
+import Tag from '@/components/ui/Tag';
+import Button from '@/components/ui/Button';
+import Dialog from '@/components/ui/Dialog';
+import Avatar from '@/components/ui/Avatar';
+import Notification from '@/components/ui/Notification';
+import toast from '@/components/ui/toast';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import StickyFooter from '@/components/shared/StickyFooter';
+import DebouceInput from '@/components/shared/DebouceInput';
+import { Drawer, Form, FormItem, Input, Select as UiSelect } from '@/components/ui'; // Added Textarea
 
 // Icons
 import {
-    TbPencil,
-    TbCopy,
-    TbSwitchHorizontal,
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbCloudDownload,
-    TbFilter,
-    TbCloudUpload,
-    TbPlus, // Using as placeholder for add product
-} from 'react-icons/tb'
+    TbPencil, TbTrash, TbChecks, TbSearch, TbCloudUpload, TbFilter, TbPlus, TbBox,
+    TbSwitchHorizontal, TbCopy, TbCloudDownload
+} from 'react-icons/tb';
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
+import type { OnSortParam, ColumnDef, Row, CellContext } from '@/components/shared/DataTable';
+import type { TableQueries } from '@/@types/common';
+import Textarea from '@/views/ui-components/forms/Input/Textarea';
+import InputNumber from '@/components/ui/Input/InputNumber';
 
-// --- Lazy Load CSVLink ---
-const CSVLink = lazy(() =>
-    import('react-csv').then((module) => ({ default: module.CSVLink })),
-)
-// --- End Lazy Load ---
+// --- Define Product Types ---
+export type ProductStatus = 'active' | 'inactive' | 'draft' | 'archived' | string; // Allow other strings for flexibility
 
-// --- Define FormItem Type (Table Row Data) ---
-export type FormItem = {
-    id: string
-    name: string
-    status: 'active' | 'inactive'
-    // Add fields corresponding to filter schema
-    purchasedProducts?: string // Optional product associated with form
-    purchaseChannel?: string // Optional channel associated with form
-}
-// --- End FormItem Type Definition ---
-
-// --- Define Filter Schema Type (Matches the provided filter component) ---
-type ProductsFilterFormSchema = {
-    purchasedProducts: string | any
-    purchaseChannel: Array<string> | any
-}
-// --- End Filter Schema Type ---
-
-// --- Define Item Type (Table Row Data) ---
 export type ProductItem = {
-    id: string
-    status: 'active' | 'inactive' | 'draft' | 'archived'
-    name: string
-    sku: string
-    categoryName: string
-    subcategoryName: string | null
-    brandName: string
-    image: string | null
-}
-// --- End Item Type Definition ---
+    id: string;
+    status: ProductStatus;
+    name: string;
+    sku: string;
+    categoryName: string;
+    subcategoryName: string | null;
+    brandName: string;
+    image: string | null;
+    description?: string | null; // Added for form
+    price?: number | null;      // Added for form
+    stock?: number | null;       // Added for form
+    // Add other relevant product fields
+};
+
+// --- Zod Schema for Add/Edit Product Form ---
+const productFormSchema = z.object({
+    name: z.string().min(1, 'Product name is required.').max(100, 'Name too long.'),
+    sku: z.string().min(1, 'SKU is required.').max(50, 'SKU too long.'),
+    status: z.string().min(1, 'Status is required.'), // Will be a select
+    categoryName: z.string().min(1, 'Category is required.').max(50, 'Category name too long.'),
+    subcategoryName: z.string().max(50, 'Subcategory name too long.').nullable().optional(),
+    brandName: z.string().min(1, 'Brand is required.').max(50, 'Brand name too long.'),
+    image: z.string().url("Must be a valid URL for image.").nullable().optional(),
+    description: z.string().nullable().optional(),
+    price: z.number().min(0, "Price must be positive.").nullable().optional(),
+    stock: z.number().int("Stock must be an integer.").min(0, "Stock must be positive.").nullable().optional(),
+});
+type ProductFormData = z.infer<typeof productFormSchema>;
+
+// --- Zod Schema for Filter Form ---
+const selectOptionSchema = z.object({ value: z.string(), label: z.string() });
+const filterFormSchema = z.object({
+    filterNameOrSku: z.string().optional().default(''),
+    filterCategories: z.array(selectOptionSchema).optional().default([]),
+    filterBrands: z.array(selectOptionSchema).optional().default([]),
+    filterStatuses: z.array(selectOptionSchema).optional().default([]), // For general status filtering
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- Constants ---
-const statusColor: Record<ProductItem['status'], string> = {
-    active: 'text-green-600 bg-green-200',
-    inactive: 'text-red-600 bg-red-200',
-    draft: 'text-blue-600 bg-blue-200',
-    archived: 'text-red-600 bg-red-200',
-}
+const statusColor: Record<ProductStatus, string> = {
+    active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
+    inactive: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
+    draft: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100',
+    archived: 'bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100',
+};
+const productStatusOptions = Object.keys(statusColor).map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }));
 
-const initialDummyProducts: ProductItem[] = [
-    {
-        id: 'PROD001',
-        status: 'active',
-        name: 'Smartphone X',
-        sku: 'SPX-1000',
-        categoryName: 'Electronics',
-        subcategoryName: 'Mobile Phones',
-        brandName: 'Alpha Gadgets',
-        image: '/img/products/phone_x.jpg',
-    },
-    {
-        id: 'PROD002',
-        status: 'active',
-        name: 'Laptop Pro 15"',
-        sku: 'LPP-15-G2',
-        categoryName: 'Electronics',
-        subcategoryName: 'Laptops',
-        brandName: 'Beta Solutions',
-        image: '/img/products/laptop_pro.jpg',
-    },
-    {
-        id: 'PROD003',
-        status: 'draft',
-        name: 'Wireless Earbuds',
-        sku: 'WEB-001',
-        categoryName: 'Electronics',
-        subcategoryName: 'Accessories',
-        brandName: 'Alpha Gadgets',
-        image: null,
-    },
-    {
-        id: 'PROD004',
-        status: 'active',
-        name: "Men's Casual T-Shirt",
-        sku: 'MCT-BL-L',
-        categoryName: 'Clothing',
-        subcategoryName: "Men's Wear",
-        brandName: 'Gamma Apparel',
-        image: '/img/products/tshirt_men.jpg',
-    },
-    {
-        id: 'PROD005',
-        status: 'inactive',
-        name: "Women's Running Shoes",
-        sku: 'WRS-PNK-8',
-        categoryName: 'Clothing',
-        subcategoryName: 'Shoes',
-        brandName: 'Eta Fitness',
-        image: '/img/products/shoes_women.jpg',
-    },
-    {
-        id: 'PROD006',
-        status: 'active',
-        name: 'Organic Coffee Beans',
-        sku: 'OCB-1KG',
-        categoryName: 'Groceries',
-        subcategoryName: 'Beverages',
-        brandName: 'Delta Foods',
-        image: null,
-    },
-    {
-        id: 'PROD007',
-        status: 'archived',
-        name: 'Old Model TV 42"',
-        sku: 'TV-OLD-42',
-        categoryName: 'Home Appliances',
-        subcategoryName: 'Televisions',
-        brandName: 'Epsilon Home',
-        image: '/img/products/tv_old.jpg',
-    },
-    {
-        id: 'PROD008',
-        status: 'active',
-        name: 'Gaming Chair',
-        sku: 'GC-RED-01',
-        categoryName: 'Furniture',
-        subcategoryName: 'Chairs',
-        brandName: 'Zeta Toys',
-        image: '/img/products/gaming_chair.jpg',
-    },
-    {
-        id: 'PROD009',
-        status: 'active',
-        name: 'Sci-Fi Novel "Cosmos"',
-        sku: 'BOOK-SF-CSMS',
-        categoryName: 'Books',
-        subcategoryName: 'Fiction',
-        brandName: 'Lambda Books',
-        image: '/img/products/book_cosmos.jpg',
-    },
-    {
-        id: 'PROD010',
-        status: 'active',
-        name: 'Bluetooth Speaker',
-        sku: 'BTSPK-BLK',
-        categoryName: 'Electronics',
-        subcategoryName: 'Audio Equipment',
-        brandName: 'Alpha Gadgets',
-        image: '/img/products/bt_speaker.jpg',
-    },
-    {
-        id: 'PROD011',
-        status: 'draft',
-        name: 'Leather Handbag',
-        sku: 'LHB-BRN',
-        categoryName: 'Clothing',
-        subcategoryName: "Women's Wear",
-        brandName: 'Iota Beauty',
-        image: null,
-    },
-    {
-        id: 'PROD012',
-        status: 'active',
-        name: 'Sedan Car Model',
-        sku: 'CAR-SDN-BLU',
-        categoryName: 'Automotive',
-        subcategoryName: null,
-        brandName: 'Kappa Auto',
-        image: '/img/products/car_sedan.jpg',
-    },
-    {
-        id: 'PROD013',
-        status: 'inactive',
-        name: 'Documentary DVD Set',
-        sku: 'DVD-DOC-SET',
-        categoryName: 'Media',
-        subcategoryName: null,
-        brandName: 'Mu Media',
-        image: null,
-    },
-    {
-        id: 'PROD014',
-        status: 'draft',
-        name: 'Smart Watch SE',
-        sku: 'SW-SE-GRY',
-        categoryName: 'Electronics',
-        subcategoryName: 'Accessories',
-        brandName: 'Beta Solutions',
-        image: '/img/products/smartwatch_se.jpg',
-    },
-    {
-        id: 'PROD015',
-        status: 'draft',
-        name: 'Running Shorts',
-        sku: 'RNSH-BLK-M',
-        categoryName: 'Clothing',
-        subcategoryName: "Men's Wear",
-        brandName: 'Eta Fitness',
-        image: null,
-    },
-]
-
-// Filter specific constant from the provided filter component
-const channelList = [
-    'Retail Stores',
-    'Online Retailers',
-    'Resellers',
-    'Mobile Apps',
-    'Direct Sales',
-]
-// Tab Definitions
 const TABS = {
     ALL: 'all',
-    PENDING: 'pending', // Using 'draft' status for pending
+    DRAFT: 'draft', // Renamed from PENDING to match 'draft' status
+};
+
+// --- Initial Dummy Products ---
+const initialDummyProducts: ProductItem[] = [
+    { id: 'PROD001', status: 'active', name: 'Smartphone X', sku: 'SPX-1000', categoryName: 'Electronics', subcategoryName: 'Mobile Phones', brandName: 'Alpha Gadgets', image: '/img/products/phone_x.jpg', price: 799, stock: 150, description: 'Latest model with AI camera.' },
+    { id: 'PROD002', status: 'active', name: 'Laptop Pro 15"', sku: 'LPP-15-G2', categoryName: 'Electronics', subcategoryName: 'Laptops', brandName: 'Beta Solutions', image: '/img/products/laptop_pro.jpg', price: 1499, stock: 75 },
+    { id: 'PROD003', status: 'draft', name: 'Wireless Earbuds V2', sku: 'WEB-002', categoryName: 'Electronics', subcategoryName: 'Accessories', brandName: 'Alpha Gadgets', image: null, price: 99, stock: 0, description: 'New version with improved battery.' },
+    { id: 'PROD004', status: 'active', name: "Men's Casual T-Shirt", sku: 'MCT-BL-L', categoryName: 'Clothing', subcategoryName: "Men's Wear", brandName: 'Gamma Apparel', image: '/img/products/tshirt_men.jpg', price: 25, stock: 300 },
+    { id: 'PROD005', status: 'inactive', name: "Women's Running Shoes", sku: 'WRS-PNK-8', categoryName: 'Clothing', subcategoryName: 'Shoes', brandName: 'Eta Fitness', image: '/img/products/shoes_women.jpg', price: 89, stock: 0 },
+    { id: 'PROD006', status: 'active', name: 'Organic Coffee Beans 1kg', sku: 'OCB-1KG', categoryName: 'Groceries', subcategoryName: 'Beverages', brandName: 'Delta Foods', image: null, price: 15, stock: 200 },
+    { id: 'PROD007', status: 'archived', name: 'Old Model TV 42"', sku: 'TV-OLD-42', categoryName: 'Home Appliances', subcategoryName: 'Televisions', brandName: 'Epsilon Home', image: '/img/products/tv_old.jpg', price: 250, stock: 0 },
+];
+
+
+// --- CSV Exporter Utility ---
+const CSV_PRODUCT_HEADERS = ['ID', 'Name', 'SKU', 'Status', 'Category', 'Subcategory', 'Brand', 'Price', 'Stock', 'Image URL', 'Description'];
+const CSV_PRODUCT_KEYS: (keyof ProductItem)[] = ['id', 'name', 'sku', 'status', 'categoryName', 'subcategoryName', 'brandName', 'price', 'stock', 'image', 'description'];
+
+function exportProductsToCsv(filename: string, rows: ProductItem[]) {
+    if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
+    const separator = ',';
+    const csvContent = CSV_PRODUCT_HEADERS.join(separator) + '\n' + rows.map(row => {
+        return CSV_PRODUCT_KEYS.map(k => {
+            let cell = row[k];
+            if (cell === null || cell === undefined) cell = '';
+            else if (typeof cell === 'number') cell = cell.toString();
+            else cell = String(cell).replace(/"/g, '""');
+            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+            return cell;
+        }).join(separator);
+    }).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+        return true;
+    }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+    return false;
 }
-// --- End Constants ---
 
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    onClone,
-    onChangeStatus,
-    onDelete,
-}: {
-    onEdit: () => void
-    onClone?: () => void
-    onChangeStatus: () => void
-    onDelete: () => void
+
+// --- ActionColumn, Search, TableTools, DataTable, SelectedFooter (Adapted for Products) ---
+const ActionColumn = ({ onEdit, onDelete, onChangeStatus, onClone }: {
+    onEdit: () => void; onDelete: () => void; onChangeStatus: () => void; onClone: () => void;
 }) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-
+    const iconBtnClass = "text-lg p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors";
     return (
-        <div className="flex items-center justify-center">
-            {/* {onClone && (
-                <Tooltip title="Clone Product">
-                    <div
-                        className={classNames(
-                            iconButtonClass,
-                            hoverBgClass,
-                            'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400',
-                        )}
-                        role="button"
-                        onClick={onClone}
-                    >
-                        {' '}
-                        <TbCopy />{' '}
-                    </div>
-                </Tooltip>
-            )} */}
-            <Tooltip title="Change Status">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400',
-                    )}
-                    role="button"
-                    onClick={onChangeStatus}
-                >
-                    {' '}
-                    <TbSwitchHorizontal />{' '}
-                </div>
-            </Tooltip>
-            <Tooltip title="Edit Product">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    {' '}
-                    <TbPencil />{' '}
-                </div>
-            </Tooltip>
-            <Tooltip title="Delete Product">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    onClick={onDelete}
-                >
-                    {' '}
-                    <TbTrash />{' '}
-                </div>
-            </Tooltip>
+        <div className="flex items-center justify-center gap-1">
+            <Tooltip title="Edit"><Button shape="circle" variant="plain" size="sm" icon={<TbPencil />} onClick={onEdit} className={`${iconBtnClass} hover:text-blue-500`}/></Tooltip>
+            <Tooltip title="Change Status"><Button shape="circle" variant="plain" size="sm" icon={<TbSwitchHorizontal />} onClick={onChangeStatus} className={`${iconBtnClass} hover:text-amber-500`}/></Tooltip>
+            <Tooltip title="Clone"><Button shape="circle" variant="plain" size="sm" icon={<TbCopy />} onClick={onClone} className={`${iconBtnClass} hover:text-purple-500`}/></Tooltip>
+            <Tooltip title="Delete"><Button shape="circle" variant="plain" size="sm" icon={<TbTrash />} onClick={onDelete} className={`${iconBtnClass} hover:text-red-500`}/></Tooltip>
         </div>
-    )
-}
-// --- End ActionColumn ---
+    );
+};
 
-// --- ProductTable Component ---
-const ProductTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedProducts,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<ProductItem>[]
-    data: ProductItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedProducts: ProductItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: ProductItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<ProductItem>[]) => void
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedProducts.some((selected) => selected.id === row.id)
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-        />
-    )
-}
-// --- End ProductTable ---
-
-// --- ProductSearch Component ---
-type ProductSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
+type ProductSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement> };
 const ProductSearch = React.forwardRef<HTMLInputElement, ProductSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                placeholder="Quick search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-ProductSearch.displayName = 'ProductSearch'
-// --- End ProductSearch ---
+    ({ onInputChange }, ref) => <DebouceInput ref={ref} className="w-full" placeholder="Search products (Name, SKU, Category)..." suffix={<TbSearch />} onChange={e => onInputChange(e.target.value)} />
+);
+ProductSearch.displayName = 'ProductSearch';
 
-// --- ProductsTableFilter Component (As provided by user, adapted for props) ---
-const ProductsTableFilter = ({
-    // Mimic the data structure the original hook would provide
-    filterData,
-    setFilterData,
-}: {
-    filterData: ProductsFilterFormSchema
-    setFilterData: (data: ProductsFilterFormSchema) => void
-}) => {
-    const [dialogIsOpen, setIsOpen] = useState(false)
+const ProductTableTools = ({ onSearchChange, onFilter, onExport, onAddNew }: {
+    onSearchChange: (q: string) => void; onFilter: () => void; onExport: () => void; onAddNew: () => void;
+}) => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex-grow"><ProductSearch onInputChange={onSearchChange} /></div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {/* Add New Button moved to header */}
+            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        </div>
+    </div>
+);
 
-    // Zod validation schema from the provided code
-    const validationSchema: ZodType<ProductsFilterFormSchema> = z.object({
-        purchasedProducts: z.string().optional().default(''), // Made optional for better reset
-        purchaseChannel: z.array(z.string()).optional().default([]), // Made optional for better reset
-    })
+type ProductTableProps = {
+    columns: ColumnDef<ProductItem>[]; data: ProductItem[]; loading: boolean;
+    pagingData: { total: number; pageIndex: number; pageSize: number };
+    selectedItems: ProductItem[]; // Changed from selectedProducts
+    onPaginationChange: (p: number) => void; onSelectChange: (v: number) => void;
+    onSort: (s: OnSortParam) => void;
+    onRowSelect: (c: boolean, r: ProductItem) => void; onAllRowSelect: (c: boolean, rs: Row<ProductItem>[]) => void;
+};
+const ProductTable = (props: ProductTableProps) => (
+    <DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData}
+        checkboxChecked={(row) => props.selectedItems.some(s => s.id === row.id)}
+        onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange}
+        onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect}
+        noData={!props.loading && props.data.length === 0}
+    />
+);
 
-    const openDialog = () => {
-        setIsOpen(true)
-    }
-
-    const onDialogClose = () => {
-        setIsOpen(false)
-    }
-
-    const { handleSubmit, reset, control } = useForm<ProductsFilterFormSchema>({
-        // Use the filterData passed from the parent as default values
-        defaultValues: filterData,
-        resolver: zodResolver(validationSchema),
-    })
-
-    // Watch for prop changes to reset the form if external state changes
-    React.useEffect(() => {
-        reset(filterData)
-    }, [filterData, reset])
-
-    const onSubmit = (values: ProductsFilterFormSchema) => {
-        setFilterData(values) // Call the setter function passed from parent
-        setIsOpen(false)
-    }
-
-    const handleReset = () => {
-        // Reset form using react-hook-form's reset
-        const defaultVals = validationSchema.parse({}) // Get default values from schema
-        reset(defaultVals)
-        // Optionally also immediately apply the reset filter state to the parent
-        // setFilterData(defaultVals);
-        // onDialogClose(); // Close after resetting if desired
-    }
-
+type ProductSelectedFooterProps = { selectedItems: ProductItem[]; onDeleteSelected: () => void; };
+const ProductSelectedFooter = ({ selectedItems, onDeleteSelected }: ProductSelectedFooterProps) => {
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    if (selectedItems.length === 0) return null;
     return (
         <>
-            <Button icon={<TbFilter />} onClick={openDialog} className=''>
-                Filter
-            </Button>
-            <Dialog
-                isOpen={dialogIsOpen}
-                onClose={onDialogClose}
-                onRequestClose={onDialogClose}
-            >
-                <h4 className="mb-4">Filter Forms</h4>
-                <Form onSubmit={handleSubmit(onSubmit)}>
-                    {/* Input from the provided filter component */}
-                    <UiFormItem label="Products">
-                        <Controller
-                            name="purchasedProducts"
-                            control={control}
-                            render={({ field }) => (
-                                <Input
-                                    type="text"
-                                    autoComplete="off"
-                                    placeholder="Search by purchased product"
-                                    {...field}
-                                />
-                            )}
-                        />
-                    </UiFormItem>
-                    {/* Checkboxes from the provided filter component */}
-                    <UiFormItem label="Purchase Channel">
-                        <Controller
-                            name="purchaseChannel"
-                            control={control}
-                            render={({ field }) => (
-                                <Checkbox.Group
-                                    vertical
-                                    value={field.value || []} // Ensure value is array
-                                    onChange={field.onChange}
-                                >
-                                    {channelList.map((source, index) => (
-                                        <Checkbox
-                                            key={source + index}
-                                            // name={field.name} // Not needed when using Controller value/onChange
-                                            value={source}
-                                            className="mb-1" // Use mb-1 for spacing
-                                        >
-                                            {source}
-                                        </Checkbox>
-                                    ))}
-                                </Checkbox.Group>
-                            )}
-                        />
-                    </UiFormItem>
-                    <div className="flex justify-end items-center gap-2 mt-6">
-                        <Button type="button" onClick={handleReset}>
-                            Reset
-                        </Button>
-                        <Button type="submit" variant="solid">
-                            Apply
-                        </Button>
-                    </div>
-                </Form>
-            </Dialog>
-        </>
-    )
-}
-
-// --- ProductTableTools Component ---
-const ProductTableTools = ({
-    onSearchChange,
-    filterData,
-    setFilterData,
-    allProducts
-}: {
-    onSearchChange: (query: string) => void
-    filterData: ProductsFilterFormSchema
-    setFilterData: (data: ProductsFilterFormSchema) => void // Prop type for setter
-    allProducts: ProductItem[] // Pass all subscribers for export
-}) => {
-
-    // Prepare data for CSV
-    const csvData = useMemo(
-        () =>
-            allProducts.map((s) => ({
-                id: s.id,
-                name: s.name,
-                image: s.image,
-                brandName : s.brandName,
-                categoryName : s.categoryName,
-                subcategoryName : s.subcategoryName,
-                sku: s.sku,
-                status: s.status,
-            })),
-        [allProducts],
-    )
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'name' },
-        { label: 'Image', key: 'image' },
-        { label: 'Brand Name', key: 'brandName' },
-        { label: 'Category Name', key: 'categoryName' },
-        { label: 'Sub Category Name', key: 'subcategoryName' },
-        { label: 'SKU', key: 'sku' },
-        { label: 'status', key: 'status' },
-    ]
-    
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            {/* <div className="flex-grow"> */}
-            <ProductSearch onInputChange={onSearchChange} />
-            <ProductsTableFilter
-                filterData={filterData}
-                setFilterData={setFilterData}
-            />
-            <Button icon={<TbCloudDownload/>}>Import</Button>
-            <Suspense fallback={<Button loading>Loading Export...</Button>}>
-                <CSVLink
-                    filename="Products.csv"
-                    data={csvData}
-                    headers={csvHeaders}
-                >
-                    <Button icon={<TbCloudUpload/>}>Export</Button>
-                </CSVLink>
-            </Suspense>
-            {/* </div> */}
-            {/* Filter button could be added here */}
-        </div>
-    )
-}
-// --- End ProductTableTools ---
-
-// --- ProductActionTools Component ---
-const ProductActionTools = ({
-    allProducts,
-}: {
-    allProducts: ProductItem[]
-}) => {
-    const navigate = useNavigate()
-    // Prepare data for CSV
-    const csvData = useMemo(() => {
-        return allProducts.map((item) => ({
-            id: item.id,
-            name: item.name,
-            status: item.status,
-            sku: item.sku,
-            categoryName: item.categoryName,
-            subcategoryName: item.subcategoryName ?? 'N/A',
-            brandName: item.brandName,
-            imageUrl: item.image ?? 'No Image',
-        }))
-    }, [allProducts])
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'name' },
-        { label: 'Status', key: 'status' },
-        { label: 'SKU', key: 'sku' },
-        { label: 'Category', key: 'categoryName' },
-        { label: 'Subcategory', key: 'subcategoryName' },
-        { label: 'Brand', key: 'brandName' },
-        { label: 'Image URL', key: 'imageUrl' },
-    ]
-
-    const handleAddProduct = () => {
-        navigate('/products/create') // Adjust route as needed
-    }
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/* <CSVLink filename="products.csv" data={csvData} headers={csvHeaders} >
-                <Button icon={<TbCloudDownload />} className="w-full" block> Download </Button>
-            </CSVLink> */}
-            <Button
-                variant="solid"
-                icon={<TbPlus className="text-lg" />}
-                onClick={handleAddProduct}
-                block
-            >
-                Add New
-            </Button>
-        </div>
-    )
-}
-// --- End ProductActionTools ---
-
-// --- ProductSelected Component ---
-const ProductSelected = ({
-    selectedProducts,
-    setSelectedProducts,
-    onDeleteSelected,
-}: {
-    selectedProducts: ProductItem[]
-    setSelectedProducts: React.Dispatch<React.SetStateAction<ProductItem[]>>
-    onDeleteSelected: () => void
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
-    }
-
-    if (selectedProducts.length === 0) return null
-
-    return (
-        <>
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-            >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            {' '}
-                            <TbChecks />{' '}
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedProducts.length}
-                            </span>
-                            <span>
-                                Product{selectedProducts.length > 1 ? 's' : ''}{' '}
-                                selected
-                            </span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-600 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                        >
-                            {' '}
-                            Delete{' '}
-                        </Button>
-                    </div>
+            <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t px-8">
+                <div className="flex items-center justify-between w-full">
+                    <span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500" /><span className="font-semibold">{selectedItems.length} product{selectedItems.length > 1 ? 's' : ''} selected</span></span>
+                    <Button size="sm" variant="plain" className="text-red-500 hover:text-red-700" onClick={() => setDeleteOpen(true)}>Delete Selected</Button>
                 </div>
             </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedProducts.length} Product${selectedProducts.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-            >
-                <p>
-                    Are you sure you want to delete the selected product
-                    {selectedProducts.length > 1 ? 's' : ''}? This action cannot
-                    be undone.
-                </p>
+            <ConfirmDialog isOpen={deleteOpen} type="danger" title={`Delete ${selectedItems.length} products?`}
+                onClose={() => setDeleteOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteOpen(false); }}
+                onCancel={() => setDeleteOpen(false)}>
+                <p>This action cannot be undone.</p>
             </ConfirmDialog>
         </>
-    )
-}
-// --- End ProductSelected ---
+    );
+};
+
 
 // --- Main Products Component ---
 const Products = () => {
-    const navigate = useNavigate()
+    const [allProducts, setAllProducts] = useState<ProductItem[]>(initialDummyProducts);
+    const [loadingStatus, setLoadingStatus] = useState<'idle' | 'loading' | 'succeeded' | 'failed'>('idle');
 
-    // --- Lifted State ---
-    const [isLoading, setIsLoading] = useState(false)
-    const [products, setProducts] =
-        useState<ProductItem[]>(initialDummyProducts)
+    const dispatchSimulated = useCallback(async (action: { type: string; payload?: any }) => {
+        setLoadingStatus('loading');
+        await new Promise(res => setTimeout(res, 300));
+        try {
+            switch (action.type) {
+                case 'products/get': setAllProducts(initialDummyProducts); break;
+                case 'products/add':
+                    const newProduct: ProductItem = { ...action.payload, id: `PROD${Date.now()}` };
+                    setAllProducts(prev => [newProduct, ...prev]);
+                    break;
+                case 'products/edit':
+                    setAllProducts(prev => prev.map(p => p.id === action.payload.id ? { ...p, ...action.payload.data } : p));
+                    break;
+                case 'products/delete':
+                    setAllProducts(prev => prev.filter(p => p.id !== action.payload.id));
+                    break;
+                case 'products/deleteAll':
+                    const idsToDelete = new Set((action.payload.ids as string).split(','));
+                    setAllProducts(prev => prev.filter(p => !idsToDelete.has(p.id)));
+                    break;
+                case 'products/changeStatus':
+                     setAllProducts(prev => prev.map(p => p.id === action.payload.id ? { ...p, status: action.payload.newStatus } : p));
+                    break;
+                default: console.warn('Unknown action');
+            }
+            setLoadingStatus('succeeded');
+            return { unwrap: () => Promise.resolve() };
+        } catch (e) { setLoadingStatus('failed'); return { unwrap: () => Promise.reject(e) }; }
+    }, []);
+
+    useEffect(() => { dispatchSimulated({ type: 'products/get' }); }, [dispatchSimulated]);
+
+    const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState(false);
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<ProductItem | null>(null);
+
+    const [currentTab, setCurrentTab] = useState<string>(TABS.ALL);
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
     const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-    const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([])
-    const [currentTab, setCurrentTab] = useState<string>(TABS.ALL)
+        pageIndex: 1, pageSize: 10, sort: { order: 'asc', key: 'name' }, query: '',
+    });
+    const [selectedItems, setSelectedItems] = useState<ProductItem[]>([]); // Renamed from selectedProducts
 
-    const [selectedForms, setSelectedForms] = useState<FormItem[]>([])
-    // State for Filters (matching the provided filter component schema)
-    const [filterData, setFilterData] = useState<ProductsFilterFormSchema>({
-        purchasedProducts: '',
-        purchaseChannel: [],
-    })
-    // --- End Lifted State ---
+    const formMethods = useForm<ProductFormData>({ resolver: zodResolver(productFormSchema) });
+    const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
 
-    // --- Memoized Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...products]
+    const openAddDrawer = useCallback(() => {
+        setEditingProduct(null);
+        formMethods.reset({ // Default values for ProductFormData
+            name: '', sku: '', status: productStatusOptions[0]?.value || 'draft', categoryName: '',
+            subcategoryName: null, brandName: '', image: null, description: null, price: null, stock: null,
+        });
+        setIsAddEditDrawerOpen(true);
+    }, [formMethods]);
 
-        // Apply Tab Filter FIRST
-        if (currentTab === TABS.PENDING) {
-            processedData = processedData.filter(
-                (prod) => prod.status === 'draft',
-            )
-        }
+    const openEditDrawer = useCallback((product: ProductItem) => {
+        setEditingProduct(product);
+        formMethods.reset(product); // ProductItem fields match ProductFormData for simplicity here
+        setIsAddEditDrawerOpen(true);
+    }, [formMethods]);
 
-        // Apply Search
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase()
-            processedData = processedData.filter(
-                (prod) =>
-                    prod.id.toLowerCase().includes(query) ||
-                    prod.name.toLowerCase().includes(query) ||
-                    prod.sku.toLowerCase().includes(query) ||
-                    prod.categoryName.toLowerCase().includes(query) ||
-                    (prod.subcategoryName?.toLowerCase().includes(query) ??
-                        false) ||
-                    prod.brandName.toLowerCase().includes(query) ||
-                    prod.status.toLowerCase().includes(query),
-            )
-        }
+    const closeAddEditDrawer = useCallback(() => { setIsAddEditDrawerOpen(false); setEditingProduct(null); }, []);
 
-        // Apply Sorting
-        const { order, key } = tableData.sort as OnSortParam
-        if (order && key) {
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                const aValue = a[key as keyof ProductItem] ?? ''
-                const bValue = b[key as keyof ProductItem] ?? ''
-                if (key === 'subcategoryName') {
-                    if (aValue === null && bValue === null) return 0
-                    if (aValue === null) return order === 'asc' ? -1 : 1
-                    if (bValue === null) return order === 'asc' ? 1 : -1
-                }
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
-                }
-                return 0
-            })
-            processedData = sortedData
-        }
-
-        // Apply Pagination
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const dataTotal = processedData.length
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
-
-        return { pageData: dataForPage, total: dataTotal }
-    }, [products, tableData, currentTab])
-    // --- End Memoized Data Processing ---
-
-    // --- Lifted Handlers ---
-    // Handler to update filter state (passed to filter component)
-    const handleApplyFilter = useCallback((newFilterData: ProductsFilterFormSchema) => {
-        setFilterData(newFilterData)
-        setTableData((prevTableData) => ({ ...prevTableData, pageIndex: 1 }))
-        setSelectedForms([])
-    }, []) // No dependencies needed as it only sets state
-    const handleSetTableData = useCallback((data: TableQueries) => {
-        setTableData(data)
-    }, [])
-    const handlePaginationChange = useCallback(
-        (page: number) => {
-            handleSetTableData({ ...tableData, pageIndex: page })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({
-                ...tableData,
-                pageSize: Number(value),
-                pageIndex: 1,
-            })
-            setSelectedProducts([])
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => {
-            handleSetTableData({ ...tableData, query: query, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-
-    const handleRowSelect = useCallback(
-        (checked: boolean, row: ProductItem) => {
-            setSelectedProducts((prev) => {
-                if (checked) {
-                    return prev.some((prod) => prod.id === row.id)
-                        ? prev
-                        : [...prev, row]
-                } else {
-                    return prev.filter((prod) => prod.id !== row.id)
-                }
-            })
-        },
-        [setSelectedProducts],
-    )
-
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<ProductItem>[]) => {
-            const currentPageRowIds = new Set(rows.map((r) => r.original.id))
-            if (checked) {
-                const rowsToAdd = rows.map((row) => row.original)
-                setSelectedProducts((prev) => {
-                    const existingIds = new Set(prev.map((p) => p.id))
-                    const newSelection = rowsToAdd.filter(
-                        (p) => !existingIds.has(p.id),
-                    )
-                    return [...prev, ...newSelection]
-                })
+    const onFormSubmit = useCallback(async (data: ProductFormData) => {
+        setIsSubmitting(true);
+        try {
+            if (editingProduct) {
+                await dispatchSimulated({ type: 'products/edit', payload: { id: editingProduct.id, data } }).unwrap();
+                toast.push(<Notification title="Success" type="success">Product updated.</Notification>);
             } else {
-                setSelectedProducts((prev) =>
-                    prev.filter((p) => !currentPageRowIds.has(p.id)),
-                )
+                await dispatchSimulated({ type: 'products/add', payload: data }).unwrap();
+                toast.push(<Notification title="Success" type="success">Product added.</Notification>);
             }
-        },
-        [setSelectedProducts],
-    )
+            closeAddEditDrawer();
+        } catch (error: any) { toast.push(<Notification title="Error" type="danger">{error.message || "Operation failed."}</Notification>); }
+        finally { setIsSubmitting(false); }
+    }, [dispatchSimulated, editingProduct, closeAddEditDrawer]);
 
-    const handleEdit = useCallback(
-        (product: ProductItem) => {
-            console.log('Edit product:', product.id)
-            navigate(`/products/edit/${product.id}`) // Adjust route
-        },
-        [navigate],
-    )
+    const handleDeleteClick = useCallback((item: ProductItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const onConfirmSingleDelete = useCallback(async () => {
+        if (!itemToDelete) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false);
+        try {
+            await dispatchSimulated({ type: 'products/delete', payload: { id: itemToDelete.id } }).unwrap();
+            toast.push(<Notification title="Deleted" type="success">Product deleted.</Notification>);
+            setSelectedItems((prev) => prev.filter(i => i.id !== itemToDelete.id));
+        } catch (e:any) { toast.push(<Notification title="Error" type="danger">{e.message || "Delete failed."}</Notification>); }
+        finally { setIsDeleting(false); setItemToDelete(null); }
+    }, [dispatchSimulated, itemToDelete]);
 
-    const handleClone = useCallback(
-        (productToClone: ProductItem) => {
-            console.log(
-                'Cloning product:',
-                productToClone.id,
-                productToClone.name,
-            )
-            const newId = `PROD${Math.floor(Math.random() * 9000) + 1000}`
-            const clonedProduct: ProductItem = {
-                ...productToClone,
-                id: newId,
-                name: `${productToClone.name} (Clone)`,
-                status: 'draft',
-                sku: `${productToClone.sku}-CLONE`,
-            }
-            setProducts((prev) => [clonedProduct, ...prev])
-            toast.push(
-                <Notification
-                    title="Product Cloned"
-                    type="success"
-                    duration={2000}
-                >
-                    Cloned product added as draft.
-                </Notification>,
-            )
-        },
-        [setProducts],
-    )
+    const onDeleteSelected = useCallback(async () => {
+        if(selectedItems.length === 0) return; setIsDeleting(true);
+        const ids = selectedItems.map(item => item.id).join(',');
+        try {
+            await dispatchSimulated({ type: 'products/deleteAll', payload: { ids } }).unwrap();
+            toast.push(<Notification title="Success" type="success">{selectedItems.length} products deleted.</Notification>);
+            setSelectedItems([]);
+        } catch (e:any) { toast.push(<Notification title="Error" type="danger">{e.message || "Bulk delete failed."}</Notification>); }
+        finally { setIsDeleting(false); }
+    }, [dispatchSimulated, selectedItems]);
 
-    const handleChangeStatus = useCallback(
-        (product: ProductItem) => {
-            const statuses: ProductItem['status'][] = [
-                'active',
-                'inactive',
-                'draft',
-                'archived',
-            ]
-            const currentStatusIndex = statuses.indexOf(product.status)
-            const nextStatusIndex = (currentStatusIndex + 1) % statuses.length
-            const newStatus = statuses[nextStatusIndex]
-            console.log(
-                `Changing status of product ${product.id} from ${product.status} to ${newStatus}`,
-            )
-            setProducts((currentProducts) =>
-                currentProducts.map((p) =>
-                    p.id === product.id ? { ...p, status: newStatus } : p,
-                ),
-            )
-            toast.push(
-                <Notification
-                    title="Status Changed"
-                    type="success"
-                    duration={2000}
-                >{`Product ${product.name} status changed to ${newStatus}.`}</Notification>,
-            )
-        },
-        [setProducts],
-    )
+    const handleChangeStatus = useCallback(async (product: ProductItem) => {
+        const statusesCycle: ProductStatus[] = ['active', 'inactive', 'draft', 'archived'];
+        const currentIndex = statusesCycle.indexOf(product.status);
+        const newStatus = statusesCycle[(currentIndex + 1) % statusesCycle.length];
+        setIsSubmitting(true);
+        try {
+            await dispatchSimulated({ type: 'products/changeStatus', payload: { id: product.id, newStatus } }).unwrap();
+            toast.push(<Notification title="Status Updated" type="success">{`Product status changed to ${newStatus}.`}</Notification>);
+        } catch (e:any) { toast.push(<Notification title="Error" type="danger">Status update failed.</Notification>); }
+        finally { setIsSubmitting(false); }
+    }, [dispatchSimulated]);
 
-    const handleDelete = useCallback(
-        (productToDelete: ProductItem) => {
-            console.log(
-                'Deleting product:',
-                productToDelete.id,
-                productToDelete.name,
-            )
-            // Consider adding a confirmation dialog specifically for single delete too
-            setProducts((currentProducts) =>
-                currentProducts.filter(
-                    (prod) => prod.id !== productToDelete.id,
-                ),
-            )
-            setSelectedProducts((prevSelected) =>
-                prevSelected.filter((prod) => prod.id !== productToDelete.id),
-            )
-            toast.push(
-                <Notification
-                    title="Product Deleted"
-                    type="success"
-                    duration={2000}
-                >{`Product ${productToDelete.name} deleted.`}</Notification>,
-            )
-        },
-        [setProducts, setSelectedProducts],
-    )
+    const handleClone = useCallback((productToClone: ProductItem) => {
+        const newProduct: ProductItem = {
+            ...cloneDeep(productToClone),
+            id: `PROD-CLONE-${Date.now()}`,
+            sku: `${productToClone.sku}-CLONE`,
+            name: `${productToClone.name} (Copy)`,
+            status: 'draft',
+        };
+        dispatchSimulated({ type: 'products/add', payload: newProduct }); // Simulate adding cloned product
+        toast.push(<Notification title="Cloned" type="info">Product cloned as a new draft.</Notification>);
+    }, [dispatchSimulated]);
 
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected products:',
-            selectedProducts.map((prod) => prod.id),
-        )
-        const selectedIds = new Set(selectedProducts.map((prod) => prod.id))
-        setProducts((currentProducts) =>
-            currentProducts.filter((prod) => !selectedIds.has(prod.id)),
-        )
-        setSelectedProducts([])
-        toast.push(
-            <Notification
-                title="Products Deleted"
-                type="success"
-                duration={2000}
-            >{`${selectedIds.size} product(s) deleted.`}</Notification>,
-        )
-    }, [selectedProducts, setProducts, setSelectedProducts])
+    const handleTabChange = useCallback((tabKey: string) => {
+        setCurrentTab(tabKey);
+        setTableData(prev => ({ ...prev, pageIndex: 1 }));
+        setSelectedItems([]);
+    }, []);
 
-    const handleTabChange = (tabKey: string) => {
-        setCurrentTab(tabKey)
-        handleSetTableData({ ...tableData, pageIndex: 1 }) // Reset page index
-        setSelectedProducts([]) // Clear selection
-    }
-    // --- End Lifted Handlers ---
+    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
+    const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
 
-    // --- Define Columns in Parent ---
-    const columns: ColumnDef<ProductItem>[] = useMemo(
-        () => [
-            {
-                header: 'ID',
-                accessorKey: 'id',
-                enableSorting: true,
-                width: 120,
-            },
-            {
-                header : "Product",
-                id : "product",
-                enableSorting: true,
-                size: 300,
-                cell : (props)=>{
-                    const {image, name, subcategoryName } = props.row.original
-                    return (
-                        <div className='flex gap-2 max-w-[230px]'>
-                            <Avatar
-                                size={40}
-                                shape="circle"
-                                src={image}
-                                icon={<TbBox />}
-                            >
-                                {!image ? name.charAt(0).toUpperCase() : ''}
-                            </Avatar>
-                            <div className='flex flex-col gap-0.5'>
-                                <span className='font-semibold'>{name}</span>
-                                <span className='text-xs'>{subcategoryName}</span>
-                            </div>
-                        </div>
-                    )
-                }
-            },
-            
-            // {
-            //     header: 'Image',
-            //     accessorKey: 'image',
-            //     enableSorting: false,
-            //     width: 80, // Adjust width
-            //     cell: (props) => {
-            //         const { image, name } = props.row.original
-            //         return (
-            //             <Avatar
-            //                 size={40}
-            //                 shape="circle"
-            //                 src={image}
-            //                 icon={<TbBox />}
-            //             >
-            //                 {!image ? name.charAt(0).toUpperCase() : ''}
-            //             </Avatar>
-            //         )
-            //     },
-            // },
-            // { header: 'Name', accessorKey: 'name', enableSorting: true },
-            {
-                header : "Brands",
-                id:"brands",
-                size: 200,
-                enableSorting: true,
-                cell: (props)=>{
-                    const { brandName, categoryName } = props.row.original
-                    return (
-                        <div className='flex flex-col gap-0.5'>
-                            <span className='font-semibold'>{brandName}</span>
-                            <span className='text-xs'>{categoryName}</span>
-                        </div>
-                    )
-                }
-            },
-            { header: 'SKU', accessorKey: 'sku', enableSorting: true },
-            // {
-            //     header: 'Category',
-            //     accessorKey: 'categoryName',
-            //     enableSorting: true,
-            // },
-            // {
-            //     header: 'Subcategory',
-            //     accessorKey: 'subcategoryName',
-            //     enableSorting: true,
-            //     cell: (props) => (
-            //         <span>{props.row.original.subcategoryName ?? '-'}</span>
-            //     ),
-            // },
-            // { header: 'Brand', accessorKey: 'brandName', enableSorting: true },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                size: 100,
-                cell: (props) => {
-                    const { status } = props.row.original
-                    return (
-                        <Tag
-                            className={`${statusColor[status]} capitalize`}
-                            prefix={false}
-                        >
-                            {status}
-                        </Tag>
-                    )
-                },
-            },
-            {
-                header: 'Action',
-                id: 'action',
-                width: 130, // Adjust width for actions
-                meta:{HeaderClass: "text-center"},
-                cell: (props) => (
-                    <ActionColumn
-                        onClone={() => handleClone(props.row.original)}
-                        onChangeStatus={() =>
-                            handleChangeStatus(props.row.original)
-                        }
-                        onEdit={() => handleEdit(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                    />
-                ),
-            },
-        ],
-        [handleClone, handleChangeStatus, handleEdit, handleDelete], // Dependencies
-    )
-    // --- End Define Columns ---
+    // Filter options
+    const categoryOptions = useMemo(() => [...new Set(allProducts.map(p => p.categoryName))].sort().map(c => ({value: c, label: c})), [allProducts]);
+    const brandOptions = useMemo(() => [...new Set(allProducts.map(p => p.brandName))].sort().map(b => ({value: b, label: b})), [allProducts]);
 
-    // --- Render Main Component ---
+
+    type ProcessedDataType = { pageData: ProductItem[]; total: number; allFilteredAndSortedData: ProductItem[]; };
+    const { pageData, total, allFilteredAndSortedData } = useMemo((): ProcessedDataType => {
+        let processedData: ProductItem[] = cloneDeep(allProducts);
+
+        if (currentTab === TABS.DRAFT) {
+            processedData = processedData.filter(p => p.status === 'draft');
+        }
+
+        if (filterCriteria.filterNameOrSku && filterCriteria.filterNameOrSku.trim() !== '') {
+            const query = filterCriteria.filterNameOrSku.toLowerCase().trim();
+            processedData = processedData.filter(p => p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query));
+        }
+        if (filterCriteria.filterCategories && filterCriteria.filterCategories.length > 0) {
+            const cats = new Set(filterCriteria.filterCategories.map(opt => opt.value));
+            processedData = processedData.filter(p => cats.has(p.categoryName));
+        }
+        if (filterCriteria.filterBrands && filterCriteria.filterBrands.length > 0) {
+            const brands = new Set(filterCriteria.filterBrands.map(opt => opt.value));
+            processedData = processedData.filter(p => brands.has(p.brandName));
+        }
+        if (filterCriteria.filterStatuses && filterCriteria.filterStatuses.length > 0) {
+            const statuses = new Set(filterCriteria.filterStatuses.map(opt => opt.value));
+            processedData = processedData.filter(p => statuses.has(p.status));
+        }
+
+
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(item =>
+                item.id.toLowerCase().includes(query) ||
+                item.name.toLowerCase().includes(query) ||
+                item.sku.toLowerCase().includes(query) ||
+                item.categoryName.toLowerCase().includes(query) ||
+                (item.subcategoryName && item.subcategoryName.toLowerCase().includes(query)) ||
+                item.brandName.toLowerCase().includes(query) ||
+                item.status.toLowerCase().includes(query)
+            );
+        }
+        const { order, key } = tableData.sort as OnSortParam;
+        if (order && key && processedData.length > 0) {
+            processedData.sort((a, b) => {
+                let aVal = a[key as keyof ProductItem];
+                let bVal = b[key as keyof ProductItem];
+                if (typeof aVal === 'number' && typeof bVal === 'number') return order === 'asc' ? aVal - bVal : bVal - aVal;
+                return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? ''));
+            });
+        }
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number;
+        const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
+    }, [allProducts, tableData, filterCriteria, currentTab]);
+
+    const handleExportData = useCallback(() => exportProductsToCsv('products_export.csv', allFilteredAndSortedData), [allFilteredAndSortedData]);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handlePageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: ProductItem) => setSelectedItems(prev => checked ? (prev.some(i => i.id === row.id) ? prev : [...prev, row]) : prev.filter(i => i.id !== row.id)), []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<ProductItem>[]) => {
+        const originals = currentRows.map(r => r.original);
+        if (checked) setSelectedItems(prev => { const oldIds = new Set(prev.map(i => i.id)); return [...prev, ...originals.filter(o => !oldIds.has(o.id))]; });
+        else { const currentIds = new Set(originals.map(o => o.id)); setSelectedItems(prev => prev.filter(i => !currentIds.has(i.id))); }
+    }, []);
+
+
+    const columns: ColumnDef<ProductItem>[] = useMemo(() => [
+        { header: 'Product', id:'product', size: 300, cell: (props: CellContext<ProductItem, any>) => (
+            <div className="flex items-center gap-2">
+                <Avatar size="lg" shape="rounded" src={props.row.original.image || undefined} icon={<TbBox/>} />
+                <div>
+                    <span className="font-semibold">{props.row.original.name}</span>
+                    <div className="text-xs text-gray-500">SKU: {props.row.original.sku}</div>
+                </div>
+            </div>
+        )},
+        { header: 'Category', accessorKey: 'categoryName', size: 150 },
+        { header: 'Brand', accessorKey: 'brandName', size: 150 },
+        { header: 'Stock', accessorKey: 'stock', size: 100, cell: (props: CellContext<ProductItem, any>) => props.row.original.stock ?? '-' },
+        { header: 'Price', accessorKey: 'price', size: 100, cell: (props: CellContext<ProductItem, any>) => props.row.original.price !== null ? `$${props.row.original.price?.toFixed(2)}` : '-' },
+        { header: 'Status', accessorKey: 'status', size: 120, cell: (props: CellContext<ProductItem, any>) => <Tag className={`${statusColor[props.row.original.status] || 'bg-gray-200'} capitalize`}>{props.row.original.status}</Tag> },
+        { header: 'Actions', id: 'actions', size: 150, meta: {HeaderClass: 'text-center'}, cell: (props: CellContext<ProductItem, any>) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} onClone={() => handleClone(props.row.original)} /> },
+    ], [openEditDrawer, handleDeleteClick, handleChangeStatus, handleClone]);
+
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header Section */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Products</h5>
-                    <ProductActionTools allProducts={products} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h5 className="mb-4 lg:mb-0">Products</h5>
+                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Product</Button>
+                    </div>
+                     <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
+                        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                            <button onClick={() => handleTabChange(TABS.ALL)} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${currentTab === TABS.ALL ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>All Products</button>
+                            <button onClick={() => handleTabChange(TABS.DRAFT)} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${currentTab === TABS.DRAFT ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>Draft Products</button>
+                        </nav>
+                    </div>
+                    <ProductTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onAddNew={openAddDrawer} />
+                    <div className="mt-4">
+                        <ProductTable columns={columns} data={pageData} loading={loadingStatus === 'loading' || isSubmitting || isDeleting}
+                            pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
+                            selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange}
+                            onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect}
+                        />
+                    </div>
+                </AdaptiveCard>
+            </Container>
+            <ProductSelectedFooter selectedItems={selectedItems} onDeleteSelected={onDeleteSelected} />
 
-                {/* Tabs Section */}
-                <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
-                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                        <button
-                            key={TABS.ALL}
-                            onClick={() => handleTabChange(TABS.ALL)}
-                            className={classNames(
-                                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm',
-                                currentTab === TABS.ALL
-                                    ? 'border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600',
-                            )}
-                        >
-                            All Products
-                        </button>
-                        <button
-                            key={TABS.PENDING}
-                            onClick={() => handleTabChange(TABS.PENDING)}
-                            className={classNames(
-                                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm',
-                                currentTab === TABS.PENDING
-                                    ? 'border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600',
-                            )}
-                        >
-                            Pending Products
-                        </button>
-                    </nav>
-                </div>
+            <Drawer
+                title={editingProduct ? 'Edit Product' : 'Add New Product'}
+                isOpen={isAddEditDrawerOpen}
+                onClose={closeAddEditDrawer}
+                onRequestClose={closeAddEditDrawer}
+                width={600}
+                
+            >
+                <Form id="productForm" onSubmit={formMethods.handleSubmit(onFormSubmit)} className="flex flex-col gap-y-3 h-full">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 overflow-y-auto p-1">
+                        <FormItem label="Product Name" invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}>
+                            <Controller name="name" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Enter product name" />} />
+                        </FormItem>
+                        <FormItem label="SKU" invalid={!!formMethods.formState.errors.sku} errorMessage={formMethods.formState.errors.sku?.message}>
+                            <Controller name="sku" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Enter SKU" />} />
+                        </FormItem>
+                        <FormItem label="Status" invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}>
+                            <Controller name="status" control={formMethods.control} render={({ field }) => (<UiSelect options={productStatusOptions} value={productStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select status" /> )} />
+                        </FormItem>
+                        <FormItem label="Category" invalid={!!formMethods.formState.errors.categoryName} errorMessage={formMethods.formState.errors.categoryName?.message}>
+                            <Controller name="categoryName" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Enter category" />} />
+                        </FormItem>
+                        <FormItem label="Subcategory (Optional)" invalid={!!formMethods.formState.errors.subcategoryName} errorMessage={formMethods.formState.errors.subcategoryName?.message}>
+                            <Controller name="subcategoryName" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Enter subcategory" />} />
+                        </FormItem>
+                        <FormItem label="Brand" invalid={!!formMethods.formState.errors.brandName} errorMessage={formMethods.formState.errors.brandName?.message}>
+                            <Controller name="brandName" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Enter brand name" />} />
+                        </FormItem>
+                         <FormItem label="Image URL (Optional)" invalid={!!formMethods.formState.errors.image} errorMessage={formMethods.formState.errors.image?.message}>
+                            <Controller name="image" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="https://example.com/image.jpg" />} />
+                        </FormItem>
+                        <FormItem label="Price (Optional)" invalid={!!formMethods.formState.errors.price} errorMessage={formMethods.formState.errors.price?.message}>
+                            <Controller name="price" control={formMethods.control} render={({ field }) => <InputNumber {...field} placeholder="0.00" prefix="$" min={0} precision={2} />} />
+                        </FormItem>
+                        <FormItem label="Stock Quantity (Optional)" invalid={!!formMethods.formState.errors.stock} errorMessage={formMethods.formState.errors.stock?.message}>
+                            <Controller name="stock" control={formMethods.control} render={({ field }) => <InputNumber {...field} placeholder="0" min={0} />} />
+                        </FormItem>
+                        <FormItem label="Description (Optional)" className="md:col-span-2" invalid={!!formMethods.formState.errors.description} errorMessage={formMethods.formState.errors.description?.message}>
+                            <Controller name="description" control={formMethods.control} render={({ field }) => <Textarea {...field} rows={4} placeholder="Enter product description..." />} />
+                        </FormItem>
+                    </div>
+                     <div className="text-right mt-auto pt-3 border-t"> {/* Footer within drawer body */}
+                        <Button size="sm" className="mr-2" type="button" onClick={closeAddEditDrawer} disabled={isSubmitting}>Cancel</Button>
+                        <Button size="sm" variant="solid" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
+                            {isSubmitting ? (editingProduct ? 'Saving...' : 'Adding...') : (editingProduct ? 'Save Changes' : 'Add Product')}
+                        </Button>
+                    </div>
+                </Form>
+            </Drawer>
 
-                {/* Tools Section (Search) */}
-                <div className="mb-4">
-                    <ProductTableTools 
-                        onSearchChange={handleSearchChange} 
-                        filterData={filterData}
-                        setFilterData={handleApplyFilter} // Pass the handler to update filter state
-                        allProducts={products} // Pass data for export
-                    />
-                </div>
+            <Drawer title="Filter Products" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer}
+                footer={<div className="text-right"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterProductForm" type="submit">Apply</Button></div>}>
+                <Form id="filterProductForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 h-full">
+                    <div className="flex-grow overflow-y-auto p-1">
+                        <FormItem label="Name or SKU">
+                            <Controller name="filterNameOrSku" control={filterFormMethods.control} render={({ field }) => <Input {...field} placeholder="Search by name or SKU" />} />
+                        </FormItem>
+                        <FormItem label="Category">
+                            <Controller name="filterCategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select categories..." options={categoryOptions} {...field} />)} />
+                        </FormItem>
+                         <FormItem label="Brand">
+                            <Controller name="filterBrands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select brands..." options={brandOptions} {...field} />)} />
+                        </FormItem>
+                        <FormItem label="Status">
+                            <Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select statuses..." options={productStatusOptions} {...field} />)} />
+                        </FormItem>
+                    </div>
+                </Form>
+            </Drawer>
 
-                {/* Table Section */}
-                <div className="flex-grow overflow-auto">
-                    <ProductTable
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{
-                            total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedProducts={selectedProducts}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
+            <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Product"
+                onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onConfirm={onConfirmSingleDelete} loading={isDeleting}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}>
+                <p>Are you sure you want to delete product <strong>{itemToDelete?.name}</strong> (SKU: {itemToDelete?.sku})?</p>
+            </ConfirmDialog>
+        </>
+    );
+};
 
-            {/* Selected Actions Footer */}
-            <ProductSelected
-                selectedProducts={selectedProducts}
-                setSelectedProducts={setSelectedProducts}
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
-    )
-}
-// --- End Main Component ---
-
-export default Products
-
-// Helper Function (make sure it's defined or imported)
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//     return classes.filter(Boolean).join(' ');
-// }
+export default Products;
