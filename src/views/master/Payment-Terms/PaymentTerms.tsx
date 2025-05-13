@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+// import { Link, useNavigate } from 'react-router-dom'; // useNavigate was unused, Link might be if not used in breadcrumbs
 import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
-// import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
-// import { z } from 'zod' // No longer needed
-// import type { ZodType } from 'zod' // No longer needed
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -12,16 +11,13 @@ import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
-// import Dialog from '@/components/ui/Dialog' // No longer needed for filter dialog
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
-// import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
-// import Input from '@/components/ui/Input' // No longer needed for filter form
-// import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
+import Select from '@/components/ui/Select' // Added for filter drawer
+import { Drawer, Form, FormItem, Input } from '@/components/ui'
 
 // Icons
 import {
@@ -29,9 +25,9 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    TbFilter, // Filter icon removed
-    TbCloudUpload,
+    TbFilter,
     TbPlus,
+    TbCloudUpload,
 } from 'react-icons/tb'
 
 // Types
@@ -39,22 +35,97 @@ import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
 import { useAppDispatch } from '@/reduxtool/store'
 import {
-    getDocumentTypeAction,
     getPaymentTermAction,
-} from '@/reduxtool/master/middleware'
+    addPaymentTermAction,    // Ensure these actions exist or are created
+    editPaymentTermAction,   // Ensure these actions exist or are created
+    deletePaymentTermAction, // Ensure these actions exist or are created
+    deleteAllPaymentTermAction, // Ensure these actions exist or are created
+} from '@/reduxtool/master/middleware' // Adjust path and action names as needed
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-// --- Define FormItem Type (Table Row Data) ---
+// --- Define PaymentTermsItem Type ---
 export type PaymentTermsItem = {
-    id: string
-    term_name: string
+    id: string | number // Allow number for consistency if backend might send it
+    term_name: string // Changed from 'name' to 'term_name'
 }
-// --- End FormItem Type Definition ---
 
-// FilterFormSchema and channelList removed
+// --- Zod Schema for Add/Edit Payment Term Form ---
+const paymentTermFormSchema = z.object({
+    term_name: z // Changed from 'name' to 'term_name'
+        .string()
+        .min(1, 'Payment term name is required.')
+        .max(100, 'Name cannot exceed 100 characters.'),
+})
+type PaymentTermFormData = z.infer<typeof paymentTermFormSchema>
 
-// --- Reusable ActionColumn Component ---
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
+    filterNames: z // This will filter by 'term_name'
+        .array(z.object({ value: z.string(), label: z.string() }))
+        .optional(),
+})
+type FilterFormData = z.infer<typeof filterFormSchema>
+
+// --- CSV Exporter Utility ---
+const CSV_HEADERS_PAYMENT_TERM = ['ID', 'Payment Term Name']
+const CSV_KEYS_PAYMENT_TERM: (keyof PaymentTermsItem)[] = ['id', 'term_name'] // Changed to 'term_name'
+
+function exportToCsvPaymentTerm(filename: string, rows: PaymentTermsItem[]) {
+    if (!rows || !rows.length) {
+        toast.push(
+            <Notification title="No Data" type="info">
+                Nothing to export.
+            </Notification>,
+        )
+        return false
+    }
+    const separator = ','
+
+    const csvContent =
+        CSV_HEADERS_PAYMENT_TERM.join(separator) +
+        '\n' +
+        rows
+            .map((row) => {
+                return CSV_KEYS_PAYMENT_TERM.map((k) => {
+                    let cell = row[k]
+                    if (cell === null || cell === undefined) {
+                        cell = ''
+                    } else {
+                        cell = String(cell).replace(/"/g, '""')
+                    }
+                    if (String(cell).search(/("|,|\n)/g) >= 0) {
+                        cell = `"${cell}"`
+                    }
+                    return cell
+                }).join(separator)
+            })
+            .join('\n')
+
+    const blob = new Blob(['\ufeff' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+    })
+    const link = document.createElement('a')
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', filename)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        return true
+    }
+    toast.push(
+        <Notification title="Export Failed" type="danger">
+            Browser does not support this feature.
+        </Notification>,
+    )
+    return false
+}
+
+// --- ActionColumn Component (No changes needed) ---
 const ActionColumn = ({
     onEdit,
     onDelete,
@@ -65,9 +136,8 @@ const ActionColumn = ({
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-
     return (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center gap-3">
             <Tooltip title="Edit">
                 <div
                     className={classNames(
@@ -97,34 +167,88 @@ const ActionColumn = ({
         </div>
     )
 }
-// --- End ActionColumn ---
 
+// --- PaymentTermSearch Component ---
+type PaymentTermSearchProps = {
+    onInputChange: (value: string) => void
+    ref?: Ref<HTMLInputElement>
+}
+const PaymentTermSearch = React.forwardRef<
+    HTMLInputElement,
+    PaymentTermSearchProps
+>(({ onInputChange }, ref) => {
+    return (
+        <DebouceInput
+            ref={ref}
+            className="w-full"
+            placeholder="Quick search payment terms..."
+            suffix={<TbSearch className="text-lg" />}
+            onChange={(e) => onInputChange(e.target.value)}
+        />
+    )
+})
+PaymentTermSearch.displayName = 'PaymentTermSearch'
 
-
-// --- FormListTable Component (No changes) ---
-const FormListTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedForms,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
+// --- PaymentTermTableTools Component ---
+const PaymentTermTableTools = ({
+    onSearchChange,
+    onFilter,
+    onExport,
 }: {
+    onSearchChange: (query: string) => void
+    onFilter: () => void
+    onExport: () => void
+}) => {
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+            <div className="flex-grow">
+                <PaymentTermSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button
+                    icon={<TbFilter />}
+                    onClick={onFilter}
+                    className="w-full sm:w-auto"
+                >
+                    Filter
+                </Button>
+                <Button
+                    icon={<TbCloudUpload />}
+                    onClick={onExport}
+                    className="w-full sm:w-auto"
+                >
+                    Export
+                </Button>
+            </div>
+        </div>
+    )
+}
+
+// --- PaymentTermTable Component ---
+type PaymentTermTableProps = {
     columns: ColumnDef<PaymentTermsItem>[]
     data: PaymentTermsItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: PaymentTermsItem[]
+    selectedItems: PaymentTermsItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
     onRowSelect: (checked: boolean, row: PaymentTermsItem) => void
     onAllRowSelect: (checked: boolean, rows: Row<PaymentTermsItem>[]) => void
-}) => {
+}
+const PaymentTermTable = ({
+    columns,
+    data,
+    loading,
+    pagingData,
+    selectedItems,
+    onPaginationChange,
+    onSelectChange,
+    onSort,
+    onRowSelect,
+    onAllRowSelect,
+}: PaymentTermTableProps) => {
     return (
         <DataTable
             selectable
@@ -134,7 +258,7 @@ const FormListTable = ({
             loading={loading}
             pagingData={pagingData}
             checkboxChecked={(row) =>
-                selectedForms.some((selected) => selected.id === row.id)
+                selectedItems.some((selected) => selected.id === row.id)
             }
             onPaginationChange={onPaginationChange}
             onSelectChange={onSelectChange}
@@ -145,176 +269,23 @@ const FormListTable = ({
     )
 }
 
-// FormListTableFilter component removed
-
-// --- FormListTableTools Component (Simplified) ---
-// const FormListTableTools = ({
-//     onSearchChange,
-// }: {
-//     onSearchChange: (query: string) => void
-// }) => {
-//     return (
-//         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-//             <FormListSearch onInputChange={onSearchChange} />
-//             {/* Filter button/component removed */}
-//         </div>
-//     )
-// }
-// // --- End FormListTableTools ---
-
-// --- PaymentTermsSearch Component ---
-type PaymentTermsSearchProps = {
-    // Renamed component
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const PaymentTermsSearch = React.forwardRef<
-    HTMLInputElement,
-    PaymentTermsSearchProps
->(({ onInputChange }, ref) => {
-    return (
-        <DebouceInput
-            ref={ref}
-            placeholder="Quick Search..." // Updated placeholder
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
-})
-PaymentTermsSearch.displayName = 'PaymentTermsSearch'
-// --- End PaymentTermsSearch ---
-
-// --- PaymentTermsTableTools Component ---
-const PaymentTermsTableTools = ({
-    // Renamed component
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-
-    type PaymentTermsFilterSchema = {
-        userRole : String,
-        exportFrom : String,
-        exportDate : Date
-    }
-
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
-
-    const {control, handleSubmit} = useForm<PaymentTermsFilterSchema>()
-
-    const exportFiltersSubmitHandler = (data : PaymentTermsFilterSchema) => {
-        console.log("filter data", data)
-    }
-
-    return (
-        <div className="flex items-center w-full gap-2">
-            <div className="flex-grow">
-                <PaymentTermsSearch onInputChange={onSearchChange} />
-            </div>
-            {/* Filter component removed */}
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                    </div>  
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Document Name"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
-                </Form>
-            </Drawer>
-        </div>
-    )
-}
-// --- End PaymentTermsTableTools ---
-
-// // --- FormListTableTools Component (Simplified) ---
-// const FormListTableTools = ({
-//     onSearchChange,
-// }: {
-//     onSearchChange: (query: string) => void
-// }) => {
-//     return (
-//         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-//             <FormListSearch onInputChange={onSearchChange} />
-//             {/* Filter button/component removed */}
-//         </div>
-//     )
-// }
-// // --- End FormListTableTools ---
-
-// --- FormListActionTools Component (No functional changes needed for filter removal) ---
-const FormListActionTools = ({
-    allFormsData,
-    openAddDrawer,
-}: {
-    allFormsData: PaymentTermsItem[];
-    openAddDrawer: () => void; // Accept function as a prop
-}) => {
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Name', key: 'term_name' },
-    ];
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={openAddDrawer} // Open the add drawer
-                block
-            >
-                Add New
-            </Button>
-        </div>
-    );
-};
-
-// --- FormListSelected Component (No functional changes needed for filter removal) ---
-const FormListSelected = ({
-    selectedForms,
-    setSelectedForms,
-    onDeleteSelected,
-}: {
-    selectedForms: PaymentTermsItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<PaymentTermsItem[]>>
+// --- PaymentTermSelectedFooter Component ---
+type PaymentTermSelectedFooterProps = {
+    selectedItems: PaymentTermsItem[]
     onDeleteSelected: () => void
-}) => {
+}
+const PaymentTermSelectedFooter = ({
+    selectedItems,
+    onDeleteSelected,
+}: PaymentTermSelectedFooterProps) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-
     const handleDeleteClick = () => setDeleteConfirmationOpen(true)
     const handleCancelDelete = () => setDeleteConfirmationOpen(false)
     const handleConfirmDelete = () => {
         onDeleteSelected()
         setDeleteConfirmationOpen(false)
     }
-
-    if (selectedForms.length === 0) return null
-
+    if (selectedItems.length === 0) return null
     return (
         <>
             <StickyFooter
@@ -328,10 +299,10 @@ const FormListSelected = ({
                         </span>
                         <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
                             <span className="heading-text">
-                                {selectedForms.length}
+                                {selectedItems.length}
                             </span>
                             <span>
-                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
+                                Item{selectedItems.length > 1 ? 's' : ''}{' '}
                                 selected
                             </span>
                         </span>
@@ -343,7 +314,7 @@ const FormListSelected = ({
                             className="text-red-600 hover:text-red-500"
                             onClick={handleDeleteClick}
                         >
-                            Delete
+                            Delete Selected
                         </Button>
                     </div>
                 </div>
@@ -351,15 +322,15 @@ const FormListSelected = ({
             <ConfirmDialog
                 isOpen={deleteConfirmationOpen}
                 type="danger"
-                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
+                title={`Delete ${selectedItems.length} Payment Term${selectedItems.length > 1 ? 's' : ''}`}
                 onClose={handleCancelDelete}
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
             >
                 <p>
-                    Are you sure you want to delete the selected item
-                    {selectedForms.length > 1 ? 's' : ''}? This action cannot be
+                    Are you sure you want to delete the selected payment term
+                    {selectedItems.length > 1 ? 's' : ''}? This action cannot be
                     undone.
                 </p>
             </ConfirmDialog>
@@ -369,42 +340,311 @@ const FormListSelected = ({
 
 // --- Main PaymentTerms Component ---
 const PaymentTerms = () => {
-
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<PaymentTermsItem | null>(null);
-
-    const openEditDrawer = (item: PaymentTermsItem) => {
-        setSelectedItem(item); // Set the selected item's data
-        setIsEditDrawerOpen(true); // Open the edit drawer
-    };
-
-    const closeEditDrawer = () => {
-        setSelectedItem(null); // Clear the selected item's data
-        setIsEditDrawerOpen(false); // Close the edit drawer
-    };
-
-    const openAddDrawer = () => {
-        setSelectedItem(null); // Clear any selected item
-        setIsAddDrawerOpen(true); // Open the add drawer
-    };
-
-    const closeAddDrawer = () => {
-        setIsAddDrawerOpen(false); // Close the add drawer
-    };
-
-    const navigate = useNavigate()
     const dispatch = useAppDispatch()
+    // const navigate = useNavigate(); // Uncomment if navigation on edit/add is needed
+
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
+    const [editingPaymentTerm, setEditingPaymentTerm] =
+        useState<PaymentTermsItem | null>(null)
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] =
+        useState(false)
+    const [paymentTermToDelete, setPaymentTermToDelete] =
+        useState<PaymentTermsItem | null>(null)
+
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
+        filterNames: [],
+    })
+
+    // Ensure PaymentTermsData is part of your masterSelector slice
+    const { PaymentTermsData = [], status: masterLoadingStatus = 'idle' } =
+        useSelector(masterSelector)
 
     useEffect(() => {
         dispatch(getPaymentTermAction())
     }, [dispatch])
 
-    const { PaymentTermsData = [], status: masterLoadingStatus = 'idle' } =
-        useSelector(masterSelector)
+    const addFormMethods = useForm<PaymentTermFormData>({
+        resolver: zodResolver(paymentTermFormSchema),
+        defaultValues: { term_name: '' }, // Use term_name
+        mode: 'onChange',
+    })
+    const editFormMethods = useForm<PaymentTermFormData>({
+        resolver: zodResolver(paymentTermFormSchema),
+        defaultValues: { term_name: '' }, // Use term_name
+        mode: 'onChange',
+    })
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria,
+    })
 
-    const [localIsLoading, setLocalIsLoading] = useState(false)
-    const [forms, setForms] = useState<PaymentTermsItem[]>([]) // Remains for potential local ops, not table data source
+    const openAddDrawer = () => {
+        addFormMethods.reset({ term_name: '' }) // Use term_name
+        setIsAddDrawerOpen(true)
+    }
+    const closeAddDrawer = () => {
+        addFormMethods.reset({ term_name: '' }) // Use term_name
+        setIsAddDrawerOpen(false)
+    }
+    const onAddPaymentTermSubmit = async (data: PaymentTermFormData) => {
+        setIsSubmitting(true)
+        try {
+            // Ensure addPaymentTermAction takes { term_name: data.term_name }
+            await dispatch(addPaymentTermAction({ term_name: data.term_name })).unwrap()
+            toast.push(
+                <Notification
+                    title="Payment Term Added"
+                    type="success"
+                    duration={2000}
+                >
+                    Payment Term "{data.term_name}" added.
+                </Notification>,
+            )
+            closeAddDrawer()
+            dispatch(getPaymentTermAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Add"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || 'Could not add payment term.'}
+                </Notification>,
+            )
+            console.error('Add Payment Term Error:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const openEditDrawer = (term: PaymentTermsItem) => {
+        setEditingPaymentTerm(term)
+        editFormMethods.setValue('term_name', term.term_name) // Use term_name
+        setIsEditDrawerOpen(true)
+    }
+    const closeEditDrawer = () => {
+        setEditingPaymentTerm(null)
+        editFormMethods.reset({ term_name: '' }) // Use term_name
+        setIsEditDrawerOpen(false)
+    }
+    const onEditPaymentTermSubmit = async (data: PaymentTermFormData) => {
+        if (
+            !editingPaymentTerm ||
+            editingPaymentTerm.id === undefined ||
+            editingPaymentTerm.id === null
+        ) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot edit: Payment Term ID is missing.
+                </Notification>,
+            )
+            setIsSubmitting(false)
+            return
+        }
+        setIsSubmitting(true)
+        try {
+
+            console.log();
+            
+            // Ensure editPaymentTermAction takes { id: ..., term_name: ... }
+            await dispatch(
+                editPaymentTermAction({
+                    id: editingPaymentTerm.id,
+                    term_name: data.term_name,
+                }),
+            ).unwrap()
+            toast.push(
+                <Notification
+                    title="Payment Term Updated"
+                    type="success"
+                    duration={2000}
+                >
+                    Payment Term "{data.term_name}" updated.
+                </Notification>,
+            )
+            closeEditDrawer()
+            dispatch(getPaymentTermAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Update"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || 'Could not update payment term.'}
+                </Notification>,
+            )
+            console.error('Edit Payment Term Error:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleDeleteClick = (term: PaymentTermsItem) => {
+        if (term.id === undefined || term.id === null) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot delete: Payment Term ID is missing.
+                </Notification>,
+            )
+            return
+        }
+        setPaymentTermToDelete(term)
+        setSingleDeleteConfirmOpen(true)
+    }
+
+    const onConfirmSingleDelete = async () => {
+        if (
+            !paymentTermToDelete ||
+            paymentTermToDelete.id === undefined ||
+            paymentTermToDelete.id === null
+        ) {
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Cannot delete: Payment Term ID is missing.
+                </Notification>,
+            )
+            setIsDeleting(false)
+            setPaymentTermToDelete(null)
+            setSingleDeleteConfirmOpen(false)
+            return
+        }
+        setIsDeleting(true)
+        setSingleDeleteConfirmOpen(false)
+        try {
+            // Ensure deletePaymentTermAction takes correct payload
+            await dispatch(
+                deletePaymentTermAction(paymentTermToDelete),
+            ).unwrap()
+            toast.push(
+                <Notification
+                    title="Payment Term Deleted"
+                    type="success"
+                    duration={2000}
+                >
+                    Payment Term "{paymentTermToDelete.term_name}" deleted.
+                </Notification>,
+            )
+            setSelectedItems((prev) =>
+                prev.filter((item) => item.id !== paymentTermToDelete!.id),
+            )
+            dispatch(getPaymentTermAction())
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Failed to Delete"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message || `Could not delete payment term.`}
+                </Notification>,
+            )
+            console.error('Delete Payment Term Error:', error)
+        } finally {
+            setIsDeleting(false)
+            setPaymentTermToDelete(null)
+        }
+    }
+    const handleDeleteSelected = async () => {
+        if (selectedItems.length === 0) {
+            toast.push(
+                <Notification title="No Selection" type="info">
+                    Please select items to delete.
+                </Notification>,
+            )
+            return
+        }
+        setIsDeleting(true)
+
+        const validItemsToDelete = selectedItems.filter(
+            (item) => item.id !== undefined && item.id !== null,
+        )
+
+        if (validItemsToDelete.length !== selectedItems.length) {
+            const skippedCount =
+                selectedItems.length - validItemsToDelete.length
+            toast.push(
+                <Notification
+                    title="Deletion Warning"
+                    type="warning"
+                    duration={3000}
+                >
+                    {skippedCount} item(s) could not be processed due to
+                    missing IDs and were skipped.
+                </Notification>,
+            )
+        }
+
+        if (validItemsToDelete.length === 0) {
+            toast.push(
+                <Notification title="No Valid Items" type="info">
+                    No valid items to delete.
+                </Notification>,
+            )
+            setIsDeleting(false)
+            return
+        }
+
+        const idsToDelete = validItemsToDelete.map((item) => item.id)
+        const commaSeparatedIds = idsToDelete.join(',')
+
+        try {
+            // Ensure deleteAllPaymentTermAction takes correct payload
+            await dispatch(
+                deleteAllPaymentTermAction({ ids: commaSeparatedIds }),
+            ).unwrap()
+            toast.push(
+                <Notification
+                    title="Deletion Successful"
+                    type="success"
+                    duration={2000}
+                >
+                    {validItemsToDelete.length} payment term(s) successfully
+                    processed for deletion.
+                </Notification>,
+            )
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    title="Deletion Failed"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error.message ||
+                        'Failed to delete selected payment terms.'}
+                </Notification>,
+            )
+            console.error('Delete selected payment terms error:', error)
+        } finally {
+            setSelectedItems([])
+            dispatch(getPaymentTermAction())
+            setIsDeleting(false)
+        }
+    }
+
+    const openFilterDrawer = () => {
+        filterFormMethods.reset(filterCriteria)
+        setIsFilterDrawerOpen(true)
+    }
+    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
+    const onApplyFiltersSubmit = (data: FilterFormData) => {
+        setFilterCriteria({ filterNames: data.filterNames || [] })
+        handleSetTableData({ pageIndex: 1 })
+        closeFilterDrawer()
+    }
+    const onClearFilters = () => {
+        const defaultFilters = { filterNames: [] }
+        filterFormMethods.reset(defaultFilters)
+        setFilterCriteria(defaultFilters)
+        handleSetTableData({ pageIndex: 1 })
+    }
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -412,64 +652,61 @@ const PaymentTerms = () => {
         sort: { order: '', key: '' },
         query: '',
     })
-    const [selectedForms, setSelectedForms] = useState<PaymentTermsItem[]>([])
-    // filterData state and handleApplyFilter removed
+    const [selectedItems, setSelectedItems] = useState<PaymentTermsItem[]>([])
 
-    console.log('Raw PaymentTermsData from Redux:', PaymentTermsData)
-
-    const { pageData, total, processedDataForCsv } = useMemo(() => {
-        console.log(
-            '[Memo] Recalculating. Query:',
-            tableData.query,
-            'Sort:',
-            tableData.sort,
-            'Page:',
-            tableData.pageIndex,
-            // 'Filters:' removed from log
-            'Input Data (PaymentTermsData) Length:',
-            PaymentTermsData?.length ?? 0,
+    const paymentTermNameOptions = useMemo(() => {
+        if (!Array.isArray(PaymentTermsData)) return []
+        const uniqueNames = new Set(
+            PaymentTermsData.map((term) => term.term_name), // Use term_name
         )
+        return Array.from(uniqueNames).map((name) => ({
+            value: name,
+            label: name,
+        }))
+    }, [PaymentTermsData])
 
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         const sourceData: PaymentTermsItem[] = Array.isArray(PaymentTermsData)
             ? PaymentTermsData
             : []
         let processedData: PaymentTermsItem[] = cloneDeep(sourceData)
 
-        // Product and Channel filtering logic removed
+        if (
+            filterCriteria.filterNames &&
+            filterCriteria.filterNames.length > 0
+        ) {
+            const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
+                opt.value.toLowerCase(),
+            )
+            processedData = processedData.filter((item: PaymentTermsItem) =>
+                selectedFilterNames.includes(
+                    item.term_name?.trim().toLowerCase() ?? '', // Use term_name
+                ),
+            )
+        }
 
-        // 1. Apply Search Query (on id and name)
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
-            console.log('[Memo] Applying search query:', query)
             processedData = processedData.filter((item: PaymentTermsItem) => {
-                const itemNameLower = item.term_name?.trim().toLowerCase() ?? ''
+                const itemNameLower = item.term_name?.trim().toLowerCase() ?? '' // Use term_name
                 const itemIdString = String(item.id ?? '').trim()
                 const itemIdLower = itemIdString.toLowerCase()
                 return (
                     itemNameLower.includes(query) || itemIdLower.includes(query)
                 )
             })
-            console.log(
-                '[Memo] After search query filter. Count:',
-                processedData.length,
-            )
         }
-
-        // 2. Apply Sorting (on id and name)
         const { order, key } = tableData.sort as OnSortParam
         if (
             order &&
             key &&
-            (key === 'id' || key === 'term_name') &&
+            (key === 'id' || key === 'term_name') && // Use term_name for sorting key
             processedData.length > 0
         ) {
-            console.log('[Memo] Applying sort. Key:', key, 'Order:', order)
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
-                // Ensure values are strings for localeCompare, default to empty string if not
                 const aValue = String(a[key as keyof PaymentTermsItem] ?? '')
                 const bValue = String(b[key as keyof PaymentTermsItem] ?? '')
-
                 return order === 'asc'
                     ? aValue.localeCompare(bValue)
                     : bValue.localeCompare(aValue)
@@ -477,9 +714,8 @@ const PaymentTerms = () => {
             processedData = sortedData
         }
 
-        const dataBeforePagination = [...processedData] // For CSV export
+        const dataToExport = [...processedData]
 
-        // 3. Apply Pagination
         const currentTotal = processedData.length
         const pageIndex = tableData.pageIndex as number
         const pageSize = tableData.pageSize as number
@@ -488,27 +724,30 @@ const PaymentTerms = () => {
             startIndex,
             startIndex + pageSize,
         )
-
-        console.log(
-            '[Memo] Returning. PageData Length:',
-            dataForPage.length,
-            'Total Items (after all filters/sort):',
-            currentTotal,
-        )
         return {
             pageData: dataForPage,
             total: currentTotal,
-            processedDataForCsv: dataBeforePagination,
+            allFilteredAndSortedData: dataToExport,
         }
-    }, [PaymentTermsData, tableData]) // filterData removed from dependencies
+    }, [PaymentTermsData, tableData, filterCriteria])
 
-    // --- Handlers ---
-    // handleApplyFilter removed
+    const handleExportData = () => {
+        const success = exportToCsvPaymentTerm(
+            'payment_terms_export.csv',
+            allFilteredAndSortedData,
+        )
+        if (success) {
+            toast.push(
+                <Notification title="Export Successful" type="success">
+                    Data exported.
+                </Notification>,
+            )
+        }
+    }
 
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
         setTableData((prev) => ({ ...prev, ...data }))
     }, [])
-
     const handlePaginationChange = useCallback(
         (page: number) => handleSetTableData({ pageIndex: page }),
         [handleSetTableData],
@@ -516,34 +755,36 @@ const PaymentTerms = () => {
     const handleSelectChange = useCallback(
         (value: number) => {
             handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-            setSelectedForms([])
+            setSelectedItems([])
         },
         [handleSetTableData],
     )
     const handleSort = useCallback(
-        (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
+        (sort: OnSortParam) => {
+            handleSetTableData({ sort: sort, pageIndex: 1 })
+        },
         [handleSetTableData],
     )
     const handleSearchChange = useCallback(
         (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
         [handleSetTableData],
     )
-
     const handleRowSelect = useCallback((checked: boolean, row: PaymentTermsItem) => {
-        setSelectedForms((prev) => {
+        setSelectedItems((prev) => {
             if (checked)
-                return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
-            return prev.filter((f) => f.id !== row.id)
+                return prev.some((item) => item.id === row.id)
+                    ? prev
+                    : [...prev, row]
+            return prev.filter((item) => item.id !== row.id)
         })
     }, [])
-
     const handleAllRowSelect = useCallback(
         (checked: boolean, currentRows: Row<PaymentTermsItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
-                setSelectedForms((prevSelected) => {
+                setSelectedItems((prevSelected) => {
                     const prevSelectedIds = new Set(
-                        prevSelected.map((f) => f.id),
+                        prevSelected.map((item) => item.id),
                     )
                     const newRowsToAdd = currentPageRowOriginals.filter(
                         (r) => !prevSelectedIds.has(r.id),
@@ -554,125 +795,150 @@ const PaymentTerms = () => {
                 const currentPageRowIds = new Set(
                     currentPageRowOriginals.map((r) => r.id),
                 )
-                setSelectedForms((prevSelected) =>
-                    prevSelected.filter((f) => !currentPageRowIds.has(f.id)),
+                setSelectedItems((prevSelected) =>
+                    prevSelected.filter(
+                        (item) => !currentPageRowIds.has(item.id),
+                    ),
                 )
             }
         },
         [],
     )
 
-    // --- Action Handlers (remain the same, need Redux integration for persistence) ---
-    const handleEdit = useCallback(
-        (form: PaymentTermsItem) => {
-            console.log('Edit item (requires navigation/modal):', form.id)
-            toast.push(
-                <Notification title="Edit Action" type="info">
-                    Edit action for "{form.term_name}" (ID: {form.id}).
-                    Implement navigation or modal.
-                </Notification>,
-            )
-        },
-        [navigate],
-    )
-
-    const handleDelete = useCallback((formToDelete: PaymentTermsItem) => {
-        console.log(
-            'Delete item (needs Redux action):',
-            formToDelete.id,
-            formToDelete.term_name,
-        )
-        setSelectedForms((prevSelected) =>
-            prevSelected.filter((form) => form.id !== formToDelete.id),
-        )
-        toast.push(
-            <Notification title="Delete Action" type="warning">
-                Delete action for "{formToDelete.term_name}" (ID:{' '}
-                {formToDelete.id}). Implement Redux deletion.
-            </Notification>,
-        )
-    }, [])
-
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected items (needs Redux action):',
-            selectedForms.map((f) => f.id),
-        )
-        setSelectedForms([])
-        toast.push(
-            <Notification title="Selected Items Delete Action" type="warning">
-                {selectedForms.length} item(s) delete action. Implement Redux
-                deletion.
-            </Notification>,
-        )
-    }, [selectedForms])
-    // --- End Action Handlers ---
-
     const columns: ColumnDef<PaymentTermsItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
-            { header: 'Terms', accessorKey: 'term_name', enableSorting: true },
             {
-                header: 'Action',
+                header: 'Payment Term Name', // Changed header
+                accessorKey: 'term_name',    // Use term_name
+                enableSorting: true,
+            },
+            {
+                header: 'Actions',
                 id: 'action',
                 meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
-                        onDelete={() => handleDelete(props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
+                        onDelete={() => handleDeleteClick(props.row.original)}
                     />
                 ),
             },
         ],
-        [handleEdit, handleDelete],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [], // openEditDrawer and handleDeleteClick are stable
     )
 
     return (
         <>
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full">
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Payment Terms</h5>
-                    <FormListActionTools
-                        allFormsData={processedDataForCsv}
-                        openAddDrawer={openAddDrawer} // Pass the function as a prop
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h5 className="mb-2 sm:mb-0">Payment Terms</h5>
+                        <Button
+                            variant="solid"
+                            icon={<TbPlus />}
+                            onClick={openAddDrawer}
+                        >
+                            Add New
+                        </Button>
+                    </div>
+                    <PaymentTermTableTools
+                        onSearchChange={handleSearchChange}
+                        onFilter={openFilterDrawer}
+                        onExport={handleExportData}
                     />
-                </div>
+                    <div className="mt-4">
+                        <PaymentTermTable
+                            columns={columns}
+                            data={pageData}
+                            loading={
+                                masterLoadingStatus === 'loading' ||
+                                isSubmitting ||
+                                isDeleting
+                            }
+                            pagingData={{
+                                total: total,
+                                pageIndex: tableData.pageIndex as number,
+                                pageSize: tableData.pageSize as number,
+                            }}
+                            selectedItems={selectedItems}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectChange}
+                            onSort={handleSort}
+                            onRowSelect={handleRowSelect}
+                            onAllRowSelect={handleAllRowSelect}
+                        />
+                    </div>
+                </AdaptiveCard>
+            </Container>
 
-                <div className="mb-4">
-                    <PaymentTermsTableTools
-                                onSearchChange={handleSearchChange}
-                            />{' '}
-                            {/* Use updated component */}
-                        </div>
-
-                <FormListTable
-                    columns={columns}
-                    data={pageData}
-                    loading={
-                        localIsLoading || masterLoadingStatus === 'loading'
-                    }
-                    pagingData={{
-                        total: total,
-                        pageIndex: tableData.pageIndex as number,
-                        pageSize: tableData.pageSize as number,
-                    }}
-                    selectedForms={selectedForms}
-                    onPaginationChange={handlePaginationChange}
-                    onSelectChange={handleSelectChange}
-                    onSort={handleSort}
-                    onRowSelect={handleRowSelect}
-                    onAllRowSelect={handleAllRowSelect}
-                />
-            </AdaptiveCard>
-
-            <FormListSelected
-                selectedForms={selectedForms}
-                setSelectedForms={setSelectedForms}
+            <PaymentTermSelectedFooter
+                selectedItems={selectedItems}
                 onDeleteSelected={handleDeleteSelected}
             />
-        </Container>
-        {/* Edit Drawer */}
+
+            {/* Add Drawer */}
+            <Drawer
+                title="Add Payment Term"
+                isOpen={isAddDrawerOpen}
+                onClose={closeAddDrawer}
+                onRequestClose={closeAddDrawer}
+                footer={
+                    <div className="text-right w-full">
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={closeAddDrawer}
+                            disabled={isSubmitting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            form="addPaymentTermForm" // Ensure this matches the form id
+                            type="submit"
+                            loading={isSubmitting}
+                            disabled={
+                                !addFormMethods.formState.isValid ||
+                                isSubmitting
+                            }
+                        >
+                            {isSubmitting ? 'Adding...' : 'Save'}
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    id="addPaymentTermForm" // Form id
+                    onSubmit={addFormMethods.handleSubmit(
+                        onAddPaymentTermSubmit,
+                    )}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem
+                        label="Payment Term Name"
+                        invalid={!!addFormMethods.formState.errors.term_name} // Use term_name
+                        errorMessage={
+                            addFormMethods.formState.errors.term_name?.message // Use term_name
+                        }
+                    >
+                        <Controller
+                            name="term_name" // Use term_name
+                            control={addFormMethods.control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    placeholder="Enter Payment Term Name"
+                                />
+                            )}
+                        />
+                    </FormItem>
+                </Form>
+            </Drawer>
+
+            {/* Edit Drawer */}
             <Drawer
                 title="Edit Payment Term"
                 isOpen={isEditDrawerOpen}
@@ -680,68 +946,136 @@ const PaymentTerms = () => {
                 onRequestClose={closeEditDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={closeEditDrawer}
+                            disabled={isSubmitting}
+                        >
                             Cancel
                         </Button>
                         <Button
                             size="sm"
                             variant="solid"
-                            onClick={() => {
-                                console.log('Updated Payment Term:', selectedItem);
-                                closeEditDrawer();
-                            }}
+                            form="editPaymentTermForm" // Ensure this matches the form id
+                            type="submit"
+                            loading={isSubmitting}
+                            disabled={
+                                !editFormMethods.formState.isValid ||
+                                isSubmitting
+                            }
                         >
-                            Save
+                            {isSubmitting ? 'Saving...' : 'Save'}
                         </Button>
                     </div>
                 }
             >
-                <Form size="sm" containerClassName="flex flex-col">
-                    <FormItem label="Term Name">
-                        <Input
-                            placeholder="Enter Term Name"
-                            value={selectedItem?.term_name || ''} // Populate with selected item's term name
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', term_name: '' }), // Handle null case
-                                    term_name: e.target.value,
-                                }))
-                            }
+                <Form
+                    id="editPaymentTermForm" // Form id
+                    onSubmit={editFormMethods.handleSubmit(
+                        onEditPaymentTermSubmit,
+                    )}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem
+                        label="Payment Term Name"
+                        invalid={!!editFormMethods.formState.errors.term_name} // Use term_name
+                        errorMessage={
+                            editFormMethods.formState.errors.term_name?.message // Use term_name
+                        }
+                    >
+                        <Controller
+                            name="term_name" // Use term_name
+                            control={editFormMethods.control}
+                            render={({ field }) => (
+                                <Input
+                                    {...field}
+                                    placeholder="Enter Payment Term Name"
+                                />
+                            )}
                         />
                     </FormItem>
                 </Form>
             </Drawer>
 
-            {/* Add New Drawer */}
+            {/* Filter Drawer */}
             <Drawer
-                title="Add New Payment Term"
-                isOpen={isAddDrawerOpen}
-                onClose={closeAddDrawer}
-                onRequestClose={closeAddDrawer}
+                title="Filter Payment Terms"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
-                            Cancel
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={onClearFilters}
+                        >
+                            Clear
                         </Button>
                         <Button
                             size="sm"
                             variant="solid"
-                            onClick={() => {
-                                console.log('New Payment Term Added');
-                                closeAddDrawer();
-                            }}
+                            form="filterPaymentTermForm" // Ensure this matches the form id
+                            type="submit"
                         >
-                            Add
+                            Apply
                         </Button>
                     </div>
                 }
             >
-                <Form size="sm" containerClassName="flex flex-col">
-                    <FormItem label="Term Name">
-                        <Input placeholder="Enter Term Name" />
+                <Form
+                    id="filterPaymentTermForm" // Form id
+                    onSubmit={filterFormMethods.handleSubmit(
+                        onApplyFiltersSubmit,
+                    )}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem label="Filter by Payment Term Name(s)">
+                        <Controller
+                            name="filterNames" // This filters by term_name based on options
+                            control={filterFormMethods.control}
+                            render={({ field }) => (
+                                <Select
+                                    isMulti
+                                    placeholder="Select payment term names..."
+                                    options={paymentTermNameOptions}
+                                    value={field.value || []}
+                                    onChange={(selectedVal) =>
+                                        field.onChange(selectedVal || [])
+                                    }
+                                />
+                            )}
+                        />
                     </FormItem>
                 </Form>
             </Drawer>
+
+            {/* Single Delete Confirmation */}
+            <ConfirmDialog
+                isOpen={singleDeleteConfirmOpen}
+                type="danger"
+                title="Delete Payment Term"
+                onClose={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setPaymentTermToDelete(null)
+                }}
+                onRequestClose={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setPaymentTermToDelete(null)
+                }}
+                onCancel={() => {
+                    setSingleDeleteConfirmOpen(false)
+                    setPaymentTermToDelete(null)
+                }}
+                onConfirm={onConfirmSingleDelete}
+                loading={isDeleting} // Add if your ConfirmDialog supports it
+            >
+                <p>
+                    Are you sure you want to delete the payment term "
+                    <strong>{paymentTermToDelete?.term_name}</strong>"?
+                </p>
+            </ConfirmDialog>
         </>
     )
 }

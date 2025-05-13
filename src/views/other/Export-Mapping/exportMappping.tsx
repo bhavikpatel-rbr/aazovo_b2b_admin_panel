@@ -1,6 +1,13 @@
-// src/views/your-path/ExportMapping.tsx (Renamed file) 
+// src/views/your-path/ExportMapping.tsx (Renamed file)
 
-import React, { useState, useMemo, useCallback, Ref, Suspense, lazy } from 'react'
+import React, {
+    useState,
+    useMemo,
+    useCallback,
+    Ref,
+    Suspense,
+    lazy,
+} from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 // import cloneDeep from 'lodash/cloneDeep'
 
@@ -19,7 +26,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { IoEyeOutline } from "react-icons/io5";
+import { IoEyeOutline } from 'react-icons/io5'
 
 // Icons
 import {
@@ -33,18 +40,22 @@ import {
     TbUserPlus,
     TbFilter,
 } from 'react-icons/tb'
-import userIcon from "/img/avatars/thumb-1.jpg"
+import userIcon from '/img/avatars/thumb-1.jpg'
 // Types
-import type {
-    OnSortParam,
-    ColumnDef,
-    Row,
-} from '@/components/shared/DataTable'
+import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
-import { Card, Drawer, Tag, Form, FormItem, Input, Select, DatePicker } from '@/components/ui'
+import {
+    Card,
+    Drawer,
+    Tag,
+    Form,
+    FormItem,
+    Input,
+    Select,
+    DatePicker,
+} from '@/components/ui'
 import { Controller, useForm } from 'react-hook-form'
 import { DatePickerRangeProps } from '@/components/ui/DatePicker/DatePickerRange'
-
 
 // --- Lazy Load CSVLink ---
 const CSVLink = lazy(() =>
@@ -177,15 +188,10 @@ const initialDummyData: ExportMappingItem[] = [
 // --- End Constants ---
 
 // --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    data
-}: {
-    data : ExportMappingItem
-}) => {
-    
-    const [isViewDrawerOpen , setIsViewDrawerOpen] = useState<boolean>(false)
-    const openViewDrawer = ()=> setIsViewDrawerOpen(true)
-    const closeViewDrawer = ()=> setIsViewDrawerOpen(false)
+const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
+    const [isViewDrawerOpen, setIsViewDrawerOpen] = useState<boolean>(false)
+    const openViewDrawer = () => setIsViewDrawerOpen(true)
+    const closeViewDrawer = () => setIsViewDrawerOpen(false)
 
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
@@ -225,7 +231,7 @@ const ActionColumn = ({
                     <IoEyeOutline />{' '}
                 </div>
             </Tooltip>
-              
+
             <Drawer
                 title="Export Mapping"
                 isOpen={isViewDrawerOpen}
@@ -233,57 +239,76 @@ const ActionColumn = ({
                 onRequestClose={closeViewDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeViewDrawer}>
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            onClick={closeViewDrawer}
+                        >
                             Cancel
                         </Button>
-                    </div>  
+                    </div>
                 }
             >
-                <div className=''>
+                <div className="">
                     <h6 className="text-base font-semibold">Exported By</h6>
 
-                    <figure className='flex gap-2 items-center mt-2'>
-                        <img src={userIcon} alt="" className='h-9 w-9 rounded-full'/>
-                        <figcaption className='flex flex-col'>
-                            <span className='font-semibold text-black dark:text-white'>{data.userName}</span>
-                            <span className='text-xs'>{data.userRole}</span>
+                    <figure className="flex gap-2 items-center mt-2">
+                        <img
+                            src={userIcon}
+                            alt=""
+                            className="h-9 w-9 rounded-full"
+                        />
+                        <figcaption className="flex flex-col">
+                            <span className="font-semibold text-black dark:text-white">
+                                {data.userName}
+                            </span>
+                            <span className="text-xs">{data.userRole}</span>
                         </figcaption>
                     </figure>
 
-                    <h6 className="text-base font-semibold mt-4">Exported From</h6>
-                    
-                    <p className='mb-2 mt-1'>
-                        <span className='font-semibold text-black  dark:text-white'>File Name: </span>
+                    <h6 className="text-base font-semibold mt-4">
+                        Exported From
+                    </h6>
+
+                    <p className="mb-2 mt-1">
+                        <span className="font-semibold text-black  dark:text-white">
+                            File Name:{' '}
+                        </span>
                         <span>{data.fileName}</span>
                     </p>
-                    
-                    <Tag className='border border-emerald-600 text-emerald-600 bg-transparent inline w-auto'>User List</Tag>
-                    
+
+                    <Tag className="border border-emerald-600 text-emerald-600 bg-transparent inline w-auto">
+                        User List
+                    </Tag>
+
                     <br />
                     <br />
 
-                    <Card className='!mt-5 bg-gray-100 dark:bg-gray-700 border-none'>
-                        <h6 className="text-base font-semibold ">Exported Log</h6>
+                    <Card className="!mt-5 bg-gray-100 dark:bg-gray-700 border-none">
+                        <h6 className="text-base font-semibold ">
+                            Exported Log
+                        </h6>
 
-                        <p className='mt-2'>
-                            <span className='font-semibold  text-black  dark:text-white'>Date: </span>
+                        <p className="mt-2">
+                            <span className="font-semibold  text-black  dark:text-white">
+                                Date:{' '}
+                            </span>
                             <span>Sat, 09 Mar 2025</span>
                         </p>
 
-                        <p className=''>
-                            <span className='font-semibold text-black  dark:text-white'>File Name: </span>
+                        <p className="">
+                            <span className="font-semibold text-black  dark:text-white">
+                                File Name:{' '}
+                            </span>
                             <span>{data.fileName}</span>
                         </p>
 
-                        <h6 className="text-sm font-semibold text-black  dark:text-white mt-1">Reason:</h6>
+                        <h6 className="text-sm font-semibold text-black  dark:text-white mt-1">
+                            Reason:
+                        </h6>
                         <p>{data.reason}</p>
-
-
                     </Card>
-
                 </div>
-
-
             </Drawer>
             {/* <Tooltip title="Delete Record">
                 <div
@@ -377,70 +402,69 @@ ExportMappingSearch.displayName = 'ExportMappingSearch'
 const ExportMappingTableTools = ({
     // Renamed component
     onSearchChange,
-    allExportMappings
+    allExportMappings,
 }: {
     onSearchChange: (query: string) => void
     allExportMappings: ExportMappingItem[]
 }) => {
-    
     const { DatePickerRange } = DatePicker
     type ExportMappingFilterSchema = {
-        userRole : object,
-        exportFrom : object,
-        fileExtensions: object,
-        exportDate : DatePickerRangeProps,
+        userRole: object
+        exportFrom: object
+        fileExtensions: object
+        exportDate: DatePickerRangeProps
     }
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
+    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
+    const openFilterDrawer = () => setIsFilterDrawerOpen(true)
 
-    const {control, handleSubmit} = useForm<ExportMappingFilterSchema>({
-        defaultValues : {
-            userRole : [],
-            exportFrom : [],
+    const { control, handleSubmit } = useForm<ExportMappingFilterSchema>({
+        defaultValues: {
+            userRole: [],
+            exportFrom: [],
             fileExtensions: [],
-            exportDate : ""
-        }
+            exportDate: '',
+        },
     })
 
-    const exportFiltersSubmitHandler = (data : ExportMappingFilterSchema) => {
-        console.log("filter data", data)
+    const exportFiltersSubmitHandler = (data: ExportMappingFilterSchema) => {
+        console.log('filter data', data)
     }
     const userRoles = [
-        { value : "Admin", label: "Admin"},
-        { value : "Manager", label: "Manager"},
-        { value : "Support Agent", label: "Support Agent"},
-        { value : "Sales Rep", label: "Sales Rep"},
-        { value : "Analyst", label: "Analyst"},
-        { value : "Developer", label: "Developer"},
-        { value : "Marketing", label: "Marketing"},
-        { value : "HR Manager", label: "HR Manager"},
+        { value: 'Admin', label: 'Admin' },
+        { value: 'Manager', label: 'Manager' },
+        { value: 'Support Agent', label: 'Support Agent' },
+        { value: 'Sales Rep', label: 'Sales Rep' },
+        { value: 'Analyst', label: 'Analyst' },
+        { value: 'Developer', label: 'Developer' },
+        { value: 'Marketing', label: 'Marketing' },
+        { value: 'HR Manager', label: 'HR Manager' },
     ]
     const exportFrom = [
-        {value : "User List", label: "User List"},
-        {value : "Order History", label: "Order History"},
-        {value : "Support Tickets", label: "Support Tickets"},
-        {value : "Product Catalog", label: "Product Catalog"},
-        {value : "Customer List", label: "Customer List"},
-        {value : "API Logs", label: "API Logs"},
+        { value: 'User List', label: 'User List' },
+        { value: 'Order History', label: 'Order History' },
+        { value: 'Support Tickets', label: 'Support Tickets' },
+        { value: 'Product Catalog', label: 'Product Catalog' },
+        { value: 'Customer List', label: 'Customer List' },
+        { value: 'API Logs', label: 'API Logs' },
     ]
     // const fileExtensions = [".csv",".xlsx",".json",".pdf",".log",".bak"]
     const fileExtensions = [
-        {value:".csv",label:".csv"},
-        {value:".xlsx",label:".xlsx"},
-        {value:".json",label:".json"},
-        {value:".pdf",label:".pdf"},
-        {value:".log",label:".log"},
-        {value:".bak",label:".bak"},
+        { value: '.csv', label: '.csv' },
+        { value: '.xlsx', label: '.xlsx' },
+        { value: '.json', label: '.json' },
+        { value: '.pdf', label: '.pdf' },
+        { value: '.log', label: '.log' },
+        { value: '.bak', label: '.bak' },
     ]
-   
+
     return (
         <div className="flex items-center w-full gap-2">
             <div className="flex-grow">
                 <ExportMappingSearch onInputChange={onSearchChange} />
             </div>
             {/* Filter component removed */}
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
+            <Button icon={<TbFilter />} className="" onClick={openFilterDrawer}>
                 Filter
             </Button>
             <Drawer
@@ -450,61 +474,73 @@ const ExportMappingTableTools = ({
                 onRequestClose={closeFilterDrawer}
                 bodyClass=""
             >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='grid grid-rows-[auto_80px]'>
+                <Form
+                    size="sm"
+                    onSubmit={handleSubmit(exportFiltersSubmitHandler)}
+                    containerClassName="grid grid-rows-[auto_80px]"
+                >
                     <div>
-                        <FormItem label='User Role'>
+                        <FormItem label="User Role">
                             <Controller
                                 control={control}
-                                name='userRole'
-                                render={({field})=>{
-                                    return <Select 
-                                        isMulti
-                                        options={userRoles}
-                                        onChange={(selected) => {
-                                            const values = selected.map(option => option.value)
-                                            field.onChange(values)
-                                        }}
-                                    />
+                                name="userRole"
+                                render={({ field }) => {
+                                    return (
+                                        <Select
+                                            isMulti
+                                            options={userRoles}
+                                            onChange={(selected) => {
+                                                const values = selected.map(
+                                                    (option) => option.value,
+                                                )
+                                                field.onChange(values)
+                                            }}
+                                        />
+                                    )
                                 }}
                             />
                         </FormItem>
-                        <FormItem label='Export From'>
+                        <FormItem label="Export From">
                             <Controller
                                 control={control}
-                                name='exportFrom'
-                                render={({field})=>(
-                                    <Select 
+                                name="exportFrom"
+                                render={({ field }) => (
+                                    <Select
                                         isMulti
                                         options={exportFrom}
                                         onChange={(selected) => {
-                                            const values = selected.map(option => option.value)
+                                            const values = selected.map(
+                                                (option) => option.value,
+                                            )
                                             field.onChange(values)
                                         }}
                                     />
                                 )}
                             />
                         </FormItem>
-                        <FormItem label='File Type'>
+                        <FormItem label="File Type">
                             <Controller
                                 control={control}
-                                name='fileExtensions'
-                                render={({field})=>(
-                                    <Select 
+                                name="fileExtensions"
+                                render={({ field }) => (
+                                    <Select
                                         isMulti
                                         options={fileExtensions}
                                         onChange={(selected) => {
-                                            const values = selected.map(option => option.value)
+                                            const values = selected.map(
+                                                (option) => option.value,
+                                            )
                                             field.onChange(values)
                                         }}
                                     />
                                 )}
                             />
                         </FormItem>
-                        <FormItem label='Export Date'>
+                        <FormItem label="Export Date">
                             <Controller
                                 control={control}
-                                name='exportDate'
-                                render={({field})=>(
+                                name="exportDate"
+                                render={({ field }) => (
                                     <DatePickerRange
                                         placeholder="Select dates range"
                                         {...field}
@@ -514,16 +550,21 @@ const ExportMappingTableTools = ({
                         </FormItem>
                     </div>
                     <div className="text-right border-t border-t-gray-200 w-full absolute bottom-0 py-4 right-0 pr-6 bg-white dark:bg-gray-700">
-                        <Button size="sm" className="mr-2" type='button' onClick={closeFilterDrawer}>
+                        <Button
+                            size="sm"
+                            className="mr-2"
+                            type="button"
+                            onClick={closeFilterDrawer}
+                        >
                             Cancel
                         </Button>
-                        <Button size="sm" variant="solid" type='submit'>
+                        <Button size="sm" variant="solid" type="submit">
                             Apply
                         </Button>
-                    </div> 
+                    </div>
                 </Form>
             </Drawer>
-            <ExportMappingExport allMappings={allExportMappings}/>
+            <ExportMappingExport allMappings={allExportMappings} />
         </div>
     )
 }
@@ -563,8 +604,19 @@ const ExportMappingExport = ({
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            <CSVLink filename="export_mappings.csv" data={csvData} headers={csvHeaders} >
-                <Button icon={<TbCloudDownload />} className="w-full" onClick={openDialog}> Export </Button>
+            <CSVLink
+                filename="export_mappings.csv"
+                data={csvData}
+                headers={csvHeaders}
+            >
+                <Button
+                    icon={<TbCloudDownload />}
+                    className="w-full"
+                    onClick={openDialog}
+                >
+                    {' '}
+                    Export{' '}
+                </Button>
             </CSVLink>
         </div>
     )
@@ -660,6 +712,14 @@ const ExportMapping = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [exportMappings, setExportMappings] =
         useState<ExportMappingItem[]>(initialDummyData) // Renamed state
+
+    // const { exportMappingData = [], status: masterLoadingStatus = 'idle' } =
+    //         useSelector(masterSelector)
+
+    //     useEffect(() => {
+    //         dispatch(getExportMappingsAction())
+    //     }, [dispatch])
+
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
         pageSize: 10,
@@ -829,38 +889,43 @@ const ExportMapping = () => {
                 header: 'Exported By',
                 accessorKey: 'userName',
                 enableSorting: true,
-                size:180,
+                size: 180,
                 cell: (props) => {
-                    const {userName, userRole} = props.row.original
+                    const { userName, userRole } = props.row.original
                     return (
-                        <div className='flex flex-col'>
-                            <span className='font-semibold'> {userName}</span>
-                            <span className='text-xs'>{userRole}</span>
+                        <div className="flex flex-col">
+                            <span className="font-semibold"> {userName}</span>
+                            <span className="text-xs">{userRole}</span>
                         </div>
                     )
-                }
+                },
             },
             {
                 header: 'Exported From',
                 accessorKey: 'exportFrom',
                 enableSorting: true,
-                size:200,
+                size: 200,
                 cell: (props) => {
-                    const {exportFrom, fileName} = props.row.original
+                    const { exportFrom, fileName } = props.row.original
                     return (
-                        <div className='flex flex-col'>
-                            <span className='font-semibold'> {exportFrom}</span>
-                            <span className='text-xs'>{fileName}</span>
+                        <div className="flex flex-col">
+                            <span className="font-semibold"> {exportFrom}</span>
+                            <span className="text-xs">{fileName}</span>
                         </div>
                     )
-                }
+                },
             },
-            { header: 'Reason', accessorKey: 'reason', enableSorting: true, size:200 }, // Maybe don't sort reason?
+            {
+                header: 'Reason',
+                accessorKey: 'reason',
+                enableSorting: true,
+                size: 200,
+            }, // Maybe don't sort reason?
             {
                 header: 'Date',
                 accessorKey: 'exportDate',
                 enableSorting: true,
-                size:200,
+                size: 200,
                 cell: (props) => {
                     const date = props.row.original.exportDate
                     return (
@@ -875,12 +940,8 @@ const ExportMapping = () => {
                 header: 'Action',
                 id: 'action',
                 width: 80, // Adjust width for actions
-                meta:{HeaderClass: "text-center"},
-                cell: (props) => (
-                    <ActionColumn
-                        data={props.row.original}
-                    />
-                ),
+                meta: { HeaderClass: 'text-center' },
+                cell: (props) => <ActionColumn data={props.row.original} />,
             },
         ],
         [], // Update dependencies

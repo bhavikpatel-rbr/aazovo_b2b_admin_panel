@@ -1,708 +1,279 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import cloneDeep from 'lodash/cloneDeep'
+// src/views/your-path/CompanyProfile.tsx
+
+import React, { useState, useEffect, useCallback } from 'react'
+// import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
-import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import { Card, Drawer, Tag, Form, FormItem, Input } from '@/components/ui'
+import { Form, FormItem, Input, Card } from '@/components/ui' // Assuming Card is available
 
 // Icons
 import {
-    TbPencil,
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbFilter,
-    TbCloudUpload,
-    TbPlus,
+    TbDeviceFloppy, TbLoader, TbBuildingSkyscraper, TbMail, TbPhone, TbLink,
+    TbPhoto, TbScript // Icons for sections
 } from 'react-icons/tb'
+import Textarea from '@/views/ui-components/forms/Input/Textarea'
 
-// Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
-import { useAppDispatch } from '@/reduxtool/store'
-import {
-    getContinentsAction,
-    getCountriesAction,
-    getDocumentTypeAction,
-    getPaymentTermAction,
-} from '@/reduxtool/master/middleware'
-import { useSelector } from 'react-redux'
-import { masterSelector } from '@/reduxtool/master/masterSlice'
+// Redux (Optional)
+// import { useAppDispatch, useAppSelector } from '@/reduxtool/store';
+// import { getCompanyProfileAction, updateCompanyProfileAction } from '@/reduxtool/company/middleware';
+// import { companySelector, selectCompanyProfile } from '@/reduxtool/company/companySlice';
 
-// --- Define FormItem Type (Table Row Data) ---
-export type CompanyItem = {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    from: string;
-    date: string;
-    status: 'active' | 'inactive';
-}
+// --- Define Company Profile Data Type ---
+export type CompanyProfileData = {
+    // Logos
+    logoUrl?: string; // URL for main logo
+    metaLogoUrl?: string; // URL for logo used in meta tags/social shares
 
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    onDelete,
-}: {
-    onEdit: () => void
-    onDelete: () => void
-}) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
+    // Company Information
+    companyName: string;
+    address?: string; // Can be a single textarea or broken into parts
+    customerCareEmail: string;
+    notificationEmail: string; // Email for system notifications
+    mobileNumber?: string; // Main contact/support mobile
 
-    return (
-        <div className="flex items-center justify-center">
-            <Tooltip title="Edit">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
-            <Tooltip title="Delete">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    onClick={onDelete}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip>
-        </div>
-    )
-}
-// --- End ActionColumn ---
+    // Social Media Links
+    facebookLink?: string;
+    instagramLink?: string;
+    linkedinLink?: string;
+    youtubeLink?: string;
+    twitterLink?: string;
+};
 
-// --- CompanyProfileSearch Component ---
-type CompanyProfileSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const CompanyProfileSearch = React.forwardRef<
-    HTMLInputElement,
-    CompanyProfileSearchProps
->(({ onInputChange }, ref) => {
-    return (
-        <DebouceInput
-            ref={ref}
-            placeholder="Quick Search..."
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
-})
-CompanyProfileSearch.displayName = 'CompanyProfileSearch'
-// --- End CompanyProfileSearch ---
+// --- Zod Schema for Company Profile Form ---
+const companyProfileSchema = z.object({
+    logoUrl: z.string().url('Invalid URL for Logo.').optional().or(z.literal('')),
+    metaLogoUrl: z.string().url('Invalid URL for Meta Logo.').optional().or(z.literal('')),
 
-// --- CompanyProfileTableTools Component ---
-const CompanyProfileTableTools = ({
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-    type CompanyProfileFilterSchema = {
-        userRole: String
-        exportFrom: String
-        exportDate: Date
-    }
+    companyName: z.string().min(1, 'Company Name is required.').max(150),
+    address: z.string().max(500, "Address is too long.").optional().or(z.literal('')),
+    customerCareEmail: z.string().email('Invalid Customer Care Email format.').min(1, "Customer Care Email is required."),
+    notificationEmail: z.string().email('Invalid Notification Email format.').min(1, "Notification Email is required."),
+    mobileNumber: z.string().max(30).optional().or(z.literal('')), // Basic validation
 
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
-    const openFilterDrawer = () => setIsFilterDrawerOpen(true)
-
-    const { control, handleSubmit } = useForm<CompanyProfileFilterSchema>()
-
-    const exportFiltersSubmitHandler = (data: CompanyProfileFilterSchema) => {
-        console.log("filter data", data)
-    }
-
-    return (
-        <div className="flex items-center w-full gap-2">
-            <div className="flex-grow">
-                <CompanyProfileSearch onInputChange={onSearchChange} />
-            </div>
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload />}>Export</Button>
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                    </div>
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                    </FormItem>
-                </Form>
-            </Drawer>
-        </div>
-    )
-}
-// --- End CompanyProfileTableTools ---
-
-// --- FormListActionTools Component (No functional changes needed for filter removal) ---
-const FormListActionTools = ({
-    allFormsData,
-    openAddDrawer,
-}: {
-    allFormsData: CompanyItem[];
-    openAddDrawer: () => void; // Accept function as a prop
-}) => {
-    const navigate = useNavigate()
-    const csvHeaders = [
-
-    ]
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
-                </Button>
-            </CSVLink>
-            */}
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={openAddDrawer}
-                block
-            >
-                Add New
-            </Button>
-        </div>
-    )
-}
-
-// --- FormListTable Component (No changes) ---
-const FormListTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedForms,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<CompanyItem>[]
-    data: CompanyItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: CompanyItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: CompanyItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<CompanyItem>[]) => void
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedForms.some((selected) => selected.id === row.id)
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-        />
-    )
-}
+    facebookLink: z.string().url('Invalid Facebook URL.').optional().or(z.literal('')),
+    instagramLink: z.string().url('Invalid Instagram URL.').optional().or(z.literal('')),
+    linkedinLink: z.string().url('Invalid LinkedIn URL.').optional().or(z.literal('')),
+    youtubeLink: z.string().url('Invalid YouTube URL.').optional().or(z.literal('')),
+    twitterLink: z.string().url('Invalid Twitter URL.').optional().or(z.literal('')),
+});
+type CompanyProfileFormData = z.infer<typeof companyProfileSchema>;
 
 // --- Main CompanyProfile Component ---
 const CompanyProfile = () => {
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<CompanyItem | null>(null);
+    // const dispatch = useAppDispatch();
+    // const existingProfile = useAppSelector(selectCompanyProfile);
+    // const profileStatus = useAppSelector(state => state.company.status);
 
-    const openEditDrawer = (item: CompanyItem) => {
-        setSelectedItem(item);
-        setIsEditDrawerOpen(true);
-    };
+    const [currentProfile, setCurrentProfile] = useState<CompanyProfileData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const closeEditDrawer = () => {
-        setSelectedItem(null);
-        setIsEditDrawerOpen(false);
-    };
-
-    const openAddDrawer = () => {
-        setSelectedItem(null);
-        setIsAddDrawerOpen(true);
-    };
-
-    const closeAddDrawer = () => {
-        setIsAddDrawerOpen(false);
-    };
-
-    const navigate = useNavigate()
-    const dispatch = useAppDispatch()
-
-    useEffect(() => {
-        dispatch(getCountriesAction())
-    }, [dispatch])
-
-    const { CompanyProfileData = [], status: masterLoadingStatus = 'idle' } =
-        useSelector(masterSelector)
-
-    const initialDummyForms: CompanyItem[] = [
-        {
-            id: 'F001',
-            name: 'John Doe',
-            email: 'john.doe@example.com',
-            phone: '+1-123-456-7890',
-            from: 'USA',
-            date: '2023-05-01',
-            status: 'active',
+    const formMethods = useForm<CompanyProfileFormData>({
+        resolver: zodResolver(companyProfileSchema),
+        defaultValues: { // Will be overridden by fetched data
+            companyName: '', customerCareEmail: '', notificationEmail: '',
+            logoUrl: '', metaLogoUrl: '', address: '', mobileNumber: '',
+            facebookLink: '', instagramLink: '', linkedinLink: '', youtubeLink: '', twitterLink: '',
         },
-        {
-            id: 'F002',
-            name: 'Jane Smith',
-            email: 'jane.smith@example.com',
-            phone: '+1-987-654-3210',
-            from: 'Canada',
-            date: '2023-05-02',
-            status: 'active',
-        },
-    ];
-
-    const [forms, setForms] = useState<CompanyItem[]>(initialDummyForms);
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
+        mode: 'onChange',
     });
-    const [selectedForms, setSelectedForms] = useState<CompanyItem[]>([]);
 
-    const columns: ColumnDef<CompanyItem>[] = useMemo(
-        () => [
-            {
-                header: 'ID',
-                accessorKey: 'id',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.id}</span>,
-            },
-            {
-                header: 'Name',
-                accessorKey: 'name',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.name}</span>,
-            },
-            {
-                header: 'Email',
-                accessorKey: 'email',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.email}</span>,
-            },
-            {
-                header: 'Phone',
-                accessorKey: 'phone',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.phone}</span>,
-            },
-            {
-                header: 'From',
-                accessorKey: 'from',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.from}</span>,
-            },
-            {
-                header: 'Date',
-                accessorKey: 'date',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.date}</span>,
-            },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                cell: (props) => (
-                    <Tag
-                        className={
-                            props.row.original.status === 'active'
-                                ? 'bg-green-200 text-green-600'
-                                : 'bg-red-200 text-red-600'
-                        }
-                    >
-                        {props.row.original.status}
-                    </Tag>
-                ),
-            },
-            {
-                header: 'Action',
-                id: 'action',
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)}
-                        onDelete={() => console.log('Delete', props.row.original)}
-                    />
-                ),
-            },
-        ],
-        [],
-    )
+    // --- Fetch existing profile on mount ---
+    useEffect(() => {
+        setIsLoading(true);
+        const fetchProfile = async () => {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+            const fetchedProfile: CompanyProfileData = { // Replace with actual API data
+                companyName: 'Aazovo Inc.',
+                address: '456 Tech Park, Silicon Valley, CA 94000, USA',
+                customerCareEmail: 'care@aazovo.com',
+                notificationEmail: 'noreply@aazovo.com',
+                mobileNumber: '+1-800-555-AAZO',
+                logoUrl: 'https://via.placeholder.com/150x50/007bff/ffffff?text=AazovoLogo',
+                metaLogoUrl: 'https://via.placeholder.com/1200x630/007bff/ffffff?text=AazovoSocial',
+                facebookLink: 'https://facebook.com/aazovo',
+                instagramLink: 'https://instagram.com/aazovo',
+                linkedinLink: 'https://linkedin.com/company/aazovo',
+                youtubeLink: 'https://youtube.com/aazovo',
+                twitterLink: 'https://twitter.com/aazovo',
+            };
+            setCurrentProfile(fetchedProfile);
+            formMethods.reset(fetchedProfile);
+            setIsLoading(false);
+        };
+        fetchProfile();
+        // If using Redux: dispatch(getCompanyProfileAction());
+    }, [formMethods]);
 
-    // --- FormListSelected Component (No functional changes needed for filter removal) ---
-const FormListSelected = ({
-    selectedForms,
-    setSelectedForms,
-    onDeleteSelected,
-}: {
-    selectedForms: CompanyItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<CompanyItem[]>>
-    onDeleteSelected: () => void
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
+    // useEffect(() => { // For Redux
+    //     if (existingProfile && profileStatus === 'succeeded') {
+    //         formMethods.reset(existingProfile);
+    //         setIsLoading(false);
+    //     } else if (profileStatus === 'loading') {
+    //         setIsLoading(true);
+    //     }
+    // }, [existingProfile, profileStatus, formMethods]);
 
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
+    const onSaveProfile = async (data: CompanyProfileFormData) => {
+        setIsSubmitting(true);
+        console.log('Saving Company Profile:', data);
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API
+        try {
+            // dispatch(updateCompanyProfileAction(data)); // If using Redux
+            setCurrentProfile(data as CompanyProfileData); // Update local state for demo
+            toast.push(
+                <Notification title="Profile Saved" type="success" duration={3000}>
+                    Company profile updated successfully.
+                </Notification>
+            );
+        } catch (error: any) {
+            toast.push(
+                <Notification title="Save Failed" type="danger" duration={4000}>
+                    {error?.message || 'Could not save company profile.'}
+                </Notification>
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <Container className="h-full flex justify-center items-center">
+                <TbLoader className="animate-spin text-4xl text-gray-500" />
+                <p className="ml-2">Loading Company Profile...</p>
+            </Container>
+        );
     }
 
-    if (selectedForms.length === 0) return null
+    // --- Render Functions for Form Sections ---
+    const renderLogoFields = () => (
+        <Card className="mb-6" header={
+            <div className="flex items-center gap-2">
+                <TbPhoto className="text-xl text-gray-600 dark:text-gray-300" />
+                <span>Logos</span>
+            </div>
+        }>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                <FormItem label="Logo URL (Main)" invalid={!!formMethods.formState.errors.logoUrl} errorMessage={formMethods.formState.errors.logoUrl?.message}>
+                    <Controller name="logoUrl" control={formMethods.control} render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/logo.png" />} />
+                    {formMethods.getValues("logoUrl") && <img src={formMethods.getValues("logoUrl")} alt="Logo Preview" className="mt-2 max-h-16 object-contain border rounded"/>}
+                </FormItem>
+                <FormItem label="Logo URL for Meta/Social" invalid={!!formMethods.formState.errors.metaLogoUrl} errorMessage={formMethods.formState.errors.metaLogoUrl?.message}>
+                    <Controller name="metaLogoUrl" control={formMethods.control} render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/meta-logo.jpg" />} />
+                     {formMethods.getValues("metaLogoUrl") && <img src={formMethods.getValues("metaLogoUrl")} alt="Meta Logo Preview" className="mt-2 max-h-16 object-contain border rounded"/>}
+                </FormItem>
+                 {/* Note: For actual file uploads, replace Input with a FileUpload component */}
+            </div>
+        </Card>
+    );
 
-    return (
-        <>
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-            >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            <TbChecks />
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedForms.length}
-                            </span>
-                            <span>
-                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
-                                selected
-                            </span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-600 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                </div>
-            </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-            >
-                <p>
-                    Are you sure you want to delete the selected item
-                    {selectedForms.length > 1 ? 's' : ''}? This action cannot be
-                    undone.
-                </p>
-            </ConfirmDialog>
-        </>
-    )
-}
+    const renderCompanyInfoFields = () => (
+        <Card className="mb-6" header={
+            <div className="flex items-center gap-2">
+                <TbBuildingSkyscraper className="text-xl text-gray-600 dark:text-gray-300" />
+                <span>Company Information</span>
+            </div>
+        }>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                <FormItem label="Company Name" className="md:col-span-2" invalid={!!formMethods.formState.errors.companyName} errorMessage={formMethods.formState.errors.companyName?.message}>
+                    <Controller name="companyName" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Your Company LLC" />} />
+                </FormItem>
+                <FormItem label="Address (Optional)" className="md:col-span-2" invalid={!!formMethods.formState.errors.address} errorMessage={formMethods.formState.errors.address?.message}>
+                    <Controller name="address" control={formMethods.control} render={({ field }) => <Textarea {...field} rows={3} placeholder="123 Business Rd, Suite 400, City, State, Zip, Country" />} />
+                </FormItem>
+                <FormItem label="Customer Care Support Email" invalid={!!formMethods.formState.errors.customerCareEmail} errorMessage={formMethods.formState.errors.customerCareEmail?.message}>
+                    <Controller name="customerCareEmail" control={formMethods.control} render={({ field }) => <Input {...field} type="email" placeholder="support@yourcompany.com" />} />
+                </FormItem>
+                <FormItem label="Notification Email" invalid={!!formMethods.formState.errors.notificationEmail} errorMessage={formMethods.formState.errors.notificationEmail?.message}>
+                    <Controller name="notificationEmail" control={formMethods.control} render={({ field }) => <Input {...field} type="email" placeholder="noreply@yourcompany.com" />} />
+                </FormItem>
+                <FormItem label="Mobile Number (Optional)" invalid={!!formMethods.formState.errors.mobileNumber} errorMessage={formMethods.formState.errors.mobileNumber?.message}>
+                    <Controller name="mobileNumber" control={formMethods.control} render={({ field }) => <Input {...field} type="tel" placeholder="+1-XXX-XXX-XXXX" />} />
+                </FormItem>
+            </div>
+        </Card>
+    );
 
-    
+    const renderSocialMediaFields = () => (
+        <Card className="mb-6" header={
+            <div className="flex items-center gap-2">
+                <TbLink className="text-xl text-gray-600 dark:text-gray-300" />
+                <span>Social Media Links (Optional)</span>
+            </div>
+        }>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                <FormItem label="Facebook Link" invalid={!!formMethods.formState.errors.facebookLink} errorMessage={formMethods.formState.errors.facebookLink?.message}>
+                    <Controller name="facebookLink" control={formMethods.control} render={({ field }) => <Input {...field} type="url" placeholder="https://facebook.com/yourcompany" />} />
+                </FormItem>
+                <FormItem label="Instagram Link" invalid={!!formMethods.formState.errors.instagramLink} errorMessage={formMethods.formState.errors.instagramLink?.message}>
+                    <Controller name="instagramLink" control={formMethods.control} render={({ field }) => <Input {...field} type="url" placeholder="https://instagram.com/yourcompany" />} />
+                </FormItem>
+                <FormItem label="LinkedIn Link" invalid={!!formMethods.formState.errors.linkedinLink} errorMessage={formMethods.formState.errors.linkedinLink?.message}>
+                    <Controller name="linkedinLink" control={formMethods.control} render={({ field }) => <Input {...field} type="url" placeholder="https://linkedin.com/company/yourcompany" />} />
+                </FormItem>
+                <FormItem label="YouTube Link" invalid={!!formMethods.formState.errors.youtubeLink} errorMessage={formMethods.formState.errors.youtubeLink?.message}>
+                    <Controller name="youtubeLink" control={formMethods.control} render={({ field }) => <Input {...field} type="url" placeholder="https://youtube.com/yourcompany" />} />
+                </FormItem>
+                <FormItem label="Twitter (X) Link" className="md:col-span-2" invalid={!!formMethods.formState.errors.twitterLink} errorMessage={formMethods.formState.errors.twitterLink?.message}>
+                    <Controller name="twitterLink" control={formMethods.control} render={({ field }) => <Input {...field} type="url" placeholder="https://twitter.com/yourcompany" />} />
+                </FormItem>
+            </div>
+        </Card>
+    );
+
     return (
         <>
             <Container className="h-full">
-                <AdaptiveCard className="h-full" bodyClass="h-full">
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">Company Profile</h5>
-                        <FormListActionTools
-                            allFormsData={forms}
-                            openAddDrawer={openAddDrawer} // Pass the function as a prop
-                        />
-                    </div>
+                <Form id="companyProfileForm" onSubmit={formMethods.handleSubmit(onSaveProfile)}>
+                    <AdaptiveCard className="h-full" bodyClass="p-0 md:p-0">
+                         <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+                             <h3 className="text-lg font-semibold">Company Profile</h3>
+                             <p className="text-sm text-gray-500 dark:text-gray-400">Manage your company's public information and branding.</p>
+                        </div>
 
-                    <div className="mb-4">
-                        <CompanyProfileTableTools
-                            onSearchChange={(query) =>
-                                setTableData((prev) => ({ ...prev, query }))
-                            }
-                        />
-                    </div>
-
-                    <FormListTable
-                        columns={columns}
-                        data={forms}
-                        loading={false}
-                        pagingData={{
-                            total: forms.length,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedForms={selectedForms}
-                        onPaginationChange={(page) =>
-                            setTableData((prev) => ({ ...prev, pageIndex: page }))
-                        }
-                        onSelectChange={(value) =>
-                            setTableData((prev) => ({
-                                ...prev,
-                                pageSize: Number(value),
-                                pageIndex: 1,
-                            }))
-                        }
-                        onSort={(sort) =>
-                            setTableData((prev) => ({ ...prev, sort }))
-                        }
-                        onRowSelect={(checked, row) =>
-                            setSelectedForms((prev) =>
-                                checked
-                                    ? [...prev, row]
-                                    : prev.filter((form) => form.id !== row.id)
-                            )
-                        }
-                        onAllRowSelect={(checked, rows) => {
-                            const rowIds = rows.map((row) => row.original.id);
-                            setSelectedForms((prev) =>
-                                checked
-                                    ? [...prev, ...rows.map((row) => row.original)]
-                                    : prev.filter((form) => !rowIds.includes(form.id))
-                            );
-                        }}
-                    />
-                </AdaptiveCard>
-
-                <FormListSelected
-                    selectedForms={selectedForms}
-                    setSelectedForms={setSelectedForms}
-                    onDeleteSelected={() =>
-                        setForms((prev) =>
-                            prev.filter(
-                                (form) =>
-                                    !selectedForms.some(
-                                        (selected) => selected.id === form.id
-                                    )
-                            )
-                        )
-                    }
-                />
+                        <div className="p-4 md:p-6 space-y-6 overflow-y-auto" style={{maxHeight: 'calc(100vh - 200px)'}}>
+                            {renderLogoFields()}
+                            {renderCompanyInfoFields()}
+                            {renderSocialMediaFields()}
+                            {/* Add other sections as needed */}
+                        </div>
+                    </AdaptiveCard>
+                </Form>
             </Container>
 
-            {/* Edit Drawer */}
-            <Drawer
-                title="Edit Profile"
-                isOpen={isEditDrawerOpen}
-                onClose={closeEditDrawer}
-                onRequestClose={closeEditDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => {
-                                console.log('Updated Company Profile:', selectedItem);
-                                closeEditDrawer();
-                            }}
-                        >
-                            Save
-                        </Button>
-                    </div>
-                }
+            <StickyFooter
+                className="flex items-center justify-end py-4 px-6 bg-white dark:bg-gray-800"
+                stickyClass="border-t border-gray-200 dark:border-gray-700"
             >
-                <Form>
-                    <FormItem label="Name">
-                        <Input
-                            value={selectedItem?.name || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    name: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Email">
-                        <Input
-                            value={selectedItem?.email || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    email: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Phone">
-                        <Input
-                            value={selectedItem?.phone || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    phone: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="From">
-                        <Input
-                            value={selectedItem?.from || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    from: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Date">
-                        <Input
-                            type="date"
-                            value={selectedItem?.date || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    date: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Status">
-                        <select
-                            value={selectedItem?.status || 'active'}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    status: e.target.value as 'active' | 'inactive',
-                                }))
-                            }
-                        >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </FormItem>
-                </Form>
-            </Drawer>
-
-            <Drawer
-                title="Add New Profile"
-                isOpen={isAddDrawerOpen}
-                onClose={closeAddDrawer}
-                onRequestClose={closeAddDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => console.log('Company Profile Added')}
-                        >
-                            Add
-                        </Button>
-                    </div>
-                }
-            >
-                <Form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.target as HTMLFormElement);
-                        const newItem: CompanyItem = {
-                            id: `${forms.length + 1}`,
-                            name: formData.get('name') as string,
-                            email: formData.get('email') as string,
-                            phone: formData.get('phone') as string,
-                            from: formData.get('from') as string,
-                            date: formData.get('date') as string,
-                            status: formData.get('status') as 'active' | 'inactive',
-                        };
-                        console.log('New Company Profile:', newItem);
-                        // handleAdd(newItem);
-                    }}
+                <Button
+                    size="sm"
+                    variant="solid"
+                    form="companyProfileForm"
+                    type="submit"
+                    loading={isSubmitting}
+                    icon={<TbDeviceFloppy />}
+                    disabled={!formMethods.formState.isDirty || !formMethods.formState.isValid || isSubmitting}
                 >
-                    <FormItem label="Name">
-                        <Input name="name" placeholder="Enter Name" />
-                    </FormItem>
-                    <FormItem label="Email">
-                        <Input name="email" placeholder="Enter Email" />
-                    </FormItem>
-                    <FormItem label="Phone">
-                        <Input name="phone" placeholder="Enter Phone" />
-                    </FormItem>
-                    <FormItem label="From">
-                        <Input name="from" placeholder="Enter From" />
-                    </FormItem>
-                    <FormItem label="Date">
-                        <Input name="date" type="date" />
-                    </FormItem>
-                    <FormItem label="Status">
-                        <select name="status" defaultValue="active">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </FormItem>
-                </Form>
-            </Drawer>
+                    {isSubmitting ? 'Saving...' : 'Save Profile'}
+                </Button>
+            </StickyFooter>
         </>
-    )
-}
+    );
+};
 
-export default CompanyProfile
+export default CompanyProfile;
 
-// Helper
-function classNames(...classes: (string | boolean | undefined)[]) {
-    return classes.filter(Boolean).join(' ')
-}
+// Helper function (if not globally available)
+// function classNames(...classes: (string | boolean | undefined)[]) {
+//     return classes.filter(Boolean).join(' ');
+// }

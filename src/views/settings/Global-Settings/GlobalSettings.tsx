@@ -1,1001 +1,331 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
-// import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
-// import { z } from 'zod' // No longer needed
-// import type { ZodType } from 'zod' // No longer needed
+// src/views/your-path/GlobalSettings.tsx (Or a more appropriate name like GlobalConfiguration)
+
+import React, { useState, useEffect, useCallback } from 'react'
+// import { useNavigate } from 'react-router-dom'; // If save redirects
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
-import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
-// import Dialog from '@/components/ui/Dialog' // No longer needed for filter dialog
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
-
-// import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
-// import Input from '@/components/ui/Input' // No longer needed for filter form
-// import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
+import StickyFooter from '@/components/shared/StickyFooter' // For the save button
+import { Card, Form, FormItem, Input, Select } from '@/components/ui' // Assuming Select and Textarea exist
 
 // Icons
-import {
-    TbPencil,
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbFilter, // Filter icon removed
-    TbCloudUpload,
-    TbPlus,
-} from 'react-icons/tb'
+import { TbDeviceFloppy, TbLoader } from 'react-icons/tb' // Save, Loading icons
+import Textarea from '@/views/ui-components/forms/Input/Textarea'
 
-// Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
-import { useAppDispatch } from '@/reduxtool/store'
-import {
-    getContinentsAction,
-    getCountriesAction,
-    getDocumentTypeAction,
-    getPaymentTermAction,
-} from '@/reduxtool/master/middleware'
-import { useSelector } from 'react-redux'
-import { masterSelector } from '@/reduxtool/master/masterSlice'
+// Redux (Optional - for fetching/saving settings from a central store/API)
+// import { useAppDispatch, useAppSelector } from '@/reduxtool/store';
+// import { getGlobalSettingsAction, updateGlobalSettingsAction } from '@/reduxtool/settings/middleware';
+// import { settingsSelector, selectGlobalSettings } from '@/reduxtool/settings/settingsSlice';
 
-// --- Define FormItem Type (Table Row Data) ---
-export type GlobalItems = {
-    id: string;
-    name: string; // Name
-    email: string; // Email
-    phone: string; // Phone
-    from: string; // From
-    date: string; // Date
-    status: 'active' | 'inactive' // Changed status options
-    // Add other form-specific fields if needed later
-}
-// --- End FormItem Type Definition ---
 
-// FilterFormSchema and channelList removed
+// --- Define Global Settings Type ---
+export type GlobalSettingsData = {
+    // General Site Info
+    siteName: string;
+    siteTagline?: string;
+    adminEmail: string; // For notifications
 
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    onDelete,
-}: {
-    onEdit: () => void
-    onDelete: () => void
-}) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
+    // Contact Information
+    contactEmail: string;
+    contactPhone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    stateProvince?: string;
+    postalCode?: string;
+    country?: string; // Could be a select dropdown
 
-    return (
-        <div className="flex items-center justify-center">
-            <Tooltip title="Edit">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
-            <Tooltip title="Delete">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    onClick={onDelete}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip>
-        </div>
-    )
-}
-// --- End ActionColumn ---
+    // Social Media Links (example)
+    facebookUrl?: string;
+    twitterUrl?: string;
+    instagramUrl?: string;
+    linkedinUrl?: string;
 
-// --- GlobalSettingSearch Component ---
-type GlobalSettingSearchProps = {
-    // Renamed component
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const GlobalSettingSearch = React.forwardRef<
-    HTMLInputElement,
-    GlobalSettingSearchProps
->(({ onInputChange }, ref) => {
-    return (
-        <DebouceInput
-            ref={ref}
-            placeholder="Quick Search..." // Updated placeholder
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
-})
-GlobalSettingSearch.displayName = 'GlobalSettingSearch'
-// --- End GlobalSettingSearch ---
+    // SEO Defaults
+    defaultMetaTitle?: string;
+    defaultMetaDescription?: string;
+    defaultMetaKeywords?: string; // Comma-separated
 
-// --- GlobalSettingTableTools Component ---
-const GlobalSettingTableTools = ({
-    // Renamed component
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
+    // Store Settings (if e-commerce related)
+    defaultCurrency: string; // e.g., 'USD', 'EUR' - Select dropdown
+    weightUnit: 'kg' | 'lb'; // Select dropdown
+    dimensionUnit: 'cm' | 'in'; // Select dropdown
 
-    type GlobalSettingFilterSchema = {
-        userRole : String,
-        exportFrom : String,
-        exportDate : Date
-    }
+    // Analytics
+    googleAnalyticsId?: string;
+    // Add other settings as needed, e.g., mail server config, API keys, feature flags
+};
 
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
-
-    const {control, handleSubmit} = useForm<GlobalSettingFilterSchema>()
-
-    const exportFiltersSubmitHandler = (data : GlobalSettingFilterSchema) => {
-        console.log("filter data", data)
-    }
-
-    return (
-        <div className="flex items-center w-full gap-2">
-            <div className="flex-grow">
-                <GlobalSettingSearch onInputChange={onSearchChange} />
-            </div>
-            {/* Filter component removed */}
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                    </div>  
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Document Name"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
-                </Form>
-            </Drawer>
-        </div>
-    )
-}
-// --- End GlobalSettingTableTools ---
-
-// --- FormListTable Component (No changes) ---
-const FormListTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedForms,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<GlobalItems>[]
-    data: GlobalItems[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: GlobalItems[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: GlobalItems) => void
-    onAllRowSelect: (checked: boolean, rows: Row<GlobalItems>[]) => void
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedForms.some((selected) => selected.id === row.id)
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-        />
-    )
-}
-
-// --- FormListSearch Component (No changes) ---
-type FormListSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const FormListSearch = React.forwardRef<HTMLInputElement, FormListSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                className="w-full "
-                placeholder="Quick search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-FormListSearch.displayName = 'FormListSearch'
-
-// FormListTableFilter component removed
-
-// --- FormListTableTools Component (Simplified) ---
-const FormListTableTools = ({
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <FormListSearch onInputChange={onSearchChange} />
-            {/* Filter button/component removed */}
-        </div>
-    )
-}
-// --- End FormListTableTools ---
-
-// --- FormListActionTools Component (No functional changes needed for filter removal) ---
-const FormListActionTools = ({
-    allFormsData,
-    openAddDrawer,
-}: {
-    allFormsData: GlobalItems[];
-    openAddDrawer: () => void; // Accept function as a prop
-}) => {
-    const navigate = useNavigate()
-    const csvHeaders = [
-
-    ]
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
-                </Button>
-            </CSVLink>
-            */}
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={openAddDrawer}
-                block
-            >
-                Add New
-            </Button>
-        </div>
-    )
-}
-
-// --- FormListSelected Component (No functional changes needed for filter removal) ---
-const FormListSelected = ({
-    selectedForms,
-    setSelectedForms,
-    onDeleteSelected,
-}: {
-    selectedForms: GlobalItems[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<GlobalItems[]>>
-    onDeleteSelected: () => void
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
-    }
-
-    if (selectedForms.length === 0) return null
-
-    return (
-        <>
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-            >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            <TbChecks />
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedForms.length}
-                            </span>
-                            <span>
-                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
-                                selected
-                            </span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-600 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                </div>
-            </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-            >
-                <p>
-                    Are you sure you want to delete the selected item
-                    {selectedForms.length > 1 ? 's' : ''}? This action cannot be
-                    undone.
-                </p>
-            </ConfirmDialog>
-        </>
-    )
-}
-
-// --- Main Continents Component ---
-const GlobalSettings = () => {
-
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<GlobalItems | null>(null);
-
-    const openEditDrawer = (item: GlobalItems) => {
-        setSelectedItem(item); // Set the selected item's data
-        setIsEditDrawerOpen(true); // Open the edit drawer
-    };
-
-    const closeEditDrawer = () => {
-        setSelectedItem(null); // Clear the selected item's data
-        setIsEditDrawerOpen(false); // Close the edit drawer
-    };
-
-    const openAddDrawer = () => {
-        setSelectedItem(null); // Clear any selected item
-        setIsAddDrawerOpen(true); // Open the add drawer
-    };
-
-    const closeAddDrawer = () => {
-        setIsAddDrawerOpen(false); // Close the add drawer
-    };
-
-    const navigate = useNavigate()
-    const dispatch = useAppDispatch()
-
-    useEffect(() => {
-        dispatch(getCountriesAction())
-    }, [dispatch])
-
-    const { GlobalSettingsData = [], status: masterLoadingStatus = 'idle' } =
-        useSelector(masterSelector)
- // Use the provided dummy data
-
-// --- Initial Dummy Data ---
-const initialDummyForms: GlobalItems[] = [
-    {
-        id: 'F001',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+1-123-456-7890',
-        from: 'USA',
-        date: '2023-05-01',
-        status: 'active',
-    },
-    {
-        id: 'F002',
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        phone: '+1-987-654-3210',
-        from: 'Canada',
-        date: '2023-05-02',
-        status: 'active',
-    },
-    {
-        id: 'F003',
-        name: 'Michael Johnson',
-        email: 'michael.johnson@example.com',
-        phone: '+44-20-7946-0958',
-        from: 'UK',
-        date: '2023-05-03',
-        status: 'active',
-    },
-    {
-        id: 'F004',
-        name: 'Emily Davis',
-        email: 'emily.davis@example.com',
-        phone: '+91-98765-43210',
-        from: 'India',
-        date: '2023-05-04',
-        status: 'active',
-    },
-    {
-        id: 'F005',
-        name: 'William Brown',
-        email: 'william.brown@example.com',
-        phone: '+81-3-1234-5678',
-        from: 'Japan',
-        date: '2023-05-05',
-        status: 'active',
-    },
+// --- Zod Schema for Global Settings Form ---
+const SUPPORTED_CURRENCIES_SETTINGS = [ // Example
+    { value: 'USD', label: 'USD - US Dollar' }, { value: 'EUR', label: 'EUR - Euro' },
+    { value: 'GBP', label: 'GBP - British Pound' }, { value: 'INR', label: 'INR - Indian Rupee' },
 ];
-// --- End Dummy Data ---
+const currencyValuesSettings = SUPPORTED_CURRENCIES_SETTINGS.map(c => c.value) as [string, ...string[]];
 
-const [forms, setForms] = useState<GlobalItems[]>(initialDummyForms); // Initialize with dummy data
-const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: '', key: '' },
-    query: '',
+const globalSettingsSchema = z.object({
+    siteName: z.string().min(1, 'Site Name is required.').max(100),
+    siteTagline: z.string().max(255).optional().or(z.literal('')),
+    adminEmail: z.string().email('Invalid admin email format.').min(1, "Admin email is required."),
+
+    contactEmail: z.string().email('Invalid contact email format.').min(1, "Contact email is required."),
+    contactPhone: z.string().max(30).optional().or(z.literal('')), // Basic validation
+    addressLine1: z.string().max(255).optional().or(z.literal('')),
+    addressLine2: z.string().max(255).optional().or(z.literal('')),
+    city: z.string().max(100).optional().or(z.literal('')),
+    stateProvince: z.string().max(100).optional().or(z.literal('')),
+    postalCode: z.string().max(20).optional().or(z.literal('')),
+    country: z.string().max(100).optional().or(z.literal('')), // Consider a select for countries
+
+    facebookUrl: z.string().url('Invalid Facebook URL.').optional().or(z.literal('')),
+    twitterUrl: z.string().url('Invalid Twitter URL.').optional().or(z.literal('')),
+    instagramUrl: z.string().url('Invalid Instagram URL.').optional().or(z.literal('')),
+    linkedinUrl: z.string().url('Invalid LinkedIn URL.').optional().or(z.literal('')),
+
+    defaultMetaTitle: z.string().max(70, "Meta title too long").optional().or(z.literal('')),
+    defaultMetaDescription: z.string().max(160, "Meta description too long").optional().or(z.literal('')),
+    defaultMetaKeywords: z.string().max(255).optional().or(z.literal('')),
+
+    defaultCurrency: z.enum(currencyValuesSettings, { errorMap: () => ({ message: 'Please select a default currency.'})}),
+    weightUnit: z.enum(['kg', 'lb']),
+    dimensionUnit: z.enum(['cm', 'in']),
+
+    googleAnalyticsId: z.string().regex(/^UA-\d{4,9}-\d{1,2}$|^G-[A-Z0-9]{10}$/, 'Invalid Google Analytics ID format (UA-XXXXX-Y or G-XXXXXXXXXX).').optional().or(z.literal('')),
 });
-const [selectedForms, setSelectedForms] = useState<GlobalItems[]>([]);
-    const [localIsLoading, setLocalIsLoading] = useState(false)
-    // filterData state and handleApplyFilter removed
+type GlobalSettingsFormData = z.infer<typeof globalSettingsSchema>;
 
-    console.log('Raw CountriesData from Redux:', GlobalSettingsData)
 
-    const { pageData, total, processedDataForCsv } = useMemo(() => {
-        console.log(
-            '[Memo] Recalculating. Query:',
-            tableData.query,
-            'Sort:',
-            tableData.sort,
-            'Page:',
-            tableData.pageIndex,
-            // 'Filters:' removed from log
-            'Input Data (CountriesData) Length:',
-            GlobalSettingsData?.length ?? 0,
-        )
+// --- Main GlobalSettings Component ---
+const GlobalSettings = () => {
+    // const dispatch = useAppDispatch(); // For Redux
+    // const existingSettings = useAppSelector(selectGlobalSettings); // For Redux
+    // const settingsStatus = useAppSelector(state => state.settings.status); // For Redux loading
 
-        const sourceData: GlobalItems[] = Array.isArray(GlobalSettingsData)
-            ? GlobalSettingsData
-            : []
-        let processedData: GlobalItems[] = cloneDeep(sourceData)
+    // Local state for settings - initialize with defaults or fetched data
+    // In a real app, you'd fetch this from an API on component mount
+    const [currentSettings, setCurrentSettings] = useState<GlobalSettingsData | null>(null);
+    const [isLoading, setIsLoading] = useState(true); // For initial load
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-        // Product and Channel filtering logic removed
-
-        // 1. Apply Search Query (on id and name)
-        if (tableData.query && tableData.query.trim() !== '') {
-            const query = tableData.query.toLowerCase().trim()
-            console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: GlobalItems) => {
-                const itemNameLower = item.email?.trim().toLowerCase() ?? ''
-                const continentNameLower = item.email?.trim().toLowerCase() ?? ''
-                const itemIdString = String(item.id ?? '').trim()
-                const itemIdLower = itemIdString.toLowerCase()
-                return (
-                    itemNameLower.includes(query) ||
-                    itemIdLower.includes(query) ||
-                    continentNameLower.includes(query)
-                )
-            })
-            console.log(
-                '[Memo] After search query filter. Count:',
-                processedData.length,
-            )
-        }
-
-        // 2. Apply Sorting (on id and name)
-        const { order, key } = tableData.sort as OnSortParam
-        if (
-            order &&
-            key &&
-            (key === 'id' || key === 'name') &&
-            processedData.length > 0
-        ) {
-            console.log('[Memo] Applying sort. Key:', key, 'Order:', order)
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof GlobalItems] ?? '')
-                const bValue = String(b[key as keyof GlobalItems] ?? '')
-
-                return order === 'asc'
-                    ? aValue.localeCompare(bValue)
-                    : bValue.localeCompare(aValue)
-            })
-            processedData = sortedData
-        }
-
-        const dataBeforePagination = [...processedData] // For CSV export
-
-        // 3. Apply Pagination
-        const currentTotal = processedData.length
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
-
-        console.log(
-            '[Memo] Returning. PageData Length:',
-            dataForPage.length,
-            'Total Items (after all filters/sort):',
-            currentTotal,
-        )
-        return {
-            pageData: dataForPage,
-            total: currentTotal,
-            processedDataForCsv: dataBeforePagination,
-        }
-    }, [GlobalSettingsData, tableData]) // filterData removed from dependencies
-
-    // --- Handlers ---
-    // handleApplyFilter removed
-
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-        setTableData((prev) => ({ ...prev, ...data }))
-    }, [])
-
-    const handlePaginationChange = useCallback(
-        (page: number) => handleSetTableData({ pageIndex: page }),
-        [handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-            setSelectedForms([])
+    const formMethods = useForm<GlobalSettingsFormData>({
+        resolver: zodResolver(globalSettingsSchema),
+        defaultValues: { // These will be overridden by fetched settings
+            siteName: '', adminEmail: '', contactEmail: '', defaultCurrency: currencyValuesSettings[0],
+            weightUnit: 'kg', dimensionUnit: 'cm',
+            // Initialize other optional fields as empty strings or undefined
+            siteTagline: '', contactPhone: '', addressLine1: '', addressLine2: '', city: '',
+            stateProvince: '', postalCode: '', country: '', facebookUrl: '', twitterUrl: '',
+            instagramUrl: '', linkedinUrl: '', defaultMetaTitle: '', defaultMetaDescription: '',
+            defaultMetaKeywords: '', googleAnalyticsId: '',
         },
-        [handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
-        [handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-        [handleSetTableData],
-    )
+        mode: 'onChange',
+    });
 
-    const handleRowSelect = useCallback((checked: boolean, row: GlobalItems) => {
-        setSelectedForms((prev) => {
-            if (checked)
-                return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
-            return prev.filter((f) => f.id !== row.id)
-        })
-    }, [])
+    // --- Fetch existing settings on mount ---
+    useEffect(() => {
+        // Simulate API call to fetch settings
+        setIsLoading(true);
+        const fetchSettings = async () => {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
+            const fetchedSettings: GlobalSettingsData = { // Replace with actual API response
+                siteName: 'Aazovo Commerce',
+                siteTagline: 'Your one-stop shop!',
+                adminEmail: 'admin@aazovo.com',
+                contactEmail: 'support@aazovo.com',
+                contactPhone: '+1-555-123-4567',
+                addressLine1: '123 Main St',
+                city: 'Anytown',
+                stateProvince: 'CA',
+                postalCode: '90210',
+                country: 'USA',
+                facebookUrl: 'https://facebook.com/aazovo',
+                twitterUrl: 'https://twitter.com/aazovo',
+                defaultCurrency: 'USD',
+                weightUnit: 'kg',
+                dimensionUnit: 'cm',
+                googleAnalyticsId: 'G-XXXXXXXXXX',
+                // ... other fetched settings
+            };
+            setCurrentSettings(fetchedSettings);
+            formMethods.reset(fetchedSettings); // Populate form with fetched settings
+            setIsLoading(false);
+        };
 
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<GlobalItems>[]) => {
-            const currentPageRowOriginals = currentRows.map((r) => r.original)
-            if (checked) {
-                setSelectedForms((prevSelected) => {
-                    const prevSelectedIds = new Set(
-                        prevSelected.map((f) => f.id),
-                    )
-                    const newRowsToAdd = currentPageRowOriginals.filter(
-                        (r) => !prevSelectedIds.has(r.id),
-                    )
-                    return [...prevSelected, ...newRowsToAdd]
-                })
-            } else {
-                const currentPageRowIds = new Set(
-                    currentPageRowOriginals.map((r) => r.id),
-                )
-                setSelectedForms((prevSelected) =>
-                    prevSelected.filter((f) => !currentPageRowIds.has(f.id)),
-                )
-            }
-        },
-        [],
-    )
+        fetchSettings();
+        // If using Redux: dispatch(getGlobalSettingsAction());
+    }, [formMethods]); // formMethods.reset dependency
 
-    // --- Action Handlers (remain the same, need Redux integration for persistence) ---
-    const handleEdit = useCallback(
-        (form: GlobalItems) => {
-            console.log('Edit item (requires navigation/modal):', form.id)
+    // useEffect(() => { // For Redux, to update form when settings are fetched
+    //     if (existingSettings && settingsStatus === 'succeeded') {
+    //         formMethods.reset(existingSettings);
+    //         setIsLoading(false);
+    //     } else if (settingsStatus === 'loading') {
+    //         setIsLoading(true);
+    //     }
+    // }, [existingSettings, settingsStatus, formMethods]);
+
+    const onSaveSettings = async (data: GlobalSettingsFormData) => {
+        setIsSubmitting(true);
+        console.log('Saving Global Settings:', data);
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            // dispatch(updateGlobalSettingsAction(data)); // If using Redux
+            setCurrentSettings(data as GlobalSettingsData); // Update local state for demo
             toast.push(
-                <Notification title="Edit Action" type="info">
-                    Edit action for "{form.email}" (ID: {form.id}). Implement
-                    navigation or modal.
-                </Notification>,
-            )
-        },
-        [navigate],
-    )
+                <Notification title="Settings Saved" type="success" duration={3000}>
+                    Global settings have been updated successfully.
+                </Notification>
+            );
+        } catch (error: any) {
+            toast.push(
+                <Notification title="Save Failed" type="danger" duration={4000}>
+                    {error?.message || 'Could not save settings.'}
+                </Notification>
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-    const handleDelete = useCallback((formToDelete: GlobalItems) => {
-        console.log(
-            'Delete item (needs Redux action):',
-            formToDelete.id,
-            formToDelete.email,
-        )
-        setSelectedForms((prevSelected) =>
-            prevSelected.filter((form) => form.id !== formToDelete.id),
-        )
-        toast.push(
-            <Notification title="Delete Action" type="warning">
-                Delete action for "{formToDelete.email}" (ID: {formToDelete.id}).
-                Implement Redux deletion.
-            </Notification>,
-        )
-    }, [])
+    if (isLoading) {
+        return (
+            <Container className="h-full flex justify-center items-center">
+                <TbLoader className="animate-spin text-4xl text-gray-500" />
+                <p className="ml-2">Loading Settings...</p>
+            </Container>
+        );
+    }
 
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected items (needs Redux action):',
-            selectedForms.map((f) => f.id),
-        )
-        setSelectedForms([])
-        toast.push(
-            <Notification title="Selected Items Delete Action" type="warning">
-                {selectedForms.length} item(s) delete action. Implement Redux
-                deletion.
-            </Notification>,
-        )
-    }, [selectedForms])
-    // --- End Action Handlers ---
+    // Group form items for better organization
+    const renderGeneralInfoFields = () => (
+        <Card className="mb-6" header="General Site Information">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                <FormItem label="Site Name" invalid={!!formMethods.formState.errors.siteName} errorMessage={formMethods.formState.errors.siteName?.message}>
+                    <Controller name="siteName" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Your Awesome Site" />} />
+                </FormItem>
+                <FormItem label="Site Tagline (Optional)" invalid={!!formMethods.formState.errors.siteTagline} errorMessage={formMethods.formState.errors.siteTagline?.message}>
+                    <Controller name="siteTagline" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="A catchy phrase for your site" />} />
+                </FormItem>
+                <FormItem label="Admin Email (for notifications)" invalid={!!formMethods.formState.errors.adminEmail} errorMessage={formMethods.formState.errors.adminEmail?.message}>
+                    <Controller name="adminEmail" control={formMethods.control} render={({ field }) => <Input {...field} type="email" placeholder="admin@example.com" />} />
+                </FormItem>
+            </div>
+        </Card>
+    );
 
-    const columns: ColumnDef<GlobalItems>[] = useMemo(
-        () => [
-            {
-                header: 'ID',
-                accessorKey: 'id',
-                // Simple cell to display ID, enable sorting
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.id}</span>,
-            },
-            {
-                header: 'Name',
-                accessorKey: 'name',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.name}</span>,
-            },
-            {
-                header: 'Email',
-                accessorKey: 'email',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.email}</span>,
-            },
-            {
-                header: 'Phone',
-                accessorKey: 'phone',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.phone}</span>,
-            },
-            {
-                header: 'From',
-                accessorKey: 'from',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.from}</span>,
-            },
-            {
-                header: 'Date',
-                accessorKey: 'date',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.date}</span>,
-            },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                cell: (props) => (
-                    <Tag
-                        className={
-                            props.row.original.status === 'active'
-                                ? 'bg-green-200 text-green-600'
-                                : 'bg-red-200 text-red-600'
-                        }
-                    >
-                        {props.row.original.status}
-                    </Tag>
-                ),
-            },
-            {
-                header: 'Action',
-                id: 'action',
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
-                        onDelete={() => console.log('Delete', props.row.original)}
-                    />
-                ),
-            },
-        ],
-        [handleEdit, handleDelete],
-    )
+    const renderContactInfoFields = () => (
+         <Card className="mb-6" header="Contact Information">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                <FormItem label="Contact Email" invalid={!!formMethods.formState.errors.contactEmail} errorMessage={formMethods.formState.errors.contactEmail?.message}>
+                    <Controller name="contactEmail" control={formMethods.control} render={({ field }) => <Input {...field} type="email" placeholder="support@example.com" />} />
+                </FormItem>
+                <FormItem label="Contact Phone (Optional)" invalid={!!formMethods.formState.errors.contactPhone} errorMessage={formMethods.formState.errors.contactPhone?.message}>
+                    <Controller name="contactPhone" control={formMethods.control} render={({ field }) => <Input {...field} type="tel" placeholder="+1-123-456-7890" />} />
+                </FormItem>
+                <FormItem label="Address Line 1 (Optional)" className="md:col-span-2" invalid={!!formMethods.formState.errors.addressLine1} errorMessage={formMethods.formState.errors.addressLine1?.message}>
+                    <Controller name="addressLine1" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="123 Main Street" />} />
+                </FormItem>
+                {/* Add more address fields: addressLine2, city, state, postalCode, country */}
+            </div>
+        </Card>
+    );
+
+    const renderStoreSettingsFields = () => (
+        <Card className="mb-6" header="Store Settings">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+                <FormItem label="Default Currency" invalid={!!formMethods.formState.errors.defaultCurrency} errorMessage={formMethods.formState.errors.defaultCurrency?.message}>
+                    <Controller name="defaultCurrency" control={formMethods.control} render={({ field }) => (
+                        <Select placeholder="Select currency" options={SUPPORTED_CURRENCIES_SETTINGS} value={SUPPORTED_CURRENCIES_SETTINGS.find(c=>c.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                    )} />
+                </FormItem>
+                <FormItem label="Weight Unit" invalid={!!formMethods.formState.errors.weightUnit} errorMessage={formMethods.formState.errors.weightUnit?.message}>
+                    <Controller name="weightUnit" control={formMethods.control} render={({ field }) => (
+                        <Select placeholder="Select unit" options={[{value: 'kg', label: 'Kilogram (kg)'}, {value: 'lb', label: 'Pound (lb)'}]} value={field.value === 'kg' ? {value: 'kg', label: 'Kilogram (kg)'} : {value: 'lb', label: 'Pound (lb)'}} onChange={opt=>field.onChange(opt?.value)} />
+                    )} />
+                </FormItem>
+                 <FormItem label="Dimension Unit" invalid={!!formMethods.formState.errors.dimensionUnit} errorMessage={formMethods.formState.errors.dimensionUnit?.message}>
+                    <Controller name="dimensionUnit" control={formMethods.control} render={({ field }) => (
+                        <Select placeholder="Select unit" options={[{value: 'cm', label: 'Centimeter (cm)'}, {value: 'in', label: 'Inch (in)'}]} value={field.value === 'cm' ? {value: 'cm', label: 'Centimeter (cm)'} : {value: 'in', label: 'Inch (in)'}} onChange={opt=>field.onChange(opt?.value)} />
+                    )} />
+                </FormItem>
+            </div>
+        </Card>
+    );
+     const renderSEOFields = () => (
+        <Card className="mb-6" header="Default SEO Settings">
+            <div className="grid grid-cols-1 gap-4 p-4">
+                <FormItem label="Default Meta Title (Optional)" invalid={!!formMethods.formState.errors.defaultMetaTitle} errorMessage={formMethods.formState.errors.defaultMetaTitle?.message}>
+                    <Controller name="defaultMetaTitle" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Your Site - Awesome Products" />} />
+                </FormItem>
+                 <FormItem label="Default Meta Description (Optional)" invalid={!!formMethods.formState.errors.defaultMetaDescription} errorMessage={formMethods.formState.errors.defaultMetaDescription?.message}>
+                    <Controller name="defaultMetaDescription" control={formMethods.control} render={({ field }) => <Textarea {...field} rows={3} placeholder="Brief description of your site for search engines." />} />
+                </FormItem>
+                 <FormItem label="Default Meta Keywords (Optional, comma-separated)" invalid={!!formMethods.formState.errors.defaultMetaKeywords} errorMessage={formMethods.formState.errors.defaultMetaKeywords?.message}>
+                    <Controller name="defaultMetaKeywords" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="keyword1, keyword2, keyword3" />} />
+                </FormItem>
+            </div>
+        </Card>
+    );
+
+    const renderAnalyticsFields = () => (
+         <Card className="mb-6" header="Analytics & Tracking">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                <FormItem label="Google Analytics ID (Optional)" invalid={!!formMethods.formState.errors.googleAnalyticsId} errorMessage={formMethods.formState.errors.googleAnalyticsId?.message}>
+                    <Controller name="googleAnalyticsId" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="UA-XXXXX-Y or G-XXXXXXXXXX" />} />
+                </FormItem>
+            </div>
+        </Card>
+    );
+
 
     return (
         <>
             <Container className="h-full">
-                <AdaptiveCard className="h-full" bodyClass="h-full">
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">Home Category Images</h5>
-                        <FormListActionTools
-                            allFormsData={forms}
-                            openAddDrawer={openAddDrawer} // Pass the function as a prop
-                        />
-                    </div>
+                <Form id="globalSettingsForm" onSubmit={formMethods.handleSubmit(onSaveSettings)}>
+                    <AdaptiveCard className="h-full" bodyClass="p-0 md:p-0"> {/* Remove padding from card body if sections have their own */}
+                        <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+                             <h3 className="text-lg font-semibold">Global Site Settings</h3>
+                             <p className="text-sm text-gray-500 dark:text-gray-400">Configure general settings for your entire application.</p>
+                        </div>
 
-                    <div className="mb-4">
-                        <GlobalSettingTableTools
-                            onSearchChange={(query) =>
-                                setTableData((prev) => ({ ...prev, query }))
-                            }
-                        />
-                    </div>
-
-                    <FormListTable
-                        columns={columns}
-                        data={forms}
-                        loading={false}
-                        pagingData={{
-                            total: forms.length,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedForms={selectedForms}
-                        onPaginationChange={(page) =>
-                            setTableData((prev) => ({ ...prev, pageIndex: page }))
-                        }
-                        onSelectChange={(value) =>
-                            setTableData((prev) => ({
-                                ...prev,
-                                pageSize: Number(value),
-                                pageIndex: 1,
-                            }))
-                        }
-                        onSort={(sort) =>
-                            setTableData((prev) => ({ ...prev, sort }))
-                        }
-                        onRowSelect={(checked, row) =>
-                            setSelectedForms((prev) =>
-                                checked
-                                    ? [...prev, row]
-                                    : prev.filter((form) => form.id !== row.id)
-                            )
-                        }
-                        onAllRowSelect={(checked, rows) => {
-                            const rowIds = rows.map((row) => row.original.id);
-                            setSelectedForms((prev) =>
-                                checked
-                                    ? [...prev, ...rows.map((row) => row.original)]
-                                    : prev.filter((form) => !rowIds.includes(form.id))
-                            );
-                        }}
-                    />
-                </AdaptiveCard>
-
-                <FormListSelected
-                    selectedForms={selectedForms}
-                    setSelectedForms={setSelectedForms}
-                    onDeleteSelected={() =>
-                        setForms((prev) =>
-                            prev.filter(
-                                (form) =>
-                                    !selectedForms.some(
-                                        (selected) => selected.id === form.id
-                                    )
-                            )
-                        )
-                    }
-                />
+                        <div className="p-4 md:p-6 space-y-6 overflow-y-auto" style={{maxHeight: 'calc(100vh - 200px)'}}> {/* Adjust max-height as needed */}
+                            {renderGeneralInfoFields()}
+                            {renderContactInfoFields()}
+                            {renderStoreSettingsFields()}
+                            {renderSEOFields()}
+                            {renderAnalyticsFields()}
+                            {/* Add more sections/cards for other settings groups */}
+                        </div>
+                    </AdaptiveCard>
+                </Form>
             </Container>
 
-            {/* Edit Drawer */}
-            <Drawer
-                title="Edit Setting"
-                isOpen={isEditDrawerOpen}
-                onClose={closeEditDrawer}
-                onRequestClose={closeEditDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => {
-                                console.log('Updated Setting:', selectedItem);
-                                closeEditDrawer();
-                            }}
-                        >
-                            Save
-                        </Button>
-                    </div>
-                }
+            <StickyFooter
+                className="flex items-center justify-end py-4 px-6 bg-white dark:bg-gray-800"
+                stickyClass="border-t border-gray-200 dark:border-gray-700"
             >
-                <Form>
-                    <FormItem label="Name">
-                        <Input
-                            value={selectedItem?.name || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    name: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Email">
-                        <Input
-                            value={selectedItem?.email || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    email: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Phone">
-                        <Input
-                            value={selectedItem?.phone || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    phone: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="From">
-                        <Input
-                            value={selectedItem?.from || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    from: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Date">
-                        <Input
-                            type="date"
-                            value={selectedItem?.date || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    date: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Status">
-                        <select
-                            value={selectedItem?.status || 'active'}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', name: '', email: '', phone: '', from: '', date: '', status: 'active' }),
-                                    status: e.target.value as 'active' | 'inactive',
-                                }))
-                            }
-                        >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </FormItem>
-                </Form>
-            </Drawer>
-
-            <Drawer
-                title="Add New Setting"
-                isOpen={isAddDrawerOpen}
-                onClose={closeAddDrawer}
-                onRequestClose={closeAddDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => console.log('Setting Added')}
-                        >
-                            Add
-                        </Button>
-                    </div>
-                }
-            >
-                <Form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.target as HTMLFormElement);
-                        const newItem: GlobalItems = {
-                            id: `${forms.length + 1}`,
-                            name: formData.get('name') as string,
-                            email: formData.get('email') as string,
-                            phone: formData.get('phone') as string,
-                            from: formData.get('from') as string,
-                            date: formData.get('date') as string,
-                            status: formData.get('status') as 'active' | 'inactive',
-                        };
-                        console.log('New Management:', newItem);
-                        // handleAdd(newItem);
-                    }}
+                <Button
+                    size="sm"
+                    variant="solid"
+                    form="globalSettingsForm" // Link to the form ID
+                    type="submit"
+                    loading={isSubmitting}
+                    icon={<TbDeviceFloppy />}
+                    disabled={!formMethods.formState.isDirty || !formMethods.formState.isValid || isSubmitting} // Disable if no changes or invalid
                 >
-                    <FormItem label="Name">
-                        <Input name="name" placeholder="Enter Name" />
-                    </FormItem>
-                    <FormItem label="Email">
-                        <Input name="email" placeholder="Enter Email" />
-                    </FormItem>
-                    <FormItem label="Phone">
-                        <Input name="phone" placeholder="Enter Phone" />
-                    </FormItem>
-                    <FormItem label="From">
-                        <Input name="from" placeholder="Enter From" />
-                    </FormItem>
-                    <FormItem label="Date">
-                        <Input name="date" type="date" />
-                    </FormItem>
-                    <FormItem label="Status">
-                        <select name="status" defaultValue="active">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </FormItem>
-                </Form>
-            </Drawer>
+                    {isSubmitting ? 'Saving...' : 'Save Settings'}
+                </Button>
+            </StickyFooter>
         </>
-    )
-}
+    );
+};
 
-export default GlobalSettings
-
-// Helper
-function classNames(...classes: (string | boolean | undefined)[]) {
-    return classes.filter(Boolean).join(' ')
-}
+export default GlobalSettings;
