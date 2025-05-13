@@ -384,12 +384,15 @@ const Units = () => {
 
     const { unitData = [], status: masterLoadingStatus = 'idle' } =
         useSelector(masterSelector)
+        
 
     useEffect(() => {
         dispatch(getUnitAction())
+        
     }, [dispatch])
 
     const addFormMethods = useForm<UnitFormData>({
+        
         resolver: zodResolver(unitFormSchema),
         defaultValues: { name: '' },
         mode: 'onChange',

@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+// import { Link, useNavigate } from 'react-router-dom'; // Keep if navigation needed for edit/view
 import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
-// import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
-// import { z } from 'zod' // No longer needed
-// import type { ZodType } from 'zod' // No longer needed
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -12,17 +11,15 @@ import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
-// import Dialog from '@/components/ui/Dialog' // No longer needed for filter dialog
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { Card, Drawer, Tag, Form, FormItem, Input, } from '@/components/ui'
-
-// import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
-// import Input from '@/components/ui/Input' // No longer needed for filter form
-// import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
+import Select from '@/components/ui/Select' // Make sure this supports isMulti and single select well
+import Avatar from '@/components/ui/Avatar'
+import Tag from '@/components/ui/Tag'
+import { Drawer, Form, FormItem, Input,  } from '@/components/ui' // Added Textarea
 
 // Icons
 import {
@@ -30,39 +27,197 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    TbFilter, // Filter icon removed
-    TbCloudUpload,
+    TbFilter,
     TbPlus,
+    TbCloudUpload,
+    TbPhoto, // Generic image icon
 } from 'react-icons/tb'
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
-import { useAppDispatch } from '@/reduxtool/store'
-import {
-    getContinentsAction,
-    getCountriesAction,
-    getDocumentTypeAction,
-    getPaymentTermAction,
-} from '@/reduxtool/master/middleware'
-import { useSelector } from 'react-redux'
-import { masterSelector } from '@/reduxtool/master/masterSlice'
+// --- Removed Redux imports for now, using local state ---
+// import { useAppDispatch } from '@/reduxtool/store';
+// import { getSlidersAction, addSliderAction, ... } from '@/reduxtool/slider/middleware';
+// import { sliderSelector } from '@/reduxtool/slider/sliderSlice';
 
-// --- Define FormItem Type (Table Row Data) ---
+// --- Define SliderItem Type ---
 export type SliderItem = {
-    id: string
-    image: string
-    domain: string
-    displayPage: string
-    link: string
-    status: 'active' | 'inactive' // Changed status options
-    // Add other form-specific fields if needed later
+    id: string | number
+    title: string
+    subtitle?: string
+    buttonText?: string
+    mobileIconUrl?: string // URL for mobile icon
+    webIconUrl?: string // URL for web icon
+    sliderColor?: string // Hex or named color
+    displayPage: string // Key for display page option
+    link?: string
+    status: 'active' | 'disable'
+    // Removed: image, domain
 }
-// --- End FormItem Type Definition ---
 
-// FilterFormSchema and channelList removed
+// --- Zod Schema for Add/Edit Slider Form ---
+const displayPageOptionsConst = [ // For Zod enum and Select options
+    { value: 'home', label: 'Home Page' },
+    { value: 'products', label: 'Products Page' },
+    { value: 'about', label: 'About Us Page' },
+    { value: 'blog_listing', label: 'Blog Listing' },
+    { value: 'contact', label: 'Contact Page' },
+];
+const displayPageValues = displayPageOptionsConst.map(opt => opt.value) as [string, ...string[]]; // For Zod enum
 
-// --- Reusable ActionColumn Component ---
+const sliderFormSchema = z.object({
+    title: z
+        .string()
+        .min(1, 'Title is required.')
+        .max(100, 'Title cannot exceed 100 characters.'),
+    subtitle: z.string().max(150, 'Subtitle too long').optional(),
+    buttonText: z.string().max(50, 'Button text too long').optional(),
+    mobileIconUrl: z.string().url('Invalid URL for mobile icon').optional().or(z.literal('')),
+    webIconUrl: z.string().url('Invalid URL for web icon').optional().or(z.literal('')),
+    sliderColor: z.string().regex(/^#([0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$|^[a-zA-Z]+$/, 'Invalid color format (hex or name)').optional().or(z.literal('')),
+    displayPage: z.enum(displayPageValues, {
+        errorMap: () => ({ message: 'Please select a display page.' }),
+    }),
+    link: z.string().url('Invalid URL for link').optional().or(z.literal('')),
+    status: z.enum(['active', 'disable'], {
+        errorMap: () => ({ message: 'Please select a status.' }),
+    }),
+})
+type SliderFormData = z.infer<typeof sliderFormSchema>
+
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
+    filterStatus: z
+        .array(z.object({ value: z.string(), label: z.string() }))
+        .optional(),
+    filterDisplayPage: z
+        .array(z.object({ value: z.string(), label: z.string() }))
+        .optional(),
+})
+type FilterFormData = z.infer<typeof filterFormSchema>
+
+// --- Constants ---
+const sliderStatusOptions = [
+    { value: 'active', label: 'Active' },
+    { value: 'disable', label: 'Disabled' },
+]
+
+const sliderStatusColor: Record<SliderItem['status'], string> = {
+    active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    disable: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+}
+
+// --- CSV Exporter Utility ---
+const CSV_HEADERS = ['ID', 'Title', 'Subtitle', 'Button Text', 'Display Page', 'Link', 'Status', 'Web Icon URL', 'Mobile Icon URL', 'Slider Color']
+const CSV_KEYS: (keyof SliderItem)[] = ['id', 'title', 'subtitle', 'buttonText', 'displayPage', 'link', 'status', 'webIconUrl', 'mobileIconUrl', 'sliderColor']
+
+function exportToCsv(filename: string, rows: SliderItem[]) {
+    // ... (exportToCsv function remains the same as in your Blogs component)
+    if (!rows || !rows.length) {
+        toast.push(
+            <Notification title="No Data" type="info">
+                Nothing to export.
+            </Notification>,
+        );
+        return false;
+    }
+    const separator = ',';
+
+    const csvContent =
+        CSV_HEADERS.join(separator) +
+        '\n' +
+        rows
+            .map((row) => {
+                return CSV_KEYS.map((k) => {
+                    let cell: any = row[k];
+                    if (cell === null || cell === undefined) {
+                        cell = '';
+                    } else if (cell instanceof Date) { // Should not happen for SliderItem
+                        cell = cell.toISOString();
+                    } else {
+                        cell = String(cell).replace(/"/g, '""');
+                    }
+                    if (String(cell).search(/("|,|\n)/g) >= 0) {
+                        cell = `"${cell}"`;
+                    }
+                    return cell;
+                }).join(separator);
+            })
+            .join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+    });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return true;
+    }
+    toast.push(
+        <Notification title="Export Failed" type="danger">
+            Browser does not support this feature.
+        </Notification>,
+    );
+    return false;
+}
+
+// --- Initial Dummy Data ---
+const initialDummySliders: SliderItem[] = [
+    {
+        id: 'SLD001',
+        title: 'Summer Collection Out Now!',
+        subtitle: 'Up to 50% off on selected items.',
+        buttonText: 'Shop Now',
+        webIconUrl: 'https://via.placeholder.com/1920x1080/FFA07A/000000?text=Web+Slider+1',
+        mobileIconUrl: 'https://via.placeholder.com/500x300/FFA07A/000000?text=Mobile+Slider+1',
+        sliderColor: '#FFA07A',
+        displayPage: 'home',
+        link: '/shop/summer-collection',
+        status: 'active',
+    },
+    {
+        id: 'SLD002',
+        title: 'New Arrivals: Tech Gadgets',
+        subtitle: 'Explore the latest innovations.',
+        webIconUrl: 'https://via.placeholder.com/1920x1080/ADD8E6/000000?text=Web+Slider+2',
+        displayPage: 'products',
+        link: '/products/tech',
+        status: 'active',
+        sliderColor: 'lightblue',
+    },
+    {
+        id: 'SLD003',
+        title: 'Read Our Latest Blog Post',
+        buttonText: 'Read More',
+        webIconUrl: 'https://via.placeholder.com/1920x1080/90EE90/000000?text=Web+Slider+3',
+        displayPage: 'blog_listing',
+        link: '/blog/latest-post',
+        status: 'disable',
+        sliderColor: '#90EE90',
+    },
+     {
+        id: 'SLD004',
+        title: 'Contact Us For Support',
+        subtitle: 'We are here to help you 24/7',
+        buttonText: 'Get In Touch',
+        webIconUrl: 'https://via.placeholder.com/1920x1080/FFFFE0/000000?text=Web+Slider+4',
+        mobileIconUrl: 'https://via.placeholder.com/500x300/FFFFE0/000000?text=Mobile+Slider+4',
+        sliderColor: 'lightyellow',
+        displayPage: 'contact',
+        link: '/contact-us',
+        status: 'active',
+    },
+];
+
+// --- ActionColumn Component (remains the same) ---
 const ActionColumn = ({
     onEdit,
     onDelete,
@@ -73,9 +228,8 @@ const ActionColumn = ({
     const iconButtonClass =
         'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-
     return (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center gap-3">
             <Tooltip title="Edit">
                 <div
                     className={classNames(
@@ -105,122 +259,87 @@ const ActionColumn = ({
         </div>
     )
 }
-// --- End ActionColumn ---
 
-// --- SliderItemSearch Component ---
-type SliderItemSearchProps = {
-    // Renamed component
+// --- SlidersSearch Component ---
+type SlidersSearchProps = {
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
 }
-const SliderItemSearch = React.forwardRef<
-    HTMLInputElement,
-    SliderItemSearchProps
->(({ onInputChange }, ref) => {
-    return (
-        <DebouceInput
-            ref={ref}
-            placeholder="Quick Search..." // Updated placeholder
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
-})
-SliderItemSearch.displayName = 'SliderItemSearch'
-// --- End SliderItemSearch ---
+const SlidersSearch = React.forwardRef<HTMLInputElement, SlidersSearchProps>(
+    ({ onInputChange }, ref) => {
+        return (
+            <DebouceInput
+                ref={ref}
+                className="w-full"
+                placeholder="Quick search sliders (title, id)..."
+                suffix={<TbSearch className="text-lg" />}
+                onChange={(e) => onInputChange(e.target.value)}
+            />
+        )
+    },
+)
+SlidersSearch.displayName = 'SlidersSearch'
 
-// --- SliderItemTableTools Component ---
-const SliderItemTableTools = ({
-    // Renamed component
+// --- SlidersTableTools Component ---
+const SlidersTableTools = ({
     onSearchChange,
+    onFilter,
+    onExport,
 }: {
     onSearchChange: (query: string) => void
+    onFilter: () => void
+    onExport: () => void
 }) => {
-
-    type SliderItemFilterSchema = {
-        userRole : String,
-        exportFrom : String,
-        exportDate : Date
-    }
-
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-    const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
-
-    const {control, handleSubmit} = useForm<SliderItemFilterSchema>()
-
-    const exportFiltersSubmitHandler = (data : SliderItemFilterSchema) => {
-        console.log("filter data", data)
-    }
-
     return (
-        <div className="flex items-center w-full gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
             <div className="flex-grow">
-                <SliderItemSearch onInputChange={onSearchChange} />
+                <SlidersSearch onInputChange={onSearchChange} />
             </div>
-            {/* Filter component removed */}
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                    </div>  
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <FormItem label='Document Name'>
-                        {/* <Controller
-                            control={control}
-                            name='userRole'
-                            render={({field})=>(
-                                <Input
-                                    type="text"
-                                    placeholder="Enter Document Name"
-                                    {...field}
-                                />
-                            )}
-                        /> */}
-                    </FormItem>
-                </Form>
-            </Drawer>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button
+                    icon={<TbFilter />}
+                    onClick={onFilter}
+                    className="w-full sm:w-auto"
+                >
+                    Filter
+                </Button>
+                <Button
+                    icon={<TbCloudUpload />}
+                    onClick={onExport}
+                    className="w-full sm:w-auto"
+                >
+                    Export
+                </Button>
+            </div>
         </div>
     )
 }
-// --- End SliderItemTableTools ---
 
-// --- FormListTable Component (No changes) ---
-const FormListTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedForms,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
+// --- SlidersTable Component ---
+type SlidersTableProps = {
     columns: ColumnDef<SliderItem>[]
     data: SliderItem[]
     loading: boolean
     pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: SliderItem[]
+    selectedItems: SliderItem[]
     onPaginationChange: (page: number) => void
     onSelectChange: (value: number) => void
     onSort: (sort: OnSortParam) => void
     onRowSelect: (checked: boolean, row: SliderItem) => void
     onAllRowSelect: (checked: boolean, rows: Row<SliderItem>[]) => void
-}) => {
+}
+const SlidersTable = ({
+    columns,
+    data,
+    loading,
+    pagingData,
+    selectedItems,
+    onPaginationChange,
+    onSelectChange,
+    onSort,
+    onRowSelect,
+    onAllRowSelect,
+}: SlidersTableProps) => {
     return (
         <DataTable
             selectable
@@ -230,7 +349,7 @@ const FormListTable = ({
             loading={loading}
             pagingData={pagingData}
             checkboxChecked={(row) =>
-                selectedForms.some((selected) => selected.id === row.id)
+                selectedItems.some((selected) => selected.id === row.id)
             }
             onPaginationChange={onPaginationChange}
             onSelectChange={onSelectChange}
@@ -241,103 +360,23 @@ const FormListTable = ({
     )
 }
 
-// --- FormListSearch Component (No changes) ---
-type FormListSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const FormListSearch = React.forwardRef<HTMLInputElement, FormListSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                className="w-full "
-                placeholder="Quick search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-FormListSearch.displayName = 'FormListSearch'
-
-// FormListTableFilter component removed
-
-// --- FormListTableTools Component (Simplified) ---
-const FormListTableTools = ({
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <FormListSearch onInputChange={onSearchChange} />
-            {/* Filter button/component removed */}
-        </div>
-    )
-}
-// --- End FormListTableTools ---
-
-// --- FormListActionTools Component (No functional changes needed for filter removal) ---
-const FormListActionTools = ({
-    allFormsData,
-    openAddDrawer,
-}: {
-    allFormsData: SliderItem[];
-    openAddDrawer: () => void; // Accept function as a prop
-}) => {
-    const navigate = useNavigate()
-    const csvHeaders = [
-
-    ]
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {/*
-            <CSVLink
-                className="w-full"
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Download
-                </Button>
-            </CSVLink>
-            */}
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={openAddDrawer}
-                block
-            >
-                Add New
-            </Button>
-        </div>
-    )
-}
-
-// --- FormListSelected Component (No functional changes needed for filter removal) ---
-const FormListSelected = ({
-    selectedForms,
-    setSelectedForms,
-    onDeleteSelected,
-}: {
-    selectedForms: SliderItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<SliderItem[]>>
+// --- SlidersSelectedFooter Component (remains the same) ---
+type SlidersSelectedFooterProps = {
+    selectedItems: SliderItem[]
     onDeleteSelected: () => void
-}) => {
+}
+const SlidersSelectedFooter = ({
+    selectedItems,
+    onDeleteSelected,
+}: SlidersSelectedFooterProps) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-
     const handleDeleteClick = () => setDeleteConfirmationOpen(true)
     const handleCancelDelete = () => setDeleteConfirmationOpen(false)
     const handleConfirmDelete = () => {
         onDeleteSelected()
         setDeleteConfirmationOpen(false)
     }
-
-    if (selectedForms.length === 0) return null
-
+    if (selectedItems.length === 0) return null
     return (
         <>
             <StickyFooter
@@ -351,10 +390,10 @@ const FormListSelected = ({
                         </span>
                         <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
                             <span className="heading-text">
-                                {selectedForms.length}
+                                {selectedItems.length}
                             </span>
                             <span>
-                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
+                                Slider{selectedItems.length > 1 ? 's' : ''}{' '}
                                 selected
                             </span>
                         </span>
@@ -366,7 +405,7 @@ const FormListSelected = ({
                             className="text-red-600 hover:text-red-500"
                             onClick={handleDeleteClick}
                         >
-                            Delete
+                            Delete Selected
                         </Button>
                     </div>
                 </div>
@@ -374,15 +413,15 @@ const FormListSelected = ({
             <ConfirmDialog
                 isOpen={deleteConfirmationOpen}
                 type="danger"
-                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
+                title={`Delete ${selectedItems.length} Slider${selectedItems.length > 1 ? 's' : ''}`}
                 onClose={handleCancelDelete}
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
             >
                 <p>
-                    Are you sure you want to delete the selected item
-                    {selectedForms.length > 1 ? 's' : ''}? This action cannot be
+                    Are you sure you want to delete the selected slider
+                    {selectedItems.length > 1 ? 's' : ''}? This action cannot be
                     undone.
                 </p>
             </ConfirmDialog>
@@ -390,168 +429,306 @@ const FormListSelected = ({
     )
 }
 
-// --- Main Continents Component ---
+// --- Main Sliders Component ---
 const Sliders = () => {
+    // const dispatch = useAppDispatch(); // Uncomment for Redux
 
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<SliderItem | null>(null);
+    const [slidersData, setSlidersData] = useState<SliderItem[]>(initialDummySliders)
+    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle')
 
-    const openEditDrawer = (item: SliderItem) => {
-        setSelectedItem(item); // Set the selected item's data
-        setIsEditDrawerOpen(true); // Open the edit drawer
-    };
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
+    const [editingSlider, setEditingSlider] = useState<SliderItem | null>(null)
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
 
-    const closeEditDrawer = () => {
-        setSelectedItem(null); // Clear the selected item's data
-        setIsEditDrawerOpen(false); // Close the edit drawer
-    };
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false)
+    const [sliderToDelete, setSliderToDelete] = useState<SliderItem | null>(null)
+
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
+        filterStatus: [],
+        filterDisplayPage: [],
+    })
+
+    // useEffect(() => { // Example Redux fetch
+    //     dispatch(getSlidersAction());
+    // }, [dispatch]);
+    // const { slidersData = [], status: masterLoadingStatus = 'idle' } =
+    //     useSelector(sliderSelector);
+
+    const addFormMethods = useForm<SliderFormData>({
+        resolver: zodResolver(sliderFormSchema),
+        defaultValues: {
+            title: '',
+            subtitle: '',
+            buttonText: '',
+            mobileIconUrl: '',
+            webIconUrl: '',
+            sliderColor: '#FFFFFF', // Default color
+            displayPage: displayPageOptionsConst[0].value, // Default display page
+            link: '',
+            status: 'active',
+        },
+        mode: 'onChange',
+    })
+    const editFormMethods = useForm<SliderFormData>({
+        resolver: zodResolver(sliderFormSchema),
+        defaultValues: {}, // Will be set on openEditDrawer
+        mode: 'onChange',
+    })
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria,
+    })
 
     const openAddDrawer = () => {
-        setSelectedItem(null); // Clear any selected item
-        setIsAddDrawerOpen(true); // Open the add drawer
-    };
-
+        addFormMethods.reset() // Reset to default values
+        setIsAddDrawerOpen(true)
+    }
     const closeAddDrawer = () => {
-        setIsAddDrawerOpen(false); // Close the add drawer
-    };
+        addFormMethods.reset()
+        setIsAddDrawerOpen(false)
+    }
+    const onAddSliderSubmit = async (data: SliderFormData) => {
+        setIsSubmitting(true)
+        setMasterLoadingStatus('loading')
+        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API
 
-    const navigate = useNavigate()
-    const dispatch = useAppDispatch()
+        try {
+            const newSlider: SliderItem = {
+                ...data,
+                id: `SLD${Date.now()}`, // Simple unique ID
+            }
+            setSlidersData((prev) => [...prev, newSlider])
+            // await dispatch(addSliderAction(newSlider)).unwrap(); // Redux
+            toast.push(
+                <Notification title="Slider Added" type="success" duration={2000}>
+                    Slider "{data.title}" added.
+                </Notification>,
+            )
+            closeAddDrawer()
+        } catch (error: any) {
+            toast.push(
+                <Notification title="Failed to Add" type="danger" duration={3000}>
+                    {error?.message || 'Could not add slider.'}
+                </Notification>,
+            )
+        } finally {
+            setIsSubmitting(false)
+            setMasterLoadingStatus('idle')
+        }
+    }
 
-    useEffect(() => {
-        dispatch(getCountriesAction())
-    }, [dispatch])
+    const openEditDrawer = (slider: SliderItem) => {
+        setEditingSlider(slider)
+        editFormMethods.reset({
+            title: slider.title,
+            subtitle: slider.subtitle ?? '',
+            buttonText: slider.buttonText ?? '',
+            mobileIconUrl: slider.mobileIconUrl ?? '',
+            webIconUrl: slider.webIconUrl ?? '',
+            sliderColor: slider.sliderColor ?? '#FFFFFF',
+            displayPage: slider.displayPage,
+            link: slider.link ?? '',
+            status: slider.status,
+        })
+        setIsEditDrawerOpen(true)
+    }
+    const closeEditDrawer = () => {
+        setEditingSlider(null)
+        editFormMethods.reset()
+        setIsEditDrawerOpen(false)
+    }
+    const onEditSliderSubmit = async (data: SliderFormData) => {
+        if (!editingSlider?.id) return
+        setIsSubmitting(true)
+        setMasterLoadingStatus('loading')
+        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API
 
-    const { SlidersData = [], status: masterLoadingStatus = 'idle' } =
-        useSelector(masterSelector)
- // Use the provided dummy data
+        try {
+            const updatedSlider: SliderItem = {
+                ...editingSlider,
+                ...data,
+            }
+            setSlidersData((prev) =>
+                prev.map((s) => (s.id === updatedSlider.id ? updatedSlider : s)),
+            )
+            // await dispatch(editSliderAction(updatedSlider)).unwrap(); // Redux
+            toast.push(
+                <Notification title="Slider Updated" type="success" duration={2000}>
+                    Slider "{data.title}" updated.
+                </Notification>,
+            )
+            closeEditDrawer()
+        } catch (error: any) {
+            toast.push(
+                <Notification title="Failed to Update" type="danger" duration={3000}>
+                     {error?.message || 'Could not update slider.'}
+                </Notification>,
+            )
+        } finally {
+            setIsSubmitting(false)
+            setMasterLoadingStatus('idle')
+        }
+    }
 
-// --- Initial Dummy Data ---
-const initialDummyForms: SliderItem[] = [
-    { id: 'F001', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active' },
-    { id: 'F002', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-    { id: 'F003', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active' },
-    { id: 'F004', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-    { id: 'F005', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-    { id: 'F006', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-    { id: 'F007', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-    { id: 'F008', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-    { id: 'F009', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-    { id: 'F010', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active' },
-    { id: 'F011', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-    { id: 'F012', image: 'Test', domain: 'test', displayPage: 'Home', link: 'Click Here', status: 'active'},
-]
-// --- End Dummy Data ---
+    const handleDeleteClick = (slider: SliderItem) => {
+        setSliderToDelete(slider)
+        setSingleDeleteConfirmOpen(true)
+    }
+    const onConfirmSingleDelete = async () => {
+        if (!sliderToDelete?.id) return
+        setIsDeleting(true)
+        setMasterLoadingStatus('loading')
+        setSingleDeleteConfirmOpen(false)
+        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API
 
-const [forms, setForms] = useState<SliderItem[]>(initialDummyForms); // Initialize with dummy data
-const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: '', key: '' },
-    query: '',
-});
-const [selectedForms, setSelectedForms] = useState<SliderItem[]>([]);
-    const [localIsLoading, setLocalIsLoading] = useState(false)
-    // filterData state and handleApplyFilter removed
+        try {
+            const idToDelete = sliderToDelete.id
+            setSlidersData((prev) => prev.filter((s) => s.id !== idToDelete))
+            // await dispatch(deleteSliderAction({ id: idToDelete })).unwrap(); // Redux
+            toast.push(
+                <Notification title="Slider Deleted" type="success" duration={2000}>
+                    Slider "{sliderToDelete.title}" deleted.
+                </Notification>,
+            )
+            setSelectedItems((prev) =>
+                prev.filter((item) => item.id !== idToDelete),
+            )
+        } catch (error: any) {
+            toast.push(
+                <Notification title="Failed to Delete" type="danger" duration={3000}>
+                    {error?.message || 'Could not delete slider.'}
+                </Notification>,
+            )
+        } finally {
+            setIsDeleting(false)
+            setMasterLoadingStatus('idle')
+            setSliderToDelete(null)
+        }
+    }
+    const handleDeleteSelected = async () => {
+        if (selectedItems.length === 0) return
+        setIsDeleting(true)
+        setMasterLoadingStatus('loading')
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API
 
-    console.log('Raw CountriesData from Redux:', SlidersData)
+        try {
+            const idsToDelete = selectedItems.map((item) => item.id)
+            setSlidersData((prev) => prev.filter((s) => !idsToDelete.includes(s.id)))
+            // await dispatch(deleteAllSlidersAction({ ids: idsToDelete })).unwrap(); // Redux
+            toast.push(
+                <Notification title="Deletion Successful" type="success" duration={2000}>
+                    {selectedItems.length} slider(s) deleted.
+                </Notification>,
+            )
+            setSelectedItems([])
+        } catch (error: any) {
+            toast.push(
+                <Notification title="Deletion Failed" type="danger" duration={3000}>
+                    {error?.message || 'Failed to delete selected sliders.'}
+                </Notification>,
+            )
+        } finally {
+            setIsDeleting(false)
+            setMasterLoadingStatus('idle')
+        }
+    }
 
-    const { pageData, total, processedDataForCsv } = useMemo(() => {
-        console.log(
-            '[Memo] Recalculating. Query:',
-            tableData.query,
-            'Sort:',
-            tableData.sort,
-            'Page:',
-            tableData.pageIndex,
-            // 'Filters:' removed from log
-            'Input Data (CountriesData) Length:',
-            SlidersData?.length ?? 0,
-        )
+    const openFilterDrawer = () => {
+        filterFormMethods.reset(filterCriteria)
+        setIsFilterDrawerOpen(true)
+    }
+    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
+    const onApplyFiltersSubmit = (data: FilterFormData) => {
+        setFilterCriteria({
+            filterStatus: data.filterStatus || [],
+            filterDisplayPage: data.filterDisplayPage || [],
+        })
+        handleSetTableData({ pageIndex: 1 })
+        closeFilterDrawer()
+    }
+    const onClearFilters = () => {
+        const defaultFilters = { filterStatus: [], filterDisplayPage: [] }
+        filterFormMethods.reset(defaultFilters)
+        setFilterCriteria(defaultFilters)
+        handleSetTableData({ pageIndex: 1 })
+    }
 
-        const sourceData: SliderItem[] = Array.isArray(SlidersData)
-            ? SlidersData
-            : []
-        let processedData: SliderItem[] = cloneDeep(sourceData)
+    const [tableData, setTableData] = useState<TableQueries>({
+        pageIndex: 1,
+        pageSize: 10,
+        sort: { order: '', key: '' },
+        query: '',
+    })
+    const [selectedItems, setSelectedItems] = useState<SliderItem[]>([])
 
-        // Product and Channel filtering logic removed
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+        let processedData: SliderItem[] = cloneDeep(slidersData)
 
-        // 1. Apply Search Query (on id and name)
-        if (tableData.query && tableData.query.trim() !== '') {
-            const query = tableData.query.toLowerCase().trim()
-            console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: SliderItem) => {
-                const itemNameLower = item.domain?.trim().toLowerCase() ?? ''
-                const continentNameLower = item.domain?.trim().toLowerCase() ?? ''
-                const itemIdString = String(item.id ?? '').trim()
-                const itemIdLower = itemIdString.toLowerCase()
-                return (
-                    itemNameLower.includes(query) ||
-                    itemIdLower.includes(query) ||
-                    continentNameLower.includes(query)
-                )
-            })
-            console.log(
-                '[Memo] After search query filter. Count:',
-                processedData.length,
+        if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
+            const selectedStatuses = filterCriteria.filterStatus.map((opt) => opt.value)
+            processedData = processedData.filter((item) =>
+                selectedStatuses.includes(item.status),
+            )
+        }
+        if (filterCriteria.filterDisplayPage && filterCriteria.filterDisplayPage.length > 0) {
+            const selectedPages = filterCriteria.filterDisplayPage.map((opt) => opt.value)
+            processedData = processedData.filter((item) =>
+                selectedPages.includes(item.displayPage),
             )
         }
 
-        // 2. Apply Sorting (on id and name)
-        const { order, key } = tableData.sort as OnSortParam
-        if (
-            order &&
-            key &&
-            (key === 'id' || key === 'name') &&
-            processedData.length > 0
-        ) {
-            console.log('[Memo] Applying sort. Key:', key, 'Order:', order)
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof SliderItem] ?? '')
-                const bValue = String(b[key as keyof SliderItem] ?? '')
-
-                return order === 'asc'
-                    ? aValue.localeCompare(bValue)
-                    : bValue.localeCompare(aValue)
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim()
+            processedData = processedData.filter((item) => {
+                const itemTitleLower = item.title?.trim().toLowerCase() ?? ''
+                const itemIdString = String(item.id ?? '').trim().toLowerCase()
+                return itemTitleLower.includes(query) || itemIdString.includes(query)
             })
-            processedData = sortedData
         }
 
-        const dataBeforePagination = [...processedData] // For CSV export
+        const { order, key } = tableData.sort as OnSortParam
+        if (order && key && ['id', 'title', 'status', 'displayPage'].includes(key)) {
+            processedData.sort((a, b) => {
+                const aValue = a[key as keyof SliderItem]
+                const bValue = b[key as keyof SliderItem]
+                const aStr = String(aValue ?? '').toLowerCase()
+                const bStr = String(bValue ?? '').toLowerCase()
+                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr)
+            })
+        }
 
-        // 3. Apply Pagination
+        const dataToExport = [...processedData]
         const currentTotal = processedData.length
         const pageIndex = tableData.pageIndex as number
         const pageSize = tableData.pageSize as number
         const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
+        const dataForPage = processedData.slice(startIndex, startIndex + pageSize)
 
-        console.log(
-            '[Memo] Returning. PageData Length:',
-            dataForPage.length,
-            'Total Items (after all filters/sort):',
-            currentTotal,
-        )
         return {
             pageData: dataForPage,
             total: currentTotal,
-            processedDataForCsv: dataBeforePagination,
+            allFilteredAndSortedData: dataToExport,
         }
-    }, [SlidersData, tableData]) // filterData removed from dependencies
+    }, [slidersData, tableData, filterCriteria])
 
-    // --- Handlers ---
-    // handleApplyFilter removed
+    const handleExportData = () => {
+        const success = exportToCsv('sliders_export.csv', allFilteredAndSortedData)
+        if (success) {
+            toast.push(
+                <Notification title="Export Successful" type="success">
+                    Data exported.
+                </Notification>,
+            )
+        }
+    }
 
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
         setTableData((prev) => ({ ...prev, ...data }))
     }, [])
-
     const handlePaginationChange = useCallback(
         (page: number) => handleSetTableData({ pageIndex: page }),
         [handleSetTableData],
@@ -559,7 +736,7 @@ const [selectedForms, setSelectedForms] = useState<SliderItem[]>([]);
     const handleSelectChange = useCallback(
         (value: number) => {
             handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-            setSelectedForms([])
+            setSelectedItems([])
         },
         [handleSetTableData],
     )
@@ -571,376 +748,445 @@ const [selectedForms, setSelectedForms] = useState<SliderItem[]>([]);
         (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
         [handleSetTableData],
     )
-
     const handleRowSelect = useCallback((checked: boolean, row: SliderItem) => {
-        setSelectedForms((prev) => {
-            if (checked)
-                return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
-            return prev.filter((f) => f.id !== row.id)
+        setSelectedItems((prev) => {
+            if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]
+            return prev.filter((item) => item.id !== row.id)
         })
     }, [])
-
     const handleAllRowSelect = useCallback(
         (checked: boolean, currentRows: Row<SliderItem>[]) => {
             const currentPageRowOriginals = currentRows.map((r) => r.original)
             if (checked) {
-                setSelectedForms((prevSelected) => {
-                    const prevSelectedIds = new Set(
-                        prevSelected.map((f) => f.id),
-                    )
-                    const newRowsToAdd = currentPageRowOriginals.filter(
-                        (r) => !prevSelectedIds.has(r.id),
-                    )
-                    return [...prevSelected, ...newRowsToAdd]
+                setSelectedItems((prev) => {
+                    const prevIds = new Set(prev.map(item => item.id));
+                    const newToAdd = currentPageRowOriginals.filter(r => !prevIds.has(r.id));
+                    return [...prev, ...newToAdd];
                 })
             } else {
-                const currentPageRowIds = new Set(
-                    currentPageRowOriginals.map((r) => r.id),
-                )
-                setSelectedForms((prevSelected) =>
-                    prevSelected.filter((f) => !currentPageRowIds.has(f.id)),
-                )
+                const currentPageIds = new Set(currentPageRowOriginals.map(r => r.id));
+                setSelectedItems((prev) => prev.filter(item => !currentPageIds.has(item.id)));
             }
-        },
-        [],
-    )
-
-    // --- Action Handlers (remain the same, need Redux integration for persistence) ---
-    const handleEdit = useCallback(
-        (form: SliderItem) => {
-            console.log('Edit item (requires navigation/modal):', form.id)
-            toast.push(
-                <Notification title="Edit Action" type="info">
-                    Edit action for "{form.domain}" (ID: {form.id}). Implement
-                    navigation or modal.
-                </Notification>,
-            )
-        },
-        [navigate],
-    )
-
-    const handleDelete = useCallback((formToDelete: SliderItem) => {
-        console.log(
-            'Delete item (needs Redux action):',
-            formToDelete.id,
-            formToDelete.domain,
-        )
-        setSelectedForms((prevSelected) =>
-            prevSelected.filter((form) => form.id !== formToDelete.id),
-        )
-        toast.push(
-            <Notification title="Delete Action" type="warning">
-                Delete action for "{formToDelete.domain}" (ID: {formToDelete.id}).
-                Implement Redux deletion.
-            </Notification>,
-        )
-    }, [])
-
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected items (needs Redux action):',
-            selectedForms.map((f) => f.id),
-        )
-        setSelectedForms([])
-        toast.push(
-            <Notification title="Selected Items Delete Action" type="warning">
-                {selectedForms.length} item(s) delete action. Implement Redux
-                deletion.
-            </Notification>,
-        )
-    }, [selectedForms])
-    // --- End Action Handlers ---
+        }, [])
 
     const columns: ColumnDef<SliderItem>[] = useMemo(
         () => [
             {
-                header: 'ID',
-                accessorKey: 'id',
-                // Simple cell to display ID, enable sorting
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.id}</span>,
+                header: 'Icon', // Using Web Icon for display
+                accessorKey: 'webIconUrl',
+                enableSorting: false,
+                size: 80,
+                meta: { headerClass: 'text-center', cellClass: 'text-center' },
+                cell: (props) => {
+                    const { webIconUrl, title } = props.row.original
+                    return (
+                        <Avatar
+                            size={40} // Adjusted size
+                            shape="square" // Sliders are often rectangular
+                            src={webIconUrl || undefined}
+                            icon={<TbPhoto />}
+                        >
+                            {!webIconUrl ? title?.charAt(0).toUpperCase() : ''}
+                        </Avatar>
+                    )
+                },
             },
-            {
-                header: 'Image',
-                accessorKey: 'image',
-                // Enable sorting
-                enableSorting: true,
-            },
-            {
-                header: 'Domain',
-                accessorKey: 'domain',
-                // Enable sorting
-                enableSorting: true,
-            },
+            { header: 'Title', accessorKey: 'title', enableSorting: true, size: 200,
+                cell: props => <span className="font-semibold">{props.row.original.title}</span>
+             },
             {
                 header: 'Display Page',
                 accessorKey: 'displayPage',
-                // Enable sorting
                 enableSorting: true,
+                size: 150,
+                cell: (props) => {
+                    const pageLabel = displayPageOptionsConst.find(
+                        (p) => p.value === props.row.original.displayPage,
+                    )?.label
+                    return <span>{pageLabel || props.row.original.displayPage}</span>
+                },
             },
             {
                 header: 'Link',
                 accessorKey: 'link',
-                // Enable sorting
-                enableSorting: true,
+                enableSorting: false, // Links are usually not sorted
+                size: 180,
+                cell: props => props.row.original.link ? <a href={props.row.original.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate">{props.row.original.link}</a> : '-'
             },
             {
                 header: 'Status',
                 accessorKey: 'status',
                 enableSorting: true,
-                cell: (props) => (
-                    <Tag
-                        className={
-                            props.row.original.status === 'active'
-                                ? 'bg-green-200 text-green-600'
-                                : 'bg-red-200 text-red-600'
-                        }
-                    >
-                        {props.row.original.status}
-                    </Tag>
-                ),
+                size: 100,
+                cell: (props) => {
+                    const { status } = props.row.original
+                    return (
+                        <Tag
+                            className={classNames(
+                                'rounded-md capitalize font-semibold border-0',
+                                sliderStatusColor[status],
+                            )}
+                        >
+                            {status}
+                        </Tag>
+                    )
+                },
             },
             {
-                header: 'Action',
+                header: 'Actions',
                 id: 'action',
+                meta: { headerClass: 'text-center', cellClass: 'text-center' },
+                size: 100,
                 cell: (props) => (
                     <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
-                        onDelete={() => console.log('Delete', props.row.original)}
+                        onEdit={() => openEditDrawer(props.row.original)}
+                        onDelete={() => handleDeleteClick(props.row.original)}
                     />
                 ),
             },
         ],
-        [handleEdit, handleDelete],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [], // openEditDrawer, handleDeleteClick will be stable due to useCallback
     )
+
+    const renderFormFields = (formMethods: typeof addFormMethods | typeof editFormMethods) => (
+        <>
+            <FormItem
+                label="Title"
+                invalid={!!formMethods.formState.errors.title}
+                errorMessage={formMethods.formState.errors.title?.message}
+            >
+                <Controller
+                    name="title"
+                    control={formMethods.control}
+                    render={({ field }) => <Input {...field} placeholder="Enter Slider Title" />}
+                />
+            </FormItem>
+            <FormItem
+                label="Subtitle (Optional)"
+                invalid={!!formMethods.formState.errors.subtitle}
+                errorMessage={formMethods.formState.errors.subtitle?.message}
+            >
+                <Controller
+                    name="subtitle"
+                    control={formMethods.control}
+                    render={({ field }) => <Input {...field} placeholder="Enter Subtitle" />}
+                />
+            </FormItem>
+            <FormItem
+                label="Button Text (Optional)"
+                invalid={!!formMethods.formState.errors.buttonText}
+                errorMessage={formMethods.formState.errors.buttonText?.message}
+            >
+                <Controller
+                    name="buttonText"
+                    control={formMethods.control}
+                    render={({ field }) => <Input {...field} placeholder="e.g., Shop Now, Learn More" />}
+                />
+            </FormItem>
+            <FormItem
+                label="Web Icon URL (1920x1080, Optional)"
+                invalid={!!formMethods.formState.errors.webIconUrl}
+                errorMessage={formMethods.formState.errors.webIconUrl?.message}
+            >
+                <Controller
+                    name="webIconUrl"
+                    control={formMethods.control}
+                    render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/web-icon.jpg" />}
+                />
+            </FormItem>
+            <FormItem
+                label="Mobile Icon URL (500x300, Optional)"
+                invalid={!!formMethods.formState.errors.mobileIconUrl}
+                errorMessage={formMethods.formState.errors.mobileIconUrl?.message}
+            >
+                <Controller
+                    name="mobileIconUrl"
+                    control={formMethods.control}
+                    render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/mobile-icon.jpg" />}
+                />
+            </FormItem>
+             <FormItem
+                label="Slider Color (Optional)"
+                invalid={!!formMethods.formState.errors.sliderColor}
+                errorMessage={formMethods.formState.errors.sliderColor?.message}
+            >
+                <div className="flex items-center gap-2">
+                     <Controller
+                        name="sliderColor"
+                        control={formMethods.control}
+                        render={({ field }) => (
+                            <Input
+                                {...field}
+                                type="color"
+                                className="w-12 h-10 p-1" // Basic styling for color input
+                            />
+                        )}
+                    />
+                    <Controller
+                        name="sliderColor"
+                        control={formMethods.control}
+                        render={({ field }) => (
+                             <Input
+                                {...field}
+                                type="text"
+                                placeholder="#RRGGBB or color name"
+                                className="flex-grow"
+                            />
+                        )}
+                    />
+                </div>
+            </FormItem>
+            <FormItem
+                label="Display Page"
+                invalid={!!formMethods.formState.errors.displayPage}
+                errorMessage={formMethods.formState.errors.displayPage?.message}
+            >
+                <Controller
+                    name="displayPage"
+                    control={formMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            placeholder="Select display page"
+                            options={displayPageOptionsConst}
+                            value={displayPageOptionsConst.find(opt => opt.value === field.value)}
+                            onChange={(option) => field.onChange(option?.value)}
+                        />
+                    )}
+                />
+            </FormItem>
+            <FormItem
+                label="Link (Optional)"
+                invalid={!!formMethods.formState.errors.link}
+                errorMessage={formMethods.formState.errors.link?.message}
+            >
+                <Controller
+                    name="link"
+                    control={formMethods.control}
+                    render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/target-page" />}
+                />
+            </FormItem>
+            <FormItem
+                label="Status"
+                invalid={!!formMethods.formState.errors.status}
+                errorMessage={formMethods.formState.errors.status?.message}
+            >
+                <Controller
+                    name="status"
+                    control={formMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            placeholder="Select status"
+                            options={sliderStatusOptions}
+                            value={sliderStatusOptions.find(opt => opt.value === field.value)}
+                            onChange={(option) => field.onChange(option?.value)}
+                        />
+                    )}
+                />
+            </FormItem>
+        </>
+    )
+
 
     return (
         <>
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">Slider's Page</h5>
-                        <FormListActionTools
-                            allFormsData={forms}
-                            openAddDrawer={openAddDrawer} // Pass the function as a prop
-                        />
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h3 className="mb-2 sm:mb-0">Manage Sliders</h3>
+                        <Button
+                            variant="solid"
+                            icon={<TbPlus />}
+                            onClick={openAddDrawer}
+                        >
+                            Add New Slider
+                        </Button>
                     </div>
 
-                    <div className="mb-4">
-                        <SliderItemTableTools
-                            onSearchChange={(query) =>
-                                setTableData((prev) => ({ ...prev, query }))
-                            }
-                        />
-                    </div>
-
-                    <FormListTable
-                        columns={columns}
-                        data={forms}
-                        loading={false}
-                        pagingData={{
-                            total: forms.length,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedForms={selectedForms}
-                        onPaginationChange={(page) =>
-                            setTableData((prev) => ({ ...prev, pageIndex: page }))
-                        }
-                        onSelectChange={(value) =>
-                            setTableData((prev) => ({
-                                ...prev,
-                                pageSize: Number(value),
-                                pageIndex: 1,
-                            }))
-                        }
-                        onSort={(sort) =>
-                            setTableData((prev) => ({ ...prev, sort }))
-                        }
-                        onRowSelect={(checked, row) =>
-                            setSelectedForms((prev) =>
-                                checked
-                                    ? [...prev, row]
-                                    : prev.filter((form) => form.id !== row.id)
-                            )
-                        }
-                        onAllRowSelect={(checked, rows) => {
-                            const rowIds = rows.map((row) => row.original.id);
-                            setSelectedForms((prev) =>
-                                checked
-                                    ? [...prev, ...rows.map((row) => row.original)]
-                                    : prev.filter((form) => !rowIds.includes(form.id))
-                            );
-                        }}
+                    <SlidersTableTools
+                        onSearchChange={handleSearchChange}
+                        onFilter={openFilterDrawer}
+                        onExport={handleExportData}
                     />
-                </AdaptiveCard>
 
-                <FormListSelected
-                    selectedForms={selectedForms}
-                    setSelectedForms={setSelectedForms}
-                    onDeleteSelected={() =>
-                        setForms((prev) =>
-                            prev.filter(
-                                (form) =>
-                                    !selectedForms.some(
-                                        (selected) => selected.id === form.id
-                                    )
-                            )
-                        )
-                    }
-                />
+                    <div className="mt-4">
+                        <SlidersTable
+                            columns={columns}
+                            data={pageData}
+                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
+                            pagingData={{
+                                total: total,
+                                pageIndex: tableData.pageIndex as number,
+                                pageSize: tableData.pageSize as number,
+                            }}
+                            selectedItems={selectedItems}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectChange}
+                            onSort={handleSort}
+                            onRowSelect={handleRowSelect}
+                            onAllRowSelect={handleAllRowSelect}
+                        />
+                    </div>
+                </AdaptiveCard>
             </Container>
 
-            {/* Edit Drawer */}
-            <Drawer
-                title="Edit Slider"
-                isOpen={isEditDrawerOpen}
-                onClose={closeEditDrawer}
-                onRequestClose={closeEditDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => {
-                                console.log('Updated Slider:', selectedItem);
-                                closeEditDrawer();
-                            }}
-                        >
-                            Save
-                        </Button>
-                    </div>
-                }
-            >
-                <Form>
-                    <FormItem label="Image">
-                        <Input
-                            value={selectedItem?.image || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', image: '', domain: '', displayPage: '', link: '', status: 'active' }),
-                                    image: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Domain">
-                        <Input
-                            value={selectedItem?.domain || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', image: '', domain: '', displayPage: '', link: '', status: 'active' }),
-                                    domain: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Display Page">
-                        <Input
-                            value={selectedItem?.displayPage || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', image: '', domain: '', displayPage: '', link: '', status: 'active' }),
-                                    displayPage: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Link">
-                        <Input
-                            value={selectedItem?.link || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', image: '', domain: '', displayPage: '', link: '', status: 'active' }),
-                                    link: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Status">
-                        <select
-                            value={selectedItem?.status || 'active'}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', image: '', domain: '', displayPage: '', link: '', status: 'active' }),
-                                    status: e.target.value as 'active' | 'inactive',
-                                }))
-                            }
-                        >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </FormItem>
-                </Form>
-            </Drawer>
+            <SlidersSelectedFooter
+                selectedItems={selectedItems}
+                onDeleteSelected={handleDeleteSelected}
+            />
 
-
+            {/* Add Slider Drawer */}
             <Drawer
                 title="Add New Slider"
                 isOpen={isAddDrawerOpen}
                 onClose={closeAddDrawer}
                 onRequestClose={closeAddDrawer}
+                width={600} // Adjust width as needed
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
+                        <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">
                             Cancel
                         </Button>
                         <Button
                             size="sm"
                             variant="solid"
-                            onClick={() => console.log('Slider Added')}
+                            form="addSliderForm"
+                            type="submit"
+                            loading={isSubmitting}
+                            disabled={!addFormMethods.formState.isValid || isSubmitting}
                         >
-                            Add
+                            {isSubmitting ? 'Adding...' : 'Add Slider'}
                         </Button>
                     </div>
                 }
             >
                 <Form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.target as HTMLFormElement);
-                        const newItem: SliderItem = {
-                            id: `${forms.length + 1}`,
-                            image: formData.get('image') as string,
-                            domain: formData.get('domain') as string,
-                            displayPage: formData.get('displayPage') as string,
-                            link: formData.get('link') as string,
-                            status: formData.get('status') as 'active' | 'inactive',
-                        };
-                        console.log('New Slider:', newItem);
-                        // handleAdd(newItem);
-                    }}
+                    id="addSliderForm"
+                    onSubmit={addFormMethods.handleSubmit(onAddSliderSubmit)}
+                    className="flex flex-col gap-4"
                 >
-                    <FormItem label="Image">
-                        <Input name="image" placeholder="Enter Image URL" />
+                    {renderFormFields(addFormMethods)}
+                </Form>
+            </Drawer>
+
+            {/* Edit Slider Drawer */}
+            <Drawer
+                title="Edit Slider"
+                isOpen={isEditDrawerOpen}
+                onClose={closeEditDrawer}
+                onRequestClose={closeEditDrawer}
+                width={600} // Adjust width
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            form="editSliderForm"
+                            type="submit"
+                            loading={isSubmitting}
+                            disabled={!editFormMethods.formState.isValid || isSubmitting}
+                        >
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </div>
+                }
+            >
+                <Form
+                    id="editSliderForm"
+                    onSubmit={editFormMethods.handleSubmit(onEditSliderSubmit)}
+                    className="flex flex-col gap-4"
+                >
+                    {renderFormFields(editFormMethods)}
+                </Form>
+            </Drawer>
+
+            {/* Filter Drawer */}
+            <Drawer
+                title="Filter Sliders"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                    <div className="flex justify-between w-full">
+                        <Button size="sm" onClick={onClearFilters} type="button">
+                            Clear All
+                        </Button>
+                        <div>
+                            <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">
+                                Cancel
+                            </Button>
+                            <Button size="sm" variant="solid" form="filterSliderForm" type="submit">
+                                Apply Filters
+                            </Button>
+                        </div>
+                    </div>
+                }
+            >
+                <Form
+                    id="filterSliderForm"
+                    onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+                    className="flex flex-col gap-4"
+                >
+                    <FormItem label="Filter by Status">
+                        <Controller
+                            name="filterStatus"
+                            control={filterFormMethods.control}
+                            render={({ field }) => (
+                                <Select
+                                    isMulti
+                                    placeholder="Select status(es)..."
+                                    options={sliderStatusOptions}
+                                    value={field.value || []}
+                                    onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                                />
+                            )}
+                        />
                     </FormItem>
-                    <FormItem label="Domain">
-                        <Input name="domain" placeholder="Enter Domain" />
-                    </FormItem>
-                    <FormItem label="Display Page">
-                        <Input name="displayPage" placeholder="Enter Display Page" />
-                    </FormItem>
-                    <FormItem label="Link">
-                        <Input name="link" placeholder="Enter Link" />
-                    </FormItem>
-                    <FormItem label="Status">
-                        <select name="status" defaultValue="active">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
+                    <FormItem label="Filter by Display Page">
+                        <Controller
+                            name="filterDisplayPage"
+                            control={filterFormMethods.control}
+                            render={({ field }) => (
+                                <Select
+                                    isMulti
+                                    placeholder="Select display page(s)..."
+                                    options={displayPageOptionsConst}
+                                    value={field.value || []}
+                                    onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                                />
+                            )}
+                        />
                     </FormItem>
                 </Form>
             </Drawer>
+
+            {/* Single Delete Confirmation */}
+            <ConfirmDialog
+                isOpen={singleDeleteConfirmOpen}
+                type="danger"
+                title="Delete Slider"
+                onClose={() => { setSingleDeleteConfirmOpen(false); setSliderToDelete(null); }}
+                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setSliderToDelete(null); }}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setSliderToDelete(null); }}
+                confirmButtonColor="red-600"
+                onConfirm={onConfirmSingleDelete}
+                loading={isDeleting}
+            >
+                <p>
+                    Are you sure you want to delete the slider "
+                    <strong>{sliderToDelete?.title}</strong>"? This action cannot be undone.
+                </p>
+            </ConfirmDialog>
         </>
     )
 }
 
 export default Sliders
 
-// Helper
+// Helper (keep if not globally available)
 function classNames(...classes: (string | boolean | undefined)[]) {
     return classes.filter(Boolean).join(' ')
 }

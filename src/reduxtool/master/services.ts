@@ -172,7 +172,7 @@ export const editCurrencyAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol , currency_code : unitData?.currency_code}) 
+    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -221,7 +221,7 @@ export const editcontinentAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", name: unitData?.name }) 
+    const response = await axiosInstance.post(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -268,7 +268,7 @@ export const editcountryAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/country/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/country/${unitData?.id}`, { _method: "PUT", name: unitData?.name , iso : unitData?.iso,phonecode : unitData?.phonecode ,continent_id : unitData?.continent_id}) 
+    const response = await axiosInstance.post(`${config.apiURL}/master/country/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -316,7 +316,7 @@ export const editDocumentListAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name , iso : unitData?.iso,phonecode : unitData?.phonecode ,continent_id : unitData?.continent_id}) 
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -353,6 +353,56 @@ export const getBrandAsync = async () => {
   }
 }
 
+export const getBlogsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/blog`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addBlogsAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editBlogsAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletBlogsAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/master/document_master/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllBlogsAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
 
 export const getExportMappingsAsync = async () => {
   try {
@@ -363,5 +413,22 @@ export const getExportMappingsAsync = async () => {
   }
 }
 
+export const getcategoryAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/category`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getwallListingAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/wall/enquiry`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 
