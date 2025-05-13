@@ -1,803 +1,539 @@
-// src/views/your-path/JobPostsListing.tsx (New file name)
+// src/views/your-path/JobPostsListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import cloneDeep from 'lodash/cloneDeep'
-import classNames from 'classnames'
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
+// import { Link, useNavigate } from 'react-router-dom'; // Not strictly needed if all actions are in-component
+import cloneDeep from 'lodash/cloneDeep';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import classNames from 'classnames';
 
 // UI Components
-import AdaptiveCard from '@/components/shared/AdaptiveCard'
-import Container from '@/components/shared/Container'
-import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag'
-import Button from '@/components/ui/Button'
-import Dialog from '@/components/ui/Dialog'
-import Avatar from '@/components/ui/Avatar' // Keep if needed (e.g., dept icon)
-import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import {
-    TbBriefcase,
-    TbMapPin,
-    TbUsers,
-    TbFileDescription,
-    TbFilter,
-    TbCloudUpload,
-} from 'react-icons/tb' // Icons
+import AdaptiveCard from '@/components/shared/AdaptiveCard';
+import Container from '@/components/shared/Container';
+import DataTable from '@/components/shared/DataTable';
+import Tooltip from '@/components/ui/Tooltip';
+import Button from '@/components/ui/Button';
+import Notification from '@/components/ui/Notification';
+import toast from '@/components/ui/toast';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import StickyFooter from '@/components/shared/StickyFooter';
+import DebouceInput from '@/components/shared/DebouceInput';
+import Select from '@/components/ui/Select';
+import Tag from '@/components/ui/Tag';
+import { Drawer, Form, FormItem, Input } from '@/components/ui'; // Ensure Textarea is from here
 
 // Icons
 import {
-    TbPencil,
-    TbCopy, // Optional: Clone action
-    TbSwitchHorizontal, // Status change
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbCloudDownload,
-    TbPlus,
-} from 'react-icons/tb'
+    TbPencil, TbTrash, TbChecks, TbSearch, TbFilter, TbPlus, TbCloudUpload,
+    TbBriefcase, TbMapPin, TbUsers, TbFileDescription, TbSwitchHorizontal, TbCalendarEvent, // Specific icons
+} from 'react-icons/tb';
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
+import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
+import type { TableQueries } from '@/@types/common';
+import Textarea from '@/views/ui-components/forms/Input/Textarea';
+// Redux (Optional)
+// import { useAppDispatch } from '@/reduxtool/store';
+// import { getJobPostsAction, addJobPostAction, ... } from '@/reduxtool/jobPost/middleware';
+// import { jobPostSelector } from '@/reduxtool/jobPost/jobPostSlice';
 
-// --- Define Item Type ---
-export type JobPostStatus = 'open' | 'closed' | 'draft' | 'on_hold'
+// --- Define Item Type & Constants ---
+export type JobPostStatus = 'open' | 'closed' | 'draft' | 'on_hold';
 export type JobPostItem = {
-    id: string // Unique Job Post ID
-    status: JobPostStatus
-    jobTitle: string // Added Job Title for clarity
-    department: string
-    description: string // Potentially long description
-    location: string // e.g., "Remote", "New York, NY", "Hybrid (London)"
-    experience: string // e.g., "2+ Years", "Entry Level", "Senior (5-8 Years)"
-    totalVacancy: number
-    createdDate?: Date // Optional but useful
-}
-// --- End Item Type ---
+    id: string | number;
+    status: JobPostStatus;
+    jobTitle: string; // Will be the "name" equivalent for the form
+    department: string; // Key/ID for department dropdown
+    description: string;
+    location: string;
+    experience: string; // e.g., "2+ Years", "Entry Level"
+    totalVacancy: number;
+    createdDate?: string; // ISO string for consistency (YYYY-MM-DD or full ISO)
+};
 
-// --- Constants ---
+const JOB_POST_STATUS_OPTIONS: { value: JobPostStatus, label: string }[] = [
+    { value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' },
+    { value: 'draft', label: 'Draft' }, { value: 'on_hold', label: 'On Hold' },
+];
+const jobPostStatusValues = JOB_POST_STATUS_OPTIONS.map(s => s.value) as [JobPostStatus, ...JobPostStatus[]];
+
 const jobStatusColor: Record<JobPostStatus, string> = {
-    open: 'bg-emerald-500',
-    closed: 'bg-red-500',
-    draft: 'bg-gray-500',
-    on_hold: 'bg-amber-500',
-}
+    open: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    closed: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+    draft: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
+    on_hold: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+};
 
+// Example Department Options for dropdowns (Replace with actual data source)
+const JOB_DEPARTMENT_OPTIONS = [
+    { value: 'eng', label: 'Engineering' }, { value: 'mktg', label: 'Marketing' },
+    { value: 'sales', label: 'Sales' }, { value: 'hr', label: 'Human Resources' },
+    { value: 'ops', label: 'Operations' },
+];
+const jobDepartmentValues = JOB_DEPARTMENT_OPTIONS.map(d => d.value) as [string, ...string[]];
+
+
+// --- Zod Schema for Add/Edit Job Post Form ---
+const jobPostFormSchema = z.object({
+    jobTitle: z.string().min(1, 'Job Title is required.').max(150, "Title too long"),
+    department: z.enum(jobDepartmentValues, { errorMap: () => ({ message: 'Please select a department.'}) }),
+    description: z.string().min(10, 'Description must be at least 10 characters.').max(5000),
+    location: z.string().min(1, 'Location is required.').max(100),
+    experience: z.string().min(1, 'Experience level is required.').max(50),
+    totalVacancy: z.coerce.number().int().min(1, 'Total vacancies must be at least 1.'),
+    status: z.enum(jobPostStatusValues, { errorMap: () => ({ message: 'Please select a status.'})}), // Added status to form
+});
+type JobPostFormData = z.infer<typeof jobPostFormSchema>;
+
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
+    filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterDepartment: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    // Can add filter by location, experience if needed
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
+
+
+// --- Initial Dummy Data ---
 const initialDummyJobPosts: JobPostItem[] = [
-    {
-        id: 'JP001',
-        status: 'open',
-        jobTitle: 'Senior Frontend Engineer',
-        department: 'Engineering',
-        description:
-            'Looking for an experienced React developer to lead our frontend team. Responsibilities include architecting new features, mentoring junior developers, and ensuring high code quality. Must have strong experience with TypeScript, Next.js, and modern testing frameworks. Familiarity with UI/UX principles is a plus.',
-        location: 'Remote',
-        experience: '5+ Years',
-        totalVacancy: 1,
-        createdDate: new Date(2023, 10, 1),
-    },
-    {
-        id: 'JP002',
-        status: 'open',
-        jobTitle: 'Marketing Content Writer',
-        department: 'Marketing',
-        description:
-            'Create compelling blog posts, website copy, and social media content to drive engagement. Requires excellent writing skills, SEO knowledge, and ability to research various topics. Portfolio required.',
-        location: 'New York, NY',
-        experience: '2-4 Years',
-        totalVacancy: 2,
-        createdDate: new Date(2023, 10, 3),
-    },
-    {
-        id: 'JP003',
-        status: 'draft',
-        jobTitle: 'Product Manager - Mobile',
-        department: 'Product Management',
-        description:
-            'Define the roadmap and strategy for our mobile applications. Work closely with design and engineering teams. Experience with agile methodologies and user research needed.',
-        location: 'Hybrid (London)',
-        experience: '4+ Years',
-        totalVacancy: 1,
-        createdDate: new Date(2023, 10, 5),
-    },
-    {
-        id: 'JP004',
-        status: 'closed',
-        jobTitle: 'Junior Accountant',
-        department: 'Finance',
-        description:
-            'Assisted with accounts payable/receivable, bank reconciliations, and month-end closing procedures. Position filled.',
-        location: 'Chicago, IL',
-        experience: 'Entry Level (0-2 Years)',
-        totalVacancy: 1,
-        createdDate: new Date(2023, 9, 15),
-    },
-    {
-        id: 'JP005',
-        status: 'on_hold',
-        jobTitle: 'Customer Support Specialist',
-        department: 'Customer Support',
-        description:
-            'Provide excellent customer service via email and chat. Troubleshoot issues and escalate complex problems. Hiring paused pending budget review.',
-        location: 'Remote (US Only)',
-        experience: '1+ Year',
-        totalVacancy: 3,
-        createdDate: new Date(2023, 9, 20),
-    },
-    {
-        id: 'JP006',
-        status: 'open',
-        jobTitle: 'Data Scientist',
-        department: 'Data Science & Analytics',
-        description:
-            'Develop machine learning models, perform statistical analysis, and create data visualizations to drive business insights. Proficiency in Python/R and SQL required. Advanced degree preferred.',
-        location: 'Austin, TX',
-        experience: '3+ Years',
-        totalVacancy: 1,
-        createdDate: new Date(2023, 10, 6),
-    },
-]
-// --- End Constants ---
-
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    onChangeStatus,
-    onDelete,
-    onClone,
-}: {
-    onEdit: () => void
-    onChangeStatus: () => void
-    onDelete: () => void
-    onClone?: () => void
-}) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-    return (
-        <div className="flex items-center justify-center">
-            {/* {onClone && (
-                <Tooltip title="Clone Job Post">
-                    <div
-                        className={classNames(
-                            iconButtonClass,
-                            hoverBgClass,
-                            'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400',
-                        )}
-                        role="button"
-                        onClick={onClone}
-                    >
-                        <TbCopy />
-                    </div>
-                </Tooltip>
-            )} */}
-            <Tooltip title="Change Status">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400',
-                    )}
-                    role="button"
-                    onClick={onChangeStatus}
-                >
-                    <TbSwitchHorizontal />
-                </div>
-            </Tooltip>
-            <Tooltip title="Edit Job Post">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
-            <Tooltip title="Delete Job Post">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    onClick={onDelete}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip>
-        </div>
-    )
+    { id: 'JP001', status: 'open', jobTitle: 'Senior Frontend Engineer', department: 'eng', description: 'Looking for an experienced React developer...', location: 'Remote', experience: '5+ Years', totalVacancy: 1, createdDate: new Date(2023, 10, 1).toISOString() },
+    { id: 'JP002', status: 'open', jobTitle: 'Marketing Content Writer', department: 'mktg', description: 'Create compelling blog posts...', location: 'New York, NY', experience: '2-4 Years', totalVacancy: 2, createdDate: new Date(2023, 10, 3).toISOString() },
+    { id: 'JP003', status: 'draft', jobTitle: 'Product Manager - Mobile', department: 'prod_mgmt', description: 'Define the roadmap...', location: 'Hybrid (London)', experience: '4+ Years', totalVacancy: 1, createdDate: new Date(2023, 10, 5).toISOString() },
+];
+// Add 'prod_mgmt' to JOB_DEPARTMENT_OPTIONS if using this dummy data
+if (!JOB_DEPARTMENT_OPTIONS.find(opt => opt.value === 'prod_mgmt')) {
+    JOB_DEPARTMENT_OPTIONS.push({ value: 'prod_mgmt', label: 'Product Management' });
+    jobDepartmentValues.push('prod_mgmt');
 }
-// --- End ActionColumn ---
 
-// --- JobPostTable Component ---
-const JobPostTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedPosts,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<JobPostItem>[]
-    data: JobPostItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedPosts: JobPostItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: JobPostItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<JobPostItem>[]) => void
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedPosts.some((selected) => selected.id === row.id)
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-            noData={!loading && data.length === 0}
-        />
-    )
-}
-// --- End JobPostTable ---
 
-// --- JobPostSearch Component ---
-type JobPostSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const JobPostSearch = React.forwardRef<HTMLInputElement, JobPostSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                placeholder="Quick Search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-JobPostSearch.displayName = 'JobPostSearch'
-// --- End JobPostSearch ---
+// --- CSV Exporter ---
+const CSV_HEADERS_JOB = ['ID', 'Job Title', 'Status', 'Department', 'Location', 'Experience', 'Vacancies', 'Description', 'Created Date'];
+const CSV_KEYS_JOB: (keyof JobPostItem)[] = ['id', 'jobTitle', 'status', 'department', 'location', 'experience', 'totalVacancy', 'description', 'createdDate'];
 
-// --- JobPostTableTools Component ---
-const JobPostTableTools = ({
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <div className="flex-grow">
-                <JobPostSearch onInputChange={onSearchChange} />
-            </div>
-            <Button icon={<TbFilter />} className=''>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
-        </div>
-    )
-    // Filter button could be added here
-}
-// --- End JobPostTableTools ---
-
-// --- JobPostActionTools Component ---
-const JobPostActionTools = ({ allPosts }: { allPosts: JobPostItem[] }) => {
-    const navigate = useNavigate()
-    const csvData = useMemo(
-        () =>
-            allPosts.map((p) => ({
-                ...p,
-                createdAt: p.createdDate?.toISOString() ?? '',
-            })),
-        [allPosts],
-    )
-    const csvHeaders = [
-        /* ... headers ... */
-    ]
-    const handleAdd = () => navigate('/job-posts/create') // Adjust route
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {' '}
-            {/* <CSVLink ... /> */}{' '}
-            <Button variant="solid" icon={<TbPlus />} onClick={handleAdd} block>
-                {' '}
-                Add New{' '}
-            </Button>{' '}
-        </div>
-    )
-}
-// --- End JobPostActionTools ---
-
-// --- JobPostSelected Component ---
-const JobPostSelected = ({
-    selectedPosts,
-    setSelectedPosts,
-    onDeleteSelected,
-}: {
-    selectedPosts: JobPostItem[]
-    setSelectedPosts: React.Dispatch<React.SetStateAction<JobPostItem[]>>
-    onDeleteSelected: () => void
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
+function exportJobPostsToCsv(filename: string, rows: JobPostItem[]) {
+    if (!rows || !rows.length) { /* ... no data toast ... */ return false; }
+    const preparedRows = rows.map(row => ({
+        ...row,
+        status: JOB_POST_STATUS_OPTIONS.find(s => s.value === row.status)?.label || row.status,
+        department: JOB_DEPARTMENT_OPTIONS.find(d => d.value === row.department)?.label || row.department,
+        createdDate: row.createdDate ? new Date(row.createdDate).toLocaleDateString() : '',
+    }));
+    // ... (Standard exportToCsv logic using preparedRows, CSV_HEADERS_JOB, CSV_KEYS_JOB)
+    const separator = ',';
+    const csvContent =
+        CSV_HEADERS_JOB.join(separator) + '\n' +
+        preparedRows.map((row: any) => CSV_KEYS_JOB.map(k => {
+            let cell: any = row[k];
+            if (cell === null || cell === undefined) cell = '';
+            else cell = String(cell).replace(/"/g, '""');
+            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+            return cell;
+        }).join(separator)).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) { /* ... download logic ... */
+        const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename);
+        link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true;
     }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
+}
 
-    if (selectedPosts.length === 0) return null
 
+// --- ActionColumn Component ---
+const ActionColumn = ({ onEdit, onDelete, onChangeStatus }: { onEdit: () => void; onDelete: () => void; onChangeStatus: () => void; }) => {
+    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
+    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
+    return (
+        <div className="flex items-center justify-center gap-2">
+            <Tooltip title="Edit Job Post"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+            <Tooltip title="Change Status"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400')} role="button" onClick={onChangeStatus}><TbSwitchHorizontal /></div></Tooltip>
+            <Tooltip title="Delete Job Post"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
+        </div>
+    );
+};
+
+// --- JobPostsSearch & JobPostsTableTools (Similar to Units) ---
+type JobPostsSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; }
+const JobPostsSearch = React.forwardRef<HTMLInputElement, JobPostsSearchProps>(
+    ({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Search job posts..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />)
+);
+JobPostsSearch.displayName = 'JobPostsSearch';
+
+type JobPostsTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }
+const JobPostsTableTools = ({ onSearchChange, onFilter, onExport }: JobPostsTableToolsProps) => ( /* ... Same as UnitsTableTools, but with JobPostsSearch ... */
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex-grow"><JobPostsSearch onInputChange={onSearchChange} /></div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        </div>
+    </div>
+);
+
+
+// --- JobPostsTable (Similar to UnitsTable) ---
+type JobPostsTableProps = { /* ... Same props as UnitsTable, but with JobPostItem type ... */
+    columns: ColumnDef<JobPostItem>[]; data: JobPostItem[]; loading: boolean;
+    pagingData: { total: number; pageIndex: number; pageSize: number };
+    selectedItems: JobPostItem[];
+    onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void;
+    onSort: (sort: OnSortParam) => void;
+    onRowSelect: (checked: boolean, row: JobPostItem) => void;
+    onAllRowSelect: (checked: boolean, rows: Row<JobPostItem>[]) => void;
+};
+const JobPostsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: JobPostsTableProps) => ( /* ... DataTable setup ... */
+     <DataTable
+        selectable columns={columns} data={data} loading={loading} pagingData={pagingData}
+        checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)}
+        onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort}
+        onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect}
+        noData={!loading && data.length === 0}
+    />
+);
+
+// --- JobPostsSelectedFooter (Similar to UnitsSelectedFooter) ---
+type JobPostsSelectedFooterProps = { selectedItems: JobPostItem[]; onDeleteSelected: () => void; };
+const JobPostsSelectedFooter = ({ selectedItems, onDeleteSelected }: JobPostsSelectedFooterProps) => { /* ... Same as UnitsSelectedFooter, text changed to "Job Post(s)" ... */
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    if (selectedItems.length === 0) return null;
     return (
         <>
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-            >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            <TbChecks />
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedPosts.length}
-                            </span>
-                            <span>
-                                Job Post{selectedPosts.length > 1 ? 's' : ''}{' '}
-                                selected
-                            </span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-600 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                </div>
-            </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedPosts.length} Job Post${selectedPosts.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-            >
-                <p>
-                    Are you sure you want to delete the selected job post
-                    {selectedPosts.length > 1 ? 's' : ''}? This action cannot be
-                    undone.
-                </p>
-            </ConfirmDialog>
+        <StickyFooter /* ... */ >
+            <div className="flex items-center justify-between w-full px-4 sm:px-8">
+                <span className="flex items-center gap-2">
+                    <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
+                    <span className="font-semibold"> {selectedItems.length} Job Post{selectedItems.length > 1 ? 's' : ''} selected </span>
+                </span>
+                <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={()=>setDeleteConfirmOpen(true)}>Delete Selected</Button>
+            </div>
+        </StickyFooter>
+        <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Job Post(s)`}
+            onClose={()=>setDeleteConfirmOpen(false)} onRequestClose={()=>setDeleteConfirmOpen(false)}
+            onCancel={()=>setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false);}}
+        >
+            <p>Are you sure you want to delete the selected job post(s)?</p>
+        </ConfirmDialog>
         </>
-    )
-}
-// --- End JobPostSelected ---
+    );
+};
+
 
 // --- Main JobPostsListing Component ---
 const JobPostsListing = () => {
-    const navigate = useNavigate()
+    const [jobPostsData, setJobPostsData] = useState<JobPostItem[]>(initialDummyJobPosts);
+    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
 
-    // --- State ---
-    const [isLoading, setIsLoading] = useState(false)
-    const [jobPosts, setJobPosts] =
-        useState<JobPostItem[]>(initialDummyJobPosts)
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<JobPostItem | null>(null);
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isChangingStatus, setIsChangingStatus] = useState(false);
+
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<JobPostItem | null>(null);
+
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
     const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-    const [selectedPosts, setSelectedPosts] = useState<JobPostItem[]>([])
-    // Filter state could be added here
-    // --- End State ---
+        pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'createdDate' }, query: '',
+    });
+    const [selectedItems, setSelectedItems] = useState<JobPostItem[]>([]);
+
+    const formMethods = useForm<JobPostFormData>({
+        resolver: zodResolver(jobPostFormSchema),
+        defaultValues: {
+            jobTitle: '', department: jobDepartmentValues[0] || '', description: '', location: '',
+            experience: '', totalVacancy: 1, status: 'draft',
+        },
+        mode: 'onChange',
+    });
+
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria,
+    });
+
+    // --- CRUD Handlers ---
+    const openAddDrawer = useCallback(() => { formMethods.reset(); setIsAddDrawerOpen(true); }, [formMethods]);
+    const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
+    const openEditDrawer = useCallback((item: JobPostItem) => {
+        setEditingItem(item);
+        formMethods.reset({ // Map item to form data
+            jobTitle: item.jobTitle,
+            department: item.department,
+            description: item.description,
+            location: item.location,
+            experience: item.experience,
+            totalVacancy: item.totalVacancy,
+            status: item.status,
+        });
+        setIsEditDrawerOpen(true);
+    }, [formMethods]);
+    const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingItem(null); }, []);
+
+    const onJobPostFormSubmit = useCallback(async (data: JobPostFormData) => {
+        setIsSubmitting(true); setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+            if (editingItem) {
+                const updatedJobPost: JobPostItem = {
+                    ...editingItem, // Keep id and createdDate
+                    ...data,
+                };
+                setJobPostsData(prev => prev.map(jp => jp.id === updatedJobPost.id ? updatedJobPost : jp));
+                toast.push(<Notification title="Job Post Updated" type="success" />);
+                closeEditDrawer();
+            } else {
+                const newJobPost: JobPostItem = {
+                    ...data,
+                    id: `JP${Date.now()}`,
+                    createdDate: new Date().toISOString(),
+                };
+                setJobPostsData(prev => [newJobPost, ...prev]);
+                toast.push(<Notification title="Job Post Added" type="success" />);
+                closeAddDrawer();
+            }
+        } catch (e: any) { toast.push(<Notification title="Operation Failed" type="danger">{e.message}</Notification>); }
+        finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
+    }, [editingItem, closeAddDrawer, closeEditDrawer]);
+
+    const handleDeleteClick = useCallback((item: JobPostItem) => { /* ... */ setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const onConfirmSingleDelete = useCallback(async () => { /* ... */
+        if (!itemToDelete) return;
+        setIsDeleting(true); setMasterLoadingStatus('loading'); setSingleDeleteConfirmOpen(false);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+            setJobPostsData(prev => prev.filter(jp => jp.id !== itemToDelete!.id));
+            toast.push(<Notification title="Job Post Deleted" type="success">{`Job Post "${itemToDelete.jobTitle}" deleted.`}</Notification>);
+            setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id));
+        } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message}</Notification>); }
+        finally { setIsDeleting(false); setMasterLoadingStatus('idle'); setItemToDelete(null); }
+    }, [itemToDelete]);
+
+    const handleDeleteSelected = useCallback(async () => { /* ... */
+        if (selectedItems.length === 0) return;
+        setIsDeleting(true); setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            const idsToDelete = selectedItems.map(item => item.id);
+            setJobPostsData(prev => prev.filter(jp => !idsToDelete.includes(jp.id)));
+            toast.push(<Notification title="Job Posts Deleted" type="success">{selectedItems.length} post(s) deleted.</Notification>);
+            setSelectedItems([]);
+        } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message}</Notification>); }
+        finally { setIsDeleting(false); setMasterLoadingStatus('idle'); }
+    }, [selectedItems]);
+
+    const handleChangeStatus = useCallback(async (item: JobPostItem) => {
+        // Example: cycle through statuses
+        setIsChangingStatus(true);
+        const currentStatusIndex = JOB_POST_STATUS_OPTIONS.findIndex(s => s.value === item.status);
+        const nextStatus = JOB_POST_STATUS_OPTIONS[(currentStatusIndex + 1) % JOB_POST_STATUS_OPTIONS.length].value;
+        await new Promise(resolve => setTimeout(resolve, 300));
+        try {
+            setJobPostsData(prev => prev.map(jp => jp.id === item.id ? { ...jp, status: nextStatus } : jp));
+            toast.push(<Notification title="Status Changed" type="success">{`Job Post "${item.jobTitle}" status changed to ${JOB_POST_STATUS_OPTIONS.find(s=>s.value === nextStatus)?.label}.`}</Notification>);
+        } catch (e: any) { toast.push(<Notification title="Status Change Failed" type="danger">{e.message}</Notification>); }
+        finally { setIsChangingStatus(false); }
+    }, []);
+
+
+    // --- Filter Handlers ---
+    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
+    const onClearFilters = useCallback(() => { const df = filterFormSchema.parse({}); filterFormMethods.reset(df); setFilterCriteria(df); setTableData(prev => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
+
+    // --- Table Interaction Handlers ---
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: JobPostItem) => { /* ... */ }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobPostItem>[]) => { /* ... */ }, []);
 
     // --- Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...jobPosts]
-
-        // Apply Filtering (if added)
-
-        // Apply Search
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase()
-            processedData = processedData.filter(
-                (j) =>
-                    j.id.toLowerCase().includes(query) ||
-                    j.status.toLowerCase().includes(query) ||
-                    j.jobTitle.toLowerCase().includes(query) ||
-                    j.department.toLowerCase().includes(query) ||
-                    j.description.toLowerCase().includes(query) ||
-                    j.location.toLowerCase().includes(query) ||
-                    j.experience.toLowerCase().includes(query) ||
-                    j.totalVacancy.toString().includes(query),
-            )
-        }
-
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+        let processedData: JobPostItem[] = cloneDeep(jobPostsData);
+        // Apply Filters
+        if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map(s=>s.value); processedData = processedData.filter(item => v.includes(item.status));}
+        if (filterCriteria.filterDepartment?.length) { const v = filterCriteria.filterDepartment.map(d=>d.value); processedData = processedData.filter(item => v.includes(item.department));}
+        // Apply Search Query
+        if (tableData.query && tableData.query.trim() !== '') { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(j => j.jobTitle.toLowerCase().includes(q) || j.department.toLowerCase().includes(q) || j.location.toLowerCase().includes(q) || j.experience.toLowerCase().includes(q) || j.description.toLowerCase().includes(q) || String(j.id).toLowerCase().includes(q) );}
         // Apply Sorting
-        const { order, key } = tableData.sort as OnSortParam
-        if (order && key) {
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                if (key === 'createdDate' && a.createdDate && b.createdDate) {
-                    return order === 'asc'
-                        ? a.createdDate.getTime() - b.createdDate.getTime()
-                        : b.createdDate.getTime() - a.createdDate.getTime()
-                }
-                if (key === 'totalVacancy') {
-                    return order === 'asc'
-                        ? a.totalVacancy - b.totalVacancy
-                        : b.totalVacancy - a.totalVacancy
-                }
+       const { order, key } = tableData.sort as OnSortParam;
+if (order && key) {
+    processedData.sort((a, b) => {
+        const aVal = a[key as keyof JobPostItem];
+        const bVal = b[key as keyof JobPostItem];
 
-                const aValue = a[key as keyof JobPostItem] ?? ''
-                const bValue = b[key as keyof JobPostItem] ?? ''
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
-                }
-                return 0
-            })
-            processedData = sortedData
+        if (key === 'createdDate') { // Specific handling for date
+            const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
+            const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
+            return order === 'asc' ? dateA - dateB : dateB - dateA;
         }
+        if (key === 'totalVacancy') { // Specific handling for number
+            return order === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+        }
+        // General string comparison
+        const aStr = String(aVal ?? '').toLowerCase();
+        const bStr = String(bVal ?? '').toLowerCase();
+        return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+    });
+}
 
-        // Apply Pagination
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const dataTotal = processedData.length
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
-        return { pageData: dataForPage, total: dataTotal }
-    }, [jobPosts, tableData /*, filterData */]) // Add filterData dependency if used
-    // --- End Data Processing ---
+        const dataToExport = [...processedData];
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+    }, [jobPostsData, tableData, filterCriteria]);
 
-    // --- Handlers ---
-    const handleSetTableData = useCallback((data: TableQueries) => {
-        setTableData(data)
-    }, [])
-    const handlePaginationChange = useCallback(
-        (page: number) => {
-            handleSetTableData({ ...tableData, pageIndex: page })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({
-                ...tableData,
-                pageSize: Number(value),
-                pageIndex: 1,
-            })
-            setSelectedPosts([])
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => {
-            handleSetTableData({ ...tableData, query: query, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-    // Filter handlers would go here if filter added
+    const handleExportData = useCallback(() => { exportJobPostsToCsv('job_posts_export.csv', allFilteredAndSortedData); }, [allFilteredAndSortedData]);
 
-    const handleRowSelect = useCallback(
-        (checked: boolean, row: JobPostItem) => {
-            setSelectedPosts((prev) => {
-                if (checked) {
-                    return prev.some((p) => p.id === row.id)
-                        ? prev
-                        : [...prev, row]
-                } else {
-                    return prev.filter((p) => p.id !== row.id)
-                }
-            })
-        },
-        [setSelectedPosts],
-    )
-
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<JobPostItem>[]) => {
-            const rowIds = new Set(rows.map((r) => r.original.id))
-            setSelectedPosts((prev) => {
-                if (checked) {
-                    const originalRows = rows.map((row) => row.original)
-                    const existingIds = new Set(prev.map((p) => p.id))
-                    const newSelection = originalRows.filter(
-                        (p) => !existingIds.has(p.id),
-                    )
-                    return [...prev, ...newSelection]
-                } else {
-                    return prev.filter((p) => !rowIds.has(p.id))
-                }
-            })
-        },
-        [setSelectedPosts],
-    )
-
-    const handleEdit = useCallback(
-        (post: JobPostItem) => {
-            console.log('Edit job post:', post.id)
-            navigate(`/job-posts/edit/${post.id}`) // Adjust route
-        },
-        [navigate],
-    )
-
-    const handleClone = useCallback(
-        (postToClone: JobPostItem) => {
-            console.log('Cloning job post:', postToClone.id)
-            const newId = `JP${Math.floor(Math.random() * 9000) + 1000}`
-            const clonedPost: JobPostItem = {
-                ...postToClone,
-                id: newId,
-                jobTitle: `${postToClone.jobTitle} (Copy)`,
-                status: 'draft',
-                createdDate: new Date(),
-            }
-            setJobPosts((prev) => [clonedPost, ...prev])
-            toast.push(
-                <Notification
-                    title="Job Post Cloned"
-                    type="success"
-                    duration={2000}
-                />,
-            )
-        },
-        [setJobPosts],
-    )
-
-    const handleChangeStatus = useCallback(
-        (post: JobPostItem) => {
-            const statuses: JobPostStatus[] = [
-                'draft',
-                'open',
-                'on_hold',
-                'closed',
-            ]
-            const currentStatusIndex = statuses.indexOf(post.status)
-            const nextStatusIndex = (currentStatusIndex + 1) % statuses.length
-            const newStatus = statuses[nextStatusIndex]
-            console.log(`Changing status of post ${post.id} to ${newStatus}`)
-            setJobPosts((current) =>
-                current.map((p) =>
-                    p.id === post.id ? { ...p, status: newStatus } : p,
-                ),
-            )
-            toast.push(
-                <Notification
-                    title="Status Changed"
-                    type="success"
-                    duration={2000}
-                >{`Job Post '${post.jobTitle}' status changed to ${newStatus}.`}</Notification>,
-            )
-        },
-        [setJobPosts],
-    )
-
-    const handleDelete = useCallback(
-        (postToDelete: JobPostItem) => {
-            console.log('Deleting job post:', postToDelete.id)
-            setJobPosts((current) =>
-                current.filter((p) => p.id !== postToDelete.id),
-            )
-            setSelectedPosts((prev) =>
-                prev.filter((p) => p.id !== postToDelete.id),
-            )
-            toast.push(
-                <Notification
-                    title="Job Post Deleted"
-                    type="success"
-                    duration={2000}
-                >{`Job Post '${postToDelete.jobTitle}' deleted.`}</Notification>,
-            )
-        },
-        [setJobPosts, setSelectedPosts],
-    )
-
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected job posts:',
-            selectedPosts.map((p) => p.id),
-        )
-        const selectedIds = new Set(selectedPosts.map((p) => p.id))
-        setJobPosts((current) => current.filter((p) => !selectedIds.has(p.id)))
-        setSelectedPosts([])
-        toast.push(
-            <Notification
-                title="Job Posts Deleted"
-                type="success"
-                duration={2000}
-            >{`${selectedIds.size} job post(s) deleted.`}</Notification>,
-        )
-    }, [selectedPosts, setJobPosts, setSelectedPosts])
-    // --- End Handlers ---
-
-    // --- Define Columns ---
+    // --- Table Column Definitions ---
     const columns: ColumnDef<JobPostItem>[] = useMemo(
         () => [
-            // { header: 'ID', accessorKey: 'id', ... }, // Optional ID column
+            { header: 'Status', accessorKey: 'status', size: 120, enableSorting: true, cell: props => <Tag className={classNames('text-white capitalize whitespace-nowrap', jobStatusColor[props.getValue<JobPostStatus>()])}>{JOB_POST_STATUS_OPTIONS.find(o=>o.value === props.getValue())?.label}</Tag> },
+            { header: 'Job Title', accessorKey: 'jobTitle', size: 220, enableSorting: true, cell: props => <span className="font-semibold">{props.getValue<string>()}</span> },
+            { header: 'Department', accessorKey: 'department', size: 150, enableSorting: true, cell: props => JOB_DEPARTMENT_OPTIONS.find(o => o.value === props.getValue())?.label || props.getValue() },
+            { header: 'Description', accessorKey: 'description', enableSorting: false, size: 250, cell: props => <Tooltip title={props.getValue<string>()}><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">{props.getValue<string>()}</span></Tooltip> },
+            { header: 'Location', accessorKey: 'location', size: 150, enableSorting: true },
+            { header: 'Experience', accessorKey: 'experience', size: 130, enableSorting: true },
+            { header: 'Vacancies', accessorKey: 'totalVacancy', size: 100, enableSorting: true, meta: { cellClass: "text-center" } },
+            // { header: 'Created Date', accessorKey: 'createdDate', size: 150, enableSorting: true, cell: props => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' },
             {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                width: 120,
-                cell: (props) => {
-                    const { status } = props.row.original
-                    const displayStatus = status
-                        .replace(/_/g, ' ')
-                        .replace(/\b\w/g, (l) => l.toUpperCase())
-                    return (
-                        <Tag
-                            className={`${jobStatusColor[status]} text-white capitalize`}
-                        >
-                            {displayStatus}
-                        </Tag>
-                    )
-                },
-            },
-            {
-                header: 'Job Title',
-                accessorKey: 'jobTitle',
-                size:120,
-                enableSorting: true,
-            },
-            {
-                header: 'Department',
-                accessorKey: 'department',
-                enableSorting: true,
-            },
-            {
-                header: 'Description',
-                accessorKey: 'description',
-                enableSorting: false, // Sorting by long text is usually not helpful
-                size: 300, // You might need to adjust this width
-                cell: (props) => (
-                    <Tooltip title={props.row.original.description} >
-                        {' '}
-                        {/* Tooltip shows full description */}
-                        {/* Span displays truncated text */}
-                        <span className="block whitespace-nowrap overflow-hidden text-ellipsis w-xs md:w-sm lg:w-xs">
-                            {' '}
-                            {/* Adjust max-w-* as needed */}
-                            {props.row.original.description}
-                        </span>
-                    </Tooltip>
-                ),
-            },
-            {
-                header: 'Location',
-                accessorKey: 'location',
-                enableSorting: true,
-            },
-            {
-                header: 'Experience',
-                accessorKey: 'experience',
-                enableSorting: true,
-            },
-            {
-                header: 'Vacancies',
-                accessorKey: 'totalVacancy',
-                enableSorting: true,
-                width: 100,
-            },
-            // { header: 'Created Date', ... }, // Optional
-            {
-                header: 'Action',
-                id: 'action',
-                size: 130,
-                meta : {HeaderClass : "text-center"},
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                        onChangeStatus={() =>
-                            handleChangeStatus(props.row.original)
-                        }
-                        onClone={() => handleClone(props.row.original)} // Optional
-                    />
-                ),
+                header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 140,
+                cell: props => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} />,
             },
         ],
-        [handleEdit, handleDelete, handleChangeStatus, handleClone], // Update dependencies
-    )
-    // --- End Define Columns ---
+        [openEditDrawer, handleDeleteClick, handleChangeStatus]
+    );
 
-    // --- Render Main Component ---
+    // --- Render Form for Add/Edit Drawer ---
+    const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <FormItem label="Job Title" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.jobTitle} errorMessage={currentFormMethods.formState.errors.jobTitle?.message}>
+                <Controller name="jobTitle" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbBriefcase/>} placeholder="e.g., Senior Software Engineer" />} />
+            </FormItem>
+             <FormItem label="Job Department" invalid={!!currentFormMethods.formState.errors.department} errorMessage={currentFormMethods.formState.errors.department?.message}>
+                <Controller name="department" control={currentFormMethods.control} render={({ field }) => (
+                    <Select placeholder="Select Department" options={JOB_DEPARTMENT_OPTIONS} value={JOB_DEPARTMENT_OPTIONS.find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                )} />
+            </FormItem>
+            <FormItem label="Status" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
+                <Controller name="status" control={currentFormMethods.control} render={({ field }) => (
+                    <Select placeholder="Select Status" options={JOB_POST_STATUS_OPTIONS} value={JOB_POST_STATUS_OPTIONS.find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                )} />
+            </FormItem>
+            <FormItem label="Location" invalid={!!currentFormMethods.formState.errors.location} errorMessage={currentFormMethods.formState.errors.location?.message}>
+                <Controller name="location" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbMapPin/>} placeholder="e.g., Remote, New York" />} />
+            </FormItem>
+            <FormItem label="Experience Required" invalid={!!currentFormMethods.formState.errors.experience} errorMessage={currentFormMethods.formState.errors.experience?.message}>
+                <Controller name="experience" control={currentFormMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., 2+ Years, Entry Level" />} />
+            </FormItem>
+            <FormItem label="Total Vacancies" invalid={!!currentFormMethods.formState.errors.totalVacancy} errorMessage={currentFormMethods.formState.errors.totalVacancy?.message}>
+                <Controller name="totalVacancy" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="number" prefix={<TbUsers/>} min={1} />} />
+            </FormItem>
+             <FormItem label="Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.description} errorMessage={currentFormMethods.formState.errors.description?.message}>
+                <Controller name="description" control={currentFormMethods.control} render={({ field }) => <Textarea {...field} rows={5} placeholder="Detailed job description, responsibilities, qualifications..." />} />
+            </FormItem>
+        </div>
+    );
+
+
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Job Posts Listing</h5>
-                    <JobPostActionTools allPosts={jobPosts} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbBriefcase /> Job Posts Management</h3>
+                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Job Post</Button>
+                    </div>
+                    <JobPostsTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+                    <div className="mt-4">
+                        <JobPostsTable
+                            columns={columns} data={pageData}
+                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting || isChangingStatus}
+                            pagingData={{total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number}}
+                            selectedItems={selectedItems}
+                            onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
+                            onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect}
+                            
+                        />
+                    </div>
+                </AdaptiveCard>
+            </Container>
 
-                {/* Tools */}
-                <div className="mb-4">
-                    <JobPostTableTools onSearchChange={handleSearchChange} />
-                    {/* Filter component could be added here */}
-                </div>
+            <JobPostsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} />
 
-                {/* Active Filters Display (if filter added) */}
-                {/* <ActiveFiltersDisplay ... /> */}
+            <Drawer
+                title={editingItem ? "Edit Job Post" : "Add New Job Post"}
+                isOpen={isAddDrawerOpen || isEditDrawerOpen}
+                onClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                width={700}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
+                        <Button size="sm" variant="solid" form="jobPostForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
+                            {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add Job Post')}
+                        </Button>
+                    </div>
+                }
+            >
+                <Form id="jobPostForm" onSubmit={formMethods.handleSubmit(onJobPostFormSubmit)} className="flex flex-col gap-4">
+                    {renderDrawerForm(formMethods)}
+                </Form>
+            </Drawer>
 
-                {/* Table */}
-                <div className="flex-grow overflow-auto">
-                    <JobPostTable
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{
-                            total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedPosts={selectedPosts}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
+            <Drawer
+                title="Filter Job Posts"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                footer={
+                     <div className="flex justify-between w-full">
+                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
+                        <div>
+                            <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button>
+                            <Button size="sm" variant="solid" form="filterJobPostForm" type="submit">Apply Filters</Button>
+                        </div>
+                    </div>
+                }
+            >
+                <Form id="filterJobPostForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Filter by Status">
+                        <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Any Status" options={JOB_POST_STATUS_OPTIONS}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />
+                        )} />
+                    </FormItem>
+                     <FormItem label="Filter by Department">
+                        <Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Any Department" options={JOB_DEPARTMENT_OPTIONS}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />
+                        )} />
+                    </FormItem>
+                    {/* Add more filters here: Location (Input), Experience (Input or Select) */}
+                </Form>
+            </Drawer>
 
-            {/* Selected Footer */}
-            <JobPostSelected
-                selectedPosts={selectedPosts}
-                setSelectedPosts={setSelectedPosts}
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
-    )
-}
-// --- End Main Component ---
+            <ConfirmDialog
+                isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Job Post"
+                onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onConfirm={onConfirmSingleDelete} loading={isDeleting}
+            >
+                <p>Are you sure you want to delete the job post "<strong>{itemToDelete?.jobTitle}</strong>"?</p>
+            </ConfirmDialog>
+        </>
+    );
+};
 
-export default JobPostsListing
-
-// Helper Function
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//     return classes.filter(Boolean).join(' ');
-// }
+export default JobPostsListing;

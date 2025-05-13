@@ -1,1035 +1,434 @@
-// src/views/your-path/AutoEmailTemplatesListing.tsx (Complete Code)
+// src/views/your-path/AutoEmailTemplatesListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, Suspense, lazy } from 'react'
-import { Link, useNavigate } from 'react-router-dom' // Ensure react-router-dom is installed
-import cloneDeep from 'lodash/cloneDeep' // Ensure lodash is installed
-import classNames from 'classnames' // Ensure classnames is installed
-import { useForm, Controller } from 'react-hook-form' // For filter form
-import { zodResolver } from '@hookform/resolvers/zod' // For filter form
-import { z } from 'zod' // For filter form
-import type { ZodType } from 'zod' // For filter form
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
+// import { Link, useNavigate } from 'react-router-dom';
+import cloneDeep from 'lodash/cloneDeep';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import classNames from 'classnames';
 
-// UI Components (Ensure these paths are correct for your project)
-import AdaptiveCard from '@/components/shared/AdaptiveCard'
-import Container from '@/components/shared/Container'
-import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag'
-import Button from '@/components/ui/Button'
-import Dialog from '@/components/ui/Dialog'
-import Avatar from '@/components/ui/Avatar'
-import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast' // Ensure toast setup exists
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import Checkbox from '@/components/ui/Checkbox' // For filter form
-// import Input from '@/components/ui/Input'; // Not currently needed for filter
-import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // For filter form
-import Badge from '@/components/ui/Badge' // Added Badge import
+// UI Components
+import AdaptiveCard from '@/components/shared/AdaptiveCard';
+import Container from '@/components/shared/Container';
+import DataTable from '@/components/shared/DataTable';
+import Tooltip from '@/components/ui/Tooltip';
+import Button from '@/components/ui/Button';
+import Notification from '@/components/ui/Notification';
+import toast from '@/components/ui/toast';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import StickyFooter from '@/components/shared/StickyFooter';
+import DebouceInput from '@/components/shared/DebouceInput';
+import Select from '@/components/ui/Select';
+import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui'; // Added Tag if needed for status (not in current type)
 
 // Icons
 import {
-    TbPencil,
-    TbCopy, // Optional: Clone action
-    // TbSwitchHorizontal, // No status field in this version
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbCloudDownload,
-    TbPlus,
-    TbFilter, // Filter Icon
-    TbX, // Icon for dismissing tags
-    TbMailForward, // Icon for add button
-    TbFileText, // Icon for Avatar placeholder
-    TbCloudUpload,
-} from 'react-icons/tb' // Ensure react-icons is installed
+    TbPencil, TbTrash, TbChecks, TbSearch, TbFilter, TbPlus, TbCloudUpload,
+    TbMailBolt,
+    TbKey, // Icon for Auto Email Templates
+} from 'react-icons/tb';
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common' // Ensure this type path is correct
+import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
+import type { TableQueries } from '@/@types/common';
+// Redux (Optional)
+// import { useAppDispatch, useAppSelector } from '@/reduxtool/store';
+// import { getAutoEmailTemplatesAction, addAutoEmailTemplateAction, ... } from '@/reduxtool/autoEmailTemplate/middleware';
+// import { autoEmailTemplateSelector } from '@/reduxtool/autoEmailTemplate/autoEmailTemplateSlice';
 
-// --- Lazy Load CSVLink ---
-const CSVLink = lazy(() =>
-    import('react-csv').then((module) => ({ default: module.CSVLink })),
-)
-// --- End Lazy Load ---
-
-// --- Define Item Type ---
+// --- Define Item Type & Constants ---
 export type AutoEmailTemplateItem = {
-    id: string
-    emailType: string
-    categoryName: string | null
-    departmentName: string | null
-    createdDate?: Date
-}
-// --- End Item Type ---
+    id: string | number;
+    emailType: string;    // e.g., "Welcome Email", "Password Reset"
+    templateKey: string;  // Unique key for the template, e.g., "USER_WELCOME_V1", "ORDER_CONFIRMATION_CUSTOMER"
+    categoryName: string; // Key for category dropdown
+    departmentName: string; // Key for department dropdown
+    // status?: 'active' | 'inactive'; // Optional: if you want a status
+};
 
-// --- Define Filter Schema ---
-const filterValidationSchema = z.object({
-    categoryName: z.array(z.string()).default([]),
-    departmentName: z.array(z.string()).default([]),
-})
+// --- Dropdown Options (Replace with actual data or fetch from API) ---
+const CATEGORY_OPTIONS_AET: { value: string, label: string }[] = [
+    { value: 'onboarding', label: 'Onboarding' }, { value: 'transactional', label: 'Transactional' },
+    { value: 'marketing', label: 'Marketing Promotion' }, { value: 'support', label: 'Support & Ticketing' },
+    { value: 'internal', label: 'Internal Notifications' },
+];
+const categoryValuesAET = CATEGORY_OPTIONS_AET.map(c => c.value) as [string, ...string[]];
 
-type FilterFormSchema = z.infer<typeof filterValidationSchema>
-// --- End Filter Schema ---
+const DEPARTMENT_OPTIONS_AET: { value: string, label: string }[] = [
+    { value: 'all', label: 'All Departments' }, // Generic option
+    { value: 'marketing_dept', label: 'Marketing Department' },
+    { value: 'sales_dept', label: 'Sales Department' },
+    { value: 'hr_dept', label: 'Human Resources' },
+    { value: 'support_dept', label: 'Customer Support' },
+    { value: 'it_dept', label: 'IT Department' },
+];
+const departmentValuesAET = DEPARTMENT_OPTIONS_AET.map(d => d.value) as [string, ...string[]];
 
-// --- Constants ---
+// --- Zod Schema for Add/Edit Form ---
+const autoEmailTemplateFormSchema = z.object({
+    emailType: z.string().min(1, 'Email Type is required.').max(100, "Email Type too long."),
+    templateKey: z.string().min(1, 'Template Key is required.')
+                      .max(50, "Template Key too long.")
+                      .regex(/^[A-Z0-9_]+$/, "Key must be uppercase alphanumeric with underscores."),
+    categoryName: z.enum(categoryValuesAET, { errorMap: () => ({ message: 'Please select a category.'}) }),
+    departmentName: z.enum(departmentValuesAET, { errorMap: () => ({ message: 'Please select a department.'}) }),
+    // status: z.enum(['active', 'inactive']).optional(), // If status is added
+});
+type AutoEmailTemplateFormData = z.infer<typeof autoEmailTemplateFormSchema>;
+
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
+    filterEmailTypes: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterTemplateKeys: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterCategories: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterDepartments: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
+
+// --- Initial Dummy Data ---
 const initialDummyAutoTemplates: AutoEmailTemplateItem[] = [
-    {
-        id: 'AUTOET001',
-        emailType: 'Welcome Email',
-        categoryName: 'Onboarding',
-        departmentName: 'Marketing',
-        createdDate: new Date(2023, 9, 1),
-    },
-    {
-        id: 'AUTOET002',
-        emailType: 'Password Reset Confirmation',
-        categoryName: 'Transactional',
-        departmentName: null,
-        createdDate: new Date(2023, 8, 15),
-    },
-    {
-        id: 'AUTOET003',
-        emailType: 'Order Shipped Notification',
-        categoryName: 'Transactional',
-        departmentName: 'Logistics',
-        createdDate: new Date(2023, 7, 20),
-    },
-    {
-        id: 'AUTOET004',
-        emailType: 'Invoice Attached',
-        categoryName: 'Transactional',
-        departmentName: 'Finance',
-        createdDate: new Date(2023, 10, 1),
-    },
-    {
-        id: 'AUTOET005',
-        emailType: 'Abandoned Cart Reminder',
-        categoryName: 'Marketing',
-        departmentName: 'Marketing',
-        createdDate: new Date(2023, 9, 25),
-    },
-    {
-        id: 'AUTOET006',
-        emailType: 'Support Ticket Created',
-        categoryName: 'Support',
-        departmentName: 'Support',
-        createdDate: new Date(2023, 8, 10),
-    },
-    {
-        id: 'AUTOET007',
-        emailType: 'Internal Policy Update',
-        categoryName: 'Internal',
-        departmentName: 'HR',
-        createdDate: new Date(2023, 10, 5),
-    },
-    {
-        id: 'AUTOET008',
-        emailType: 'Subscription Renewal Success',
-        categoryName: 'Transactional',
-        departmentName: 'Billing',
-        createdDate: new Date(2023, 9, 5),
-    },
-    {
-        id: 'AUTOET009',
-        emailType: 'Feature Update Newsletter',
-        categoryName: 'Marketing',
-        departmentName: 'Product',
-        createdDate: new Date(2023, 10, 8),
-    },
-    {
-        id: 'AUTOET010',
-        emailType: 'Password Change Confirmation',
-        categoryName: 'Transactional',
-        departmentName: null,
-        createdDate: new Date(2023, 10, 9),
-    },
-]
+    { id: 'AET001', emailType: 'Welcome New User', templateKey: 'WELCOME_NEW_USER_V1', categoryName: 'onboarding', departmentName: 'marketing_dept' },
+    { id: 'AET002', emailType: 'Password Reset Request', templateKey: 'PASSWORD_RESET_REQUEST', categoryName: 'transactional', departmentName: 'it_dept' },
+    { id: 'AET003', emailType: 'Order Confirmation', templateKey: 'ORDER_CONFIRM_CUSTOMER_V2', categoryName: 'transactional', departmentName: 'sales_dept' },
+    { id: 'AET004', emailType: 'Weekly Newsletter', templateKey: 'NEWSLETTER_WEEKLY_STANDARD', categoryName: 'marketing', departmentName: 'marketing_dept' },
+];
 
-// Extract unique categories and departments for filter options
-const uniqueCategories = Array.from(
-    new Set(
-        initialDummyAutoTemplates
-            .map((t) => t.categoryName)
-            .filter((c): c is string => c !== null),
-    ),
-).sort()
-const uniqueDepartments = Array.from(
-    new Set(
-        initialDummyAutoTemplates
-            .map((t) => t.departmentName)
-            .filter((d): d is string => d !== null),
-    ),
-).sort()
+// --- CSV Exporter ---
+const CSV_HEADERS_AET = ['ID', 'Email Type', 'Template Key', 'Category', 'Department'];
+const CSV_KEYS_AET: (keyof AutoEmailTemplateItem)[] = ['id', 'emailType', 'templateKey', 'categoryName', 'departmentName'];
 
-// --- End Constants ---
+function exportAutoEmailTemplatesToCsv(filename: string, rows: AutoEmailTemplateItem[]) {
+    if (!rows || !rows.length) { /* ... no data toast ... */ return false; }
+    const preparedRows = rows.map(row => ({
+        ...row,
+        categoryName: CATEGORY_OPTIONS_AET.find(c => c.value === row.categoryName)?.label || row.categoryName,
+        departmentName: DEPARTMENT_OPTIONS_AET.find(d => d.value === row.departmentName)?.label || row.departmentName,
+    }));
+    // ... (Standard exportToCsv logic using preparedRows, CSV_HEADERS_AET, CSV_KEYS_AET)
+    const separator = ',';
+    const csvContent = CSV_HEADERS_AET.join(separator) + '\n' + preparedRows.map((row: any) => CSV_KEYS_AET.map(k => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ''; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) { /* ... download logic ... */ const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
+}
 
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    onClone,
-    // onChangeStatus, // Removed
-    onDelete,
-}: {
-    onEdit: () => void
-    onClone?: () => void
-    // onChangeStatus?: () => void;
-    onDelete: () => void
-}) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-
+// --- ActionColumn Component ---
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => {
+    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
+    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
     return (
-        <div className="flex items-center justify-center">
-            {onClone && (
-                <Tooltip title="Clone Template">
-                    <div
-                        className={classNames(
-                            iconButtonClass,
-                            hoverBgClass,
-                            'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400',
-                        )}
-                        role="button"
-                        onClick={onClone}
-                    >
-                        <TbCopy />
-                    </div>
-                </Tooltip>
-            )}
-            {/* Status change removed */}
-            <Tooltip title="Edit Template">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
-            <Tooltip title="Delete Template">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    onClick={onDelete}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip>
+        <div className="flex items-center justify-center gap-3">
+            <Tooltip title="Edit Template"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+            <Tooltip title="Delete Template"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
         </div>
-    )
-}
-// --- End ActionColumn ---
+    );
+};
 
-// --- TemplateTable Component ---
-const TemplateTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedTemplates,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<AutoEmailTemplateItem>[]
-    data: AutoEmailTemplateItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedTemplates: AutoEmailTemplateItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: AutoEmailTemplateItem) => void
-    onAllRowSelect: (
-        checked: boolean,
-        rows: Row<AutoEmailTemplateItem>[],
-    ) => void
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedTemplates.some((selected) => selected.id === row.id)
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-            noData={!loading && data.length === 0}
-        />
-    )
-}
-// --- End TemplateTable ---
+// --- AutoEmailTemplatesSearch & TableTools (Similar to Units) ---
+type AutoEmailTemplatesSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
+const AutoEmailTemplatesSearch = React.forwardRef<HTMLInputElement, AutoEmailTemplatesSearchProps>(
+    ({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Search templates (type, key)..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />)
+);
+AutoEmailTemplatesSearch.displayName = 'AutoEmailTemplatesSearch';
 
-// --- TemplateSearch Component ---
-type TemplateSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const TemplateSearch = React.forwardRef<HTMLInputElement, TemplateSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                placeholder="Quick Search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-TemplateSearch.displayName = 'TemplateSearch'
-// --- End TemplateSearch ---
+type AutoEmailTemplatesTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
+const AutoEmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport }: AutoEmailTemplatesTableToolsProps) => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex-grow"><AutoEmailTemplatesSearch onInputChange={onSearchChange} /></div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        </div>
+    </div>
+);
 
-// --- TemplateFilter Component ---
-const TemplateFilter = ({
-    filterData,
-    setFilterData,
-}: {
-    filterData: FilterFormSchema
-    setFilterData: (data: FilterFormSchema) => void
-}) => {
-    const [dialogIsOpen, setIsOpen] = useState(false)
-    const openDialog = () => setIsOpen(true)
-    const onDialogClose = () => setIsOpen(false)
+// --- AutoEmailTemplatesTable (Similar to UnitsTable) ---
+type AutoEmailTemplatesTableProps = { /* ... Same props as UnitsTable, but with AutoEmailTemplateItem type ... */
+    columns: ColumnDef<AutoEmailTemplateItem>[]; data: AutoEmailTemplateItem[]; loading: boolean;
+    pagingData: { total: number; pageIndex: number; pageSize: number };
+    selectedItems: AutoEmailTemplateItem[];
+    onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void;
+    onSort: (sort: OnSortParam) => void;
+    onRowSelect: (checked: boolean, row: AutoEmailTemplateItem) => void;
+    onAllRowSelect: (checked: boolean, rows: Row<AutoEmailTemplateItem>[]) => void;
+};
+const AutoEmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: AutoEmailTemplatesTableProps) => ( /* ... DataTable setup ... */
+     <DataTable
+        selectable columns={columns} data={data} loading={loading} pagingData={pagingData}
+        checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)}
+        onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort}
+        onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect}
+        noData={!loading && data.length === 0}
+    />
+);
 
-    const { control, handleSubmit, reset } = useForm<FilterFormSchema>({
-        defaultValues: filterData,
-        resolver: zodResolver(filterValidationSchema),
-    })
-
-    React.useEffect(() => {
-        reset(filterData)
-    }, [filterData, reset])
-
-    const onSubmit = (values: FilterFormSchema) => {
-        setFilterData(values)
-        onDialogClose()
-    }
-    const handleReset = () => {
-        const defaultVals = filterValidationSchema.parse({})
-        reset(defaultVals)
-        // Apply reset immediately
-        setFilterData(defaultVals)
-        onDialogClose()
-    }
-
-    // Calculate active filter count
-    const activeFilterCount =
-        (filterData.categoryName?.length || 0) +
-        (filterData.departmentName?.length || 0)
-
+// --- AutoEmailTemplatesSelectedFooter (Similar to UnitsSelectedFooter) ---
+type AutoEmailTemplatesSelectedFooterProps = { selectedItems: AutoEmailTemplateItem[]; onDeleteSelected: () => void; };
+const AutoEmailTemplatesSelectedFooter = ({ selectedItems, onDeleteSelected }: AutoEmailTemplatesSelectedFooterProps) => { /* ... Same as UnitsSelectedFooter, text changed to "Template(s)" ... */
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    if (selectedItems.length === 0) return null;
     return (
         <>
-            <Button
-                icon={<TbFilter />}
-                onClick={openDialog}
-                className="relative" // Needed for badge positioning
-            >
-                <span>Filter</span>
-                {activeFilterCount > 0 && (
-                    <Badge
-                        content={activeFilterCount}
-                        className="absolute -top-2 -right-2" // Position the badge
-                        innerClass="text-xs"
-                    />
-                )}
-            </Button>
-            <Dialog
-                isOpen={dialogIsOpen}
-                onClose={onDialogClose}
-                onRequestClose={onDialogClose}
-            >
-                <h4 className="mb-4">Filter Templates</h4>
-                <Form onSubmit={handleSubmit(onSubmit)}>
-                    <UiFormItem label="Category" className="mb-4">
-                        {' '}
-                        {/* Add margin between sections */}
-                        <Controller
-                            name="categoryName"
-                            control={control}
-                            render={({ field }) => (
-                                <Checkbox.Group
-                                    vertical
-                                    value={field.value || []}
-                                    onChange={field.onChange}
-                                >
-                                    {uniqueCategories.map((cat) => (
-                                        <Checkbox
-                                            key={cat}
-                                            value={cat}
-                                            className="mb-1"
-                                        >
-                                            {cat}
-                                        </Checkbox>
-                                    ))}
-                                </Checkbox.Group>
-                            )}
-                        />
-                    </UiFormItem>
-                    <UiFormItem label="Department">
-                        <Controller
-                            name="departmentName"
-                            control={control}
-                            render={({ field }) => (
-                                <Checkbox.Group
-                                    vertical
-                                    value={field.value || []}
-                                    onChange={field.onChange}
-                                >
-                                    {uniqueDepartments.map((dept) => (
-                                        <Checkbox
-                                            key={dept}
-                                            value={dept}
-                                            className="mb-1"
-                                        >
-                                            {dept}
-                                        </Checkbox>
-                                    ))}
-                                </Checkbox.Group>
-                            )}
-                        />
-                    </UiFormItem>
-
-                    <div className="flex justify-end items-center gap-2 mt-6">
-                        <Button type="button" onClick={handleReset}>
-                            {' '}
-                            Reset{' '}
-                        </Button>
-                        <Button type="submit" variant="solid">
-                            {' '}
-                            Apply Filters{' '}
-                        </Button>
-                    </div>
-                </Form>
-            </Dialog>
-        </>
-    )
-}
-// --- End TemplateFilter ---
-
-// --- TemplateTableTools Component ---
-const TemplateTableTools = ({
-    onSearchChange,
-    filterData,
-    setFilterData,
-    allAutoEmailTemplates
-}: {
-    onSearchChange: (query: string) => void
-    filterData: FilterFormSchema
-    setFilterData: (data: FilterFormSchema) => void
-    allAutoEmailTemplates: AutoEmailTemplateItem[]
-}) => {
-
-    // Prepare data for CSV
-    const csvData = useMemo(
-        () =>
-            allAutoEmailTemplates.map((s) => ({
-                id: s.id,
-                emailType: s.emailType,
-                categoryName: s.categoryName,
-                departmentName: s.departmentName,
-            })),
-        [allAutoEmailTemplates],
-    )
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Email Type', key: 'emailType' },
-        { label: 'Category', key: 'categoryName' },
-        { label: 'Department', key: 'departmentName' },
-    ]
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            {' '}
-            {/* Increased gap */}
-            <div className="flex-grow">
-                <TemplateSearch onInputChange={onSearchChange} />
+        <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
+            <div className="flex items-center justify-between w-full px-4 sm:px-8">
+                <span className="flex items-center gap-2">
+                    <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
+                    <span className="font-semibold"> {selectedItems.length} Template{selectedItems.length > 1 ? 's' : ''} selected </span>
+                </span>
+                <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={()=>setDeleteConfirmOpen(true)}>Delete Selected</Button>
             </div>
-            <div className="flex-shrink-0">
-                <TemplateFilter
-                    filterData={filterData}
-                    setFilterData={setFilterData}
-                />
-            </div>
-            <Suspense fallback={<Button loading>Loading Export...</Button>}>
-                <CSVLink
-                    filename="AutoEmailTemplates.csv"
-                    data={csvData}
-                    headers={csvHeaders}
-                >
-                    <Button icon={<TbCloudUpload/>}>Export</Button>
-                </CSVLink>
-            </Suspense>
-        </div>
-    )
-}
-// --- End TemplateTableTools ---
-
-// --- ActiveFiltersDisplay Component ---
-const ActiveFiltersDisplay = ({
-    filterData,
-    onRemoveFilter,
-    onClearAll,
-}: {
-    filterData: FilterFormSchema
-    onRemoveFilter: (key: keyof FilterFormSchema, value: string) => void
-    onClearAll: () => void
-}) => {
-    const activeCategories = filterData.categoryName || []
-    const activeDepartments = filterData.departmentName || []
-    const hasActiveFilters =
-        activeCategories.length > 0 || activeDepartments.length > 0
-
-    if (!hasActiveFilters) {
-        return null
-    }
-
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 pt-2 border-t border-gray-200 dark:border-gray-700 mt-4">
-            {' '}
-            {/* Added border/padding */}
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">
-                Active Filters:
-            </span>
-            {activeCategories.map((cat) => (
-                <Tag
-                    key={`cat-${cat}`}
-                    prefix
-                    className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500"
-                >
-                    {cat}
-                    <TbX
-                        className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-                        onClick={() => onRemoveFilter('categoryName', cat)}
-                    />
-                </Tag>
-            ))}
-            {activeDepartments.map((dept) => (
-                <Tag
-                    key={`dept-${dept}`}
-                    prefix
-                    className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500"
-                >
-                    {dept}
-                    <TbX
-                        className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-                        onClick={() => onRemoveFilter('departmentName', dept)}
-                    />
-                </Tag>
-            ))}
-            <Button
-                size="xs"
-                variant="plain"
-                className="text-red-600 hover:text-red-500 hover:underline ml-auto"
-                onClick={onClearAll}
-            >
-                {' '}
-                Clear All{' '}
-            </Button>
-        </div>
-    )
-}
-// --- End ActiveFiltersDisplay ---
-
-// --- TemplateActionTools Component ---
-const TemplateActionTools = ({
-    allTemplates,
-}: {
-    allTemplates: AutoEmailTemplateItem[]
-}) => {
-    const navigate = useNavigate()
-    const csvData = useMemo(
-        () =>
-            allTemplates.map((t) => ({
-                id: t.id,
-                emailType: t.emailType,
-                categoryName: t.categoryName ?? 'N/A',
-                departmentName: t.departmentName ?? 'N/A',
-                createdDate: t.createdDate?.toISOString() ?? '',
-            })),
-        [allTemplates],
-    )
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Email Type', key: 'emailType' },
-        { label: 'Category', key: 'categoryName' },
-        { label: 'Department', key: 'departmentName' },
-        { label: 'Created Date', key: 'createdDate' },
-    ]
-    const handleAdd = () => navigate('/auto-email-templates/create') // Adjust route
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {' '}
-            {/* <CSVLink ... /> */}{' '}
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={handleAdd}
-                block
-            >
-                {' '}
-                Add New{' '}
-            </Button>{' '}
-        </div>
-    )
-}
-// --- End TemplateActionTools ---
-
-// --- TemplateSelected Component ---
-const TemplateSelected = ({
-    selectedTemplates,
-    setSelectedTemplates,
-    onDeleteSelected,
-}: {
-    selectedTemplates: AutoEmailTemplateItem[]
-    setSelectedTemplates: React.Dispatch<
-        React.SetStateAction<AutoEmailTemplateItem[]>
-    >
-    onDeleteSelected: () => void
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
-    }
-
-    if (selectedTemplates.length === 0) return null
-
-    return (
-        <>
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-            >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            <TbChecks />
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedTemplates.length}
-                            </span>
-                            <span>
-                                Template
-                                {selectedTemplates.length > 1 ? 's' : ''}{' '}
-                                selected
-                            </span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-600 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                </div>
-            </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedTemplates.length} Template${selectedTemplates.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-            >
-                <p>
-                    Are you sure you want to delete the selected template
-                    {selectedTemplates.length > 1 ? 's' : ''}? This action
-                    cannot be undone.
-                </p>
-            </ConfirmDialog>
+        </StickyFooter>
+        <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Template(s)`}
+            onClose={()=>setDeleteConfirmOpen(false)} onRequestClose={()=>setDeleteConfirmOpen(false)}
+            onCancel={()=>setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false);}}
+        >
+            <p>Are you sure you want to delete the selected template(s)?</p>
+        </ConfirmDialog>
         </>
-    )
-}
-// --- End TemplateSelected ---
+    );
+};
 
 // --- Main AutoEmailTemplatesListing Component ---
 const AutoEmailTemplatesListing = () => {
-    const navigate = useNavigate()
-
-    // --- State ---
-    const [isLoading, setIsLoading] = useState(false)
-    const [templates, setTemplates] = useState<AutoEmailTemplateItem[]>(
-        initialDummyAutoTemplates,
-    )
+    const [autoEmailTemplatesData, setAutoEmailTemplatesData] = useState<AutoEmailTemplateItem[]>(initialDummyAutoTemplates);
+    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<AutoEmailTemplateItem | null>(null);
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<AutoEmailTemplateItem | null>(null);
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
     const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-    const [selectedTemplates, setSelectedTemplates] = useState<
-        AutoEmailTemplateItem[]
-    >([])
-    const [filterData, setFilterData] = useState<FilterFormSchema>(
-        filterValidationSchema.parse({}),
-    )
-    // --- End State ---
+        pageIndex: 1, pageSize: 10, sort: { order: 'asc', key: 'emailType' }, query: '',
+    });
+    const [selectedItems, setSelectedItems] = useState<AutoEmailTemplateItem[]>([]);
 
-    // --- Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...templates]
+    const formMethods = useForm<AutoEmailTemplateFormData>({
+        resolver: zodResolver(autoEmailTemplateFormSchema),
+        defaultValues: { emailType: '', templateKey: '', categoryName: categoryValuesAET[0], departmentName: departmentValuesAET[0] },
+        mode: 'onChange',
+    });
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria,
+    });
 
-        // Apply Filtering
-        if (filterData.categoryName && filterData.categoryName.length > 0) {
-            const categorySet = new Set(filterData.categoryName)
-            processedData = processedData.filter(
-                (t) => t.categoryName && categorySet.has(t.categoryName),
-            )
-        }
-        if (filterData.departmentName && filterData.departmentName.length > 0) {
-            const departmentSet = new Set(filterData.departmentName)
-            processedData = processedData.filter(
-                (t) => t.departmentName && departmentSet.has(t.departmentName),
-            )
-        }
+    const openAddDrawer = useCallback(() => { formMethods.reset(); setIsAddDrawerOpen(true); }, [formMethods]);
+    const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
+    const openEditDrawer = useCallback((item: AutoEmailTemplateItem) => { setEditingItem(item); formMethods.reset(item); setIsEditDrawerOpen(true); }, [formMethods]);
+    const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingItem(null); }, []);
 
-        // Apply Search
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase()
-            processedData = processedData.filter(
-                (t) =>
-                    t.id.toLowerCase().includes(query) ||
-                    t.emailType.toLowerCase().includes(query) ||
-                    (t.categoryName?.toLowerCase().includes(query) ?? false) ||
-                    (t.departmentName?.toLowerCase().includes(query) ?? false),
-            )
-        }
+    const onFormSubmit = useCallback(async (data: AutoEmailTemplateFormData) => {
+        setIsSubmitting(true); setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+            if (editingItem) {
+                const updatedItem: AutoEmailTemplateItem = { ...editingItem, ...data };
+                setAutoEmailTemplatesData(prev => prev.map(t => t.id === updatedItem.id ? updatedItem : t));
+                toast.push(<Notification title="Template Updated" type="success" />);
+                closeEditDrawer();
+            } else {
+                const newItem: AutoEmailTemplateItem = { ...data, id: `AET${Date.now()}` };
+                setAutoEmailTemplatesData(prev => [newItem, ...prev]);
+                toast.push(<Notification title="Template Added" type="success" />);
+                closeAddDrawer();
+            }
+        } catch (e: any) { toast.push(<Notification title="Operation Failed" type="danger">{e.message}</Notification>); }
+        finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
+    }, [editingItem, closeAddDrawer, closeEditDrawer]);
 
-        // Apply Sorting
-        const { order, key } = tableData.sort as OnSortParam
-        if (order && key) {
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                if (key === 'createdDate' && a.createdDate && b.createdDate) {
-                    return order === 'asc'
-                        ? a.createdDate.getTime() - b.createdDate.getTime()
-                        : b.createdDate.getTime() - a.createdDate.getTime()
-                }
-                if (key === 'categoryName' || key === 'departmentName') {
-                    const valA = a[key] ?? ''
-                    const valB = b[key] ?? '' // Treat null as empty string
-                    if (valA === null && valB === null) return 0
-                    if (valA === null) return order === 'asc' ? -1 : 1
-                    if (valB === null) return order === 'asc' ? 1 : -1
-                    // Now both are non-null strings
-                    return order === 'asc'
-                        ? valA.localeCompare(valB)
-                        : valB.localeCompare(valA)
-                }
-                const aValue = a[key as keyof AutoEmailTemplateItem] ?? ''
-                const bValue = b[key as keyof AutoEmailTemplateItem] ?? ''
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
-                }
-                return 0
-            })
-            processedData = sortedData
-        }
+    const handleDeleteClick = useCallback((item: AutoEmailTemplateItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const onConfirmSingleDelete = useCallback(async () => { /* ... (delete logic adapted) ... */
+        if(!itemToDelete) return; setIsDeleting(true); /* ... API call ... */ setAutoEmailTemplatesData(prev => prev.filter(t => t.id !== itemToDelete.id)); toast.push(<Notification title="Deleted" type="success" >Template "{itemToDelete.emailType}" deleted.</Notification>); setSelectedItems(prev => prev.filter(i => i.id !== itemToDelete.id)); setIsDeleting(false); setItemToDelete(null); setSingleDeleteConfirmOpen(false);
+    }, [itemToDelete]);
+    const handleDeleteSelected = useCallback(async () => { /* ... (delete selected logic adapted) ... */
+        if(selectedItems.length === 0) return; setIsDeleting(true); /* ... API call ... */ const ids = selectedItems.map(i=>i.id); setAutoEmailTemplatesData(prev => prev.filter(t => !ids.includes(t.id))); toast.push(<Notification title="Deleted" type="success">{selectedItems.length} templates deleted.</Notification>); setSelectedItems([]); setIsDeleting(false);
+    }, [selectedItems]);
 
-        // Apply Pagination
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const dataTotal = processedData.length
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
+    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
+    const onClearFilters = useCallback(() => { const df = filterFormSchema.parse({}); filterFormMethods.reset(df); setFilterCriteria(df); setTableData(prev => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
 
-        return { pageData: dataForPage, total: dataTotal }
-    }, [templates, tableData, filterData])
-    // --- End Data Processing ---
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: AutoEmailTemplateItem) => { /* ... */ }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AutoEmailTemplateItem>[]) => { /* ... */ }, []);
 
-    // --- Handlers ---
-    const handleSetTableData = useCallback((data: TableQueries) => {
-        setTableData(data)
-    }, [])
-    const handlePaginationChange = useCallback(
-        (page: number) => {
-            handleSetTableData({ ...tableData, pageIndex: page })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({
-                ...tableData,
-                pageSize: Number(value),
-                pageIndex: 1,
-            })
-            setSelectedTemplates([])
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => {
-            handleSetTableData({ ...tableData, query: query, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleApplyFilter = useCallback(
-        (newFilterData: FilterFormSchema) => {
-            setFilterData(newFilterData)
-            handleSetTableData({ ...tableData, pageIndex: 1 })
-            setSelectedTemplates([])
-        },
-        [tableData, handleSetTableData],
-    )
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+        let processedData: AutoEmailTemplateItem[] = cloneDeep(autoEmailTemplatesData);
+        if (filterCriteria.filterEmailTypes?.length) { const v = filterCriteria.filterEmailTypes.map(et=>et.value.toLowerCase()); processedData = processedData.filter(item => v.includes(item.emailType.toLowerCase()));}
+        if (filterCriteria.filterTemplateKeys?.length) { const v = filterCriteria.filterTemplateKeys.map(tk=>tk.value.toLowerCase()); processedData = processedData.filter(item => v.includes(item.templateKey.toLowerCase()));}
+        if (filterCriteria.filterCategories?.length) { const v = filterCriteria.filterCategories.map(c=>c.value); processedData = processedData.filter(item => v.includes(item.categoryName));}
+        if (filterCriteria.filterDepartments?.length) { const v = filterCriteria.filterDepartments.map(d=>d.value); processedData = processedData.filter(item => v.includes(item.departmentName));}
 
-    const handleRemoveFilter = useCallback(
-        (key: keyof FilterFormSchema, value: string) => {
-            setFilterData((prev) => {
-                const currentValues = prev[key] || []
-                const newValues = currentValues.filter((item) => item !== value)
-                const updatedFilterData = { ...prev, [key]: newValues }
-                handleSetTableData({ ...tableData, pageIndex: 1 }) // Trigger data refresh
-                setSelectedTemplates([])
-                return updatedFilterData
-            })
-        },
-        [tableData, handleSetTableData],
-    )
+        if (tableData.query && tableData.query.trim() !== '') { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => String(item.id).toLowerCase().includes(q) || item.emailType.toLowerCase().includes(q) || item.templateKey.toLowerCase().includes(q) || item.categoryName.toLowerCase().includes(q) || item.departmentName.toLowerCase().includes(q));}
+        const { order, key } = tableData.sort as OnSortParam;
+        if (order && key) { processedData.sort((a,b) => { const aVal = a[key as keyof AutoEmailTemplateItem]; const bVal = b[key as keyof AutoEmailTemplateItem]; const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase(); return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr); });}
 
-    const handleClearAllFilters = useCallback(() => {
-        const defaultFilters = filterValidationSchema.parse({})
-        setFilterData(defaultFilters)
-        handleSetTableData({ ...tableData, pageIndex: 1 })
-        setSelectedTemplates([])
-    }, [tableData, handleSetTableData])
+        const dataToExport = [...processedData];
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+    }, [autoEmailTemplatesData, tableData, filterCriteria]);
 
-    const handleRowSelect = useCallback(
-        (checked: boolean, row: AutoEmailTemplateItem) => {
-            setSelectedTemplates((prev) => {
-                if (checked) {
-                    return prev.some((t) => t.id === row.id)
-                        ? prev
-                        : [...prev, row]
-                } else {
-                    return prev.filter((t) => t.id !== row.id)
-                }
-            })
-        },
-        [setSelectedTemplates],
-    )
+    const handleExportData = useCallback(() => { exportAutoEmailTemplatesToCsv('auto_email_templates.csv', allFilteredAndSortedData); }, [allFilteredAndSortedData]);
 
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<AutoEmailTemplateItem>[]) => {
-            const rowIds = new Set(rows.map((r) => r.original.id))
-            setSelectedTemplates((prev) => {
-                if (checked) {
-                    const originalRows = rows.map((row) => row.original)
-                    const existingIds = new Set(prev.map((t) => t.id))
-                    const newSelection = originalRows.filter(
-                        (t) => !existingIds.has(t.id),
-                    )
-                    return [...prev, ...newSelection]
-                } else {
-                    return prev.filter((t) => !rowIds.has(t.id))
-                }
-            })
-        },
-        [setSelectedTemplates],
-    )
+    const emailTypeOptionsForFilter = useMemo(() => autoEmailTemplatesData.map(t => ({label: t.emailType, value: t.emailType})).filter((v,i,a)=>a.findIndex(t=>(t.value === v.value))===i) , [autoEmailTemplatesData]);
+    const templateKeyOptionsForFilter = useMemo(() => autoEmailTemplatesData.map(t => ({label: t.templateKey, value: t.templateKey})).filter((v,i,a)=>a.findIndex(t=>(t.value === v.value))===i) , [autoEmailTemplatesData]);
 
-    const handleEdit = useCallback(
-        (template: AutoEmailTemplateItem) => {
-            console.log('Edit auto template:', template.id)
-            navigate(`/auto-email-templates/edit/${template.id}`)
-        },
-        [navigate],
-    )
 
-    // Clone handler (optional)
-    // const handleClone = useCallback((templateToClone: AutoEmailTemplateItem) => { ... }, [setTemplates]);
-
-    const handleDelete = useCallback(
-        (templateToDelete: AutoEmailTemplateItem) => {
-            console.log('Deleting auto template:', templateToDelete.id)
-            // Add confirmation dialog if needed for single delete
-            setTemplates((current) =>
-                current.filter((t) => t.id !== templateToDelete.id),
-            )
-            setSelectedTemplates((prev) =>
-                prev.filter((t) => t.id !== templateToDelete.id),
-            )
-            toast.push(
-                <Notification
-                    title="Auto Template Deleted"
-                    type="success"
-                    duration={2000}
-                >{`Template '${templateToDelete.emailType}' deleted.`}</Notification>,
-            )
-        },
-        [setTemplates, setSelectedTemplates],
-    )
-
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected auto templates:',
-            selectedTemplates.map((t) => t.id),
-        )
-        const selectedIds = new Set(selectedTemplates.map((t) => t.id))
-        setTemplates((current) => current.filter((t) => !selectedIds.has(t.id)))
-        setSelectedTemplates([])
-        toast.push(
-            <Notification
-                title="Auto Templates Deleted"
-                type="success"
-                duration={2000}
-            >{`${selectedIds.size} template(s) deleted.`}</Notification>,
-        )
-    }, [selectedTemplates, setTemplates, setSelectedTemplates])
-    // --- End Handlers ---
-
-    // --- Define Columns ---
     const columns: ColumnDef<AutoEmailTemplateItem>[] = useMemo(
         () => [
+            { header: 'ID', accessorKey: 'id', size: 100, enableSorting: true },
+            { header: 'Email Type', accessorKey: 'emailType', size: 200, enableSorting: true },
+            { header: 'Template Key', accessorKey: 'templateKey', size: 200, enableSorting: true },
+            { header: 'Category', accessorKey: 'categoryName', size: 150, enableSorting: true, cell: props => CATEGORY_OPTIONS_AET.find(o=>o.value === props.getValue())?.label || props.getValue() },
+            { header: 'Department', accessorKey: 'departmentName', size: 150, enableSorting: true, cell: props => DEPARTMENT_OPTIONS_AET.find(o=>o.value === props.getValue())?.label || props.getValue() },
             {
-                header: 'ID',
-                accessorKey: 'id',
-                enableSorting: true,
-                width: 120,
-            },
-            {
-                header: 'Email Type',
-                accessorKey: 'emailType',
-                enableSorting: true,
-            },
-            {
-                header: 'Category',
-                accessorKey: 'categoryName',
-                enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.categoryName ?? '-'}</span>
-                ),
-            },
-            {
-                header: 'Department',
-                accessorKey: 'departmentName',
-                enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.departmentName ?? '-'}</span>
-                ),
-            },
-            // { header: 'Created Date', accessorKey: 'createdDate', ... }, // Optional
-            {
-                header: 'Action',
-                id: 'action',
-                width: 100,
-                meta : { HeaderClass : "text-center" },
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                        // onClone optional
-                    />
-                ),
+                header: 'Actions', id: 'actions', meta:{ headerClass: "text-center", cellClass: "text-center" }, size: 100,
+                cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
             },
         ],
-        [handleEdit, handleDelete], // Update dependencies
-    )
-    // --- End Define Columns ---
+        [openEditDrawer, handleDeleteClick],
+    );
 
-    // --- Render Main Component ---
+    const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <FormItem label="Email Type" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.emailType} errorMessage={currentFormMethods.formState.errors.emailType?.message}>
+                <Controller name="emailType" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbMailBolt/>} placeholder="e.g., Welcome Email, Monthly Newsletter" />} />
+            </FormItem>
+            <FormItem label="Template Key" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.templateKey} errorMessage={currentFormMethods.formState.errors.templateKey?.message}>
+                <Controller name="templateKey" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbKey/>} placeholder="e.g., USER_WELCOME_V2 (UPPERCASE_WITH_UNDERSCORES)" />} />
+            </FormItem>
+            <FormItem label="Category" invalid={!!currentFormMethods.formState.errors.categoryName} errorMessage={currentFormMethods.formState.errors.categoryName?.message}>
+                <Controller name="categoryName" control={currentFormMethods.control} render={({ field }) => (
+                    <Select placeholder="Select Category" options={CATEGORY_OPTIONS_AET} value={CATEGORY_OPTIONS_AET.find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                )} />
+            </FormItem>
+            <FormItem label="Department" invalid={!!currentFormMethods.formState.errors.departmentName} errorMessage={currentFormMethods.formState.errors.departmentName?.message}>
+                <Controller name="departmentName" control={currentFormMethods.control} render={({ field }) => (
+                    <Select placeholder="Select Department" options={DEPARTMENT_OPTIONS_AET} value={DEPARTMENT_OPTIONS_AET.find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                )} />
+            </FormItem>
+            {/* If status field is added back to AutoEmailTemplateItem & form schema:
+            <FormItem label="Status" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
+                <Controller name="status" control={currentFormMethods.control} render={({ field }) => (
+                    <Select placeholder="Select Status" options={[{value: 'active', label: 'Active'}, {value: 'inactive', label: 'Inactive'}]} value={[{value: 'active', label: 'Active'}, {value: 'inactive', label: 'Inactive'}].find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                )} />
+            </FormItem>
+            */}
+        </div>
+    );
+
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Auto Email Templates</h5>
-                    <TemplateActionTools allTemplates={templates} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbMailBolt /> Auto Email Templates</h3>
+                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Template</Button>
+                    </div>
+                    <AutoEmailTemplatesTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+                    <div className="mt-4">
+                        <AutoEmailTemplatesTable
+                            columns={columns} data={pageData}
+                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
+                            pagingData={{total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number}}
+                            selectedItems={selectedItems}
+                            onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
+                            onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect}
+                        />
+                    </div>
+                </AdaptiveCard>
+            </Container>
 
-                {/* Tools */}
-                <div className="mb-2">
-                    {' '}
-                    {/* Reduced margin */}
-                    <TemplateTableTools
-                        onSearchChange={handleSearchChange}
-                        filterData={filterData}
-                        setFilterData={handleApplyFilter} // Pass filter handler
-                        allAutoEmailTemplates={templates} // Pass data for export
-                    />
-                </div>
+            <AutoEmailTemplatesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} />
 
-                {/* Active Filters Display Area */}
-                <ActiveFiltersDisplay
-                    filterData={filterData}
-                    onRemoveFilter={handleRemoveFilter}
-                    onClearAll={handleClearAllFilters}
-                />
+            <Drawer
+                title={editingItem ? "Edit Auto Email Template" : "Add New Auto Email Template"}
+                isOpen={isAddDrawerOpen || isEditDrawerOpen}
+                onClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                width={700}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
+                        <Button size="sm" variant="solid" form="autoEmailTemplateForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
+                            {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add Template')}
+                        </Button>
+                    </div>
+                }
+            >
+                <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onFormSubmit)} className="flex flex-col gap-4">
+                    {renderDrawerForm(formMethods)}
+                </Form>
+            </Drawer>
 
-                {/* Table */}
-                <div className="flex-grow overflow-auto">
-                    <TemplateTable
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{
-                            total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedTemplates={selectedTemplates}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
+            <Drawer
+                title="Filter Auto Email Templates"
+                isOpen={isFilterDrawerOpen}
+                onClose={closeFilterDrawer}
+                onRequestClose={closeFilterDrawer}
+                width={400}
+                footer={
+                     <div className="flex justify-between w-full">
+                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
+                        <div>
+                            <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button>
+                            <Button size="sm" variant="solid" form="filterAutoEmailTemplateForm" type="submit">Apply Filters</Button>
+                        </div>
+                    </div>
+                }
+            >
+                <Form id="filterAutoEmailTemplateForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Filter by Email Type(s)">
+                        <Controller name="filterEmailTypes" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Any Email Type" options={emailTypeOptionsForFilter}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />
+                        )} />
+                    </FormItem>
+                    <FormItem label="Filter by Template Key(s)">
+                        <Controller name="filterTemplateKeys" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Any Template Key" options={templateKeyOptionsForFilter}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />
+                        )} />
+                    </FormItem>
+                     <FormItem label="Filter by Category">
+                        <Controller name="filterCategories" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Any Category" options={CATEGORY_OPTIONS_AET}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />
+                        )} />
+                    </FormItem>
+                    <FormItem label="Filter by Department">
+                        <Controller name="filterDepartments" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Any Department" options={DEPARTMENT_OPTIONS_AET}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />
+                        )} />
+                    </FormItem>
+                </Form>
+            </Drawer>
 
-            {/* Selected Footer */}
-            <TemplateSelected
-                selectedTemplates={selectedTemplates}
-                setSelectedTemplates={setSelectedTemplates}
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
-    )
-}
-// --- End Main Component ---
+            <ConfirmDialog
+                isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Auto Email Template"
+                onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onConfirm={onConfirmSingleDelete} loading={isDeleting}
+            >
+                <p>Are you sure you want to delete the template "<strong>{itemToDelete?.emailType} - {itemToDelete?.templateKey}</strong>"?</p>
+            </ConfirmDialog>
+        </>
+    );
+};
 
-export default AutoEmailTemplatesListing
-
-// Helper Function
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//     return classes.filter(Boolean).join(' ');
-// }
+export default AutoEmailTemplatesListing;

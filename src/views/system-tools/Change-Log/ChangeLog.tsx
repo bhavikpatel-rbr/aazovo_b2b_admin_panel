@@ -1,821 +1,562 @@
-// src/views/your-path/ChangeLogListing.tsx (New file name)
+// src/views/your-path/ChangeLogListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
+// import { Link, useNavigate } from 'react-router-dom';
 import cloneDeep from 'lodash/cloneDeep';
-import classNames from 'classnames';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { ZodType } from 'zod';
+import classNames from 'classnames';
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
 import Container from '@/components/shared/Container';
 import DataTable from '@/components/shared/DataTable';
 import Tooltip from '@/components/ui/Tooltip';
-import Tag from '@/components/ui/Tag';
 import Button from '@/components/ui/Button';
-import Dialog from '@/components/ui/Dialog';
-import Avatar from '@/components/ui/Avatar';
 import Notification from '@/components/ui/Notification';
 import toast from '@/components/ui/toast';
-import ConfirmDialog from '@/components/shared/ConfirmDialog'; // Keep if delete needed
-import StickyFooter from '@/components/shared/StickyFooter'; // Keep if bulk delete needed
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import StickyFooter from '@/components/shared/StickyFooter';
 import DebouceInput from '@/components/shared/DebouceInput';
-import Checkbox from '@/components/ui/Checkbox';
-import { Form, FormItem as UiFormItem } from '@/components/ui/Form';
-import Badge from '@/components/ui/Badge';
-import DatePicker from '@/components/ui/DatePicker'; // For date range filter
-import { HiOutlineCalendar } from 'react-icons/hi'; // For date picker
-import { TbHistory, TbFilter, TbX, TbUserCircle, TbListDetails } from 'react-icons/tb'; // Icons
-import { Card, Drawer, FormItem, Input, } from '@/components/ui'
+import Select from '@/components/ui/Select';
+import Avatar from '@/components/ui/Avatar';
+import Tag from '@/components/ui/Tag';
+ import Textarea from '@/views/ui-components/forms/Input/Textarea';
+import DatePicker from '@/components/ui/DatePicker'; // For date fields in form & filter
+import { Dialog, Drawer, Form, FormItem, Input } from '@/components/ui';
 
 // Icons
 import {
-    TbPencil, // Edit might not apply to logs
-    // TbTrash, // Delete might be restricted
-    TbEye,   // View Details
-    TbChecks, // Selected Footer (if selectable)
-    TbSearch,
-    TbCloudDownload,
-    TbCloudUpload,
-    TbPlus, // Adding logs is usually automatic
+    TbPencil, TbTrash, TbChecks, TbSearch, TbFilter, TbPlus, TbCloudUpload,
+    TbEye, TbUserCircle, TbHistory
 } from 'react-icons/tb';
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
 
-// --- Define Item Type ---
+// --- Define Item Type & Constants ---
 type ChangeType = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'SYSTEM' | 'OTHER';
+const CHANGE_TYPE_OPTIONS = [
+    { value: 'CREATE', label: 'Create' }, { value: 'UPDATE', label: 'Update' },
+    { value: 'DELETE', label: 'Delete' }, { value: 'LOGIN', label: 'Login' },
+    { value: 'LOGOUT', label: 'Logout' }, { value: 'SYSTEM', label: 'System' },
+    { value: 'OTHER', label: 'Other' },
+];
+const changeTypeValues = CHANGE_TYPE_OPTIONS.map(ct => ct.value) as [ChangeType, ...ChangeType[]];
+
 type EntityType = 'User' | 'Product' | 'Order' | 'Setting' | 'Role' | 'Permission' | 'System' | 'Other';
+const ENTITY_TYPE_OPTIONS = [
+    { value: 'User', label: 'User' }, { value: 'Product', label: 'Product' },
+    { value: 'Order', label: 'Order' }, { value: 'Setting', label: 'Setting' },
+    { value: 'Role', label: 'Role' }, { value: 'Permission', label: 'Permission' },
+    { value: 'System', label: 'System' }, { value: 'Other', label: 'Other' },
+];
+const entityTypeValues = ENTITY_TYPE_OPTIONS.map(et => et.value) as [EntityType, ...EntityType[]];
 
 export type ChangeLogItem = {
-    id: string; // Unique Log ID
-    timestamp: Date;
-    userName: string; // User who performed the action (or 'System')
-    userId: string | null; // ID of the user
+    id: string | number; // Keep consistent with UnitItem
+    timestamp: string; // Store as ISO string (YYYY-MM-DDTHH:mm:ss.sssZ) or YYYY-MM-DD for DatePicker
+    userName: string;
+    userId: string | null;
     actionType: ChangeType;
     entityType: EntityType;
-    entityId: string | null; // ID of the entity affected (e.g., product ID, user ID)
-    description: string; // Summary of the change (e.g., "Updated product price", "User logged in")
-    details?: Record<string, unknown> | string | null; // Optional structured details (e.g., old/new values) or raw string
+    entityId: string | null;
+    description: string;
+    details?: string; // Simplified to string for this example, can be JSON string
 };
-// --- End Item Type ---
 
-// --- Define Filter Schema ---
-const filterValidationSchema = z.object({
-    actionType: z.array(z.string()).default([]),
-    entityType: z.array(z.string()).default([]),
-    userName: z.array(z.string()).default([]), // Allow filtering by specific users
-    dateRange: z.tuple([z.date().nullable(), z.date().nullable()]).default([null, null]), // Date range
-});
-
-type FilterFormSchema = z.infer<typeof filterValidationSchema>;
-// --- End Filter Schema ---
-
-
-// --- Constants ---
-// Colors for change types
-const changeTypeColor: Record<ChangeType, string> = {
+const changeTypeColor: Record<ChangeType, string> = { /* ... colors ... */
     CREATE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
     UPDATE: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100',
     DELETE: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
     LOGIN: 'bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-100',
     LOGOUT: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
     SYSTEM: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-100',
-    OTHER: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
+    OTHER: 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-100',
 };
 
+// --- Zod Schema for Add/Edit ChangeLog Form ---
+// Note: Adding/Editing logs is atypical. This schema is for if you enable it.
+const changeLogFormSchema = z.object({
+    timestamp: z.string().min(1, "Timestamp is required."), // Or z.date() if DatePicker provides Date object
+    userName: z.string().min(1, 'User name is required.').max(100),
+    userId: z.string().max(50).nullable().optional(),
+    actionType: z.enum(changeTypeValues),
+    entityType: z.enum(entityTypeValues),
+    entityId: z.string().max(100).nullable().optional(),
+    description: z.string().min(1, 'Description is required.').max(1000),
+    details: z.string().max(5000).optional().or(z.literal('')),
+});
+type ChangeLogFormData = z.infer<typeof changeLogFormSchema>;
+
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
+    filterActionType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterEntityType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterUserName: z.string().optional(),
+    filterDateRange: z.tuple([z.date().nullable(), z.date().nullable()]).optional().default([null, null]),
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
+
+// --- Initial Dummy Data ---
 const initialDummyChangeLogs: ChangeLogItem[] = [
-    { id: 'CL001', timestamp: new Date(2023, 10, 6, 14, 30, 15), userName: 'Alice Admin', userId: 'U001', actionType: 'UPDATE', entityType: 'Product', entityId: 'PROD002', description: 'Updated product name to "Laptop Pro 15" (2023 Edition)"' },
-    { id: 'CL002', timestamp: new Date(2023, 10, 6, 11, 45, 2), userName: 'George Support', userId: 'U007', actionType: 'LOGIN', entityType: 'User', entityId: 'U007', description: 'User logged in successfully' },
-    { id: 'CL003', timestamp: new Date(2023, 10, 5, 16, 15, 55), userName: 'Fiona Finance', userId: 'U006', actionType: 'LOGOUT', entityType: 'User', entityId: 'U006', description: 'User logged out' },
-    { id: 'CL004', timestamp: new Date(2023, 10, 5, 10, 0, 0), userName: 'System', userId: null, actionType: 'SYSTEM', entityType: 'System', entityId: null, description: 'Nightly backup process completed successfully.' },
-    { id: 'CL005', timestamp: new Date(2023, 10, 4, 9, 0, 10), userName: 'Bob Editor', userId: 'U002', actionType: 'CREATE', entityType: 'System', entityId: 'BLOG011', description: 'Created new blog post "Intro to V3 Features"' },
-    { id: 'CL006', timestamp: new Date(2023, 10, 3, 10, 5, 30), userName: 'Admin User', userId: 'admin01', actionType: 'DELETE', entityType: 'User', entityId: 'U009-temp', description: 'Deleted temporary user account "temp-user".' },
-    { id: 'CL007', timestamp: new Date(2023, 10, 2, 11, 0, 0), userName: 'Alice Admin', userId: 'U001', actionType: 'UPDATE', entityType: 'Role', entityId: 'editor', description: 'Updated permissions for role "Content Editor".', details: { added: ['publish:immediate'], removed: ['delete:any'] } },
-    { id: 'CL008', timestamp: new Date(2023, 10, 1, 8, 0, 45), userName: 'System', userId: null, actionType: 'OTHER', entityType: 'System', entityId: 'CRON-JOB-1', description: 'Data synchronization job finished.' },
+    { id: 'CL001', timestamp: new Date(2023, 10, 6, 14, 30, 15).toISOString(), userName: 'Alice Admin', userId: 'U001', actionType: 'UPDATE', entityType: 'Product', entityId: 'PROD002', description: 'Updated product name to "Laptop Pro 15" (2023 Edition)"' },
+    { id: 'CL002', timestamp: new Date(2023, 10, 6, 11, 45, 2).toISOString(), userName: 'George Support', userId: 'U007', actionType: 'LOGIN', entityType: 'User', entityId: 'U007', description: 'User logged in successfully' },
 ];
 
-// Extract unique filter options
-const uniqueActionTypes = Array.from(new Set(initialDummyChangeLogs.map(t => t.actionType))).sort();
-const uniqueEntityTypes = Array.from(new Set(initialDummyChangeLogs.map(t => t.entityType))).sort();
-const uniqueUserNames = Array.from(new Set(initialDummyChangeLogs.map(t => t.userName))).sort();
-// --- End Constants ---
+// --- CSV Exporter Utility ---
+const CSV_HEADERS_LOG = ['ID', 'Timestamp', 'User Name', 'User ID', 'Action Type', 'Entity Type', 'Entity ID', 'Description', 'Details'];
+const CSV_KEYS_LOG: (keyof ChangeLogItem)[] = ['id', 'timestamp', 'userName', 'userId', 'actionType', 'entityType', 'entityId', 'description', 'details'];
 
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({ onEdit, onViewDetails }: { onEdit: () => void; onViewDetails: () => void; }) => {
+function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) { /* ... (same as previous) ... */
+     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
+    const separator = ',';
+    const csvContent =
+        CSV_HEADERS_LOG.join(separator) + '\n' +
+        rows.map(row => CSV_KEYS_LOG.map(k => {
+            let cell: any = row[k];
+            if (k === 'timestamp' && cell) cell = new Date(cell).toLocaleString(); // Format timestamp for readability
+            if (cell === null || cell === undefined) cell = '';
+            else cell = String(cell).replace(/"/g, '""');
+            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+            return cell;
+        }).join(separator)).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) { /* ... download logic ... */
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return true;
+    }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+    return false;
+}
+
+// --- ActionColumn Component (Simplified: View, optional Edit) ---
+const ActionColumn = ({ onView, onEdit }: { onView: () => void; onEdit?: () => void; }) => {
     const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
     return (
-        <div className="flex items-center justify-end gap-2">
-            <Tooltip title="View Details"><div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400' )} role="button" onClick={onViewDetails}><TbEye /></div></Tooltip>
-            {/* Edit/Delete usually not applicable for logs */}
-             <Tooltip title="Edit">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
+        <div className="flex items-center justify-center gap-3">
+            <Tooltip title="View Details"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-300')} role="button" onClick={onView}><TbEye /></div></Tooltip>
+            {onEdit && ( // Only show edit if onEdit handler is provided
+                <Tooltip title="Edit Log (Admin)"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-300')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+            )}
+            {/* Delete is generally not provided for logs */}
         </div>
     );
 };
-// --- End ActionColumn ---
 
+// --- ChangeLogsSearch Component ---
+type ChangeLogsSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; }
+const ChangeLogsSearch = React.forwardRef<HTMLInputElement, ChangeLogsSearchProps>(
+    ({ onInputChange }, ref) => (
+        <DebouceInput ref={ref} className="w-full" placeholder="Search logs..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
+    )
+);
+ChangeLogsSearch.displayName = 'ChangeLogsSearch';
 
-// --- ChangeLogTable Component ---
-const ChangeLogTable = ({ columns, data, loading, pagingData, onPaginationChange, onSelectChange, onSort}: { columns: ColumnDef<ChangeLogItem>[]; data: ChangeLogItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; }) => {
-     // Note: Selectable might not be needed for logs
-     return <DataTable columns={columns} data={data} loading={loading} pagingData={pagingData}
-                      onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort}
-                      noData={!loading && data.length === 0} />;
-};
-// --- End ChangeLogTable ---
-
-
-// --- ChangeLogSearch Component ---
-type ChangeLogSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const ChangeLogSearch = React.forwardRef<HTMLInputElement, ChangeLogSearchProps>(({ onInputChange }, ref) => {
-    return <DebouceInput ref={ref} placeholder="Search Logs (User, Action, Entity, Desc...)" suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />;
-});
-ChangeLogSearch.displayName = 'ChangeLogSearch';
-// --- End ChangeLogSearch ---
-
-
-// --- ChangeLogFilter Component ---
-const ChangeLogFilter = ({ filterData, setFilterData }: { filterData: FilterFormSchema; setFilterData: (data: FilterFormSchema) => void; }) => {
-    const [dialogIsOpen, setIsOpen] = useState(false);
-    const openDialog = () => setIsOpen(true);
-    const onDialogClose = () => setIsOpen(false);
-    const { control, handleSubmit, reset, watch } = useForm<FilterFormSchema>({ defaultValues: filterData, resolver: zodResolver(filterValidationSchema), });
-    const dateRange = watch('dateRange'); // Watch date range for DatePicker
-
-    React.useEffect(() => { reset(filterData); }, [filterData, reset]);
-
-    const onSubmit = (values: FilterFormSchema) => { setFilterData(values); onDialogClose(); };
-    const handleReset = () => { const defaultVals = filterValidationSchema.parse({}); reset(defaultVals); setFilterData(defaultVals); onDialogClose(); };
-    const activeFilterCount = (filterData.actionType?.length || 0) + (filterData.entityType?.length || 0) + (filterData.userName?.length || 0) + (filterData.dateRange?.[0] || filterData.dateRange?.[1] ? 1 : 0);
-
-    return (
-        <>
-            <Button icon={<TbFilter />} onClick={openDialog} className="relative">
-                <span>Filter</span> {activeFilterCount > 0 && ( <Badge content={activeFilterCount} className="absolute -top-2 -right-2" innerClass="text-xs"/> )}
-            </Button>
-            <Dialog isOpen={dialogIsOpen} onClose={onDialogClose} onRequestClose={onDialogClose} width={600}>
-                <h4 className="mb-4">Filter Change Logs</h4>
-                <Form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                        <UiFormItem label="Action Type" className="mb-4">
-                            <Controller name="actionType" control={control} render={({ field }) => ( <Checkbox.Group vertical value={field.value || []} onChange={field.onChange} > {uniqueActionTypes.map((type) => ( <Checkbox key={type} value={type} className="mb-1 capitalize">{type}</Checkbox> ))} </Checkbox.Group> )} />
-                        </UiFormItem>
-                        <UiFormItem label="Entity Type" className="mb-4">
-                             <Controller name="entityType" control={control} render={({ field }) => ( <Checkbox.Group vertical value={field.value || []} onChange={field.onChange} > {uniqueEntityTypes.map((type) => ( <Checkbox key={type} value={type} className="mb-1">{type}</Checkbox> ))} </Checkbox.Group> )} />
-                        </UiFormItem>
-                         <UiFormItem label="User Name" className="mb-4">
-                             <Controller name="userName" control={control} render={({ field }) => ( <Checkbox.Group vertical value={field.value || []} onChange={field.onChange} > {uniqueUserNames.map((user) => ( <Checkbox key={user} value={user} className="mb-1">{user}</Checkbox> ))} </Checkbox.Group> )} />
-                        </UiFormItem>
-                         <UiFormItem label="Date Range" className="mb-4">
-                            {/* <Controller name="dateRange" control={control} render={({ field }) => (
-                                 <DatePicker.RangePicker
-                                     placeholder="Select date range"
-                                     value={field.value}
-                                     onChange={field.onChange} // DatePicker range usually provides [Date | null, Date | null]
-                                     inputFormat="YYYY-MM-DD"
-                                     inputPrefix={<HiOutlineCalendar className="text-lg"/>}
-                                 />
-                            )} /> */}
-                         </UiFormItem>
-                    </div>
-                    <div className="flex justify-end items-center gap-2 mt-6">
-                        <Button type="button" onClick={handleReset}> Reset </Button>
-                        <Button type="submit" variant="solid"> Apply Filters </Button>
-                    </div>
-                </Form>
-            </Dialog>
-        </>
-    );
-};
-// --- End ChangeLogFilter ---
-
-
-// --- ChangeLogTableTools Component ---
-const ChangeLogTableTools = ({ onSearchChange, filterData, setFilterData }: { onSearchChange: (query: string) => void; filterData: FilterFormSchema; setFilterData: (data: FilterFormSchema) => void; }) => {
-       type ChangeLogFilterSchema = {
-            userRole : String,
-            exportFrom : String,
-            exportDate : Date
-        }
-    
-        const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-        const closeFilterDrawer = ()=> setIsFilterDrawerOpen(false)
-        const openFilterDrawer = ()=> setIsFilterDrawerOpen(true)
-    
-        const {control, handleSubmit} = useForm<ChangeLogFilterSchema>()
-    
-        const exportFiltersSubmitHandler = (data : ChangeLogFilterSchema) => {
-            console.log("filter data", data)
-        }
-    return (
-        <div className="flex items-center w-full gap-2">
-        <div className="flex-grow">
-            <ChangeLogSearch onInputChange={onSearchChange} />
+// --- ChangeLogsTableTools Component ---
+const ChangeLogsTableTools = ({ onSearchChange, onFilter, onExport }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }) => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex-grow"><ChangeLogsSearch onInputChange={onSearchChange} /></div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
         </div>
-        {/* Filter component removed */}
-        <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-            Filter
-        </Button>
-        <Button icon={<TbCloudUpload/>}>Export</Button>
-        <Drawer
-            title="Filters"
-            isOpen={isFilterDrawerOpen}
-            onClose={closeFilterDrawer}
-            onRequestClose={closeFilterDrawer}
-            footer={
-                <div className="text-right w-full">
-                    <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                        Cancel
-                    </Button>
-                </div>  
-            }
-        >
-            <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                <FormItem label='Document Name'>
-                    {/* <Controller
-                        control={control}
-                        name='userRole'
-                        render={({field})=>(
-                            <Input
-                                type="text"
-                                placeholder="Enter Document Name"
-                                {...field}
-                            />
-                        )}
-                    /> */}
-                </FormItem>
-            </Form>
-        </Drawer>
     </div>
-    );
+);
+
+// --- ChangeLogsTable Component ---
+type ChangeLogsTableProps = {
+    columns: ColumnDef<ChangeLogItem>[]; data: ChangeLogItem[]; loading: boolean;
+    pagingData: { total: number; pageIndex: number; pageSize: number };
+    // selectedItems: ChangeLogItem[]; // Selection not typical for logs
+    onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void;
+    onSort: (sort: OnSortParam) => void;
+    // onRowSelect: (checked: boolean, row: ChangeLogItem) => void; // Selection not typical
+    // onAllRowSelect: (checked: boolean, rows: Row<ChangeLogItem>[]) => void; // Selection not typical
 };
-// --- End ChangeLogTableTools ---
+const ChangeLogsTable = ({ columns, data, loading, pagingData, onPaginationChange, onSelectChange, onSort }: ChangeLogsTableProps) => (
+    <DataTable
+        // selectable={false} // Logs are usually not selectable for bulk actions
+        columns={columns} data={data} loading={loading} pagingData={pagingData}
+        onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort}
+        noData={!loading && data.length === 0}
+    />
+);
 
-
-// --- ActiveFiltersDisplay Component ---
-const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormSchema; onRemoveFilter: (key: keyof FilterFormSchema, value: string | [Date | null, Date | null]) => void; onClearAll: () => void; }) => {
-    const activeActions = filterData.actionType || [];
-    const activeEntities = filterData.entityType || [];
-    const activeUsers = filterData.userName || [];
-    const activeDateRange = filterData.dateRange || [null, null];
-    const hasDateRange = activeDateRange[0] || activeDateRange[1];
-    const hasActiveFilters = activeActions.length > 0 || activeEntities.length > 0 || activeUsers.length > 0 || hasDateRange;
-
-    if (!hasActiveFilters) return null;
-
-    const formatDate = (date: Date | null) => date ? date.toLocaleDateString() : '';
-
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 pt-2 border-t border-gray-200 dark:border-gray-700 mt-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {activeActions.map((action) => ( <Tag key={`action-${action}`} prefix className="bg-gray-100 ..."> <span className="capitalize">{action}</span> <TbX className="ml-1 ..." onClick={() => onRemoveFilter('actionType', action)} /> </Tag> ))}
-            {activeEntities.map((entity) => ( <Tag key={`entity-${entity}`} prefix className="bg-gray-100 ..."> {entity} <TbX className="ml-1 ..." onClick={() => onRemoveFilter('entityType', entity)} /> </Tag> ))}
-            {activeUsers.map((user) => ( <Tag key={`user-${user}`} prefix className="bg-gray-100 ..."> {user} <TbX className="ml-1 ..." onClick={() => onRemoveFilter('userName', user)} /> </Tag> ))}
-             {hasDateRange && (
-                 <Tag prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
-                     Date: {formatDate(activeDateRange[0])} - {formatDate(activeDateRange[1])}
-                     <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('dateRange', [null, null])} /> {/* Remove date range */}
-                 </Tag>
-             )}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}> Clear All </Button>
-        </div>
-    );
-};
-// --- End ActiveFiltersDisplay ---
-
-
-// --- ChangeLogActionTools Component (No Add Button) ---
-const ChangeLogActionTools = ({ allLogs, openAddDrawer, }: 
-    { allLogs: ChangeLogItem[];
-    openAddDrawer: () => void; // Accept function as a prop
-}) => {
-    const csvData = useMemo(() => allLogs.map(l => ({ ...l, timestamp: l.timestamp.toISOString(), details: JSON.stringify(l.details) })), [allLogs]);
-    const csvHeaders = [ /* ... headers ... */ ];
-    return ( <div className="flex flex-col md:flex-row gap-3">
-        {/*
-        <CSVLink
-            className="w-full"
-            filename="documentTypeList.csv"
-            data={allFormsData}
-            headers={csvHeaders}
-        >
-            <Button icon={<TbCloudDownload />} className="w-full" block>
-                Download
-            </Button>
-        </CSVLink>
-        */}
-        <Button
-            variant="solid"
-            icon={<TbPlus />}
-            onClick={openAddDrawer}
-            block
-        >
-            Add New
-        </Button>
-    </div> ); // No Add button typically
-};
-// --- End ChangeLogActionTools ---
-
-
-// --- ChangeLogSelected Component (Removed - selection usually not needed) ---
-
-
-// --- Detail View Dialog ---
-const DetailViewDialog = ({ isOpen, onClose, logItem }: { isOpen: boolean; onClose: () => void; logItem: ChangeLogItem | null }) => {
-    if (!logItem) return null;
-    const formatDate = (date: Date) => date.toLocaleString();
-    const formatDetails = (details: any) => {
-        if (!details) return 'N/A';
-        if (typeof details === 'string') return details;
-        // Pretty print JSON object
-        try { return JSON.stringify(details, null, 2); } catch { return String(details); }
-    };
-     return (
-         <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={700}>
-             <h5 className="mb-4">Log Details (ID: {logItem.id})</h5>
-             <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <p><strong>Timestamp:</strong> {formatDate(logItem.timestamp)}</p>
-                <p><strong>User:</strong> {logItem.userName} {logItem.userId ? `(${logItem.userId})` : '(System)'}</p>
-                <p><strong>Action Type:</strong> <Tag className={`${changeTypeColor[logItem.actionType]} font-semibold border ${changeTypeColor[logItem.actionType].replace('bg-','border-').replace('/20','')} capitalize`}>{logItem.actionType}</Tag></p>
-                <p><strong>Entity Type:</strong> {logItem.entityType}</p>
-                <p><strong>Entity ID:</strong> {logItem.entityId ?? 'N/A'}</p>
-             </div>
-              <div className='mt-4'>
-                 <h6 className="mb-2 font-semibold">Description:</h6>
-                 <p>{logItem.description}</p>
-             </div>
-             <div className='mt-4'>
-                 <h6 className="mb-2 font-semibold">Details / Changes:</h6>
-                 <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded-md max-h-60 overflow-y-auto whitespace-pre-wrap">{formatDetails(logItem.details)}</pre>
-             </div>
-             <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-         </Dialog>
-     );
-}
-// --- End Dialogs ---
+// --- ChangeLogsSelectedFooter (Typically not used for logs, but kept if selection is added back) ---
+// type ChangeLogsSelectedFooterProps = { selectedItems: ChangeLogItem[]; onDeleteSelected: () => void; };
+// const ChangeLogsSelectedFooter = ({ selectedItems, onDeleteSelected }: ChangeLogsSelectedFooterProps) => { /* ... similar to UnitsSelectedFooter ... */ };
 
 
 // --- Main ChangeLogListing Component ---
 const ChangeLogListing = () => {
+    const [changeLogsData, setChangeLogsData] = useState<ChangeLogItem[]>(initialDummyChangeLogs);
+    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
 
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    // Note: Add/Edit for logs is atypical. These are included to match "Units" structure if strictly needed.
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<ChangeLogItem | null>(null);
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<ChangeLogItem | null>(null);
 
-    const openEditDrawer = (item: ChangeLogItem) => {
-        setSelectedItem(item); // Set the selected item's data
-        setIsEditDrawerOpen(true); // Open the edit drawer
-    };
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+    const [viewingItem, setViewingItem] = useState<ChangeLogItem | null>(null); // For view dialog
 
-    const closeEditDrawer = () => {
-        setSelectedItem(null); // Clear the selected item's data
-        setIsEditDrawerOpen(false); // Close the edit drawer
-    };
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    // const [isDeleting, setIsDeleting] = useState(false); // Deleting logs is rare
+    // const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    // const [itemToDelete, setItemToDelete] = useState<ChangeLogItem | null>(null);
 
-    const openAddDrawer = () => {
-        setSelectedItem(null); // Clear any selected item
-        setIsAddDrawerOpen(true); // Open the add drawer
-    };
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
+    const [tableData, setTableData] = useState<TableQueries>({
+        pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'timestamp' }, query: '',
+    });
+    // const [selectedItems, setSelectedItems] = useState<ChangeLogItem[]>([]); // Selection typically not needed
 
-    const closeAddDrawer = () => {
-        setIsAddDrawerOpen(false); // Close the add drawer
-    };
+    const formMethods = useForm<ChangeLogFormData>({
+        resolver: zodResolver(changeLogFormSchema),
+        defaultValues: {
+            timestamp: new Date().toISOString().split('T')[0], // Default to today for date part
+            userName: 'System', userId: null, actionType: 'OTHER', entityType: 'Other',
+            entityId: null, description: '', details: '',
+        },
+        mode: 'onChange',
+    });
 
-    const navigate = useNavigate(); // Keep if edit/view actions navigate
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria,
+    });
 
-    // --- State ---
-    const [isLoading, setIsLoading] = useState(false);
-    const [changeLogs, setChangeLogs] = useState<ChangeLogItem[]>(initialDummyChangeLogs);
-    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'timestamp' }, query: '' }); // Default sort by time desc
-    // const [selectedLogs, setSelectedLogs] = useState<ChangeLogItem[]>([]); // Selection unlikely needed
-    const [filterData, setFilterData] = useState<FilterFormSchema>(filterValidationSchema.parse({}));
-    const [detailViewOpen, setDetailViewOpen] = useState(false);
-    const [currentItem, setCurrentItem] = useState<ChangeLogItem | null>(null);
-    // --- End State ---
+    // --- CRUD Handlers (Add/Edit are optional for logs) ---
+    const openAddDrawer = useCallback(() => { formMethods.reset(); setIsAddDrawerOpen(true); }, [formMethods]);
+    const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
+    const openEditDrawer = useCallback((item: ChangeLogItem) => {
+        setEditingItem(item);
+        // Convert timestamp string back to a format DatePicker/Input[type=datetime-local] understands if needed
+        const formValues = {
+            ...item,
+            timestamp: item.timestamp.substring(0, 16), // For datetime-local input: YYYY-MM-DDTHH:mm
+        };
+        formMethods.reset(formValues);
+        setIsEditDrawerOpen(true);
+    }, [formMethods]);
+    const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingItem(null); }, []);
 
-    // --- Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...changeLogs];
+    const onSubmitLog = useCallback(async (data: ChangeLogFormData) => {
+        // This function would only be used if manual Add/Edit of logs is enabled.
+        setIsSubmitting(true);
+        setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+            const payload = {
+                ...data,
+                timestamp: new Date(data.timestamp).toISOString(), // Ensure it's full ISO string
+            };
+            if (editingItem) {
+                const updatedItem: ChangeLogItem = { ...payload, id: editingItem.id };
+                setChangeLogsData(prev => prev.map(log => log.id === updatedItem.id ? updatedItem : log));
+                toast.push(<Notification title="Log Entry Updated" type="success" duration={2000} />);
+                closeEditDrawer();
+            } else {
+                const newItem: ChangeLogItem = { ...payload, id: `LOG${Date.now()}` };
+                setChangeLogsData(prev => [newItem, ...prev]);
+                toast.push(<Notification title="Log Entry Added" type="success" duration={2000} />);
+                closeAddDrawer(); // Or reset form if "add another" is desired
+            }
+        } catch (e: any) { toast.push(<Notification title="Operation Failed" type="danger" duration={3000}>{e.message}</Notification>); }
+        finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
+    }, [editingItem, closeAddDrawer, closeEditDrawer]);
 
-        // Apply Filtering
-        if (filterData.actionType && filterData.actionType.length > 0) { const set = new Set(filterData.actionType); processedData = processedData.filter(log => set.has(log.actionType)); }
-        if (filterData.entityType && filterData.entityType.length > 0) { const set = new Set(filterData.entityType); processedData = processedData.filter(log => set.has(log.entityType)); }
-        if (filterData.userName && filterData.userName.length > 0) { const set = new Set(filterData.userName); processedData = processedData.filter(log => set.has(log.userName)); }
-        if (filterData.dateRange && (filterData.dateRange[0] || filterData.dateRange[1])) {
-             const startDate = filterData.dateRange[0]?.getTime();
-             const endDate = filterData.dateRange[1] ? new Date(filterData.dateRange[1].getTime() + 86399999).getTime() : null; // Include full end date
-             processedData = processedData.filter(log => {
-                 const logTime = log.timestamp.getTime();
-                 const startMatch = startDate ? logTime >= startDate : true;
-                 const endMatch = endDate ? logTime <= endDate : true;
-                 return startMatch && endMatch;
-             });
+    // Delete handlers typically not used for logs. If needed, implement like Units.
+
+    // --- View Dialog Handler ---
+    const openViewDialog = useCallback((item: ChangeLogItem) => setViewingItem(item), []);
+    const closeViewDialog = useCallback(() => setViewingItem(null), []);
+
+    // --- Filter Handlers ---
+    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
+        setFilterCriteria(data);
+        setTableData(prev => ({ ...prev, pageIndex: 1 }));
+        setIsFilterDrawerOpen(false);
+    }, []);
+    const onClearFilters = useCallback(() => {
+        const defaultFilters = filterFormSchema.parse({});
+        filterFormMethods.reset(defaultFilters);
+        setFilterCriteria(defaultFilters);
+        setTableData(prev => ({ ...prev, pageIndex: 1 }));
+    }, [filterFormMethods]);
+
+    // --- Table Interaction Handlers ---
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); /*setSelectedItems([]);*/ }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
+    // Row select and All Row select handlers removed as selection is not typical for logs.
+
+    // --- Data Processing (Memoized) ---
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+        let processedData: ChangeLogItem[] = cloneDeep(changeLogsData);
+        // Apply Filters
+        if (filterCriteria.filterActionType?.length) {
+            const actionValues = filterCriteria.filterActionType.map(a => a.value);
+            processedData = processedData.filter(log => actionValues.includes(log.actionType));
         }
-
-
-        // Apply Search
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase();
-            processedData = processedData.filter(log =>
-                log.id.toLowerCase().includes(query) ||
-                log.userName.toLowerCase().includes(query) ||
-                (log.userId?.toLowerCase().includes(query) ?? false) ||
-                log.actionType.toLowerCase().includes(query) ||
-                log.entityType.toLowerCase().includes(query) ||
-                (log.entityId?.toLowerCase().includes(query) ?? false) ||
-                log.description.toLowerCase().includes(query)
+        if (filterCriteria.filterEntityType?.length) {
+            const entityValues = filterCriteria.filterEntityType.map(e => e.value);
+            processedData = processedData.filter(log => entityValues.includes(log.entityType));
+        }
+        if (filterCriteria.filterUserName && filterCriteria.filterUserName.trim() !== '') {
+            const userQuery = filterCriteria.filterUserName.toLowerCase().trim();
+            processedData = processedData.filter(log => log.userName.toLowerCase().includes(userQuery));
+        }
+        if (filterCriteria.filterDateRange && (filterCriteria.filterDateRange[0] || filterCriteria.filterDateRange[1])) {
+            const startDate = filterCriteria.filterDateRange[0]?.getTime();
+            const endDate = filterCriteria.filterDateRange[1] ? new Date(filterCriteria.filterDateRange[1].getTime() + 86399999).getTime() : null;
+            processedData = processedData.filter(log => {
+                const logTime = new Date(log.timestamp).getTime();
+                const startMatch = startDate ? logTime >= startDate : true;
+                const endMatch = endDate ? logTime <= endDate : true;
+                return startMatch && endMatch;
+            });
+        }
+        // Apply Search Query
+        if (tableData.query && tableData.query.trim() !== '') {
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(log => /* ... search logic ... */
+                log.id.toString().toLowerCase().includes(query) || log.userName.toLowerCase().includes(query) ||
+                (log.userId && log.userId.toLowerCase().includes(query)) || log.actionType.toLowerCase().includes(query) ||
+                log.entityType.toLowerCase().includes(query) || (log.entityId && log.entityId.toLowerCase().includes(query)) ||
+                log.description.toLowerCase().includes(query) || (log.details && log.details.toLowerCase().includes(query))
             );
         }
-
         // Apply Sorting
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key) {
-            const sortedData = [...processedData];
-            sortedData.sort((a, b) => {
-                 if (key === 'timestamp') { return order === 'asc' ? a.timestamp.getTime() - b.timestamp.getTime() : b.timestamp.getTime() - a.timestamp.getTime(); }
-                 const aValue = a[key as keyof ChangeLogItem] ?? '';
-                 const bValue = b[key as keyof ChangeLogItem] ?? '';
-                 if (aValue === null && bValue === null) return 0; if (aValue === null) return order === 'asc' ? -1 : 1; if (bValue === null) return order === 'asc' ? 1 : -1;
-                 if (typeof aValue === 'string' && typeof bValue === 'string') { return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue); }
-                 return 0;
+            processedData.sort((a, b) => {
+                if (key === 'timestamp') return order === 'asc' ? new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime() : new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                const aVal = a[key as keyof ChangeLogItem]; const bVal = b[key as keyof ChangeLogItem];
+                const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase();
+                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
             });
-            processedData = sortedData;
         }
+        const dataToExport = [...processedData];
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+    }, [changeLogsData, tableData, filterCriteria]);
 
-        // Apply Pagination
-        const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const dataTotal = processedData.length; const startIndex = (pageIndex - 1) * pageSize; const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-        return { pageData: dataForPage, total: dataTotal };
-    }, [changeLogs, tableData, filterData]);
-    // --- End Data Processing ---
+    const handleExportData = useCallback(() => {
+        const success = exportChangeLogsToCsv('change_logs.csv', allFilteredAndSortedData);
+        if (success) toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported.</Notification>);
+    }, [allFilteredAndSortedData]);
 
-    // --- Handlers ---
-    const handleSetTableData = useCallback((data: TableQueries) => { setTableData(data); }, []);
-    const handlePaginationChange = useCallback((page: number) => { handleSetTableData({ ...tableData, pageIndex: page }); }, [tableData, handleSetTableData]);
-    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ ...tableData, pageSize: Number(value), pageIndex: 1 }); /* setSelectedLogs([]); */ }, [tableData, handleSetTableData]);
-    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 }); }, [tableData, handleSetTableData]);
-    const handleSearchChange = useCallback((query: string) => { handleSetTableData({ ...tableData, query: query, pageIndex: 1 }); }, [tableData, handleSetTableData]);
-    const handleApplyFilter = useCallback((newFilterData: FilterFormSchema) => { setFilterData(newFilterData); handleSetTableData({ ...tableData, pageIndex: 1 }); /* setSelectedLogs([]); */ }, [tableData, handleSetTableData]);
-    const handleRemoveFilter = useCallback((key: keyof FilterFormSchema, value: any) => { // value can be string or tuple now
-        setFilterData(prev => {
-             let newValues: any;
-             if (key === 'dateRange') {
-                 newValues = [null, null]; // Clear date range
-             } else {
-                const currentValues = prev[key] || [];
-                 newValues = currentValues.filter(item => item !== value);
-             }
-            const updatedFilterData = { ...prev, [key]: newValues };
-            handleSetTableData({ ...tableData, pageIndex: 1 });
-            // setSelectedLogs([]);
-            return updatedFilterData;
-        });
-    }, [tableData, handleSetTableData]);
-    const handleClearAllFilters = useCallback(() => { const defaultFilters = filterValidationSchema.parse({}); setFilterData(defaultFilters); handleSetTableData({ ...tableData, pageIndex: 1 }); /* setSelectedLogs([]); */ }, [tableData, handleSetTableData]);
-
-    // Row/All Row Select handlers removed
-
-    const handleViewDetails = useCallback((item: ChangeLogItem) => { setCurrentItem(item); setDetailViewOpen(true); }, [setCurrentItem, setDetailViewOpen]);
-    const handleCloseDetailView = useCallback(() => { setDetailViewOpen(false); setCurrentItem(null); }, [setCurrentItem, setDetailViewOpen]);
-
-    // Edit/Delete handlers removed
-    // --- End Handlers ---
-
-
-    // --- Define Columns ---
+    // --- Table Column Definitions ---
     const columns: ColumnDef<ChangeLogItem>[] = useMemo(
         () => [
+            { header: 'Timestamp', accessorKey: 'timestamp', size: 180, enableSorting: true, cell: props => { const d = new Date(props.getValue<string>()); return <span>{d.toLocaleDateString()} <span className="text-xs text-gray-500">{d.toLocaleTimeString()}</span></span>}},
+            { header: 'User', accessorKey: 'userName', size: 160, enableSorting: true, cell: props => <div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span>{props.getValue<string>()}</span></div> },
+            { header: 'Action', accessorKey: 'actionType', size: 110, enableSorting: true, cell: props => <Tag className={classNames('capitalize whitespace-nowrap font-semibold', changeTypeColor[props.getValue<ChangeType>()])}>{CHANGE_TYPE_OPTIONS.find(o=>o.value === props.getValue())?.label}</Tag>},
+            { header: 'Entity Type', accessorKey: 'entityType', size: 120, enableSorting: true, cell: props => ENTITY_TYPE_OPTIONS.find(o=>o.value === props.getValue())?.label || props.getValue()},
+            { header: 'Entity ID', accessorKey: 'entityId', size: 130, enableSorting: true, cell: props => props.getValue() || '-' },
+            { header: 'Description', accessorKey: 'description', enableSorting: false, cell: props => <Tooltip title={props.getValue<string>()} wrapperClass="w-full"><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-md">{props.getValue<string>()}</span></Tooltip> },
             {
-                header: 'Timestamp', accessorKey: 'timestamp', enableSorting: true, width: 180,
-                cell: props => { const date = props.row.original.timestamp; return <span>{date.toLocaleDateString()} {date.toLocaleTimeString()}</span>; } // Show seconds
-            },
-             {
-                 header: 'User', accessorKey: 'userName', enableSorting: true, width: 180,
-                 cell: props => (
-                     <div className="flex items-center gap-2">
-                         <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
-                         <span>{props.row.original.userName}</span>
-                         {/* Optionally show userId in tooltip or smaller text */}
-                         {/* {props.row.original.userId && <span className="text-xs text-gray-500 ml-1">({props.row.original.userId})</span>} */}
-                     </div>
-                 )
-             },
-             {
-                header: 'Action', accessorKey: 'actionType', enableSorting: true, width: 120,
-                cell: props => { const type = props.row.original.actionType; return ( <Tag className={`${changeTypeColor[type]} font-semibold border ${changeTypeColor[type].replace('bg-','border-').replace('/20','')} capitalize`}>{type}</Tag> ); }
-            },
-            { header: 'Entity Type', accessorKey: 'entityType', enableSorting: true, width: 130 },
-            { header: 'Entity ID', accessorKey: 'entityId', enableSorting: true, width: 150, cell: props => <span>{props.row.original.entityId ?? '-'}</span> },
-            {
-                 header: 'Description', accessorKey: 'description', enableSorting: false,
-                 cell: props => ( <Tooltip title={props.row.original.description} wrapperClass="w-full"><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-md">{props.row.original.description}</span></Tooltip> )
-             },
-            {
-                header: '', id: 'action', width: 80,
-                cell: (props) => ( <ActionColumn 
-                    onViewDetails={() => handleViewDetails(props.row.original)}
-                    onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
-                 /> ), // Only View action
+                header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 80,
+                cell: props => <ActionColumn onView={() => openViewDialog(props.row.original)}
+                                            // onEdit={() => openEditDrawer(props.row.original)} // Optional: only if admin edit is allowed
+                               />,
             },
         ],
-        [handleViewDetails] // Update dependencies
+        [openViewDialog, /*openEditDrawer*/],
     );
-    // --- End Define Columns ---
 
+    // --- Render Form for Drawer (Optional: if manual add/edit of logs is enabled) ---
+    const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <FormItem label="Timestamp" invalid={!!currentFormMethods.formState.errors.timestamp} errorMessage={currentFormMethods.formState.errors.timestamp?.message}>
+                 <Controller name="timestamp" control={currentFormMethods.control} render={({ field }) =>
+                    // For datetime-local, value needs to be YYYY-MM-DDTHH:MM
+                    // Input value will be string, Zod schema expects string
+                    <Input {...field} type="datetime-local" />
+                } />
+            </FormItem>
+            <FormItem label="User Name" invalid={!!currentFormMethods.formState.errors.userName} errorMessage={currentFormMethods.formState.errors.userName?.message}>
+                <Controller name="userName" control={currentFormMethods.control} render={({ field }) => <Input {...field} placeholder="Username or System" />} />
+            </FormItem>
+            <FormItem label="User ID (Optional)" invalid={!!currentFormMethods.formState.errors.userId} errorMessage={currentFormMethods.formState.errors.userId?.message}>
+                <Controller name="userId" control={currentFormMethods.control} render={({ field }) => <Input {...field} placeholder="U001" />} />
+            </FormItem>
+             <FormItem label="Action Type" invalid={!!currentFormMethods.formState.errors.actionType} errorMessage={currentFormMethods.formState.errors.actionType?.message}>
+                <Controller name="actionType" control={currentFormMethods.control} render={({ field }) => (
+                    <Select placeholder="Select action" options={CHANGE_TYPE_OPTIONS} value={CHANGE_TYPE_OPTIONS.find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                )} />
+            </FormItem>
+            <FormItem label="Entity Type" invalid={!!currentFormMethods.formState.errors.entityType} errorMessage={currentFormMethods.formState.errors.entityType?.message}>
+                <Controller name="entityType" control={currentFormMethods.control} render={({ field }) => (
+                    <Select placeholder="Select entity type" options={ENTITY_TYPE_OPTIONS} value={ENTITY_TYPE_OPTIONS.find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                )} />
+            </FormItem>
+            <FormItem label="Entity ID (Optional)" invalid={!!currentFormMethods.formState.errors.entityId} errorMessage={currentFormMethods.formState.errors.entityId?.message}>
+                <Controller name="entityId" control={currentFormMethods.control} render={({ field }) => <Input {...field} placeholder="PROD005" />} />
+            </FormItem>
+            <FormItem label="Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.description} errorMessage={currentFormMethods.formState.errors.description?.message}>
+                <Controller name="description" control={currentFormMethods.control} render={({ field }) => <Textarea {...field} rows={3} placeholder="Summary of the change" />} />
+            </FormItem>
+            <FormItem label="Details (JSON or Text, Optional)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.details} errorMessage={currentFormMethods.formState.errors.details?.message}>
+                <Controller name="details" control={currentFormMethods.control} render={({ field }) => <Textarea {...field} rows={4} placeholder='e.g., {"oldValue": "X", "newValue": "Y"}' />} />
+            </FormItem>
+        </div>
+    );
 
-    // --- Render Main Component ---
     return (
         <>
             <Container className="h-full">
-                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                    {/* Header */}
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h3 className="mb-4 lg:mb-0">Change Log</h3>
-                        <ChangeLogActionTools allLogs={changeLogs} openAddDrawer={openAddDrawer} /> {/* No Add button typically */}
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbHistory /> Change Log Viewer</h3>
+                        {/* Add New button is typically not present for logs. Kept for structural similarity if needed. */}
+                        {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add Log Entry (Admin)</Button> */}
                     </div>
-
-                    {/* Tools */}
-                    <div className="mb-2">
-                        <ChangeLogTableTools
-                            onSearchChange={handleSearchChange}
-                            filterData={filterData}
-                            setFilterData={handleApplyFilter} // Pass filter handler
-                        />
-                    </div>
-
-                    {/* Active Filters Display Area */}
+                    {/* <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
                     <ActiveFiltersDisplay
-                        filterData={filterData}
-                        onRemoveFilter={handleRemoveFilter}
-                        onClearAll={handleClearAllFilters}
-                    />
-
-
-                    {/* Table */}
-                    <div className="flex-grow overflow-auto">
-                        <ChangeLogTable
-                            columns={columns} data={pageData} loading={isLoading}
-                            pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-                            // selectedLogs={selectedLogs} // Selection removed
-                            onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort}
-                            // onRowSelect={handleRowSelect} // Selection removed
-                            // onAllRowSelect={handleAllRowSelect} // Selection removed
+                        filterData={filterCriteria}
+                        onRemoveFilter={handleRemoveFilter as any}
+                        onClearAll={onClearFilters}
+                    /> */}
+                    <div className="mt-4">
+                        <ChangeLogsTable
+                            columns={columns}
+                            data={pageData}
+                            loading={masterLoadingStatus === 'loading'}
+                            pagingData={{total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number}}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectChange}
+                            onSort={handleSort}
                         />
                     </div>
                 </AdaptiveCard>
-
-                {/* Selected Footer Removed */}
-
-                {/* Detail View Dialog */}
-                <DetailViewDialog
-                    isOpen={detailViewOpen}
-                    onClose={handleCloseDetailView}
-                    logItem={currentItem}
-                />
-
             </Container>
+
+            {/* View Details Dialog */}
+            <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={700}>
+                 <h5 className="mb-4">Log Details (ID: {viewingItem?.id})</h5>
+                 {viewingItem && (
+                    <div className="space-y-3 text-sm">
+                        {(Object.keys(viewingItem) as Array<keyof ChangeLogItem>).map(key => {
+                            let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                            let value: any = viewingItem[key];
+                            if (key === 'timestamp' && value) value = new Date(value).toLocaleString();
+                            else if (key === 'actionType') value = CHANGE_TYPE_OPTIONS.find(o=>o.value === value)?.label || value;
+                            else if (key === 'entityType') value = ENTITY_TYPE_OPTIONS.find(o=>o.value === value)?.label || value;
+                            else if (key === 'details' && value && typeof value !== 'string') {
+                                try { value = JSON.stringify(value, null, 2); } catch { value = String(value); }
+                                return (
+                                    <div key={key} className="flex flex-col">
+                                        <span className="font-semibold">{label}:</span>
+                                        <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-40 overflow-auto">{value || '-'}</pre>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div key={key} className="flex">
+                                    <span className="font-semibold w-1/3 md:w-1/4">{label}:</span>
+                                    <span className="w-2/3 md:w-3/4 break-words">{value || '-'}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+                 <div className="text-right mt-6"> <Button variant="solid" onClick={closeViewDialog}>Close</Button> </div>
+            </Dialog>
+
+
+            {/* Optional Add/Edit Drawer for Logs (if enabled) */}
             <Drawer
-                title="Edit Change Log"
-                isOpen={isEditDrawerOpen}
-                onClose={closeEditDrawer}
-                onRequestClose={closeEditDrawer}
+                title={editingItem ? "Edit Log Entry (Admin)" : "Add New Log Entry (Admin)"}
+                isOpen={isAddDrawerOpen || isEditDrawerOpen}
+                onClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                width={700}
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => {
-                                console.log('Updated Change Log:', selectedItem);
-                                closeEditDrawer();
-                            }}
-                        >
-                            Save
+                        <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
+                        <Button size="sm" variant="solid" form="changeLogForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
+                            {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add Log')}
                         </Button>
                     </div>
                 }
             >
-                <Form>
-                    <FormItem label="Timestamp">
-                        <Input
-                            type="datetime-local"
-                            value={selectedItem?.timestamp.toISOString().slice(0, 16) || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', timestamp: new Date(), userName: '', userId: null, actionType: 'OTHER', entityType: 'Other', entityId: null, description: '', details: null }),
-                                    timestamp: new Date(e.target.value),
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="User Name">
-                        <Input
-                            value={selectedItem?.userName || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', timestamp: new Date(), userName: '', userId: null, actionType: 'OTHER', entityType: 'Other', entityId: null, description: '', details: null }),
-                                    userName: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="User ID">
-                        <Input
-                            value={selectedItem?.userId || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', timestamp: new Date(), userName: '', userId: null, actionType: 'OTHER', entityType: 'Other', entityId: null, description: '', details: null }),
-                                    userId: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Action Type">
-                        <select
-                            value={selectedItem?.actionType || 'OTHER'}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', timestamp: new Date(), userName: '', userId: null, actionType: 'OTHER', entityType: 'Other', entityId: null, description: '', details: null }),
-                                    actionType: e.target.value as ChangeType,
-                                }))
-                            }
-                        >
-                            <option value="CREATE">Create</option>
-                            <option value="UPDATE">Update</option>
-                            <option value="DELETE">Delete</option>
-                            <option value="LOGIN">Login</option>
-                            <option value="LOGOUT">Logout</option>
-                            <option value="SYSTEM">System</option>
-                            <option value="OTHER">Other</option>
-                        </select>
-                    </FormItem>
-                    <FormItem label="Entity Type">
-                        <select
-                            value={selectedItem?.entityType || 'Other'}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', timestamp: new Date(), userName: '', userId: null, actionType: 'OTHER', entityType: 'Other', entityId: null, description: '', details: null }),
-                                    entityType: e.target.value as EntityType,
-                                }))
-                            }
-                        >
-                            <option value="User">User</option>
-                            <option value="Product">Product</option>
-                            <option value="Order">Order</option>
-                            <option value="Setting">Setting</option>
-                            <option value="Role">Role</option>
-                            <option value="Permission">Permission</option>
-                            <option value="System">System</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </FormItem>
-                    <FormItem label="Entity ID">
-                        <Input
-                            value={selectedItem?.entityId || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', timestamp: new Date(), userName: '', userId: null, actionType: 'OTHER', entityType: 'Other', entityId: null, description: '', details: null }),
-                                    entityId: e.target.value,
-                                }))
-                            }
-                        />
-                    </FormItem>
-                    <FormItem label="Description">
-                        <textarea
-                            value={selectedItem?.description || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', timestamp: new Date(), userName: '', userId: null, actionType: 'OTHER', entityType: 'Other', entityId: null, description: '', details: null }),
-                                    description: e.target.value,
-                                }))
-                            }
-                            className="input"
-                            placeholder="Enter description"
-                        />
-                    </FormItem>
-                    <FormItem label="Details">
-                        <textarea
-                            value={typeof selectedItem?.details === 'string' ? selectedItem.details : JSON.stringify(selectedItem?.details, null, 2) || ''}
-                            onChange={(e) =>
-                                setSelectedItem((prev) => ({
-                                    ...(prev || { id: '', timestamp: new Date(), userName: '', userId: null, actionType: 'OTHER', entityType: 'Other', entityId: null, description: '', details: null }),
-                                    details: e.target.value,
-                                }))
-                            }
-                            className="input"
-                            placeholder="Enter details (JSON or text)"
-                        />
-                    </FormItem>
+                <Form id="changeLogForm" onSubmit={formMethods.handleSubmit(onSubmitLog)} className="flex flex-col gap-4">
+                    {renderDrawerForm(formMethods)}
                 </Form>
             </Drawer>
+
             <Drawer
-                title="Add New Change Log"
-                isOpen={isAddDrawerOpen}
-                onClose={closeAddDrawer}
-                onRequestClose={closeAddDrawer}
+                title="Filter Change Logs"
+                isOpen={isFilterDrawerOpen}
+                onClose={() => setIsFilterDrawerOpen(false)}
+                onRequestClose={() => setIsFilterDrawerOpen(false)}
+                width={400}
                 footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => console.log('Change Log Added')}
-                        >
-                            Add
-                        </Button>
+                     <div className="flex justify-between w-full">
+                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
+                        <div>
+                            <Button size="sm" className="mr-2" onClick={() => setIsFilterDrawerOpen(false)} type="button">Cancel</Button>
+                            <Button size="sm" variant="solid" form="filterLogForm" type="submit">Apply Filters</Button>
+                        </div>
                     </div>
                 }
             >
-                <Form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.target as HTMLFormElement);
-                        const newItem: ChangeLogItem = {
-                            id: `${changeLogs.length + 1}`,
-                            timestamp: new Date(formData.get('timestamp') as string),
-                            userName: formData.get('userName') as string,
-                            userId: formData.get('userId') as string | null,
-                            actionType: formData.get('actionType') as ChangeType,
-                            entityType: formData.get('entityType') as EntityType,
-                            entityId: formData.get('entityId') as string | null,
-                            description: formData.get('description') as string,
-                            details: formData.get('details') as string,
-                        };
-                        console.log('New Change Log:', newItem);
-                        // handleAdd(newItem);
-                    }}
-                >
-                    <FormItem label="Timestamp">
-                        <Input name="timestamp" type="datetime-local" />
+                <Form id="filterLogForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Action Type(s)">
+                        <Controller name="filterActionType" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Any Action Type" options={CHANGE_TYPE_OPTIONS}
+                                    value={CHANGE_TYPE_OPTIONS.filter(opt => field.value?.includes(opt.value))}
+                                    onChange={opts => field.onChange(opts ? opts.map((o: any) => o.value) : [])} />
+                        )} />
                     </FormItem>
-                    <FormItem label="User Name">
-                        <Input name="userName" placeholder="Enter User Name" />
+                    <FormItem label="Entity Type(s)">
+                         <Controller name="filterEntityType" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Any Entity Type" options={ENTITY_TYPE_OPTIONS}
+                                    value={ENTITY_TYPE_OPTIONS.filter(opt => field.value?.includes(opt.value))}
+                                    onChange={opts => field.onChange(opts ? opts.map((o: any) => o.value) : [])} />
+                        )} />
                     </FormItem>
-                    <FormItem label="User ID">
-                        <Input name="userId" placeholder="Enter User ID (optional)" />
+                    <FormItem label="User Name (contains)">
+                        <Controller name="filterUserName" control={filterFormMethods.control} render={({ field }) => (
+                            <Input {...field} placeholder="Enter username to filter" />
+                        )} />
                     </FormItem>
-                    <FormItem label="Action Type">
-                        <select name="actionType" defaultValue="OTHER">
-                            <option value="CREATE">Create</option>
-                            <option value="UPDATE">Update</option>
-                            <option value="DELETE">Delete</option>
-                            <option value="LOGIN">Login</option>
-                            <option value="LOGOUT">Logout</option>
-                            <option value="SYSTEM">System</option>
-                            <option value="OTHER">Other</option>
-                        </select>
-                    </FormItem>
-                    <FormItem label="Entity Type">
-                        <select name="entityType" defaultValue="Other">
-                            <option value="User">User</option>
-                            <option value="Product">Product</option>
-                            <option value="Order">Order</option>
-                            <option value="Setting">Setting</option>
-                            <option value="Role">Role</option>
-                            <option value="Permission">Permission</option>
-                            <option value="System">System</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </FormItem>
-                    <FormItem label="Entity ID">
-                        <Input name="entityId" placeholder="Enter Entity ID (optional)" />
-                    </FormItem>
-                    <FormItem label="Description">
-                        <textarea name="description" className="input" placeholder="Enter description" />
-                    </FormItem>
-                    <FormItem label="Details">
-                        <textarea name="details" className="input" placeholder="Enter details (JSON or text)" />
+                    <FormItem label="Date Range">
+                         <Controller name="filterDateRange" control={filterFormMethods.control} render={({ field }) => (
+                             <DatePicker.RangePicker
+                                 value={field.value as [Date | null, Date | null] | undefined}
+                                 onChange={(dates) => field.onChange(dates || [null, null])}
+                                 placeholder="Start Date - End Date"
+                                 inputFormat="YYYY-MM-DD"
+                             />
+                         )} />
                     </FormItem>
                 </Form>
             </Drawer>
+
+            {/* ConfirmDialog for delete would typically be removed for logs */}
         </>
     );
 };
-// --- End Main Component ---
 
 export default ChangeLogListing;
-
-// Helper Function
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//     return classes.filter(Boolean).join(' ');
-// }

@@ -1,12 +1,19 @@
 // src/views/your-path/WallListing.tsx
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Keep useNavigate if used for cloning/navigation
+// import { Link, useNavigate } from 'react-router-dom';
 import cloneDeep from 'lodash/cloneDeep';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import dayjs from 'dayjs'; // For date handling
+import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+
+dayjs.extend(isBetween);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
@@ -15,294 +22,171 @@ import DataTable from '@/components/shared/DataTable';
 import Tooltip from '@/components/ui/Tooltip';
 import Tag from '@/components/ui/Tag';
 import Button from '@/components/ui/Button';
-import Dialog from '@/components/ui/Dialog'; // For Import dialog
-import Avatar from '@/components/ui/Avatar'; // For Product image/icon placeholder
+import Dialog from '@/components/ui/Dialog';
+import Avatar from '@/components/ui/Avatar';
 import Notification from '@/components/ui/Notification';
-import toast from '@/components/ui/toast'; // Ensure toast is configured
+import toast from '@/components/ui/toast';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import StickyFooter from '@/components/shared/StickyFooter';
 import DebouceInput from '@/components/shared/DebouceInput';
-// Corrected import: Ensure InputNumber is imported from the correct path
 import InputNumber from '@/components/ui/Input/InputNumber';
-import { Drawer, Form, FormItem, Input, Select as UiSelect, DatePicker } from '@/components/ui'; // Renamed Select, added InputNumber, DatePicker
+import { Drawer, Form, FormItem, Input, Select as UiSelect, DatePicker } from '@/components/ui';
 
 // Icons
 import {
-    TbPencil,
-    TbCopy, // Keep clone if needed
-    TbSwitchHorizontal, // For status change
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbCloudDownload,
-    TbCloudUpload, // For Export button
-    TbFilter,
-    TbPlus, // Generic add icon
-    TbBox, // Icon for Product
-    TbClipboardList, // Icon for Wall Listing
+    TbPencil, TbTrash, TbChecks, TbSearch, TbCloudUpload, TbFilter, TbPlus, TbBox,
+    TbSwitchHorizontal, TbEye, TbLink, TbCloudDownload, // Added TbCloudDownload for import
 } from 'react-icons/tb';
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
+import type { OnSortParam, ColumnDef, Row, CellContext } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
-// CSVLink is not used with custom export function
-// import { CSVLink } from 'react-csv';
+import Textarea from '@/views/ui-components/forms/Input/Textarea';
 
-// Redux
-import { useAppDispatch } from '@/reduxtool/store';
-// Assuming these actions exist or you will create them for Wall Items
-import {
-    getWallItemsAction,
-    addWallItemAction,
-    editWallItemAction,
-    deleteWallItemAction,
-    deleteAllWallItemsAction,
-    // You might need a changeWallItemStatusAction if status change is separate
-} from '@/reduxtool/master/middleware'; // **Adjust path and action names as needed**
-import { masterSelector } from '@/reduxtool/master/masterSlice'; // **Adjust path and selector name as needed**
-import { useSelector } from 'react-redux';
-// Assuming you have actions/selectors for related entities like Products, Customers, Companies, Product Specs
-// import { getProductsAction, getCustomersAction, getCompaniesAction, getProductSpecsAction } from '@/reduxtool/master/middleware';
-// import { masterSelector as relatedDataSelector } from '@/reduxtool/master/masterSlice';
+// --- Define Types ---
+export type WallRecordStatus = 'Pending' | 'Approved' | 'Rejected' | 'Expired' | 'Fulfilled' | string;
+export type WallIntent = 'Buy' | 'Sell' | 'Exchange'; // Made specific to match Zod enum
+export type WallProductCondition = 'New' | 'Used' | 'Refurbished' | string;
 
-
-// Type for data coming directly from API before mapping
-// Based on your provided sample data structure
-type ApiWallItem = {
+export type ApiWallItem = {
     id: number;
     product_id: number;
-    customer_id: number; // Assuming customer is also a foreign key
-    company_id?: string; // From sample data, might be a string ID? Or number?
-    status: "Active" | "Inactive"; // API status - Need to map this to the UI's pending/approved/etc status? Or is this a different status? Let's assume API 'status' maps to record's overall status.
-    want_to: "Sell" | "Buy" | string; // Assuming this maps to UI 'intent'
-    qty: number;
-    product_status: "Active" | "Non-active" | string; // API product status - Need to map this to the UI's in_stock/low_stock/etc? Let's assume this maps to UI 'productStatus'.
-    source: "in" | "out" | string; // What this maps to in UI 'intent' is unclear. Let's keep it separate for now or map it if meaning is clear.
-    delivery_at: string | null; // Date string
-    delivery_details: string | null;
-    created_by: number; // User ID
-    active_hrs: number;
-    expired_date: string | null; // Date string
-    internal_remarks: string | null;
-    created_at: string; // Date string
-    updated_at: string; // Date string
     product_spec_id: number;
-    device_type: string | null;
-    price: number;
-    color: string | null;
-    master_cartoon: number | null; // Assuming number for quantity of master cartons
-    dispatch_status: string | null;
-    payment_term: number; // Assuming number of days?
-    device_condition: string | null;
-    eta_details: string | null;
-    location: string | null;
-    is_wall_manual: 0 | 1; // Boolean like
-    wall_link_token: string | null; // Maybe not needed in UI?
-    wall_link_datetime: string | null; // Date string
-    // Related entities included in the API response for display
-    product?: { // Assuming nested product object
-        id: number;
-        name: string; // Product Name
-        icon_full_path?: string; // Product Image/Icon URL
-         // Add other product fields if needed for display/mapping
-    }
-    customer?: { // Assuming nested customer object if needed for display/mapping customer_id
-        id: number;
-        name: string;
-        // Add other customer fields if needed
-    }
-    // Add other nested relationships (e.g., Company, User for created_by, ProductSpec) if needed for display/mapping
+    company_id?: string | null; // Make it optional and nullable if API allows
+    customer_id: number;
+    qty: number;
+    product_status: string;
+    want_to: string; // API might send as general string
+    status: string;  // API might send as general string
+    price?: number | null;
+    color?: string | null;
+    cartoon_type_id?: number | null;
+    dispatch_status?: string | null;
+    payment_term_id?: number | null;
+    device_condition?: string;
+    eta?: string | null;
+    location?: string | null;
+    internal_remarks?: string | null;
+    created_at: string;
+    updated_at: string;
+    product?: { name: string; icon_url?: string };
+    product_spec?: { name: string; };
+    company?: { name: string };
+    customer?: { name: string; email?: string; phone?: string };
 };
-
-// --- Define WallItem Type (Mapped for UI) ---
-// Mapping from API data structure to a UI-friendly format
-export type WallRecordStatus = 'active' | 'inactive'; // Mapping API 'status'
-export type WallIntent = 'Sell' | 'Buy' | string; // Mapping API 'want_to'. Using API values directly in UI type for simplicity.
-export type WallProductStatus = 'Active' | 'Non-active' | string; // Mapping API 'product_status'. Using API values directly.
-export type WallSource = 'in' | 'out' | string; // Mapping API 'source'. Using API values directly.
-export type WallDispatchStatus = string | null; // Mapping API 'dispatch_status'
-
 
 export type WallItem = {
-    id: number; // Use number based on sample data
-    productId: number; // Mapped from product_id
-    customerId: number; // Mapped from customer_id
-    companyId?: string; // Mapped from company_id
-    recordStatus: WallRecordStatus; // Mapped from API 'status' ('Active'/'Inactive' -> 'active'/'inactive')
-    intent: WallIntent; // Mapped from 'want_to'
+    id: number;
+    productId: number;
+    productSpecId: number;
+    companyId: string; // Keep as string, ensure mapping handles null/undefined from API
+    customerId: number;
     qty: number;
-    productStatus: WallProductStatus; // Mapped from 'product_status'
-    source: WallSource; // Mapped from 'source'
-    deliveryAt: string | null; // Mapped from delivery_at (date string)
-    deliveryDetails: string | null; // Mapped from delivery_details
-    createdByUserId: number; // Mapped from created_by
-    activeHrs: number; // Mapped from active_hrs
-    expiredDate: string | null; // Mapped from expired_date (date string)
-    internalRemarks: string | null; // Mapped from internal_remarks
-    createdAt: string; // Mapped from created_at (date string)
-    updatedAt: string; // Mapped from updated_at (date string)
-    productSpecId: number; // Mapped from product_spec_id
-    deviceType: string | null; // Mapped from device_type
-    price: number; // Mapped from price
-    color: string | null; // Mapped from color
-    masterCartoonQty: number | null; // Mapped from master_cartoon (assuming number)
-    dispatchStatus: WallDispatchStatus; // Mapped from dispatch_status
-    paymentTermDays: number; // Mapped from payment_term (assuming days)
-    deviceCondition: string | null; // Mapped from device_condition
-    etaDetails: string | null; // Mapped from eta_details
-    location: string | null; // Mapped from location
-    isWallManual: boolean; // Mapped from is_wall_manual (0/1 to boolean)
-    // wallLinkToken: string | null; // Probably not needed in UI
-    // wallLinkDatetime: string | null; // Probably not needed in UI
-    productName: string | null; // Mapped from product.name
-    productIconUrl: string | null; // Mapped from product.icon_full_path
-    customerName?: string | null; // Mapped from customer.name (if available)
-    createdByName?: string | null; // Mapped from created_by user's name (if available)
+    productStatus: string;
+    intent: WallIntent; // Use the specific enum
+    recordStatus: WallRecordStatus; // Use the specific enum
+    price?: number | null;
+    color?: string | null;
+    cartoonTypeId?: number | null;
+    dispatchStatus?: string | null;
+    paymentTermId?: number | null;
+    deviceCondition?: WallProductCondition;
+    eta?: string | null;
+    location?: string | null;
+    internalRemarks?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    productName?: string;
+    productIconUrl?: string;
+    productSpecName?: string;
+    companyName?: string;
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    cartoonTypeName?: string;
+    paymentTermName?: string;
 };
-// --- End Item Type Definition ---
-
 
 // --- Zod Schema for Add/Edit Wall Item Form ---
-// Based on the fields provided for the form
 const wallItemFormSchema = z.object({
-    product_id: z.number({ invalid_type_error: "Product is required" }).min(1, "Product is required"), // Assuming Select provides number
-    customer_id: z.number({ invalid_type_error: "Customer is required" }).min(1, "Customer is required"), // Assuming Select provides number
-    company_id: z.string().min(1, "Company is required"), // Assuming Input/Select provides string
-    status: z.enum(["Active", "Inactive"], { invalid_type_error: "Invalid Status" }), // API status field type
-    want_to: z.enum(["Sell", "Buy", "Exchange", "Transfer"], { invalid_type_error: "Invalid Intent" }), // Example intent options matching API/common values
-    qty: z.number({ invalid_type_error: "Quantity is required" }).min(1, "Quantity must be at least 1"),
-    product_status: z.enum(["Active", "Non-active"], { invalid_type_error: "Invalid Product Status" }), // API product_status field type
-    source: z.enum(["in", "out", "internal"], { invalid_type_error: "Invalid Source" }), // Example source options
-    created_by: z.number({ invalid_type_error: "Created By user is required" }).min(1, "Created By user is required"), // User ID who created this entry
-    active_hrs: z.number().nullable().optional(), // Optional/nullable number
-    expired_date: z.string().nullable().optional(), // ISO date string or null
-    internal_remarks: z.string().nullable().optional(),
-    product_spec_id: z.number({ invalid_type_error: "Product Specification is required" }).min(1, "Product Specification is required"),
+    productId: z.number({ required_error: "Product is required." }).min(1, "Product is required."),
+    productSpecId: z.number({ required_error: "Product Specification is required." }).min(1, "Product Spec is required."),
+    companyId: z.string({ required_error: "Company is required." }).min(1, "Company is required."),
+    customerId: z.number({ required_error: "Member/Customer is required." }).min(1, "Member is required."),
+    qty: z.number({ required_error: "Quantity is required." }).min(1, "Quantity must be at least 1."),
+    productStatus: z.string().min(1, "Product Status is required."),
+    intent: z.enum(['Buy', 'Sell', 'Exchange'] as const, // Use as const for stricter typing
+        { required_error: "Intent (Want to) is required." }
+    ),
+    recordStatus: z.string().min(1, "Record Status is required."),
     price: z.number().nullable().optional(),
-    color: z.string().nullable().optional(),
-    master_cartoon: z.number().nullable().optional(), // Assuming number for master cartons
-    dispatch_status: z.string().nullable().optional(),
-    payment_term: z.number().nullable().optional(), // Assuming number of days
-    eta_details: z.string().nullable().optional(),
-    location: z.string().nullable().optional(),
-    is_wall_manual: z.boolean().optional(), // Assuming checkbox/switch provides boolean
-})
-type WallFormData = z.infer<typeof wallItemFormSchema>
+    color: z.string().max(50, "Color too long.").nullable().optional(),
+    cartoonTypeId: z.number().nullable().optional(),
+    dispatchStatus: z.string().max(100, "Dispatch status too long.").nullable().optional(),
+    paymentTermId: z.number().nullable().optional(),
+    deviceCondition: z.string().nullable().optional(),
+    eta: z.string().max(100, "ETA details too long.").nullable().optional(),
+    location: z.string().max(100, "Location too long.").nullable().optional(),
+    internalRemarks: z.string().nullable().optional(),
+});
+type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
 // --- Zod Schema for Filter Form ---
-const filterFormWallSchema = z.object({
-    filterStatuses: z.array(z.object({ value: z.string(), label: z.string() })).optional(), // Filter by record status (active/inactive)
-    filterProductStatuses: z.array(z.object({ value: z.string(), label: z.string() })).optional(), // Filter by product status (active/non-active)
-    filterIntents: z.array(z.object({ value: z.string(), label: z.string() })).optional(), // Filter by intent (sell/buy)
-    filterProductIds: z.array(z.object({ value: z.number(), label: z.string() })).optional(), // Filter by product
-    filterCustomerIds: z.array(z.object({ value: z.number(), label: z.string() })).optional(), // Filter by customer
-    filterCompanyIds: z.array(z.object({ value: z.string(), label: z.string() })).optional(), // Filter by company
-    // filterCreatedBy: z.array(z.object({ value: z.number(), label: z.string() })).optional(), // Filter by user who created
-    // filterDateRange: z.array(z.date().nullable()).length(2).nullable().optional(), // Filter by created date range
-})
-type FilterFormData = z.infer<typeof filterFormWallSchema>
+const selectOptionSchema = z.object({ value: z.any(), label: z.string() });
+const filterFormSchema = z.object({
+    filterRecordStatuses: z.array(selectOptionSchema).optional().default([]),
+    filterProductIds: z.array(selectOptionSchema).optional().default([]),
+    filterProductSpecIds: z.array(selectOptionSchema).optional().default([]),
+    filterCompanyIds: z.array(selectOptionSchema).optional().default([]),
+    filterCustomerIds: z.array(selectOptionSchema).optional().default([]),
+    filterIntents: z.array(selectOptionSchema).optional().default([]),
+    dateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
 
-
-// --- CSV Exporter Utility ---
-const CSV_HEADERS_WALL = [
-    'ID', 'Record Status', 'Intent', 'Qty', 'Product Status', 'Source', 'Price',
-    'Product Name', 'Product Specs ID', 'Color', 'Master Cartoon Qty', 'Dispatch Status',
-    'Payment Term (Days)', 'Device Type', 'Device Condition', 'ETA Details', 'Location',
-    'Company ID', 'Customer ID', 'Created By User ID', 'Created At', 'Updated At',
-    'Delivery At', 'Expired Date', 'Active Hrs', 'Internal Remarks', 'Is Manual Entry',
-];
-type WallCsvItem = {
-    id: number;
-    recordStatus: WallRecordStatus; // UI status
-    intent: WallIntent; // UI intent
-    qty: number;
-    productStatus: WallProductStatus; // UI product status
-    source: WallSource; // UI source
-    price: number;
-    productName: string | null;
-    productSpecId: number;
-    color: string | null;
-    masterCartoonQty: number | null;
-    dispatchStatus: WallDispatchStatus; // UI dispatch status
-    paymentTermDays: number;
-    deviceType: string | null;
-    deviceCondition: string | null;
-    etaDetails: string | null;
-    location: string | null;
-    companyId?: string;
-    customerId: number;
-    createdByUserId: number;
-    createdAt: string; // Formatted date string
-    updatedAt: string; // Formatted date string
-    deliveryAt: string | null; // Formatted date string or null
-    expiredDate: string | null; // Formatted date string or null
-    activeHrs: number;
-    internalRemarks: string | null;
-    isWallManual: boolean;
+// --- Status Colors and Options ---
+const recordStatusColor: Record<WallRecordStatus, string> = {
+    Pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100',
+    Approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
+    Rejected: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
+    Expired: 'bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100',
+    Fulfilled: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100',
 };
+const recordStatusOptions = Object.keys(recordStatusColor).map(s => ({ value: s, label: s }));
+const intentOptions: {value: WallIntent, label: string}[] = [{value: 'Buy', label: 'Buy'}, {value: 'Sell', label: 'Sell'}, {value: 'Exchange', label: 'Exchange'}];
+const productStatusOptions = [{value: 'In Stock', label: 'In Stock'}, {value: 'Low Stock', label: 'Low Stock'}, {value: 'Out of Stock', label: 'Out of Stock'}];
+const deviceConditionOptions = [{value: 'New', label: 'New'}, {value: 'Used', label: 'Used'}, {value: 'Refurbished', label: 'Refurbished'}];
 
+const dummyProducts = [{ id: 1, name: "iPhone 15 Pro" }, { id: 2, name: "Samsung Galaxy S24 Ultra" }];
+const dummyProductSpecs = [{ id: 1, name: "256GB, Blue Titanium", productId: 1 }, { id: 2, name: "512GB, Natural Titanium", productId: 1 }, {id: 3, name: "256GB, Phantom Black", productId: 2}];
+const dummyCompanies = [{ id: "COMP001", name: "TechDistributors Inc." }, { id: "COMP002", name: "Global Gadgets LLC" }];
+const dummyCustomers = [{ id: 101, name: "John Retailer", email: "john@retail.com", phone: "111-222-3333" }, { id: 102, name: "Sarah Wholesaler", email: "sarah@ws.com", phone: "444-555-6666" }];
+const dummyCartoonTypes = [{id: 1, name: 'Master Cartoon'}, {id: 2, name: 'Inner Carton'}];
+const dummyPaymentTerms = [{id: 1, name: 'Net 30'}, {id: 2, name: 'COD'}, {id: 3, name: 'Prepaid'}];
 
-function exportToCsvWall(filename: string, rows: WallItem[]) {
-    if (!rows || !rows.length) {
-        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
-        return false;
-    }
-    // Transform data for CSV output format
-    const transformedRows: WallCsvItem[] = rows.map(item => ({
-        id: item.id,
-        recordStatus: item.recordStatus, // Use UI status
-        intent: item.intent, // Use UI intent
-        qty: item.qty,
-        productStatus: item.productStatus, // Use UI product status
-        source: item.source, // Use UI source
-        price: item.price,
-        productName: item.productName,
-        productSpecId: item.productSpecId,
-        color: item.color,
-        masterCartoonQty: item.masterCartoonQty,
-        dispatchStatus: item.dispatchStatus,
-        paymentTermDays: item.paymentTermDays,
-        deviceType: item.deviceType,
-        deviceCondition: item.deviceCondition,
-        etaDetails: item.etaDetails,
-        location: item.location,
-        companyId: item.companyId,
-        customerId: item.customerId,
-        createdByUserId: item.createdByUserId,
-        createdAt: item.createdAt ? dayjs(item.createdAt).format('YYYY-MM-DD HH:mm:ss') : '',
-        updatedAt: item.updatedAt ? dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm:ss') : '',
-        deliveryAt: item.deliveryAt ? dayjs(item.deliveryAt).format('YYYY-MM-DD HH:mm:ss') : '',
-        expiredDate: item.expiredDate ? dayjs(item.expiredDate).format('YYYY-MM-DD HH:mm:ss') : '',
-        activeHrs: item.activeHrs,
-        internalRemarks: item.internalRemarks,
-        isWallManual: item.isWallManual,
-    }));
+const initialDummyWallItems: ApiWallItem[] = [
+    { id: 1, product_id: 1, product_spec_id: 1, company_id: "COMP001", customer_id: 101, qty: 100, product_status: "In Stock", want_to: "Sell", status: "Approved", price: 999, color: "Blue Titanium", cartoon_type_id: 1, dispatch_status: "Ready for Dispatch", payment_term_id: 1, device_condition: "New", eta: "2-3 days", location: "Warehouse A", internal_remarks: "High demand item", created_at: dayjs().subtract(2, 'day').toISOString(), updated_at: dayjs().subtract(1, 'day').toISOString(), product: dummyProducts[0], product_spec: dummyProductSpecs[0], company: dummyCompanies[0], customer: dummyCustomers[0] },
+    { id: 2, product_id: 2, product_spec_id: 3, company_id: "COMP002", customer_id: 102, qty: 50, product_status: "In Stock", want_to: "Buy", status: "Pending", price: 1100, color: "Phantom Black", cartoon_type_id: 2, payment_term_id: 2, device_condition: "New", location: "Central Hub", created_at: dayjs().subtract(5, 'day').toISOString(), updated_at: dayjs().subtract(5, 'day').toISOString(), product: dummyProducts[1], product_spec: dummyProductSpecs[2], company: dummyCompanies[1], customer: dummyCustomers[1] },
+    { id: 3, product_id: 1, product_spec_id: 2, company_id: "COMP001", customer_id: 101, qty: 20, product_status: "Low Stock", want_to: "Sell", status: "Expired", price: 1050, color: "Natural Titanium", device_condition: "Used", created_at: dayjs().subtract(10, 'day').toISOString(), updated_at: dayjs().subtract(3, 'day').toISOString(), product: dummyProducts[0], product_spec: dummyProductSpecs[1], company: dummyCompanies[0], customer: dummyCustomers[0] },
+];
 
-    const csvKeys: (keyof WallCsvItem)[] = [
-        'id', 'recordStatus', 'intent', 'qty', 'productStatus', 'source', 'price',
-        'productName', 'productSpecId', 'color', 'masterCartoonQty', 'dispatchStatus',
-        'paymentTermDays', 'deviceType', 'deviceCondition', 'etaDetails', 'location',
-        'companyId', 'customerId', 'createdByUserId', 'createdAt', 'updatedAt',
-        'deliveryAt', 'expiredDate', 'activeHrs', 'internalRemarks', 'isWallManual',
-    ];
+const CSV_WALL_HEADERS = ['ID', 'Product Name', 'Product Spec', 'Company Name', 'Customer Name', 'Qty', 'Product Status', 'Intent', 'Record Status', 'Price', 'Color', 'Cartoon Type', 'Dispatch Status', 'Payment Term', 'Device Condition', 'ETA', 'Location', 'Internal Remarks', 'Created At'];
+const CSV_WALL_KEYS: (keyof WallItem)[] = ['id', 'productName', 'productSpecName', 'companyName', 'customerName', 'qty', 'productStatus', 'intent', 'recordStatus', 'price', 'color', 'cartoonTypeName', 'dispatchStatus', 'paymentTermName', 'deviceCondition', 'eta', 'location', 'internalRemarks', 'createdAt'];
 
+function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
+     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
     const separator = ',';
-    const csvContent =
-        CSV_HEADERS_WALL.join(separator) +
-        '\n' +
-        transformedRows
-            .map((row) => {
-                return csvKeys.map((k) => {
-                    let cell = row[k];
-                    if (cell === null || cell === undefined) cell = '';
-                    else cell = String(cell).replace(/"/g, '""'); // Escape double quotes
-                    if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; // Wrap cell if needed
-                    return cell;
-                }).join(separator);
-            })
-            .join('\n');
-
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' }); // Add BOM for UTF-8
+    const csvContent = CSV_WALL_HEADERS.join(separator) + '\n' + rows.map(row => {
+        return CSV_WALL_KEYS.map(k => {
+            let cell = row[k];
+            if (cell === null || cell === undefined) cell = '';
+            else if (cell instanceof Date) cell = dayjs(cell).format('YYYY-MM-DD HH:mm:ss');
+            else cell = String(cell).replace(/"/g, '""');
+            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+            return cell;
+        }).join(separator);
+    }).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     if (link.download !== undefined) {
         const url = URL.createObjectURL(blob);
@@ -311,1116 +195,639 @@ function exportToCsvWall(filename: string, rows: WallItem[]) {
         link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
         return true;
     }
-    toast.push(<Notification title="Export Failed" type="danger">Your browser does not support this feature.</Notification>);
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
     return false;
 }
 
-
-// --- Constants for Options and Colors ---
-// **Assume these options are fetched dynamically or defined based on API allowable values**
-
-// Options for API 'status' field (used in forms)
-const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [
-    { value: 'Active', label: 'Active' },
-    { value: 'Inactive', label: 'Inactive' },
-];
-
-// Options for mapped UI 'recordStatus' field (used in filters and tags)
-const uiRecordStatusOptions: { value: WallRecordStatus; label: string }[] = [
-     { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' },
-];
-
-// Options for API 'product_status' field (used in forms and filters)
-const apiProductStatusOptions: { value: "Active" | "Non-active"; label: string }[] = [
-    { value: 'Active', label: 'Active' },
-    { value: 'Non-active', label: 'Non-active' },
-];
-
-// Options for API 'want_to' field (used in forms and filters)
-const apiIntentOptions: { value: WallIntent; label: string }[] = [
-    { value: 'Sell', label: 'Sell' },
-    { value: 'Buy', label: 'Buy' },
-    { value: 'Exchange', label: 'Exchange' },
-    { value: 'Transfer', label: 'Transfer' },
-];
-
-// Options for API 'source' field (used in forms)
-const apiSourceOptions: { value: WallSource; label: string }[] = [
-     { value: 'in', label: 'In' },
-     { value: 'out', label: 'Out' },
-     { value: 'internal', label: 'Internal' },
-];
-
-// Dummy options for related entities (Replace with data from Redux)
-const dummyProductOptions: { value: number; label: string }[] = [{ value: 1, label: 'Product A' }, { value: 2, label: 'Product B' }];
-const dummyCustomerOptions: { value: number; label: string }[] = [{ value: 1, label: 'Customer 1' }, { value: 2, label: 'Customer 2' }];
-const dummyCompanyOptions: { value: string; label: string }[] = [{ value: 'C001', label: 'Company X' }, { value: 'C002', label: 'Company Y' }];
-const dummyUserOptions: { value: number; label: string }[] = [{ value: 1, label: 'Admin User' }, { value: 2, label: 'Standard User' }];
-const dummyProductSpecOptions: { value: number; label: string }[] = [{ value: 1, label: 'Spec 1' }, { value: 2, label: 'Spec 2' }];
-
-// Color mappings for Tags (UI statuses)
-const recordStatusColorMapping: Record<WallRecordStatus, string> = {
-    active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-    inactive: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-};
-const productStatusColorMapping: Record<WallProductStatus, string> = {
-    Active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-    'Non-active': 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-};
-
-
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({ onEdit, onClone, onChangeStatus, onDelete }: {
-    onEdit: () => void;
-    onClone: () => void; // Always include clone if the button is always there
-    onChangeStatus: () => void;
-    onDelete: () => void;
+const ActionColumn = ({ onEdit, onDelete, onView, onChangeStatus, onWallLink }: {
+    onEdit: () => void; onDelete: () => void; onView: () => void; onChangeStatus: () => void; onWallLink: () => void;
 }) => {
-    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
-
+    const iconBtnClass = "text-lg p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors";
     return (
-        <div className="flex items-center justify-center gap-2">
-            <Tooltip title="Clone Record">
-                <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400' )} role="button" onClick={onClone} > <TbCopy /> </div>
-            </Tooltip>
-            <Tooltip title="Change Status">
-                <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400' )} role="button" onClick={onChangeStatus} > <TbSwitchHorizontal /> </div>
-            </Tooltip>
-            <Tooltip title="Edit Record">
-                <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400' )} role="button" onClick={onEdit} > <TbPencil /> </div>
-            </Tooltip>
-            <Tooltip title="Delete Record">
-                <div className={classNames( iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400' )} role="button" onClick={onDelete} > <TbTrash /> </div>
-            </Tooltip>
+        <div className="flex items-center justify-center gap-1">
+            <Tooltip title="View Details"><Button shape="circle" variant="plain" size="sm" icon={<TbEye />} onClick={onView} className={iconBtnClass} /></Tooltip>
+            <Tooltip title="Edit"><Button shape="circle" variant="plain" size="sm" icon={<TbPencil />} onClick={onEdit} className={`${iconBtnClass} hover:text-blue-500`} /></Tooltip>
+            <Tooltip title="Change Status"><Button shape="circle" variant="plain" size="sm" icon={<TbSwitchHorizontal />} onClick={onChangeStatus} className={`${iconBtnClass} hover:text-amber-500`} /></Tooltip>
+            <Tooltip title="Wall Link"><Button shape="circle" variant="plain" size="sm" icon={<TbLink />} onClick={onWallLink} className={`${iconBtnClass} hover:text-green-500`} /></Tooltip>
+            <Tooltip title="Delete"><Button shape="circle" variant="plain" size="sm" icon={<TbTrash />} onClick={onDelete} className={`${iconBtnClass} hover:text-red-500`} /></Tooltip>
         </div>
     );
 };
 
-
-// --- WallItemSearch Component ---
-type WallItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement> }
-const WallItemSearch = React.forwardRef<HTMLInputElement, WallItemSearchProps>(
-    ({ onInputChange }, ref) => (
-        <DebouceInput ref={ref} className="w-full" placeholder="Search Wall Items (ID, Product, Company, Status, Intent)..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
-    )
+type WallSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement> };
+const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(
+    ({ onInputChange }, ref) => <DebouceInput ref={ref} className="w-full" placeholder="Search wall listings..." suffix={<TbSearch />} onChange={e => onInputChange(e.target.value)} />
 );
-WallItemSearch.displayName = 'WallItemSearch';
+WallSearch.displayName = 'WallSearch';
 
-// --- WallItemTableTools Component ---
-const WallItemTableTools = ({ onSearchChange, onFilter, onExport, onImport }: {
-    onSearchChange: (query: string) => void;
-    onFilter: () => void;
-    onExport: () => void;
-    onImport: () => void;
-}) => {
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-            <div className="flex-grow"><WallItemSearch onInputChange={onSearchChange} /></div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
-                <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-            </div>
+const WallTableTools = ({ onSearchChange, onFilter, onExport, onAddNew, onImport }: { // Added onImport
+    onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onAddNew: () => void; onImport: () => void; // Added onImport
+}) => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex-grow"><WallSearch onInputChange={onSearchChange} /></div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+           
+            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+            <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button> {/* Import Button */}
+            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
         </div>
-    );
-};
+    </div>
+);
 
-// --- WallItemTable Component ---
-type WallItemTableProps = {
+type WallTableProps = {
     columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean;
     pagingData: { total: number; pageIndex: number; pageSize: number };
     selectedItems: WallItem[];
     onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void;
     onSort: (sort: OnSortParam) => void;
-    onRowSelect: (checked: boolean, row: WallItem) => void;
-    onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void;
-}
-const WallItemTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: WallItemTableProps) => (
-    <DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData}
-        checkboxChecked={(row) => selectedItems.some(selected => selected.id === row.id)}
-        onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort}
-        onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect}
+    onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void;
+};
+const WallTable = (props: WallTableProps) => (
+    <DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData}
+        checkboxChecked={(row) => props.selectedItems.some(s => s.id === row.id)}
+        onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange}
+        onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect}
+        noData={!props.loading && props.data.length === 0}
     />
 );
 
-// --- WallItemSelectedFooter Component ---
-type WallItemSelectedFooterProps = { selectedItems: WallItem[]; onDeleteSelected: () => void; }
-const WallItemSelectedFooter = ({ selectedItems, onDeleteSelected }: WallItemSelectedFooterProps) => {
+type WallSelectedFooterProps = { selectedItems: WallItem[]; onDeleteSelected: () => void; };
+const WallSelectedFooter = ({ selectedItems, onDeleteSelected }: WallSelectedFooterProps) => {
     const [deleteOpen, setDeleteOpen] = useState(false);
     if (selectedItems.length === 0) return null;
     return (
         <>
-            <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
+            <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t px-8">
+                <div className="flex items-center justify-between w-full">
                     <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">{selectedItems.length}</span>
-                            <span>Item{selectedItems.length > 1 ? 's' : ''} selected</span>
-                        </span>
+                        <TbChecks className="text-xl text-primary-500" />
+                        <span className="font-semibold">{selectedItems.length} item{selectedItems.length > 1 ? 's' : ''} selected</span>
                     </span>
-                    <div className="flex items-center gap-3">
-                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteOpen(true)}>Delete Selected</Button>
-                    </div>
+                    <Button size="sm" variant="plain" className="text-red-500 hover:text-red-700" onClick={() => setDeleteOpen(true)}>Delete Selected</Button>
                 </div>
             </StickyFooter>
-            <ConfirmDialog isOpen={deleteOpen} type="danger" title={`Delete ${selectedItems.length} Item${selectedItems.length > 1 ? 's' : ''}`}
-                onClose={() => setDeleteOpen(false)} onRequestClose={() => setDeleteOpen(false)} onCancel={() => setDeleteOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteOpen(false); }}>
-                <p>Are you sure you want to delete the selected item{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p>
+            <ConfirmDialog isOpen={deleteOpen} type="danger" title={`Delete ${selectedItems.length} items?`}
+                onClose={() => setDeleteOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteOpen(false); }}
+                onCancel={() => setDeleteOpen(false)}>
+                <p>This action cannot be undone.</p>
             </ConfirmDialog>
         </>
     );
 };
 
+const WallListing = () => {
+    const [allWallItems, setAllWallItems] = useState<WallItem[]>([]);
+    const [apiRawData, setApiRawData] = useState<ApiWallItem[]>(initialDummyWallItems);
+    const [loadingStatus, setLoadingStatus] = useState<'idle' | 'loading' | 'succeeded' | 'failed'>('idle');
 
-// --- Main WallListing Component ---
-const WallListing = () => { // Renamed Component
-    const navigate = useNavigate();
-    const dispatch = useAppDispatch();
+    const dispatchSimulated = useCallback(async (action: { type: string; payload?: any }) => {
+        setLoadingStatus('loading');
+        await new Promise(res => setTimeout(res, 300));
+        try {
+            switch (action.type) {
+                case 'wall/get': setApiRawData(initialDummyWallItems); break;
+                case 'wall/add':
+                    const newItemApi: ApiWallItem = {
+                        ...action.payload,
+                        id: Date.now(),
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                        status: action.payload.recordStatus, // Map back from form to API
+                        want_to: action.payload.intent, // Map back from form to API
+                    };
+                    setApiRawData(prev => [newItemApi, ...prev]);
+                    break;
+                case 'wall/edit':
+                    setApiRawData(prev => prev.map(item => item.id === action.payload.id ? { ...item, ...action.payload.data, status: action.payload.data.recordStatus, want_to: action.payload.data.intent, updated_at: new Date().toISOString() } : item));
+                    break;
+                case 'wall/delete':
+                    setApiRawData(prev => prev.filter(item => item.id !== action.payload.id));
+                    break;
+                case 'wall/deleteAll':
+                    const idsToDelete = new Set((action.payload.ids as string).split(',').map(Number));
+                    setApiRawData(prev => prev.filter(item => !idsToDelete.has(item.id)));
+                    break;
+                case 'wall/changeStatus':
+                     setApiRawData(prev => prev.map(item => item.id === action.payload.id ? { ...item, status: action.payload.newStatus, updated_at: new Date().toISOString() } : item));
+                    break;
+                default: console.warn('Unknown action');
+            }
+            setLoadingStatus('succeeded');
+            return { unwrap: () => Promise.resolve() };
+        } catch (e) { setLoadingStatus('failed'); return { unwrap: () => Promise.reject(e) }; }
+    }, []);
 
-    // Redux State: Assuming wallItemsData is in your masterSlice
-    // **Adjust wallItemsData and masterSelector paths/names as needed**
-    const { wallItemsData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
-    // **Assume you also fetch related data like products, customers, etc. if needed for forms/filters**
-    // const { products = [], customers = [], companies = [], productSpecs = [], users = [] } = useSelector(relatedDataSelector);
+    useEffect(() => {
+        dispatchSimulated({ type: 'wall/get' });
+    }, [dispatchSimulated]);
+
+    useEffect(() => {
+        const mapped = apiRawData.map((apiItem): WallItem => ({
+            id: apiItem.id,
+            productId: apiItem.product_id,
+            productSpecId: apiItem.product_spec_id,
+            companyId: apiItem.company_id || '',
+            customerId: apiItem.customer_id,
+            qty: apiItem.qty,
+            productStatus: apiItem.product_status,
+            intent: apiItem.want_to as WallIntent, // Cast if API is string
+            recordStatus: apiItem.status as WallRecordStatus, // Cast if API is string
+            price: apiItem.price,
+            color: apiItem.color,
+            cartoonTypeId: apiItem.cartoon_type_id,
+            dispatchStatus: apiItem.dispatch_status,
+            paymentTermId: apiItem.payment_term_id,
+            deviceCondition: apiItem.device_condition as WallProductCondition,
+            eta: apiItem.eta,
+            location: apiItem.location,
+            internalRemarks: apiItem.internal_remarks,
+            createdAt: new Date(apiItem.created_at),
+            updatedAt: new Date(apiItem.updated_at),
+            productName: apiItem.product?.name,
+            productIconUrl: apiItem.product?.icon_url,
+            productSpecName: apiItem.product_spec?.name,
+            companyName: apiItem.company?.name,
+            customerName: apiItem.customer?.name,
+            customerEmail: apiItem.customer?.email,
+            customerPhone: apiItem.customer?.phone,
+            cartoonTypeName: dummyCartoonTypes.find(ct => ct.id === apiItem.cartoon_type_id)?.name,
+            paymentTermName: dummyPaymentTerms.find(pt => pt.id === apiItem.payment_term_id)?.name,
+        }));
+        setAllWallItems(mapped);
+    }, [apiRawData]);
+
+    const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState(false);
+    const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<WallItem | null>(null);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<WallItem | null>(null);
+    const [importDialogOpen, setImportDialogOpen] = useState(false); // Added state for import dialog
 
 
-    // --- Local Component State ---
-
-    // State for DataTable: pagination, sort, and quick search query
-    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' });
-    // State for selected rows (for bulk actions)
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
+    const [tableData, setTableData] = useState<TableQueries>({
+        pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'createdAt' }, query: '',
+    });
     const [selectedItems, setSelectedItems] = useState<WallItem[]>([]);
 
-    // State for Drawer UI: controls whether drawers are open
-    const [isAddDrawerOpen, setAddDrawerOpen] = useState(false);
-    const [isEditDrawerOpen, setEditDrawerOpen] = useState(false);
-    const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
-    // State for Delete Confirmation Dialogs
-    const [singleDeleteOpen, setSingleDeleteOpen] = useState(false);
-    const [importDialogOpen, setImportDialogOpen] = useState(false); // State for import dialog
+    const formMethods = useForm<WallItemFormData>({ resolver: zodResolver(wallItemFormSchema) });
+    const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
 
-    // State for the Wall Item being edited or deleted (single action)
-    const [editingWallItem, setEditingWallItem] = useState<WallItem | null>(null);
-    const [wallItemToDelete, setWallItemToDelete] = useState<WallItem | null>(null);
-
-    // State for Loading/Submitting/Deleting states (for UI feedback)
-    const [isSubmitting, setSubmitting] = useState(false); // For Add/Edit operations
-    const [isDeleting, setDeleting] = useState(false); // For Delete operations (single or bulk)
-
-
-    // State for Filters: holds the currently applied filters from the drawer form
-    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterStatuses: [], filterProductStatuses: [], filterIntents: [], filterProductIds: [], filterCustomerIds: [], filterCompanyIds: [] }); // Updated filter criteria default
-
-    // --- Table State Update Handlers ---
-    // IMPORTANT: Declare these early so they can be called by other handlers.
-    // Memoized using useCallback to ensure stable function references for DataTable props
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-        setTableData((prev) => ({ ...prev, ...data }));
-    }, []); // No dependencies needed as it only updates local state (`setTableData` is stable)
-
-
-    // --- Effects ---
-
-    // Effect to fetch Wall Item data from Redux middleware when the component mounts
-    useEffect(() => {
-        dispatch(getWallItemsAction()); // Dispatch the action to fetch wall items
-        // **Also dispatch actions to fetch related data needed for forms/filters**
-        // dispatch(getProductsAction());
-        // dispatch(getCustomersAction());
-        // dispatch(getCompaniesAction());
-        // dispatch(getProductSpecsAction());
-        // dispatch(getUsersAction()); // If filtering by created_by user
-    }, [dispatch]);
-
-
-    // --- Data Mapping ---
-    // Memoized mapping from API data structure to UI-friendly WallItem structure
-    const mappedWallItems = useMemo(() => {
-        if (!Array.isArray(wallItemsData)) return []; // Ensure source data is an array
-
-        return wallItemsData.map((apiItem: ApiWallItem) => {
-            // Map API data to UI structure
-            return {
-                id: apiItem.id,
-                productId: apiItem.product_id,
-                customerId: apiItem.customer_id,
-                companyId: apiItem.company_id,
-                recordStatus: apiItem.status === 'Active' ? 'active' : 'inactive', // Map API status
-                intent: apiItem.want_to, // Use API value directly or map if needed ('Sell' -> 'sell')
-                qty: apiItem.qty,
-                productStatus: apiItem.product_status, // Use API value directly or map
-                source: apiItem.source, // Use API value directly or map
-                deliveryAt: apiItem.delivery_at,
-                deliveryDetails: apiItem.delivery_details,
-                createdByUserId: apiItem.created_by,
-                activeHrs: apiItem.active_hrs,
-                expiredDate: apiItem.expired_date,
-                internalRemarks: apiItem.internal_remarks,
-                createdAt: apiItem.created_at,
-                updatedAt: apiItem.updated_at,
-                productSpecId: apiItem.product_spec_id,
-                deviceType: apiItem.device_type,
-                price: apiItem.price,
-                color: apiItem.color,
-                masterCartoonQty: apiItem.master_cartoon,
-                dispatchStatus: apiItem.dispatch_status,
-                paymentTermDays: apiItem.payment_term,
-                deviceCondition: apiItem.device_condition,
-                etaDetails: apiItem.eta_details,
-                location: apiItem.location,
-                isWallManual: apiItem.is_wall_manual === 1, // Map 0/1 to boolean
-                // wallLinkToken: apiItem.wall_link_token,
-                // wallLinkDatetime: apiItem.wall_link_datetime,
-                productName: apiItem.product?.name ?? null, // Get product name from nested object
-                productIconUrl: apiItem.product?.icon_full_path ?? null, // Get product icon URL
-                // customerName: apiItem.customer?.name ?? null, // Get customer name if nested
-                // createdByName: apiItem.user?.name ?? null, // Get created by user name if nested
-            };
+    const openAddDrawer = useCallback(() => {
+        setEditingItem(null);
+        formMethods.reset({
+            productId: undefined, productSpecId: undefined, companyId: '', customerId: undefined, // Ensure companyId is string
+            qty: 1, productStatus: productStatusOptions[0]?.value,
+            intent: 'Sell', // Default to a valid enum value
+            recordStatus: recordStatusOptions[0]?.value,
+            price: null, color: null, cartoonTypeId: null, dispatchStatus: null, paymentTermId: null,
+            deviceCondition: deviceConditionOptions[0]?.value, eta: null, location: null, internalRemarks: null,
         });
-    }, [wallItemsData /* Add dependencies for any related data needed for mapping */]);
+        setIsAddEditDrawerOpen(true);
+    }, [formMethods]);
 
-
-    // --- Table State Update Handlers ---
-    // Handler for pagination changes (page number)
-    const handlePaginationChange = useCallback(
-        (page: number) => handleSetTableData({ pageIndex: page }),
-        [handleSetTableData], // Depend on handleSetTableData (which is stable)
-    );
-
-    // Handler for page size changes
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            // When page size changes, reset to the first page
-            handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-            // Also clear any selections, as the page content has changed
-            setSelectedItems([]);
-        },
-        [handleSetTableData], // Depend on handleSetTableData (which is stable)
-    );
-
-    // Handler for sorting changes
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            // When sort changes, reset to the first page
-            handleSetTableData({ sort: sort, pageIndex: 1 });
-        },
-        [handleSetTableData], // Depend on handleSetTableData (which is stable)
-    );
-
-    // Handler for quick search input changes (debounced by DebouceInput)
-    const handleSearchChange = useCallback(
-        (query: string) => {
-             // When search query changes, reset to the first page
-             handleSetTableData({ query: query, pageIndex: 1 })
-            },
-        [handleSetTableData], // Depend on handleSetTableData (which is stable)
-    );
-
-
-    // React Hook Form methods for forms (declared after state they might reset)
-    const addFormMethods = useForm<WallFormData>({
-        resolver: zodResolver(wallItemFormSchema),
-        defaultValues: { // Set initial default values for form fields
-            product_id: undefined, customer_id: undefined, company_id: '',
-            status: 'Active', want_to: 'Sell', qty: 1, product_status: 'Active', source: 'in',
-            created_by: undefined, active_hrs: null, expired_date: null, internal_remarks: null,
-            product_spec_id: undefined, price: null, color: null, master_cartoon: null,
-            dispatch_status: null, payment_term: null, eta_details: null, location: null,
-            is_wall_manual: false,
-        },
-        mode: 'onChange'
-    });
-    const editFormMethods = useForm<WallFormData>({
-         resolver: zodResolver(wallItemFormSchema),
-        defaultValues: { // Set initial default values
-            product_id: undefined, customer_id: undefined, company_id: '',
-            status: 'Active', want_to: 'Sell', qty: 1, product_status: 'Active', source: 'in',
-            created_by: undefined, active_hrs: null, expired_date: null, internal_remarks: null,
-            product_spec_id: undefined, price: null, color: null, master_cartoon: null,
-            dispatch_status: null, payment_term: null, eta_details: null, location: null,
-            is_wall_manual: false,
-        },
-        mode: 'onChange'
-    });
-    const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormWallSchema), defaultValues: filterCriteria });
-
-
-    // --- Drawer Handlers (Add/Edit) ---
-    // Handlers to open/close drawers and manage form state
-    const openAddWallItemDrawer = useCallback(() => {
-        // Reset form to default values before opening
-        addFormMethods.reset({
-            product_id: undefined, customer_id: undefined, company_id: '',
-            status: 'Active', want_to: 'Sell', qty: 1, product_status: 'Active', source: 'in',
-            created_by: undefined, active_hrs: null, expired_date: null, internal_remarks: null,
-            product_spec_id: undefined, price: null, color: null, master_cartoon: null,
-            dispatch_status: null, payment_term: null, eta_details: null, location: null,
-            is_wall_manual: false,
+    const openEditDrawer = useCallback((item: WallItem) => {
+        setEditingItem(item);
+        formMethods.reset({
+            productId: item.productId,
+            productSpecId: item.productSpecId,
+            companyId: item.companyId,
+            customerId: item.customerId,
+            qty: item.qty,
+            productStatus: item.productStatus,
+            intent: item.intent, // This should be 'Buy' | 'Sell' | 'Exchange'
+            recordStatus: item.recordStatus,
+            price: item.price,
+            color: item.color,
+            cartoonTypeId: item.cartoonTypeId,
+            dispatchStatus: item.dispatchStatus,
+            paymentTermId: item.paymentTermId,
+            deviceCondition: item.deviceCondition,
+            eta: item.eta,
+            location: item.location,
+            internalRemarks: item.internalRemarks,
         });
-        setAddDrawerOpen(true); // Open the add drawer
-    }, [addFormMethods]); // Depend on addFormMethods
+        setIsAddEditDrawerOpen(true);
+    }, [formMethods]);
 
-    const closeAddWallItemDrawer = useCallback(() => {
-        addFormMethods.reset(); // Reset form when closing
-        setAddDrawerOpen(false); // Close the add drawer
-    }, [addFormMethods]); // Depend on addFormMethods
+    const closeAddEditDrawer = useCallback(() => {
+        setIsAddEditDrawerOpen(false);
+        setEditingItem(null);
+    }, []);
 
-    // Handles submission of the add Wall Item form
-    const onAddWallItemSubmit = useCallback(async (data: WallFormData) => {
-        setSubmitting(true); // Show submitting state
-
-        // Prepare data for API - usually, this would be a simple object or FormData
-        // based on your API's requirements. Let's assume a simple object for now.
-        const apiData = {
-             ...data,
-             // Convert date fields if needed (e.g., Date object to ISO string)
-             // expired_date: data.expired_date instanceof Date ? dayjs(data.expired_date).toISOString() : data.expired_date,
-             // delivery_at: data.delivery_at instanceof Date ? dayjs(data.delivery_at).toISOString() : data.delivery_at,
-             // Handle boolean to 0/1 if API expects that
-             is_wall_manual: data.is_wall_manual ? 1 : 0,
-             // Ensure nullable fields are sent as null or omitted if API allows
-        };
-
-        console.log("Submitting Add Wall Item Data:", apiData); // Log data
-
-        try {
-            // Dispatch add action for Wall Item
-            await dispatch(addWallItemAction(apiData)).unwrap(); // **Adjust action name**
-            toast.push(<Notification title="Wall Item Added" type="success" duration={2000}>Wall Item added successfully.</Notification>); // Updated success toast
-            closeAddWallItemDrawer(); // Close drawer on success
-            dispatch(getWallItemsAction()); // Refresh data list after successful add
-        } catch (error: any) {
-             console.error('Add Wall Item Error:', error); // Log error
-            toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{error.message || error.data?.message || 'Could not add wall item.'}</Notification>); // Improved error toast
-        } finally { setSubmitting(false); } // Hide submitting state
-    }, [dispatch, addWallItemAction, closeAddWallItemDrawer, getWallItemsAction]); // Dependencies
-
-
-    // Opens the edit Wall Item drawer and populates the form with data
-    const openEditWallItemDrawer = useCallback((item: WallItem) => { // Use WallItem type
-        setEditingWallItem(item); // Set the item being edited
-        // Reset form with current item data
-        editFormMethods.reset({
-            product_id: item.productId, customer_id: item.customerId, company_id: item.companyId ?? '',
-            status: item.recordStatus === 'active' ? 'Active' : 'Inactive', // Map UI status back to API
-            want_to: item.intent, // Use UI intent value directly or map back to API value
-            qty: item.qty, product_status: item.productStatus, source: item.source,
-            created_by: item.createdByUserId, active_hrs: item.activeHrs,
-            expired_date: item.expiredDate, // Use ISO string from mapped data
-            internal_remarks: item.internalRemarks, product_spec_id: item.productSpecId,
-            price: item.price, color: item.color, master_cartoon: item.masterCartoonQty,
-            dispatch_status: item.dispatchStatus, payment_term: item.paymentTermDays,
-            eta_details: item.etaDetails, location: item.location,
-            is_wall_manual: item.isWallManual, // Use boolean
-            // other fields...
-        });
-        setEditDrawerOpen(true); // Open the edit drawer
-    }, [editFormMethods]); // Depend on editFormMethods
-
-    const closeEditWallItemDrawer = useCallback(() => {
-        setEditingWallItem(null); // Clear the item being edited
-        editFormMethods.reset(); // Reset the edit form
-        setEditDrawerOpen(false); // Close the edit drawer
-    }, [editFormMethods]); // Depend on editFormMethods
-
-    // Handles submission of the edit Wall Item form
-    const onEditWallItemSubmit = useCallback(async (data: WallFormData) => {
-        if (!editingWallItem) return; // Ensure an item is being edited
-        setSubmitting(true); // Show submitting state
-
-        // Prepare data for API submission
-        const apiData = {
-            ...data,
-             // Convert date fields if needed
-             // expired_date: data.expired_date instanceof Date ? dayjs(data.expired_date).toISOString() : data.expired_date,
-             // delivery_at: data.delivery_at instanceof Date ? dayjs(data.delivery_at).toISOString() : data.delivery_at,
-             is_wall_manual: data.is_wall_manual ? 1 : 0, // Handle boolean back to 0/1
-             // Ensure nullable fields are handled correctly for API
-        };
-
-         console.log("Submitting Edit Wall Item Data for ID", editingWallItem.id, ":", apiData); // Log data
-
-        try {
-            // Dispatch edit action for Wall Item with ID and data
-            await dispatch(editWallItemAction({ id: editingWallItem.id, data: apiData })).unwrap(); // **Adjust action name**
-            toast.push(<Notification title="Wall Item Updated" type="success" duration={2000}>Wall Item updated successfully.</Notification>); // Updated success toast
-            closeEditWallItemDrawer(); // Close drawer on success
-            dispatch(getWallItemsAction()); // Refresh data list after successful update
-        } catch (error: any) {
-             console.error('Edit Wall Item Error:', error); // Log error
-            toast.push(<Notification title="Failed to Update" type="danger" duration={3000}>{error.message || error.data?.message || 'Could not update wall item.'}</Notification>); // Improved error toast
-        } finally { setSubmitting(false); } // Hide submitting state
-    }, [dispatch, editWallItemAction, editingWallItem, closeEditWallItemDrawer, getWallItemsAction]); // Dependencies
-
-
-    // --- Delete Handlers ---
-    const handleDeleteWallItemClick = useCallback((item: WallItem) => { setWallItemToDelete(item); setSingleDeleteOpen(true); }, []);
-    const onConfirmSingleWallItemDelete = useCallback(async () => {
-        if (!wallItemToDelete) return;
-        setDeleting(true); setSingleDeleteOpen(false);
-        try {
-            await dispatch(deleteWallItemAction(wallItemToDelete.id)).unwrap(); // **Adjust action name** (assuming it takes ID)
-            toast.push(<Notification title="Wall Item Deleted" type="success" duration={2000}>Wall Item deleted successfully.</Notification>);
-            setSelectedItems(prev => prev.filter(item => item.id !== wallItemToDelete!.id));
-            dispatch(getWallItemsAction());
-        } catch (error: any) {
-             console.error('Delete Wall Item Error:', error);
-            toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}>{error.message || error.data?.message || `Could not delete wall item.`}</Notification>);
-        } finally { setDeleting(false); setWallItemToDelete(null); }
-    }, [dispatch, deleteWallItemAction, wallItemToDelete, setSelectedItems, getWallItemsAction]);
-
-    const handleDeleteSelectedWallItems = useCallback(async () => {
-        if (selectedItems.length === 0) {
-             toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>);
-             return;
-        }
-        setDeleting(true);
-        const idsToDelete = selectedItems.map(item => item.id);
-         const commaSeparatedIds = idsToDelete.join(','); // Format IDs as needed by API
-
-        try {
-            await dispatch(deleteAllWallItemsAction({ ids: commaSeparatedIds })).unwrap(); // **Adjust action name**
-            toast.push(<Notification title="Wall Items Deleted" type="success" duration={2000}>{selectedItems.length} item(s) deleted.</Notification>);
-        } catch (error: any) {
-             console.error('Delete selected Wall Items error:', error);
-            toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message || error.data?.message || 'Failed to delete selected wall items.'}</Notification>);
-        } finally {
-             setSelectedItems([]);
-             dispatch(getWallItemsAction());
-             setDeleting(false);
-        }
-    }, [dispatch, deleteAllWallItemsAction, selectedItems, setSelectedItems, getWallItemsAction]);
-
-    // --- Other Action Column Handlers ---
-    const handleChangeWallItemStatus = useCallback(async (item: WallItem) => {
-        // **Implement actual Redux action dispatch for status change**
-        // Example: Cycle between UI statuses or map to API status values
-        toast.push(<Notification title="Status Change" type="info">Attempting to change status for item {item.id}... (Implement backend update)</Notification>);
-        console.log(`Simulating status change for Wall Item ID ${item.id}`);
-
-        // *** For now, just refresh data to reflect potential change if API supports it or you have a polling mechanism ***
-        dispatch(getWallItemsAction());
-    }, [dispatch, getWallItemsAction]);
-
-    const handleCloneWallItem = useCallback((itemToClone: WallItem) => {
-        // **Implement actual clone logic/navigation**
-        toast.push(<Notification title="Clone Wall Item" type="info">Cloning "{itemToClone.id}"... (Implement clone logic/navigation)</Notification>);
-        console.log(`Simulating cloning Wall Item ID ${itemToClone.id}`);
-        // Example navigation: navigate('/wall/create', { state: { cloneData: itemToClone } });
+    const openViewDrawer = useCallback((item: WallItem) => {
+        setEditingItem(item);
+        setIsViewDrawerOpen(true);
+    }, []);
+    const closeViewDrawer = useCallback(() => {
+        setIsViewDrawerOpen(false);
+        setEditingItem(null);
     }, []);
 
 
-    // --- Filter Handlers ---
-    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
-    const closeFilterDrawer = useCallback(() => setFilterDrawerOpen(false), []);
-    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
-         setFilterCriteria(data);
-         handleSetTableData({ pageIndex: 1 });
-         closeFilterDrawer();
-     }, [handleSetTableData, closeFilterDrawer]);
-    const onClearFilters = useCallback(() => {
-         const defaultFilters = { filterStatuses: [], filterProductStatuses: [], filterIntents: [], filterProductIds: [], filterCustomerIds: [], filterCompanyIds: [] };
-         filterFormMethods.reset(defaultFilters);
-         setFilterCriteria(defaultFilters);
-         handleSetTableData({ pageIndex: 1 });
-     }, [filterFormMethods, handleSetTableData]);
+    const onFormSubmit = useCallback(async (data: WallItemFormData) => {
+        setIsSubmitting(true);
+        const apiPayload = {
+            product_id: data.productId,
+            product_spec_id: data.productSpecId,
+            company_id: data.companyId,
+            customer_id: data.customerId,
+            qty: data.qty,
+            product_status: data.productStatus,
+            want_to: data.intent,       // Already correct type from form
+            status: data.recordStatus, // Map from form to API if necessary
+            price: data.price,
+            color: data.color,
+            cartoon_type_id: data.cartoonTypeId,
+            dispatch_status: data.dispatchStatus,
+            payment_term_id: data.paymentTermId,
+            device_condition: data.deviceCondition,
+            eta: data.eta,
+            location: data.location,
+            internal_remarks: data.internalRemarks,
+        };
 
-
-    // --- Data Processing: Filtering, Searching, Sorting, Pagination ---
-    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        let processedData: WallItem[] = cloneDeep(mappedWallItems);
-
-        // --- Apply Filters ---
-        if (filterCriteria.filterStatuses && filterCriteria.filterStatuses.length > 0) {
-            const selectedStatuses = filterCriteria.filterStatuses.map(opt => opt.value); // UI record status (active/inactive)
-            processedData = processedData.filter(item => selectedStatuses.includes(item.recordStatus));
+        try {
+            if (editingItem) {
+                await dispatchSimulated({ type: 'wall/edit', payload: { id: editingItem.id, data: apiPayload } }).unwrap();
+                toast.push(<Notification title="Success" type="success">Wall item updated.</Notification>);
+            } else {
+                await dispatchSimulated({ type: 'wall/add', payload: apiPayload }).unwrap();
+                toast.push(<Notification title="Success" type="success">Wall item added.</Notification>);
+            }
+            closeAddEditDrawer();
+        } catch (error: any) {
+            toast.push(<Notification title="Error" type="danger">{error.message || "Operation failed."}</Notification>);
+        } finally {
+            setIsSubmitting(false);
         }
-         if (filterCriteria.filterProductStatuses && filterCriteria.filterProductStatuses.length > 0) {
-            const selectedStatuses = filterCriteria.filterProductStatuses.map(opt => opt.value); // API product status (Active/Non-active)
-            processedData = processedData.filter(item => selectedStatuses.includes(item.productStatus));
-         }
-         if (filterCriteria.filterIntents && filterCriteria.filterIntents.length > 0) {
-             const selectedIntents = filterCriteria.filterIntents.map(opt => opt.value); // API intent (Sell/Buy)
-             processedData = processedData.filter(item => selectedIntents.includes(item.intent));
-         }
-         if (filterCriteria.filterProductIds && filterCriteria.filterProductIds.length > 0) {
-             const selectedIds = filterCriteria.filterProductIds.map(opt => opt.value); // Product IDs
-             processedData = processedData.filter(item => selectedIds.includes(item.productId));
-         }
-         if (filterCriteria.filterCustomerIds && filterCriteria.filterCustomerIds.length > 0) {
-             const selectedIds = filterCriteria.filterCustomerIds.map(opt => opt.value); // Customer IDs
-             processedData = processedData.filter(item => selectedIds.includes(item.customerId));
-         }
-         if (filterCriteria.filterCompanyIds && filterCriteria.filterCompanyIds.length > 0) {
-             const selectedIds = filterCriteria.filterCompanyIds.map(opt => opt.value); // Company IDs
-             processedData = processedData.filter(item => item.companyId !== undefined && item.companyId !== null && selectedIds.includes(item.companyId)); // Added null check for companyId
-         }
-         // Add date range filter here if needed
+    }, [dispatchSimulated, editingItem, closeAddEditDrawer]);
 
 
-        // --- Apply Quick Search ---
+    const handleDeleteClick = useCallback((item: WallItem) => {
+        setItemToDelete(item);
+        setSingleDeleteConfirmOpen(true);
+    }, []);
+
+    const onConfirmSingleDelete = useCallback(async () => {
+        if (!itemToDelete) return;
+        setIsDeleting(true);
+        setSingleDeleteConfirmOpen(false);
+        try {
+            await dispatchSimulated({ type: 'wall/delete', payload: { id: itemToDelete.id } }).unwrap();
+            toast.push(<Notification title="Deleted" type="success">Item deleted.</Notification>);
+            setSelectedItems((prev) => prev.filter(i => i.id !== itemToDelete.id));
+        } catch (error: any) {
+            toast.push(<Notification title="Error" type="danger">{error.message || "Delete failed."}</Notification>);
+        } finally {
+            setIsDeleting(false);
+            setItemToDelete(null);
+        }
+    }, [dispatchSimulated, itemToDelete]);
+
+    const onDeleteSelected = useCallback(async () => {
+        if(selectedItems.length === 0) return;
+        setIsDeleting(true);
+        const ids = selectedItems.map(item => item.id).join(',');
+        try {
+            await dispatchSimulated({ type: 'wall/deleteAll', payload: { ids } }).unwrap();
+            toast.push(<Notification title="Success" type="success">{selectedItems.length} items deleted.</Notification>);
+            setSelectedItems([]);
+        } catch (error: any) {
+            toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>);
+        } finally {
+            setIsDeleting(false);
+        }
+    }, [dispatchSimulated, selectedItems]);
+
+
+    const handleChangeStatus = useCallback(async (item: WallItem) => {
+        const statusesCycle: WallRecordStatus[] = ['Pending', 'Approved', 'Rejected', 'Expired', 'Fulfilled'];
+        const currentIndex = statusesCycle.indexOf(item.recordStatus);
+        const newStatus = statusesCycle[(currentIndex + 1) % statusesCycle.length];
+        setIsSubmitting(true);
+        try {
+            await dispatchSimulated({ type: 'wall/changeStatus', payload: { id: item.id, newStatus } }).unwrap();
+            toast.push(<Notification title="Status Updated" type="success">{`Status changed to ${newStatus}.`}</Notification>);
+        } catch (error: any) {
+            toast.push(<Notification title="Error" type="danger">Failed to update status.</Notification>);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [dispatchSimulated]);
+
+    const handleWallLink = useCallback((item: WallItem) => {
+        const wallLink = `https://yourplatform.com/wall/${item.id}`;
+        navigator.clipboard.writeText(wallLink).then(() => {
+            toast.push(<Notification title="Link Copied" type="success">Wall link copied!</Notification>);
+        }).catch(err => {
+            toast.push(<Notification title="Copy Failed" type="danger">Could not copy.</Notification>);
+        });
+    }, []);
+
+    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
+    const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+
+    type ProcessedDataType = { pageData: WallItem[]; total: number; allFilteredAndSortedData: WallItem[]; };
+    const { pageData, total, allFilteredAndSortedData } = useMemo((): ProcessedDataType => {
+        let processedData: WallItem[] = cloneDeep(allWallItems);
+        if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) {
+            const [startDate, endDate] = filterCriteria.dateRange;
+            const start = startDate ? dayjs(startDate).startOf('day') : null;
+            const end = endDate ? dayjs(endDate).endOf('day') : null;
+            processedData = processedData.filter(item => {
+                const itemDate = dayjs(item.createdAt);
+                if (start && end) return itemDate.isBetween(start, end, null, '[]');
+                if (start) return itemDate.isSameOrAfter(start, 'day');
+                if (end) return itemDate.isSameOrBefore(end, 'day');
+                return true;
+            });
+        }
+        if (filterCriteria.filterRecordStatuses && filterCriteria.filterRecordStatuses.length > 0) {
+            const statuses = new Set(filterCriteria.filterRecordStatuses.map(opt => opt.value));
+            processedData = processedData.filter(item => statuses.has(item.recordStatus));
+        }
+        if (filterCriteria.filterIntents && filterCriteria.filterIntents.length > 0) {
+            const intents = new Set(filterCriteria.filterIntents.map(opt => opt.value));
+            processedData = processedData.filter(item => intents.has(item.intent));
+        }
+        if (filterCriteria.filterProductIds && filterCriteria.filterProductIds.length > 0) {
+            const productIds = new Set(filterCriteria.filterProductIds.map(opt => opt.value as number));
+            processedData = processedData.filter(item => productIds.has(item.productId));
+        }
+         if (filterCriteria.filterProductSpecIds && filterCriteria.filterProductSpecIds.length > 0) {
+            const specIds = new Set(filterCriteria.filterProductSpecIds.map(opt => opt.value as number));
+            processedData = processedData.filter(item => specIds.has(item.productSpecId));
+        }
+        if (filterCriteria.filterCompanyIds && filterCriteria.filterCompanyIds.length > 0) {
+            const companyIds = new Set(filterCriteria.filterCompanyIds.map(opt => opt.value as string));
+            processedData = processedData.filter(item => companyIds.has(item.companyId));
+        }
+        if (filterCriteria.filterCustomerIds && filterCriteria.filterCustomerIds.length > 0) {
+            const customerIds = new Set(filterCriteria.filterCustomerIds.map(opt => opt.value as number));
+            processedData = processedData.filter(item => customerIds.has(item.customerId));
+        }
+
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item =>
-                String(item.id ?? '').toLowerCase().includes(query) ||
-                (item.productName?.toLowerCase().includes(query) ?? false) ||
-                (item.productSpecs?.toLowerCase().includes(query) ?? false) || // Assuming productSpecs is a mapped field or available somehow
-                (item.companyId?.toLowerCase().includes(query) ?? false) ||
-                (item.customerName?.toLowerCase().includes(query) ?? false) || // Assuming customer name is mapped
-                (item.createdByName?.toLowerCase().includes(query) ?? false) || // Assuming created by name is mapped
-                String(item.qty ?? '').toLowerCase().includes(query) ||
-                item.recordStatus.toLowerCase().includes(query) || // UI status
-                item.productStatus.toLowerCase().includes(query) || // UI product status
-                item.intent.toLowerCase().includes(query) // UI intent
+                String(item.id).toLowerCase().includes(query) ||
+                (item.productName && item.productName.toLowerCase().includes(query)) ||
+                (item.productSpecName && item.productSpecName.toLowerCase().includes(query)) ||
+                (item.companyName && item.companyName.toLowerCase().includes(query)) ||
+                (item.customerName && item.customerName.toLowerCase().includes(query)) ||
+                item.intent.toLowerCase().includes(query) ||
+                item.recordStatus.toLowerCase().includes(query)
             );
         }
-
-        // --- Apply Sorting ---
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key && processedData.length > 0) {
-            const sortedData = [...processedData];
-            sortedData.sort((a, b) => {
-                let aValue: any = (a as any)[key]; // Use any for flexible access
-                let bValue: any = (b as any)[key];
-
-
-                 // Handle Date sorting (using dayjs)
-                 if (key === 'createdAt' || key === 'updatedAt' || key === 'deliveryAt' || key === 'expiredDate') {
-                     const dateA = aValue ? dayjs(aValue).valueOf() : (order === 'asc' ? -Infinity : Infinity); // Treat null/invalid dates consistently
-                     const dateB = bValue ? dayjs(bValue).valueOf() : (order === 'asc' ? -Infinity : Infinity);
-
-                     // Handle cases where dayjs parsing results in NaN
-                     if (isNaN(dateA) && isNaN(dateB)) return 0;
-                     if (isNaN(dateA)) return order === 'asc' ? -1 : 1;
-                     if (isNaN(dateB)) return order === 'asc' ? 1 : -1;
-
-                     return order === 'asc' ? dateA - dateB : dateB - dateA;
-                 }
-
-                 // Handle Numerical sorting (id, qty, price, etc.)
-                 if (key === 'id' || key === 'qty' || key === 'price' || key === 'activeHrs' || key === 'masterCartoonQty' || key === 'paymentTermDays' || key === 'productId' || key === 'customerId' || key === 'createdByUserId' || key === 'productSpecId') {
-                    const numA = typeof aValue === 'number' ? aValue : (aValue ? Number(aValue) : (order === 'asc' ? -Infinity : Infinity)); // Convert to number, handle null/invalid
-                    const numB = typeof bValue === 'number' ? bValue : (bValue ? Number(bValue) : (order === 'asc' ? -Infinity : Infinity));
-
-                    // Handle cases where conversion results in NaN
-                     if (isNaN(numA) && isNaN(numB)) return 0;
-                     if (isNaN(numA)) return order === 'asc' ? -1 : 1;
-                     if (isNaN(numB)) return order === 'asc' ? 1 : -1;
-
-                    return order === 'asc' ? numA - numB : numB - numA;
-                 }
-
-                 // Handle Boolean sorting
-                 if (key === 'isWallManual') {
-                      const boolA = Boolean(aValue); // Ensure boolean comparison
-                      const boolB = Boolean(bValue);
-                      if (boolA === boolB) return 0;
-                      if (boolA === false && boolB === true) return order === 'asc' ? -1 : 1;
-                      if (boolA === true && boolB === false) return order === 'asc' ? 1 : -1;
-                      return 0; // Should not reach here for booleans
-                 }
-
-
-                // Default string comparison for other keys
-                const stringA = String(aValue ?? '').toLowerCase();
-                const stringB = String(bValue ?? '').toLowerCase();
-                if (stringA < stringB) return order === 'asc' ? -1 : 1;
-                if (stringA > stringB) return order === 'asc' ? 1 : -1;
-                return 0;
+            processedData.sort((a, b) => {
+                let aVal = a[key as keyof WallItem];
+                let bVal = b[key as keyof WallItem];
+                if (aVal instanceof Date && bVal instanceof Date) return order === 'asc' ? aVal.getTime() - bVal.getTime() : bVal.getTime() - aVal.getTime();
+                if (typeof aVal === 'number' && typeof bVal === 'number') return order === 'asc' ? aVal - bVal : bVal - aVal;
+                return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? ''));
             });
-            processedData = sortedData;
         }
-
-        const dataToExport = [...processedData];
         const currentTotal = processedData.length;
         const pageIndex = tableData.pageIndex as number;
         const pageSize = tableData.pageSize as number;
         const startIndex = (pageIndex - 1) * pageSize;
-        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+        return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
+    }, [allWallItems, tableData, filterCriteria]);
 
-        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
-    }, [mappedWallItems, tableData.query, tableData.sort, filterCriteria, tableData.pageIndex, tableData.pageSize]);
-
-
-    // --- Row Selection Callbacks ---
-    const handleRowSelect = useCallback((checked: boolean, row: WallItem) => {
-        setSelectedItems(prev => {
-            if (checked) { return prev.some(item => item.id === row.id) ? prev : [...prev, row]; }
-            else { return prev.filter(item => item.id !== row.id); }
-        });
-    }, []);
-
+    const handleExportData = useCallback(() => exportWallItemsToCsv('wall_listing_export.csv', allFilteredAndSortedData), [allFilteredAndSortedData]);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handlePageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: WallItem) => setSelectedItems(prev => checked ? (prev.some(i => i.id === row.id) ? prev : [...prev, row]) : prev.filter(i => i.id !== row.id)), []);
     const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<WallItem>[]) => {
-        const currentPageOriginals = currentRows.map(r => r.original);
-        if (checked) {
-             setSelectedItems(prev => {
-                const prevIds = new Set(prev.map(item => item.id));
-                const newSelection = currentPageOriginals.filter(item => !prevIds.has(item.id));
-                return [...prev, ...newSelection];
-             });
-        } else {
-             const currentIds = new Set(currentPageOriginals.map(r => r.id));
-             setSelectedItems(prev => prev.filter(item => !currentIds.has(item.id)));
-        }
+        const originals = currentRows.map(r => r.original);
+        if (checked) setSelectedItems(prev => { const oldIds = new Set(prev.map(i => i.id)); return [...prev, ...originals.filter(o => !oldIds.has(o.id))]; });
+        else { const currentIds = new Set(originals.map(o => o.id)); setSelectedItems(prev => prev.filter(i => !currentIds.has(i.id))); }
     }, []);
 
-
-    // --- Export/Import Handlers ---
-    const handleExportData = useCallback(() => {
-        const success = exportToCsvWall('wall_items_export.csv', allFilteredAndSortedData);
-        if (success) toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
-    }, [allFilteredAndSortedData]);
-
-     const handleImportData = useCallback(() => {
+    const handleImportData = useCallback(() => { // Define handleImportData
         setImportDialogOpen(true);
-        console.log("Import functionality triggered.");
     }, []);
 
-    const handleImportFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files ? event.target.files[0] : null;
+    const handleImportFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => { // Define handleImportFileSelect
+        const file = event.target.files?.[0];
         if (file) {
-            console.log("File selected for Wall Item import:", file.name);
-            // **Implement actual file processing and dispatching import action**
-            // dispatch(importWallItemsAction(file));
-            setImportDialogOpen(false); // Close dialog
-            toast.push(<Notification title="Import Initiated" type="info">Wall Item import process started. Check notifications for status.</Notification>);
+            // Process file (e.g., dispatch an action)
+            console.log('Selected file for import:', file.name);
+            toast.push(<Notification title="Import Started" type="info">File processing initiated.</Notification>);
+            setImportDialogOpen(false); // Close dialog after selection
         }
-        event.target.value = ''; // Clear input value
-    }, [dispatch /* Add import action if needed */]);
+        event.target.value = ''; // Reset file input
+    }, []);
 
 
-    // --- Generate Dynamic Filter/Form Options ---
-    // **Replace these dummy options with data fetched from Redux for related entities**
-    const productOptions = useMemo(() => dummyProductOptions, []); // Replace dummy data
-    const customerOptions = useMemo(() => dummyCustomerOptions, []); // Replace dummy data
-    const companyOptions = useMemo(() => dummyCompanyOptions, []); // Replace dummy data
-    const userOptions = useMemo(() => dummyUserOptions, []); // Replace dummy data (for created_by)
-    const productSpecOptions = useMemo(() => dummyProductSpecOptions, []); // Replace dummy data
-
-    // Options for the 'status' filter (using UI mapped status)
-    const filterRecordStatusOptions = useMemo(() => uiRecordStatusOptions, []); // Use UI mapped status options
-
-    // Options for the 'product_status' filter (using API values)
-    const filterProductStatusOptions = useMemo(() => apiProductStatusOptions, []); // Use API product status options
-
-    // Options for the 'want_to' filter (using API values)
-    const filterIntentOptions = useMemo(() => apiIntentOptions, []); // Use API intent options
-
-
-    // --- Define DataTable Columns ---
     const columns: ColumnDef<WallItem>[] = useMemo(() => [
-        { header: 'ID', accessorKey: 'id', enableSorting: true, size: 80 },
-        {
-            header: 'Status', accessorKey: 'recordStatus', enableSorting: true, size: 120,
-            cell: props => {
-                const { recordStatus } = props.row.original;
-                // Map UI status to color class (ensure recordStatusColorMapping is defined)
-                const colorClass = recordStatusColorMapping[recordStatus] || 'bg-gray-500'; // Fallback color
-                return <Tag className={`${colorClass} text-white capitalize`}>{recordStatus}</Tag>;
-            }
-        },
-         {
-            header: 'Product', accessorKey: 'productName', enableSorting: true, size: 200,
-            cell: props => {
-                 const { productName, productIconUrl } = props.row.original;
-                 return (
-                     <div className="flex items-center gap-2">
-                         {/* Display Avatar with icon or initial */}
-                         <Avatar size={30} shape="circle" src={productIconUrl || undefined} icon={<TbBox />}>
-                            {!productIconUrl && productName ? productName.charAt(0).toUpperCase() : ''}
-                         </Avatar>
-                         <span className="font-semibold">{productName || '-'}</span>
-                     </div>
-                 )
-             }
-        },
-        { header: 'Qty', accessorKey: 'qty', enableSorting: true, size: 80 },
-         {
-            header: 'Product Status', accessorKey: 'productStatus', enableSorting: true, size: 140,
-            cell: props => {
-                const { productStatus } = props.row.original;
-                // Map UI product status to color class (ensure productStatusColorMapping is defined)
-                const colorClass = productStatusColorMapping[productStatus] || 'bg-gray-500'; // Fallback color
-                // Optional: Format product status text for display
-                const displayStatus = productStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Example: 'Non-active' -> 'Non-Active'
-                return <Tag className={`${colorClass} font-semibold`}>{displayStatus}</Tag>;
-            }
-        },
-         {
-            header: 'Intent', accessorKey: 'intent', enableSorting: true, size: 100,
-             cell: props => {
-                 const { intent } = props.row.original;
-                 // Optional: Format intent text for display
-                 const displayIntent = intent.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Example: 'Sell' -> 'Sell'
-                 return <span>{displayIntent || '-'}</span>;
-             }
-         },
-         // Add other columns based on WallItem type and UI requirements
-        { header: 'Price', accessorKey: 'price', enableSorting: true, size: 100, cell: props => props.row.original.price ?? '-' },
-        { header: 'Company ID', accessorKey: 'companyId', enableSorting: true, size: 120, cell: props => props.row.original.companyId ?? '-' },
-        { header: 'Customer ID', accessorKey: 'customerId', enableSorting: true, size: 120, cell: props => props.row.original.customerId ?? '-' },
-        // { header: 'Created By', accessorKey: 'createdByName', enableSorting: true, size: 150, cell: props => props.row.original.createdByName ?? '-' }, // If mapping user name
-        {
-            header: 'Created At', accessorKey: 'createdAt', enableSorting: true, size: 180,
-            cell: props => {
-                const date = props.row.original.createdAt;
-                return <span>{date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'}</span>; // Format date
-            }
-        },
-        {
-            header: 'Action', id: 'action', width: 130,
-            meta : {HeaderClass : "text-center"},
-            cell: (props) => (
-                <ActionColumn
-                    onClone={() => handleCloneWallItem(props.row.original)}
-                    onChangeStatus={() => handleChangeWallItemStatus(props.row.original)}
-                    onEdit={() => openEditWallItemDrawer(props.row.original)} // Open edit drawer
-                    onDelete={() => handleDeleteWallItemClick(props.row.original)} // Open delete dialog
-                />
-            ),
-        },
-    ], [handleCloneWallItem, handleChangeWallItemStatus, openEditWallItemDrawer, handleDeleteWallItemClick]); // Dependencies
-
-
-    // Determine overall loading status for the table (Redux status OR local submitting/deleting)
-    const tableLoading = masterLoadingStatus === 'loading' || isSubmitting || isDeleting;
+        { header: 'Status', accessorKey: 'recordStatus', size: 120, cell: (props: CellContext<WallItem, any>) => <Tag className={`${recordStatusColor[props.row.original.recordStatus] || 'bg-gray-200'} capitalize`}>{props.row.original.recordStatus}</Tag> },
+        { header: 'Product', accessorKey: 'productName', size: 200, cell: (props: CellContext<WallItem, any>) => (
+            <div className="flex items-center gap-2">
+                <Avatar size="sm" shape="rounded" src={props.row.original.productIconUrl || undefined} icon={<TbBox />} />
+                <div>
+                    <div>{props.row.original.productName || '-'}</div>
+                    <div className="text-xs text-gray-500">{props.row.original.productSpecName || 'N/A'}</div>
+                </div>
+            </div>
+        )},
+        { header: 'Company', accessorKey: 'companyName', size: 150, cell: (props: CellContext<WallItem, any>) => props.row.original.companyName || props.row.original.companyId },
+        { header: 'Member', accessorKey: 'customerName', size: 150, cell: (props: CellContext<WallItem, any>) => props.row.original.customerName || `ID: ${props.row.original.customerId}` },
+        { header: 'Qty', accessorKey: 'qty', size: 80, cell: (props: CellContext<WallItem, any>) => props.row.original.qty },
+        { header: 'Product Status', accessorKey: 'productStatus', size: 130, cell: (props: CellContext<WallItem, any>) => <Tag className="capitalize">{props.row.original.productStatus}</Tag> },
+        { header: 'Want to', accessorKey: 'intent', size: 100, cell: (props: CellContext<WallItem, any>) => props.row.original.intent },
+        { header: 'Created At', accessorKey: 'createdAt', size: 160, cell: (props: CellContext<WallItem, any>) => dayjs(props.row.original.createdAt).format('YYYY-MM-DD HH:mm') },
+        { header: 'Actions', id: 'actions', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: CellContext<WallItem, any>) => <ActionColumn onView={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} onWallLink={() => handleWallLink(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+    ], [openViewDrawer, openEditDrawer, handleChangeStatus, handleWallLink, handleDeleteClick]);
 
     return (
         <>
             <Container className="h-full">
-                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                    {/* Header Section */}
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">Wall Listing</h5> {/* Updated title */}
-                         <Button variant="solid" icon={<TbPlus />} onClick={openAddWallItemDrawer}>Add New Item</Button> {/* Button to add new item */}
+                <AdaptiveCard className="h-full" bodyClass="h-full">
+                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
+                        <Button
+                                                    variant="solid"
+                                                    icon={<TbPlus />}
+                                                    onClick={openAddDrawer}
+                                                >
+                                                    {' '}
+                                                    Add New{' '}
+                                                </Button>
                     </div>
-
-                    {/* Tools Section (Search, Filter, Import, Export) */}
-                    <div className="mb-4">
-                         <WallItemTableTools
-                            onSearchChange={handleSearchChange} // Pass search handler
-                            onFilter={openFilterDrawer} // Pass handler to open filter drawer
-                            onExport={handleExportData} // Pass handler to trigger export
-                            onImport={handleImportData} // Pass handler to trigger import dialog
-                        />
-                    </div>
-
-                    {/* Table Section */}
-                    <div className="mt-4 flex-grow overflow-auto"> {/* Allows the table body to scroll */}
-                        <WallItemTable
-                            columns={columns} // Pass column definitions
-                            data={pageData} // Pass paginated data for the current page
-                            loading={tableLoading} // Pass combined loading status
-                            pagingData={{ // Pass pagination metadata
-                                total, // Total count after filtering/searching
-                                pageIndex: tableData.pageIndex as number,
-                                pageSize: tableData.pageSize as number,
-                            }}
-                            selectedItems={selectedItems} // Pass selected items for checkboxes
-                            onPaginationChange={handlePaginationChange} // Pass pagination handler
-                            onSelectChange={handleSelectChange} // Pass page size change handler
-                            onSort={handleSort} // Pass sort handler
-                            onRowSelect={handleRowSelect} // Pass single row selection handler
-                            onAllRowSelect={handleAllRowSelect} // Pass all row selection handler
+                    <WallTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onAddNew={openAddDrawer} onImport={handleImportData} /> {/* Added onImport */}
+                    <div className="mt-4">
+                        <WallTable columns={columns} data={pageData} loading={loadingStatus === 'loading' || isSubmitting || isDeleting}
+                            pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
+                            selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange}
+                            onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect}
                         />
                     </div>
                 </AdaptiveCard>
             </Container>
+            <WallSelectedFooter selectedItems={selectedItems} onDeleteSelected={onDeleteSelected} />
 
-            {/* Selected Actions Footer (Bulk Delete) */}
-            <WallItemSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelectedWallItems} />
-
-            {/* Add Wall Item Drawer */}
-            <Drawer title="Add Wall Item" isOpen={isAddDrawerOpen} onClose={closeAddWallItemDrawer} onRequestClose={closeAddWallItemDrawer}
-                footer={<div className="text-right w-full">
-                    <Button size="sm" className="mr-2" onClick={closeAddWallItemDrawer} disabled={isSubmitting}>Cancel</Button>
-                    <Button size="sm" variant="solid" form="addWallItemForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>
-                        {isSubmitting ? 'Adding...' : 'Save'}
-                    </Button>
-                </div>}>
-                {/* Add Wall Item Form */}
-                <Form id="addWallItemForm" onSubmit={addFormMethods.handleSubmit(onAddWallItemSubmit)} className="flex flex-col gap-4 h-full">
-                     <div className="flex-grow overflow-y-auto"> {/* Allow form content to scroll */}
-                        <FormItem label="Product" invalid={!!addFormMethods.formState.errors.product_id} errorMessage={addFormMethods.formState.errors.product_id?.message}>
-                            <Controller name="product_id" control={addFormMethods.control} render={({ field }) => (
-                                <UiSelect options={productOptions} value={productOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product" isClearable/>
-                            )} />
+            <Drawer
+                title={editingItem ? 'Edit Wall Item' : 'Add Wall Item'}
+                isOpen={isAddEditDrawerOpen}
+                onClose={closeAddEditDrawer}
+                onRequestClose={closeAddEditDrawer}
+                width={700}
+                footer={
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={closeAddEditDrawer} disabled={isSubmitting}>Cancel</Button>
+                        <Button size="sm" variant="solid" form="wallItemForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
+                            {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add Item')}
+                        </Button>
+                    </div>
+                }
+            >
+                <Form id="wallItemForm" onSubmit={formMethods.handleSubmit(onFormSubmit)} className="flex flex-col gap-y-4 h-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto p-1">
+                        <FormItem label="Product" invalid={!!formMethods.formState.errors.productId} errorMessage={formMethods.formState.errors.productId?.message}>
+                            <Controller name="productId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyProducts.map(p=>({value: p.id, label: p.name}))} value={dummyProducts.map(p=>({value: p.id, label: p.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product" /> )} />
                         </FormItem>
-                         <FormItem label="Customer" invalid={!!addFormMethods.formState.errors.customer_id} errorMessage={addFormMethods.formState.errors.customer_id?.message}>
-                            <Controller name="customer_id" control={addFormMethods.control} render={({ field }) => (
-                                <UiSelect options={customerOptions} value={customerOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Customer" isClearable/>
-                            )} />
+                        <FormItem label="Product Specification" invalid={!!formMethods.formState.errors.productSpecId} errorMessage={formMethods.formState.errors.productSpecId?.message}>
+                            <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyProductSpecs.filter(s => s.productId === formMethods.watch('productId')).map(s=>({value: s.id, label: s.name}))} value={dummyProductSpecs.map(s=>({value: s.id, label: s.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Specification" isDisabled={!formMethods.watch('productId')} /> )} />
                         </FormItem>
-                         <FormItem label="Company ID" invalid={!!addFormMethods.formState.errors.company_id} errorMessage={addFormMethods.formState.errors.company_id?.message}>
-                            <Controller name="company_id" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Company ID" />} />
+                        <FormItem label="Company" invalid={!!formMethods.formState.errors.companyId} errorMessage={formMethods.formState.errors.companyId?.message}>
+                            <Controller name="companyId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCompanies.map(c=>({value: c.id, label: c.name}))} value={dummyCompanies.map(c=>({value: c.id, label: c.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Company" /> )} />
                         </FormItem>
-                         <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message}>
-                            <Controller name="status" control={addFormMethods.control} render={({ field }) => (
-                                <UiSelect options={apiStatusOptions} value={apiStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Status"/>
-                            )} />
+                        <FormItem label="Member/Customer" invalid={!!formMethods.formState.errors.customerId} errorMessage={formMethods.formState.errors.customerId?.message}>
+                            <Controller name="customerId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCustomers.map(c=>({value: c.id, label: c.name}))} value={dummyCustomers.map(c=>({value: c.id, label: c.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Member" /> )} />
                         </FormItem>
-                         <FormItem label="Intent" invalid={!!addFormMethods.formState.errors.want_to} errorMessage={addFormMethods.formState.errors.want_to?.message}>
-                            <Controller name="want_to" control={addFormMethods.control} render={({ field }) => (
-                                <UiSelect options={apiIntentOptions} value={apiIntentOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Intent"/>
-                            )} />
+                        <FormItem label="Quantity" invalid={!!formMethods.formState.errors.qty} errorMessage={formMethods.formState.errors.qty?.message}>
+                            <Controller name="qty" control={formMethods.control} render={({ field }) => <InputNumber {...field} placeholder="Enter Quantity" min={1} />} />
                         </FormItem>
-                         <FormItem label="Quantity" invalid={!!addFormMethods.formState.errors.qty} errorMessage={addFormMethods.formState.errors.qty?.message}>
-                            <Controller name="qty" control={addFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                 <InputNumber {...rest} value={value} onChange={onChange} placeholder="Enter Quantity" min={1} /> 
-                            )} />
+                        <FormItem label="Product Status" invalid={!!formMethods.formState.errors.productStatus} errorMessage={formMethods.formState.errors.productStatus?.message}>
+                            <Controller name="productStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={productStatusOptions} value={productStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product Status" /> )} />
                         </FormItem>
-                         <FormItem label="Product Status" invalid={!!addFormMethods.formState.errors.product_status} errorMessage={addFormMethods.formState.errors.product_status?.message}>
-                            <Controller name="product_status" control={addFormMethods.control} render={({ field }) => (
-                                <UiSelect options={apiProductStatusOptions} value={apiProductStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product Status"/>
-                            )} />
+                        <FormItem label="Intent (Want to)" invalid={!!formMethods.formState.errors.intent} errorMessage={formMethods.formState.errors.intent?.message}>
+                            <Controller name="intent" control={formMethods.control} render={({ field }) => (<UiSelect options={intentOptions} value={intentOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Intent" /> )} />
                         </FormItem>
-                         <FormItem label="Source" invalid={!!addFormMethods.formState.errors.source} errorMessage={addFormMethods.formState.errors.source?.message}>
-                            <Controller name="source" control={addFormMethods.control} render={({ field }) => (
-                                <UiSelect options={apiSourceOptions} value={apiSourceOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Source"/>
-                            )} />
+                        <FormItem label="Record Status" invalid={!!formMethods.formState.errors.recordStatus} errorMessage={formMethods.formState.errors.recordStatus?.message}>
+                            <Controller name="recordStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={recordStatusOptions} value={recordStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Record Status" /> )} />
                         </FormItem>
-                         <FormItem label="Created By User" invalid={!!addFormMethods.formState.errors.created_by} errorMessage={addFormMethods.formState.errors.created_by?.message}>
-                            <Controller name="created_by" control={addFormMethods.control} render={({ field }) => (
-                                <UiSelect options={userOptions} value={userOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select User"/>
-                            )} />
+                        <FormItem label="Price ($)" invalid={!!formMethods.formState.errors.price} errorMessage={formMethods.formState.errors.price?.message}>
+                            <Controller name="price" control={formMethods.control} render={({ field }) => <InputNumber {...field} placeholder="Enter Price" prefix="$" min={0} precision={2} />} />
                         </FormItem>
-                         <FormItem label="Active Hrs" invalid={!!addFormMethods.formState.errors.active_hrs} errorMessage={addFormMethods.formState.errors.active_hrs?.message}>
-                            <Controller name="active_hrs" control={addFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                <InputNumber {...rest} value={value} onChange={onChange} placeholder="Enter Active Hours" isClearable min={0}/>
-                            )} />
+                         <FormItem label="Color" invalid={!!formMethods.formState.errors.color} errorMessage={formMethods.formState.errors.color?.message}>
+                            <Controller name="color" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Blue Titanium" />} />
                         </FormItem>
-                         <FormItem label="Expired Date" invalid={!!addFormMethods.formState.errors.expired_date} errorMessage={addFormMethods.formState.errors.expired_date?.message}>
-                            <Controller name="expired_date" control={addFormMethods.control} render={({ field }) => (
-                                <DatePicker value={field.value ? dayjs(field.value).toDate() : null} onChange={(date) => field.onChange(date ? dayjs(date).toISOString() : null)} placeholder="Select Date"/>
-                            )} />
+                        <FormItem label="Cartoon Type" invalid={!!formMethods.formState.errors.cartoonTypeId} errorMessage={formMethods.formState.errors.cartoonTypeId?.message}>
+                            <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCartoonTypes.map(ct=>({value: ct.id, label: ct.name}))} value={dummyCartoonTypes.map(ct=>({value: ct.id, label: ct.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Cartoon Type" isClearable /> )} />
                         </FormItem>
-                         <FormItem label="Internal Remarks" invalid={!!addFormMethods.formState.errors.internal_remarks} errorMessage={addFormMethods.formState.errors.internal_remarks?.message}>
-                            <Controller name="internal_remarks" control={addFormMethods.control} render={({ field }) => <Input {...field} textArea placeholder="Enter Internal Remarks"/>} />
+                        <FormItem label="Dispatch Status" invalid={!!formMethods.formState.errors.dispatchStatus} errorMessage={formMethods.formState.errors.dispatchStatus?.message}>
+                            <Controller name="dispatchStatus" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Ready, Shipped" />} />
                         </FormItem>
-                         <FormItem label="Product Spec" invalid={!!addFormMethods.formState.errors.product_spec_id} errorMessage={addFormMethods.formState.errors.product_spec_id?.message}>
-                            <Controller name="product_spec_id" control={addFormMethods.control} render={({ field }) => (
-                                <UiSelect options={productSpecOptions} value={productSpecOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product Spec"/>
-                            )} />
+                         <FormItem label="Payment Term" invalid={!!formMethods.formState.errors.paymentTermId} errorMessage={formMethods.formState.errors.paymentTermId?.message}>
+                            <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyPaymentTerms.map(pt=>({value: pt.id, label: pt.name}))} value={dummyPaymentTerms.map(pt=>({value: pt.id, label: pt.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Payment Term" isClearable /> )} />
                         </FormItem>
-                         <FormItem label="Price" invalid={!!addFormMethods.formState.errors.price} errorMessage={addFormMethods.formState.errors.price?.message}>
-                            <Controller name="price" control={addFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                <InputNumber {...rest} value={value} onChange={onChange} prefix="$" placeholder="Enter Price" isClearable min={0} precision={2}/>
-                            )} />
+                        <FormItem label="Device Condition" invalid={!!formMethods.formState.errors.deviceCondition} errorMessage={formMethods.formState.errors.deviceCondition?.message}>
+                            <Controller name="deviceCondition" control={formMethods.control} render={({ field }) => (<UiSelect options={deviceConditionOptions} value={deviceConditionOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Device Condition" /> )} />
                         </FormItem>
-                         <FormItem label="Color" invalid={!!addFormMethods.formState.errors.color} errorMessage={addFormMethods.formState.errors.color?.message}>
-                            <Controller name="color" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Color"/>} />
+                        <FormItem label="ETA" invalid={!!formMethods.formState.errors.eta} errorMessage={formMethods.formState.errors.eta?.message}>
+                            <Controller name="eta" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., 3-5 business days, In Stock" />} />
                         </FormItem>
-                         <FormItem label="Master Cartoon Qty" invalid={!!addFormMethods.formState.errors.master_cartoon} errorMessage={addFormMethods.formState.errors.master_cartoon?.message}>
-                            <Controller name="master_cartoon" control={addFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                <InputNumber {...rest} value={value} onChange={onChange} placeholder="Enter Master Cartoon Qty" isClearable min={0}/>
-                            )} />
+                        <FormItem label="Location" invalid={!!formMethods.formState.errors.location} errorMessage={formMethods.formState.errors.location?.message}>
+                            <Controller name="location" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Warehouse A, Dubai" />} />
                         </FormItem>
-                         <FormItem label="Dispatch Status" invalid={!!addFormMethods.formState.errors.dispatch_status} errorMessage={addFormMethods.formState.errors.dispatch_status?.message}>
-                            <Controller name="dispatch_status" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Dispatch Status"/>} />
+                         <FormItem label="Internal Remarks" className="md:col-span-2" invalid={!!formMethods.formState.errors.internalRemarks} errorMessage={formMethods.formState.errors.internalRemarks?.message}>
+                            <Controller name="internalRemarks" control={formMethods.control} render={({ field }) => <Textarea {...field} rows={3} placeholder="Add any internal notes here..." />} />
                         </FormItem>
-                         <FormItem label="Payment Term (Days)" invalid={!!addFormMethods.formState.errors.payment_term} errorMessage={addFormMethods.formState.errors.payment_term?.message}>
-                            <Controller name="payment_term" control={addFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                 <InputNumber {...rest} value={value} onChange={onChange} placeholder="Enter Payment Term" isClearable min={0}/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="ETA Details" invalid={!!addFormMethods.formState.errors.eta_details} errorMessage={addFormMethods.formState.errors.eta_details?.message}>
-                            <Controller name="eta_details" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter ETA Details"/>} />
-                        </FormItem>
-                         <FormItem label="Location" invalid={!!addFormMethods.formState.errors.location} errorMessage={addFormMethods.formState.errors.location?.message}>
-                            <Controller name="location" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Location"/>} />
-                        </FormItem>
-                        {/* is_wall_manual - assuming a checkbox or switch */}
-                         {/* <FormItem label="Is Manual Entry" invalid={!!addFormMethods.formState.errors.is_wall_manual} errorMessage={addFormMethods.formState.errors.is_wall_manual?.message}>
-                            <Controller name="is_wall_manual" control={addFormMethods.control} render={({ field: { value, onChange, ...rest } }) => (
-                                // Use your Switch or Checkbox component here
-                                <Switch checked={value} onChange={onChange} {...rest} />
-                            )} />
-                        </FormItem> */}
-                         {/* wall_link_token, wall_link_datetime - probably not form inputs */}
-                     </div>
-                </Form>
-            </Drawer>
-
-            {/* Edit Wall Item Drawer */}
-             <Drawer title="Edit Wall Item" isOpen={isEditDrawerOpen} onClose={closeEditWallItemDrawer} onRequestClose={closeEditWallItemDrawer}
-                footer={<div className="text-right w-full">
-                    <Button size="sm" className="mr-2" onClick={closeEditWallItemDrawer} disabled={isSubmitting}>Cancel</Button>
-                    <Button size="sm" variant="solid" form="editWallItemForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>
-                        {isSubmitting ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                </div>}>
-                {/* Edit Wall Item Form */}
-                <Form id="editWallItemForm" onSubmit={editFormMethods.handleSubmit(onEditWallItemSubmit)} className="flex flex-col gap-4 h-full">
-                     <div className="flex-grow overflow-y-auto"> {/* Allow form content to scroll */}
-                        {/* Display current product image/name if available */}
-                         {editingWallItem?.productIconUrl && (
-                             <FormItem label="Current Product">
-                                 <div className="flex items-center gap-2">
-                                     <Avatar size={80} shape="rounded" src={editingWallItem.productIconUrl} icon={<TbBox />} />
-                                     <span className="font-semibold text-gray-900 dark:text-gray-100">{editingWallItem.productName || '-'}</span>
-                                 </div>
-                             </FormItem>
-                         )}
-                         {/* Most fields will be the same as the add form */}
-                         <FormItem label="Product" invalid={!!editFormMethods.formState.errors.product_id} errorMessage={editFormMethods.formState.errors.product_id?.message}>
-                            <Controller name="product_id" control={editFormMethods.control} render={({ field }) => (
-                                <UiSelect options={productOptions} value={productOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product" isClearable/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Customer" invalid={!!editFormMethods.formState.errors.customer_id} errorMessage={editFormMethods.formState.errors.customer_id?.message}>
-                            <Controller name="customer_id" control={editFormMethods.control} render={({ field }) => (
-                                <UiSelect options={customerOptions} value={customerOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Customer" isClearable/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Company ID" invalid={!!editFormMethods.formState.errors.company_id} errorMessage={editFormMethods.formState.errors.company_id?.message}>
-                            <Controller name="company_id" control={editFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Company ID" />} />
-                        </FormItem>
-                         <FormItem label="Status" invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message}>
-                            <Controller name="status" control={editFormMethods.control} render={({ field }) => (
-                                <UiSelect options={apiStatusOptions} value={apiStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Status"/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Intent" invalid={!!editFormMethods.formState.errors.want_to} errorMessage={editFormMethods.formState.errors.want_to?.message}>
-                            <Controller name="want_to" control={editFormMethods.control} render={({ field }) => (
-                                <UiSelect options={apiIntentOptions} value={apiIntentOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Intent"/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Quantity" invalid={!!editFormMethods.formState.errors.qty} errorMessage={editFormMethods.formState.errors.qty?.message}>
-                            <Controller name="qty" control={editFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                 <InputNumber {...rest} value={value} onChange={onChange} placeholder="Enter Quantity" min={1}/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Product Status" invalid={!!editFormMethods.formState.errors.product_status} errorMessage={editFormMethods.formState.errors.product_status?.message}>
-                            <Controller name="product_status" control={editFormMethods.control} render={({ field }) => (
-                                <UiSelect options={apiProductStatusOptions} value={apiProductStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product Status"/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Source" invalid={!!editFormMethods.formState.errors.source} errorMessage={editFormMethods.formState.errors.source?.message}>
-                            <Controller name="source" control={editFormMethods.control} render={({ field }) => (
-                                <UiSelect options={apiSourceOptions} value={apiSourceOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Source"/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Created By User" invalid={!!editFormMethods.formState.errors.created_by} errorMessage={editFormMethods.formState.errors.created_by?.message}>
-                            <Controller name="created_by" control={editFormMethods.control} render={({ field }) => (
-                                <UiSelect options={userOptions} value={userOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select User"/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Active Hrs" invalid={!!editFormMethods.formState.errors.active_hrs} errorMessage={editFormMethods.formState.errors.active_hrs?.message}>
-                            <Controller name="active_hrs" control={editFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                <InputNumber {...rest} value={value} onChange={onChange} placeholder="Enter Active Hours" isClearable min={0}/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Expired Date" invalid={!!editFormMethods.formState.errors.expired_date} errorMessage={editFormMethods.formState.errors.expired_date?.message}>
-                            <Controller name="expired_date" control={editFormMethods.control} render={({ field }) => (
-                                 <DatePicker value={field.value ? dayjs(field.value).toDate() : null} onChange={(date) => field.onChange(date ? dayjs(date).toISOString() : null)} placeholder="Select Date"/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Internal Remarks" invalid={!!editFormMethods.formState.errors.internal_remarks} errorMessage={editFormMethods.formState.errors.internal_remarks?.message}>
-                            <Controller name="internal_remarks" control={editFormMethods.control} render={({ field }) => <Input {...field} textArea placeholder="Enter Internal Remarks"/>} />
-                        </FormItem>
-                         <FormItem label="Product Spec" invalid={!!editFormMethods.formState.errors.product_spec_id} errorMessage={editFormMethods.formState.errors.product_spec_id?.message}>
-                            <Controller name="product_spec_id" control={editFormMethods.control} render={({ field }) => (
-                                <UiSelect options={productSpecOptions} value={productSpecOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product Spec"/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Price" invalid={!!editFormMethods.formState.errors.price} errorMessage={editFormMethods.formState.errors.price?.message}>
-                            <Controller name="price" control={editFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                <InputNumber {...rest} value={value} onChange={onChange} prefix="$" placeholder="Enter Price" isClearable min={0} precision={2}/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Color" invalid={!!editFormMethods.formState.errors.color} errorMessage={editFormMethods.formState.errors.color?.message}>
-                            <Controller name="color" control={editFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Color"/>} />
-                        </FormItem>
-                         <FormItem label="Master Cartoon Qty" invalid={!!editFormMethods.formState.errors.master_cartoon} errorMessage={editFormMethods.formState.errors.master_cartoon?.message}>
-                            <Controller name="master_cartoon" control={editFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                <InputNumber {...rest} value={value} onChange={onChange} placeholder="Enter Master Cartoon Qty" isClearable min={0}/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="Dispatch Status" invalid={!!editFormMethods.formState.errors.dispatch_status} errorMessage={editFormMethods.formState.errors.dispatch_status?.message}>
-                            <Controller name="dispatch_status" control={editFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Dispatch Status"/>} />
-                        </FormItem>
-                         <FormItem label="Payment Term (Days)" invalid={!!editFormMethods.formState.errors.payment_term} errorMessage={editFormMethods.formState.errors.payment_term?.message}>
-                            <Controller name="payment_term" control={editFormMethods.control} render={({ field: { onChange, value, ...rest } }) => (
-                                 <InputNumber {...rest} value={value} onChange={onChange} placeholder="Enter Payment Term" isClearable min={0}/>
-                            )} />
-                        </FormItem>
-                         <FormItem label="ETA Details" invalid={!!editFormMethods.formState.errors.eta_details} errorMessage={editFormMethods.formState.errors.eta_details?.message}>
-                            <Controller name="eta_details" control={editFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter ETA Details"/>} />
-                        </FormItem>
-                         <FormItem label="Location" invalid={!!editFormMethods.formState.errors.location} errorMessage={editFormMethods.formState.errors.location?.message}>
-                            <Controller name="location" control={editFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Location"/>} />
-                        </FormItem>
-                         {/* is_wall_manual checkbox/switch */}
-                          {/* <FormItem label="Is Manual Entry" invalid={!!editFormMethods.formState.errors.is_wall_manual} errorMessage={editFormMethods.formState.errors.is_wall_manual?.message}>
-                            <Controller name="is_wall_manual" control={editFormMethods.control} render={({ field: { value, onChange, ...rest } }) => (
-                                <Switch checked={value} onChange={onChange} {...rest} />
-                            )} />
-                        </FormItem> */}
-                     </div>
-                </Form>
-            </Drawer>
-
-            {/* Filter Wall Items Drawer */}
-            <Drawer title="Filter Wall Items" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-                footer={<div className="text-right w-full">
-                    <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button>
-                    <Button size="sm" variant="solid" form="filterWallItemForm" type="submit">Apply</Button>
-                </div>}>
-                {/* Filter Wall Items Form */}
-                <Form id="filterWallItemForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 h-full">
-                    <div className="flex-grow overflow-y-auto"> {/* Allow form content to scroll */}
-                         <FormItem label="Record Status">
-                            <Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (
-                                 <UiSelect isMulti placeholder="Select statuses..." options={filterRecordStatusOptions} value={field.value} onChange={val => field.onChange(val)} />
-                            )} />
-                        </FormItem>
-                         <FormItem label="Product Status">
-                            <Controller name="filterProductStatuses" control={filterFormMethods.control} render={({ field }) => (
-                                 <UiSelect isMulti placeholder="Select product statuses..." options={filterProductStatusOptions} value={field.value} onChange={val => field.onChange(val)} />
-                            )} />
-                        </FormItem>
-                         <FormItem label="Intent">
-                            <Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (
-                                 <UiSelect isMulti placeholder="Select intents..." options={filterIntentOptions} value={field.value} onChange={val => field.onChange(val)} />
-                            )} />
-                        </FormItem>
-                         <FormItem label="Product">
-                            <Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (
-                                 <UiSelect isMulti placeholder="Select products..." options={productOptions} value={field.value} onChange={val => field.onChange(val)} />
-                            )} />
-                        </FormItem>
-                         <FormItem label="Customer">
-                            <Controller name="filterCustomerIds" control={filterFormMethods.control} render={({ field }) => (
-                                 <UiSelect isMulti placeholder="Select customers..." options={customerOptions} value={field.value} onChange={val => field.onChange(val)} />
-                            )} />
-                        </FormItem>
-                         <FormItem label="Company">
-                            <Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (
-                                 <UiSelect isMulti placeholder="Select companies..." options={companyOptions} value={field.value} onChange={val => field.onChange(val)} />
-                            )} />
-                        </FormItem>
-                         {/* Add date range filter for Created At if needed */}
-                         {/* <FormItem label="Created Date Range">
-                            <Controller name="filterDateRange" control={filterFormMethods.control} render={({ field }) => (
-                                <DatePicker.DatePickerRange value={field.value as DatePickerRangeProps} onChange={field.onChange} placeholder="Select dates range"/>
-                            )} />
-                        </FormItem> */}
                     </div>
                 </Form>
             </Drawer>
 
-            {/* Single Delete Confirmation Dialog */}
-            <ConfirmDialog isOpen={singleDeleteOpen} type="danger" title="Delete Wall Item"
-                onClose={() => { setSingleDeleteOpen(false); setWallItemToDelete(null); }} onRequestClose={() => { setSingleDeleteOpen(false); setWallItemToDelete(null); }} onCancel={() => { setSingleDeleteOpen(false); setWallItemToDelete(null); }}
-                onConfirm={onConfirmSingleWallItemDelete} loading={isDeleting}>
-                <p>Are you sure you want to delete the Wall Item with ID "<strong>{wallItemToDelete?.id}</strong>"?</p>
+            <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
+                {editingItem && (
+                    <div className="p-4 space-y-3">
+                        <h6 className="text-lg font-semibold border-b pb-2 mb-3">Item ID: {editingItem.id}</h6>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                            <div><strong>Product:</strong> {editingItem.productName || '-'} ({editingItem.productSpecName || 'N/A'})</div>
+                            <div><strong>Company:</strong> {editingItem.companyName || editingItem.companyId}</div>
+                            <div><strong>Member/Customer:</strong> {editingItem.customerName || `ID: ${editingItem.customerId}`}</div>
+                            <div><strong>Email:</strong> {editingItem.customerEmail || '-'}</div>
+                            <div><strong>Phone:</strong> {editingItem.customerPhone || '-'}</div>
+                            <div><strong>Quantity:</strong> {editingItem.qty}</div>
+                            <div><strong>Intent:</strong> <Tag className="capitalize">{editingItem.intent}</Tag></div>
+                            <div><strong>Record Status:</strong> <Tag className={`${recordStatusColor[editingItem.recordStatus] || ''} capitalize`}>{editingItem.recordStatus}</Tag></div>
+                            <div><strong>Product Status:</strong> <Tag className="capitalize">{editingItem.productStatus}</Tag></div>
+                            <div><strong>Price:</strong> {editingItem.price !== null && editingItem.price !== undefined ? `$${editingItem.price.toFixed(2)}` : '-'}</div>
+                            <div><strong>Color:</strong> {editingItem.color || '-'}</div>
+                            <div><strong>Cartoon Type:</strong> {editingItem.cartoonTypeName || '-'}</div>
+                            <div><strong>Dispatch Status:</strong> {editingItem.dispatchStatus || '-'}</div>
+                            <div><strong>Payment Term:</strong> {editingItem.paymentTermName || '-'}</div>
+                            <div><strong>Device Condition:</strong> {editingItem.deviceCondition || '-'}</div>
+                            <div><strong>ETA:</strong> {editingItem.eta || '-'}</div>
+                            <div><strong>Location:</strong> {editingItem.location || '-'}</div>
+                            <div><strong>Created At:</strong> {dayjs(editingItem.createdAt).format('YYYY-MM-DD HH:mm:ss')}</div>
+                            <div><strong>Last Updated:</strong> {dayjs(editingItem.updatedAt).format('YYYY-MM-DD HH:mm:ss')}</div>
+                        </div>
+                        {editingItem.internalRemarks && (
+                            <div className="mt-2 pt-2 border-t">
+                                <strong>Internal Remarks:</strong>
+                                <p className="whitespace-pre-wrap bg-gray-50 dark:bg-gray-700 p-2 rounded">{editingItem.internalRemarks}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Drawer>
+
+            <Drawer title="Filter Wall Listings" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+                footer={<div className="text-right w-full">
+                    <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button>
+                    <Button size="sm" variant="solid" form="filterWallForm" type="submit">Apply Filters</Button>
+                </div>}>
+                <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 h-full">
+                    <div className="flex-grow overflow-y-auto p-1">
+                        <FormItem label="Record Status">
+                            <Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select record statuses..." options={recordStatusOptions} {...field} />)} />
+                        </FormItem>
+                         <FormItem label="Product">
+                            <Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={dummyProducts.map(p=>({value: p.id, label:p.name}))} {...field} />)} />
+                        </FormItem>
+                        <FormItem label="Product Specification">
+                            <Controller name="filterProductSpecIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select specifications..." options={dummyProductSpecs.map(p=>({value: p.id, label:p.name}))} {...field} />)} />
+                        </FormItem>
+                         <FormItem label="Company">
+                            <Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={dummyCompanies.map(p=>({value: p.id, label:p.name}))} {...field} />)} />
+                        </FormItem>
+                        <FormItem label="Member/Customer">
+                            <Controller name="filterCustomerIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select members..." options={dummyCustomers.map(p=>({value: p.id, label:p.name}))} {...field} />)} />
+                        </FormItem>
+                        <FormItem label="Intent (Want to)">
+                            <Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} />
+                        </FormItem>
+                        <FormItem label="Created Date Range">
+                            <Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date|null,Date|null]|null|undefined} onChange={field.onChange} placeholder="Select date range"/>)} />
+                        </FormItem>
+                    </div>
+                </Form>
+            </Drawer>
+
+            <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Wall Item"
+                onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onConfirm={onConfirmSingleDelete} loading={isDeleting}>
+                <p>Are you sure you want to delete item <strong>ID: {itemToDelete?.id}</strong> ({itemToDelete?.productName})?</p>
             </ConfirmDialog>
 
-             {/* Basic Import Dialog Placeholder */}
-            <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} title="Import Wall Items">
+             <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} title="Import Wall Items">
                 <div className="p-4">
                     <p>Upload a CSV file to import Wall Items.</p>
                     <FormItem label="CSV File">
@@ -1435,7 +842,4 @@ const WallListing = () => { // Renamed Component
     );
 };
 
-export default WallListing; // Export the component
-
-// Helper function for classNames (kept as it's used in ActionColumn)
-function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(' '); }
+export default WallListing;

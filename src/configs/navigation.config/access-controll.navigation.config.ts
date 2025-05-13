@@ -19,22 +19,8 @@ const accessControlNavigationConfig: NavigationTree[] = [
             },
         },
         subMenu: [
-            {
-                key: 'accessControl.user',
-                path: `${ACCESS_CONTROL_PREFIX_PATH}/user`,
-                title: 'User',
-                translateKey: 'nav.accessControl.user',
-                icon: 'user',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN],
-                meta: {
-                    description: {
-                        translateKey: 'nav.accessControl.userDesc',
-                        label: 'Manage users',
-                    },
-                },
-                subMenu: [],
-            },
+
+
             {
                 key: 'accessControl.roles',
                 path: `${ACCESS_CONTROL_PREFIX_PATH}/roles`,
