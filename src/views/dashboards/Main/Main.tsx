@@ -11,46 +11,29 @@ import type { GetEcommerceDashboardResponse } from './types'
 
 const Main = () => {
 
-      const { data, isLoading } = useSWR(
-            ['/api/dashboard/ecommerce'],
-            () => apiGetEcommerceDashboard<GetEcommerceDashboardResponse>(),
-            {
-                revalidateOnFocus: false,
-                revalidateIfStale: false,
-                revalidateOnReconnect: false,
-            },
-        )
-    
-        return (
-            <Loading loading={isLoading}>
-                {data && (
-                    <div>
-                        <div className="flex flex-col gap-4 max-w-full overflow-x-hidden">
-                            <div className=''>
-                                <Overview data={data.statisticData} />
-                            </div>
+    const { data, isLoading } = useSWR(
+        ['/api/dashboard/ecommerce'],
+        () => apiGetEcommerceDashboard<GetEcommerceDashboardResponse>(),
+        {
+            revalidateOnFocus: false,
+            revalidateIfStale: false,
+            revalidateOnReconnect: false,
+        },
+    )
 
-                            <div className="flex flex-col xl:flex-row gap-4">
-                                <div className="flex flex-col gap-4 flex-1 xl:col-span-3">
-                                    <CustomerDemographic
-                                        data={data.customerDemographic}
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-4 2xl:min-w-[360px]">
-                                    <SalesTarget data={data.salesTarget} />
-                                    <TopProduct data={data.topProduct} />
-                                    <RevenueByChannel
-                                        data={data.revenueByChannel}
-                                    />
-                                </div>
-                            </div>
-    
-                            <RecentOrder data={data.recentOrders} />
+    return (
+        <Loading loading={isLoading}>
+            {data && (
+                <div>
+                    <div className="flex flex-col gap-4 max-w-full overflow-x-hidden">
+                        <div className=''>
+                            <Overview data={data.statisticData} />
                         </div>
                     </div>
-                )}
-            </Loading>
-        )
+                </div>
+            )}
+        </Loading>
+    )
 }
 
 export default Main

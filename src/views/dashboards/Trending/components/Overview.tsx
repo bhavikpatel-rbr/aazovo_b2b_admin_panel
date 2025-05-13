@@ -9,6 +9,7 @@ import { useThemeStore } from '@/store/themeStore'
 import classNames from '@/utils/classNames'
 import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { options } from '../constants'
+import DataTable1 from './DataTable1'
 import { NumericFormat } from 'react-number-format'
 import { TbCoin, TbShoppingBagCheck, TbEye } from 'react-icons/tb'
 import type { ReactNode } from 'react'
@@ -22,6 +23,7 @@ import { FaBookmark, FaCircle } from 'react-icons/fa'
 import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
 import { BsCake } from 'react-icons/bs'
 import { IoMdShare } from 'react-icons/io'
+import { HiOutlineMinusCircle, HiOutlinePlusCircle } from 'react-icons/hi'
 
 type StatisticCardProps = {
     title: string
@@ -114,7 +116,7 @@ const Bar = ({
 }
 
 const Overview = ({ data }: StatisticGroupsProps) => {
-    const [selectedCategory, setSelectedCategory] = useState<StatisticCategory>('Companies')
+    const [selectedCategory, setSelectedCategory] = useState<StatisticCategory>('Opportunity')
 
     const [selectedPeriod, setSelectedPeriod] = useState<Period>('thisMonth')
 
@@ -156,6 +158,22 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             action: 'View',
             status: 'Active',
             progress: 85,
+            subRows: [
+                {
+                    productName: 'Iphone 14 Pro Max',
+                    brand: 'Apple',
+                    category: 'Electronics',
+                    subCategory: 'Mobile',
+                    status: 'Active',
+                },
+                {
+                    productName: 'Iphone 14 Pro Max',
+                    brand: 'Apple',
+                    category: 'Electronics',
+                    subCategory: 'Mobile',
+                    status: 'Active',
+                },
+            ]
         },
         {
             name: 'Nova Agro Imports',
@@ -261,31 +279,49 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
     const companyColumns = [
         {
-            header: 'Company Info',
+            id: 'expander',
+            header: "",
+            cell: (props) => {
+                return (
+                    <>
+                        <button
+                            className="text-xl"
+                            {...{
+                                onClick: props.row.getToggleExpandedHandler(),
+                            }}
+                        >
+                            {props.row.getIsExpanded() ? (
+                                <HiOutlineMinusCircle />
+                            ) : (
+                                <HiOutlinePlusCircle />
+                            )}
+                        </button>
+                    </>
+                )
+            },
+        },
+        {
+            header: 'Products',
             accessorKey: 'name',
             enableSorting: true,
             size: 230,
             cell: props => (
                 <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs">{props.getValue()}</h6>
+                    <h6 className="text-xs">Macbook M4</h6>
                     <span className="text-xs flex gap-1">
-                        ({"Phone/Email"})
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Type :</h6> {props.row.original.type}
+                        ({"Matches: 5"})
                     </span>
                     <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Country:</h6> {props.row.original.country}
+                        <h6 className="text-xs">Buyers: </h6> 3/3
                     </span>
-                    <span className="text-xs">
-                        <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
+                    <span className="text-xs flex gap-1">
+                        <h6 className="text-xs">Sellers: </h6> 2/3
                     </span>
-                    {/* <span >Status: {props.row.original.status}</span> */}
                 </div>
             )
         },
         {
-            header: 'Preferences',
+            header: 'Matched',
             accessorKey: 'brands',
             cell: props => (
                 <div className='flex flex-col gap-1'>
@@ -305,7 +341,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Verified', accessorKey: 'verified',
-            size:100,
+            size: 100,
             cell: props => (
                 <div className='flex flex-col gap-1'>
                     <span className="flex flex-wrap gap-1 text-xs">
@@ -345,7 +381,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Opportunities', accessorKey: 'opportunity',
-            size:170,
+            size: 170,
             cell: props => (
                 <div>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
@@ -359,7 +395,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Leads', accessorKey: 'leads',
-            size:180,
+            size: 180,
             cell: props => (
                 <div>
                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
@@ -520,14 +556,15 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     ];
 
     const memberColumns = [
+
         {
-            header: 'Member Info',
+            header: 'Sales Person (RM)',
             accessorKey: 'name',
             enableSorting: true,
             size: 230,
             cell: props => (
                 <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs">{props.getValue()}</h6>
+                    <h6 className="text-xs">Janhvi Kapoor</h6>
                     <span className="text-xs flex">
                         <h6 className="text-xs"></h6> ({"XYZ Company Name"})
                     </span>
@@ -545,74 +582,23 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             accessorKey: 'brands',
             cell: props => (
                 <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
+                    <span className="text-xs ">
+                        <h6 className="text-xs inline">Brands:</h6> {props.row.original.brands?.map(val => {
                             return <span>{val}, </span>
                         })}
                     </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
+                    <span className="text-xs ">
+                        <h6 className="text-xs inline">Category:</h6> {props.row.original.category}
                     </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
+                    <span className="text-xs ">
+                        <h6 className="text-xs inline">Products: </h6>Iphone, Airpods, Macbook
                     </span>
                 </div>
             )
         },
         {
-            header: 'Verified', accessorKey: 'verified',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="flex gap-1 text-black dark:text-white text-xs font-semibold">INS - PREMIUM</span>
-                    <div className='flex gap-1 items-center'>
-                        <Tooltip title="KYC Verification" className='text-xs'>
-                            <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
-                                <MdCheckCircle className='text-green-500 text-lg' />
-                                <span>13/27</span>
-                            </div>
-                        </Tooltip>
-                        <Tooltip title="Email Verification" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
-                    </div>
-                    <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
-                        <div className='h-1.5 w-28 rounded-full bg-gray-300'>
-                            <div className={`font-bold rounded-full h-1.5 bg-blue-500 heading-text mt-1`}
-                                style={{ width: props.row.original.progress + "%" }}
-                            ></div>
-                        </div>
-                    </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Walls', accessorKey: 'wallCount',
-            cell: props => (
-                <div>
-                    <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
-                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            13 | 12 | 25
-                        </div>
-                    </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Opportunities', accessorKey: 'opportunity',
-            size:160,
-            cell: props => (
-                <div>
-                    <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
-                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
-                        </div>
-                    </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Leads', accessorKey: 'leads',
-            size:180,
+            header: 'Count', accessorKey: 'leads',
+            size: 180,
             cell: props => (
                 <div>
                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
@@ -625,18 +611,49 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             )
         },
         {
-            header: 'Ratio', accessorKey: 'trustRatio',
-            size:190,
+            header: 'Follow-Ups', accessorKey: 'wallCount',
+            cell: props => (
+                <div>
+                    <Tooltip title="New: 13 | Follow-Up: 12 | Total: 25 " className='text-xs'>
+                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
+                            shadow-md inline'>
+                            13 | 12 | 25
+                        </div>
+                    </Tooltip>
+                </div>
+            )
+        },
+        {
+            header: 'Total', accessorKey: 'opportunity',
+            size: 160,
+            cell: props => (
+                <div>
+                    <Tooltip title="Qty: 34 | Value: $15,67,832" className='text-xs'>
+                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
+                            shadow-md inline'>
+                            34 | $15,67,832
+                        </div>
+                    </Tooltip>
+                </div>
+            )
+        },
+
+        {
+            header: 'Average & Ratio', accessorKey: 'trustRatio',
+            size: 190,
             cell: props => (
                 <div className='flex flex-col gap-1'>
                     <Tag className="flex gap-1 text-[10px]">
-                        <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
+                        <h6 className="text-[10px]">Response Time :</h6>3.2 hours
                     </Tag>
                     <Tag className="flex gap-1 text-[10px]">
-                        <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
+                        <h6 className="text-[10px]">Closing Time :</h6>4.5 days
                     </Tag>
                     <Tag className="flex gap-1 text-[10px] flex-wrap">
-                        <h6 className="text-[10px]">Activity Level:</h6> 80%
+                        <h6 className="text-[10px]">Conversion Rate :</h6> 70%
+                    </Tag>
+                    <Tag className="flex gap-1 text-[10px] flex-wrap bg-green-200">
+                        <h6 className="text-[10px]">Grade :</h6> A
                     </Tag>
                 </div>
             )
@@ -828,7 +845,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Opportunities', accessorKey: 'opportunity',
-            size:160,
+            size: 160,
             cell: props => (
                 <div>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
@@ -842,7 +859,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Leads', accessorKey: 'leads',
-            size:180,
+            size: 180,
             cell: props => (
                 <div>
                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
@@ -1105,11 +1122,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                     </Tooltip>
                     <div className='flex gap-2 items-center mt-3 text-orange-400'>
                         <Tooltip title="Total Shares: 12" wrapperClass="flex gap-1 text-xs">
-                            <IoMdShare className="text-base"/>
-                            <span>12</span> 
+                            <IoMdShare className="text-base" />
+                            <span>12</span>
                         </Tooltip>
                         <Tooltip title="Total Bookmarks: 8" wrapperClass="flex flex-row gap-1 text-xs">
-                            <FaBookmark className="text-base"/>
+                            <FaBookmark className="text-base" />
                             <span>8</span>
                         </Tooltip>
                     </div>
@@ -1232,7 +1249,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 <div className='flex flex-col gap-1'>
                     <div className='flex gap-2 items-center'>
                         <Tooltip title="Birthday : 23 May">
-                            <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm "/>
+                            <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm " />
                         </Tooltip>
                         <h6 className="text-xs">Raman Ojha</h6>
                     </div>
@@ -1273,7 +1290,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         {
             header: 'Status',
             accessorKey: 'status',
-            size:110,
+            size: 110,
             cell: props => (
                 <span className="text-xs">
                     <span className="text-xs">
@@ -1291,12 +1308,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             cell: props => (
                 <div className='flex flex-col gap-1'>
                     <span className="text-xs mb-1">
-                       <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
+                        <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
                     </span>
                     <Tooltip title="Present: 24 | Leaves: 2" className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
                             shadow-md inline'>
-                           P: 24 | L: 2
+                            P: 24 | L: 2
                         </div>
                     </Tooltip>
                 </div>
@@ -1420,7 +1437,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 <section >
                     <div className="grid grid-cols-1 md:grid-cols-6 gap-2 rounded-2xl py-3 mt-4 ">
                         <StatisticCard
-                            title="Companies"
+                            title="Opportunity"
                             value={
                                 <NumericFormat
                                     displayType="text"
@@ -1431,15 +1448,15 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             }
                             iconClass="bg-sky-200"
                             icon={<MdOutlineBusinessCenter className='h-5' />}
-                            label="Companies"
-                            active={selectedCategory === 'Companies'}
-                            onClick={() => setSelectedCategory('Companies')}
+                            label="Opportunity"
+                            active={selectedCategory === 'Opportunity'}
+                            onClick={() => setSelectedCategory('Opportunity')}
                             colorClass="bg-red-100"
                             activeBgColor="bg-red-200"
                             iconBg="bg-red-400"
                         />
                         <StatisticCard
-                            title="Members"
+                            title="Leads"
                             value={
                                 <NumericFormat
                                     displayType="text"
@@ -1449,15 +1466,15 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             }
                             iconClass="bg-emerald-200"
                             icon={<TbShoppingBagCheck className='h-5' />}
-                            label="Members"
-                            active={selectedCategory === 'Members'}
-                            onClick={() => setSelectedCategory('Members')}
+                            label="Leads"
+                            active={selectedCategory === 'Leads'}
+                            onClick={() => setSelectedCategory('Leads')}
                             colorClass="bg-green-100"
                             activeBgColor="bg-green-200"
                             iconBg="bg-green-400"
                         />
                         <StatisticCard
-                            title="Products"
+                            title="Accounts"
                             value={
                                 <NumericFormat
                                     displayType="text"
@@ -1468,15 +1485,35 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             }
                             iconClass="bg-purple-200"
                             icon={<TbEye className='h-5' />}
-                            label="Products"
-                            active={selectedCategory === 'Products'}
-                            onClick={() => setSelectedCategory('Products')}
+                            label="Accounts"
+                            active={selectedCategory === 'Accounts'}
+                            onClick={() => setSelectedCategory('Accounts')}
                             colorClass="bg-blue-100"
                             activeBgColor="bg-blue-200"
                             iconBg="bg-blue-400"
                         />
                         <StatisticCard
-                            title="Wall Listings"
+                            title="Tasks"
+                            value={
+                                <NumericFormat
+                                    displayType="text"
+                                    value="23"
+                                    thousandSeparator={true}
+                                />
+                            }
+                            // growShrink={data.totalOrder[selectedPeriod].growShrink}
+                            iconClass="bg-emerald-200"
+                            icon={<TbShoppingBagCheck className='h-5' />}
+                            label="Tasks"
+                            active={selectedCategory === 'Tasks'}
+                            // compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
+                            onClick={() => setSelectedCategory('Tasks')}
+                            colorClass="bg-pink-100"
+                            activeBgColor="bg-pink-200"
+                            iconBg="bg-pink-400"
+                        />
+                        <StatisticCard
+                            title="Web Analytics"
                             value={
                                 <NumericFormat
                                     displayType="text"
@@ -1488,36 +1525,16 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             // growShrink={data.totalProfit[selectedPeriod].growShrink}
                             iconClass="bg-sky-200"
                             icon={<TbCoin className='h-5' />}
-                            label="Wall Listings"
-                            active={selectedCategory === 'Wall Listings'}
+                            label="Web Analytics"
+                            active={selectedCategory === 'Web Analytics'}
                             // compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
-                            onClick={() => setSelectedCategory('Wall Listings')}
+                            onClick={() => setSelectedCategory('Web Analytics')}
                             colorClass="bg-violet-100"
                             activeBgColor="bg-violet-200"
                             iconBg="bg-violet-400"
                         />
                         <StatisticCard
-                            title="Partners"
-                            value={
-                                <NumericFormat
-                                    displayType="text"
-                                    value="23"
-                                    thousandSeparator={true}
-                                />
-                            }
-                            // growShrink={data.totalOrder[selectedPeriod].growShrink}
-                            iconClass="bg-emerald-200"
-                            icon={<TbShoppingBagCheck className='h-5' />}
-                            label="Partners"
-                            active={selectedCategory === 'Partners'}
-                            // compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
-                            onClick={() => setSelectedCategory('Partners')}
-                            colorClass="bg-pink-100"
-                            activeBgColor="bg-pink-200"
-                            iconBg="bg-pink-400"
-                        />
-                        <StatisticCard
-                            title="Teams"
+                            title="Marketing"
                             value={
                                 <NumericFormat
                                     displayType="text"
@@ -1529,10 +1546,10 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             // growShrink={data.totalImpression[selectedPeriod].growShrink}
                             iconClass="bg-purple-200"
                             icon={<TbEye className='h-5' />}
-                            label="Teams"
-                            active={selectedCategory === 'Teams'}
+                            label="Marketing"
+                            active={selectedCategory === 'Marketing'}
                             // compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
-                            onClick={() => setSelectedCategory('Teams')}
+                            onClick={() => setSelectedCategory('Marketing')}
                             colorClass="bg-orange-100"
                             activeBgColor="bg-orange-200"
                             iconBg="bg-orange-400"
@@ -1557,8 +1574,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             />
                         </div>
 
-                        {/* Company Starts */}
-                        {selectedCategory === 'Companies' && (
+                        {/* Opportunity Starts */}
+                        {selectedCategory === 'Opportunity' && (
                             <div>
                                 <div className='lg:flex  gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
@@ -1588,37 +1605,37 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Pending"
+                                            field="Converted"
                                             percent={32}
                                             color='text-[#ffc107]'
                                             className="bg-[#ffc107] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Verified"
-                                            percent={20}
-                                            color='text-[#2ecc71]'
-                                            className="bg-[#2ecc71] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Unverified"
+                                            field="Lost"
                                             percent={20}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Offerer"
+                                            field="Dropped"
+                                            percent={20}
+                                            color='text-[#2ecc71]'
+                                            className="bg-[#2ecc71] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Offers"
                                             percent={20}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Seller"
+                                            field="Demands"
                                             percent={20}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Both"
+                                            field="Avg Conversion"
                                             percent={20}
                                             color='text-[#20c997]'
                                             className="bg-[#20c997] dark:opacity-70"
@@ -1634,9 +1651,9 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
-                                        <h6 className='mb-6'>Company Leaderboard</h6>
+                                        <h6 className='mb-6'>Opportunity Leaderboard</h6>
                                         <div className='flex gap-2 items-center text-sm'>
-                                            <h6 className='text-sm'>Health Score</h6>
+                                            <h6 className='text-sm'>Match Score</h6>
                                             <Select
                                                 className="min-w-[140px]"
                                                 size="sm"
@@ -1650,10 +1667,23 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             />
                                         </div>
                                     </div>
-                                    <DataTable
+                                    <DataTable1
                                         columns={companyColumns}
                                         data={companyData}
-                                    // loading={isLoading}
+                                        getRowCanExpand={() => true}
+                                        renderSubComponent={({ row }) => (
+                                            <div className="p-4 bg-gray-50">
+                                                {/* Render whatever you want for expanded row */}
+                                                <strong>Products:</strong>
+                                                <ul>
+                                                    {row.original.products?.map((p, idx) => (
+                                                        <li key={idx}>
+                                                            {p.productName} - {p.brand} ({p.status})
+                                                        </li>
+                                                    )) ?? <li>No products</li>}
+                                                </ul>
+                                            </div>
+                                        )}
                                     />
 
                                     {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
@@ -1662,10 +1692,10 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             </div>
 
                         )}
-                        {/* Company Ends */}
+                        {/* Opportunity Ends */}
 
-                        {/* Members  */}
-                        {selectedCategory === 'Members' && (
+                        {/* Leads  */}
+                        {selectedCategory === 'Leads' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
@@ -1683,61 +1713,67 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Verified"
+                                            field="Recently"
                                             percent={20}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Unverified"
+                                            field="Completed"
                                             percent={20}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Active"
+                                            field="Cancelled"
                                             percent={20}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Inactive"
+                                            field="In-Progress"
                                             percent={28}
                                             color='text-[#6c757d]'
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Listers"
+                                            field="Converted"
                                             percent={32}
                                             color='text-[#ffc107]'
                                             className="bg-[#ffc107] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="New Lister"
+                                            field="Follow-ups"
                                             percent={20}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Zero Listers"
+                                            field="Top Products"
                                             percent={20}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Activity Score"
+                                            field="Top Category"
                                             percent={20}
                                             color='text-gray-500'
                                             className="bg-gray-500 dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Top Brands"
+                                            percent={20}
+                                            color="text-[#6610f2]"
+                                            className="bg-[#6610f2] dark:opacity-70"
                                         />
                                     </div>
                                 </div>
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
-                                        <h6 className='mb-6'>Members Leaderboard</h6>
+                                        <h6 className='mb-6'>Leads Leaderboard</h6>
                                         <div className='flex gap-2 items-center text-sm'>
-                                            <h6 className='text-sm'>Activity Level</h6>
+                                            <h6 className='text-sm'>Conversion Rate</h6>
                                             <Select
                                                 className="min-w-[140px]"
                                                 size="sm"
@@ -1762,10 +1798,10 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 </div>
                             </div>
                         )}
-                        {/* Members Ends */}
+                        {/* Leads Ends */}
 
-                        {/* Products  */}
-                        {selectedCategory === 'Products' && (
+                        {/* Accounts  */}
+                        {selectedCategory === 'Accounts' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
@@ -1862,10 +1898,122 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 </div>
                             </div>
                         )}
-                        {/* Products Ends */}
+                        {/* Accounts Ends */}
 
-                        {/* Wall Listing  */}
-                        {selectedCategory === 'Wall Listings' && (
+                        {/* Tasks  */}
+                        {selectedCategory === 'Tasks' && (
+                            <div>
+                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                        <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
+                                        <div className='flex gap-1 items-center'>
+                                            <h3>13%</h3>
+                                            <span className='text-green-600 text-lg'><FaArrowUpLong /></span>
+                                        </div>
+                                    </div>
+                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
+                                        <Bar
+                                            field="Total"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Verified"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Active"
+                                            percent={20}
+                                            color='text-[#2ecc71]'
+                                            className="bg-[#2ecc71] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Inactive"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Pending"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Blocked"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Category"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Type"
+                                            percent={20}
+                                            color='text-[#28a745]'
+                                            className="bg-[#28a745] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Recent"
+                                            percent={28}
+                                            color='text-[#6c757d]'
+                                            className="bg-[#6c757d] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="International"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="National"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className='mt-8 block  gap-2'>
+                                    <div className='flex justify-between items-center'>
+                                        <h6 className='mb-6'>Partners Leaderboard</h6>
+                                        <div className='flex gap-2 items-center text-sm'>
+                                            <h6 className='text-sm'>Trust Score</h6>
+                                            <Select
+                                                className="min-w-[140px]"
+                                                size="sm"
+                                                defaultValue={{ label: "All", value: "All" }}
+                                                options={[
+                                                    { label: "75% - 100%", value: "75-100" },
+                                                    { label: "50% - 74%", value: "50-74" },
+                                                    { label: "25% - 49%", value: "25-49" },
+                                                    { label: "0% - 24%", value: "0-24" },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                    <DataTable
+                                        columns={partnerColumns}
+                                        data={wallListingData}
+                                    // loading={isLoading}
+                                    />
+
+                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
+                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
+                                </div>
+                            </div>
+                        )}
+                        {/* Tasks */}
+
+                        {/* Web Analytics  */}
+                        {selectedCategory === 'Web Analytics' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
@@ -1982,120 +2130,10 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 </div>
                             </div>
                         )}
-                        {/* Wall Listing Ends */}
-                        {/* Partners  */}
-                        {selectedCategory === 'Partners' && (
-                            <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
-                                        <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
-                                        <div className='flex gap-1 items-center'>
-                                            <h3>13%</h3>
-                                            <span className='text-green-600 text-lg'><FaArrowUpLong /></span>
-                                        </div>
-                                    </div>
-                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
-                                        <Bar
-                                            field="Total"
-                                            percent={20}
-                                            color='text-[#6610f2]'
-                                            className="bg-[#6610f2] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Verified"
-                                            percent={20}
-                                            color='text-[#6610f2]'
-                                            className="bg-[#6610f2] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Active"
-                                            percent={20}
-                                            color='text-[#2ecc71]'
-                                            className="bg-[#2ecc71] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Inactive"
-                                            percent={20}
-                                            color='text-[#e74c3c]'
-                                            className="bg-[#e74c3c] dark:opacity-70"
-                                        />
-                                         <Bar
-                                            field="Pending"
-                                            percent={32}
-                                            color='text-[#ffc107]'
-                                            className="bg-[#ffc107] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Blocked"
-                                            percent={20}
-                                            color='text-[#fd7e14]'
-                                            className="bg-[#fd7e14] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Category"
-                                            percent={20}
-                                            color='text-[#007bff]'
-                                            className="bg-[#007bff] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Type"
-                                            percent={20}
-                                            color='text-[#28a745]'
-                                            className="bg-[#28a745] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Recent"
-                                            percent={28}
-                                            color='text-[#6c757d]'
-                                            className="bg-[#6c757d] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="International"
-                                            percent={20}
-                                            color='text-[#007bff]'
-                                            className="bg-[#007bff] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="National"
-                                            percent={20}
-                                            color='text-[#007bff]'
-                                            className="bg-[#007bff] dark:opacity-70"
-                                        />
-                                    </div>
-                                </div>
+                        {/* Web Analytics Ends */}
 
-                                <div className='mt-8 block  gap-2'>
-                                    <div className='flex justify-between items-center'>
-                                        <h6 className='mb-6'>Partners Leaderboard</h6>
-                                        <div className='flex gap-2 items-center text-sm'>
-                                            <h6 className='text-sm'>Trust Score</h6>
-                                            <Select
-                                                className="min-w-[140px]"
-                                                size="sm"
-                                                defaultValue={{ label: "All", value: "All" }}
-                                                options={[
-                                                    { label: "75% - 100%", value: "75-100" },
-                                                    { label: "50% - 74%", value: "50-74" },
-                                                    { label: "25% - 49%", value: "25-49" },
-                                                    { label: "0% - 24%", value: "0-24" },
-                                                ]}
-                                            />
-                                        </div>
-                                    </div>
-                                    <DataTable
-                                        columns={partnerColumns}
-                                        data={wallListingData}
-                                    // loading={isLoading}
-                                    />
-
-                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
-                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
-                                </div>
-                            </div>
-                        )}
-                        {/* Partners */}
-                        {/* Teams  */}
-                        {selectedCategory === 'Teams' && (
+                        {/* Marketing  */}
+                        {selectedCategory === 'Marketing' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
@@ -2124,7 +2162,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
-                                         <Bar
+                                        <Bar
                                             field="On Leave"
                                             percent={32}
                                             color='text-[#ffc107]'
@@ -2198,7 +2236,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 </div>
                             </div>
                         )}
-                        {/* Teams */}
+                        {/* Marketing */}
 
 
                     </Card>

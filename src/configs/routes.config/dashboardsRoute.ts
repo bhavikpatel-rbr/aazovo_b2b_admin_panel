@@ -23,8 +23,8 @@ const dashboardsRoute: Routes = [
         },
     },
     {
-        key: 'dashboard.trending',
-        path: `${DASHBOARDS_PREFIX_PATH}/trending`,
+        key: 'dashboard.active',
+        path: `${DASHBOARDS_PREFIX_PATH}/active`,
         component: lazy(() => import('@/views/dashboards/Trending')),
         authority: [ADMIN, USER],
         meta: {
