@@ -1,6 +1,6 @@
 export type Period = 'thisMonth' | 'thisWeek' | 'thisYear'
 
-export type StatisticCategory = 'Companies' | 'Members' | 'Products' | 'Wall Listings' | 'Partners' | 'Teams'
+export type StatisticCategory = 'Opportunity' | 'Leads' | 'Accounts' | 'Web Analytics' | 'Tasks' | 'Marketing'
 
 export type ChannelRevenue = Record<
     Period,
