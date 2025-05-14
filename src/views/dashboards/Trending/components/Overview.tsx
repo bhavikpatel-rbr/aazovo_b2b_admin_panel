@@ -1676,7 +1676,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                 {/* Render whatever you want for expanded row */}
                                                 <strong>Products:</strong>
                                                 <ul>
-                                                    {row.original.products?.map((p, idx) => (
+                                                    {row.original.subRows?.map((p, idx) => (
                                                         <li key={idx}>
                                                             {p.productName} - {p.brand} ({p.status})
                                                         </li>
