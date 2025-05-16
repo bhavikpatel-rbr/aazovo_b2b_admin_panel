@@ -19,13 +19,23 @@ import type { TableQueries } from '@/@types/common'
 // --- Define Form Type ---
 export type FormItem = {
     id: string
-    billingStatus: string // Added billing status
-    companyName: string // Added company name
-    companyId: string // Added company ID
-    gstNumber: string // Added GST number
-    panNumber: string // Added PAN number
-    photo: string // Added photo URL
-    expiryDate: string // Added expiry date
+    company_name: string // Added billing status
+    company_code: string // Added company name
+    gst_number: string // Added company ID
+    pan_number: string // Added GST number
+    company_photo: string // Added PAN number
+    expiry_date: string // Added expiry_date URL
+    company_type: string // Added expiry date
+    country: string // Added country
+    brands: Array<string> // Added brands
+    category: Array<string> // Added category
+    interested_in : string // Added interested_in
+    active_member: number // Added active_member
+    total_members: number // Added total_members
+    member_participation: number // Added member_participation
+    success_score: number // Added success_score
+    trust_score: number // Added trust_score
+    health_score: number // Added health_score
     status: 'active' | 'inactive' // Changed status options
     // Add other form-specific fields if needed later
 }
@@ -98,62 +108,72 @@ const ActionColumn = ({
 
 // --- Initial Dummy Data ---
 const initialDummyForms: FormItem[] = [
-    {
-        id: 'F001',
-        billingStatus: 'true',
-        companyName: 'ABC Pvt Ltd',
-        companyId: 'C001',
-        gstNumber: '27AAAPL1234C1ZP',
-        panNumber: 'AAAPL1234C',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2025-12-31',
-        status: 'active',
-    },
-    {
-        id: 'F002',
-        billingStatus: 'false',
-        companyName: 'XYZ Pvt Ltd',
-        companyId: 'C002',
-        gstNumber: '27BBAPL5678D1ZP',
-        panNumber: 'BBAPL5678D',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2026-06-30',
-        status: 'inactive',
-    },
-    {
-        id: 'F003',
-        billingStatus: 'true',
-        companyName: 'PQR Ltd',
-        companyId: 'C003',
-        gstNumber: '27CCAPL9101E1ZP',
-        panNumber: 'CCAPL9101E',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2024-11-15',
-        status: 'active',
-    },
-    {
-        id: 'F004',
-        billingStatus: 'false',
-        companyName: 'LMN Corp',
-        companyId: 'C004',
-        gstNumber: '27DDAPL2345F1ZP',
-        panNumber: 'DDAPL2345F',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2023-08-20',
-        status: 'inactive',
-    },
-    {
-        id: 'F005',
-        billingStatus: 'true',
-        companyName: 'EFG Enterprises',
-        companyId: 'C005',
-        gstNumber: '27EEAPL6789G1ZP',
-        panNumber: 'EEAPL6789G',
-        photo: 'https://picsum.photos/200/200',
-        expiryDate: '2027-01-10',
-        status: 'active',
-    },
-]
+  {
+    id: '1',
+    company_name: 'TechNova Ltd.',
+    company_code: 'TNL001',
+    gst_number: '27AAACT2727Q1Z5',
+    pan_number: 'AAACT2727Q',
+    company_photo: 'https://via.placeholder.com/80',
+    expiry_date: 'https://via.placeholder.com/80',
+    company_type: 'Private Limited',
+    country: 'India',
+    brands: ['TechNova', 'NovaGear'],
+    category: ['Electronics', 'Automation'],
+    interested_in: 'Partnership',
+    active_member: 25,
+    total_members: 100,
+    member_participation: 85,
+    success_score: 92,
+    trust_score: 88,
+    health_score: 90,
+    status: 'active',
+  },
+  {
+    id: '2',
+    company_name: 'GreenField Corp.',
+    company_code: 'GFC002',
+    gst_number: '29AACCG1234H1Z6',
+    pan_number: 'AACCG1234H',
+    company_photo: 'https://via.placeholder.com/80',
+    expiry_date: 'https://via.placeholder.com/80',
+    company_type: 'LLP',
+    country: 'USA',
+    brands: ['GreenField', 'EcoBuild'],
+    category: ['Construction', 'Sustainability'],
+    interested_in: 'Investment',
+    active_member: 40,
+    total_members: 150,
+    member_participation: 70,
+    success_score: 78,
+    trust_score: 82,
+    health_score: 75,
+    status: 'inactive',
+  },
+  {
+    id: '3',
+    company_name: 'AutoSync Pvt. Ltd.',
+    company_code: 'ASPL003',
+    gst_number: '07AABCU9603R1ZV',
+    pan_number: 'AABCU9603R',
+    company_photo: 'https://via.placeholder.com/80',
+    expiry_date: 'https://via.placeholder.com/80',
+    company_type: 'Pvt Ltd',
+    country: 'Germany',
+    brands: ['AutoSync', 'SyncDrive'],
+    category: ['Automobile', 'Technology'],
+    interested_in: 'Collaboration',
+    active_member: 10,
+    total_members: 60,
+    member_participation: 50,
+    success_score: 65,
+    trust_score: 70,
+    health_score: 60,
+    status: 'active',
+  },
+];
+
+
 // --- End Dummy Data ---
 
 const FormListTable = () => {
@@ -181,13 +201,13 @@ const FormListTable = () => {
             filteredData = forms.filter(
                 (form) =>
                     form.id.toLowerCase().includes(query) ||
-                    form.billingStatus.toLowerCase().includes(query) ||
-                    form.companyName.toLowerCase().includes(query) ||
-                    form.companyId.toLowerCase().includes(query) ||
-                    form.gstNumber.toLowerCase().includes(query) ||
-                    form.panNumber.toLowerCase().includes(query) ||
-                    form.photo.toLowerCase().includes(query) ||
-                    form.expiryDate.toLowerCase().includes(query) ||
+                    form.company_name.toLowerCase().includes(query) ||
+                    form.company_code.toLowerCase().includes(query) ||
+                    form.gst_number.toLowerCase().includes(query) ||
+                    form.pan_number.toLowerCase().includes(query) ||
+                    form.company_photo.toLowerCase().includes(query) ||
+                    form.expiry_date.toLowerCase().includes(query) ||
+                    form.company_type.toLowerCase().includes(query) ||
                     form.status.toLowerCase().includes(query)
             );
         }
@@ -241,13 +261,13 @@ const FormListTable = () => {
         const clonedForm: FormItem = {
             ...form,
             id: newId,
-            billingStatus: `${form.billingStatus} (Clone)`,
-            companyName: `${form.companyName} (Clone)`,
-            companyId: `${form.companyId} (Clone)`,
-            gstNumber: `${form.gstNumber} (Clone)`,
-            panNumber: `${form.panNumber} (Clone)`,
-            photo: `${form.photo}`, // Keep the same photo URL
-            expiryDate: `${form.expiryDate}`, // Keep the same expiry date
+            company_name: `${form.company_name} (Clone)`,
+            company_code: `${form.company_code} (Clone)`,
+            gst_number: `${form.gst_number} (Clone)`,
+            pan_number: `${form.pan_number} (Clone)`,
+            company_photo: `${form.company_photo} (Clone)`,
+            expiry_date: `${form.expiry_date}`, // Keep the same expiry_date URL
+            company_type: `${form.company_type}`, // Keep the same expiry date
             status: 'inactive', // Cloned forms start as inactive
         };
         setForms((prev) => [clonedForm, ...prev]) // Add to the beginning of the list
@@ -270,106 +290,154 @@ const FormListTable = () => {
     // --- End Action Handlers ---
 
     // --- Columns Definition ---
-    const columns: ColumnDef<FormItem>[] = useMemo(
+        const columns: ColumnDef<FormItem>[] = useMemo(
         () => [
             {
-                header: 'ID',
-                accessorKey: 'id',
-                // Simple cell to display ID, enable sorting
-                enableSorting: true,
-                size:70,
-                cell: (props) => <span>{props.row.original.id}</span>,
+            header: 'ID',
+            accessorKey: 'id',
+            enableSorting: true,
+            size: 70,
+            cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
-                header: 'Enable Billing Status',
-                accessorKey: 'billingStatus',
-                enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.billingStatus ? 'Enabled' : 'Disabled'}</span>
-                ),
+            header: 'Company Name',
+            accessorKey: 'company_name',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.company_name}</span>,
             },
             {
-                header: 'Company Name',
-                accessorKey: 'companyName',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.companyName}</span>,
+            header: 'Company Code',
+            accessorKey: 'company_code',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.company_code}</span>,
             },
             {
-                header: 'Company ID',
-                accessorKey: 'companyId',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.companyId}</span>,
+            header: 'GST Number',
+            accessorKey: 'gst_number',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.gst_number}</span>,
             },
             {
-                header: 'GST Number',
-                accessorKey: 'gstNumber',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.gstNumber}</span>,
+            header: 'PAN Number',
+            accessorKey: 'pan_number',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.pan_number}</span>,
             },
             {
-                header: 'PAN Number',
-                accessorKey: 'panNumber',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.panNumber}</span>,
+            header: 'Company Photo URL',
+            accessorKey: 'company_photo',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.company_photo}</span>,
             },
             {
-                header: 'Photo',
-                accessorKey: 'photo',
-                cell: (props) => (
-                    <Avatar
-                        src={props.row.original.photo}
-                        alt="Company Photo"
-                        size="sm"
-                    />
-                ),
+            header: 'Company Photo',
+            accessorKey: 'expiry_date',
+            // cell: (props) => (
+            //     <Avatar
+            //     src={props.row.original.expiry_date}
+            //     alt="Company Photo"
+            //     size="sm"
+            //     />
+            // ),
             },
             {
-                header: 'Expiry Date',
-                accessorKey: 'expiryDate',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.expiryDate}</span>,
+            header: 'Company Type',
+            accessorKey: 'company_type',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.company_type}</span>,
             },
             {
-                header: 'Status',
-                accessorKey: 'status',
-                // Enable sorting
-                enableSorting: true,
-                size:120,
-                cell: (props) => {
-                    const { status } = props.row.original
-                    return (
-                        <div className="flex items-center">
-                            <Tag className={statusColor[status]}>
-                                <span className="capitalize">{status}</span>
-                            </Tag>
-                        </div>
-                    )
-                },
+            header: 'Country',
+            accessorKey: 'country',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.country}</span>,
             },
             {
-                header: 'Action', // Keep header empty for actions
-                id: 'action',
-                size: 160, // Adjust width for actions
-                meta:{HeaderClass: "text-center"},
-                cell: (props) => (
-                    <ActionColumn
-                        // Pass new handlers
-                        onClone={() => handleCloneForm(props.row.original)}
-                        onChangeStatus={() =>
-                            handleChangeStatus(props.row.original)
-                        }
-                        // Keep existing handlers if needed
-                        onEdit={() => handleEdit(props.row.original)}
-                        onViewDetail={() =>
-                            handleViewDetails(props.row.original)
-                        }
-                    />
-                ),
+            header: 'Brands',
+            accessorKey: 'brands',
+            cell: (props) => <span>{props.row.original.brands.join(', ')}</span>,
+            },
+            {
+            header: 'Categories',
+            accessorKey: 'category',
+            cell: (props) => <span>{props.row.original.category.join(', ')}</span>,
+            },
+            {
+            header: 'Interested In',
+            accessorKey: 'interested_in',
+            cell: (props) => <span>{props.row.original.interested_in}</span>,
+            },
+            {
+            header: 'Active Members',
+            accessorKey: 'active_member',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.active_member}</span>,
+            },
+            {
+            header: 'Total Members',
+            accessorKey: 'total_members',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.total_members}</span>,
+            },
+            {
+            header: 'Member Participation',
+            accessorKey: 'member_participation',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.member_participation}</span>,
+            },
+            {
+            header: 'Success Score',
+            accessorKey: 'success_score',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.success_score}</span>,
+            },
+            {
+            header: 'Trust Score',
+            accessorKey: 'trust_score',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.trust_score}</span>,
+            },
+            {
+            header: 'Health Score',
+            accessorKey: 'health_score',
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.health_score}</span>,
+            },
+            {
+            header: 'Status',
+            accessorKey: 'status',
+            enableSorting: true,
+            size: 120,
+            cell: (props) => {
+                const { status } = props.row.original;
+                return (
+                <div className="flex items-center">
+                    <Tag className={statusColor[status]}>
+                    <span className="capitalize">{status}</span>
+                    </Tag>
+                </div>
+                );
+            },
+            },
+            {
+            header: 'Actions',
+            id: 'action',
+            size: 160,
+            meta: { HeaderClass: 'text-center' },
+            cell: (props) => (
+                <ActionColumn
+                onClone={() => handleCloneForm(props.row.original)}
+                onChangeStatus={() => handleChangeStatus(props.row.original)}
+                onEdit={() => handleEdit(props.row.original)}
+                onViewDetail={() => handleViewDetails(props.row.original)}
+                />
+            ),
             },
         ],
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [], // Handlers are defined outside, state dependency handled by component re-render
-    )
+        []
+        );
+
+
     // --- End Columns Definition ---
 
     // --- Table Interaction Handlers (Pagination, Selection, etc.) ---
