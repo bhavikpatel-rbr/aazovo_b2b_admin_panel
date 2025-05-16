@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addUnitAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllUnitAsync, deletPaymentTermAsync, deletUnitAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getUnitAsync, getwallListingAsync } from "./services"
+import { addBlogsAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addPriceListAsync, addUnitAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllUnitAsync, deletePriceListAsync, deletPaymentTermAsync, deletUnitAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editPriceListAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getPriceListAsync, getUnitAsync, getwallListingAsync } from "./services"
 import { AxiosResponse } from "axios"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
@@ -338,8 +338,8 @@ export const editPaymentTermAction = createAsyncThunk<any, any>(
   "auth/editpayment_term",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editPaymentTermAsync(data)
       if (response?.data?.status === true) {
         dispatch(getPaymentTermAction())
@@ -478,8 +478,8 @@ export const editCurrencyAction = createAsyncThunk<any, any>(
   "auth/editcurrency",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editCurrencyAsync(data)
       if (response?.data?.status === true) {
         dispatch(getCurrencyAction())
@@ -619,8 +619,8 @@ export const editContinentAction = createAsyncThunk<any, any>(
   "auth/editcontinent",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editcontinentAsync(data)
       if (response?.data?.status === true) {
         dispatch(getContinentsAction())
@@ -760,8 +760,8 @@ export const editCountryAction = createAsyncThunk<any, any>(
   "auth/editcountry",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editcountryAsync(data)
       if (response?.data?.status === true) {
         dispatch(getCountriesAction())
@@ -901,8 +901,8 @@ export const editDocumentListAction = createAsyncThunk<any, any>(
   "auth/editdocument_master",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editDocumentListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentListAction())
@@ -986,11 +986,16 @@ export const deleteAllDocumentListAction = createAsyncThunk<any, any>(
 )
 
 export const getBlogsAction = createAsyncThunk(
-  "auth/Blogs",
+  "auth/getBlogs",
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getBlogsAsync()
+
+      console.log("response", response?.data?.status);
+
       if (response?.data?.status === true) {
+        console.log("response?.data?.data", response?.data?.data);
+
         return response?.data?.data
       }
       dispatch(
@@ -1007,13 +1012,13 @@ export const getBlogsAction = createAsyncThunk(
 )
 
 export const addBlogAction = createAsyncThunk<any, any>(
-  "auth/adddocument_master",
+  "auth/addBlog",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await addDocumentListAsync(data)
+      const response: AxiosResponse<any> = await addBlogsAsync(data)
       if (response?.data?.status === true) {
 
-        dispatch(getDocumentListAction())
+        dispatch(getBlogsAction())
 
         dispatch(
           showMessage({
@@ -1041,8 +1046,8 @@ export const editBlogAction = createAsyncThunk<any, any>(
   "auth/editdocument_master",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editDocumentListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentListAction())
@@ -1182,8 +1187,8 @@ export const editBrandAction = createAsyncThunk<any, any>(
   "auth/editdocument_master",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editDocumentListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentListAction())
@@ -1341,8 +1346,8 @@ export const editCategoryAction = createAsyncThunk<any, any>(
   "auth/editdocument_master",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editDocumentListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentListAction())
@@ -1480,8 +1485,8 @@ export const editWallItemAction = createAsyncThunk<any, any>(
   "auth/editdocument_master",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data",data);
-      
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await editDocumentListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentListAction())
@@ -1543,6 +1548,143 @@ export const deleteAllWallItemsAction = createAsyncThunk<any, any>(
       if (response?.data?.status === true) {
         console.log(response?.data);
         dispatch(getDocumentListAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const getPriceListAction = createAsyncThunk(
+  "auth/getPriceList",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getPriceListAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addPriceListAction = createAsyncThunk<any, any>(
+  "auth/addPriceList",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addPriceListAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getPriceListAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editPriceListAction = createAsyncThunk<any, any>(
+  "auth/editPriceList",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editPriceListAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getPriceListAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deletePriceListAction = createAsyncThunk<any, any>(
+  "auth/deletPriceList",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletePriceListAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getUnitAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllPriceListAction = createAsyncThunk<any, any>(
+  "auth/delete",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllPriceListAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getPriceListAction())
         dispatch(
           showMessage({
             ...defaultMessageObj,

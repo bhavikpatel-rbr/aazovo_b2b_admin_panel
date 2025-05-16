@@ -1,10 +1,8 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect, lazy, Suspense } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form' // No longer needed for filter form
-// import { zodResolver } from '@hookform/resolvers/zod' // No longer needed
-// import { z } from 'zod' // No longer needed
-// import type { ZodType } from 'zod' // No longer needed
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -12,17 +10,13 @@ import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
-// import Dialog from '@/components/ui/Dialog' // No longer needed for filter dialog
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import { Card, Drawer, Tag, Form, FormItem, Input, Select } from '@/components/ui'
-
-// import Checkbox from '@/components/ui/Checkbox' // No longer needed for filter form
-// import Input from '@/components/ui/Input' // No longer needed for filter form
-// import { Form, FormItem as UiFormItem } from '@/components/ui/Form' // No longer needed for filter form
+import Select from '@/components/ui/Select'
+import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui'
 
 // Icons
 import {
@@ -30,1136 +24,459 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
-    TbFilter, // Filter icon removed
-    TbCloudUpload,
+    TbFilter,
     TbPlus,
-    TbCloudDownload,
+    TbCloudUpload,
 } from 'react-icons/tb'
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
 import { useAppDispatch } from '@/reduxtool/store'
-import {
-    getContinentsAction,
-    // getCountriesAction,
-    getDocumentTypeAction,
-    getPaymentTermAction,
-} from '@/reduxtool/master/middleware'
+// Assuming your actual actions are named like this, or stubs for now
+import { 
+    getPriceListAction, 
+    addPriceListAction, // You'll need to define this if it's not a stub
+ editPriceListAction, 
+     deletePriceListAction, 
+     deleteAllPriceListAction 
+} from '@/reduxtool/master/middleware'; 
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-const CSVLink = lazy(() =>
-    import('react-csv').then((module) => ({ default: module.CSVLink })),
-)
+// --- Mock Product Master Data (for Product Name Select in Forms) ---
+const MOCK_PRODUCTS_MASTER: { id: string; name: string }[] = [ // Using string IDs to match API's product_id if it's a string
+    { id: '44', name: 'IPHONE 12 128GB' },
+    { id: 'prod_002', name: 'Samsung Galaxy S24 Ultra' },
+    { id: 'prod_003', name: 'Google Pixel 8 Pro' },
+];
 
-// --- Define FormItem Type (Table Row Data) ---
+// --- Define PriceList Type (Matches API Response Structure) ---
+export type ApiProduct = {
+    id: number; // Or string if product_id is a string
+    name: string;
+    icon_full_path?: string; // Optional
+    product_images_array?: any[]; // Optional
+}
+
 export type PriceListItem = {
-    id: string
-    productName: string
-    price: string
-    basePrice: string
-    gstPrice: string
-    usd: string // Added USD field
-    expance: string // Added expense field
-    margin: string // Added margin field
-    interest: string // Added interest field
-    nlc: string // Added NLC field
-    salesPrice: string // Added sales price field
-    qty: string // Added quantity field
-    status: 'active' | 'inactive' // Changed status options
-    // Add other form-specific fields if needed later
+    id: number; // API returns number for price list item ID
+    product_id: string; // API returns string for product_id
+    price: string;
+    base_price: string;
+    gst_price: string;
+    usd_rate: string;
+    usd: string; // USD equivalent amount
+    expance: string; // Matches API 'expance'
+    interest: string;
+    nlc: string;
+    margin: string;
+    sales_price: string; // Matches API 'sales_price'
+    created_at?: string; // Optional
+    updated_at?: string; // Optional
+    product: ApiProduct; // Nested product details
+    qty?: string; // Add qty if it's part of your API response and needed for table
+    status?: 'active' | 'inactive'; // Add status if it's part of your API and needed
 }
-// --- End FormItem Type Definition ---
 
-// FilterFormSchema and channelList removed
-
-// --- Reusable ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    onDelete,
-}: {
-    onEdit: () => void
-    onDelete: () => void
-}) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
-
-    return (
-        <div className="flex items-center justify-center">
-            <Tooltip title="Edit">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
-            <Tooltip title="Delete">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    onClick={onDelete}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip>
-        </div>
-    )
-}
-// --- End ActionColumn ---
-
-// --- PriceListSearch Component ---
-type PriceListSearchProps = {
-    // Renamed component
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const PriceListSearch = React.forwardRef<
-    HTMLInputElement,
-    PriceListSearchProps
->(({ onInputChange }, ref) => {
-    return (
-        <DebouceInput
-            ref={ref}
-            placeholder="Quick Search..." // Updated placeholder
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
+// --- Zod Schema for SIMPLIFIED Add/Edit PriceList Form ---
+// This schema ONLY defines the fields present in the Add/Edit form
+const priceListFormSchema = z.object({
+    product_id: z.string().min(1, 'Product selection is required.'),
+    price: z.string().min(1, 'Price is required.').regex(/^\d+(\.\d{1,2})?$/, "Price must be a valid number (e.g., 100 or 100.50)"),
+    usd_rate: z.string().min(1, 'USD Rate is required.').regex(/^\d+(\.\d{1,2})?$/, "USD Rate must be a valid number"),
+    expance: z.string().min(1, 'Expenses are required.').regex(/^\d+(\.\d{1,2})?$/, "Expenses must be a valid number"),
+    margin: z.string().min(1, 'Margin is required.').regex(/^\d+(\.\d{1,2})?$/, "Margin must be a valid number"),
 })
+type PriceListFormData = z.infer<typeof priceListFormSchema>
+
+// --- Zod Schema for Filter Form ---
+const priceListFilterFormSchema = z.object({
+    filterProductNames: z // This will filter by product.name from the listing
+        .array(z.object({ value: z.string(), label: z.string() }))
+        .optional(),
+    // Add other filters if needed (e.g., filter by status if status exists in PriceListItem)
+})
+type PriceListFilterFormData = z.infer<typeof priceListFilterFormSchema>
+
+// --- CSV Exporter Utility (Exports fields based on PriceListItem) ---
+// Adjust headers and keys to match your PriceListItem and desired CSV output
+const CSV_PRICE_LIST_HEADERS = [
+    'ID', 'Product ID', 'Product Name', 'Price', 'Base Price', 'GST Price', 'USD Rate', 'USD Amount',
+    'Expense', 'Interest', 'NLC', 'Margin', 'Sales Price', /* 'Quantity', 'Status' */ // Add if present
+];
+const CSV_PRICE_LIST_KEYS: (keyof PriceListItem)[] = [
+    'id', 'product_id', /* 'product.name' - needs special handling */ 'price', 'base_price', 'gst_price', 'usd_rate', 'usd',
+    'expance', 'interest', 'nlc', 'margin', 'sales_price', /* 'qty', 'status' */ // Add if present
+];
+
+function exportPriceListToCsv(filename: string, rows: PriceListItem[]) {
+    if (!rows || !rows.length) {
+        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+        return false;
+    }
+    const separator = ',';
+    const csvContent =
+        CSV_PRICE_LIST_HEADERS.join(separator) +
+        '\n' +
+        rows
+            .map((row) => {
+                // Special handling for nested product.name
+                const flatRow = { ...row, productNameForCsv: row.product?.name || '' }; 
+                return CSV_PRICE_LIST_KEYS.map((k) => {
+                    let cell: any;
+                    if (k === ('product.name' as any)) { // Temporary hack for typing
+                        cell = flatRow.productNameForCsv;
+                    } else {
+                        cell = flatRow[k as keyof typeof flatRow];
+                    }
+                    
+                    if (cell === null || cell === undefined) {
+                        cell = '';
+                    } else {
+                        cell = String(cell).replace(/"/g, '""');
+                    }
+                    if (String(cell).search(/("|,|\n)/g) >= 0) {
+                        cell = `"${cell}"`;
+                    }
+                    return cell;
+                }).join(separator);
+            })
+            .join('\n');
+    // ... (rest of the blob creation and download logic remains the same)
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return true;
+    }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+    return false;
+}
+
+
+// --- ActionColumn, PriceListSearch, PriceListTableTools, PriceListTable, PriceListSelectedFooter ---
+// No changes needed in these components themselves, they are generic.
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => {
+    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
+    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
+    return ( <div className="flex items-center justify-center gap-3"> <Tooltip title="Edit"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="Delete"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> )
+}
+type PriceListSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement> }
+const PriceListSearch = React.forwardRef<HTMLInputElement, PriceListSearchProps>(({ onInputChange }, ref) => ( <DebouceInput ref={ref} className="w-full" placeholder="Quick search price list..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ))
 PriceListSearch.displayName = 'PriceListSearch'
-// --- End PriceListSearch ---
+const PriceListTableTools = ({ onSearchChange, onFilter, onExport }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void }) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><PriceListSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> )
+type PriceListTableProps = { columns: ColumnDef<PriceListItem>[]; data: PriceListItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: PriceListItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: PriceListItem) => void; onAllRowSelect: (checked: boolean, rows: Row<PriceListItem>[]) => void; }
+const PriceListTable = (props: PriceListTableProps) => ( <DataTable selectable columns={props.columns} data={props.data} noData={!props.loading && props.data.length === 0} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} />)
+type PriceListSelectedFooterProps = { selectedItems: PriceListItem[]; onDeleteSelected: () => void }
+const PriceListSelectedFooter = ({ selectedItems, onDeleteSelected }: PriceListSelectedFooterProps) => { const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false); const handleDeleteClick = () => setDeleteConfirmationOpen(true); const handleCancelDelete = () => setDeleteConfirmationOpen(false); const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmationOpen(false); }; if (selectedItems.length === 0) return null; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"><span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span><span className="font-semibold flex items-center gap-1 text-sm sm:text-base"><span className="heading-text">{selectedItems.length}</span><span> Item{selectedItems.length > 1 ? 's' : ''} selected</span></span></span> <div className="flex items-center gap-3"><Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick}>Delete Selected</Button></div> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Price List Item${selectedItems.length > 1 ? 's' : ''}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete}><p>Are you sure you want to delete the selected price list item{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p></ConfirmDialog> </> ) }
 
-// --- PriceListTableTools Component ---
-const PriceListTableTools = ({
-    // Renamed component
-    onSearchChange,
-    allFormsData,
-}: {
-    onSearchChange: (query: string) => void
-    allFormsData: PriceListItem[];
-}) => {
 
-    type PriceListFilterSchema = {
-        userRole: String,
-        exportFrom: String,
-        exportDate: Date
-    }
-
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
-    const openFilterDrawer = () => setIsFilterDrawerOpen(true)
-
-    const { control, handleSubmit } = useForm<PriceListFilterSchema>()
-
-    const exportFiltersSubmitHandler = (data: PriceListFilterSchema) => {
-        console.log("filter data", data)
-    }
-
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Product Name', key: 'productName' },
-        { label: 'Price', key: 'price' },
-        { label: 'Base Price', key: 'basePrice' },
-        { label: 'GST Price', key: 'gstPrice' },
-        { label: 'USD', key: 'usd' },
-        { label: 'Expance', key: 'expance' },
-        { label: 'Margin', key: 'margin' },
-        { label: 'Interest', key: 'interest' },
-        { label: 'NLC', key: 'nlc' },
-        { label: 'Sales Price', key: 'salesPrice' },
-        { label: 'Qty', key: 'qty' },
-        { label: 'Status', key: 'status' },
-    ]
-
-    return (
-        <div className="flex items-center w-full gap-2">
-            <div className="flex-grow">
-                <PriceListSearch onInputChange={onSearchChange} />
-            </div>
-            {/* Filter component removed */}
-            <Button icon={<TbFilter />} className='' onClick={openFilterDrawer}>
-                Filter
-            </Button>
-            {/* <Button icon={<TbCloudUpload/>}>Export</Button> */}
-
-            <CSVLink
-                className=""
-                filename="documentTypeList.csv"
-                data={allFormsData}
-                headers={csvHeaders}
-            >
-                <Button icon={<TbCloudDownload />} className="w-full" block>
-                    Export
-                </Button>
-            </CSVLink>
-
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                    </div>
-                }
-            >
-                <Form size='sm' onSubmit={handleSubmit(exportFiltersSubmitHandler)} containerClassName='flex flex-col'>
-                    <div>
-                        <FormItem label='Category'>
-                            <Select
-                                isMulti
-                                options={[
-                                    { label: "Electronics", value: "Electronics" },
-                                    { label: "Food", value: "Food" },
-                                    { label: "Industrial Equipment", value: "Industrial Equipment" },
-                                ]}
-                            />
-                        </FormItem>
-                        <FormItem label='Brand'>
-                            <Select
-                                isMulti
-                                options={[
-                                    { label: "Apple", value: "Apple" },
-                                    { label: "Samsung", value: "Samsung" },
-                                    { label: "Xiaomi", value: "Xiaomi" },
-                                    { label: "LG", value: "LG" },
-                                ]}
-                            />
-                        </FormItem>
-                        <FormItem label='Type'>
-                            <Select
-                                isMulti
-                                options={[
-                                    { label: "SmartPhone", value: "SmartPhone" },
-                                    { label: "Tablet", value: "Tablet" },
-                                    { label: "Laptop", value: "Laptop" },
-                                ]}
-                            />
-                        </FormItem>
-                    </div>
-                    <div className="text-right border-t border-t-gray-200 w-full absolute bottom-0 py-4 right-0 pr-6 bg-white dark:bg-gray-700">
-                        <Button size="sm" className="mr-2" type='button' onClick={closeFilterDrawer}>
-                            Cancel
-                        </Button>
-                        <Button size="sm" variant="solid" type='submit'>
-                            Apply
-                        </Button>
-                    </div>
-                </Form>
-            </Drawer>
-        </div>
-    )
-}
-// --- End PriceListTableTools ---
-
-// --- FormListTable Component (No changes) ---
-const FormListTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedForms,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: {
-    columns: ColumnDef<PriceListItem>[]
-    data: PriceListItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedForms: PriceListItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: PriceListItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<PriceListItem>[]) => void
-}) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={(row) =>
-                selectedForms.some((selected) => selected.id === row.id)
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-        />
-    )
-}
-
-// --- FormListSearch Component (No changes) ---
-type FormListSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const FormListSearch = React.forwardRef<HTMLInputElement, FormListSearchProps>(
-    ({ onInputChange }, ref) => {
-        return (
-            <DebouceInput
-                ref={ref}
-                className="w-full "
-                placeholder="Quick search..."
-                suffix={<TbSearch className="text-lg" />}
-                onChange={(e) => onInputChange(e.target.value)}
-            />
-        )
-    },
-)
-FormListSearch.displayName = 'FormListSearch'
-
-// FormListTableFilter component removed
-
-// --- FormListTableTools Component (Simplified) ---
-const FormListTableTools = ({
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <FormListSearch onInputChange={onSearchChange} />
-            {/* Filter button/component removed */}
-        </div>
-    )
-}
-// --- End FormListTableTools ---
-
-// --- FormListActionTools Component (No functional changes needed for filter removal) ---
-const FormListActionTools = ({
-    allFormsData,
-    openAddDrawer,
-}: {
-    allFormsData: PriceListItem[];
-    openAddDrawer: () => void; // Accept function as a prop
-}) => {
-    const navigate = useNavigate()
-    const csvHeaders = [
-
-    ]
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={openAddDrawer}
-                block
-            >
-                Add New
-            </Button>
-        </div>
-    )
-}
-
-// --- FormListSelected Component (No functional changes needed for filter removal) ---
-const FormListSelected = ({
-    selectedForms,
-    setSelectedForms,
-    onDeleteSelected,
-}: {
-    selectedForms: PriceListItem[]
-    setSelectedForms: React.Dispatch<React.SetStateAction<PriceListItem[]>>
-    onDeleteSelected: () => void
-}) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
-    }
-
-    if (selectedForms.length === 0) return null
-
-    return (
-        <>
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-            >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            <TbChecks />
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedForms.length}
-                            </span>
-                            <span>
-                                Item{selectedForms.length > 1 ? 's' : ''}{' '}
-                                selected
-                            </span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-600 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                </div>
-            </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedForms.length} Item${selectedForms.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-            >
-                <p>
-                    Are you sure you want to delete the selected item
-                    {selectedForms.length > 1 ? 's' : ''}? This action cannot be
-                    undone.
-                </p>
-            </ConfirmDialog>
-        </>
-    )
-}
-
-// --- Main Continents Component ---
+// --- Main PriceList Component ---
 const PriceList = () => {
-
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<PriceListItem | null>(null);
-
-    const openEditDrawer = (item: PriceListItem) => {
-        setSelectedItem(item); // Set the selected item's data
-        setIsEditDrawerOpen(true); // Open the edit drawer
-    };
-
-    const closeEditDrawer = () => {
-        setSelectedItem(null); // Clear the selected item's data
-        setIsEditDrawerOpen(false); // Close the edit drawer
-    };
-
-    const openAddDrawer = () => {
-        setSelectedItem(null); // Clear any selected item
-        setIsAddDrawerOpen(true); // Open the add drawer
-    };
-
-    const closeAddDrawer = () => {
-        setIsAddDrawerOpen(false); // Close the add drawer
-    };
-
-    const navigate = useNavigate()
     const dispatch = useAppDispatch()
 
-    // useEffect(() => {
-    //     dispatch(getCountriesAction())
-    // }, [dispatch])
+    // STUB: Replace with actual Redux actions if not already done
+    // const addPriceListAction = (data: PriceListFormData & { /* other API fields */ }) => ({ type: 'ADD_PRICELIST_STUB', payload: data })
+    // const editPriceListAction = (data: { id: number } & PriceListFormData & { /* other API fields */ }) => ({ type: 'EDIT_PRICELIST_STUB', payload: data })
+    //const deletePriceListAction = (item: { id: number }) => ({ type: 'DELETE_PRICELIST_STUB', payload: item })
+    //const deleteAllPriceListAction = (data: { ids: string }) => ({ type: 'DELETE_ALL_PRICELIST_STUB', payload: data })
 
-    const { PriceListData = [], status: masterLoadingStatus = 'idle' } =
-        useSelector(masterSelector)
-    // Use the provided dummy data
+    const productSelectOptions = useMemo(() => MOCK_PRODUCTS_MASTER.map(p => ({ value: p.id, label: p.name })), []);
 
-    // --- Initial Dummy Data ---
-    const initialDummyForms: PriceListItem[] = [
-        { id: 'F001', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F002', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F003', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F004', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F005', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F006', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F007', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F008', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F009', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F010', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F011', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-        { id: 'F012', productName: 'Test', price: 'test', basePrice: 'Home', gstPrice: '₹10', usd: 'test', expance: 'test', margin: 'test', interest: 'test', nlc: 'test', salesPrice: 'price', qty: '10', status: 'active' },
-    ];
-    // --- End Dummy Data ---
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
+    const [editingPriceListItem, setEditingPriceListItem] = useState<PriceListItem | null>(null)
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false)
+    const [itemToDelete, setItemToDelete] = useState<PriceListItem | null>(null)
+    const [filterCriteria, setFilterCriteria] = useState<PriceListFilterFormData>({ filterProductNames: [] })
 
-    const [forms, setForms] = useState<PriceListItem[]>(initialDummyForms); // Initialize with dummy data
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    });
-    const [selectedForms, setSelectedForms] = useState<PriceListItem[]>([]);
-    const [localIsLoading, setLocalIsLoading] = useState(false)
-    // filterData state and handleApplyFilter removed
+    // Assuming 'priceListData' in Redux store matches the 'PriceListItem[]' structure
+    const { priceListData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector)
 
-    console.log('Raw CountriesData from Redux:', PriceListData)
+    useEffect(() => { // @ts-ignore
+        dispatch(getPriceListAction()) }, [dispatch])
 
-    const { pageData, total, processedDataForCsv } = useMemo(() => {
-        console.log(
-            '[Memo] Recalculating. Query:',
-            tableData.query,
-            'Sort:',
-            tableData.sort,
-            'Page:',
-            tableData.pageIndex,
-            // 'Filters:' removed from log
-            'Input Data (CountriesData) Length:',
-            PriceListData?.length ?? 0,
-        )
+    const defaultFormValues: PriceListFormData = {
+        product_id: '', price: '', usd_rate: '', expance: '', margin: '',
+    }
 
-        const sourceData: PriceListItem[] = Array.isArray(PriceListData)
-            ? PriceListData
-            : []
-        let processedData: PriceListItem[] = cloneDeep(sourceData)
+    const addFormMethods = useForm<PriceListFormData>({ resolver: zodResolver(priceListFormSchema), defaultValues: defaultFormValues, mode: 'onChange' })
+    const editFormMethods = useForm<PriceListFormData>({ resolver: zodResolver(priceListFormSchema), defaultValues: defaultFormValues, mode: 'onChange' })
+    const filterFormMethods = useForm<PriceListFilterFormData>({ resolver: zodResolver(priceListFilterFormSchema), defaultValues: filterCriteria })
 
-        // Product and Channel filtering logic removed
+    const openAddDrawer = () => { addFormMethods.reset(defaultFormValues); setIsAddDrawerOpen(true); }
+    const closeAddDrawer = () => { addFormMethods.reset(defaultFormValues); setIsAddDrawerOpen(false); }
+    
+    const onAddPriceListSubmit = async (formData: PriceListFormData) => {
+        setIsSubmitting(true)
+        const selectedProduct = MOCK_PRODUCTS_MASTER.find(p => p.id === formData.product_id);
+        const productNameForNotification = selectedProduct ? selectedProduct.name : 'Unknown Product';
 
-        // 1. Apply Search Query (on id and name)
+        // API payload should match what your backend expects.
+        // It will take the 5 fields from formData.
+        // Other fields (base_price, gst_price, etc.) might be calculated/set by the backend
+        // or you might need to send them with default/calculated values if API requires.
+        const apiPayload = {
+            ...formData, // product_id, price, usd_rate, expance, margin
+            // If API needs other fields for creation, add them here:
+            // e.g. status: 'active', qty: '1', etc.
+        };
+
+        try { // @ts-ignore
+            await dispatch(addPriceListAction(apiPayload)).unwrap() 
+            toast.push(<Notification title="Price List Item Added" type="success" duration={2000}>Item for "{productNameForNotification}" added.</Notification>)
+            closeAddDrawer() // @ts-ignore
+            dispatch(getPriceListAction())
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{error.message || 'Could not add item.'}</Notification>)
+            console.error('Add Price List Item Error:', error)
+        } finally { setIsSubmitting(false) }
+    }
+
+    const openEditDrawer = (item: PriceListItem) => {
+        setEditingPriceListItem(item)
+        const formValues: PriceListFormData = {
+            product_id: item.product_id,
+            price: item.price,
+            usd_rate: item.usd_rate,
+            expance: item.expance,
+            margin: item.margin,
+        }
+        editFormMethods.reset(formValues)
+        setIsEditDrawerOpen(true)
+    }
+    const closeEditDrawer = () => { setEditingPriceListItem(null); editFormMethods.reset(defaultFormValues); setIsEditDrawerOpen(false); }
+
+    const onEditPriceListSubmit = async (formData: PriceListFormData) => {
+        if (!editingPriceListItem) { /* error handling */ return }
+        setIsSubmitting(true)
+        const selectedProduct = MOCK_PRODUCTS_MASTER.find(p => p.id === formData.product_id);
+        const productNameForNotification = selectedProduct ? selectedProduct.name : editingPriceListItem.product.name;
+
+        const apiPayload = {
+            id: editingPriceListItem.id, // ID of the item to edit
+            ...formData, // The 5 editable fields
+            // Include other fields if your API expects the full object on PATCH/PUT
+            // e.g., base_price: editingPriceListItem.base_price (if not editable but needs to be sent)
+        };
+
+        try { // @ts-ignore
+            await dispatch(editPriceListAction(apiPayload)).unwrap()
+            toast.push(<Notification title="Price List Item Updated" type="success" duration={2000}>Item for "{productNameForNotification}" updated.</Notification>)
+            closeEditDrawer() // @ts-ignore
+            dispatch(getPriceListAction())
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Update" type="danger" duration={3000}>{error.message || 'Could not update item.'}</Notification>)
+            console.error('Edit Price List Item Error:', error)
+        } finally { setIsSubmitting(false) }
+    }
+
+    const handleDeleteClick = (item: PriceListItem) => { if (item.id === undefined) { /*...*/ return; } setItemToDelete(item); setSingleDeleteConfirmOpen(true); }
+    const onConfirmSingleDelete = async () => { 
+        if (!itemToDelete || itemToDelete.id === undefined) { /*...*/ return; }
+        setIsDeleting(true); setSingleDeleteConfirmOpen(false);
+        try { // @ts-ignore
+            await dispatch(deleteAllPriceListAction({ ids: itemToDelete.id })).unwrap();
+            toast.push(<Notification title="Price List Item Deleted" type="success" duration={2000}>Item "{itemToDelete.product.name}" deleted.</Notification>);
+            setSelectedItems((prev) => prev.filter((i) => i.id !== itemToDelete!.id)); // @ts-ignore
+            dispatch(getPriceListAction());
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}>{error.message || `Could not delete item.`}</Notification>);
+        } finally { setIsDeleting(false); setItemToDelete(null); }
+    }
+    const handleDeleteSelected = async () => { 
+        if (selectedItems.length === 0) { /*...*/ return; }
+        setIsDeleting(true);
+        const validItemsToDelete = selectedItems.filter(item => item.id !== undefined);
+        // ... (rest of delete selected logic as before)
+        const idsToDelete = validItemsToDelete.map(item => item.id).join(',');
+        try { // @ts-ignore
+            await dispatch(deleteAllPriceListAction({ ids: idsToDelete })).unwrap();
+            toast.push(<Notification title="Selected Items Deleted" type="success">{validItemsToDelete.length} item(s) deleted.</Notification>);
+            setSelectedItems([]); // @ts-ignore
+            dispatch(getPriceListAction());
+        } catch (error: any) {
+            toast.push(<Notification title="Deletion Failed" type="danger">{error.message || 'Failed to delete selected items.'}</Notification>);
+        } finally { setIsDeleting(false); }
+    }
+
+    const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }
+    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
+    const onApplyFiltersSubmit = (data: PriceListFilterFormData) => { setFilterCriteria({ filterProductNames: data.filterProductNames || [] /*, filterStatus: data.filterStatus || null */ }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }
+    const onClearFilters = () => { const df = { filterProductNames: [] /*, filterStatus: null */ }; filterFormMethods.reset(df); setFilterCriteria(df); handleSetTableData({ pageIndex: 1 });}
+
+    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' })
+    const [selectedItems, setSelectedItems] = useState<PriceListItem[]>([])
+    
+    const filterProductNameOptions = useMemo(() => {
+        if (!Array.isArray(priceListData)) return []
+        // Use product.name for filter options, assuming priceListData items have the nested product object
+        const uniqueNames = new Set(priceListData.map((item) => item.product?.name).filter(Boolean) as string[])
+        return Array.from(uniqueNames).map((name) => ({ value: name, label: name }))
+    }, [priceListData])
+    // const statusOptions = useMemo(() => [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }], []) // If status is used
+
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+        const sourceData: PriceListItem[] = Array.isArray(priceListData) ? priceListData : [];
+        let processedData: PriceListItem[] = cloneDeep(sourceData);
+        if (filterCriteria.filterProductNames && filterCriteria.filterProductNames.length > 0) {
+            const selectedFilterProductValues = filterCriteria.filterProductNames.map(opt => opt.value.toLowerCase());
+            processedData = processedData.filter(item => selectedFilterProductValues.includes(item.product?.name?.trim().toLowerCase() ?? ''));
+        }
+        // Add status filter logic if status field exists and is part of filterCriteria
+        // if (filterCriteria.filterStatus && filterCriteria.filterStatus.value) { ... }
+
         if (tableData.query && tableData.query.trim() !== '') {
-            const query = tableData.query.toLowerCase().trim()
-            console.log('[Memo] Applying search query:', query)
-            processedData = processedData.filter((item: PriceListItem) => {
-                const itemNameLower = item.id?.trim().toLowerCase() ?? ''
-                const continentNameLower = item.id?.trim().toLowerCase() ?? ''
-                const itemIdString = String(item.id ?? '').trim()
-                const itemIdLower = itemIdString.toLowerCase()
-                return (
-                    itemNameLower.includes(query) ||
-                    itemIdLower.includes(query) ||
-                    continentNameLower.includes(query)
-                )
-            })
-            console.log(
-                '[Memo] After search query filter. Count:',
-                processedData.length,
-            )
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter((item) => {
+                const matchProductName = item.product?.name?.toLowerCase().includes(query);
+                const matchId = String(item.id ?? '').toLowerCase().includes(query);
+                const matchProductId = String(item.product_id ?? '').toLowerCase().includes(query);
+                return matchProductName || matchId || matchProductId;
+            });
         }
-
-        // 2. Apply Sorting (on id and name)
-        const { order, key } = tableData.sort as OnSortParam
-        if (
-            order &&
-            key &&
-            (key === 'id' || key === 'name') &&
-            processedData.length > 0
-        ) {
-            console.log('[Memo] Applying sort. Key:', key, 'Order:', order)
-            const sortedData = [...processedData]
+        const { order, key } = tableData.sort as OnSortParam;
+        if (order && key && processedData.length > 0) {
+            const sortedData = [...processedData];
             sortedData.sort((a, b) => {
-                // Ensure values are strings for localeCompare, default to empty string if not
-                const aValue = String(a[key as keyof PriceListItem] ?? '')
-                const bValue = String(b[key as keyof PriceListItem] ?? '')
-
-                return order === 'asc'
-                    ? aValue.localeCompare(bValue)
-                    : bValue.localeCompare(aValue)
-            })
-            processedData = sortedData
+                // Handle nested product.name for sorting
+                let aValue: any, bValue: any;
+                if (key === 'product.name') {
+                    aValue = String(a.product?.name ?? '');
+                    bValue = String(b.product?.name ?? '');
+                } else {
+                    aValue = String(a[key as keyof PriceListItem] ?? '');
+                    bValue = String(b[key as keyof PriceListItem] ?? '');
+                }
+                return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            });
+            processedData = sortedData;
         }
+        const dataToExport = [...processedData];
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number;
+        const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+    }, [priceListData, tableData, filterCriteria])
 
-        const dataBeforePagination = [...processedData] // For CSV export
-
-        // 3. Apply Pagination
-        const currentTotal = processedData.length
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
-
-        console.log(
-            '[Memo] Returning. PageData Length:',
-            dataForPage.length,
-            'Total Items (after all filters/sort):',
-            currentTotal,
-        )
-        return {
-            pageData: dataForPage,
-            total: currentTotal,
-            processedDataForCsv: dataBeforePagination,
-        }
-    }, [PriceListData, tableData]) // filterData removed from dependencies
-
-    // --- Handlers ---
-    // handleApplyFilter removed
-
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-        setTableData((prev) => ({ ...prev, ...data }))
+    const handleExportData = () => { const success = exportPriceListToCsv('pricelist_export.csv', allFilteredAndSortedData); if (success) { toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>)}}
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), [])
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData])
+    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData])
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData])
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData])
+    const handleRowSelect = useCallback((checked: boolean, row: PriceListItem) => { setSelectedItems(prev => checked ? (prev.some(item => item.id === row.id) ? prev : [...prev, row]) : prev.filter(item => item.id !== row.id))}, [])
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<PriceListItem>[]) => { 
+        const crOriginals = currentRows.map(r => r.original);
+        if (checked) { setSelectedItems(prev => { const pIds = new Set(prev.map(i => i.id)); const nRows = crOriginals.filter(r => !pIds.has(r.id)); return [...prev, ...nRows]; }); }
+        else { const crIds = new Set(crOriginals.map(r => r.id)); setSelectedItems(prev => prev.filter(i => !crIds.has(i.id))); }
     }, [])
 
-    const handlePaginationChange = useCallback(
-        (page: number) => handleSetTableData({ pageIndex: page }),
-        [handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-            setSelectedForms([])
+    // Table columns definition - aligned with API response structure
+    const columns: ColumnDef<PriceListItem>[] = useMemo(() => [
+        { header: 'ID', accessorKey: 'id', enableSorting: true, size: 70 },
+        { 
+            header: 'Product Name', 
+            accessorFn: (row) => row.product?.name, // Access nested data
+            id: 'product.name', // Unique ID for the column
+            enableSorting: true, 
+            size: 200 
         },
-        [handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
-        [handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-        [handleSetTableData],
-    )
-
-    const handleRowSelect = useCallback((checked: boolean, row: PriceListItem) => {
-        setSelectedForms((prev) => {
-            if (checked)
-                return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
-            return prev.filter((f) => f.id !== row.id)
-        })
-    }, [])
-
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<PriceListItem>[]) => {
-            const currentPageRowOriginals = currentRows.map((r) => r.original)
-            if (checked) {
-                setSelectedForms((prevSelected) => {
-                    const prevSelectedIds = new Set(
-                        prevSelected.map((f) => f.id),
-                    )
-                    const newRowsToAdd = currentPageRowOriginals.filter(
-                        (r) => !prevSelectedIds.has(r.id),
-                    )
-                    return [...prevSelected, ...newRowsToAdd]
-                })
-            } else {
-                const currentPageRowIds = new Set(
-                    currentPageRowOriginals.map((r) => r.id),
-                )
-                setSelectedForms((prevSelected) =>
-                    prevSelected.filter((f) => !currentPageRowIds.has(f.id)),
+        {
+            header: 'Price Breakup',
+            id: 'priceBreakup',
+            size: 180,
+            cell: (props) => {
+                const { price, base_price, gst_price, usd } = props.row.original
+                return (
+                    <div className='flex flex-col text-xs'>
+                        <span className='font-semibold'>Price: {price}</span>
+                        <span>Base: {base_price}</span>
+                        <span>GST: {gst_price}</span>
+                        <span>USD: {usd}</span>
+                    </div>
                 )
             }
         },
-        [],
-    )
-
-    // --- Action Handlers (remain the same, need Redux integration for persistence) ---
-    const handleEdit = useCallback(
-        (form: PriceListItem) => {
-            console.log('Edit item (requires navigation/modal):', form.id)
-            toast.push(
-                <Notification title="Edit Action" type="info">
-                    Edit action for "{form.id}" (ID: {form.id}). Implement
-                    navigation or modal.
-                </Notification>,
-            )
+        {
+            header: 'Cost Split',
+            id: 'costSplit',
+            size: 180,
+            cell: (props) => {
+                const { expance, margin, interest, nlc } = props.row.original
+                return (
+                    <div className='flex flex-col text-xs'>
+                        <span className='font-semibold'>Expense: {expance}</span>
+                        <span>Margin: {margin}</span>
+                        <span>Interest: {interest}</span>
+                        <span>NLC: {nlc}</span>
+                    </div>
+                )
+            }
         },
-        [navigate],
-    )
+        { header: 'Sales Price', accessorKey: 'sales_price', enableSorting: true, size: 110 },
+        // Add 'qty' and 'status' columns if they exist in your PriceListItem and are needed
+        // { header: 'Qty', accessorKey: 'qty', enableSorting: true, size: 70 },
+        // {
+        //     header: 'Status', accessorKey: 'status', enableSorting: true, size: 100,
+        //     cell: (props) => props.row.original.status ? (<Tag className={props.row.original.status === 'active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100'}>{props.row.original.status}</Tag>) : null,
+        // },
+        {
+            header: 'Actions', id: 'action', meta:{ HeaderClass: "text-center" },
+            cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
+        },
+    ], [openEditDrawer, handleDeleteClick])
 
-    const handleDelete = useCallback((formToDelete: PriceListItem) => {
-        console.log(
-            'Delete item (needs Redux action):',
-            formToDelete.id,
-            formToDelete.id,
-        )
-        setSelectedForms((prevSelected) =>
-            prevSelected.filter((form) => form.id !== formToDelete.id),
-        )
-        toast.push(
-            <Notification title="Delete Action" type="warning">
-                Delete action for "{formToDelete.id}" (ID: {formToDelete.id}).
-                Implement Redux deletion.
-            </Notification>,
-        )
-    }, [])
+    // SIMPLIFIED form fields config for Add/Edit Drawers
+    const formFieldsConfig: {name: keyof PriceListFormData, label: string, type?: 'text' | 'number' | 'select', options?: {value: string, label: string}[]}[] = [
+        { name: 'product_id', label: 'Product Name', type: 'select', options: productSelectOptions },
+        { name: 'price', label: 'Price', type: 'text' },
+        { name: 'usd_rate', label: 'USD Rate', type: 'text' },
+        { name: 'expance', label: 'Expenses', type: 'text' },
+        { name: 'margin', label: 'Margin', type: 'text' },
+    ];
 
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected items (needs Redux action):',
-            selectedForms.map((f) => f.id),
-        )
-        setSelectedForms([])
-        toast.push(
-            <Notification title="Selected Items Delete Action" type="warning">
-                {selectedForms.length} item(s) delete action. Implement Redux
-                deletion.
-            </Notification>,
-        )
-    }, [selectedForms])
-    // --- End Action Handlers ---
-
-    const columns: ColumnDef<PriceListItem>[] = useMemo(
-        () => [
-            {
-                header: 'ID',
-                accessorKey: 'id',
-                // Simple cell to display ID, enable sorting
-                enableSorting: true,
-                size: 70,
-                cell: (props) => <span>{props.row.original.id}</span>,
-            },
-            {
-                header: 'Product Name',
-                accessorKey: 'productName',
-                // Enable sorting
-                enableSorting: true,
-                size: 260
-            },
-            {
-                header: 'Price Breakup',
-                accessorKey: 'basePrice',
-                enableSorting: true,
-                size: 260,
-                cell: (props) => {
-                    const { basePrice, gstPrice, usd } = props.row.original
-                    return (
-                        <div className='flex flex-col'>
-                            <span className='font-semibold'>Base Price: {basePrice}</span>
-                            <span className='text-xs'>GST: {gstPrice}</span>
-                            <span className='text-xs'>IN USD: {usd}</span>
-                        </div>
-                    )
-                }
-            },
-            {
-                header: 'Cost Split',
-                accessorKey: 'expance',
-                enableSorting: true,
-                size: 260,
-                cell: (props) => {
-                    const { expance, margin, interest, nlc } = props.row.original
-                    return (
-                        <div className='flex flex-col'>
-                            <span className='font-semibold'>Expance: {expance}</span>
-                            <span className='text-xs'>Margin: {margin}</span>
-                            <span className='text-xs'>Interest: {interest}</span>
-                            <span className='text-xs'>NLC: {nlc}</span>
-                        </div>
-                    )
-                }
-            },
-            {
-                header: 'Sales Price',
-                accessorKey: 'salesPrice',
-                // Enable sorting
-                enableSorting: true,
-                size: 220
-            },
-            {
-                header: 'Qty',
-                accessorKey: 'qty',
-                // Enable sorting
-                enableSorting: true,
-                size: 100
-            },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                cell: (props) => (
-                    <Tag
-                        className={
-                            props.row.original.status === 'active'
-                                ? 'bg-green-200 text-green-600'
-                                : 'bg-red-200 text-red-600'
-                        }
-                    >
-                        {props.row.original.status}
-                    </Tag>
-                ),
-            },
-            {
-                header: 'Action',
-                id: 'action',
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
-                        onDelete={() => console.log('Delete', props.row.original)}
-                    />
-                ),
-            },
-        ],
-        [handleEdit, handleDelete],
-    )
+    const renderFormField = ( fieldConfig: typeof formFieldsConfig[0], formControl: any ) => {
+        const commonProps = { name: fieldConfig.name, control: formControl };
+        const placeholderText = `Enter ${fieldConfig.label}`;
+        if (fieldConfig.type === 'select') {
+            return (<Controller {...commonProps} render={({ field }) => (<Select placeholder={`Select ${fieldConfig.label}`} options={fieldConfig.options || []} value={fieldConfig.options?.find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : '')}/>)}/>);
+        }
+        return (<Controller {...commonProps} render={({ field }) => (<Input {...field} type={fieldConfig.type || 'text'} placeholder={placeholderText} />)}/>);
+    };
 
     return (
         <>
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
-                    <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">Price List</h5>
-                        <FormListActionTools
-                            allFormsData={forms}
-                            openAddDrawer={openAddDrawer} // Pass the function as a prop
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <PriceListTableTools
-                            onSearchChange={(query) =>
-                                setTableData((prev) => ({ ...prev, query }))
-                            }
-                            allFormsData={forms}
-                        />
-                    </div>
-
-                    <FormListTable
-                        columns={columns}
-                        data={forms}
-                        loading={false}
-                        pagingData={{
-                            total: forms.length,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedForms={selectedForms}
-                        onPaginationChange={(page) =>
-                            setTableData((prev) => ({ ...prev, pageIndex: page }))
-                        }
-                        onSelectChange={(value) =>
-                            setTableData((prev) => ({
-                                ...prev,
-                                pageSize: Number(value),
-                                pageIndex: 1,
-                            }))
-                        }
-                        onSort={(sort) =>
-                            setTableData((prev) => ({ ...prev, sort }))
-                        }
-                        onRowSelect={(checked, row) =>
-                            setSelectedForms((prev) =>
-                                checked
-                                    ? [...prev, row]
-                                    : prev.filter((form) => form.id !== row.id)
-                            )
-                        }
-                        onAllRowSelect={(checked, rows) => {
-                            const rowIds = rows.map((row) => row.original.id);
-                            setSelectedForms((prev) =>
-                                checked
-                                    ? [...prev, ...rows.map((row) => row.original)]
-                                    : prev.filter((form) => !rowIds.includes(form.id))
-                            );
-                        }}
-                    />
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"> <h5 className="mb-2 sm:mb-0">Price List</h5> <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New </Button> </div>
+                    <PriceListTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+                    <div className="mt-4"> <PriceListTable columns={columns} data={pageData} loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /> </div>
                 </AdaptiveCard>
-
-                <FormListSelected
-                    selectedForms={selectedForms}
-                    setSelectedForms={setSelectedForms}
-                    onDeleteSelected={() =>
-                        setForms((prev) =>
-                            prev.filter(
-                                (form) =>
-                                    !selectedForms.some(
-                                        (selected) => selected.id === form.id
-                                    )
-                            )
-                        )
-                    }
-                />
             </Container>
-
-            {/* Edit Drawer */}
-            <Drawer
-                title="Edit Price List"
-                isOpen={isEditDrawerOpen}
-                onClose={closeEditDrawer}
-                onRequestClose={closeEditDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => {
-                                console.log('Updated Price List Item:', selectedItem);
-                                closeEditDrawer();
-                            }}
-                        >
-                            Save
-                        </Button>
-                    </div>
-                }
-            >
-                <Form>
-                    <FormItem label="Product Name">
-                        <Select
-                            options={[
-                                { label: "Iphone 16", value: "Iphone 16" },
-                                { label: "Poco M4 Pro 6GB 128GB", value: "Poco M4 Pro 6GB 128GB" },
-                                { label: "Xiaomi 15 12GB 512GB", value: "Xiaomi 15 12GB 512GB" },
-                            ]}
-                        />
-                    </FormItem>
-                    <div className="flex gap-2">
-                        <FormItem label="Price" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.price || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        price: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                        <FormItem label="Base Price" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.basePrice || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        basePrice: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                    </div>
-                    <div className="flex gap-2">
-                        <FormItem label="GST Price" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.gstPrice || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        gstPrice: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                        <FormItem label="USD" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.usd || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        usd: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                    </div>
-                    <div className="flex gap-2">
-                        <FormItem label="Expense" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.expance || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        expance: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                        <FormItem label="Margin" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.margin || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        margin: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                    </div>
-                    <div className="flex gap-2">
-                        <FormItem label="Interest" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.interest || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        interest: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                        <FormItem label="NLC" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.nlc || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        nlc: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                    </div>
-                    <div className="flex gap-2">
-                        <FormItem label="Sales Price" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.salesPrice || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        salesPrice: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                        <FormItem label="Quantity" className="w-full lg:w-1/2">
-                            <Input
-                                value={selectedItem?.qty || ''}
-                                onChange={(e) =>
-                                    setSelectedItem((prev) => ({
-                                        ...(prev || { id: '', productName: '', price: '', basePrice: '', gstPrice: '', usd: '', expance: '', margin: '', interest: '', nlc: '', salesPrice: '', qty: '', status: 'active' }),
-                                        qty: e.target.value,
-                                    }))
-                                }
-                            />
-                        </FormItem>
-                    </div>
-                    <FormItem label="Status">
-                        <Select
-                            options={[
-                                { label: "Active", value: "Active" },
-                                { label: "Inactive", value: "Inactive" },
-                            ]}
-                        />
-                    </FormItem>
-                </Form>
-            </Drawer>
-
-
-            <Drawer
-                title="Add Price List"
-                isOpen={isAddDrawerOpen}
-                onClose={closeAddDrawer}
-                onRequestClose={closeAddDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer}>
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            onClick={() => console.log('Price List Item Added')}
-                        >
-                            Save
-                        </Button>
-                    </div>
-                }
-            >
-                <Form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.target as HTMLFormElement);
-                        const newItem: PriceListItem = {
-                            id: `${forms.length + 1}`,
-                            productName: formData.get('productName') as string,
-                            price: formData.get('price') as string,
-                            basePrice: formData.get('basePrice') as string,
-                            gstPrice: formData.get('gstPrice') as string,
-                            usd: formData.get('usd') as string,
-                            expance: formData.get('expance') as string,
-                            margin: formData.get('margin') as string,
-                            interest: formData.get('interest') as string,
-                            nlc: formData.get('nlc') as string,
-                            salesPrice: formData.get('salesPrice') as string,
-                            qty: formData.get('qty') as string,
-                            status: formData.get('status') as 'active' | 'inactive',
-                        };
-                        console.log('New Price List Item:', newItem);
-                        // handleAdd(newItem);
-                    }}
-                >
-                    <FormItem label="Product Name">
-                        <Select
-                            options={[
-                                { label: "Iphone 16", value: "Iphone 16" },
-                                { label: "Poco M4 Pro 6GB 128GB", value: "Poco M4 Pro 6GB 128GB" },
-                                { label: "Xiaomi 15 12GB 512GB", value: "Xiaomi 15 12GB 512GB" },
-                            ]}
-                        />
-                    </FormItem>
-                    <div className="flex gap-2">
-                        <FormItem label="Price" className="w-full lg:w-1/2">
-                            <Input name="price" placeholder="Enter Price" />
-                        </FormItem>
-                        <FormItem label="Base Price" className="w-full lg:w-1/2">
-                            <Input name="basePrice" placeholder="Enter Base Price" />
-                        </FormItem>
-                    </div>
-                    <div className="flex gap-2">
-                        <FormItem label="GST Price" className="w-full lg:w-1/2">
-                            <Input name="gstPrice" placeholder="Enter GST Price" />
-                        </FormItem>
-                        <FormItem label="USD" className="w-full lg:w-1/2">
-                            <Input name="usd" placeholder="Enter USD" />
-                        </FormItem>
-                    </div>
-                    <div className="flex gap-2">
-                        <FormItem label="Expense" className="w-full lg:w-1/2">
-                            <Input name="expance" placeholder="Enter Expense" />
-                        </FormItem>
-                        <FormItem label="Margin" className="w-full lg:w-1/2">
-                            <Input name="margin" placeholder="Enter Margin" />
-                        </FormItem>
-                    </div>
-                    <div className="flex gap-2" >
-                        <FormItem label="Interest" className="w-full lg:w-1/2">
-                            <Input name="interest" placeholder="Enter Interest" />
-                        </FormItem>
-                        <FormItem label="NLC" className="w-full lg:w-1/2">
-                            <Input name="nlc" placeholder="Enter NLC" />
-                        </FormItem>
-                    </div>
-                    <div className="flex gap-2">
-                        <FormItem label="Sales Price" className="w-full lg:w-1/2">
-                            <Input name="salesPrice" placeholder="Enter Sales Price" />
-                        </FormItem>
-                        <FormItem label="Quantity" className="w-full lg:w-1/2">
-                            <Input name="qty" placeholder="Enter Quantity" />
-                        </FormItem>
-                    </div>
-                    <FormItem label="Status">
-                        <Select
-                            options={[
-                                { label: "Active", value: "Active" },
-                                { label: "Inactive", value: "Inactive" },
-                            ]}
-                            onChange={(option) => {
-                                field.onChange(option.value)
-                            }}
-                        />
-                    </FormItem>
-                </Form>
-            </Drawer>
+            <PriceListSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} />
+            {[ { title: 'Add Price List Item', isOpen: isAddDrawerOpen, closeFn: closeAddDrawer, formId: 'addPriceListForm', methods: addFormMethods, onSubmit: onAddPriceListSubmit, submitText: 'Adding...', saveText: 'Save' }, { title: 'Edit Price List Item', isOpen: isEditDrawerOpen, closeFn: closeEditDrawer, formId: 'editPriceListForm', methods: editFormMethods, onSubmit: onEditPriceListSubmit, submitText: 'Saving...', saveText: 'Save' }, ].map(drawerProps => ( <Drawer key={drawerProps.formId} title={drawerProps.title} isOpen={drawerProps.isOpen} onClose={drawerProps.closeFn} onRequestClose={drawerProps.closeFn} footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form={drawerProps.formId} type="submit" loading={isSubmitting} disabled={!drawerProps.methods.formState.isValid || isSubmitting}>{isSubmitting ? drawerProps.submitText : drawerProps.saveText}</Button> </div> }> <Form id={drawerProps.formId} onSubmit={drawerProps.methods.handleSubmit(drawerProps.onSubmit as any)} className="flex flex-col gap-4"> {formFieldsConfig.map(fConfig => ( <FormItem key={fConfig.name} label={fConfig.label} invalid={!!drawerProps.methods.formState.errors[fConfig.name]} errorMessage={drawerProps.methods.formState.errors[fConfig.name]?.message as string | undefined}> {renderFormField(fConfig, drawerProps.methods.control)} </FormItem> ))} </Form>  </Drawer>) )}
+            <Drawer title="Filter Price List" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button> <Button size="sm" variant="solid" form="filterPriceListForm" type="submit">Apply</Button> </div> }> <Form id="filterPriceListForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4"> <FormItem label="Filter by Product Name(s)"><Controller name="filterProductNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select product names..." options={filterProductNameOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])}/>)}/></FormItem> {/* Add Status filter if needed */} </Form> </Drawer>
+            <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Price List Item" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete}> <p>Are you sure you want to delete the item "<strong>{itemToDelete?.product.name}</strong>"?</p> </ConfirmDialog>
         </>
     )
 }
 
 export default PriceList
 
-// Helper
 function classNames(...classes: (string | boolean | undefined)[]) {
     return classes.filter(Boolean).join(' ')
 }
