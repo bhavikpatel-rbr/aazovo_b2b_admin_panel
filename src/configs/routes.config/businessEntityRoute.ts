@@ -14,6 +14,15 @@ const businessEntityRoute: Routes = [
         },
     },
     {
+        key: 'businessEntities.createCompany',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/company-create`,
+        component: lazy(() => import('@/views/business-entities/Company/CompanyCreate/CreateCompany')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'businessEntities.member',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/member`,
         component: lazy(() => import('@/views/business-entities/Member')),
