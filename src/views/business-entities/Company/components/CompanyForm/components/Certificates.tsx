@@ -1,33 +1,16 @@
-import { useMemo } from 'react'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import { FormItem } from '@/components/ui/Form'
-import { countryList } from '@/constants/countries.constant'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types'
 
 type CerificateDetailSectionProps = FormSectionBaseProps
 
-type CountryOption = {
-    label: string
-    dialCode: string
-    value: string
-}
 
 const CerificateDetailSection = ({
     control,
     errors,
 }: CerificateDetailSectionProps) => {
-    const dialCodeList = useMemo(() => {
-        const newCountryList: Array<CountryOption> = JSON.parse(
-            JSON.stringify(countryList),
-        )
-
-        return newCountryList.map((country) => {
-            country.label = country.dialCode
-            return country
-        })
-    }, [])
 
     return (
         <Card id="certificateAndLicenses">

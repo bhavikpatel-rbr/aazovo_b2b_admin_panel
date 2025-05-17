@@ -3,10 +3,6 @@ import { Form } from '@/components/ui/Form'
 import Affix from '@/components/shared/Affix'
 import Card from '@/components/ui/Card'
 import Container from '@/components/shared/Container'
-import PrimarySelectSection from './components/PrimaryDetailSection'
-import TradeInformation from './components/TradeInformation'
-import CompanyInformationDetailSection from './components/CompanyInformation'
-import CertificateDetailSection from './components/Certificates'
 import Navigator from './components/Navigator'
 import useLayoutGap from '@/utils/hooks/useLayoutGap'
 import useResponsive from '@/utils/hooks/useResponsive'
@@ -14,22 +10,24 @@ import isEmpty from 'lodash/isEmpty'
 import { useForm } from 'react-hook-form'
 import type { ReactNode } from 'react'
 import type {
-    CompanyFormSchema,
+    MemberFormSchema,
 } from './types'
 import type { CommonProps } from '@/@types/common'
-import BranchesDetailSection from './components/Branches'
-import KYCDetailSection from './components/KYC'
-
-type CompanyFormProps = {
+import PersonalDetails from './components/PersonalDetails'
+import ContactDetails from './components/Contact'
+import MemberAccessibility from './components/MemberAccessibility'
+import MembershipPlan from './components/MembershipPlan'
+import RequestAndFeedbacks from './components/RequestAndFeedbacks'
+type MemberFormProps = {
     children: ReactNode
-    onFormSubmit: (values: CompanyFormSchema) => void
-    defaultValues?: CompanyFormSchema
-    newCompany?: boolean
+    onFormSubmit: (values: MemberFormSchema) => void
+    defaultValues?: MemberFormSchema
+    // defaultProducts?: SelectedProduct[]
+    newMember?: boolean
 } & CommonProps
 
-const CompanyForm = (props: CompanyFormProps) => {
+const MemberForm = (props: MemberFormProps) => {
     const { onFormSubmit, children, defaultValues  } = props
-
 
     const { getTopGapValue } = useLayoutGap()
 
@@ -39,19 +37,19 @@ const CompanyForm = (props: CompanyFormProps) => {
         if (!isEmpty(defaultValues)) {
             reset(defaultValues)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    const onSubmit = (values: CompanyFormSchema) => {
+    const onSubmit = (values: MemberFormSchema) => {
         onFormSubmit?.(values)
     }
 
     const {
         handleSubmit,
         reset,
-        watch,
         formState: { errors },
         control,
-    } = useForm<CompanyFormSchema>({
+    } = useForm<MemberFormSchema>({
         defaultValues: {
             ...(defaultValues ? defaultValues : {}),
         },
@@ -78,12 +76,11 @@ const CompanyForm = (props: CompanyFormProps) => {
 
                         <div className="flex-1">
                             <div className="flex flex-col gap-4">
-                                <PrimarySelectSection control={control} errors={errors} />
-                                <TradeInformation control={control} errors={errors} />
-                                <CompanyInformationDetailSection control={control} errors={errors} />
-                                <CertificateDetailSection control={control} errors={errors} />
-                                <BranchesDetailSection control={control} errors={errors} />
-                                <KYCDetailSection control={control} errors={errors}/>
+                                <PersonalDetails errors={errors} control={control} />
+                                <ContactDetails errors={errors} control={control} />
+                                <MemberAccessibility errors={errors} control={control} />
+                                <MembershipPlan errors={errors} control={control} />
+                                <RequestAndFeedbacks errors={errors} control={control} />
                             </div>
                         </div>
                     </div>
@@ -94,4 +91,4 @@ const CompanyForm = (props: CompanyFormProps) => {
     )
 }
 
-export default CompanyForm
+export default MemberForm
