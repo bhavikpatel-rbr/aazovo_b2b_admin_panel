@@ -486,6 +486,67 @@ export const getcategoryAsync = async () => {
   }
 }
 
+export const addcategoryAsync = async (unitData: FormData) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/master/category`, unitData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const editcategoryListAsync = async (brandId: number | string, formData: FormData) => {
+  console.log("editBrandListAsync - brandId:", brandId);
+  console.log("editBrandListAsync - formData to be sent:");
+  for (const pair of formData.entries()) {
+    console.log(pair[0] + ': ' + pair[1]);
+  }
+
+  try {
+    // The formData already contains _method: 'PUT'
+    // Axios will automatically set 'Content-Type': 'multipart/form-data'
+    // when the second argument to post/put is a FormData instance.
+    const response = await axiosInstance.post(
+      `${config.apiURL}/master/category/${brandId}`, // Use brandId in the URL
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const deletcategoryListAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/master/category/${unitData}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllcategoryListAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/master/category/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
 export const getwallListingAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/wall/enquiry`)
