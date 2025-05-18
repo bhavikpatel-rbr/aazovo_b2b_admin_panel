@@ -494,25 +494,57 @@ export const getBlogsAsync = async () => {
   }
 }
 
-export const addBlogsAsync = async (unitData: any) => {
+export const addBlogsAsync = async (unitData: FormData) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/blog`, unitData)
-    return response
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/blog`, unitData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
 
-export const editBlogsAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
+// export const editBlogsAsync = async (unitData: any) => {
+//   console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
+
+//   try {
+//     const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+//     return response
+//   } catch (err) {
+//     return isAxiosError(err)
+//   }
+// }
+
+export const editBlogsAsync = async (brandId: number | string, formData: FormData) => {
+  console.log("editBrandListAsync - brandId:", brandId);
+  console.log("editBrandListAsync - formData to be sent:");
+  for (const pair of formData.entries()) {
+    console.log(pair[0] + ': ' + pair[1]);
+  }
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
-    return response
+    // The formData already contains _method: 'PUT'
+    // Axios will automatically set 'Content-Type': 'multipart/form-data'
+    // when the second argument to post/put is a FormData instance.
+    const response = await axiosInstance.post(
+      `${config.apiURL}/blog/${brandId}`, // Use brandId in the URL
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
+
 
 export const deletBlogsAsync = async (unitData: any) => {
   try {

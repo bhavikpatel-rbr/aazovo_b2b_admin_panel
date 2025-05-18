@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { addBlogsAsync, addBrandAsync, addcategoryAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addPriceListAsync, addUnitAsync, deletBrandListAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllBrandListAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllUnitAsync, deletePriceListAsync, deletPaymentTermAsync, deletUnitAsync, editBrandListAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editPriceListAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getPriceListAsync, getUnitAsync, getwallListingAsync } from "./services"
+import { addBlogsAsync, addBrandAsync, addcategoryAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addPriceListAsync, addUnitAsync, deletBrandListAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllBrandListAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllUnitAsync, deletePriceListAsync, deletPaymentTermAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editPriceListAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getPriceListAsync, getUnitAsync, getwallListingAsync } from "./services"
 import { AxiosResponse } from "axios"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
@@ -1043,35 +1043,44 @@ export const addBlogAction = createAsyncThunk<any, any>(
 )
 
 
-export const editBlogAction = createAsyncThunk<any, any>(
-  "auth/editdocument_master",
-  async (data, { rejectWithValue, dispatch }) => {
-    try {
-      console.log("data", data);
 
-      const response: AxiosResponse<any> = await editDocumentListAsync(data)
+
+export const editBlogAction = createAsyncThunk<
+  any, // Return type of the fulfilled action
+  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+>(
+  "auth/editBrand",
+  async (payload, { rejectWithValue, dispatch }) => {
+    // payload here is { id: editingBrand.id, formData: formData }
+    try {
+      console.log("editBrandAction - payload received:", payload);
+      // *** CHANGE HERE: Pass id and formData separately ***
+      const response: AxiosResponse<any> = await editBlogsAsync(payload.id, payload.formData);
+
       if (response?.data?.status === true) {
-        dispatch(getDocumentListAction())
+        dispatch(getBlogsAction());
         dispatch(
           showMessage({
             ...defaultMessageObj,
             type: "success",
             messageText: response?.data?.message || "success",
-          }))
-        return response?.data?.data
+          })
+        );
+        return response?.data?.data;
       }
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
           messageText: response?.data?.message || "failed",
-        }))
-      return rejectWithValue(response)
+        })
+      );
+      return rejectWithValue(response);
     } catch (error: unknown) {
-      return rejectWithValue(error as Error)
+      return rejectWithValue(error as Error);
     }
   }
-)
+);
 
 export const deleteBlogAction = createAsyncThunk<any, any>(
   "auth/deletdocument_master",
