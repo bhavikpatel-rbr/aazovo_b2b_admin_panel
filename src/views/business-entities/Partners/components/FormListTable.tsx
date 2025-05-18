@@ -18,17 +18,32 @@ import type { TableQueries } from '@/@types/common'
 
 // --- Define Form Type ---
 export type FormItem = {
-    id: string
-    kycVerification: boolean; // KYC Verification Status
-    partnerId: string; // Partner ID
-    companyId: string; // Company ID
-    companyName: string; // Company Name
-    partnerName: string; // Partner Name
-    email: string; // Email Address
-    phone: string; // Phone Number
-    status: 'active' | 'inactive' // Changed status options
-    // Add other form-specific fields if needed later
-}
+  id: string;
+  status: 'active' | 'inactive'; // Changed status options
+  partner_name: string;
+  partner_contact_number: string;
+  partner_email_id: string;
+  partner_logo: string; // URL
+  partner_status: 'Active' | 'Inactive' | 'Pending';
+  partner_join_date: string; // ISO date string
+  partner_location: string;
+  partner_profile_completion: number; // float
+  partner_trust_score: number; // integer
+  partner_activity_score: number; // integer
+  partner_kyc_status: string;
+  business_category: string[]; // array of strings
+  partner_interested_in: 'Buy' | 'Sell' | 'Both' | 'None';
+  partner_business_type: string;
+  partner_profile_link: string; // URL
+  partner_certifications: string[]; // array of strings
+  partner_service_offerings: string[]; // array of strings
+  partner_website: string; // URL
+  partner_payment_terms: string;
+  partner_reference_id: string;
+  partner_document_upload: string; // URL
+  partner_lead_time: number; // integer
+};
+
 // --- End Form Type Definition ---
 
 // --- Updated Status Colors ---
@@ -97,63 +112,139 @@ const ActionColumn = ({
 }
 
 // --- Initial Dummy Data ---
-const initialDummyForms: FormItem[] = [
-    {
-        id: 'F001',
-        kycVerification: true,
-        partnerId: 'P001',
-        companyId: 'C001',
-        companyName: 'ABC Pvt Ltd',
-        partnerName: 'John Doe',
-        email: 'john.doe@abc.com',
-        phone: '+1-123-456-7890',
-        status: 'active',
-    },
-    {
-        id: 'F002',
-        kycVerification: false,
-        partnerId: 'P002',
-        companyId: 'C002',
-        companyName: 'XYZ Pvt Ltd',
-        partnerName: 'Jane Smith',
-        email: 'jane.smith@xyz.com',
-        phone: '+1-987-654-3210',
-        status: 'inactive',
-    },
-    {
-        id: 'F003',
-        kycVerification: true,
-        partnerId: 'P003',
-        companyId: 'C003',
-        companyName: 'PQR Ltd',
-        partnerName: 'Michael Johnson',
-        email: 'michael.johnson@pqr.com',
-        phone: '+44-20-7946-0958',
-        status: 'active',
-    },
-    {
-        id: 'F004',
-        kycVerification: false,
-        partnerId: 'P004',
-        companyId: 'C004',
-        companyName: 'LMN Corp',
-        partnerName: 'Emily Davis',
-        email: 'emily.davis@lmn.com',
-        phone: '+91-98765-43210',
-        status: 'inactive',
-    },
-    {
-        id: 'F005',
-        kycVerification: true,
-        partnerId: 'P005',
-        companyId: 'C005',
-        companyName: 'EFG Enterprises',
-        partnerName: 'William Brown',
-        email: 'william.brown@efg.com',
-        phone: '+81-3-1234-5678',
-        status: 'active',
-    },
+export const initialDummyForms: FormItem[] = [
+  {
+    id: 'F001',
+    status: 'active',
+    partner_name: 'Alpha Tech Solutions',
+    partner_contact_number: '+1-202-555-0143',
+    partner_email_id: 'contact@alphatech.com',
+    partner_logo: 'https://example.com/logos/alpha.png',
+    partner_status: 'Active',
+    partner_join_date: '2023-01-15',
+    partner_location: 'New York, USA',
+    partner_profile_completion: 95.5,
+    partner_trust_score: 88,
+    partner_activity_score: 75,
+    partner_kyc_status: 'Verified',
+    business_category: ['IT', 'Consulting'],
+    partner_interested_in: 'Both',
+    partner_business_type: 'B2B',
+    partner_profile_link: 'https://example.com/partners/alpha',
+    partner_certifications: ['ISO 9001', 'CMMI Level 3'],
+    partner_service_offerings: ['Software Development', 'Cloud Services'],
+    partner_website: 'https://alphatech.com',
+    partner_payment_terms: 'Net 30',
+    partner_reference_id: 'REF12345',
+    partner_document_upload: 'https://example.com/docs/alpha_agreement.pdf',
+    partner_lead_time: 7,
+  },
+  {
+    id: 'F002',
+    status: 'inactive',
+    partner_name: 'Beta Logistics',
+    partner_contact_number: '+44-161-555-0199',
+    partner_email_id: 'info@betalogs.co.uk',
+    partner_logo: 'https://example.com/logos/beta.png',
+    partner_status: 'Inactive',
+    partner_join_date: '2022-10-01',
+    partner_location: 'Manchester, UK',
+    partner_profile_completion: 78.2,
+    partner_trust_score: 72,
+    partner_activity_score: 60,
+    partner_kyc_status: 'Pending',
+    business_category: ['Logistics', 'Warehousing'],
+    partner_interested_in: 'Sell',
+    partner_business_type: 'B2B',
+    partner_profile_link: 'https://example.com/partners/beta',
+    partner_certifications: ['ISO 27001'],
+    partner_service_offerings: ['Freight Transport', 'Storage'],
+    partner_website: 'https://betalogs.co.uk',
+    partner_payment_terms: 'Advance',
+    partner_reference_id: 'REF56789',
+    partner_document_upload: 'https://example.com/docs/beta_license.pdf',
+    partner_lead_time: 10,
+  },
+  {
+    id: 'F003',
+    status: 'active',
+    partner_name: 'Gamma Retailers',
+    partner_contact_number: '+91-9876543210',
+    partner_email_id: 'sales@gammaretail.in',
+    partner_logo: 'https://example.com/logos/gamma.png',
+    partner_status: 'Pending',
+    partner_join_date: '2024-03-21',
+    partner_location: 'Mumbai, India',
+    partner_profile_completion: 67.0,
+    partner_trust_score: 55,
+    partner_activity_score: 49,
+    partner_kyc_status: 'Under Review',
+    business_category: ['Retail', 'FMCG'],
+    partner_interested_in: 'Buy',
+    partner_business_type: 'B2C',
+    partner_profile_link: 'https://example.com/partners/gamma',
+    partner_certifications: ['FSSAI'],
+    partner_service_offerings: ['Retail Sales'],
+    partner_website: 'https://gammaretail.in',
+    partner_payment_terms: 'Net 15',
+    partner_reference_id: 'REF32123',
+    partner_document_upload: 'https://example.com/docs/gamma_docs.pdf',
+    partner_lead_time: 5,
+  },
+  {
+    id: 'F004',
+    status: 'inactive',
+    partner_name: 'Delta Engineering',
+    partner_contact_number: '+61-2-9876-5432',
+    partner_email_id: 'engineering@delta.com.au',
+    partner_logo: 'https://example.com/logos/delta.png',
+    partner_status: 'Active',
+    partner_join_date: '2023-06-05',
+    partner_location: 'Sydney, Australia',
+    partner_profile_completion: 88.9,
+    partner_trust_score: 91,
+    partner_activity_score: 85,
+    partner_kyc_status: 'Verified',
+    business_category: ['Engineering', 'Manufacturing'],
+    partner_interested_in: 'Sell',
+    partner_business_type: 'B2B',
+    partner_profile_link: 'https://example.com/partners/delta',
+    partner_certifications: ['ISO 14001'],
+    partner_service_offerings: ['Mechanical Design', 'CAD Services'],
+    partner_website: 'https://delta.com.au',
+    partner_payment_terms: 'Net 45',
+    partner_reference_id: 'REF77889',
+    partner_document_upload: 'https://example.com/docs/delta_papers.pdf',
+    partner_lead_time: 12,
+  },
+  {
+    id: 'F005',
+    status: 'active',
+    partner_name: 'Epsilon Innovations',
+    partner_contact_number: '+49-30-123456',
+    partner_email_id: 'hello@epsilon.de',
+    partner_logo: 'https://example.com/logos/epsilon.png',
+    partner_status: 'Active',
+    partner_join_date: '2022-12-11',
+    partner_location: 'Berlin, Germany',
+    partner_profile_completion: 92.3,
+    partner_trust_score: 85,
+    partner_activity_score: 78,
+    partner_kyc_status: 'Verified',
+    business_category: ['AI', 'Tech Consulting'],
+    partner_interested_in: 'Both',
+    partner_business_type: 'B2B',
+    partner_profile_link: 'https://example.com/partners/epsilon',
+    partner_certifications: ['TUV Certified'],
+    partner_service_offerings: ['AI Solutions', 'R&D Consulting'],
+    partner_website: 'https://epsilon.de',
+    partner_payment_terms: 'Milestone Based',
+    partner_reference_id: 'REF00987',
+    partner_document_upload: 'https://example.com/docs/epsilon_agreement.pdf',
+    partner_lead_time: 8,
+  },
 ];
+
 // --- End Dummy Data ---
 
 const FormListTable = () => {
@@ -178,16 +269,15 @@ const FormListTable = () => {
         // --- Filtering ---
         if (tableData.query) {
             const query = tableData.query.toLowerCase();
-            filteredData = forms.filter(
-                (form) =>
-                    form.id.toLowerCase().includes(query) ||
-                    form.partnerId.toLowerCase().includes(query) ||
-                    form.companyId.toLowerCase().includes(query) ||
-                    form.companyName.toLowerCase().includes(query) ||
-                    form.partnerName.toLowerCase().includes(query) ||
-                    form.email.toLowerCase().includes(query) ||
-                    form.phone.toLowerCase().includes(query) ||
-                    form.status.toLowerCase().includes(query)
+            filteredData = forms.filter((form) =>
+                form.id.toLowerCase().includes(query) ||
+                form.partner_name.toLowerCase().includes(query) ||
+                form.partner_contact_number.toLowerCase().includes(query) ||
+                form.partner_email_id.toLowerCase().includes(query) ||
+                form.partner_status.toLowerCase().includes(query) ||
+                form.partner_location.toLowerCase().includes(query) ||
+                form.partner_kyc_status.toLowerCase().includes(query) ||
+                form.status.toLowerCase().includes(query)
             );
         }
 
@@ -242,15 +332,31 @@ const FormListTable = () => {
         const clonedForm: FormItem = {
             ...form,
             id: newId, // Assign the new ID
-            partnerId: `${form.partnerId} (Clone)`, // Append "(Clone)" to the partner ID
-            companyId: `${form.companyId} (Clone)`, // Append "(Clone)" to the company ID
-            companyName: `${form.companyName} (Clone)`, // Append "(Clone)" to the company name
-            partnerName: `${form.partnerName} (Clone)`, // Append "(Clone)" to the partner name
-            email: form.email, // Keep the same email
-            phone: form.phone, // Keep the same phone number
-            kycVerification: false, // Reset KYC verification for the cloned form
-            status: 'inactive', // Cloned forms start as inactive
+            partner_name: `${form.partner_name} (Clone)`,
+            partner_contact_number: form.partner_contact_number,
+            partner_email_id: form.partner_email_id,
+            partner_logo: form.partner_logo,
+            partner_status: 'Inactive', // Cloned forms start as inactive
+            partner_join_date: form.partner_join_date,
+            partner_location: form.partner_location,
+            partner_profile_completion: form.partner_profile_completion,
+            partner_trust_score: form.partner_trust_score,
+            partner_activity_score: form.partner_activity_score,
+            partner_kyc_status: 'Pending', // Reset or mark KYC status
+            business_category: [...form.business_category],
+            partner_interested_in: form.partner_interested_in,
+            partner_business_type: form.partner_business_type,
+            partner_profile_link: form.partner_profile_link,
+            partner_certifications: [...form.partner_certifications],
+            partner_service_offerings: [...form.partner_service_offerings],
+            partner_website: form.partner_website,
+            partner_payment_terms: form.partner_payment_terms,
+            partner_reference_id: form.partner_reference_id,
+            partner_document_upload: form.partner_document_upload,
+            partner_lead_time: form.partner_lead_time,
+            status: 'inactive' // Keep overall form status also inactive
         };
+
     
         // Add the cloned form to the beginning of the forms list
         setForms((prev) => [clonedForm, ...prev]);
@@ -286,48 +392,151 @@ const FormListTable = () => {
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
-                header: 'KYC Verification',
-                accessorKey: 'kycVerification',
-                enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.kycVerification ? 'Verified' : 'Pending'}</span>
-                ),
-            },
-            {
-                header: 'Partner ID',
-                accessorKey: 'partnerId',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.partnerId}</span>,
-            },
-            {
-                header: 'Company ID',
-                accessorKey: 'companyId',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.companyId}</span>,
-            },
-            {
-                header: 'Company Name',
-                accessorKey: 'companyName',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.companyName}</span>,
-            },
-            {
                 header: 'Partner Name',
-                accessorKey: 'partnerName',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.partnerName}</span>,
+                accessorKey: 'partner_name',
+                size: 150,
+            },
+            {
+                header: 'Contact Number',
+                accessorKey: 'partner_contact_number',
+                size: 140,
             },
             {
                 header: 'Email',
-                accessorKey: 'email',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.email}</span>,
+                accessorKey: 'partner_email_id',
+                size: 180,
             },
             {
-                header: 'Phone',
-                accessorKey: 'phone',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.phone}</span>,
+                header: 'Logo',
+                accessorKey: 'partner_logo',
+                size: 120,
+                cell: ({ row }) => (
+                <img src={row.original.partner_logo} alt="Logo" className="h-10 w-10 rounded-full object-cover" />
+                ),
+            },
+            {
+                header: 'Partner Status',
+                accessorKey: 'partner_status',
+                size: 120,
+            },
+            {
+                header: 'Join Date',
+                accessorKey: 'partner_join_date',
+                size: 120,
+                cell: ({ row }) => new Date(row.original.partner_join_date).toLocaleDateString(),
+            },
+            {
+                header: 'Location',
+                accessorKey: 'partner_location',
+                size: 160,
+            },
+            {
+                header: 'Profile Completion (%)',
+                accessorKey: 'partner_profile_completion',
+                size: 140,
+            },
+            {
+                header: 'Trust Score',
+                accessorKey: 'partner_trust_score',
+                size: 120,
+            },
+            {
+                header: 'Activity Score',
+                accessorKey: 'partner_activity_score',
+                size: 120,
+            },
+            {
+                header: 'KYC Status',
+                accessorKey: 'partner_kyc_status',
+                size: 120,
+            },
+            {
+                header: 'Business Category',
+                accessorKey: 'business_category',
+                size: 180,
+                cell: ({ row }) => row.original.business_category.join(', '),
+            },
+            {
+                header: 'Interested In',
+                accessorKey: 'partner_interested_in',
+                size: 120,
+            },
+            {
+                header: 'Business Type',
+                accessorKey: 'partner_business_type',
+                size: 150,
+            },
+            {
+                header: 'Profile Link',
+                accessorKey: 'partner_profile_link',
+                size: 180,
+                cell: ({ row }) => (
+                <a
+                    href={row.original.partner_profile_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                >
+                    View Profile
+                </a>
+                ),
+            },
+            {
+                header: 'Certifications',
+                accessorKey: 'partner_certifications',
+                size: 180,
+                cell: ({ row }) => row.original.partner_certifications.join(', '),
+            },
+            {
+                header: 'Service Offerings',
+                accessorKey: 'partner_service_offerings',
+                size: 180,
+                cell: ({ row }) => row.original.partner_service_offerings.join(', '),
+            },
+            {
+                header: 'Website',
+                accessorKey: 'partner_website',
+                size: 180,
+                cell: ({ row }) => (
+                <a
+                    href={row.original.partner_website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                >
+                    Visit Site
+                </a>
+                ),
+            },
+            {
+                header: 'Payment Terms',
+                accessorKey: 'partner_payment_terms',
+                size: 150,
+            },
+            {
+                header: 'Reference ID',
+                accessorKey: 'partner_reference_id',
+                size: 130,
+            },
+            {
+                header: 'Document Upload',
+                accessorKey: 'partner_document_upload',
+                size: 150,
+                cell: ({ row }) => (
+                <a
+                    href={row.original.partner_document_upload}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                >
+                    View Document
+                </a>
+                ),
+            },
+            {
+                header: 'Lead Time (days)',
+                accessorKey: 'partner_lead_time',
+                size: 120,
             },
             {
                 header: 'Status',

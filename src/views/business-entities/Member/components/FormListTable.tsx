@@ -18,19 +18,33 @@ import type { TableQueries } from '@/@types/common'
 
 // --- Define Form Type ---
 export type FormItem = {
-    id: string
-    memberName: string; // Member Name
-    memberId: string; // Member ID
-    name: string; // Company Name
-    email: string; // Email Address
-    phone: string; // Phone Number
-    status: 'active' | 'inactive' // Changed status options
-    // Add other form-specific fields if needed later
+    id: string;
+    member_name: string;
+    member_contact_number: string;
+    member_email_id: string;
+    member_photo: string; // URL or path
+    member_photo_upload: string; // could be a timestamp or status string
+    member_role: string;
+    member_status: 'active' | 'inactive'; // 'Active' | 'Inactive'
+    member_join_date: string; // Date string (e.g. "2025-05-17")
+    profile_completion: number; // float
+    success_score: number; // integer
+    trust_score: number; // integer
+    activity_score: number; // integer
+    associated_brands: string[]; // array of strings
+    business_category: string[]; // array of strings
+    interested_in: string; // 'Buy' | 'Sell' | 'Both'
+    company_id: string;
+    company_name: string;
+    membership_stats: string; // formatted string like "12/43"
+    member_location: string;
+    kyc_status: string; // 'Verified' | 'Pending' | 'Not Submitted'
 }
+
 // --- End Form Type Definition ---
 
 // --- Updated Status Colors ---
-const statusColor: Record<FormItem['status'], string> = {
+const statusColor: Record<FormItem['member_status'], string> = {
     active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
     inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
 }
@@ -97,50 +111,74 @@ const ActionColumn = ({
 // --- Initial Dummy Data ---
 const initialDummyForms: FormItem[] = [
     {
-        id: 'F001',
-        memberName: 'John Doe',
-        memberId: 'M001',
-        name: 'ABC Pvt Ltd',
-        email: 'john.doe@abc.com',
-        phone: '+1-123-456-7890',
-        status: 'active',
-    },
-    {
-        id: 'F002',
-        memberName: 'Jane Smith',
-        memberId: 'M002',
-        name: 'XYZ Pvt Ltd',
-        email: 'jane.smith@xyz.com',
-        phone: '+1-987-654-3210',
-        status: 'inactive',
-    },
-    {
-        id: 'F003',
-        memberName: 'Michael Johnson',
-        memberId: 'M003',
-        name: 'PQR Ltd',
-        email: 'michael.johnson@pqr.com',
-        phone: '+44-20-7946-0958',
-        status: 'active',
-    },
-    {
-        id: 'F004',
-        memberName: 'Emily Davis',
-        memberId: 'M004',
-        name: 'LMN Corp',
-        email: 'emily.davis@lmn.com',
-        phone: '+91-98765-43210',
-        status: 'inactive',
-    },
-    {
-        id: 'F005',
-        memberName: 'William Brown',
-        memberId: 'M005',
-        name: 'EFG Enterprises',
-        email: 'william.brown@efg.com',
-        phone: '+81-3-1234-5678',
-        status: 'active',
-    },
+    id: "1",
+    member_name: "John Doe",
+    member_contact_number: "+1234567890",
+    member_email_id: "john.doe@example.com",
+    member_photo: "https://example.com/photo1.jpg",
+    member_photo_upload: "Uploaded at 2025-05-17T10:00:00Z",
+    member_role: "Director",
+    member_status: "active",
+    member_join_date: "2023-01-01",
+    profile_completion: 85.5,
+    success_score: 75,
+    trust_score: 80,
+    activity_score: 90,
+    associated_brands: ["Brand A", "Brand B"],
+    business_category: ["Automotive", "Electronics"],
+    interested_in: "Both",
+    company_id: "COMP12345",
+    company_name: "Acme Corporation",
+    membership_stats: "12/43",
+    member_location: "USA / New York / NY",
+    kyc_status: "Verified",
+  },
+  {
+    id: "2",
+    member_name: "Jane Smith",
+    member_contact_number: "+1987654321",
+    member_email_id: "jane.smith@example.com",
+    member_photo: "https://example.com/photo2.jpg",
+    member_photo_upload: "Uploaded at 2025-05-16T11:00:00Z",
+    member_role: "Manager",
+    member_status: "inactive",
+    member_join_date: "2022-06-15",
+    profile_completion: 72.0,
+    success_score: 60,
+    trust_score: 70,
+    activity_score: 65,
+    associated_brands: ["Brand C"],
+    business_category: ["Healthcare"],
+    interested_in: "Sell",
+    company_id: "COMP67890",
+    company_name: "Beta Enterprises",
+    membership_stats: "8/30",
+    member_location: "UK / London",
+    kyc_status: "Pending",
+  },
+  {
+    id: "3",
+    member_name: "Alice Johnson",
+    member_contact_number: "+1123456789",
+    member_email_id: "alice.johnson@example.com",
+    member_photo: "https://example.com/photo3.jpg",
+    member_photo_upload: "Uploaded at 2025-05-15T09:30:00Z",
+    member_role: "Engineer",
+    member_status: "active",
+    member_join_date: "2021-09-10",
+    profile_completion: 92.0,
+    success_score: 88,
+    trust_score: 95,
+    activity_score: 98,
+    associated_brands: ["Brand D", "Brand E"],
+    business_category: ["IT Services", "FinTech"],
+    interested_in: "Buy",
+    company_id: "COMP24680",
+    company_name: "Gamma Innovations",
+    membership_stats: "20/50",
+    member_location: "India / Bengaluru / KA",
+    kyc_status: "Verified",
+  }
 ];
 // --- End Dummy Data ---
 
@@ -169,12 +207,13 @@ const FormListTable = () => {
             filteredData = forms.filter(
                 (form) =>
                     form.id.toLowerCase().includes(query) ||
-                    form.memberName.toLowerCase().includes(query) ||
-                    form.memberId.toLowerCase().includes(query) ||
-                    form.name.toLowerCase().includes(query) ||
-                    form.email.toLowerCase().includes(query) ||
-                    form.phone.toLowerCase().includes(query) ||
-                    form.status.toLowerCase().includes(query)
+                    form.member_name.toLowerCase().includes(query) ||
+                    form.member_email_id.toLowerCase().includes(query) ||
+                    form.member_contact_number.toLowerCase().includes(query) ||
+                    form.member_status.toLowerCase().includes(query) ||
+                    form.member_role.toLowerCase().includes(query) ||
+                    form.company_name.toLowerCase().includes(query) ||
+                    form.member_location.toLowerCase().includes(query)
             );
         }
 
@@ -229,13 +268,28 @@ const FormListTable = () => {
         const clonedForm: FormItem = {
             ...form,
             id: newId, // Assign the new ID
-            memberName: `${form.memberName} (Clone)`, // Append "(Clone)" to the member name
-            memberId: `${form.memberId} (Clone)`, // Append "(Clone)" to the member ID
-            name: `${form.name} (Clone)`, // Append "(Clone)" to the company name
-            email: form.email, // Keep the same email
-            phone: form.phone, // Keep the same phone number
-            status: 'inactive', // Cloned forms start as inactive
+            member_name: `${form.member_name} (Clone)`, // Append "(Clone)" to the member name
+            member_contact_number: form.member_contact_number, // Copy contact
+            member_email_id: form.member_email_id, // Keep same email
+            member_photo: form.member_photo,
+            member_photo_upload: form.member_photo_upload,
+            member_role: form.member_role,
+            member_status: 'inactive', // Cloned forms start as inactive
+            member_join_date: form.member_join_date,
+            profile_completion: form.profile_completion,
+            success_score: form.success_score,
+            trust_score: form.trust_score,
+            activity_score: form.activity_score,
+            associated_brands: [...form.associated_brands], // Clone array
+            business_category: [...form.business_category],
+            interested_in: form.interested_in,
+            company_id: form.company_id,
+            company_name: `${form.company_name} (Clone)`, // Append "(Clone)" to company name
+            membership_stats: form.membership_stats,
+            member_location: form.member_location,
+            kyc_status: form.kyc_status,
         };
+
     
         // Add the cloned form to the beginning of the forms list
         setForms((prev) => [clonedForm, ...prev]);
@@ -247,13 +301,13 @@ const FormListTable = () => {
 
     const handleChangeStatus = (form: FormItem) => {
         // Logic to change the status (e.g., API call and update state)
-        const newStatus = form.status === 'active' ? 'inactive' : 'active'
+        const newStatus = form.member_status === 'active' ? 'inactive' : 'active'
         console.log(`Changing status of form ${form.id} to ${newStatus}`)
 
         // Update the status in the local state for visual feedback
         setForms((currentForms) =>
             currentForms.map((f) =>
-                f.id === form.id ? { ...f, status: newStatus } : f,
+                f.id === form.id ? { ...f, member_status: newStatus } : f,
             ),
         )
     }
@@ -270,52 +324,67 @@ const FormListTable = () => {
                 size:70,
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
+            { header: 'Member Name', accessorKey: 'member_name' },
+            { header: 'Contact Number', accessorKey: 'member_contact_number' },
+            { header: 'Email ID', accessorKey: 'member_email_id' },
             {
-                header: 'Member Name',
-                accessorKey: 'memberName',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.memberName}</span>,
+                header: 'Photo',
+                accessorKey: 'member_photo',
+                cell: (props) => (
+                    <img
+                        src={props.row.original.member_photo}
+                        alt="Member"
+                        className="h-10 w-10 object-cover rounded-full"
+                    />
+                )
             },
+            { header: 'Photo Upload', accessorKey: 'member_photo_upload' },
+            { header: 'Role', accessorKey: 'member_role' },
             {
-                header: 'Member ID',
-                accessorKey: 'membertId',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.memberId}</span>,
-            },
-            {
-                header: 'Company Name',
-                accessorKey: 'name',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.name}</span>,
-            },
-            {
-                header: 'Email',
-                accessorKey: 'email',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.email}</span>,
-            },
-            {
-                header: 'Phone',
-                accessorKey: 'phone',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.phone}</span>,
-            },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                // Enable sorting
-                enableSorting: true,
-                size:120,
-                cell: (props) => {
-                    const { status } = props.row.original
+                header: 'Member Status',
+                accessorKey: 'member_status',
+                                cell: (props) => {
+                    const { member_status } = props.row.original
                     return (
                         <div className="flex items-center">
-                            <Tag className={statusColor[status]}>
-                                <span className="capitalize">{status}</span>
+                            <Tag className={statusColor[member_status]}>
+                                <span className="capitalize">{member_status}</span>
                             </Tag>
                         </div>
                     )
                 },
+            },
+            { header: 'Join Date', accessorKey: 'member_join_date' },
+            { header: 'Profile Completion %', accessorKey: 'profile_completion' },
+            { header: 'Success Score %', accessorKey: 'success_score' },
+            { header: 'Trust Score %', accessorKey: 'trust_score' },
+            { header: 'Activity Score %', accessorKey: 'activity_score' },
+            {
+                header: 'Associated Brands',
+                accessorKey: 'associated_brands',
+                cell: (props) => props.row.original.associated_brands.join(', ')
+            },
+            {
+                header: 'Business Category',
+                accessorKey: 'business_category',
+                cell: (props) => props.row.original.business_category.join(', ')
+            },
+            { header: 'Interested In', accessorKey: 'interested_in' },
+            { header: 'Company ID', accessorKey: 'company_id' },
+            { header: 'Company Name', accessorKey: 'company_name' },
+            { header: 'Membership Stats', accessorKey: 'membership_stats' },
+            { header: 'Location', accessorKey: 'member_location' },
+            {
+                header: 'KYC Status',
+                accessorKey: 'kyc_status',
+                cell: (props) => {
+                    const kyc = props.row.original.kyc_status;
+                    let color = 'bg-gray-200 text-gray-700';
+                    if (kyc === 'Verified') color = 'bg-green-100 text-green-800';
+                    else if (kyc === 'Pending') color = 'bg-yellow-100 text-yellow-800';
+                    else if (kyc === 'Not Submitted') color = 'bg-red-100 text-red-800';
+                    return <Tag className={color}>{kyc}</Tag>;
+                }
             },
             {
                 header: 'Action', // Keep header empty for actions

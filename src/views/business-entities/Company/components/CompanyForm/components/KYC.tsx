@@ -1,36 +1,22 @@
-import { useMemo } from 'react'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import { FormItem } from '@/components/ui/Form'
-import { countryList } from '@/constants/countries.constant'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types'
 import {CompanyFormFields} from '../types'
+import Button from '@/components/ui/Button'
+import Checkbox from '@/components/ui/Checkbox'
+
 type KYCDetailSectionProps = FormSectionBaseProps
 
-type CountryOption = {
-    label: string
-    dialCode: string
-    value: string
-}
 
 const KYCDetailSection = ({
     control,
     errors,
 }: KYCDetailSectionProps) => {
-    const dialCodeList = useMemo(() => {
-        const newCountryList: Array<CountryOption> = JSON.parse(
-            JSON.stringify(countryList),
-        )
-
-        return newCountryList.map((country) => {
-            country.label = country.dialCode
-            return country
-        })
-    }, [])
 
     return (
-<Card id="documentUpload">
+<Card id="kycDocuments">
     <h4 className="mb-4">Document Upload</h4>
 
     {[
@@ -49,57 +35,64 @@ const KYCDetailSection = ({
         const checkboxField = `${doc.name}_remark_enabled` as keyof CompanyFormFields
 
         return (
-            <div key={doc.name} className="mb-6">
-                <FormItem label={doc.label}>
-                    <Controller
-                        name={doc.name as keyof CompanyFormFields}
-                        control={control}
-                        render={({ field }) => (
-                            <Input
-                                type="file"
-                                // onChange={(e) =>
-                                //     field.onChange(e.target.files?.[0]?.name || '')
-                                // }
-                            />
-                        )}
-                    />
-                </FormItem>
-
-                <div className="mt-2">
-                    <label className="flex items-center gap-2 mb-1">
+            <>
+                <div key={doc.name} className="mb-6">
+                    <FormItem label={doc.label}>
                         <Controller
-                            name={checkboxField}
+                            name={doc.name as keyof CompanyFormFields}
                             control={control}
                             render={({ field }) => (
-                                <input
-                                    type="checkbox"
-                                    // checked={field.value}
-                                    onChange={(e) => field.onChange(e.target.checked)}
+                                <Input
+                                    type="file"
+                                    onChange={(e) => {
+                                        const target = e.target as HTMLInputElement;
+                                        field.onChange(target.files?.[0]?.name || '');
+                                    }}
                                 />
                             )}
                         />
-                        Add Remark
-                    </label>
+                    </FormItem>
 
-                    <Controller
-                        name={remarkField}
-                        control={control}
-                        render={({ field: { onChange, onBlur, value } }) => (
-                            <textarea
-                            className="form-textarea w-full"
-                            placeholder={`Remark for ${doc.label}`}
-                            rows={2}
-                            value={value as string}
-                            onChange={onChange}
-                            onBlur={onBlur}
-                            disabled={!control._formValues[checkboxField]}
+                    <div className="mt-2">
+                        <label className="flex items-center gap-2 mb-1">
+                            <Controller
+                                name={checkboxField}
+                                control={control}
+                                render={({ field }) => (
+                                    <Checkbox
+                                    defaultChecked={!!field.value}
+                                    onChange={(checked: boolean, e: React.ChangeEvent<HTMLInputElement>) => field.onChange(checked)}
+                                    >
+                                        Add Remark
+                                    </Checkbox>
+                                )}
                             />
-                        )}
-                        />
+                        </label>
+
+                        <Controller
+                            name={remarkField}
+                            control={control}
+                            render={({ field: { onChange, onBlur, value } }) => (
+                                <Input textArea
+                                className="form-textarea w-full"
+                                placeholder={`Remark for ${doc.label}`}
+                                value={value as string}
+                                onChange={onChange}
+                                onBlur={onBlur}
+                                // disabled={!control._formValues[checkboxField]}
+                                />
+                            )}
+                            />
+                    </div>
                 </div>
-            </div>
+            </>
         )
     })}
+    {/* Footer with Save and Cancel buttons */}
+    <div className="flex justify-end gap-3 mt-6 border-t pt-4">
+        <Button type="button" className="px-4 py-2 rounded">Cancel</Button>
+        <Button type="submit" className="px-4 py-2 rounded" variant="solid">Save</Button>
+    </div>
 </Card>
 
 

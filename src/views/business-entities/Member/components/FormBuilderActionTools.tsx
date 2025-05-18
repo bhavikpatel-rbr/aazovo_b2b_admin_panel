@@ -11,22 +11,10 @@ const FormListActionTools = () => {
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
-            {/* <CSVLink
-                className="w-full"
-                filename="customerList.csv"
-                data={customerList}
-            >
-                <Button
-                    icon={<TbCloudDownload className="text-xl" />}
-                    className="w-full"
-                >
-                    Download
-                </Button>
-            </CSVLink> */}
             <Button
                 variant="solid"
                 icon={<TbPlus className="text-lg" />}
-                onClick={() => navigate('/concepts/customers/customer-create')}
+                onClick={() => navigate('/business-entities/member-create')}
             >
                 Add New
             </Button>

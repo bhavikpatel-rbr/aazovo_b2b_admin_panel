@@ -14,7 +14,7 @@ const businessEntityRoute: Routes = [
         },
     },
     {
-        key: 'businessEntities.createCompany',
+        key: 'businessEntities.company',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/company-create`,
         component: lazy(() => import('@/views/business-entities/Company/CompanyCreate/CreateCompany')),
         authority: [ADMIN, USER],
@@ -32,6 +32,15 @@ const businessEntityRoute: Routes = [
         },
     },
     {
+        key: 'businessEntities.member',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/member-create`,
+        component: lazy(() => import('@/views/business-entities/Member/MemberCreate/CreateMember')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'businessEntities.partner',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/partner`,
         component: lazy(() => import('@/views/business-entities/Partners')),
@@ -41,9 +50,27 @@ const businessEntityRoute: Routes = [
         },
     },
     {
+        key: 'businessEntities.partner',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/create-partner`,
+        component: lazy(() => import('@/views/business-entities/Partners/PartnerCreate/CreatePartner')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'businessEntities.inquiries',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/inquiries`,
         component: lazy(() => import('@/views/business-entities/Inquiries')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'businessEntities.inquiries',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/create-inquiry`,
+        component: lazy(() => import('@/views/business-entities/Inquiries/InquiryCreate/CreateInquiry')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',
@@ -67,6 +94,7 @@ const businessEntityRoute: Routes = [
     //         pageContainerType: 'contained',
     //     },
     // },
+
     {
         key: 'businessEntities.allDocuments',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/all-documents`,
