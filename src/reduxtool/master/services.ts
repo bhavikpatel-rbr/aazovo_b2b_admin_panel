@@ -303,14 +303,15 @@ export const getDocumentListAsync = async () => {
   }
 }
 
-export const addDocumentListAsync = async (unitData: any) => {
+
+export const addDocumentListAsync = async (unitData: FormData) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_master`, unitData)
-    return response
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master`, unitData);
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
 
 export const editDocumentListAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
@@ -352,6 +353,20 @@ export const getBrandAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+export const addBrandAsync = async (unitData: FormData) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/master/brand`, unitData, {
+      // headers: {
+      //   'Content-Type': 'multipart/form-data'
+      // }
+    });
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
 
 export const getBlogsAsync = async () => {
   try {
