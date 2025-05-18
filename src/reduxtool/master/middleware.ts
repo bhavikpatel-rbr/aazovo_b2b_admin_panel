@@ -1132,6 +1132,155 @@ export const deleteAllBlogsAction = createAsyncThunk<any, any>(
 )
 
 
+export const getProductsAction = createAsyncThunk(
+  "auth/product",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getBrandAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addProductAction = createAsyncThunk<any, any>(
+  "auth/addBrand",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      console.log("data", data);
+
+      const response: AxiosResponse<any> = await addBrandAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getBrandAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+
+export const editProductAction = createAsyncThunk<
+  any, // Return type of the fulfilled action
+  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+>(
+  "auth/editBrand",
+  async (payload, { rejectWithValue, dispatch }) => {
+    // payload here is { id: editingBrand.id, formData: formData }
+    try {
+      console.log("editBrandAction - payload received:", payload);
+      // *** CHANGE HERE: Pass id and formData separately ***
+      const response: AxiosResponse<any> = await editBrandListAsync(payload.id, payload.formData);
+
+      if (response?.data?.status === true) {
+        dispatch(getBrandAction());
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          })
+        );
+        return response?.data?.data;
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        })
+      );
+      return rejectWithValue(response);
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error);
+    }
+  }
+);
+
+export const deleteProductAction = createAsyncThunk<any, any>(
+  "auth/deleteBrand",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletBrandListAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getBrandAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllProductsAction = createAsyncThunk<any, any>(
+  "auth/deleteAllBrand",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllBrandListAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getBrandAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
 export const getBrandAction = createAsyncThunk(
   "auth/brand",
   async (_, { rejectWithValue, dispatch }) => {

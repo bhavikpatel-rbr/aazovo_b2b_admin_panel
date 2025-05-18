@@ -413,6 +413,74 @@ export const deleteAllBrandListAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+export const getProductAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/product`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addProductAsync = async (unitData: FormData) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/master/brand`, unitData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const editProductListAsync = async (brandId: number | string, formData: FormData) => {
+  console.log("editBrandListAsync - brandId:", brandId);
+  console.log("editBrandListAsync - formData to be sent:");
+  for (const pair of formData.entries()) {
+    console.log(pair[0] + ': ' + pair[1]);
+  }
+
+  try {
+    // The formData already contains _method: 'PUT'
+    // Axios will automatically set 'Content-Type': 'multipart/form-data'
+    // when the second argument to post/put is a FormData instance.
+    const response = await axiosInstance.post(
+      `${config.apiURL}/master/brand/${brandId}`, // Use brandId in the URL
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const deletProductListAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/master/brand/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllProductListAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/master/brand/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 
 export const getBlogsAsync = async () => {
