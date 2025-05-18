@@ -25,7 +25,8 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import StickyFooter from '@/components/shared/StickyFooter';
 import DebouceInput from '@/components/shared/DebouceInput';
 import { Drawer, Form, FormItem, Input, Select as UiSelect, Tag, Dialog } from '@/components/ui';
-
+import Dropdown from '@/components/ui/Dropdown'
+// import Button from '@/components/ui/Button'
 // import Dropdown from '@/components/ui/Dropdown'; // For Export/Import actions
 
 // Icons
@@ -441,9 +442,22 @@ const Products = () => {
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     {/* Header & Tabs */}
                     <div className="lg:flex items-center justify-between mb-0">
-                        <h5 className="mb-4 lg:mb-0">Products</h5>
-                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Product</Button>
+                    <h5 className="mb-4 lg:mb-0">Products</h5>
+                    
+                    <div className="flex items-center gap-2">
+                    <Dropdown title="More Options" className="mr-2">
+                        <Dropdown.Item eventKey="Export Product">Export Product</Dropdown.Item>
+                        <Dropdown.Item eventKey="Import Product">Import Product</Dropdown.Item>
+                        <Dropdown.Item eventKey="Export Product Keywords">Export Product Keywords</Dropdown.Item>
+                        <Dropdown.Item eventKey="Import Product Keyword">Import Product Keyword</Dropdown.Item>
+                    </Dropdown>
+
+                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+                        Add New Product
+                        </Button>
                     </div>
+                    </div>
+
                     <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
                         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                             {[TABS.ALL, TABS.PENDING].map(tab => (

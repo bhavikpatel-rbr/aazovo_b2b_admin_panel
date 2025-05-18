@@ -37,6 +37,7 @@ import {
     TbCloudUpload,
     TbCloudDownload,
     TbCategory,
+    TbBox,
     TbBuildingStore, // Using TbCategory for categories
 } from 'react-icons/tb'
 
@@ -456,7 +457,7 @@ const Categories = () => { // Renamed component
                         return (
                             <div className="flex items-center gap-2 min-w-[200px]">
                                 <Avatar
-                                    size={30} shape="circle" src={icon_full_path || undefined} icon={<TbBuildingStore />}
+                                    size={30} shape="circle" src={icon_full_path || undefined} icon={<TbBox />}
                                     className={icon_full_path ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500' : ''}
                                     onClick={() => icon_full_path && openImageViewer(icon_full_path)}
                                 >
@@ -470,7 +471,7 @@ const Categories = () => { // Renamed component
         
         { header: 'Parent Category', accessorKey: 'parentCategoryName', enableSorting: true, cell: props => props.row.original.parentCategoryName || <span className="text-gray-400 dark:text-gray-500">-</span> },
         { header: 'Status', accessorKey: 'status', enableSorting: true, cell: props => { const status = props.row.original.status; return <Tag className={`${statusColor[status]} capitalize font-semibold border-0`}>{status}</Tag>; }},
-        { header: 'Actions', id: 'action', meta: { thClass: 'text-center', tdClass: 'text-center' }, cell: props => <ActionColumn onEdit={() => openEditCategoryDrawer(props.row.original)} onClone={() => handleCloneCategory(props.row.original)} onChangeStatus={() => openChangeCategoryStatusDialog(props.row.original)} onDelete={() => handleDeleteCategoryClick(props.row.original)} />},
+        { header: 'Actions', id: 'action', size: 160, meta: { HeaderClass: 'text-center' }, cell: props => <ActionColumn onEdit={() => openEditCategoryDrawer(props.row.original)} onClone={() => handleCloneCategory(props.row.original)} onChangeStatus={() => openChangeCategoryStatusDialog(props.row.original)} onDelete={() => handleDeleteCategoryClick(props.row.original)} />},
     ], [mappedCategories, openImageViewer]);
 
     const tableLoading = masterLoadingStatus === 'loading' || isSubmitting || isProcessing;
@@ -508,7 +509,7 @@ const Categories = () => { // Renamed component
                     <FormItem label="Coming Soon?" invalid={!!addFormMethods.formState.errors.comingsoon} errorMessage={addFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={addFormMethods.control} render={({ field }) => ( <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} /> )} /> </FormItem>
                     <FormItem label="Show Page Name" invalid={!!addFormMethods.formState.errors.show_page_name} errorMessage={addFormMethods.formState.errors.show_page_name?.message}> <Controller name="show_page_name" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="e.g., Electronics Page" />} /> </FormItem>
                     <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={addFormMethods.control} render={({ field }) => ( <UiSelect options={apiStatusOptions} value={apiStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} /> )} /> </FormItem>
-                    <h6 className="text-sm font-medium mt-2">Meta Options (Optional)</h6>
+                    <FormItem style={{fontWeight:"bold", color:"#000"}} label="Meta Options (Optional)"></FormItem>
                     <FormItem label="Meta Title" invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Meta Title" />} /> </FormItem>
                     <FormItem label="Meta Description" invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Meta Description" />} /> </FormItem>
                     <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Meta Keywords (comma-separated)" />} /> </FormItem>

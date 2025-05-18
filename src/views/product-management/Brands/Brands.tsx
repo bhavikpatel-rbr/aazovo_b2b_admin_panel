@@ -37,6 +37,7 @@ import {
     TbCloudUpload,
     TbCloudDownload,
     TbBuildingStore,
+    TbBox,
 } from 'react-icons/tb'
 
 // Types
@@ -267,7 +268,10 @@ const Brands = () => {
 
     const { BrandData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
 
-    useEffect(() => { dispatch(getBrandAction()) }, [dispatch]);
+    useEffect(() => { 
+        console.log('test');
+        dispatch(getBrandAction()
+) }, []);
 
     // Clean up object URLs on component unmount
     useEffect(() => {
@@ -558,8 +562,11 @@ const Brands = () => {
                 return (
                     <div className="flex items-center gap-2 min-w-[200px]">
                         <Avatar
-                            size={30} shape="circle" src={icon_full_path || undefined} icon={<TbBuildingStore />}
-                            className={icon_full_path ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500' : ''}
+                            size={30}
+                            shape="circle"
+                            src={icon_full_path || undefined}
+                            icon={<TbBox />}
+                            className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
                             onClick={() => icon_full_path && openImageViewer(icon_full_path)}
                         >
                             {!icon_full_path && name ? name.charAt(0).toUpperCase() : ''}
@@ -569,10 +576,20 @@ const Brands = () => {
                 );
             }
         },
+
         { header: 'Mobile No', accessorKey: 'mobileNo', enableSorting: true, cell: props => props.row.original.mobileNo ?? <span className="text-gray-400 dark:text-gray-500">-</span> },
         { header: 'Status', accessorKey: 'status', enableSorting: true, cell: props => { const status = props.row.original.status; return <Tag className={`${statusColor[status]} capitalize font-semibold border-0`}>{status}</Tag>; }},
-        { header: 'Actions', id: 'action', meta: { thClass: 'text-center', tdClass: 'text-center' }, cell: props => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onClone={() => handleClone(props.row.original)} onChangeStatus={() => openChangeStatusDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />},
+        {
+          header: 'Actions',
+          id: 'action',
+          size: 160,
+          meta: { HeaderClass: 'text-center' },
+          cell: (props) => (
+            <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onClone={() => handleClone(props.row.original)} onChangeStatus={() => openChangeStatusDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />
+          ),
+        },
     ], [mappedBrands, openImageViewer]); // Added openImageViewer dependency
+
 
     const tableLoading = masterLoadingStatus === 'loading' || isSubmitting || isProcessing;
 
