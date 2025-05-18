@@ -20,7 +20,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import { TbUserCircle } from 'react-icons/tb' // Placeholder icon for createdBy
-
+import CreateOffer from './OfferCreate/CreateOffer'
 // Icons
 import {
     TbPencil,
@@ -35,6 +35,7 @@ import {
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common' // Ensure this type path is correct
+import CreateOfferPage from './OfferCreate/CreateOffer'
 
 // --- Define Item Type (Table Row Data) ---
 // Generic type for both Offers and Demands
@@ -298,7 +299,7 @@ const ItemActionTools = ({
 
     const handleAddItem = () => {
         const targetRoute =
-            activeTab === TABS.OFFER ? '/offers/create' : '/demands/create'
+            activeTab === TABS.OFFER ? '/sales-leads/offers/create' : '/sales-leads/demands/create'
         console.log(
             `Navigate to Add New ${activeTab === TABS.OFFER ? 'Offer' : 'Demand'} page: ${targetRoute}`,
         )
@@ -847,6 +848,7 @@ const OffersDemands = () => {
                 onDeleteSelected={handleDeleteSelected}
                 activeTab={currentTab}
             />
+            <CreateOffer/>
         </Container>
     )
 }

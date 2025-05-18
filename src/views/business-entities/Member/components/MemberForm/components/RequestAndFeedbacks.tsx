@@ -136,7 +136,7 @@ const RequestAndFeedbacksDetails = ({
             <Controller
                 name="submitted_on"
                 control={control}
-                render={({ field }) => (
+                render={() => (
                     <DatePicker
                         labelFormat={{
                             month: 'MMMM',

@@ -23,6 +23,24 @@ const salesLeadsRoute: Routes = [
         },
     },
     {
+        key: 'salesLeads.opportunities',
+        path: `${SALES_LEADS_PREFIX_PATH}/seller/create`,
+        component: lazy(() => import('@/views/sales-Leads/Opportunities/SellerCreate/CreateSeller')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'salesLeads.opportunities',
+        path: `${SALES_LEADS_PREFIX_PATH}/buyer/create`,
+        component: lazy(() => import('@/views/sales-Leads/Opportunities/BuyerCreate/CreateBuyer')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'salesLeads.lead',
         path: `${SALES_LEADS_PREFIX_PATH}/lead`,
         component: lazy(() => import('@/views/sales-Leads/Lead')),
@@ -35,6 +53,25 @@ const salesLeadsRoute: Routes = [
         key: 'salesLeads.offersDemands',
         path: `${SALES_LEADS_PREFIX_PATH}/offers-demands`,
         component: lazy(() => import('@/views/sales-Leads/Offers-Demands')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'salesLeads.offersDemands',
+        path: `${SALES_LEADS_PREFIX_PATH}/offers/create`,
+        component: lazy(() => import('@/views/sales-Leads/Offers-Demands/OfferCreate/CreateOffer')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+
+    {
+        key: 'salesLeads.offersDemands',
+        path: `${SALES_LEADS_PREFIX_PATH}/demands/create`,
+        component: lazy(() => import('@/views/sales-Leads/Offers-Demands/DemandCreate/CreateDemand')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',
