@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { addBlogsAsync, addBrandAsync, addcategoryAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addPriceListAsync, addUnitAsync, deletBrandListAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllBrandListAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllUnitAsync, deletePriceListAsync, deletPaymentTermAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editPriceListAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getPriceListAsync, getUnitAsync, getwallListingAsync } from "./services"
+import { addBlogsAsync, addBrandAsync, addcategoryAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addPriceListAsync, addSlidersAsync, addUnitAsync, deletBrandListAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllBrandListAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllSlidersListAsync, deleteAllUnitAsync, deletePriceListAsync, deletPaymentTermAsync, deletSlidersListAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editPriceListAsync, editSlidersListAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getPriceListAsync, getSlidersAsync, getUnitAsync, getwallListingAsync } from "./services"
 import { AxiosResponse } from "axios"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
@@ -1864,6 +1864,155 @@ export const deleteAllPriceListAction = createAsyncThunk<any, any>(
       if (response?.data?.status === true) {
         console.log(response?.data);
         dispatch(getPriceListAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const getSlidersAction = createAsyncThunk(
+  "auth/Sliders",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getSlidersAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addSliderAction = createAsyncThunk<any, any>(
+  "auth/addSliders",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      console.log("data", data);
+
+      const response: AxiosResponse<any> = await addSlidersAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getSlidersAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+
+export const editSliderAction = createAsyncThunk<
+  any, // Return type of the fulfilled action
+  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+>(
+  "auth/editSliders",
+  async (payload, { rejectWithValue, dispatch }) => {
+    // payload here is { id: editingBrand.id, formData: formData }
+    try {
+      console.log("editBrandAction - payload received:", payload);
+      // *** CHANGE HERE: Pass id and formData separately ***
+      const response: AxiosResponse<any> = await editSlidersListAsync(payload.id, payload.formData);
+
+      if (response?.data?.status === true) {
+        dispatch(getSlidersAction());
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          })
+        );
+        return response?.data?.data;
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        })
+      );
+      return rejectWithValue(response);
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error);
+    }
+  }
+);
+
+export const deleteSliderAction = createAsyncThunk<any, any>(
+  "auth/deleteSliders",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletSlidersListAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getSlidersAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllSlidersAction = createAsyncThunk<any, any>(
+  "auth/deleteAllSliders",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllSlidersListAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getSlidersAction())
         dispatch(
           showMessage({
             ...defaultMessageObj,

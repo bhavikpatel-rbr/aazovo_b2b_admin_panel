@@ -16,8 +16,10 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
+import Avatar from '@/components/ui/Avatar'
 import Tag from '@/components/ui/Tag'
 import { Drawer, Form, FormItem, Input } from '@/components/ui'
+import { Segment } from '@/components/ui'
 
 // Icons
 import {
@@ -28,13 +30,13 @@ import {
     TbFilter,
     TbPlus,
     TbCloudUpload,
-    TbArticle,
+    TbPhoto,
+    TbSlideshow,
 } from 'react-icons/tb'
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
-import Textarea from '@/views/ui-components/forms/Input/Textarea'
 
 // --- Constants ---
 const statusOptionsConst = [
@@ -45,37 +47,27 @@ const statusColorsConst: Record<'active' | 'inactive', string> = {
     active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
     inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
 }
-const pageNameOptionsConst = [
-    { value: 'home', label: 'Home Page' },
-    { value: 'category_fashion', label: 'Fashion Category' },
-    { value: 'category_electronics', label: 'Electronics Category' },
-    { value: 'blog_detail', label: 'Blog Detail Page' },
-    { value: 'landing_promo_xyz', label: 'Promo XYZ Landing Page' },
-];
-const pageNameValues = pageNameOptionsConst.map(opt => opt.value) as [string, ...string[]];
 
-// --- Trending Page Images ---
-export type TrendingPageImageItem = {
+// --- Carousel Items ---
+export type TrendingCarouselItem = {
     id: string | number
-    pageName: string
-    trendingProducts?: string
-    date: string
+    imageUrl: string
+    link?: string
+    date: string // YYYY-MM-DD
     status: 'active' | 'inactive'
 }
 
-const trendingPageImageFormSchema = z.object({
-    pageName: z.enum(pageNameValues, {
-        errorMap: () => ({ message: 'Please select a page name.' }),
-    }),
-    trendingProducts: z.string().optional(),
+const trendingCarouselFormSchema = z.object({
+    imageUrl: z.string().url('Valid image URL is required.'),
+    link: z.string().url('Valid link URL is optional.').optional().or(z.literal('')),
     date: z.string().min(1, 'Date is required.').regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
     status: z.enum(['active', 'inactive']),
 })
-type TrendingPageImageFormData = z.infer<typeof trendingPageImageFormSchema>
+type TrendingCarouselFormData = z.infer<typeof trendingCarouselFormSchema>
 
-const initialDummyPageImages: TrendingPageImageItem[] = [
-    { id: 'TPI001', pageName: 'home', date: '2024-07-28', status: 'active', trendingProducts: 'SKU001, SKU002' },
-    { id: 'TPI002', pageName: 'category_fashion', date: '2024-07-27', status: 'inactive', trendingProducts: 'SKU003' },
+const initialDummyCarouselItems: TrendingCarouselItem[] = [
+    { id: 'TCI001', imageUrl: 'https://via.placeholder.com/800x400/ADD8E6/000000?text=Carousel+Image+1', link: '/products/123', date: '2024-07-28', status: 'active' },
+    { id: 'TCI002', imageUrl: 'https://via.placeholder.com/800x400/FFA07A/000000?text=Carousel+Image+2', date: '2024-07-27', status: 'inactive' },
 ]
 
 // --- CSV Exporter Utility ---
@@ -171,61 +163,60 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, searchPlaceholder 
     </div>
 );
 
-// --- Main Component: Trending Page Images Only ---
-const Trending = () => {
-    // --- State ---
-    const [pageImagesData, setPageImagesData] = useState<TrendingPageImageItem[]>(initialDummyPageImages);
-    const [isAddPageImageDrawerOpen, setIsAddPageImageDrawerOpen] = useState(false);
-    const [isEditPageImageDrawerOpen, setIsEditPageImageDrawerOpen] = useState(false);
-    const [editingPageImage, setEditingPageImage] = useState<TrendingPageImageItem | null>(null);
-    const [pageImageToDelete, setPageImageToDelete] = useState<TrendingPageImageItem | null>(null);
+// --- Main Component: Trending Carousel Only ---
+const TrendingCarousel = () => {
+    const [carouselItemsData, setCarouselItemsData] = useState<TrendingCarouselItem[]>(initialDummyCarouselItems);
+    const [isAddCarouselDrawerOpen, setIsAddCarouselDrawerOpen] = useState(false);
+    const [isEditCarouselDrawerOpen, setIsEditCarouselDrawerOpen] = useState(false);
+    const [editingCarouselItem, setEditingCarouselItem] = useState<TrendingCarouselItem | null>(null);
+    const [carouselItemToDelete, setCarouselItemToDelete] = useState<TrendingCarouselItem | null>(null);
 
     const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' });
-    const [selectedItems, setSelectedItems] = useState<TrendingPageImageItem[]>([]);
+    const [selectedItems, setSelectedItems] = useState<TrendingCarouselItem[]>([]);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-    const [filterCriteria, setFilterCriteria] = useState<{ filterStatus?: any[], filterPageName?: any[] }>({});
+    const [filterCriteria, setFilterCriteria] = useState<{ filterStatus?: any[] }>({});
 
     // --- React Hook Forms ---
-    const pageImageForm = useForm<TrendingPageImageFormData>({
-        resolver: zodResolver(trendingPageImageFormSchema),
-        defaultValues: { pageName: pageNameValues[0], date: new Date().toISOString().split('T')[0], status: 'active', trendingProducts: '' },
+    const carouselForm = useForm<TrendingCarouselFormData>({
+        resolver: zodResolver(trendingCarouselFormSchema),
+        defaultValues: { imageUrl: '', date: new Date().toISOString().split('T')[0], status: 'active', link: '' },
         mode: 'onChange',
     });
-    const filterForm = useForm<{ filterStatus?: any[], filterPageName?: any[] }>({
+    const filterForm = useForm<{ filterStatus?: any[] }>({
         defaultValues: {},
     });
 
     // --- CRUD and State Handlers ---
     const openAddDrawer = () => {
-        pageImageForm.reset();
-        setIsAddPageImageDrawerOpen(true);
+        carouselForm.reset();
+        setIsAddCarouselDrawerOpen(true);
     };
     const closeAddDrawer = () => {
-        setIsAddPageImageDrawerOpen(false);
+        setIsAddCarouselDrawerOpen(false);
     };
 
-    const openEditDrawer = (item: TrendingPageImageItem) => {
-        setEditingPageImage(item);
-        pageImageForm.reset(item as TrendingPageImageFormData);
-        setIsEditPageImageDrawerOpen(true);
+    const openEditDrawer = (item: TrendingCarouselItem) => {
+        setEditingCarouselItem(item);
+        carouselForm.reset(item as TrendingCarouselFormData);
+        setIsEditCarouselDrawerOpen(true);
     };
     const closeEditDrawer = () => {
-        setIsEditPageImageDrawerOpen(false);
-        setEditingPageImage(null);
+        setIsEditCarouselDrawerOpen(false);
+        setEditingCarouselItem(null);
     };
 
-    const onAddSubmit = async (data: TrendingPageImageFormData) => {
+    const onAddSubmit = async (data: TrendingCarouselFormData) => {
         setIsSubmitting(true);
         setMasterLoadingStatus('loading');
         await new Promise(resolve => setTimeout(resolve, 500));
         try {
-            const newItem: TrendingPageImageItem = { ...data, id: `TPI${Date.now()}` };
-            setPageImagesData(prev => [...prev, newItem]);
-            toast.push(<Notification title="Page Image Added" type="success">Item added to Trending Images.</Notification>);
+            const newItem: TrendingCarouselItem = { ...data, id: `TCI${Date.now()}` };
+            setCarouselItemsData(prev => [...prev, newItem]);
+            toast.push(<Notification title="Carousel Item Added" type="success">Item added to Trending Carousel.</Notification>);
             closeAddDrawer();
         } catch (error: any) {
             toast.push(<Notification title="Failed to Add" type="danger">{error?.message || 'Could not add item.'}</Notification>);
@@ -235,15 +226,15 @@ const Trending = () => {
         }
     };
 
-    const onEditSubmit = async (data: TrendingPageImageFormData) => {
+    const onEditSubmit = async (data: TrendingCarouselFormData) => {
         setIsSubmitting(true);
         setMasterLoadingStatus('loading');
         await new Promise(resolve => setTimeout(resolve, 500));
         try {
-            if (editingPageImage) {
-                const updatedItem: TrendingPageImageItem = { ...editingPageImage, ...data };
-                setPageImagesData(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
-                toast.push(<Notification title="Page Image Updated" type="success">Item updated.</Notification>);
+            if (editingCarouselItem) {
+                const updatedItem: TrendingCarouselItem = { ...editingCarouselItem, ...data };
+                setCarouselItemsData(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+                toast.push(<Notification title="Carousel Item Updated" type="success">Item updated.</Notification>);
             }
             closeEditDrawer();
         } catch (error: any) {
@@ -254,8 +245,8 @@ const Trending = () => {
         }
     };
 
-    const handleDeleteClick = (item: TrendingPageImageItem) => {
-        setPageImageToDelete(item);
+    const handleDeleteClick = (item: TrendingCarouselItem) => {
+        setCarouselItemToDelete(item);
         setSingleDeleteConfirmOpen(true);
     };
 
@@ -266,11 +257,11 @@ const Trending = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
         try {
             let idToDelete: string | number | undefined;
-            let itemTitle: string = "Item";
-            if (pageImageToDelete) {
-                idToDelete = pageImageToDelete.id;
-                itemTitle = pageNameOptionsConst.find(p=>p.value === pageImageToDelete.pageName)?.label || pageImageToDelete.pageName;
-                setPageImagesData(prev => prev.filter(item => item.id !== idToDelete));
+            let itemTitle: string = "Carousel Item";
+            if (carouselItemToDelete) {
+                idToDelete = carouselItemToDelete.id;
+                itemTitle = `Carousel for ${carouselItemToDelete.date}`;
+                setCarouselItemsData(prev => prev.filter(item => item.id !== idToDelete));
             }
             if (idToDelete) {
                 toast.push(<Notification title="Item Deleted" type="success">{`${itemTitle} deleted.`}</Notification>);
@@ -281,7 +272,7 @@ const Trending = () => {
         } finally {
             setIsDeleting(false);
             setMasterLoadingStatus('idle');
-            setPageImageToDelete(null);
+            setCarouselItemToDelete(null);
         }
     };
 
@@ -292,7 +283,7 @@ const Trending = () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
         try {
             const idsToDelete = selectedItems.map(item => item.id);
-            setPageImagesData(prev => prev.filter(item => !idsToDelete.includes(item.id)));
+            setCarouselItemsData(prev => prev.filter(item => !idsToDelete.includes(item.id)));
             toast.push(<Notification title="Deletion Successful" type="success">{selectedItems.length} item(s) deleted.</Notification>);
             setSelectedItems([]);
         } catch (error: any) {
@@ -308,7 +299,7 @@ const Trending = () => {
         filterForm.reset(filterCriteria);
         setIsFilterDrawerOpen(true);
     };
-    const onApplyFiltersSubmit = (data: { filterStatus?: any[], filterPageName?: any[] }) => {
+    const onApplyFiltersSubmit = (data: { filterStatus?: any[] }) => {
         setFilterCriteria(data);
         setTableData(prev => ({ ...prev, pageIndex: 1 }));
         setIsFilterDrawerOpen(false);
@@ -321,23 +312,19 @@ const Trending = () => {
 
     // --- Data Processing (Memoized) ---
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        let processedData: TrendingPageImageItem[] = cloneDeep(pageImagesData);
+        let processedData: TrendingCarouselItem[] = cloneDeep(carouselItemsData);
 
         // Apply Filters
         if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
             const selectedStatuses = filterCriteria.filterStatus.map((opt: any) => opt.value);
             processedData = processedData.filter(item => selectedStatuses.includes(item.status));
         }
-        if (filterCriteria.filterPageName && filterCriteria.filterPageName.length > 0) {
-            const selectedPageNames = filterCriteria.filterPageName.map((opt: any) => opt.value);
-            processedData = processedData.filter(item => selectedPageNames.includes(item.pageName));
-        }
 
         // Apply Search Query
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item => {
-                const itemTitleLower = String(item.pageName).toLowerCase();
+                const itemTitleLower = String(item.imageUrl).toLowerCase();
                 const itemIdString = String(item.id ?? '').toLowerCase();
                 return itemTitleLower.includes(query) || itemIdString.includes(query);
             });
@@ -363,13 +350,13 @@ const Trending = () => {
         const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
 
         return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
-    }, [pageImagesData, tableData, filterCriteria]);
+    }, [carouselItemsData, tableData, filterCriteria]);
 
     // --- Export Handler ---
     const handleExportData = () => {
-        const headers = ['ID', 'Page Name', 'Date', 'Status', 'Trending Products'];
-        const keys = ['id', 'pageName', 'date', 'status', 'trendingProducts'];
-        const filename = 'trending_page_images.csv';
+        const headers = ['ID', 'Image URL', 'Link', 'Date', 'Status'];
+        const keys = ['id', 'imageUrl', 'link', 'date', 'status'];
+        const filename = 'trending_carousel_items.csv';
         const success = exportToCsv(filename, allFilteredAndSortedData, headers, keys);
         if (success) toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
     };
@@ -380,13 +367,13 @@ const Trending = () => {
     const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
     const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
     const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
-    const handleRowSelect = useCallback((checked: boolean, row: TrendingPageImageItem) => {
+    const handleRowSelect = useCallback((checked: boolean, row: TrendingCarouselItem) => {
         setSelectedItems(prev => {
             if (checked) return prev.some(item => item.id === row.id) ? prev : [...prev, row];
             return prev.filter(item => item.id !== row.id);
         });
     }, []);
-    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<TrendingPageImageItem>[]) => {
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<any>[]) => {
         const originals = currentRows.map(r => r.original);
         if (checked) {
             setSelectedItems(prev => {
@@ -401,36 +388,40 @@ const Trending = () => {
     }, []);
 
     // --- Column Definitions ---
-    const columns = useMemo(() => {
-        return [
-            { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
-            {
-                header: 'Page Name', accessorKey: 'pageName', enableSorting: true, size: 200,
-                cell: (props: any) => {
-                    const page = pageNameOptionsConst.find(p => p.value === props.row.original.pageName);
-                    return <span className="font-semibold">{page ? page.label : props.row.original.pageName}</span>;
-                }
-            },
-            { header: 'Date', accessorKey: 'date', enableSorting: true, size: 120 },
-            {
-                header: 'Status', accessorKey: 'status', enableSorting: true, size: 100,
-                cell: (props: any) => <Tag className={classNames('rounded-md capitalize font-semibold border-0', statusColorsConst[props.row.original.status])}>{props.row.original.status}</Tag>,
-            },
-            {
-                header: 'Actions', id: 'action', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100,
-                cell: (props: any) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
-            },
-        ] as ColumnDef<TrendingPageImageItem>[];
-    }, [openEditDrawer, handleDeleteClick]);
+    const columns = useMemo(() => [
+        { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
+        {
+            header: 'Image', accessorKey: 'imageUrl', enableSorting: false, size: 100, meta: { cellClass: 'p-1' },
+            cell: (props: any) => <Avatar size={60} shape="square" src={props.row.original.imageUrl || undefined} icon={<TbPhoto />} />,
+        },
+        {
+            header: 'Link', accessorKey: 'link', enableSorting: false, size: 200,
+            cell: (props: any) => props.row.original.link ? <a href={props.row.original.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate">{props.row.original.link}</a> : '-'
+        },
+        { header: 'Date', accessorKey: 'date', enableSorting: true, size: 120 },
+        {
+            header: 'Status', accessorKey: 'status', enableSorting: true, size: 100,
+            cell: (props: any) => <Tag className={classNames('rounded-md capitalize font-semibold border-0', statusColorsConst[props.row.original.status])}>{props.row.original.status}</Tag>,
+        },
+        {
+            header: 'Actions', id: 'action', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100,
+            cell: (props: any) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
+        },
+    ] as ColumnDef<TrendingCarouselItem>[], [openEditDrawer, handleDeleteClick]);
+
+    // --- Segmented Control for View (Only Carousel) ---
+    const viewOptions = [
+        { value: 'carouselItems', label: 'Carousel Items', icon: <TbSlideshow /> },
+    ];
 
     return (
         <>
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <h5 className="mb-2 sm:mb-0">Trending Page Images</h5>
+                        <h5 className="mb-2 sm:mb-0">Trending Carousel</h5>
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-                            Add New Page Image
+                            Add New Carousel Item
                         </Button>
                     </div>
 
@@ -438,7 +429,7 @@ const Trending = () => {
                         onSearchChange={handleSearchChange}
                         onFilter={openFilterDrawer}
                         onExport={handleExportData}
-                        searchPlaceholder="Search page names..."
+                        searchPlaceholder="Search image URLs..."
                     />
 
                     <div className="mt-4">
@@ -496,75 +487,67 @@ const Trending = () => {
                 </div>
             </StickyFooter>
 
-            {/* Drawer for Trending Page Images (Add) */}
+            {/* Drawer for Trending Carousel Items (Add) */}
             <Drawer
-                title="Add Trending Page Image"
-                isOpen={isAddPageImageDrawerOpen}
+                title="Add Trending Carousel Item"
+                isOpen={isAddCarouselDrawerOpen}
                 onClose={closeAddDrawer}
                 onRequestClose={closeAddDrawer}
                 footer={
                     <div className="text-right w-full">
                         <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                        <Button size="sm" variant="solid" form="addPageImageForm" type="submit" loading={isSubmitting} disabled={!pageImageForm.formState.isValid || isSubmitting}>
-                            {isSubmitting ? 'Adding...' : 'Add Page Image'}
+                        <Button size="sm" variant="solid" form="addCarouselItemForm" type="submit" loading={isSubmitting} disabled={!carouselForm.formState.isValid || isSubmitting}>
+                            {isSubmitting ? 'Adding...' : 'Add Carousel Item'}
                         </Button>
                     </div>
                 }
             >
-                <Form id="addPageImageForm" onSubmit={pageImageForm.handleSubmit(onAddSubmit)} className="flex flex-col gap-4">
-                    <FormItem label="Page Name" invalid={!!pageImageForm.formState.errors.pageName} errorMessage={pageImageForm.formState.errors.pageName?.message}>
-                        <Controller name="pageName" control={pageImageForm.control} render={({ field }) => (
-                            <Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} />
-                        )} />
+                <Form id="addCarouselItemForm" onSubmit={carouselForm.handleSubmit(onAddSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Image URL" invalid={!!carouselForm.formState.errors.imageUrl} errorMessage={carouselForm.formState.errors.imageUrl?.message}>
+                        <Controller name="imageUrl" control={carouselForm.control} render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/image.jpg" />} />
                     </FormItem>
-                    <FormItem label="Trending Products (Optional, e.g., SKUs)" invalid={!!pageImageForm.formState.errors.trendingProducts} errorMessage={pageImageForm.formState.errors.trendingProducts?.message}>
-                        <Controller name="trendingProducts" control={pageImageForm.control} render={({ field }) => (
-                            <Textarea {...field} placeholder="Enter product SKUs or identifiers, comma-separated" />
-                        )} />
+                    <FormItem label="Link (Optional)" invalid={!!carouselForm.formState.errors.link} errorMessage={carouselForm.formState.errors.link?.message}>
+                        <Controller name="link" control={carouselForm.control} render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/product" />} />
                     </FormItem>
-                    <FormItem label="Date" invalid={!!pageImageForm.formState.errors.date} errorMessage={pageImageForm.formState.errors.date?.message}>
-                        <Controller name="date" control={pageImageForm.control} render={({ field }) => <Input {...field} type="date" />} />
+                    <FormItem label="Date" invalid={!!carouselForm.formState.errors.date} errorMessage={carouselForm.formState.errors.date?.message}>
+                        <Controller name="date" control={carouselForm.control} render={({ field }) => <Input {...field} type="date" />} />
                     </FormItem>
-                    <FormItem label="Status" invalid={!!pageImageForm.formState.errors.status} errorMessage={pageImageForm.formState.errors.status?.message}>
-                        <Controller name="status" control={pageImageForm.control} render={({ field }) => (
-                            <Select placeholder="Select status" options={statusOptionsConst} value={statusOptionsConst.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                    <FormItem label="Status" invalid={!!carouselForm.formState.errors.status} errorMessage={carouselForm.formState.errors.status?.message}>
+                        <Controller name="status" control={carouselForm.control} render={({ field }) => (
+                            <Select placeholder="Select status" options={statusOptionsConst} value={statusOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />
                         )} />
                     </FormItem>
                 </Form>
             </Drawer>
 
-            {/* Drawer for Trending Page Images (Edit) */}
+            {/* Drawer for Trending Carousel Items (Edit) */}
             <Drawer
-                title="Edit Trending Page Image"
-                isOpen={isEditPageImageDrawerOpen}
+                title="Edit Trending Carousel Item"
+                isOpen={isEditCarouselDrawerOpen}
                 onClose={closeEditDrawer}
                 onRequestClose={closeEditDrawer}
                 footer={
                     <div className="text-right w-full">
                         <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                        <Button size="sm" variant="solid" form="editPageImageForm" type="submit" loading={isSubmitting} disabled={!pageImageForm.formState.isValid || isSubmitting}>
+                        <Button size="sm" variant="solid" form="editCarouselItemForm" type="submit" loading={isSubmitting} disabled={!carouselForm.formState.isValid || isSubmitting}>
                             {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>
                 }
             >
-                <Form id="editPageImageForm" onSubmit={pageImageForm.handleSubmit(onEditSubmit)} className="flex flex-col gap-4">
-                    <FormItem label="Page Name" invalid={!!pageImageForm.formState.errors.pageName} errorMessage={pageImageForm.formState.errors.pageName?.message}>
-                        <Controller name="pageName" control={pageImageForm.control} render={({ field }) => (
-                            <Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} />
-                        )} />
+                <Form id="editCarouselItemForm" onSubmit={carouselForm.handleSubmit(onEditSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Image URL" invalid={!!carouselForm.formState.errors.imageUrl} errorMessage={carouselForm.formState.errors.imageUrl?.message}>
+                        <Controller name="imageUrl" control={carouselForm.control} render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/image.jpg" />} />
                     </FormItem>
-                    <FormItem label="Trending Products (Optional, e.g., SKUs)" invalid={!!pageImageForm.formState.errors.trendingProducts} errorMessage={pageImageForm.formState.errors.trendingProducts?.message}>
-                        <Controller name="trendingProducts" control={pageImageForm.control} render={({ field }) => (
-                            <Textarea {...field} placeholder="Enter product SKUs or identifiers, comma-separated" />
-                        )} />
+                    <FormItem label="Link (Optional)" invalid={!!carouselForm.formState.errors.link} errorMessage={carouselForm.formState.errors.link?.message}>
+                        <Controller name="link" control={carouselForm.control} render={({ field }) => <Input {...field} type="url" placeholder="https://example.com/product" />} />
                     </FormItem>
-                    <FormItem label="Date" invalid={!!pageImageForm.formState.errors.date} errorMessage={pageImageForm.formState.errors.date?.message}>
-                        <Controller name="date" control={pageImageForm.control} render={({ field }) => <Input {...field} type="date" />} />
+                    <FormItem label="Date" invalid={!!carouselForm.formState.errors.date} errorMessage={carouselForm.formState.errors.date?.message}>
+                        <Controller name="date" control={carouselForm.control} render={({ field }) => <Input {...field} type="date" />} />
                     </FormItem>
-                    <FormItem label="Status" invalid={!!pageImageForm.formState.errors.status} errorMessage={pageImageForm.formState.errors.status?.message}>
-                        <Controller name="status" control={pageImageForm.control} render={({ field }) => (
-                            <Select placeholder="Select status" options={statusOptionsConst} value={statusOptionsConst.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                    <FormItem label="Status" invalid={!!carouselForm.formState.errors.status} errorMessage={carouselForm.formState.errors.status?.message}>
+                        <Controller name="status" control={carouselForm.control} render={({ field }) => (
+                            <Select placeholder="Select status" options={statusOptionsConst} value={statusOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />
                         )} />
                     </FormItem>
                 </Form>
@@ -572,7 +555,7 @@ const Trending = () => {
 
             {/* Filter Drawer */}
             <Drawer
-                title="Filter Page Images"
+                title="Filter Carousel Items"
                 isOpen={isFilterDrawerOpen}
                 onClose={() => setIsFilterDrawerOpen(false)}
                 onRequestClose={() => setIsFilterDrawerOpen(false)}
@@ -592,11 +575,6 @@ const Trending = () => {
                             <Select isMulti placeholder="Select status(es)..." options={statusOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />
                         )} />
                     </FormItem>
-                    <FormItem label="Filter by Page Name">
-                        <Controller name="filterPageName" control={filterForm.control} render={({ field }) => (
-                            <Select isMulti placeholder="Select page name(s)..." options={pageNameOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />
-                        )} />
-                    </FormItem>
                 </Form>
             </Drawer>
 
@@ -605,16 +583,16 @@ const Trending = () => {
                 isOpen={singleDeleteConfirmOpen}
                 type="danger"
                 title="Delete Item"
-                onClose={() => { setSingleDeleteConfirmOpen(false); setPageImageToDelete(null); }}
-                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setPageImageToDelete(null); }}
-                onCancel={() => { setSingleDeleteConfirmOpen(false); setPageImageToDelete(null); }}
+                onClose={() => { setSingleDeleteConfirmOpen(false); setCarouselItemToDelete(null); }}
+                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setCarouselItemToDelete(null); }}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setCarouselItemToDelete(null); }}
                 confirmButtonColor="red-600"
                 onConfirm={onConfirmSingleDelete}
                 loading={isDeleting}
             >
                 <p>
                     Are you sure you want to delete this item?
-                    {pageImageToDelete && ` (Page: ${pageNameOptionsConst.find(p=>p.value === pageImageToDelete.pageName)?.label || pageImageToDelete.pageName})`}
+                    {carouselItemToDelete && ` (Carousel Image for ${carouselItemToDelete.date})`}
                     This action cannot be undone.
                 </p>
             </ConfirmDialog>
@@ -622,7 +600,7 @@ const Trending = () => {
     );
 };
 
-export default Trending;
+export default TrendingCarousel;
 
 // Helper
 function classNames(...classes: (string | boolean | undefined)[]) {
