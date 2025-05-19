@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getSlidersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction } from "./middleware"
+import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getSlidersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction } from "./middleware"
 import { deletPaymentTermAsync } from "./services"
 
 const INITIAL_STATE: any = {
@@ -158,6 +158,10 @@ const masterSlice = createSlice({
     builder.addCase(getTrendingCarouselAction.fulfilled, (state, { payload }) => ({
       ...state,
       trendingCarouselData: payload
+    }))
+    builder.addCase(getProductSpecificationsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      ProductSpecificationsData: payload
     }))
 
 

@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import cloneDeep from 'lodash/cloneDeep'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
+// UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
@@ -13,9 +14,11 @@ import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import { Drawer, Form, FormItem, Input } from '@/components/ui'
+import DebouceInput from '@/components/shared/DebouceInput' // Corrected typo
+import Select from '@/components/ui/Select' // For Country Dropdown
+import { Drawer, Form, FormItem, Input } from '@/components/ui' // Added Textarea for notes
 
+// Icons
 import {
     TbPencil,
     TbTrash,
@@ -26,32 +29,50 @@ import {
     TbCloudUpload,
 } from 'react-icons/tb'
 
+// Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
 import { useAppDispatch } from '@/reduxtool/store'
 import {
-    // getProductSpecificationsAction,
-    // addProductSpecificationAction,
-    // editProductSpecificationAction,
-    // deleteProductSpecificationAction,
-    // deleteAllProductSpecificationsAction,
-} from '@/reduxtool/master/middleware'
+    // Actions for Product Specifications (ensure these are created in your middleware)
+    getProductSpecificationsAction,
+    addProductSpecificationAction,
+    editProductSpecificationAction,
+    deleteProductSpecificationAction,
+    deleteAllProductSpecificationsAction,
+    getCountriesAction, // Action to fetch countries for the dropdown
+} from '@/reduxtool/master/middleware' // Adjust path if necessary
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
+import Textarea from '@/views/ui-components/forms/Input/Textarea'
 
-// --- Define ProductSpecificationItem Type ---
+// --- Define ProductSpecificationItem Type (based on API and display needs) ---
 export type ProductSpecificationItem = {
     id: string | number
-    icon: string
-    name: string
-    country_name: string
+    name: string        // Specification name
+    country_id: string | number // Will be used for edit form
+    country_name: string // For display in the table (assumed to be available)
+    note_details: string | null
+    flag_icon: string | null
+    created_at?: string // Optional, if not always needed for display
+    updated_at?: string // Optional
+}
+
+// --- Define Country Type (for the dropdown options) ---
+export type CountryOption = {
+    value: string | number // Country ID
+    label: string       // Country Name
 }
 
 // --- Zod Schema for Add/Edit Product Specification Form ---
 const productSpecificationFormSchema = z.object({
-    icon: z.string().min(1, 'Icon is required.'),
-    name: z.string().min(1, 'Specification name is required.').max(100),
-    country_name: z.string().min(1, 'Country name is required.').max(100),
+    flag_icon: z.string().nullable().optional(), // Optional, can be empty
+    name: z
+        .string()
+        .min(1, 'Specification name is required.')
+        .max(100, 'Name cannot exceed 100 characters.'),
+    country_id: z.string().min(1, 'Country is required.'), // Country ID from dropdown
+    note_details: z.string().nullable().optional(), // Optional
 })
 type ProductSpecificationFormData = z.infer<typeof productSpecificationFormSchema>
 
@@ -59,14 +80,15 @@ type ProductSpecificationFormData = z.infer<typeof productSpecificationFormSchem
 const filterFormSchema = z.object({
     filterNames: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
     filterCountryNames: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    // Add filter for flag_icon if needed
 })
 type FilterFormData = z.infer<typeof filterFormSchema>
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS = ['ID', 'Icon', 'Specification Name', 'Country Name']
-const CSV_KEYS = ['id', 'icon', 'name', 'country_name']
+const CSV_HEADERS = ['ID', 'Flag Icon', 'Specification Name', 'Country Name', 'Notes']
+const CSV_KEYS: (keyof ProductSpecificationItem)[] = ['id', 'flag_icon', 'name', 'country_name', 'note_details']
 
-function exportToCsv(filename: string, rows: ProductSpecificationItem[]) {
+function exportProductSpecificationsToCsv(filename: string, rows: ProductSpecificationItem[]) {
     if (!rows || !rows.length) {
         toast.push(
             <Notification title="No Data" type="info">
@@ -82,7 +104,7 @@ function exportToCsv(filename: string, rows: ProductSpecificationItem[]) {
         rows
             .map((row) => {
                 return CSV_KEYS.map((k) => {
-                    let cell = row[k as keyof ProductSpecificationItem]
+                    let cell = row[k]
                     if (cell === null || cell === undefined) {
                         cell = ''
                     } else {
@@ -95,6 +117,7 @@ function exportToCsv(filename: string, rows: ProductSpecificationItem[]) {
                 }).join(separator)
             })
             .join('\n')
+
     const blob = new Blob(['\ufeff' + csvContent], {
         type: 'text/csv;charset=utf-8;',
     })
@@ -118,7 +141,7 @@ function exportToCsv(filename: string, rows: ProductSpecificationItem[]) {
     return false
 }
 
-// --- ActionColumn Component ---
+// --- ActionColumn Component (Identical to Units) ---
 const ActionColumn = ({
     onEdit,
     onDelete,
@@ -139,7 +162,9 @@ const ActionColumn = ({
                         'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400',
                     )}
                     role="button"
+                    tabIndex={0}
                     onClick={onEdit}
+                    onKeyDown={(e) => e.key === 'Enter' && onEdit()}
                 >
                     <TbPencil />
                 </div>
@@ -152,7 +177,9 @@ const ActionColumn = ({
                         'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400',
                     )}
                     role="button"
+                    tabIndex={0}
                     onClick={onDelete}
+                    onKeyDown={(e) => e.key === 'Enter' && onDelete()}
                 >
                     <TbTrash />
                 </div>
@@ -160,29 +187,32 @@ const ActionColumn = ({
         </div>
     )
 }
+ActionColumn.displayName = 'ActionColumn'
 
-// --- ProductSpecificationSearch Component ---
-type ProductSpecificationSearchProps = {
+
+// --- Search Component (Renamed for specificity) ---
+type ItemSearchProps = {
     onInputChange: (value: string) => void
+    placeholder: string
 }
-const ProductSpecificationSearch = React.forwardRef<
-    HTMLInputElement,
-    ProductSpecificationSearchProps
->(({ onInputChange }, ref) => {
-    return (
-        <DebouceInput
-            ref={ref}
-            className="w-full"
-            placeholder="Quick search specifications..."
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
-})
-ProductSpecificationSearch.displayName = 'ProductSpecificationSearch'
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
+    ({ onInputChange, placeholder }, ref) => {
+        return (
+            <DebouceInput // Corrected typo
+                ref={ref}
+                className="w-full"
+                placeholder={placeholder}
+                suffix={<TbSearch className="text-lg" />}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)}
+            />
+        )
+    },
+)
+ItemSearch.displayName = 'ItemSearch'
 
-// --- TableTools Component ---
-const TableTools = ({
+
+// --- TableTools Component (Renamed for specificity) ---
+const ItemTableTools = ({
     onSearchChange,
     onFilter,
     onExport,
@@ -190,74 +220,48 @@ const TableTools = ({
     onSearchChange: (query: string) => void
     onFilter: () => void
     onExport: () => void
-}) => (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-        <div className="flex-grow">
-            <ProductSpecificationSearch onInputChange={onSearchChange} />
+}) => {
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+            <div className="flex-grow">
+                <ItemSearch
+                    onInputChange={onSearchChange}
+                    placeholder="Search specifications..."
+                />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button
+                    icon={<TbFilter />}
+                    onClick={onFilter}
+                    className="w-full sm:w-auto"
+                >
+                    Filter
+                </Button>
+                <Button
+                    icon={<TbCloudUpload />}
+                    onClick={onExport}
+                    className="w-full sm:w-auto"
+                >
+                    Export
+                </Button>
+            </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">
-                Export
-            </Button>
-        </div>
-    </div>
-)
-
-// --- Table Component ---
-type TableProps = {
-    columns: ColumnDef<ProductSpecificationItem>[]
-    data: ProductSpecificationItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedItems: ProductSpecificationItem[]
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: ProductSpecificationItem) => void
-    onAllRowSelect: (checked: boolean, rows: Row<ProductSpecificationItem>[]) => void
+    )
 }
-const Table = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedItems,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-}: TableProps) => (
-    <DataTable
-        selectable
-        columns={columns}
-        data={data}
-        noData={!loading && data.length === 0}
-        loading={loading}
-        pagingData={pagingData}
-        checkboxChecked={(row) =>
-            selectedItems.some((selected) => selected.id === row.id)
-        }
-        onPaginationChange={onPaginationChange}
-        onSelectChange={onSelectChange}
-        onSort={onSort}
-        onCheckBoxChange={onRowSelect}
-        onIndeterminateCheckBoxChange={onAllRowSelect}
-    />
-)
+ItemTableTools.displayName = 'ItemTableTools'
 
-// --- SelectedFooter Component ---
-type SelectedFooterProps = {
+
+// --- SelectedFooter Component (Renamed for specificity) ---
+type ItemSelectedFooterProps = {
     selectedItems: ProductSpecificationItem[]
     onDeleteSelected: () => void
+    disabled?: boolean;
 }
-const SelectedFooter = ({
+const ItemSelectedFooter = ({
     selectedItems,
     onDeleteSelected,
-}: SelectedFooterProps) => {
+    disabled,
+}: ItemSelectedFooterProps) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
     const handleDeleteClick = () => setDeleteConfirmationOpen(true)
     const handleCancelDelete = () => setDeleteConfirmationOpen(false)
@@ -292,6 +296,7 @@ const SelectedFooter = ({
                             variant="plain"
                             className="text-red-600 hover:text-red-500"
                             onClick={handleDeleteClick}
+                            disabled={disabled}
                         >
                             Delete Selected
                         </Button>
@@ -306,343 +311,359 @@ const SelectedFooter = ({
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
+                loading={disabled} // Pass disabled state
             >
                 <p>
-                    Are you sure you want to delete the selected specification
-                    {selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.
+                    Are you sure you want to delete the selected specification{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.
                 </p>
             </ConfirmDialog>
         </>
     )
 }
+ItemSelectedFooter.displayName = 'ItemSelectedFooter'
+
 
 // --- Main ProductSpecification Component ---
 const ProductSpecification = () => {
     const dispatch = useAppDispatch()
 
+    // Destructure product specification data and country data from masterSelector
+    const {
+        ProductSpecificationsData = [], // Ensure this key exists in MasterState
+        CountriesData = [], // Assumes CountriesData is populated by getCountriesAction
+        status: masterLoadingStatus = 'idle',
+        error: masterError = null, // General error from masterSlice
+    } = useSelector(masterSelector)
+
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<ProductSpecificationItem | null>(null)
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false)
     const [itemToDelete, setItemToDelete] = useState<ProductSpecificationItem | null>(null)
+
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
         filterNames: [],
         filterCountryNames: [],
     })
-
-    const {
-        ProductSpecificationsData = [],
-        status: masterLoadingStatus = 'idle'
-    } = useSelector(masterSelector)
-
-    useEffect(() => {
-        // dispatch(getProductSpecificationsAction())
-    }, [dispatch])
-
-    const addFormMethods = useForm<ProductSpecificationFormData>({
-        resolver: zodResolver(productSpecificationFormSchema),
-        defaultValues: { icon: '', name: '', country_name: '' },
-        mode: 'onChange',
-    })
-    const editFormMethods = useForm<ProductSpecificationFormData>({
-        resolver: zodResolver(productSpecificationFormSchema),
-        defaultValues: { icon: '', name: '', country_name: '' },
-        mode: 'onChange',
-    })
-    const filterFormMethods = useForm<FilterFormData>({
-        resolver: zodResolver(filterFormSchema),
-        defaultValues: filterCriteria,
-    })
-
-    const openAddDrawer = () => {
-        addFormMethods.reset({ icon: '', name: '', country_name: '' })
-        setIsAddDrawerOpen(true)
-    }
-    const closeAddDrawer = () => {
-        addFormMethods.reset({ icon: '', name: '', country_name: '' })
-        setIsAddDrawerOpen(false)
-    }
-    const onAddSubmit = async (data: ProductSpecificationFormData) => {
-        setIsSubmitting(true)
-        // try {
-        //     await dispatch(addProductSpecificationAction(data)).unwrap()
-        //     toast.push(
-        //         <Notification title="Specification Added" type="success" duration={2000}>
-        //             Specification "{data.name}" added.
-        //         </Notification>,
-        //     )
-        //     closeAddDrawer()
-        //     dispatch(getProductSpecificationsAction())
-        // } catch (error: any) {
-        //     toast.push(
-        //         <Notification title="Failed to Add" type="danger" duration={3000}>
-        //             {error.message || 'Could not add specification.'}
-        //         </Notification>,
-        //     )
-        // } finally {
-        //     setIsSubmitting(false)
-        // }
-    }
-
-    const openEditDrawer = (item: ProductSpecificationItem) => {
-        setEditingItem(item)
-        editFormMethods.setValue('icon', item.icon)
-        editFormMethods.setValue('name', item.name)
-        editFormMethods.setValue('country_name', item.country_name)
-        setIsEditDrawerOpen(true)
-    }
-    const closeEditDrawer = () => {
-        setEditingItem(null)
-        editFormMethods.reset({ icon: '', name: '', country_name: '' })
-        setIsEditDrawerOpen(false)
-    }
-    const onEditSubmit = async (data: ProductSpecificationFormData) => {
-        if (!editingItem || editingItem.id === undefined || editingItem.id === null) {
-            toast.push(
-                <Notification title="Error" type="danger">
-                    Cannot edit: ID is missing.
-                </Notification>,
-            )
-            setIsSubmitting(false)
-            return
-        }
-        setIsSubmitting(true)
-        // try {
-        //     await dispatch(
-        //         editProductSpecificationAction({
-        //             id: editingItem.id,
-        //             ...data,
-        //         }),
-        //     ).unwrap()
-        //     toast.push(
-        //         <Notification title="Specification Updated" type="success" duration={2000}>
-        //             Specification "{data.name}" updated.
-        //         </Notification>,
-        //     )
-        //     closeEditDrawer()
-        //     dispatch(getProductSpecificationsAction())
-        // } catch (error: any) {
-        //     toast.push(
-        //         <Notification title="Failed to Update" type="danger" duration={3000}>
-        //             {error.message || 'Could not update specification.'}
-        //         </Notification>,
-        //     )
-        // } finally {
-        //     setIsSubmitting(false)
-        // }
-    }
-
-    const handleDeleteClick = (item: ProductSpecificationItem) => {
-        if (item.id === undefined || item.id === null) {
-            toast.push(
-                <Notification title="Error" type="danger">
-                    Cannot delete: ID is missing.
-                </Notification>,
-            )
-            return
-        }
-        setItemToDelete(item)
-        setSingleDeleteConfirmOpen(true)
-    }
-
-    const onConfirmSingleDelete = async () => {
-        if (!itemToDelete || itemToDelete.id === undefined || itemToDelete.id === null) {
-            toast.push(
-                <Notification title="Error" type="danger">
-                    Cannot delete: ID is missing.
-                </Notification>,
-            )
-            setIsDeleting(false)
-            setItemToDelete(null)
-            setSingleDeleteConfirmOpen(false)
-            return
-        }
-        setIsDeleting(true)
-        setSingleDeleteConfirmOpen(false)
-        // try {
-        //     await dispatch(deleteProductSpecificationAction(itemToDelete)).unwrap()
-        //     toast.push(
-        //         <Notification title="Specification Deleted" type="success" duration={2000}>
-        //             Specification "{itemToDelete.name}" deleted.
-        //         </Notification>,
-        //     )
-        //     setSelectedItems((prev) =>
-        //         prev.filter((item) => item.id !== itemToDelete!.id),
-        //     )
-        //     dispatch(getProductSpecificationsAction())
-        // } catch (error: any) {
-        //     toast.push(
-        //         <Notification title="Failed to Delete" type="danger" duration={3000}>
-        //             {error.message || `Could not delete specification.`}
-        //         </Notification>,
-        //     )
-        // } finally {
-        //     setIsDeleting(false)
-        //     setItemToDelete(null)
-        // }
-    }
-    const [selectedItems, setSelectedItems] = useState<ProductSpecificationItem[]>([])
-    const handleDeleteSelected = async () => {
-        if (selectedItems.length === 0) {
-            toast.push(
-                <Notification title="No Selection" type="info">
-                    Please select items to delete.
-                </Notification>,
-            )
-            return
-        }
-        setIsDeleting(true)
-        const validItemsToDelete = selectedItems.filter(
-            (item) => item.id !== undefined && item.id !== null,
-        )
-        if (validItemsToDelete.length === 0) {
-            toast.push(
-                <Notification title="No Valid Items" type="info">
-                    No valid items to delete.
-                </Notification>,
-            )
-            setIsDeleting(false)
-            return
-        }
-        const idsToDelete = validItemsToDelete.map((item) => item.id)
-        const commaSeparatedIds = idsToDelete.join(',')
-        // try {
-        //     await dispatch(
-        //         deleteAllProductSpecificationsAction({ ids: commaSeparatedIds }),
-        //     ).unwrap()
-        //     toast.push(
-        //         <Notification title="Deletion Successful" type="success" duration={2000}>
-        //             {validItemsToDelete.length} specification{validItemsToDelete.length > 1 ? 's' : ''} deleted.
-        //         </Notification>,
-        //     )
-        // } catch (error: any) {
-        //     toast.push(
-        //         <Notification title="Deletion Failed" type="danger" duration={3000}>
-        //             {error.message || 'Failed to delete selected specifications.'}
-        //         </Notification>,
-        //     )
-        // } finally {
-        //     setSelectedItems([])
-        //     dispatch(getProductSpecificationsAction())
-        //     setIsDeleting(false)
-        // }
-    }
-
-    const openFilterDrawer = () => {
-        filterFormMethods.reset(filterCriteria)
-        setIsFilterDrawerOpen(true)
-    }
-    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
-    const onApplyFiltersSubmit = (data: FilterFormData) => {
-        setFilterCriteria({
-            filterNames: data.filterNames || [],
-            filterCountryNames: data.filterCountryNames || [],
-        })
-        handleSetTableData({ pageIndex: 1 })
-        closeFilterDrawer()
-    }
-    const onClearFilters = () => {
-        const defaultFilters = { filterNames: [], filterCountryNames: [] }
-        filterFormMethods.reset(defaultFilters)
-        setFilterCriteria(defaultFilters)
-        handleSetTableData({ pageIndex: 1 })
-    }
-
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
         pageSize: 10,
         sort: { order: '', key: '' },
         query: '',
     })
+    const [selectedItems, setSelectedItems] = useState<ProductSpecificationItem[]>([])
+    const [countryOptions, setCountryOptions] = useState<CountryOption[]>([])
 
-    const nameOptions = useMemo(() => {
+    // Fetch initial data
+    useEffect(() => {
+        dispatch(getProductSpecificationsAction())
+        dispatch(getCountriesAction()) // Fetch countries for the dropdown
+    }, [dispatch])
+
+    // Populate country options for dropdown
+    useEffect(() => {
+        if (Array.isArray(CountriesData)) {
+            // Assuming CountriesData is an array of { id: any, name: string }
+            const options = CountriesData.map((country: any) => ({
+                value: String(country.id), // Ensure value is string for Select component consistency
+                label: country.name,
+            }))
+            setCountryOptions(options)
+        }
+    }, [CountriesData])
+
+    // Display general API errors
+     useEffect(() => {
+        if (masterLoadingStatus === 'failed' && masterError) {
+            const errorMessage = typeof masterError === 'string' ? masterError : 'An unexpected error occurred.';
+            toast.push(<Notification title="Operation Failed" type="danger" duration={4000}>{errorMessage}</Notification>);
+        }
+    }, [masterLoadingStatus, masterError]);
+
+    const addFormMethods = useForm<ProductSpecificationFormData>({
+        resolver: zodResolver(productSpecificationFormSchema),
+        defaultValues: { flag_icon: '', name: '', country_id: '', note_details: '' },
+        mode: 'onChange',
+    })
+    const editFormMethods = useForm<ProductSpecificationFormData>({
+        resolver: zodResolver(productSpecificationFormSchema),
+        defaultValues: { flag_icon: '', name: '', country_id: '', note_details: '' },
+        mode: 'onChange',
+    })
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria, // Initialize with current filter criteria
+    })
+
+     const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
+        setTableData((prev) => ({ ...prev, ...data }))
+    }, [])
+
+    const openAddDrawer = useCallback(() => {
+        addFormMethods.reset({ flag_icon: '', name: '', country_id: '', note_details: '' })
+        setIsAddDrawerOpen(true)
+    }, [addFormMethods])
+
+    const closeAddDrawer = useCallback(() => {
+        addFormMethods.reset({ flag_icon: '', name: '', country_id: '', note_details: '' })
+        setIsAddDrawerOpen(false)
+    }, [addFormMethods])
+
+    
+    const onAddSubmit = async (data: ProductSpecificationFormData) => {
+        setIsSubmitting(true)
+        try {
+            // The payload should match what addProductSpecificationAction expects
+            await dispatch(addProductSpecificationAction(data)).unwrap()
+            toast.push(
+                <Notification title="Specification Added" type="success" duration={2000}>
+                    Specification "{data.name}" added.
+                </Notification>,
+            )
+            closeAddDrawer()
+            dispatch(getProductSpecificationsAction()) // Refresh list
+        } catch (error: any) {
+            const message = error?.message || error?.data?.message || 'Could not add specification.';
+            toast.push(
+                <Notification title="Failed to Add" type="danger" duration={3000}>
+                    {message}
+                </Notification>,
+            )
+            console.error('Add Specification Error:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const openEditDrawer = useCallback((item: ProductSpecificationItem) => {
+        setEditingItem(item)
+        editFormMethods.reset({
+            flag_icon: item.flag_icon || '',
+            name: item.name,
+            country_id: String(item.country_id), // Ensure country_id is a string for Select
+            note_details: item.note_details || '',
+        })
+        setIsEditDrawerOpen(true)
+    }, [editFormMethods])
+
+    const closeEditDrawer = useCallback(() => {
+        setEditingItem(null)
+        editFormMethods.reset({ flag_icon: '', name: '', country_id: '', note_details: '' })
+        setIsEditDrawerOpen(false)
+    }, [editFormMethods])
+
+    const onEditSubmit = async (data: ProductSpecificationFormData) => {
+        if (!editingItem || editingItem.id === undefined || editingItem.id === null) {
+            toast.push(<Notification title="Error" type="danger">Cannot edit: Specification ID is missing.</Notification>)
+            setIsSubmitting(false)
+            return
+        }
+        setIsSubmitting(true)
+        try {
+            // Payload for edit action
+            const payload = {
+                id: editingItem.id,
+                ...data, // Includes flag_icon, name, country_id, note_details
+            }
+            await dispatch(editProductSpecificationAction(payload)).unwrap()
+            toast.push(
+                <Notification title="Specification Updated" type="success" duration={2000}>
+                    Specification "{data.name}" updated.
+                </Notification>,
+            )
+            closeEditDrawer()
+            dispatch(getProductSpecificationsAction()) // Refresh list
+        } catch (error: any) {
+            const message = error?.message || error?.data?.message || 'Could not update specification.';
+            toast.push(
+                <Notification title="Failed to Update" type="danger" duration={3000}>
+                    {message}
+                </Notification>,
+            )
+            console.error('Edit Specification Error:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleDeleteClick = useCallback((item: ProductSpecificationItem) => {
+        if (item.id === undefined || item.id === null) {
+            toast.push(<Notification title="Error" type="danger">Cannot delete: Specification ID is missing.</Notification>)
+            return
+        }
+        setItemToDelete(item)
+        setSingleDeleteConfirmOpen(true)
+    }, [])
+
+    const onConfirmSingleDelete = async () => {
+        if (!itemToDelete || itemToDelete.id === undefined || itemToDelete.id === null) {
+            toast.push(<Notification title="Error" type="danger">Cannot delete: Specification ID is missing.</Notification>)
+            setIsDeleting(false); setItemToDelete(null); setSingleDeleteConfirmOpen(false);
+            return;
+        }
+        setIsDeleting(true)
+        setSingleDeleteConfirmOpen(false)
+        try {
+            // deleteProductSpecificationAction might expect just an ID or the full item
+            await dispatch(deleteProductSpecificationAction({ id: itemToDelete.id })).unwrap()
+            toast.push(
+                <Notification title="Specification Deleted" type="success" duration={2000}>
+                    Specification "{itemToDelete.name}" deleted.
+                </Notification>,
+            )
+            setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id))
+            dispatch(getProductSpecificationsAction()) // Refresh list
+        } catch (error: any) {
+            const message = error?.message || error?.data?.message || 'Could not delete specification.';
+            toast.push(
+                <Notification title="Failed to Delete" type="danger" duration={3000}>
+                   {message}
+                </Notification>,
+            )
+            console.error('Delete Specification Error:', error)
+        } finally {
+            setIsDeleting(false)
+            setItemToDelete(null)
+        }
+    }
+
+    const handleDeleteSelected = async () => {
+        if (selectedItems.length === 0) {
+            toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>)
+            return
+        }
+        setIsDeleting(true)
+        const validItemsToDelete = selectedItems.filter(item => item.id !== undefined && item.id !== null)
+
+        if (validItemsToDelete.length !== selectedItems.length) {
+            toast.push(<Notification title="Deletion Warning" type="warning" duration={3000}>Some selected items had missing IDs and were skipped.</Notification>)
+        }
+        if (validItemsToDelete.length === 0) {
+            toast.push(<Notification title="No Valid Items" type="info">No valid items to delete.</Notification>)
+            setIsDeleting(false)
+            return
+        }
+
+        const idsToDelete = validItemsToDelete.map((item) => String(item.id))
+        try {
+            await dispatch(deleteAllProductSpecificationsAction({ ids: idsToDelete.join(',') })).unwrap()
+            toast.push(
+                <Notification title="Deletion Successful" type="success" duration={2000}>
+                    {validItemsToDelete.length} specification(s) deleted.
+                </Notification>,
+            )
+            setSelectedItems([]) // Clear selection
+            dispatch(getProductSpecificationsAction()) // Refresh list
+        } catch (error: any) {
+            const message = error?.message || error?.data?.message || 'Failed to delete selected specifications.';
+            toast.push(
+                <Notification title="Deletion Failed" type="danger" duration={3000}>
+                    {message}
+                </Notification>,
+            )
+            console.error('Delete Selected Specifications Error:', error)
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
+    const openFilterDrawer = useCallback(() => {
+        filterFormMethods.reset(filterCriteria) // Reset form with current criteria
+        setIsFilterDrawerOpen(true)
+    }, [filterFormMethods, filterCriteria])
+
+    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), [])
+
+    const onApplyFiltersSubmit = (data: FilterFormData) => {
+        setFilterCriteria({
+            filterNames: data.filterNames || [],
+            filterCountryNames: data.filterCountryNames || [],
+        })
+        handleSetTableData({ pageIndex: 1 }) // Reset to first page on filter change
+        closeFilterDrawer()
+    }
+
+    
+    const onClearFilters = useCallback(() => {
+        const defaultFilters = { filterNames: [], filterCountryNames: [] }
+        filterFormMethods.reset(defaultFilters)
+        setFilterCriteria(defaultFilters)
+        handleSetTableData({ pageIndex: 1 }) // Reset to first page
+    }, [filterFormMethods, handleSetTableData]) // Added handleSetTableData to dependencies
+
+
+    // Memoized options for filter dropdowns
+    const specNameFilterOptions = useMemo(() => {
         if (!Array.isArray(ProductSpecificationsData)) return []
-        const uniqueNames = new Set(
-            ProductSpecificationsData.map((item) => item.name),
-        )
-        return Array.from(uniqueNames).map((name) => ({
-            value: name,
-            label: name,
-        }))
+        const uniqueNames = new Set(ProductSpecificationsData.map((item) => item.name))
+        return Array.from(uniqueNames).map((name) => ({ value: name, label: name }))
     }, [ProductSpecificationsData])
 
-    const countryNameOptions = useMemo(() => {
+    const countryNameFilterOptions = useMemo(() => {
+        // This should ideally use the fetched CountriesData if you want to filter by all possible countries
+        // For now, using distinct country names from the ProductSpecificationsData
         if (!Array.isArray(ProductSpecificationsData)) return []
-        const uniqueCountries = new Set(
-            ProductSpecificationsData.map((item) => item.country_name),
-        )
-        return Array.from(uniqueCountries).map((name) => ({
-            value: name,
-            label: name,
-        }))
+        const uniqueCountryNames = new Set(ProductSpecificationsData.map((item) => item.country_name))
+        return Array.from(uniqueCountryNames).map((name) => ({ value: name, label: name }))
     }, [ProductSpecificationsData])
+
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        const sourceData: ProductSpecificationItem[] = Array.isArray(ProductSpecificationsData)
-            ? ProductSpecificationsData
-            : []
+        const sourceData: ProductSpecificationItem[] = Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData : []
         let processedData: ProductSpecificationItem[] = cloneDeep(sourceData)
 
+        // Apply filters
         if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
-            const selectedNames = filterCriteria.filterNames.map((opt) =>
-                opt.value.toLowerCase(),
-            )
-            processedData = processedData.filter((item) =>
-                selectedNames.includes(item.name?.trim().toLowerCase() ?? ''),
-            )
+            const selectedNames = filterCriteria.filterNames.map(opt => opt.value.toLowerCase())
+            processedData = processedData.filter(item => item.name && selectedNames.includes(item.name.toLowerCase()))
         }
         if (filterCriteria.filterCountryNames && filterCriteria.filterCountryNames.length > 0) {
-            const selectedCountries = filterCriteria.filterCountryNames.map((opt) =>
-                opt.value.toLowerCase(),
-            )
-            processedData = processedData.filter((item) =>
-                selectedCountries.includes(item.country_name?.trim().toLowerCase() ?? ''),
-            )
+            const selectedCountries = filterCriteria.filterCountryNames.map(opt => opt.value.toLowerCase())
+            processedData = processedData.filter(item => item.country_name && selectedCountries.includes(item.country_name.toLowerCase()))
         }
+
+        // Apply search query
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim()
-            processedData = processedData.filter((item) => {
-                const nameLower = item.name?.trim().toLowerCase() ?? ''
-                const iconLower = item.icon?.trim().toLowerCase() ?? ''
-                const countryLower = item.country_name?.trim().toLowerCase() ?? ''
-                const idString = String(item.id ?? '').trim().toLowerCase()
-                return (
-                    nameLower.includes(query) ||
-                    iconLower.includes(query) ||
-                    countryLower.includes(query) ||
-                    idString.includes(query)
-                )
-            })
+            processedData = processedData.filter(item =>
+                String(item.id).toLowerCase().includes(query) ||
+                (item.name && item.name.toLowerCase().includes(query)) ||
+                (item.country_name && item.country_name.toLowerCase().includes(query)) ||
+                (item.flag_icon && item.flag_icon.toLowerCase().includes(query)) ||
+                (item.note_details && item.note_details.toLowerCase().includes(query))
+            )
         }
+
+        // Apply sorting
         const { order, key } = tableData.sort as OnSortParam
-        if (
-            order &&
-            key &&
-            (key === 'id' || key === 'name' || key === 'icon' || key === 'country_name') &&
-            processedData.length > 0
-        ) {
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                let aValue = String(a[key as keyof ProductSpecificationItem] ?? '')
-                let bValue = String(b[key as keyof ProductSpecificationItem] ?? '')
-                return order === 'asc'
-                    ? aValue.localeCompare(bValue)
-                    : bValue.localeCompare(aValue)
-            })
-            processedData = sortedData
+        if (order && key && processedData.length > 0 && processedData[0].hasOwnProperty(key)) {
+            processedData.sort((a, b) => {
+                const aValue = a[key as keyof ProductSpecificationItem];
+                const bValue = b[key as keyof ProductSpecificationItem];
+                if (aValue === null || aValue === undefined) return order === 'asc' ? -1 : 1;
+                if (bValue === null || bValue === undefined) return order === 'asc' ? 1 : -1;
+
+                if (key === 'id' && typeof aValue === 'number' && typeof bValue === 'number') {
+                     return order === 'asc' ? aValue - bValue : bValue - aValue;
+                }
+                const aStr = String(aValue).toLowerCase();
+                const bStr = String(bValue).toLowerCase();
+                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+            });
         }
+
         const dataToExport = [...processedData]
         const currentTotal = processedData.length
         const pageIndex = tableData.pageIndex as number
         const pageSize = tableData.pageSize as number
         const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
+        const dataForPage = processedData.slice(startIndex, startIndex + pageSize)
+
         return {
             pageData: dataForPage,
             total: currentTotal,
@@ -651,117 +672,73 @@ const ProductSpecification = () => {
     }, [ProductSpecificationsData, tableData, filterCriteria])
 
     const handleExportData = () => {
-        const success = exportToCsv(
-            'product_specifications_export.csv',
-            allFilteredAndSortedData,
-        )
+        const success = exportProductSpecificationsToCsv('product_specifications.csv', allFilteredAndSortedData)
         if (success) {
-            toast.push(
-                <Notification title="Export Successful" type="success">
-                    Data exported.
-                </Notification>,
-            )
+            toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported.</Notification>)
         }
     }
 
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-        setTableData((prev) => ({ ...prev, ...data }))
-    }, [])
-    const handlePaginationChange = useCallback(
-        (page: number) => handleSetTableData({ pageIndex: page }),
-        [handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-            setSelectedItems([])
-        },
-        [handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ sort: sort, pageIndex: 1 })
-        },
-        [handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-        [handleSetTableData],
-    )
+   
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData])
+    const handleSelectChange = useCallback((value: number) => {
+        handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
+        setSelectedItems([])
+    }, [handleSetTableData])
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData])
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData])
+
     const handleRowSelect = useCallback((checked: boolean, row: ProductSpecificationItem) => {
         setSelectedItems((prev) => {
-            if (checked)
-                return prev.some((item) => item.id === row.id)
-                    ? prev
-                    : [...prev, row]
+            if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]
             return prev.filter((item) => item.id !== row.id)
         })
     }, [])
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<ProductSpecificationItem>[]) => {
-            const currentPageRowOriginals = currentRows.map((r) => r.original)
-            if (checked) {
-                setSelectedItems((prevSelected) => {
-                    const prevSelectedIds = new Set(
-                        prevSelected.map((item) => item.id),
-                    )
-                    const newRowsToAdd = currentPageRowOriginals.filter(
-                        (r) => !prevSelectedIds.has(r.id),
-                    )
-                    return [...prevSelected, ...newRowsToAdd]
-                })
-            } else {
-                const currentPageRowIds = new Set(
-                    currentPageRowOriginals.map((r) => r.id),
-                )
-                setSelectedItems((prevSelected) =>
-                    prevSelected.filter(
-                        (item) => !currentPageRowIds.has(item.id),
-                    ),
-                )
-            }
-        },
-        [],
-    )
 
-    const columns: ColumnDef<ProductSpecificationItem>[] = useMemo(
-        () => [
-            { header: 'ID', accessorKey: 'id', enableSorting: true, size: 80 },
-            {
-                header: 'Icon',
-                accessorKey: 'icon',
-                enableSorting: true,
-                cell: props => (
-                    <span>
-                        {/* You can render an <img> if icon is a URL, or an icon font otherwise */}
-                        {props.row.original.icon}
-                    </span>
-                ),
-            },
-            {
-                header: 'Specification Name',
-                accessorKey: 'name',
-                enableSorting: true,
-            },
-            {
-                header: 'Country Name',
-                accessorKey: 'country_name',
-                enableSorting: true,
-            },
-            {
-                header: 'Actions',
-                id: 'action',
-                meta: { HeaderClass: 'text-center' },
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)}
-                        onDelete={() => handleDeleteClick(props.row.original)}
-                    />
-                ),
-            },
-        ],
-        [],
-    )
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<ProductSpecificationItem>[]) => {
+        const originals = currentRows.map(r => r.original)
+        if (checked) {
+            setSelectedItems(prev => {
+                const prevIds = new Set(prev.map(item => item.id))
+                const newToAdd = originals.filter(r => r.id !== undefined && !prevIds.has(r.id))
+                return [...prev, ...newToAdd]
+            });
+        } else {
+            const currentIds = new Set(originals.map(r => r.id).filter(id => id !== undefined))
+            setSelectedItems(prev => prev.filter(item => item.id !== undefined && !currentIds.has(item.id)))
+        }
+    }, [])
+
+
+    const columns: ColumnDef<ProductSpecificationItem>[] = useMemo(() => [
+        { header: 'ID', accessorKey: 'id', enableSorting: true, size: 80 },
+        {
+            header: 'Flag Icon',
+            accessorKey: 'flag_icon',
+            enableSorting: true, // Or false if it's just a display string/URL
+            size: 120,
+            cell: props => (
+                // If flag_icon is a URL: <img src={props.row.original.flag_icon} alt="flag" width="20" />
+                // If it's a class for an icon font: <i className={props.row.original.flag_icon}></i>
+                // For now, just display as text:
+                <span className="truncate">{props.row.original.flag_icon || '-'}</span>
+            ),
+        },
+        { header: 'Specification Name', accessorKey: 'name', enableSorting: true },
+        { header: 'Country Name', accessorKey: 'country_name', enableSorting: true },
+        // { header: 'Notes', accessorKey: 'note_details', enableSorting: false, size: 200, cell: props => <span className="truncate">{props.row.original.note_details || '-'}</span> },
+        {
+            header: 'Actions',
+            id: 'action',
+            meta: { headerClass: 'text-center', cellClass: 'text-center' }, // Corrected meta
+            size: 120,
+            cell: (props) => (
+                <ActionColumn
+                    onEdit={() => openEditDrawer(props.row.original)}
+                    onDelete={() => handleDeleteClick(props.row.original)}
+                />
+            ),
+        },
+    ], [openEditDrawer, handleDeleteClick]) // Added dependencies
 
     return (
         <>
@@ -773,43 +750,42 @@ const ProductSpecification = () => {
                             variant="solid"
                             icon={<TbPlus />}
                             onClick={openAddDrawer}
+                            disabled={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
                         >
                             Add New
                         </Button>
                     </div>
-                    <TableTools
+                    <ItemTableTools
                         onSearchChange={handleSearchChange}
                         onFilter={openFilterDrawer}
                         onExport={handleExportData}
                     />
                     <div className="mt-4">
-                        <Table
+                        <DataTable
                             columns={columns}
                             data={pageData}
-                            loading={
-                                masterLoadingStatus === 'loading' ||
-                                isSubmitting ||
-                                isDeleting
-                            }
+                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
                             pagingData={{
                                 total: total,
                                 pageIndex: tableData.pageIndex as number,
                                 pageSize: tableData.pageSize as number,
                             }}
-                            selectedItems={selectedItems}
+                            selectable
+                            checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)}
                             onPaginationChange={handlePaginationChange}
                             onSelectChange={handleSelectChange}
                             onSort={handleSort}
-                            onRowSelect={handleRowSelect}
-                            onAllRowSelect={handleAllRowSelect}
+                            onCheckBoxChange={handleRowSelect}
+                            onIndeterminateCheckBoxChange={handleAllRowSelect}
                         />
                     </div>
                 </AdaptiveCard>
             </Container>
 
-            <SelectedFooter
+            <ItemSelectedFooter
                 selectedItems={selectedItems}
                 onDeleteSelected={handleDeleteSelected}
+                disabled={isDeleting || masterLoadingStatus === 'loading'}
             />
 
             <Drawer
@@ -819,24 +795,14 @@ const ProductSpecification = () => {
                 onRequestClose={closeAddDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button
-                            size="sm"
-                            className="mr-2"
-                            onClick={closeAddDrawer}
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </Button>
+                        <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
                         <Button
                             size="sm"
                             variant="solid"
                             form="addProductSpecificationForm"
                             type="submit"
                             loading={isSubmitting}
-                            disabled={
-                                !addFormMethods.formState.isValid ||
-                                isSubmitting
-                            }
+                            disabled={!addFormMethods.formState.isValid || isSubmitting}
                         >
                             {isSubmitting ? 'Adding...' : 'Save'}
                         </Button>
@@ -846,46 +812,31 @@ const ProductSpecification = () => {
                 <Form
                     id="addProductSpecificationForm"
                     onSubmit={addFormMethods.handleSubmit(onAddSubmit)}
-                    className="flex flex-col gap-4"
+                    className="flex flex-col gap-y-6"
                 >
-                    <FormItem
-                        label="Icon"
-                        invalid={!!addFormMethods.formState.errors.icon}
-                        errorMessage={addFormMethods.formState.errors.icon?.message}
-                    >
+                    <FormItem label="Flag Icon (URL or Class)" invalid={!!addFormMethods.formState.errors.flag_icon} errorMessage={addFormMethods.formState.errors.flag_icon?.message}>
+                        <Controller name="flag_icon" control={addFormMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ''} placeholder="e.g., /icons/us.svg or fas fa-flag" />)} />
+                    </FormItem>
+                    <FormItem label="Specification Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message}>
+                        <Controller name="name" control={addFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter specification name" />)} />
+                    </FormItem>
+                    <FormItem label="Country" invalid={!!addFormMethods.formState.errors.country_id} errorMessage={addFormMethods.formState.errors.country_id?.message}>
                         <Controller
-                            name="icon"
+                            name="country_id"
                             control={addFormMethods.control}
                             render={({ field }) => (
-                                <Input {...field} placeholder="Enter icon name or URL" />
+                                <Select
+                                    placeholder="Select country"
+                                    options={countryOptions}
+                                    value={countryOptions.find(opt => opt.value === field.value) || null}
+                                    onChange={opt => field.onChange(opt?.value)}
+                                    isLoading={masterLoadingStatus === 'loading' && countryOptions.length === 0} // Show loading if countries are being fetched
+                                />
                             )}
                         />
                     </FormItem>
-                    <FormItem
-                        label="Specification Name"
-                        invalid={!!addFormMethods.formState.errors.name}
-                        errorMessage={addFormMethods.formState.errors.name?.message}
-                    >
-                        <Controller
-                            name="name"
-                            control={addFormMethods.control}
-                            render={({ field }) => (
-                                <Input {...field} placeholder="Enter specification name" />
-                            )}
-                        />
-                    </FormItem>
-                    <FormItem
-                        label="Country Name"
-                        invalid={!!addFormMethods.formState.errors.country_name}
-                        errorMessage={addFormMethods.formState.errors.country_name?.message}
-                    >
-                        <Controller
-                            name="country_name"
-                            control={addFormMethods.control}
-                            render={({ field }) => (
-                                <Input {...field} placeholder="Enter country name" />
-                            )}
-                        />
+                    <FormItem label="Notes (Optional)" invalid={!!addFormMethods.formState.errors.note_details} errorMessage={addFormMethods.formState.errors.note_details?.message}>
+                        <Controller name="note_details" control={addFormMethods.control} render={({ field }) => (<Textarea {...field} value={field.value ?? ''} placeholder="Enter any relevant notes" rows={3} />)} />
                     </FormItem>
                 </Form>
             </Drawer>
@@ -897,26 +848,16 @@ const ProductSpecification = () => {
                 onRequestClose={closeEditDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button
-                            size="sm"
-                            className="mr-2"
-                            onClick={closeEditDrawer}
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </Button>
+                        <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button>
                         <Button
                             size="sm"
                             variant="solid"
                             form="editProductSpecificationForm"
                             type="submit"
                             loading={isSubmitting}
-                            disabled={
-                                !editFormMethods.formState.isValid ||
-                                isSubmitting
-                            }
+                            disabled={!editFormMethods.formState.isValid || isSubmitting || !editFormMethods.formState.isDirty}
                         >
-                            {isSubmitting ? 'Saving...' : 'Save'}
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>
                 }
@@ -924,46 +865,30 @@ const ProductSpecification = () => {
                 <Form
                     id="editProductSpecificationForm"
                     onSubmit={editFormMethods.handleSubmit(onEditSubmit)}
-                    className="flex flex-col gap-4"
+                    className="flex flex-col gap-y-6"
                 >
-                    <FormItem
-                        label="Icon"
-                        invalid={!!editFormMethods.formState.errors.icon}
-                        errorMessage={editFormMethods.formState.errors.icon?.message}
-                    >
+                    <FormItem label="Flag Icon (URL or Class)" invalid={!!editFormMethods.formState.errors.flag_icon} errorMessage={editFormMethods.formState.errors.flag_icon?.message}>
+                        <Controller name="flag_icon" control={editFormMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ''} placeholder="e.g., /icons/us.svg or fas fa-flag" />)} />
+                    </FormItem>
+                    <FormItem label="Specification Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message}>
+                        <Controller name="name" control={editFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter specification name" />)} />
+                    </FormItem>
+                    <FormItem label="Country" invalid={!!editFormMethods.formState.errors.country_id} errorMessage={editFormMethods.formState.errors.country_id?.message}>
                         <Controller
-                            name="icon"
+                            name="country_id"
                             control={editFormMethods.control}
                             render={({ field }) => (
-                                <Input {...field} placeholder="Enter icon name or URL" />
+                                <Select
+                                    placeholder="Select country"
+                                    options={countryOptions}
+                                    value={countryOptions.find(opt => opt.value === field.value) || null}
+                                    onChange={opt => field.onChange(opt?.value)}
+                                />
                             )}
                         />
                     </FormItem>
-                    <FormItem
-                        label="Specification Name"
-                        invalid={!!editFormMethods.formState.errors.name}
-                        errorMessage={editFormMethods.formState.errors.name?.message}
-                    >
-                        <Controller
-                            name="name"
-                            control={editFormMethods.control}
-                            render={({ field }) => (
-                                <Input {...field} placeholder="Enter specification name" />
-                            )}
-                        />
-                    </FormItem>
-                    <FormItem
-                        label="Country Name"
-                        invalid={!!editFormMethods.formState.errors.country_name}
-                        errorMessage={editFormMethods.formState.errors.country_name?.message}
-                    >
-                        <Controller
-                            name="country_name"
-                            control={editFormMethods.control}
-                            render={({ field }) => (
-                                <Input {...field} placeholder="Enter country name" />
-                            )}
-                        />
+                    <FormItem label="Notes (Optional)" invalid={!!editFormMethods.formState.errors.note_details} errorMessage={editFormMethods.formState.errors.note_details?.message}>
+                        <Controller name="note_details" control={editFormMethods.control} render={({ field }) => (<Textarea {...field} value={field.value ?? ''} placeholder="Enter any relevant notes" rows={3} />)} />
                     </FormItem>
                 </Form>
             </Drawer>
@@ -974,65 +899,49 @@ const ProductSpecification = () => {
                 onClose={closeFilterDrawer}
                 onRequestClose={closeFilterDrawer}
                 footer={
-                    <div className="text-right w-full">
-                        <Button
-                            size="sm"
-                            className="mr-2"
-                            onClick={onClearFilters}
-                        >
-                            Clear
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            form="filterProductSpecificationForm"
-                            type="submit"
-                        >
-                            Apply
-                        </Button>
+                    <div className="flex justify-between w-full"> {/* Changed to flex justify-between */}
+                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
+                        <div>
+                            <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button>
+                            <Button size="sm" variant="solid" form="filterProductSpecificationsForm" type="submit">Apply Filters</Button>
+                        </div>
                     </div>
                 }
             >
                 <Form
-                    id="filterProductSpecificationForm"
+                    id="filterProductSpecificationsForm" // Corrected ID
                     onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-                    className="flex flex-col gap-4"
+                    className="flex flex-col gap-y-6"
                 >
                     <FormItem label="Filter by Specification Name(s)">
                         <Controller
                             name="filterNames"
                             control={filterFormMethods.control}
                             render={({ field }) => (
-                                <Input
-                                    // {...field}
-                                    placeholder="Type or select specification names..."
-                                    list="spec-names"
+                                <Select
+                                    isMulti
+                                    placeholder="Select specification names..."
+                                    options={specNameFilterOptions} // Use memoized options
+                                    value={field.value || []}
+                                    onChange={(selectedVal) => field.onChange(selectedVal || [])}
                                 />
                             )}
                         />
-                        <datalist id="spec-names">
-                            {nameOptions.map(opt => (
-                                <option key={opt.value} value={opt.value} />
-                            ))}
-                        </datalist>
                     </FormItem>
                     <FormItem label="Filter by Country Name(s)">
                         <Controller
                             name="filterCountryNames"
                             control={filterFormMethods.control}
                             render={({ field }) => (
-                                <Input
-                                    {...field}
-                                    placeholder="Type or select country names..."
-                                    list="country-names"
+                                <Select
+                                    isMulti
+                                    placeholder="Select country names..."
+                                    options={countryNameFilterOptions} // Use memoized options
+                                    value={field.value || []}
+                                    onChange={(selectedVal) => field.onChange(selectedVal || [])}
                                 />
                             )}
                         />
-                        <datalist id="country-names">
-                            {countryNameOptions.map(opt => (
-                                <option key={opt.value} value={opt.value} />
-                            ))}
-                        </datalist>
                     </FormItem>
                 </Form>
             </Drawer>
@@ -1041,24 +950,14 @@ const ProductSpecification = () => {
                 isOpen={singleDeleteConfirmOpen}
                 type="danger"
                 title="Delete Specification"
-                onClose={() => {
-                    setSingleDeleteConfirmOpen(false)
-                    setItemToDelete(null)
-                }}
-                onRequestClose={() => {
-                    setSingleDeleteConfirmOpen(false)
-                    setItemToDelete(null)
-                }}
-                onCancel={() => {
-                    setSingleDeleteConfirmOpen(false)
-                    setItemToDelete(null)
-                }}
+                onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onConfirm={onConfirmSingleDelete}
-                loading={isDeleting}
+                loading={isDeleting} // Pass loading state
             >
                 <p>
-                    Are you sure you want to delete the specification "
-                    <strong>{itemToDelete?.name}</strong>"?
+                    Are you sure you want to delete the specification "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.
                 </p>
             </ConfirmDialog>
         </>
@@ -1067,6 +966,7 @@ const ProductSpecification = () => {
 
 export default ProductSpecification
 
+// Helper (Identical to Units)
 function classNames(...classes: (string | boolean | undefined)[]) {
     return classes.filter(Boolean).join(' ')
 }

@@ -927,6 +927,55 @@ export const deleteAllTrandingCarouselAsync = async (unitData: any) => {
   }
 }
 
+export const getProductSepecificationAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/product_spec`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addProductSepecificationAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/product_spec`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editProductSepecificationAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/product_spec/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletProductSepecificationAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/master/product_spec/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllProductSepecificationAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/master/product_spec/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 
 
 
