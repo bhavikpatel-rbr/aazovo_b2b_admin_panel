@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getSlidersAction, getUnitAction, getWallItemsAction } from "./middleware"
+import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getSlidersAction, getUnitAction, getWallItemsAction } from "./middleware"
 import { deletPaymentTermAsync } from "./services"
 
 const INITIAL_STATE: any = {
@@ -146,6 +146,11 @@ const masterSlice = createSlice({
       ...state,
       slidersData: payload
     }))
+    builder.addCase(getCompanyProfileAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      rawProfileArrayFromState: payload
+    }))
+
 
   },
 })
