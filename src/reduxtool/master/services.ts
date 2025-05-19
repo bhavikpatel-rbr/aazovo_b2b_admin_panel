@@ -777,4 +777,42 @@ export const deleteAllSlidersListAsync = async (unitData: any) => {
   }
 }
 
+export const getCompanyProfileAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/company_profile_setting`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const editCompanyProfileListAsync = async (brandId: number | string, formData: FormData) => {
+  console.log("editBrandListAsync - brandId:", brandId);
+  console.log("editBrandListAsync - formData to be sent:");
+  for (const pair of formData.entries()) {
+    console.log(pair[0] + ': ' + pair[1]);
+  }
+
+  try {
+    // The formData already contains _method: 'PUT'
+    // Axios will automatically set 'Content-Type': 'multipart/form-data'
+    // when the second argument to post/put is a FormData instance.
+    const response = await axiosInstance.post(
+      `${config.apiURL}/setting/slider/${brandId}`, // Use brandId in the URL
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+
+
 
