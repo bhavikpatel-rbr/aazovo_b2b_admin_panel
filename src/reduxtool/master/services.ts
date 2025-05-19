@@ -1295,6 +1295,65 @@ export const deleteAllJobPostsAsync = async (unitData: any) => {
   }
 }
 
+export const getBugReportAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/other/bug_report`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addBugReportAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/bug_report`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editBugReportAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+  console.log("unitdata", unitData);
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/bug_report/${unitData?.id}`, {
+      _method: "PUT", name: unitData?.name
+      , email: unitData?.email
+      , mobile_no: unitData?.mobile_no
+      , report: unitData?.report
+      , status: unitData?.status
+      , reported_by: unitData?.reported_by
+      , created_by: unitData?.created_by
+      , attachment: unitData?.attachment
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletBugReportAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/other/bug_report/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllBugReportAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/other/bug_report/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 
 
 
