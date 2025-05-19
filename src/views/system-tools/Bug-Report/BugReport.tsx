@@ -1,12 +1,10 @@
 // src/views/your-path/BugReportListing.tsx
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
-// import { Link, useNavigate } from 'react-router-dom'; // Uncomment if navigation is used
 import cloneDeep from 'lodash/cloneDeep';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import classNames from 'classnames'; // Changed from '@/components/ui/utils/classNames' - ensure this is correct
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
@@ -20,322 +18,307 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import StickyFooter from '@/components/shared/StickyFooter';
 import DebouceInput from '@/components/shared/DebouceInput';
 import Select from '@/components/ui/Select';
-import Avatar from '@/components/ui/Avatar';
-import Tag from '@/components/ui/Tag';
-// Corrected Textarea import if it's from @/components/ui
-// If Textarea is from a different path, adjust accordingly.
-// For example, if it's a custom component:
-// import Textarea from '@/components/ui/Textarea'; // Assuming it's here
-// Or if it's the one you used previously:
- import Textarea from '@/views/ui-components/forms/Input/Textarea'; // This path seems unusual for a core UI component
-// For this example, I'll assume Textarea is part of '@/components/ui' like Input
-import { Drawer, Form, FormItem, Input } from '@/components/ui';
-
+import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui';
+import Textarea from '@/views/ui-components/forms/Input/Textarea'; // Ensure path is correct
 
 // Icons
 import {
     TbPencil, TbTrash, TbChecks, TbSearch, TbFilter, TbPlus, TbCloudUpload,
-    TbUserCircle, TbBug, TbFileDescription, TbCalendar, TbPaperclip,
-    TbMail, TbPhone
+    TbBug, TbMail, TbPhone, TbUserCircle, TbFileDescription, TbPaperclip, TbCalendarTime, TbSwitchHorizontal
 } from 'react-icons/tb';
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
 
-// --- Define BugReportItem Type ---
-export type BugStatusType = 'new' | 'investigating' | 'confirmed' | 'in_progress' | 'resolved' | 'closed' | 'wont_fix';
-export type BugReportItem = {
+// Redux
+import { useAppDispatch } from '@/reduxtool/store';
+import { shallowEqual, useSelector } from 'react-redux';
+import {
+    getBugReportsAction,    // Placeholder
+    addBugReportAction,     // Placeholder
+    editBugReportAction,    // Placeholder
+    deleteBugReportAction,  // Placeholder
+    deleteAllBugReportsAction, // Placeholder
+} from '@/reduxtool/master/middleware'; // Adjust path as necessary
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // Adjust as necessary
+
+// --- Define Types ---
+export type BugReportStatusApi = 'Read' | 'Unread' | string; // From your API
+export type BugReportStatusForm = 'Read' | 'Unread';      // For form select
+
+export type BugReportItem = { // Matches your API listing data
     id: string | number;
     name: string;
     email: string;
-    phone?: string;
-    reportedBy?: string;
-    date: string; // YYYY-MM-DD
-    status: BugStatusType;
-    reportDescription: string;
-    attachmentUrl?: string;
+    mobile_no?: string;
+    report: string; // Main description
+    attachment?: string | null; // Filename or path
+    status: BugReportStatusApi;
+    reported_by?: string; // Internal logger
+    created_by?: string; // User ID who created
+    created_at?: string;
+    updated_at?: string;
 };
 
-// --- Constants for Status ---
-const BUG_STATUS_OPTIONS: { value: BugStatusType, label: string }[] = [
-    { value: 'new', label: 'New' }, { value: 'investigating', label: 'Investigating' },
-    { value: 'confirmed', label: 'Confirmed' }, { value: 'in_progress', label: 'In Progress' },
-    { value: 'resolved', label: 'Resolved' }, { value: 'closed', label: 'Closed' },
-    { value: 'wont_fix', label: "Won't Fix" },
+// --- Constants for Form Selects & Display ---
+const BUG_REPORT_STATUS_OPTIONS_FORM: { value: BugReportStatusForm, label: string }[] = [
+    { value: 'Unread', label: 'Unread' },
+    { value: 'Read', label: 'Read' },
 ];
-const bugStatusValues = BUG_STATUS_OPTIONS.map(s => s.value) as [BugStatusType, ...BugStatusType[]];
-const BUG_STATUS_COLORS: Record<BugStatusType, string> = { /* ... colors from previous example ... */
-    new: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    investigating: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-100',
-    confirmed: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-100',
-    in_progress: 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
-    resolved: 'bg-lime-100 text-lime-600 dark:bg-lime-500/20 dark:text-lime-100',
-    closed: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    wont_fix: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+const bugReportStatusFormValues = BUG_REPORT_STATUS_OPTIONS_FORM.map(s => s.value) as [BugReportStatusForm, ...BugReportStatusForm[]];
+
+const bugStatusColor: Record<BugReportStatusApi, string> = {
+    Unread: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+    Read: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
 };
 
-// --- Zod Schema ---
-const bugReportFormSchema = z.object({ /* ... schema from previous example ... */
-    name: z.string().min(1, 'Reporter name is required.').max(100),
-    email: z.string().email('Invalid email format.').min(1, "Email is required."),
-    phone: z.string().max(30).optional().or(z.literal('')),
-    reportedBy: z.string().max(100).optional().or(z.literal('')),
-    date: z.string().min(1, 'Date is required.').regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
-    status: z.enum(bugStatusValues, { errorMap: () => ({ message: 'Please select a status.'})}),
-    reportDescription: z.string().min(10, 'Report description must be at least 10 characters.').max(5000),
-    attachmentUrl: z.string().url('Invalid URL for attachment.').optional().or(z.literal('')),
+
+// --- Zod Schema for Add/Edit Bug Report Form ---
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_FILE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+
+const bugReportFormSchema = z.object({
+    name: z.string().min(1, 'Name is required.').max(100, "Name too long"),
+    email: z.string().email("Invalid email format.").min(1, "Email is required."),
+    mobile_no: z.string().max(20, "Mobile number too long.").optional().or(z.literal('')),
+    report: z.string().min(10, 'Report description must be at least 10 characters.').max(5000, "Report too long"),
+    attachment: z.any() // For FileList or file object
+        .optional()
+        .refine(
+            (files) => !files || files.length === 0 || files?.[0]?.size <= MAX_FILE_SIZE,
+            `Max file size is 5MB.`
+        )
+        .refine(
+            (files) => !files || files.length === 0 || ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
+            "Unsupported file type."
+        ),
+    // Fields below are not typically in the "Add Bug Report" user form but are part of the data model
+    status: z.enum(bugReportStatusFormValues).optional(), // Status might be set by system or admin
+    reported_by: z.string().max(100).optional().or(z.literal('')), // Could be auto-filled
 });
 type BugReportFormData = z.infer<typeof bugReportFormSchema>;
 
-const filterFormSchema = z.object({ // Zod schema for filter form
+
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
     filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
     filterReportedBy: z.string().optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 
-// --- Initial Dummy Data ---
-const initialDummyBugReports: BugReportItem[] = [ /* ... data from previous example ... */
-    { id: 'BUG001', name: 'Alice C.', email: 'alice@example.com', phone: '555-1234', reportedBy: 'SupportTeam', date: '2024-07-29', status: 'new', reportDescription: 'Login button not working on Safari.', attachmentUrl: 'https://example.com/screenshot1.png' },
-    { id: 'BUG002', name: 'Bob U.', email: 'bob@example.net', date: '2024-07-28', status: 'investigating', reportDescription: 'Dashboard calculation error for specific user group.' },
-    { id: 'BUG003', name: 'Charlie D.', email: 'charlie.dev@internal.co', reportedBy: 'Charlie D.', date: '2024-07-27', status: 'confirmed', reportDescription: 'API endpoint /data returns 500 internal server error.' },
-];
-
-// --- CSV Exporter ---
-const CSV_HEADERS_BUG = ['ID', 'Name', 'Email', 'Phone', 'Reported By', 'Date', 'Status', 'Description', 'Attachment URL'];
-const CSV_KEYS_BUG: (keyof BugReportItem)[] = ['id', 'name', 'email', 'phone', 'reportedBy', 'date', 'status', 'reportDescription', 'attachmentUrl'];
-function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) { /* ... from previous example ... */
-     if (!rows || !rows.length) {
-        toast.push(<Notification title="No Data" type="info" duration={2000}>Nothing to export.</Notification>);
-        return false;
-    }
+// --- CSV Exporter Utility ---
+const CSV_HEADERS_BUG = ['ID', 'Name', 'Email', 'Mobile No', 'Report', 'Attachment', 'Status', 'Reported By', 'Created At'];
+const CSV_KEYS_BUG: (keyof BugReportItem)[] = ['id', 'name', 'email', 'mobile_no', 'report', 'attachment', 'status', 'reported_by', 'created_at'];
+// ... (exportBugReportsToCsv function - similar to previous, ensure keys match)
+function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
+    if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
     const separator = ',';
-    const csvContent =
-        CSV_HEADERS_BUG.join(separator) + '\n' +
-        rows.map(row => CSV_KEYS_BUG.map(k => {
-            let cell: any = row[k];
-            if (cell === null || cell === undefined) cell = '';
-            else cell = String(cell).replace(/"/g, '""');
-            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-            return cell;
-        }).join(separator)).join('\n');
-
+    const csvContent = CSV_HEADERS_BUG.join(separator) + '\n' + rows.map((row: any) => CSV_KEYS_BUG.map(k => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ''; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        return true;
-    }
-    toast.push(<Notification title="Export Failed" type="danger" duration={3000}>Browser does not support this feature.</Notification>);
-    return false;
+    if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
-// --- ActionColumn Component ---
-const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => {
-    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
-    return (
-        <div className="flex items-center justify-center gap-3">
-            <Tooltip title="Edit Report"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-300')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
-            <Tooltip title="Delete Report"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-300')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
-        </div>
-    );
-};
+// --- ActionColumn, Search, TableTools, SelectedFooter (Structurally similar) ---
+const ActionColumn = ({ onEdit, onDelete, onChangeStatus }: { onEdit: () => void; onDelete: () => void; onChangeStatus: () => void; }) => { const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'; const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'; return ( <div className="flex items-center justify-center gap-2"> <Tooltip title="Edit Report"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="Change Status"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400')} role="button" onClick={onChangeStatus}><TbSwitchHorizontal /></div></Tooltip> <Tooltip title="Delete Report"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> ); };
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; }; const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebouceInput ref={ref} className="w-full" placeholder="Search bug reports..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ) ); ItemSearch.displayName = 'ItemSearch';
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }; const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type BugReportsSelectedFooterProps = { selectedItems: BugReportItem[]; onDeleteSelected: () => void; isDeleting: boolean }; const BugReportsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: BugReportsSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; const handleDeleteClick = () => setDeleteConfirmOpen(true); const handleCancelDelete = () => setDeleteConfirmOpen(false); const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmOpen(false);}; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold flex items-center gap-1 text-sm sm:text-base"> <span className="heading-text">{selectedItems.length}</span> <span>Report{selectedItems.length > 1 ? 's' : ''} selected</span> </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? 's' : ''}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} > <p>Are you sure you want to delete the selected report{selectedItems.length > 1 ? 's' : ''}?</p> </ConfirmDialog> </> ); };
 
-// --- Search and TableTools ---
-type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; }
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
-    ({ onInputChange }, ref) => (
-        <DebouceInput ref={ref} className="w-full" placeholder="Search reports..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
-    )
-);
-ItemSearch.displayName = 'ItemSearch';
-
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }
-const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-        <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
-            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-        </div>
-    </div>
-);
 
 // --- Main Component: BugReportListing ---
 const BugReportListing = () => {
-    const [bugReportsData, setBugReportsData] = useState<BugReportItem[]>(initialDummyBugReports);
+    const dispatch = useAppDispatch();
+    const {
+        bugReportsData = [], // Ensure this field name matches your masterSlice state
+        status: masterLoadingStatus = 'idle'
+    } = useSelector(masterSelector, shallowEqual);
+
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<BugReportItem | null>(null);
-    const [itemToDelete, setItemToDelete] = useState<BugReportItem | null>(null);
-
-    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isChangingStatus, setIsChangingStatus] = useState(false);
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<BugReportItem | null>(null);
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
     const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '',
+        pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '',
     });
     const [selectedItems, setSelectedItems] = useState<BugReportItem[]>([]);
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
+    const [selectedFile, setSelectedFile] = useState<File | null>(null); // For file input
+
+    useEffect(() => {
+        dispatch(getBugReportsAction());
+    }, [dispatch]);
+
+    const defaultFormValues: BugReportFormData = {
+        name: '',
+        email: '',
+        mobile_no: '',
+        report: '',
+        attachment: undefined, // Default for file input
+        status: 'Unread',      // Default status for new reports
+        reported_by: '',       // Could be auto-filled with logged-in user's name/ID
+    };
 
     const formMethods = useForm<BugReportFormData>({
         resolver: zodResolver(bugReportFormSchema),
-        defaultValues: {
-            name: '', email: '', phone: '', reportedBy: '', date: new Date().toISOString().split('T')[0],
-            status: 'new', reportDescription: '', attachmentUrl: '',
-        },
+        defaultValues: defaultFormValues,
         mode: 'onChange',
     });
 
-    const filterFormMethods = useForm<FilterFormData>({ // For the filter drawer form
+    const filterFormMethods = useForm<FilterFormData>({
         resolver: zodResolver(filterFormSchema),
         defaultValues: filterCriteria,
     });
 
-    // --- CRUD Handlers ---
-    const openAddDrawer = useCallback(() => { formMethods.reset(); setIsAddDrawerOpen(true); }, [formMethods]);
+    const openAddDrawer = useCallback(() => {
+        formMethods.reset(defaultFormValues);
+        setSelectedFile(null); // Clear selected file for new report
+        setEditingItem(null);
+        setIsAddDrawerOpen(true);
+    }, [formMethods, defaultFormValues]);
     const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
-    const openEditDrawer = useCallback((item: BugReportItem) => { setEditingItem(item); formMethods.reset(item); setIsEditDrawerOpen(true); }, [formMethods]);
-    const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingItem(null); }, []);
 
-    const onSubmit = useCallback(async (data: BugReportFormData, addAnother?: boolean) => {
+    const openEditDrawer = useCallback((item: BugReportItem) => {
+        setEditingItem(item);
+        setSelectedFile(null); // Clear selected file, user must re-select if changing
+        formMethods.reset({
+            name: item.name,
+            email: item.email,
+            mobile_no: item.mobile_no || '',
+            report: item.report,
+            attachment: undefined, // File input cannot be pre-filled for security reasons
+            status: item.status as BugReportStatusForm,
+            reported_by: item.reported_by || '',
+        });
+        setIsEditDrawerOpen(true);
+    }, [formMethods]);
+    const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
+
+    const onSubmitHandler = async (data: BugReportFormData) => {
         setIsSubmitting(true);
-        setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const loggedInUser = { id: '1', name: 'Admin' }; // Placeholder for actual logged-in user
+
+        // Use FormData for file uploads
+        const formData = new FormData();
+        formData.append('name', data.name);
+        formData.append('email', data.email);
+        if (data.mobile_no) formData.append('mobile_no', data.mobile_no);
+        formData.append('report', data.report);
+        if (data.status) formData.append('status', data.status); // For edit, status is from form
+        
+        // For 'reported_by', if it's an admin action, it might be the admin's ID/name
+        // If it's a public form, 'reported_by' might be same as 'name' or system-derived
+        formData.append('reported_by', data.reported_by || loggedInUser.name); // Example
+        
+        if (selectedFile) { // The 'attachment' from Zod schema is for validation, use 'selectedFile' state
+            formData.append('attachment', selectedFile);
+        }
+
+        // If it's an add operation, set created_by and default status if not in form
+        if (!editingItem) {
+            formData.append('created_by', loggedInUser.id);
+            if(!data.status) formData.append('status', 'Unread'); // Default for new if not in form
+        } else {
+             // For edit, send existing created_by if API needs it, or let backend handle
+            if(editingItem.created_by) formData.append('created_by', editingItem.created_by);
+        }
+
+
         try {
             if (editingItem) {
-                const updatedItem: BugReportItem = { ...data, id: editingItem.id };
-                setBugReportsData(prev => prev.map(br => br.id === updatedItem.id ? updatedItem : br));
-                toast.push(<Notification title="Bug Report Updated" type="success" duration={2000} />);
+                // For PUT requests with FormData, some backends might need `_method: 'PUT'` if using POST to simulate PUT
+                // formData.append('_method', 'PUT'); // If your backend needs this for FormData with PUT
+                await dispatch(editBugReportAction({ id: editingItem.id, formData })).unwrap();
+                toast.push(<Notification title="Bug Report Updated" type="success" duration={2000}>Report updated.</Notification>);
                 closeEditDrawer();
             } else {
-                const newItem: BugReportItem = { ...data, id: `BUG${Date.now()}` };
-                setBugReportsData(prev => [newItem, ...prev]);
-                toast.push(<Notification title="Bug Report Added" type="success" duration={2000} />);
-                if (addAnother) {
-                    formMethods.reset({
-                        name: '', email: '', phone: '', reportedBy: '', date: new Date().toISOString().split('T')[0],
-                        status: 'new', reportDescription: '', attachmentUrl: '',
-                    });
-                } else {
-                    closeAddDrawer();
-                }
+                await dispatch(addBugReportAction(formData)).unwrap();
+                toast.push(<Notification title="Bug Report Submitted" type="success" duration={2000}>Thank you for your report!</Notification>);
+                closeAddDrawer();
             }
-        } catch (e: any) { toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger" duration={3000}>{e.message}</Notification>); }
-        finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
-    }, [editingItem, formMethods, closeAddDrawer, closeEditDrawer]);
-
-    const handleDeleteClick = useCallback((item: BugReportItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-    const onConfirmSingleDelete = useCallback(async () => {
-        if (!itemToDelete) return;
-        setIsDeleting(true); setMasterLoadingStatus('loading'); setSingleDeleteConfirmOpen(false);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        try {
-            setBugReportsData(prev => prev.filter(br => br.id !== itemToDelete!.id));
-            toast.push(<Notification title="Bug Report Deleted" type="success" duration={2000}>{`Report by "${itemToDelete.name}" deleted.`}</Notification>);
-            setSelectedItems(prev => prev.filter(br => br.id !== itemToDelete!.id));
-        } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{e.message}</Notification>); }
-        finally { setIsDeleting(false); setMasterLoadingStatus('idle'); setItemToDelete(null); }
-    }, [itemToDelete]);
-
-    const handleDeleteSelected = useCallback(async () => {
-        if (selectedItems.length === 0) {
-             toast.push(<Notification title="No Selection" type="info" duration={2000}>Please select reports to delete.</Notification>);
-            return;
+            dispatch(getBugReportsAction());
+        } catch (error: any) {
+            toast.push(<Notification title={editingItem ? "Update Failed" : "Submission Failed"} type="danger" duration={3000}>{error?.message || 'Operation failed.'}</Notification>);
+            console.error("Bug Report Submit Error:", error);
+        } finally {
+            setIsSubmitting(false);
         }
-        setIsDeleting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        try {
-            const idsToDelete = selectedItems.map(item => item.id);
-            setBugReportsData(prev => prev.filter(br => !idsToDelete.includes(br.id)));
-            toast.push(<Notification title="Reports Deleted" type="success" duration={2000}>{selectedItems.length} report(s) deleted.</Notification>);
-            setSelectedItems([]);
-        } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{e.message}</Notification>); }
-        finally { setIsDeleting(false); setMasterLoadingStatus('idle'); }
-    }, [selectedItems]);
+    };
 
-    // --- Filter Handlers ---
+    const handleChangeStatus = useCallback(async (item: BugReportItem) => {
+        setIsChangingStatus(true);
+        const newStatus = item.status === 'Read' ? 'Unread' : 'Read';
+
+        // For status change, we also need to send other potentially required fields
+        // or have a dedicated API endpoint for just status update.
+        // Assuming editBugReportAction can handle partial updates or expects full object.
+        const formData = new FormData();
+        formData.append('name', item.name);
+        formData.append('email', item.email);
+        if(item.mobile_no) formData.append('mobile_no', item.mobile_no);
+        formData.append('report', item.report);
+        formData.append('status', newStatus);
+        if(item.reported_by) formData.append('reported_by', item.reported_by);
+        if(item.created_by) formData.append('created_by', item.created_by);
+        // Don't resend attachment unless it's being changed.
+        // If API requires attachment field even if not changing, send current attachment name/path.
+        // if (item.attachment) formData.append('attachment_name', item.attachment); // Example if API needs existing name
+
+        try {
+            await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
+            toast.push(<Notification title="Status Changed" type="success" duration={2000}>{`Report status changed to ${newStatus}.`}</Notification>);
+            dispatch(getBugReportsAction());
+        } catch (error: any) {
+            toast.push(<Notification title="Status Change Failed" type="danger" duration={3000}>{error.message}</Notification>);
+            console.error("Change Status Error:", error);
+        } finally {
+            setIsChangingStatus(false);
+        }
+    }, [dispatch]);
+
+    // Delete Handlers
+    const handleDeleteClick = useCallback((item: BugReportItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Report Deleted" type="success" duration={2000}>{`Report by "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter(d => d.id !== itemToDelete!.id)); dispatch(getBugReportsAction()); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{error.message}</Notification>); console.error("Delete Error:", error); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
+    const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const validItems = selectedItems.filter(item => item.id); if (validItems.length === 0) { setIsDeleting(false); return; } const idsToDelete = validItems.map(item => String(item.id)); try { await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(',') })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${validItems.length} report(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getBugReportsAction()); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message}</Notification>); console.error("Bulk Delete Error:", error); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
+
+    // Filter Handlers
     const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
-    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
-        setFilterCriteria(data);
-        setTableData(prev => ({ ...prev, pageIndex: 1 }));
-        setIsFilterDrawerOpen(false);
-    }, []);
-    const onClearFilters = useCallback(() => {
-        const defaultFilters = filterFormSchema.parse({});
-        filterFormMethods.reset(defaultFilters);
-        setFilterCriteria(defaultFilters);
-        setTableData(prev => ({ ...prev, pageIndex: 1 }));
-    }, [filterFormMethods]);
+    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterReportedBy: data.filterReportedBy || '' }); setTableData(prev => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
+    const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterReportedBy: '' }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData(prev => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
 
-    // --- Table Interaction Handlers ---
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-        setTableData((prev) => ({ ...prev, ...data }));
-    }, []);
-    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-    const handleSelectChange = useCallback((value: number) => {
-        handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-        setSelectedItems([]);
-    }, [handleSetTableData]);
-    const handleSort = useCallback((sort: OnSortParam) => {
-        handleSetTableData({ sort: sort, pageIndex: 1 });
-    }, [handleSetTableData]);
-    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
-    const handleRowSelect = useCallback((checked: boolean, row: BugReportItem) => {
-        setSelectedItems((prev) => {
-            if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
-            return prev.filter((item) => item.id !== row.id);
-        });
-    }, []);
-    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<BugReportItem>[]) => {
-        const currentPageRowOriginals = currentRows.map((r) => r.original);
-        if (checked) {
-            setSelectedItems((prevSelected) => {
-                const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-                const newRowsToAdd = currentPageRowOriginals.filter(r => !prevSelectedIds.has(r.id));
-                return [...prevSelected, ...newRowsToAdd];
-            });
-        } else {
-            const currentPageRowIds = new Set(currentPageRowOriginals.map((r) => r.id));
-            setSelectedItems((prevSelected) => prevSelected.filter((item) => !currentPageRowIds.has(item.id)));
-        }
-    }, []);
-
-    // --- Data Processing (Memoized) ---
+    // Data Processing for Table
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        let processedData: BugReportItem[] = cloneDeep(bugReportsData);
-        if (filterCriteria.filterStatus?.length) {
-            const statusValues = filterCriteria.filterStatus.map(s => s.value);
-            processedData = processedData.filter(item => statusValues.includes(item.status));
-        }
-        if (filterCriteria.filterReportedBy && filterCriteria.filterReportedBy.trim() !== '') {
-             processedData = processedData.filter(item => item.reportedBy?.toLowerCase().includes(filterCriteria.filterReportedBy!.toLowerCase() || ''));
-        }
+        const sourceData: BugReportItem[] = Array.isArray(bugReportsData) ? bugReportsData : [];
+        let processedData: BugReportItem[] = cloneDeep(sourceData);
+
+        if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map(s=>s.value); processedData = processedData.filter(item => v.includes(item.status));}
+        if (filterCriteria.filterReportedBy?.trim()) { const rb = filterCriteria.filterReportedBy.toLowerCase(); processedData = processedData.filter(item => item.reported_by?.toLowerCase().includes(rb));}
+
+
         if (tableData.query && tableData.query.trim() !== '') {
-            const query = tableData.query.toLowerCase().trim();
-            processedData = processedData.filter(item =>
-                String(item.id).toLowerCase().includes(query) || item.name.toLowerCase().includes(query) ||
-                item.email.toLowerCase().includes(query) || (item.phone && item.phone.toLowerCase().includes(query)) ||
-                (item.reportedBy && item.reportedBy.toLowerCase().includes(query)) ||
-                item.status.toLowerCase().includes(query) || item.reportDescription.toLowerCase().includes(query)
+            const q = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(b =>
+                (b.name?.toLowerCase() ?? '').includes(q) ||
+                (b.email?.toLowerCase() ?? '').includes(q) ||
+                (b.report?.toLowerCase() ?? '').includes(q) ||
+                (b.reported_by?.toLowerCase() ?? '').includes(q) ||
+                String(b.id).toLowerCase().includes(q)
             );
         }
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key) {
-             processedData.sort((a, b) => {
+            processedData.sort((a, b) => {
                 const aVal = a[key as keyof BugReportItem]; const bVal = b[key as keyof BugReportItem];
-                if (key === 'date') { return order === 'asc' ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime(); }
+                if (key === 'created_at' || key === 'updated_at') { const dateA = aVal ? new Date(aVal as string).getTime() : 0; const dateB = bVal ? new Date(bVal as string).getTime() : 0; return order === 'asc' ? dateA - dateB : dateB - dateA; }
                 const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase();
                 return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
             });
@@ -348,117 +331,133 @@ const BugReportListing = () => {
         return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
     }, [bugReportsData, tableData, filterCriteria]);
 
-    const handleExportData = useCallback(() => {
-        const success = exportBugReportsToCsv('bug_reports_export.csv', allFilteredAndSortedData);
-        if (success) toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported.</Notification>);
-    }, [allFilteredAndSortedData]);
+    const handleExportData = useCallback(() => { const success = exportBugReportsToCsv('bug_reports_export.csv', allFilteredAndSortedData); if (success) toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported.</Notification>); }, [allFilteredAndSortedData]);
+    // Table interaction handlers
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: BugReportItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<BugReportItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-    // --- Table Column Definitions ---
+    // Columns for Listing
     const columns: ColumnDef<BugReportItem>[] = useMemo(
         () => [
-            { header: 'Status', accessorKey: 'status', size: 130, enableSorting: true, cell: props => <Tag className={classNames('capitalize whitespace-nowrap', BUG_STATUS_COLORS[props.getValue<BugStatusType>()])}>{BUG_STATUS_OPTIONS.find(o => o.value === props.getValue())?.label}</Tag> },
-            {
-                header: 'Reporter Info', id: 'reporter', size: 220, enableSorting: true, // Sort by name
-                accessorFn: row => row.name, // For sorting by name
-                cell: props => (
-                    <div className="flex items-center">
-                        <Avatar size={32} shape="circle" icon={<TbUserCircle />} />
-                        <div className="ml-2 rtl:mr-2">
-                            <span className="font-semibold block">{props.row.original.name}</span>
-                            <span className="text-xs text-gray-500">{props.row.original.email}</span>
-                        </div>
-                    </div>
-                )
+            { header: 'Status', accessorKey: 'status', size: 120, enableSorting: true,
+              cell: props => { const statusVal = props.getValue<BugReportStatusApi>(); return <Tag className={classNames('capitalize whitespace-nowrap', bugStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag> }
             },
-            { header: 'Phone', accessorKey: 'phone', size: 140, enableSorting: false, cell: props => props.getValue() || '-' },
-            { header: 'Logged By', accessorKey: 'reportedBy', size: 120, enableSorting: true, cell: props => props.getValue() || '-' },
-            { header: 'Date', accessorKey: 'date', size: 120, enableSorting: true, cell: props => new Date(props.getValue() as string).toLocaleDateString() },
+            { header: 'Name', accessorKey: 'name', size: 180, enableSorting: true,
+              cell: props => <span className="font-semibold">{props.getValue<string>()}</span>
+            },
+            { header: 'Email', accessorKey: 'email', size: 200, enableSorting: true },
+            { header: 'Mobile No', accessorKey: 'mobile_no', size: 130, enableSorting: false, cell: props => props.getValue() || '-' },
+            { header: 'Reported By', accessorKey: 'reported_by', size: 130, enableSorting: true, cell: props => props.getValue() || 'N/A' },
+            { header: 'Date', accessorKey: 'created_at', size: 120, enableSorting: true,
+              cell: props => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-'
+            },
             {
-                header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100,
-                cell: props => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
+                header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 140,
+                cell: props => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} />,
             },
         ],
-        [openEditDrawer, handleDeleteClick],
+        [openEditDrawer, handleDeleteClick, handleChangeStatus] // Dependencies for actions
     );
 
-    // --- Render Form for Drawer ---
+    // Render Form for Add/Edit Drawer
     const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            <FormItem label="Reporter Name" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}>
-                <Controller name="name" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbUserCircle/>} placeholder="Full Name" />} />
+            <FormItem label="Name" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}>
+                <Controller name="name" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbUserCircle />} placeholder="Your Name" />} />
             </FormItem>
-            <FormItem label="Reporter Email" invalid={!!currentFormMethods.formState.errors.email} errorMessage={currentFormMethods.formState.errors.email?.message}>
-                <Controller name="email" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="email" prefix={<TbMail/>} placeholder="name@example.com" />} />
+            <FormItem label="Email" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.email} errorMessage={currentFormMethods.formState.errors.email?.message}>
+                <Controller name="email" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="email" prefix={<TbMail />} placeholder="your.email@example.com" />} />
             </FormItem>
-            <FormItem label="Mobile No. (Optional)" invalid={!!currentFormMethods.formState.errors.phone} errorMessage={currentFormMethods.formState.errors.phone?.message}>
-                <Controller name="phone" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="tel" prefix={<TbPhone/>} placeholder="+XX-XXXXXXXXXX" />} />
+            <FormItem label="Mobile No. (Optional)" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}>
+                <Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="tel" prefix={<TbPhone />} placeholder="+XX-XXXXXXXXXX" />} />
             </FormItem>
-            <FormItem label="Logged By (Internal User, Optional)" invalid={!!currentFormMethods.formState.errors.reportedBy} errorMessage={currentFormMethods.formState.errors.reportedBy?.message}>
-                <Controller name="reportedBy" control={currentFormMethods.control} render={({ field }) => <Input {...field} placeholder="Your Username / ID" />} />
+            {/* Reported By and Status are usually set by admin or system, not by the user reporting the bug initially */}
+            { (isEditDrawerOpen || isAddDrawerOpen && false) && // Only show status/reported_by in edit mode, or for admin add.
+              // For a public bug report form, these might be hidden or auto-filled.
+              // For this example, making them available in edit.
+                <>
+                    <FormItem label="Status" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
+                        <Controller name="status" control={currentFormMethods.control} render={({ field }) => (
+                            <Select placeholder="Set Status" options={BUG_REPORT_STATUS_OPTIONS_FORM}
+                                    value={BUG_REPORT_STATUS_OPTIONS_FORM.find(o=>o.value === field.value)}
+                                    onChange={opt=>field.onChange(opt?.value)} />
+                        )} />
+                    </FormItem>
+                     <FormItem label="Reported By (Internal)" invalid={!!currentFormMethods.formState.errors.reported_by} errorMessage={currentFormMethods.formState.errors.reported_by?.message}>
+                        <Controller name="reported_by" control={currentFormMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Support Team / Your Name" />} />
+                    </FormItem>
+                </>
+            }
+            <FormItem label="Report / Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.report} errorMessage={currentFormMethods.formState.errors.report?.message}>
+                <Controller name="report" control={currentFormMethods.control} render={({ field }) => <Textarea {...field} rows={6} prefix={<TbFileDescription />} placeholder="Please describe the bug in detail..." />} />
             </FormItem>
-            <FormItem label="Date Reported" invalid={!!currentFormMethods.formState.errors.date} errorMessage={currentFormMethods.formState.errors.date?.message}>
-                <Controller name="date" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="date" prefix={<TbCalendar />} />} />
-            </FormItem>
-            <FormItem label="Status" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
-                <Controller name="status" control={currentFormMethods.control} render={({ field }) => (
-                    <Select placeholder="Select status" options={BUG_STATUS_OPTIONS} value={BUG_STATUS_OPTIONS.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />
-                )} />
-            </FormItem>
-            <FormItem label="Report / Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.reportDescription} errorMessage={currentFormMethods.formState.errors.reportDescription?.message}>
-                <Controller name="reportDescription" control={currentFormMethods.control} render={({ field }) => <Textarea {...field} rows={5} placeholder="Please describe the bug in detail, including steps to reproduce..." />} />
-            </FormItem>
-            <FormItem label="Attachment URL (Optional)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachmentUrl} errorMessage={currentFormMethods.formState.errors.attachmentUrl?.message}>
-                <Controller name="attachmentUrl" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="url" prefix={<TbPaperclip/>} placeholder="https://example.com/path/to/attachment.png" />} />
-                {/* For actual file upload, replace Input with a FileUpload component */}
+            <FormItem label="Attachment (Optional)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachment} errorMessage={currentFormMethods.formState.errors.attachment?.message as string}>
+                <Controller
+                    name="attachment"
+                    control={currentFormMethods.control}
+                    render={({ field: { onChange, onBlur, name, ref } }) => (
+                        <Input
+                            type="file"
+                            name={name}
+                            ref={ref}
+                            onBlur={onBlur}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                onChange(file); // RHF expects the file object or FileList
+                                setSelectedFile(file || null);
+                            }}
+                            prefix={<TbPaperclip />}
+                        />
+                    )}
+                />
+                 {editingItem?.attachment && !selectedFile && ( // Show current attachment if editing and no new file selected
+                    <div className="mt-2 text-sm text-gray-500">
+                        Current: <a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{editingItem.attachment}</a>
+                    </div>
+                )}
             </FormItem>
         </div>
     );
+     const itemPath = (filename : any) => {
+        // Replace with your actual base URL for attachments
+        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+        return `${baseUrl}/storage/attachments/bug_reports/${filename}`;
+    };
 
     return (
         <>
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbBug /> Bug Report System</h3>
+                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbBug /> Bug Reports</h3>
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Report New Bug</Button>
                     </div>
                     <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
-                    <div className="mt-4">
+                     <div className="mt-4">
                         <DataTable
-                            columns={columns}
-                            data={pageData}
-                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
+                            columns={columns} // These columns are defined for BugReportItem
+                            data={pageData}   // This data is of type BugReportItem[]
+                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting || isChangingStatus}
                             pagingData={{total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number}}
                             selectable
-                            checkboxChecked={(row: BugReportItem) => selectedItems.some(selected => selected.id === row.id)}
+                            checkboxChecked={(row: BugReportItem) => selectedItems.some(selected => selected.id === row.id)} // Type assertion for row
                             onPaginationChange={handlePaginationChange}
                             onSelectChange={handleSelectChange}
                             onSort={handleSort}
-                            onCheckBoxChange={handleRowSelect}
-                            onIndeterminateCheckBoxChange={handleAllRowSelect}
+                            onCheckBoxChange={handleRowSelect} // DataTable's prop
+                            onIndeterminateCheckBoxChange={handleAllRowSelect} // DataTable's prop
+                            // noData={!loading && pageData.length === 0}
                         />
                     </div>
                 </AdaptiveCard>
             </Container>
 
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-                hidden={selectedItems.length === 0}
-            >
-                 <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">{selectedItems.length}</span>
-                            <span>Report{selectedItems.length > 1 ? 's' : ''} selected</span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteSelected}>Delete Selected</Button>
-                    </div>
-                </div>
-            </StickyFooter>
+            <BugReportsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
             <Drawer
                 title={editingItem ? "Edit Bug Report" : "Report New Bug"}
@@ -466,52 +465,27 @@ const BugReportListing = () => {
                 onClose={editingItem ? closeEditDrawer : closeAddDrawer}
                 onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
                 width={700}
-                footer={
-                    <div className="flex justify-between w-full">
-                        {!editingItem && (
-                            <Button size="sm" variant="outline" type="button" onClick={() => formMethods.handleSubmit((data) => onSubmit(data, true))()} loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
-                                Save & Report Another
-                            </Button>
-                        )}
-                        <div className={editingItem || !isAddDrawerOpen ? "w-full text-right" : ""}>
-                            <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                            <Button size="sm" variant="solid" form="bugReportForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
-                                {isSubmitting ? (editingItem ? 'Saving...' : 'Submitting...') : (editingItem ? 'Save Changes' : 'Submit Report')}
-                            </Button>
-                        </div>
-                    </div>
-                }
+                footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="bugReportForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}> {isSubmitting ? (editingItem ? 'Saving...' : 'Submitting...') : (editingItem ? 'Save Changes' : 'Submit Report')} </Button> </div> }
             >
-                <Form id="bugReportForm" onSubmit={formMethods.handleSubmit((data) => onSubmit(data, false))} className="flex flex-col gap-4"> {/* Added second arg for addAnother flag */}
+                <Form id="bugReportForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
                     {renderDrawerForm(formMethods)}
                 </Form>
             </Drawer>
 
             <Drawer
-                title="Filter Bug Reports"
-                isOpen={isFilterDrawerOpen}
-                onClose={() => setIsFilterDrawerOpen(false)}
-                onRequestClose={() => setIsFilterDrawerOpen(false)}
-                footer={
-                     <div className="flex justify-between w-full">
-                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
-                        <div>
-                            <Button size="sm" className="mr-2" onClick={() => setIsFilterDrawerOpen(false)} type="button">Cancel</Button>
-                            <Button size="sm" variant="solid" form="filterBugForm" type="submit">Apply Filters</Button>
-                        </div>
-                    </div>
-                }
+                title="Filter Bug Reports" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+                footer={ <div className="flex justify-between w-full"> <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button> <div> <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button> <Button size="sm" variant="solid" form="filterBugReportForm" type="submit">Apply Filters</Button> </div> </div> }
             >
-                <Form id="filterBugForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+                <Form id="filterBugReportForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Filter by Status">
                         <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (
-                            <Select isMulti placeholder="Select status(es)..." options={BUG_STATUS_OPTIONS}
+                            <Select isMulti placeholder="Any Status" options={BUG_REPORT_STATUS_OPTIONS_FORM.map(s=>({value:s.value, label: s.label}))}
                                     value={field.value || []} onChange={val => field.onChange(val || [])} />
                         )} />
                     </FormItem>
-                    <FormItem label="Filter by Logged By (Internal User)">
+                     <FormItem label="Filter by Reported By (Internal)">
                         <Controller name="filterReportedBy" control={filterFormMethods.control} render={({ field }) => (
-                            <Input {...field} placeholder="Enter username or ID" />
+                           <Input {...field} placeholder="Enter username or ID to filter" />
                         )} />
                     </FormItem>
                 </Form>
@@ -520,14 +494,18 @@ const BugReportListing = () => {
             <ConfirmDialog
                 isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Bug Report"
                 onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} // Added for consistency
-                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}    // Added for consistency
+                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onConfirm={onConfirmSingleDelete} loading={isDeleting}
             >
-                <p>Are you sure you want to delete the bug report by "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p>
+                <p>Are you sure you want to delete the report by "<strong>{itemToDelete?.name}</strong>"?</p>
             </ConfirmDialog>
         </>
     );
 };
 
 export default BugReportListing;
+
+function classNames(...classes: (string | boolean | undefined)[]) {
+    return classes.filter(Boolean).join(' ');
+}
