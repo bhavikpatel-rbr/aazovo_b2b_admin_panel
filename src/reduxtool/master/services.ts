@@ -1188,6 +1188,113 @@ export const deleteDomainsAsync = async (unitData: any) => {
   }
 }
 
+export const getJobDepartmentAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/job_department`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addJobDepartmentAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/job_department`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editJobDepartmentAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/job_department/${unitData?.id}`, {
+      _method: "PUT", name: unitData?.name
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletJobDepartmentAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/master/job_department/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllJobDepartmentAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/master/job_department/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const getJobPostsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/other/job_post`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addJobPostsAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_post`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editJobPostsAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_post/${unitData?.id}`, {
+      _method: "PUT", name: unitData?.name
+      , status: unitData?.status
+      , title: unitData?.title
+      , description: unitData?.description
+      , location: unitData?.location
+      , vacancies: unitData?.vacancies
+      , experience: unitData?.experience
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletJobPostsAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/other/job_post/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllJobPostsAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_post/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 
 
 

@@ -1,12 +1,10 @@
-// src/views/your-path/Departments.tsx (New file name)
+// src/views/your-path/JobDepartment.tsx
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
-// import { Link, useNavigate } from 'react-router-dom'; // Not used by Units
 import cloneDeep from 'lodash/cloneDeep';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import classNames from 'classnames'; // Ensure this is installed or replace
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
@@ -19,7 +17,7 @@ import toast from '@/components/ui/toast';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import StickyFooter from '@/components/shared/StickyFooter';
 import DebouceInput from '@/components/shared/DebouceInput';
-import Select from '@/components/ui/Select';
+import Select from '@/components/ui/Select'; // For filter, if needed later
 import { Drawer, Form, FormItem, Input } from '@/components/ui';
 
 // Icons
@@ -31,43 +29,46 @@ import {
     TbFilter,
     TbPlus,
     TbCloudUpload,
-    TbBuildingCommunity, // Icon for Departments
+    TbBuildingSkyscraper, // Icon for Job Department (example)
 } from 'react-icons/tb';
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
-// import JobDepartment from '.';
 
-// Redux (Assuming you might have specific actions for Departments)
-// import { useAppDispatch } from '@/reduxtool/store';
-// import {
-//     getDepartmentsAction,
-//     addDepartmentAction,
-//     editDepartmentAction,
-//     deleteDepartmentAction, // Corrected: delet -> delete
-//     deleteAllDepartmentsAction, // Corrected: deletAll -> deleteAll
-// } from '@/reduxtool/master/departmentMiddleware'; // Example path
-// import { useSelector } from 'react-redux';
-// import { masterSelector } from '@/reduxtool/master/masterSlice'; // Or a specific departmentSlice
+// Redux
+import { useAppDispatch } from '@/reduxtool/store';
+import { shallowEqual, useSelector } from 'react-redux';
+import {
+    getJobDepartmentsAction,    // Placeholder for your actual action
+    addJobDepartmentAction,     // Placeholder
+    editJobDepartmentAction,    // Placeholder
+    deleteJobDepartmentAction,  // Placeholder
+    deleteAllJobDepartmentsAction, // Placeholder
+} from '@/reduxtool/master/middleware'; // Adjust path as necessary
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // Adjust as necessary
 
-
-// --- Define Department Type ---
-export type DepartmentItem = {
+// --- Define JobDepartmentItem Type (Matches your API response) ---
+export type JobDepartmentItem = {
     id: string | number;
-    name: string; // Department Name
+    name: string;
+    status: 'Active' | 'Inactive' | string; // API returns 'Active', allow string for flexibility
+    deleted_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
 };
 
-// --- Zod Schema for Add/Edit Department Form ---
-const departmentFormSchema = z.object({
+// --- Zod Schema for Add/Edit Form (Only Name) ---
+const jobDepartmentFormSchema = z.object({
     name: z
         .string()
         .min(1, 'Department name is required.')
         .max(100, 'Department name cannot exceed 100 characters.'),
+    // Status is handled implicitly, not part of the form schema visible to user
 });
-type DepartmentFormData = z.infer<typeof departmentFormSchema>;
+type JobDepartmentFormData = z.infer<typeof jobDepartmentFormSchema>;
 
-// --- Zod Schema for Filter Form ---
+// --- Zod Schema for Filter Form (Example: by name) ---
 const filterFormSchema = z.object({
     filterNames: z
         .array(z.object({ value: z.string(), label: z.string() }))
@@ -76,18 +77,18 @@ const filterFormSchema = z.object({
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_DEPT = ['ID', 'Department Name'];
-const CSV_KEYS_DEPT: (keyof DepartmentItem)[] = ['id', 'name'];
+const CSV_HEADERS_JOB_DEPT = ['ID', 'Name', 'Status']; // Include status in export
+const CSV_KEYS_JOB_DEPT: (keyof JobDepartmentItem)[] = ['id', 'name', 'status'];
 
-function exportDepartmentsToCsv(filename: string, rows: DepartmentItem[]) {
+function exportJobDepartmentsToCsv(filename: string, rows: JobDepartmentItem[]) {
     if (!rows || !rows.length) {
         toast.push(<Notification title="No Data" type="info" duration={2000}>Nothing to export.</Notification>);
         return false;
     }
     const separator = ',';
     const csvContent =
-        CSV_HEADERS_DEPT.join(separator) + '\n' +
-        rows.map((row) => CSV_KEYS_DEPT.map((k) => {
+        CSV_HEADERS_JOB_DEPT.join(separator) + '\n' +
+        rows.map((row) => CSV_KEYS_JOB_DEPT.map((k) => {
             let cell = row[k];
             if (cell === null || cell === undefined) cell = '';
             else cell = String(cell).replace(/"/g, '""');
@@ -117,25 +118,25 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
     return (
         <div className="flex items-center justify-center gap-3">
-            <Tooltip title="Edit Department"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
-            <Tooltip title="Delete Department"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
+            <Tooltip title="Edit Job Department"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+            <Tooltip title="Delete Job Department"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
         </div>
     );
 };
 
-// --- DepartmentsSearch Component ---
-type DepartmentsSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const DepartmentsSearch = React.forwardRef<HTMLInputElement, DepartmentsSearchProps>(
+// --- Search Component ---
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
     ({ onInputChange }, ref) => (
-        <DebouceInput ref={ref} className="w-full" placeholder="Quick search departments..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
+        <DebouceInput ref={ref} className="w-full" placeholder="Search by name or ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
     )
 );
-DepartmentsSearch.displayName = 'DepartmentsSearch';
+ItemSearch.displayName = 'ItemSearch';
 
-// --- DepartmentsTableTools Component ---
-const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }) => (
+// --- TableTools Component ---
+const ItemTableTools = ({ onSearchChange, onFilter, onExport }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }) => (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-        <div className="flex-grow"><DepartmentsSearch onInputChange={onSearchChange} /></div>
+        <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
             <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
@@ -143,29 +144,9 @@ const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport }: { onSearc
     </div>
 );
 
-// --- DepartmentsTable Component ---
-type DepartmentsTableProps = {
-    columns: ColumnDef<DepartmentItem>[]; data: DepartmentItem[]; loading: boolean;
-    pagingData: { total: number; pageIndex: number; pageSize: number };
-    selectedItems: DepartmentItem[];
-    onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void;
-    onSort: (sort: OnSortParam) => void;
-    onRowSelect: (checked: boolean, row: DepartmentItem) => void;
-    onAllRowSelect: (checked: boolean, rows: Row<DepartmentItem>[]) => void;
-};
-const DepartmentsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: DepartmentsTableProps) => (
-    <DataTable
-        selectable columns={columns} data={data} loading={loading} pagingData={pagingData}
-        checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)}
-        onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort}
-        onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect}
-        noData={!loading && data.length === 0}
-    />
-);
-
-// --- DepartmentsSelectedFooter Component ---
-type DepartmentsSelectedFooterProps = { selectedItems: DepartmentItem[]; onDeleteSelected: () => void; };
-const DepartmentsSelectedFooter = ({ selectedItems, onDeleteSelected }: DepartmentsSelectedFooterProps) => {
+// --- SelectedFooter Component ---
+type JobDepartmentsSelectedFooterProps = { selectedItems: JobDepartmentItem[]; onDeleteSelected: () => void; isDeleting: boolean };
+const JobDepartmentsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: JobDepartmentsSelectedFooterProps) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
     const handleDeleteClick = () => setDeleteConfirmationOpen(true);
     const handleCancelDelete = () => setDeleteConfirmationOpen(false);
@@ -183,135 +164,141 @@ const DepartmentsSelectedFooter = ({ selectedItems, onDeleteSelected }: Departme
                         </span>
                     </span>
                     <div className="flex items-center gap-3">
-                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick}>Delete Selected</Button>
+                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button>
                     </div>
                 </div>
             </StickyFooter>
             <ConfirmDialog
-                isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Department${selectedItems.length > 1 ? 's' : ''}`}
+                isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Job Department${selectedItems.length > 1 ? 's' : ''}`}
                 onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete}
             >
-                <p>Are you sure you want to delete the selected department{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p>
+                <p>Are you sure you want to delete the selected job department{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p>
             </ConfirmDialog>
         </>
     );
 };
 
-// --- Initial Dummy Data (for local state example) ---
-const initialDummyDepartments: DepartmentItem[] = [
-    { id: 'DEPT001', name: 'Engineering' }, { id: 'DEPT002', name: 'Marketing' },
-    { id: 'DEPT003', name: 'Sales' }, { id: 'DEPT004', name: 'Human Resources' },
-    { id: 'DEPT005', name: 'Finance' },
-];
 
-// --- Main Departments Component ---
+// --- Main Component: JobDepartment ---
 const JobDepartment = () => {
-    // const dispatch = useAppDispatch();
-    // const { data: departmentsData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector); // Adjust for actual slice
-
-    // Using local state for this example
-    const [departmentsData, setDepartmentsData] = useState<DepartmentItem[]>(initialDummyDepartments);
-    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
+    const dispatch = useAppDispatch();
+    const {
+        jobDepartmentsData = [], // Ensure this is provided by masterSelector
+        status: masterLoadingStatus = 'idle'
+    } = useSelector(masterSelector, shallowEqual);
 
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState<DepartmentItem | null>(null);
+    const [editingItem, setEditingItem] = useState<JobDepartmentItem | null>(null);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<DepartmentItem | null>(null);
-
+    const [itemToDelete, setItemToDelete] = useState<JobDepartmentItem | null>(null);
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterNames: [] });
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '',
     });
-    const [selectedItems, setSelectedItems] = useState<DepartmentItem[]>([]);
+    const [selectedItems, setSelectedItems] = useState<JobDepartmentItem[]>([]);
 
-    // useEffect(() => { dispatch(getDepartmentsAction()); }, [dispatch]); // For Redux
+    useEffect(() => {
+        dispatch(getJobDepartmentsAction());
+    }, [dispatch]);
 
-    const addFormMethods = useForm<DepartmentFormData>({ resolver: zodResolver(departmentFormSchema), defaultValues: { name: '' }, mode: 'onChange' });
-    const editFormMethods = useForm<DepartmentFormData>({ resolver: zodResolver(departmentFormSchema), defaultValues: { name: '' }, mode: 'onChange' });
-    const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
+    const formMethods = useForm<JobDepartmentFormData>({
+        resolver: zodResolver(jobDepartmentFormSchema),
+        defaultValues: { name: '' },
+        mode: 'onChange',
+    });
 
-    const openAddDrawer = useCallback(() => { addFormMethods.reset({ name: '' }); setIsAddDrawerOpen(true); }, [addFormMethods]);
-    const closeAddDrawer = useCallback(() => { addFormMethods.reset({ name: '' }); setIsAddDrawerOpen(false); }, [addFormMethods]);
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria,
+    });
 
-    const onAddDepartmentSubmit = useCallback(async (data: DepartmentFormData) => {
-        setIsSubmitting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
-        try {
-            // await dispatch(addDepartmentAction({ name: data.name })).unwrap(); // Redux
-            const newDepartment: DepartmentItem = { id: `DEPT${Date.now()}`, name: data.name };
-            setDepartmentsData(prev => [newDepartment, ...prev]);
+    const openAddDrawer = useCallback(() => {
+        formMethods.reset({ name: '' });
+        setEditingItem(null); // Ensure editingItem is null for add mode
+        setIsAddDrawerOpen(true);
+    }, [formMethods]);
+    const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
-            toast.push(<Notification title="Department Added" type="success" duration={2000}>{`Department "${data.name}" added.`}</Notification>);
-            closeAddDrawer();
-            // dispatch(getDepartmentsAction()); // Redux
-        } catch (error: any) {
-            toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{error.message || 'Could not add department.'}</Notification>);
-        } finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
-    }, [closeAddDrawer /*, dispatch*/]);
-
-    const openEditDrawer = useCallback((item: DepartmentItem) => {
+    const openEditDrawer = useCallback((item: JobDepartmentItem) => {
         setEditingItem(item);
-        editFormMethods.reset({ name: item.name });
+        formMethods.reset({ name: item.name });
         setIsEditDrawerOpen(true);
-    }, [editFormMethods]);
-    const closeEditDrawer = useCallback(() => { setEditingItem(null); editFormMethods.reset({ name: '' }); setIsEditDrawerOpen(false); }, [editFormMethods]);
+    }, [formMethods]);
+    const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
-    const onEditDepartmentSubmit = useCallback(async (data: DepartmentFormData) => {
-        if (!editingItem?.id) { toast.push(<Notification title="Error" type="danger">Cannot edit: Department ID is missing.</Notification>); return; }
-        setIsSubmitting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
+    const onSubmitHandler = async (data: JobDepartmentFormData) => {
+        setIsSubmitting(true);
+        let payload;
+
+        if (editingItem) {
+            // For editing, include the ID and existing status
+            payload = {
+                id: editingItem.id,
+                name: data.name,
+               
+            };
+        } else {
+            // For adding, set status to 'Active' by default
+            payload = {
+                name: data.name,
+               
+            };
+        }
+
         try {
-            // await dispatch(editDepartmentAction({ id: editingItem.id, name: data.name })).unwrap(); // Redux
-            const updatedDepartment: DepartmentItem = { id: editingItem.id, name: data.name };
-            setDepartmentsData(prev => prev.map(d => d.id === updatedDepartment.id ? updatedDepartment : d));
-
-            toast.push(<Notification title="Department Updated" type="success" duration={2000}>{`Department "${data.name}" updated.`}</Notification>);
-            closeEditDrawer();
-            // dispatch(getDepartmentsAction()); // Redux
+            if (editingItem) {
+                await dispatch(editJobDepartmentAction(payload)).unwrap();
+                toast.push(<Notification title="Job Department Updated" type="success" duration={2000}>Department updated.</Notification>);
+                closeEditDrawer();
+            } else {
+                await dispatch(addJobDepartmentAction(payload)).unwrap();
+                toast.push(<Notification title="Job Department Added" type="success" duration={2000}>New department added.</Notification>);
+                closeAddDrawer();
+            }
+            dispatch(getJobDepartmentsAction());
         } catch (error: any) {
-            toast.push(<Notification title="Failed to Update" type="danger" duration={3000}>{error.message || 'Could not update department.'}</Notification>);
-        } finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
-    }, [editingItem, closeEditDrawer /*, dispatch*/]);
+            toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger" duration={3000}>{error?.message || 'Operation failed.'}</Notification>);
+            console.error("Job Department Submit Error:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-    const handleDeleteClick = useCallback((item: DepartmentItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const handleDeleteClick = useCallback((item: JobDepartmentItem) => {
+        if (!item.id) { toast.push(<Notification title="Error" type="danger">Cannot delete: ID missing.</Notification>); return; }
+        setItemToDelete(item); setSingleDeleteConfirmOpen(true);
+    }, []);
+
     const onConfirmSingleDelete = useCallback(async () => {
-        if (!itemToDelete?.id) { toast.push(<Notification title="Error" type="danger">Cannot delete: Department ID is missing.</Notification>); return; }
-        setIsDeleting(true); setMasterLoadingStatus('loading'); setSingleDeleteConfirmOpen(false);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
+        if (!itemToDelete?.id) return;
+        setIsDeleting(true); setSingleDeleteConfirmOpen(false);
         try {
-            // await dispatch(deleteDepartmentAction({ id: itemToDelete.id })).unwrap(); // Redux
-            setDepartmentsData(prev => prev.filter(d => d.id !== itemToDelete.id));
-
-            toast.push(<Notification title="Department Deleted" type="success" duration={2000}>{`Department "${itemToDelete.name}" deleted.`}</Notification>);
-            setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id));
-            // dispatch(getDepartmentsAction()); // Redux
-        } catch (error: any) {
-            toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}>{error.message || `Could not delete department.`}</Notification>);
-        } finally { setIsDeleting(false); setMasterLoadingStatus('idle'); setItemToDelete(null); }
-    }, [itemToDelete /*, dispatch*/]);
+            await dispatch(deleteJobDepartmentAction({ id: itemToDelete.id })).unwrap();
+            toast.push(<Notification title="Job Department Deleted" type="success" duration={2000}>{`Department "${itemToDelete.name}" deleted.`}</Notification>);
+            setSelectedItems((prev) => prev.filter(d => d.id !== itemToDelete!.id));
+            dispatch(getJobDepartmentsAction());
+        } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{error.message || 'Could not delete.'}</Notification>); console.error("Delete Error:", error);
+        } finally { setIsDeleting(false); setItemToDelete(null); }
+    }, [dispatch, itemToDelete]);
 
     const handleDeleteSelected = useCallback(async () => {
-        if (selectedItems.length === 0) { toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>); return; }
-        setIsDeleting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API
+        if (selectedItems.length === 0) return;
+        setIsDeleting(true);
+        const validItems = selectedItems.filter(item => item.id);
+        if (validItems.length === 0) { setIsDeleting(false); return; }
+        const idsToDelete = validItems.map(item => String(item.id));
         try {
-            const idsToDelete = selectedItems.map((item) => item.id);
-            // await dispatch(deleteAllDepartmentsAction({ ids: idsToDelete.join(',') })).unwrap(); // Redux
-            setDepartmentsData(prev => prev.filter(d => !idsToDelete.includes(d.id)));
-
-            toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${selectedItems.length} department(s) deleted.`}</Notification>);
+            await dispatch(deleteAllJobDepartmentsAction({ ids: idsToDelete.join(',') })).unwrap();
+            toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${validItems.length} department(s) deleted.`}</Notification>);
             setSelectedItems([]);
-            // dispatch(getDepartmentsAction()); // Redux
-        } catch (error: any) {
-            toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message || 'Failed to delete selected departments.'}</Notification>);
-        } finally { setIsDeleting(false); setMasterLoadingStatus('idle'); }
-    }, [selectedItems /*, dispatch*/]);
+            dispatch(getJobDepartmentsAction());
+        } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message || 'Failed to delete.'}</Notification>); console.error("Bulk Delete Error:", error);
+        } finally { setIsDeleting(false); }
+    }, [dispatch, selectedItems]);
 
     const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
@@ -327,44 +314,51 @@ const JobDepartment = () => {
         setTableData(prev => ({ ...prev, pageIndex: 1 }));
     }, [filterFormMethods]);
 
-    const departmentNameOptions = useMemo(() => {
-        if (!Array.isArray(departmentsData)) return [];
-        const uniqueNames = new Set(departmentsData.map((item) => item.name));
+    const jobDepartmentNameOptions = useMemo(() => {
+        const sourceData: JobDepartmentItem[] = Array.isArray(jobDepartmentsData) ? jobDepartmentsData : [];
+        const uniqueNames = new Set(sourceData.map((item) => item.name));
         return Array.from(uniqueNames).map((name) => ({ value: name, label: name }));
-    }, [departmentsData]);
+    }, [jobDepartmentsData]);
+
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        const sourceData: DepartmentItem[] = Array.isArray(departmentsData) ? departmentsData : [];
-        let processedData: DepartmentItem[] = cloneDeep(sourceData);
+        const sourceData: JobDepartmentItem[] = Array.isArray(jobDepartmentsData) ? jobDepartmentsData : [];
+        let processedData: JobDepartmentItem[] = cloneDeep(sourceData);
+
         if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
             const selectedFilterNames = filterCriteria.filterNames.map((opt) => opt.value.toLowerCase());
             processedData = processedData.filter((item) => selectedFilterNames.includes(item.name?.trim().toLowerCase() ?? ''));
         }
+
         if (tableData.query && tableData.query.trim() !== '') {
             const query = tableData.query.toLowerCase().trim();
-            processedData = processedData.filter((item) =>
-                (item.name?.trim().toLowerCase() ?? '').includes(query) ||
-                String(item.id ?? '').trim().toLowerCase().includes(query)
+            processedData = processedData.filter(item =>
+                (item.name?.toLowerCase() ?? '').includes(query) ||
+                String(item.id).toLowerCase().includes(query)
             );
         }
         const { order, key } = tableData.sort as OnSortParam;
-        if (order && key && (key === 'id' || key === 'name') && processedData.length > 0) {
+        if (order && key && ['id', 'name'].includes(String(key))) { // Only ID and Name are sortable in the table
             processedData.sort((a, b) => {
-                const aValue = String(a[key as keyof DepartmentItem] ?? '');
-                const bValue = String(b[key as keyof DepartmentItem] ?? '');
-                return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                const aVal = a[key as keyof JobDepartmentItem];
+                const bVal = b[key as keyof JobDepartmentItem];
+                const aStr = String(aVal ?? '').toLowerCase();
+                const bStr = String(bVal ?? '').toLowerCase();
+                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
             });
         }
-        const dataToExport = [...processedData];
+
+        const dataToExport = [...processedData]; // For CSV export, includes status
         const currentTotal = processedData.length;
-        const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number;
+        const pageIndex = tableData.pageIndex as number;
+        const pageSize = tableData.pageSize as number;
         const startIndex = (pageIndex - 1) * pageSize;
         const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
         return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
-    }, [departmentsData, tableData, filterCriteria]);
+    }, [jobDepartmentsData, tableData, filterCriteria]);
 
     const handleExportData = useCallback(() => {
-        const success = exportDepartmentsToCsv('departments_export.csv', allFilteredAndSortedData);
+        const success = exportJobDepartmentsToCsv('job_departments_export.csv', allFilteredAndSortedData);
         if (success) toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported.</Notification>);
     }, [allFilteredAndSortedData]);
 
@@ -373,10 +367,11 @@ const JobDepartment = () => {
     const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
     const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
     const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
-    const handleRowSelect = useCallback((checked: boolean, row: DepartmentItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
-    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<DepartmentItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
+    const handleRowSelect = useCallback((checked: boolean, row: JobDepartmentItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobDepartmentItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-    const columns: ColumnDef<DepartmentItem>[] = useMemo(
+    // Columns for Listing: ID, Name
+    const columns: ColumnDef<JobDepartmentItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
             { header: 'Department Name', accessorKey: 'name', enableSorting: true },
@@ -385,7 +380,7 @@ const JobDepartment = () => {
                 cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
             },
         ],
-        [openEditDrawer, handleDeleteClick],
+        [openEditDrawer, handleDeleteClick] // These are stable due to useCallback
     );
 
     return (
@@ -393,72 +388,66 @@ const JobDepartment = () => {
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <h3 className="mb-2 sm:mb-0 flex items-center gap-2"><TbBuildingCommunity /> Departments</h3>
+                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbBuildingSkyscraper /> Job Departments</h3>
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
                     </div>
-                    <DepartmentsTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
                     <div className="mt-4">
-                        <DepartmentsTable
+                        <DataTable
                             columns={columns} data={pageData}
                             loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
-                            pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-                            selectedItems={selectedItems}
+                            pagingData={{total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number}}
+                            selectable checkboxChecked={(row) => selectedItems.some(selected => selected.id === row.id)}
                             onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
-                            onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect}
+                            onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect}
+                            // noData={!loading && pageData.length === 0}
                         />
                     </div>
                 </AdaptiveCard>
             </Container>
 
-            <DepartmentsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} />
+            <JobDepartmentsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-            <Drawer title="Add Department" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer}
+            <Drawer
+                title={editingItem ? "Edit Job Department" : "Add New Job Department"}
+                isOpen={isAddDrawerOpen || isEditDrawerOpen}
+                onClose={editingItem ? closeEditDrawer : closeAddDrawer}
+                onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
                 footer={
                     <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                        <Button size="sm" variant="solid" form="addDepartmentForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>
-                            {isSubmitting ? 'Adding...' : 'Save'}
+                        <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
+                        <Button size="sm" variant="solid" form="jobDepartmentForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
+                            {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : 'Save'}
                         </Button>
                     </div>
                 }
             >
-                <Form id="addDepartmentForm" onSubmit={addFormMethods.handleSubmit(onAddDepartmentSubmit)} className="flex flex-col gap-4">
-                    <FormItem label="Department Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message}>
-                        <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Department Name" />} />
+                <Form id="jobDepartmentForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
+                    <FormItem label="Department Name" invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}>
+                        <Controller name="name" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Department Name" />} />
                     </FormItem>
+                    {/* Status field is not rendered in the form */}
                 </Form>
             </Drawer>
 
-            <Drawer title="Edit Department" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer}
+            {/* Filter Drawer (Simplified to filter by name) */}
+            <Drawer
+                title="Filter Job Departments" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
                 footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                        <Button size="sm" variant="solid" form="editDepartmentForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>
-                            {isSubmitting ? 'Saving...' : 'Save'}
-                        </Button>
+                     <div className="flex justify-between w-full">
+                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
+                        <div>
+                            <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button>
+                            <Button size="sm" variant="solid" form="filterJobDepartmentForm" type="submit">Apply</Button>
+                        </div>
                     </div>
                 }
             >
-                <Form id="editDepartmentForm" onSubmit={editFormMethods.handleSubmit(onEditDepartmentSubmit)} className="flex flex-col gap-4">
-                    <FormItem label="Department Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message}>
-                        <Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Department Name" />} />
-                    </FormItem>
-                </Form>
-            </Drawer>
-
-            <Drawer title="Filter Departments" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button>
-                        <Button size="sm" variant="solid" form="filterDepartmentForm" type="submit">Apply</Button>
-                    </div>
-                }
-            >
-                <Form id="filterDepartmentForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+                <Form id="filterJobDepartmentForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Filter by Department Name(s)">
                         <Controller name="filterNames" control={filterFormMethods.control}
                             render={({ field }) => (
-                                <Select isMulti placeholder="Select department names..." options={departmentNameOptions}
+                                <Select isMulti placeholder="Select department names..." options={jobDepartmentNameOptions}
                                         value={field.value || []} onChange={(selectedVal) => field.onChange(selectedVal || [])} />
                             )} />
                     </FormItem>
@@ -466,16 +455,20 @@ const JobDepartment = () => {
             </Drawer>
 
             <ConfirmDialog
-                isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Department"
+                isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Job Department"
                 onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-                onConfirm={onConfirmSingleDelete} loading={isDeleting}
+                confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting}
             >
-                <p>Are you sure you want to delete the department "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p>
+                <p>Are you sure you want to delete the job department "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p>
             </ConfirmDialog>
         </>
     );
 };
 
 export default JobDepartment;
+
+function classNames(...classes: (string | boolean | undefined)[]) {
+    return classes.filter(Boolean).join(' ');
+}

@@ -1,12 +1,10 @@
 // src/views/your-path/JobPostsListing.tsx
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
-// import { Link, useNavigate } from 'react-router-dom'; // Not strictly needed if all actions are in-component
 import cloneDeep from 'lodash/cloneDeep';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import classNames from 'classnames';
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
@@ -20,69 +18,83 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import StickyFooter from '@/components/shared/StickyFooter';
 import DebouceInput from '@/components/shared/DebouceInput';
 import Select from '@/components/ui/Select';
-import Tag from '@/components/ui/Tag';
-import { Drawer, Form, FormItem, Input } from '@/components/ui'; // Ensure Textarea is from here
+import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui';
+import Textarea from '@/views/ui-components/forms/Input/Textarea'; // Ensure this path is correct
 
 // Icons
 import {
     TbPencil, TbTrash, TbChecks, TbSearch, TbFilter, TbPlus, TbCloudUpload,
-    TbBriefcase, TbMapPin, TbUsers, TbFileDescription, TbSwitchHorizontal, TbCalendarEvent, // Specific icons
+    TbBriefcase, TbMapPin, TbUsers, TbFileText, TbSwitchHorizontal, TbBuildingSkyscraper,
 } from 'react-icons/tb';
 
 // Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
-import Textarea from '@/views/ui-components/forms/Input/Textarea';
-// Redux (Optional)
-// import { useAppDispatch } from '@/reduxtool/store';
-// import { getJobPostsAction, addJobPostAction, ... } from '@/reduxtool/jobPost/middleware';
-// import { jobPostSelector } from '@/reduxtool/jobPost/jobPostSlice';
 
-// --- Define Item Type & Constants ---
-export type JobPostStatus = 'open' | 'closed' | 'draft' | 'on_hold';
+// Redux
+import { useAppDispatch } from '@/reduxtool/store';
+import { shallowEqual, useSelector } from 'react-redux';
+import {
+    getJobPostsAction,
+    addJobPostAction,
+    editJobPostAction,
+    deleteJobPostAction,
+    deleteAllJobPostsAction,
+    getJobDepartmentsAction, // Action to fetch job departments
+} from '@/reduxtool/master/middleware'; // Adjust path as necessary
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // Adjust as necessary
+
+// --- Define Types ---
+export type JobDepartmentListItem = {
+    id: string | number;
+    name: string;
+};
+export type JobDepartmentOption = { value: string; label: string };
+
+export type JobPostStatusApi = 'Active' | 'Disabled' | string;
+export type JobPostStatusForm = 'Active' | 'Disabled';
+
 export type JobPostItem = {
     id: string | number;
-    status: JobPostStatus;
-    jobTitle: string; // Will be the "name" equivalent for the form
-    department: string; // Key/ID for department dropdown
+    job_title?: string; // Assuming this field exists in your API response
+    status: JobPostStatusApi;
+    job_department_id: string;
     description: string;
     location: string;
-    experience: string; // e.g., "2+ Years", "Entry Level"
-    totalVacancy: number;
-    createdDate?: string; // ISO string for consistency (YYYY-MM-DD or full ISO)
+    created_by?: string;
+    vacancies: string | number; // API might send string, form uses number
+    experience: string;
+    created_at?: string;
+    updated_at?: string;
 };
 
-const JOB_POST_STATUS_OPTIONS: { value: JobPostStatus, label: string }[] = [
-    { value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' },
-    { value: 'draft', label: 'Draft' }, { value: 'on_hold', label: 'On Hold' },
+// --- Constants for Form Selects ---
+const JOB_POST_STATUS_OPTIONS_FORM: { value: JobPostStatusForm, label: string }[] = [
+    { value: 'Active', label: 'Active' },
+    { value: 'Disabled', label: 'Disabled' },
 ];
-const jobPostStatusValues = JOB_POST_STATUS_OPTIONS.map(s => s.value) as [JobPostStatus, ...JobPostStatus[]];
+const jobPostStatusFormValues = JOB_POST_STATUS_OPTIONS_FORM.map(s => s.value) as [JobPostStatusForm, ...JobPostStatusForm[]];
 
-const jobStatusColor: Record<JobPostStatus, string> = {
-    open: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    closed: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
-    draft: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
-    on_hold: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+const jobStatusColor: Record<JobPostStatusApi, string> = {
+    Active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    Disabled: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+    // Add other potential statuses from API if they need distinct colors
 };
-
-// Example Department Options for dropdowns (Replace with actual data source)
-const JOB_DEPARTMENT_OPTIONS = [
-    { value: 'eng', label: 'Engineering' }, { value: 'mktg', label: 'Marketing' },
-    { value: 'sales', label: 'Sales' }, { value: 'hr', label: 'Human Resources' },
-    { value: 'ops', label: 'Operations' },
-];
-const jobDepartmentValues = JOB_DEPARTMENT_OPTIONS.map(d => d.value) as [string, ...string[]];
-
 
 // --- Zod Schema for Add/Edit Job Post Form ---
 const jobPostFormSchema = z.object({
-    jobTitle: z.string().min(1, 'Job Title is required.').max(150, "Title too long"),
-    department: z.enum(jobDepartmentValues, { errorMap: () => ({ message: 'Please select a department.'}) }),
-    description: z.string().min(10, 'Description must be at least 10 characters.').max(5000),
+    job_title: z.string().min(1, 'Job Title is required.').max(150, "Title too long"),
+    job_department_id: z.string().min(1, 'Please select a department.'),
+    description: z.string()
+                  .min(1, 'Description is required.') // Or make it optional if it truly is
+                  // .min(10, 'Description must be at least 10 characters.') // Keep if this is a business rule
+                  .max(5000, "Description too long (max 5000 chars).")
+                  .optional() // If description can be empty or not sent
+                  .or(z.literal('')), // Allow empty string if optional
     location: z.string().min(1, 'Location is required.').max(100),
     experience: z.string().min(1, 'Experience level is required.').max(50),
-    totalVacancy: z.coerce.number().int().min(1, 'Total vacancies must be at least 1.'),
-    status: z.enum(jobPostStatusValues, { errorMap: () => ({ message: 'Please select a status.'})}), // Added status to form
+    vacancies: z.coerce.number().int().min(0, 'Vacancies must be a non-negative number.'),
+    status: z.enum(jobPostStatusFormValues, { errorMap: () => ({ message: 'Please select a status.'})}),
 });
 type JobPostFormData = z.infer<typeof jobPostFormSchema>;
 
@@ -90,301 +102,303 @@ type JobPostFormData = z.infer<typeof jobPostFormSchema>;
 const filterFormSchema = z.object({
     filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
     filterDepartment: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-    // Can add filter by location, experience if needed
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-
-// --- Initial Dummy Data ---
-const initialDummyJobPosts: JobPostItem[] = [
-    { id: 'JP001', status: 'open', jobTitle: 'Senior Frontend Engineer', department: 'eng', description: 'Looking for an experienced React developer...', location: 'Remote', experience: '5+ Years', totalVacancy: 1, createdDate: new Date(2023, 10, 1).toISOString() },
-    { id: 'JP002', status: 'open', jobTitle: 'Marketing Content Writer', department: 'mktg', description: 'Create compelling blog posts...', location: 'New York, NY', experience: '2-4 Years', totalVacancy: 2, createdDate: new Date(2023, 10, 3).toISOString() },
-    { id: 'JP003', status: 'draft', jobTitle: 'Product Manager - Mobile', department: 'prod_mgmt', description: 'Define the roadmap...', location: 'Hybrid (London)', experience: '4+ Years', totalVacancy: 1, createdDate: new Date(2023, 10, 5).toISOString() },
-];
-// Add 'prod_mgmt' to JOB_DEPARTMENT_OPTIONS if using this dummy data
-if (!JOB_DEPARTMENT_OPTIONS.find(opt => opt.value === 'prod_mgmt')) {
-    JOB_DEPARTMENT_OPTIONS.push({ value: 'prod_mgmt', label: 'Product Management' });
-    jobDepartmentValues.push('prod_mgmt');
-}
-
-
-// --- CSV Exporter ---
-const CSV_HEADERS_JOB = ['ID', 'Job Title', 'Status', 'Department', 'Location', 'Experience', 'Vacancies', 'Description', 'Created Date'];
-const CSV_KEYS_JOB: (keyof JobPostItem)[] = ['id', 'jobTitle', 'status', 'department', 'location', 'experience', 'totalVacancy', 'description', 'createdDate'];
-
+// --- CSV Exporter Utility ---
+const CSV_HEADERS_JOB = ['ID', 'Job Title', 'Status', 'Department ID', 'Description', 'Location', 'Experience', 'Vacancies', 'Created At'];
+const CSV_KEYS_JOB: (keyof JobPostItem)[] = ['id', 'job_title', 'status', 'job_department_id', 'description', 'location', 'experience', 'vacancies', 'created_at'];
 function exportJobPostsToCsv(filename: string, rows: JobPostItem[]) {
-    if (!rows || !rows.length) { /* ... no data toast ... */ return false; }
-    const preparedRows = rows.map(row => ({
-        ...row,
-        status: JOB_POST_STATUS_OPTIONS.find(s => s.value === row.status)?.label || row.status,
-        department: JOB_DEPARTMENT_OPTIONS.find(d => d.value === row.department)?.label || row.department,
-        createdDate: row.createdDate ? new Date(row.createdDate).toLocaleDateString() : '',
-    }));
-    // ... (Standard exportToCsv logic using preparedRows, CSV_HEADERS_JOB, CSV_KEYS_JOB)
+    if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
     const separator = ',';
-    const csvContent =
-        CSV_HEADERS_JOB.join(separator) + '\n' +
-        preparedRows.map((row: any) => CSV_KEYS_JOB.map(k => {
-            let cell: any = row[k];
-            if (cell === null || cell === undefined) cell = '';
-            else cell = String(cell).replace(/"/g, '""');
-            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-            return cell;
-        }).join(separator)).join('\n');
+    const csvContent = CSV_HEADERS_JOB.join(separator) + '\n' + rows.map((row: any) => CSV_KEYS_JOB.map(k => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ''; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    if (link.download !== undefined) { /* ... download logic ... */
-        const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename);
-        link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true;
-    }
+    if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; }
     toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
-
 // --- ActionColumn Component ---
-const ActionColumn = ({ onEdit, onDelete, onChangeStatus }: { onEdit: () => void; onDelete: () => void; onChangeStatus: () => void; }) => {
-    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
-    return (
-        <div className="flex items-center justify-center gap-2">
-            <Tooltip title="Edit Job Post"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
-            <Tooltip title="Change Status"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400')} role="button" onClick={onChangeStatus}><TbSwitchHorizontal /></div></Tooltip>
-            <Tooltip title="Delete Job Post"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
-        </div>
-    );
-};
+const ActionColumn = ({ onEdit, onDelete, onChangeStatus }: { onEdit: () => void; onDelete: () => void; onChangeStatus: () => void; }) => { const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'; const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'; return ( <div className="flex items-center justify-center gap-2"> <Tooltip title="Edit Job Post"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="Change Status"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400')} role="button" onClick={onChangeStatus}><TbSwitchHorizontal /></div></Tooltip> <Tooltip title="Delete Job Post"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> ); };
 
-// --- JobPostsSearch & JobPostsTableTools (Similar to Units) ---
-type JobPostsSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; }
-const JobPostsSearch = React.forwardRef<HTMLInputElement, JobPostsSearchProps>(
-    ({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Search job posts..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />)
-);
-JobPostsSearch.displayName = 'JobPostsSearch';
+// --- JobPostsSearch Component ---
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebouceInput ref={ref} className="w-full" placeholder="Search job posts..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ) );
+ItemSearch.displayName = 'ItemSearch';
 
-type JobPostsTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }
-const JobPostsTableTools = ({ onSearchChange, onFilter, onExport }: JobPostsTableToolsProps) => ( /* ... Same as UnitsTableTools, but with JobPostsSearch ... */
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-        <div className="flex-grow"><JobPostsSearch onInputChange={onSearchChange} /></div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
-            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-        </div>
-    </div>
-);
+// --- JobPostsTableTools Component ---
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
 
-
-// --- JobPostsTable (Similar to UnitsTable) ---
-type JobPostsTableProps = { /* ... Same props as UnitsTable, but with JobPostItem type ... */
-    columns: ColumnDef<JobPostItem>[]; data: JobPostItem[]; loading: boolean;
+// --- JobPostsTable Component (Corrected) ---
+type JobPostsTableProps = {
+    columns: ColumnDef<JobPostItem>[];
+    data: JobPostItem[];
+    loading: boolean;
     pagingData: { total: number; pageIndex: number; pageSize: number };
     selectedItems: JobPostItem[];
-    onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void;
+    onPaginationChange: (page: number) => void;
+    onSelectChange: (value: number) => void;
     onSort: (sort: OnSortParam) => void;
     onRowSelect: (checked: boolean, row: JobPostItem) => void;
     onAllRowSelect: (checked: boolean, rows: Row<JobPostItem>[]) => void;
 };
-const JobPostsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: JobPostsTableProps) => ( /* ... DataTable setup ... */
+const JobPostsTable = ({
+    columns, data, loading, pagingData, selectedItems,
+    onPaginationChange, onSelectChange, onSort,
+    onRowSelect, onAllRowSelect
+}: JobPostsTableProps) => (
      <DataTable
-        selectable columns={columns} data={data} loading={loading} pagingData={pagingData}
+        selectable
+        columns={columns}
+        data={data}
+        loading={loading}
+        pagingData={pagingData}
         checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)}
-        onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort}
-        onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect}
+        onPaginationChange={onPaginationChange}
+        onSelectChange={onSelectChange}
+        onSort={onSort}
+        onCheckBoxChange={onRowSelect}
+        onIndeterminateCheckBoxChange={onAllRowSelect}
         noData={!loading && data.length === 0}
     />
 );
 
-// --- JobPostsSelectedFooter (Similar to UnitsSelectedFooter) ---
-type JobPostsSelectedFooterProps = { selectedItems: JobPostItem[]; onDeleteSelected: () => void; };
-const JobPostsSelectedFooter = ({ selectedItems, onDeleteSelected }: JobPostsSelectedFooterProps) => { /* ... Same as UnitsSelectedFooter, text changed to "Job Post(s)" ... */
+// --- JobPostsSelectedFooter Component (Corrected) ---
+type JobPostsSelectedFooterProps = {
+    selectedItems: JobPostItem[];
+    onDeleteSelected: () => void;
+    isDeleting: boolean;
+};
+const JobPostsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: JobPostsSelectedFooterProps) => {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     if (selectedItems.length === 0) return null;
+    const handleDeleteClick = () => setDeleteConfirmOpen(true);
+    const handleCancelDelete = () => setDeleteConfirmOpen(false);
+    const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmOpen(false);};
+
     return (
         <>
-        <StickyFooter /* ... */ >
+        <StickyFooter
+            className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
+            stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
+        >
             <div className="flex items-center justify-between w-full px-4 sm:px-8">
                 <span className="flex items-center gap-2">
                     <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
-                    <span className="font-semibold"> {selectedItems.length} Job Post{selectedItems.length > 1 ? 's' : ''} selected </span>
+                    <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
+                         <span className="heading-text">{selectedItems.length}</span>
+                         <span> Job Post{selectedItems.length > 1 ? 's' : ''} selected</span>
+                    </span>
                 </span>
-                <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={()=>setDeleteConfirmOpen(true)}>Delete Selected</Button>
+                <Button
+                    size="sm"
+                    variant="plain"
+                    className="text-red-600 hover:text-red-500"
+                    onClick={handleDeleteClick}
+                    loading={isDeleting}
+                >
+                    Delete Selected
+                </Button>
             </div>
         </StickyFooter>
-        <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Job Post(s)`}
-            onClose={()=>setDeleteConfirmOpen(false)} onRequestClose={()=>setDeleteConfirmOpen(false)}
-            onCancel={()=>setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false);}}
+        <ConfirmDialog
+            isOpen={deleteConfirmOpen}
+            type="danger"
+            title={`Delete ${selectedItems.length} Job Post${selectedItems.length > 1 ? 's' : ''}`}
+            onClose={handleCancelDelete}
+            onRequestClose={handleCancelDelete}
+            onCancel={handleCancelDelete}
+            onConfirm={handleConfirmDelete}
         >
-            <p>Are you sure you want to delete the selected job post(s)?</p>
+            <p>Are you sure you want to delete the selected job post{selectedItems.length > 1 ? 's' : ''}?</p>
         </ConfirmDialog>
         </>
     );
 };
 
 
-// --- Main JobPostsListing Component ---
+// --- Main Component: JobPostsListing ---
 const JobPostsListing = () => {
-    const [jobPostsData, setJobPostsData] = useState<JobPostItem[]>(initialDummyJobPosts);
-    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
+    const dispatch = useAppDispatch();
+    const {
+        jobPostsData = [],
+        jobDepartmentsData = [],
+        status: masterLoadingStatus = 'idle'
+    } = useSelector(masterSelector, shallowEqual);
 
+    const [departmentOptions, setDepartmentOptions] = useState<JobDepartmentOption[]>([]);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<JobPostItem | null>(null);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isChangingStatus, setIsChangingStatus] = useState(false);
-
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<JobPostItem | null>(null);
-
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
     const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'createdDate' }, query: '',
+        pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '',
     });
     const [selectedItems, setSelectedItems] = useState<JobPostItem[]>([]);
 
+    useEffect(() => {
+        dispatch(getJobPostsAction());
+        dispatch(getJobDepartmentsAction());
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (Array.isArray(jobDepartmentsData) && jobDepartmentsData.length > 0) {
+            const options = jobDepartmentsData.map((dept: JobDepartmentListItem) => ({
+                value: String(dept.id),
+                label: dept.name,
+            }));
+            setDepartmentOptions(prevOptions => {
+                if(JSON.stringify(prevOptions) !== JSON.stringify(options)) return options;
+                return prevOptions;
+            });
+        } else if (departmentOptions.length > 0) {
+            setDepartmentOptions([]);
+        }
+    }, [jobDepartmentsData, departmentOptions.length]);
+
+    const defaultFormValues: JobPostFormData = {
+        job_title: '',
+        job_department_id: departmentOptions[0]?.value || '',
+        description: '',
+        location: '',
+        experience: '',
+        vacancies: 1,
+        status: 'Active',
+    };
+
     const formMethods = useForm<JobPostFormData>({
         resolver: zodResolver(jobPostFormSchema),
-        defaultValues: {
-            jobTitle: '', department: jobDepartmentValues[0] || '', description: '', location: '',
-            experience: '', totalVacancy: 1, status: 'draft',
-        },
+        defaultValues: defaultFormValues,
         mode: 'onChange',
     });
 
     const filterFormMethods = useForm<FilterFormData>({
-        resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria,
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria,
     });
 
-    // --- CRUD Handlers ---
-    const openAddDrawer = useCallback(() => { formMethods.reset(); setIsAddDrawerOpen(true); }, [formMethods]);
+    const openAddDrawer = useCallback(() => {
+        formMethods.reset(defaultFormValues);
+        setEditingItem(null);
+        setIsAddDrawerOpen(true);
+    }, [formMethods, defaultFormValues]); // defaultFormValues depends on departmentOptions, so it's better to pass it if it changes
     const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
+
     const openEditDrawer = useCallback((item: JobPostItem) => {
         setEditingItem(item);
-        formMethods.reset({ // Map item to form data
-            jobTitle: item.jobTitle,
-            department: item.department,
+        formMethods.reset({
+            job_title: item.job_title || '',
+            job_department_id: String(item.job_department_id),
             description: item.description,
             location: item.location,
             experience: item.experience,
-            totalVacancy: item.totalVacancy,
-            status: item.status,
+            vacancies: typeof item.vacancies === 'string' ? parseInt(item.vacancies, 10) || 0 : Number(item.vacancies) || 0,
+            status: item.status as JobPostStatusForm,
         });
         setIsEditDrawerOpen(true);
     }, [formMethods]);
-    const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingItem(null); }, []);
+    const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
-    const onJobPostFormSubmit = useCallback(async (data: JobPostFormData) => {
-        setIsSubmitting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 500));
+    const onSubmitHandler = async (data: JobPostFormData) => {
+        setIsSubmitting(true);
+        const loggedInUserId = '1'; // Placeholder: Get actual logged-in user ID
+ console.log("data",data);
+ 
+        const apiPayload = {
+            // Map form field names to API expected field names
+            title: data.job_title, // Assuming API expects 'title' for job_title
+            job_department_id: parseInt(data.job_department_id),
+            description: data.description,
+            
+            location: data.location,
+            experience: data.experience,
+            vacancies: String(data.vacancies), // API example showed "tet", ensure backend handles string or number
+            status: data.status,
+            created_by: loggedInUserId,
+        };
+
         try {
             if (editingItem) {
-                const updatedJobPost: JobPostItem = {
-                    ...editingItem, // Keep id and createdDate
-                    ...data,
-                };
-                setJobPostsData(prev => prev.map(jp => jp.id === updatedJobPost.id ? updatedJobPost : jp));
-                toast.push(<Notification title="Job Post Updated" type="success" />);
+                await dispatch(editJobPostAction({ id: editingItem.id, ...apiPayload })).unwrap();
+                toast.push(<Notification title="Job Post Updated" type="success" duration={2000}>Job post saved.</Notification>);
                 closeEditDrawer();
             } else {
-                const newJobPost: JobPostItem = {
-                    ...data,
-                    id: `JP${Date.now()}`,
-                    createdDate: new Date().toISOString(),
-                };
-                setJobPostsData(prev => [newJobPost, ...prev]);
-                toast.push(<Notification title="Job Post Added" type="success" />);
+                await dispatch(addJobPostAction(apiPayload)).unwrap();
+                toast.push(<Notification title="Job Post Added" type="success" duration={2000}>New job post created.</Notification>);
                 closeAddDrawer();
             }
-        } catch (e: any) { toast.push(<Notification title="Operation Failed" type="danger">{e.message}</Notification>); }
-        finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
-    }, [editingItem, closeAddDrawer, closeEditDrawer]);
-
-    const handleDeleteClick = useCallback((item: JobPostItem) => { /* ... */ setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-    const onConfirmSingleDelete = useCallback(async () => { /* ... */
-        if (!itemToDelete) return;
-        setIsDeleting(true); setMasterLoadingStatus('loading'); setSingleDeleteConfirmOpen(false);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        try {
-            setJobPostsData(prev => prev.filter(jp => jp.id !== itemToDelete!.id));
-            toast.push(<Notification title="Job Post Deleted" type="success">{`Job Post "${itemToDelete.jobTitle}" deleted.`}</Notification>);
-            setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id));
-        } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message}</Notification>); }
-        finally { setIsDeleting(false); setMasterLoadingStatus('idle'); setItemToDelete(null); }
-    }, [itemToDelete]);
-
-    const handleDeleteSelected = useCallback(async () => { /* ... */
-        if (selectedItems.length === 0) return;
-        setIsDeleting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        try {
-            const idsToDelete = selectedItems.map(item => item.id);
-            setJobPostsData(prev => prev.filter(jp => !idsToDelete.includes(jp.id)));
-            toast.push(<Notification title="Job Posts Deleted" type="success">{selectedItems.length} post(s) deleted.</Notification>);
-            setSelectedItems([]);
-        } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message}</Notification>); }
-        finally { setIsDeleting(false); setMasterLoadingStatus('idle'); }
-    }, [selectedItems]);
+            dispatch(getJobPostsAction());
+        } catch (error: any) {
+            toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger" duration={3000}>{error?.message || 'Operation failed.'}</Notification>);
+            console.error("Job Post Submit Error:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const handleChangeStatus = useCallback(async (item: JobPostItem) => {
-        // Example: cycle through statuses
         setIsChangingStatus(true);
-        const currentStatusIndex = JOB_POST_STATUS_OPTIONS.findIndex(s => s.value === item.status);
-        const nextStatus = JOB_POST_STATUS_OPTIONS[(currentStatusIndex + 1) % JOB_POST_STATUS_OPTIONS.length].value;
-        await new Promise(resolve => setTimeout(resolve, 300));
+        const newStatus = item.status === 'Active' ? 'Disabled' : 'Active';
+        const payload = { // Construct full payload as editJobPostAction likely expects it
+            id: item.id,
+            status: newStatus,
+            title: item.job_title || '',
+            job_department_id: item.job_department_id,
+            description: item.description,
+            location: item.location,
+            experience: item.experience,
+            vacancies: String(item.vacancies),
+            created_by: item.created_by, // Preserve existing created_by
+        };
         try {
-            setJobPostsData(prev => prev.map(jp => jp.id === item.id ? { ...jp, status: nextStatus } : jp));
-            toast.push(<Notification title="Status Changed" type="success">{`Job Post "${item.jobTitle}" status changed to ${JOB_POST_STATUS_OPTIONS.find(s=>s.value === nextStatus)?.label}.`}</Notification>);
-        } catch (e: any) { toast.push(<Notification title="Status Change Failed" type="danger">{e.message}</Notification>); }
-        finally { setIsChangingStatus(false); }
-    }, []);
+            await dispatch(editJobPostAction(payload)).unwrap();
+            toast.push(<Notification title="Status Changed" type="success" duration={2000}>{`Job Post status changed to ${newStatus}.`}</Notification>);
+            dispatch(getJobPostsAction());
+        } catch (error: any) {
+            toast.push(<Notification title="Status Change Failed" type="danger" duration={3000}>{error.message}</Notification>);
+            console.error("Change Status Error:", error);
+        } finally {
+            setIsChangingStatus(false);
+        }
+    }, [dispatch]);
 
+    const handleDeleteClick = useCallback((item: JobPostItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteJobPostAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Job Post Deleted" type="success" duration={2000}>{`Job post "${itemToDelete.job_title || itemToDelete.id}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter(d => d.id !== itemToDelete!.id)); dispatch(getJobPostsAction()); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{error.message}</Notification>); console.error("Delete Error:", error); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
+    const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const validItems = selectedItems.filter(item => item.id); if (validItems.length === 0) { setIsDeleting(false); return; } const idsToDelete = validItems.map(item => String(item.id)); try { await dispatch(deleteAllJobPostsAction({ ids: idsToDelete.join(',') })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${validItems.length} job post(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getJobPostsAction()); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message}</Notification>); console.error("Bulk Delete Error:", error); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
 
-    // --- Filter Handlers ---
     const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
-    const onClearFilters = useCallback(() => { const df = filterFormSchema.parse({}); filterFormMethods.reset(df); setFilterCriteria(df); setTableData(prev => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterDepartment: data.filterDepartment || [] }); setTableData(prev => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
+    const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterDepartment: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData(prev => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
 
-    // --- Table Interaction Handlers ---
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
-    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
-    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
-    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
-    const handleRowSelect = useCallback((checked: boolean, row: JobPostItem) => { /* ... */ }, []);
-    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobPostItem>[]) => { /* ... */ }, []);
-
-    // --- Data Processing ---
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        let processedData: JobPostItem[] = cloneDeep(jobPostsData);
-        // Apply Filters
+        const sourceData: JobPostItem[] = Array.isArray(jobPostsData) ? jobPostsData : [];
+        let processedData: JobPostItem[] = cloneDeep(sourceData);
+
         if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map(s=>s.value); processedData = processedData.filter(item => v.includes(item.status));}
-        if (filterCriteria.filterDepartment?.length) { const v = filterCriteria.filterDepartment.map(d=>d.value); processedData = processedData.filter(item => v.includes(item.department));}
-        // Apply Search Query
-        if (tableData.query && tableData.query.trim() !== '') { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(j => j.jobTitle.toLowerCase().includes(q) || j.department.toLowerCase().includes(q) || j.location.toLowerCase().includes(q) || j.experience.toLowerCase().includes(q) || j.description.toLowerCase().includes(q) || String(j.id).toLowerCase().includes(q) );}
-        // Apply Sorting
-       const { order, key } = tableData.sort as OnSortParam;
-if (order && key) {
-    processedData.sort((a, b) => {
-        const aVal = a[key as keyof JobPostItem];
-        const bVal = b[key as keyof JobPostItem];
+        if (filterCriteria.filterDepartment?.length) { const v = filterCriteria.filterDepartment.map(d=>d.value); processedData = processedData.filter(item => v.includes(String(item.job_department_id)));}
 
-        if (key === 'createdDate') { // Specific handling for date
-            const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
-            const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
-            return order === 'asc' ? dateA - dateB : dateB - dateA;
+        if (tableData.query && tableData.query.trim() !== '') {
+            const q = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(j => (j.job_title?.toLowerCase() ?? '').includes(q) || (j.description?.toLowerCase() ?? '').includes(q) || (j.location?.toLowerCase() ?? '').includes(q) || (j.experience?.toLowerCase() ?? '').includes(q) || String(j.id).toLowerCase().includes(q) );
         }
-        if (key === 'totalVacancy') { // Specific handling for number
-            return order === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+        const { order, key } = tableData.sort as OnSortParam;
+        if (order && key) {
+            processedData.sort((a, b) => {
+                const aVal = a[key as keyof JobPostItem]; const bVal = b[key as keyof JobPostItem];
+                if (key === 'created_at' || key === 'updated_at') { const dateA = aVal ? new Date(aVal as string).getTime() : 0; const dateB = bVal ? new Date(bVal as string).getTime() : 0; return order === 'asc' ? dateA - dateB : dateB - dateA; }
+                if (key === 'vacancies') { const numA = typeof aVal === 'string' ? parseInt(aVal,10) || 0 : Number(aVal) || 0; const numB = typeof bVal === 'string' ? parseInt(bVal,10) || 0 : Number(bVal) || 0; return order === 'asc' ? numA - numB : numB - numA; }
+                const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase();
+                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+            });
         }
-        // General string comparison
-        const aStr = String(aVal ?? '').toLowerCase();
-        const bStr = String(bVal ?? '').toLowerCase();
-        return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
-    });
-}
-
         const dataToExport = [...processedData];
         const currentTotal = processedData.length;
         const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number;
@@ -393,68 +407,80 @@ if (order && key) {
         return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
     }, [jobPostsData, tableData, filterCriteria]);
 
-    const handleExportData = useCallback(() => { exportJobPostsToCsv('job_posts_export.csv', allFilteredAndSortedData); }, [allFilteredAndSortedData]);
+    const handleExportData = useCallback(() => { const success = exportJobPostsToCsv('job_posts_export.csv', allFilteredAndSortedData); if (success) toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported.</Notification>); }, [allFilteredAndSortedData]);
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: JobPostItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobPostItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-    // --- Table Column Definitions ---
     const columns: ColumnDef<JobPostItem>[] = useMemo(
         () => [
-            { header: 'Status', accessorKey: 'status', size: 120, enableSorting: true, cell: props => <Tag className={classNames('text-white capitalize whitespace-nowrap', jobStatusColor[props.getValue<JobPostStatus>()])}>{JOB_POST_STATUS_OPTIONS.find(o=>o.value === props.getValue())?.label}</Tag> },
-            { header: 'Job Title', accessorKey: 'jobTitle', size: 220, enableSorting: true, cell: props => <span className="font-semibold">{props.getValue<string>()}</span> },
-            { header: 'Department', accessorKey: 'department', size: 150, enableSorting: true, cell: props => JOB_DEPARTMENT_OPTIONS.find(o => o.value === props.getValue())?.label || props.getValue() },
-            { header: 'Description', accessorKey: 'description', enableSorting: false, size: 250, cell: props => <Tooltip title={props.getValue<string>()}><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">{props.getValue<string>()}</span></Tooltip> },
+            { header: 'Status', accessorKey: 'status', size: 120, enableSorting: true,
+              cell: props => { const statusVal = props.getValue<JobPostStatusApi>(); return <Tag className={classNames('capitalize whitespace-nowrap', jobStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag> }
+            },
+            { header: 'Department', accessorKey: 'job_department_id', size: 180, enableSorting: true,
+              cell: props => { const deptId = String(props.getValue()); const department = departmentOptions.find(opt => opt.value === deptId); return department ? department.label : `ID: ${deptId}`; }
+            },
+            { header: 'Description', accessorKey: 'description', enableSorting: false, size: 250,
+              cell: props => <Tooltip title={props.getValue<string>()}><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">{props.getValue<string>()}</span></Tooltip>
+            },
             { header: 'Location', accessorKey: 'location', size: 150, enableSorting: true },
             { header: 'Experience', accessorKey: 'experience', size: 130, enableSorting: true },
-            { header: 'Vacancies', accessorKey: 'totalVacancy', size: 100, enableSorting: true, meta: { cellClass: "text-center" } },
-            // { header: 'Created Date', accessorKey: 'createdDate', size: 150, enableSorting: true, cell: props => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' },
+            { header: 'Vacancies', accessorKey: 'vacancies', size: 100, enableSorting: true, meta: { cellClass: "text-center" } },
             {
                 header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 140,
                 cell: props => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} />,
             },
         ],
-        [openEditDrawer, handleDeleteClick, handleChangeStatus]
+        [departmentOptions, openEditDrawer, handleDeleteClick, handleChangeStatus]
     );
 
-    // --- Render Form for Add/Edit Drawer ---
     const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            <FormItem label="Job Title" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.jobTitle} errorMessage={currentFormMethods.formState.errors.jobTitle?.message}>
-                <Controller name="jobTitle" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbBriefcase/>} placeholder="e.g., Senior Software Engineer" />} />
+            <FormItem label="Job Title" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.job_title} errorMessage={currentFormMethods.formState.errors.job_title?.message}>
+                <Controller name="job_title" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbBriefcase/>} placeholder="e.g., Software Engineer" />} />
             </FormItem>
-             <FormItem label="Job Department" invalid={!!currentFormMethods.formState.errors.department} errorMessage={currentFormMethods.formState.errors.department?.message}>
-                <Controller name="department" control={currentFormMethods.control} render={({ field }) => (
-                    <Select placeholder="Select Department" options={JOB_DEPARTMENT_OPTIONS} value={JOB_DEPARTMENT_OPTIONS.find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+             <FormItem label="Job Department" invalid={!!currentFormMethods.formState.errors.job_department_id} errorMessage={currentFormMethods.formState.errors.job_department_id?.message}>
+                <Controller name="job_department_id" control={currentFormMethods.control} render={({ field }) => (
+                    <Select placeholder="Select Department" options={departmentOptions}
+                            value={departmentOptions.find(o=>o.value === field.value)}
+                            onChange={opt=>field.onChange(opt?.value)} />
                 )} />
             </FormItem>
             <FormItem label="Status" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
                 <Controller name="status" control={currentFormMethods.control} render={({ field }) => (
-                    <Select placeholder="Select Status" options={JOB_POST_STATUS_OPTIONS} value={JOB_POST_STATUS_OPTIONS.find(o=>o.value === field.value)} onChange={opt=>field.onChange(opt?.value)} />
+                    <Select placeholder="Select Status" options={JOB_POST_STATUS_OPTIONS_FORM}
+                            value={JOB_POST_STATUS_OPTIONS_FORM.find(o=>o.value === field.value)}
+                            onChange={opt=>field.onChange(opt?.value)} />
                 )} />
             </FormItem>
-            <FormItem label="Location" invalid={!!currentFormMethods.formState.errors.location} errorMessage={currentFormMethods.formState.errors.location?.message}>
+            <FormItem label="Location" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.location} errorMessage={currentFormMethods.formState.errors.location?.message}>
                 <Controller name="location" control={currentFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbMapPin/>} placeholder="e.g., Remote, New York" />} />
             </FormItem>
             <FormItem label="Experience Required" invalid={!!currentFormMethods.formState.errors.experience} errorMessage={currentFormMethods.formState.errors.experience?.message}>
                 <Controller name="experience" control={currentFormMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., 2+ Years, Entry Level" />} />
             </FormItem>
-            <FormItem label="Total Vacancies" invalid={!!currentFormMethods.formState.errors.totalVacancy} errorMessage={currentFormMethods.formState.errors.totalVacancy?.message}>
-                <Controller name="totalVacancy" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="number" prefix={<TbUsers/>} min={1} />} />
+            <FormItem label="Total Vacancies" invalid={!!currentFormMethods.formState.errors.vacancies} errorMessage={currentFormMethods.formState.errors.vacancies?.message}>
+                <Controller name="vacancies" control={currentFormMethods.control} render={({ field }) => <Input {...field} type="number" prefix={<TbUsers/>} min={0} />} />
             </FormItem>
              <FormItem label="Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.description} errorMessage={currentFormMethods.formState.errors.description?.message}>
-                <Controller name="description" control={currentFormMethods.control} render={({ field }) => <Textarea {...field} rows={5} placeholder="Detailed job description, responsibilities, qualifications..." />} />
+                <Controller name="description" control={currentFormMethods.control} render={({ field }) => <Textarea {...field} rows={5}  prefix={<TbFileText />} placeholder="Detailed job description, responsibilities, qualifications..." />} />
             </FormItem>
         </div>
     );
-
 
     return (
         <>
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbBriefcase /> Job Posts Management</h3>
+                        <h3 className="mb-4 sm:mb-0 flex items-center gap-2"><TbBriefcase /> Job Posts</h3>
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Job Post</Button>
                     </div>
-                    <JobPostsTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
                     <div className="mt-4">
                         <JobPostsTable
                             columns={columns} data={pageData}
@@ -463,13 +489,13 @@ if (order && key) {
                             selectedItems={selectedItems}
                             onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
                             onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect}
-                            
+                           
                         />
                     </div>
                 </AdaptiveCard>
             </Container>
 
-            <JobPostsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} />
+            <JobPostsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
             <Drawer
                 title={editingItem ? "Edit Job Post" : "Add New Job Post"}
@@ -477,49 +503,30 @@ if (order && key) {
                 onClose={editingItem ? closeEditDrawer : closeAddDrawer}
                 onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
                 width={700}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                        <Button size="sm" variant="solid" form="jobPostForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
-                            {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add Job Post')}
-                        </Button>
-                    </div>
-                }
+                footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="jobPostForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}> {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add Job Post')} </Button> </div> }
             >
-                <Form id="jobPostForm" onSubmit={formMethods.handleSubmit(onJobPostFormSubmit)} className="flex flex-col gap-4">
+                <Form id="jobPostForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
                     {renderDrawerForm(formMethods)}
                 </Form>
             </Drawer>
 
             <Drawer
-                title="Filter Job Posts"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                footer={
-                     <div className="flex justify-between w-full">
-                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
-                        <div>
-                            <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button>
-                            <Button size="sm" variant="solid" form="filterJobPostForm" type="submit">Apply Filters</Button>
-                        </div>
-                    </div>
-                }
+                title="Filter Job Posts" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+                footer={ <div className="flex justify-between w-full"> <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button> <div> <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button> <Button size="sm" variant="solid" form="filterJobPostForm" type="submit">Apply Filters</Button> </div> </div> }
             >
                 <Form id="filterJobPostForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Filter by Status">
                         <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (
-                            <Select isMulti placeholder="Any Status" options={JOB_POST_STATUS_OPTIONS}
+                            <Select isMulti placeholder="Any Status" options={JOB_POST_STATUS_OPTIONS_FORM.map(s=>({value:s.value, label: s.label}))}
                                     value={field.value || []} onChange={val => field.onChange(val || [])} />
                         )} />
                     </FormItem>
                      <FormItem label="Filter by Department">
                         <Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => (
-                            <Select isMulti placeholder="Any Department" options={JOB_DEPARTMENT_OPTIONS}
+                            <Select isMulti placeholder="Any Department" options={departmentOptions}
                                     value={field.value || []} onChange={val => field.onChange(val || [])} />
                         )} />
                     </FormItem>
-                    {/* Add more filters here: Location (Input), Experience (Input or Select) */}
                 </Form>
             </Drawer>
 
@@ -530,10 +537,14 @@ if (order && key) {
                 onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onConfirm={onConfirmSingleDelete} loading={isDeleting}
             >
-                <p>Are you sure you want to delete the job post "<strong>{itemToDelete?.jobTitle}</strong>"?</p>
+                <p>Are you sure you want to delete the job post "<strong>{itemToDelete?.job_title || itemToDelete?.id}</strong>"?</p>
             </ConfirmDialog>
         </>
     );
 };
 
 export default JobPostsListing;
+
+function classNames(...classes: (string | boolean | undefined)[]) {
+    return classes.filter(Boolean).join(' ');
+}
