@@ -68,6 +68,22 @@ const documentMasterNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
+                key: 'master.trendingCarousel',
+                path: `${DOCUMENT_MASTER_PREFIX_PATH}/trending-carousel`,
+                title: 'Trending Carousel',
+                translateKey: 'nav.master.trendingCarousel',
+                icon: 'trendingCarousel',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.master.trendingCarouselDesc',
+                        label: 'Manage trending Carousels',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'master.sliders',
                 path: `${DOCUMENT_MASTER_PREFIX_PATH}/sliders`,
                 title: 'Sliders',

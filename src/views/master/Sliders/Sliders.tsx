@@ -457,11 +457,12 @@ const Sliders = () => {
         setSingleDeleteConfirmOpen(false);
         try {
             await dispatch(deleteSliderAction(sliderToDelete.id)).unwrap();
+
             toast.push(<Notification title="Slider Deleted" type="success" duration={2000}>Slider "{sliderToDelete.title}" deleted.</Notification>);
             setSelectedItems(prev => prev.filter(item => item.id !== sliderToDelete!.id));
             dispatch(getSlidersAction());
         } catch (error: any) {
-            toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}>{error.message || 'Could not delete slider.'}</Notification>);
+            toast.push(<Notification title={error} type="danger" duration={3000}>{error.message || 'Could not delete slider.'}</Notification>);
         } finally {
             setIsProcessing(false);
             setSliderToDelete(null);

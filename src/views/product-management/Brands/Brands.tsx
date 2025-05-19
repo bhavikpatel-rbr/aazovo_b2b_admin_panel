@@ -664,7 +664,7 @@ const Brands = () => {
                                       onChange={opt => field.onChange(opt ? opt.value : undefined)} />
                         )} />
                     </FormItem>
-                    <h6 className="text-sm font-medium mt-2">Meta Options (Optional)</h6>
+                    <FormItem style={{fontWeight:"bold", color:"#000"}} label="Meta Options (Optional)"></FormItem>
                     <FormItem label="Meta Title" invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}>
                         <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Meta Title" />} />
                     </FormItem>
@@ -735,7 +735,7 @@ const Brands = () => {
                                       onChange={opt => field.onChange(opt ? opt.value : undefined)} />
                         )} />
                     </FormItem>
-                    <h6 className="text-sm font-medium mt-2">Meta Options (Optional)</h6>
+                    <FormItem style={{fontWeight:"bold", color:"#000"}} label="Meta Options (Optional)"></FormItem>
                     <FormItem label="Meta Title" invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}>
                         <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ''} />} />
                     </FormItem>

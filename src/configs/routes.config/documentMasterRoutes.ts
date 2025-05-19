@@ -32,6 +32,15 @@ const documentMasterRoutes: Routes = [
         },
     },
     {
+        key: 'master.trendingCarousel',
+        path: `${DOCUMENT_MASTER_PREFIX_PATH}/trending-carousel`,
+        component: lazy(() => import('@/views/master/Trending-Carousel')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'master.sliders',
         path: `${DOCUMENT_MASTER_PREFIX_PATH}/sliders`,
         component: lazy(() => import('@/views/master/Sliders')),
