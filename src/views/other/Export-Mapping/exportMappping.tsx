@@ -7,6 +7,7 @@ import React, {
     Ref,
     Suspense,
     lazy,
+    useEffect,
 } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 // import cloneDeep from 'lodash/cloneDeep'
@@ -715,10 +716,12 @@ const ExportMapping = () => {
 
     // const { exportMappingData = [], status: masterLoadingStatus = 'idle' } =
     //         useSelector(masterSelector)
+    // const dispatch = useAppDispatch();
 
-    //     useEffect(() => {
-    //         dispatch(getExportMappingsAction())
-    //     }, [dispatch])
+    useEffect(() => { 
+        console.log('test');
+        // dispatch(getBrandAction())
+     }, []);
 
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,

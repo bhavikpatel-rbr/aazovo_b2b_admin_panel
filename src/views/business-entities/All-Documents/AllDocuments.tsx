@@ -13,7 +13,7 @@ const AllDocuments = () => {
                 <AdaptiveCard>
                     <div className="flex flex-col gap-4">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                            <h5>Dosument Master</h5>
+                            <h5>Document Master</h5>
                             <FormListActionTools />
                         </div>
                         <FormListTableTools />

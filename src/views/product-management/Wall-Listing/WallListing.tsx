@@ -50,62 +50,79 @@ export type WallProductCondition = 'New' | 'Used' | 'Refurbished' | string;
 
 export type ApiWallItem = {
     id: number;
-    product_id: number;
-    product_spec_id: number;
-    company_id?: string | null; // Make it optional and nullable if API allows
-    customer_id: number;
-    qty: number;
+    listing_id: string;
+    product_name: string;
+    company_name: string;
+    contact_person_name: string;
+    contact_person_email: string;
+    contact_person_phone: string;
+    product_category: string;
+    product_subcategory: string;
+    product_description: string;
+    product_specs: string;
     product_status: string;
-    want_to: string; // API might send as general string
-    status: string;  // API might send as general string
-    price?: number | null;
-    color?: string | null;
-    cartoon_type_id?: number | null;
-    dispatch_status?: string | null;
-    payment_term_id?: number | null;
-    device_condition?: string;
-    eta?: string | null;
-    location?: string | null;
-    internal_remarks?: string | null;
-    created_at: string;
-    updated_at: string;
-    product?: { name: string; icon_url?: string };
-    product_spec?: { name: string; };
-    company?: { name: string };
-    customer?: { name: string; email?: string; phone?: string };
+    quantity: number;
+    price: number;
+    want_to: string;
+    listing_type: string;
+    shipping_options: string;
+    payment_method: string;
+    warranty: string;
+    return_policy: string;
+    listing_url: string;
+    brand: string;
+    product_images: string[]; // Array of image URLs
+    rating: number;
+    reviews_count: number;
+    created_date: string; // ISO date format recommended
+    last_updated: string; // ISO date format recommended
+    visibility: string;
+    priority: string;
+    assigned_to: string;
+    inquiry_count: number;
+    view_count: number;
+    interaction_type: string;
+    action: string;
+
 };
 
 export type WallItem = {
     id: number;
-    productId: number;
-    productSpecId: number;
-    companyId: string; // Keep as string, ensure mapping handles null/undefined from API
-    customerId: number;
-    qty: number;
-    productStatus: string;
-    intent: WallIntent; // Use the specific enum
-    recordStatus: WallRecordStatus; // Use the specific enum
-    price?: number | null;
-    color?: string | null;
-    cartoonTypeId?: number | null;
-    dispatchStatus?: string | null;
-    paymentTermId?: number | null;
-    deviceCondition?: WallProductCondition;
-    eta?: string | null;
-    location?: string | null;
-    internalRemarks?: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    productName?: string;
-    productIconUrl?: string;
-    productSpecName?: string;
-    companyName?: string;
-    customerName?: string;
-    customerEmail?: string;
-    customerPhone?: string;
-    cartoonTypeName?: string;
-    paymentTermName?: string;
+    listing_id: string;
+    product_name: string;
+    company_name: string;
+    contact_person_name: string;
+    contact_person_email: string;
+    contact_person_phone: string;
+    product_category: string;
+    product_subcategory: string;
+    product_description: string;
+    product_specs: string;
+    product_status: string;
+    quantity: number;
+    price: number;
+    want_to: string;
+    listing_type: string;
+    shipping_options: string;
+    payment_method: string;
+    warranty: string;
+    return_policy: string;
+    listing_url: string;
+    brand: string;
+    product_images: string[]; // Array of image URLs
+    rating: number;
+    reviews_count: number;
+    created_date: string; // ISO date format recommended
+    last_updated: string; // ISO date format recommended
+    visibility: string;
+    priority: string;
+    assigned_to: string;
+    inquiry_count: number;
+    view_count: number;
+    interaction_type: string;
+    action: string;
 };
+
 
 // --- Zod Schema for Add/Edit Wall Item Form ---
 const wallItemFormSchema = z.object({
@@ -165,13 +182,85 @@ const dummyCartoonTypes = [{id: 1, name: 'Master Cartoon'}, {id: 2, name: 'Inner
 const dummyPaymentTerms = [{id: 1, name: 'Net 30'}, {id: 2, name: 'COD'}, {id: 3, name: 'Prepaid'}];
 
 const initialDummyWallItems: ApiWallItem[] = [
-    { id: 1, product_id: 1, product_spec_id: 1, company_id: "COMP001", customer_id: 101, qty: 100, product_status: "In Stock", want_to: "Sell", status: "Approved", price: 999, color: "Blue Titanium", cartoon_type_id: 1, dispatch_status: "Ready for Dispatch", payment_term_id: 1, device_condition: "New", eta: "2-3 days", location: "Warehouse A", internal_remarks: "High demand item", created_at: dayjs().subtract(2, 'day').toISOString(), updated_at: dayjs().subtract(1, 'day').toISOString(), product: dummyProducts[0], product_spec: dummyProductSpecs[0], company: dummyCompanies[0], customer: dummyCustomers[0] },
-    { id: 2, product_id: 2, product_spec_id: 3, company_id: "COMP002", customer_id: 102, qty: 50, product_status: "In Stock", want_to: "Buy", status: "Pending", price: 1100, color: "Phantom Black", cartoon_type_id: 2, payment_term_id: 2, device_condition: "New", location: "Central Hub", created_at: dayjs().subtract(5, 'day').toISOString(), updated_at: dayjs().subtract(5, 'day').toISOString(), product: dummyProducts[1], product_spec: dummyProductSpecs[2], company: dummyCompanies[1], customer: dummyCustomers[1] },
-    { id: 3, product_id: 1, product_spec_id: 2, company_id: "COMP001", customer_id: 101, qty: 20, product_status: "Low Stock", want_to: "Sell", status: "Expired", price: 1050, color: "Natural Titanium", device_condition: "Used", created_at: dayjs().subtract(10, 'day').toISOString(), updated_at: dayjs().subtract(3, 'day').toISOString(), product: dummyProducts[0], product_spec: dummyProductSpecs[1], company: dummyCompanies[0], customer: dummyCustomers[0] },
-];
+    {
+      id: 1,
+      listing_id: 'LIST-001',
+      product_name: 'Electric Drill',
+      company_name: 'ToolMaster Inc.',
+      contact_person_name: 'John Doe',
+      contact_person_email: 'john@toolmaster.com',
+      contact_person_phone: '+1 234 567 890',
+      product_category: 'Tools',
+      product_subcategory: 'Power Tools',
+      product_description: 'A high-performance electric drill suitable for heavy-duty tasks.',
+      product_specs: '500W, 220V, 13mm chuck',
+      product_status: 'available',
+      quantity: 25,
+      price: 149.99,
+      want_to: 'sell',
+      listing_type: 'featured',
+      shipping_options: 'Courier, Pickup',
+      payment_method: 'Online, COD',
+      warranty: '1 Year Manufacturer Warranty',
+      return_policy: '7 Days Return',
+      listing_url: 'https://example.com/product/electric-drill',
+      brand: 'ToolMaster',
+      product_images: [
+        'https://example.com/images/drill1.jpg',
+        'https://example.com/images/drill2.jpg'
+      ],
+      rating: 4.5,
+      reviews_count: 87,
+      created_date: '2024-11-01T10:00:00Z',
+      last_updated: '2024-12-01T12:30:00Z',
+      visibility: 'public',
+      priority: 'high',
+      assigned_to: 'Sales Team A',
+      inquiry_count: 42,
+      view_count: 580,
+      interaction_type: 'call',
+      action: 'follow_up'
+    }
+  ];
+  
 
 const CSV_WALL_HEADERS = ['ID', 'Product Name', 'Product Spec', 'Company Name', 'Customer Name', 'Qty', 'Product Status', 'Intent', 'Record Status', 'Price', 'Color', 'Cartoon Type', 'Dispatch Status', 'Payment Term', 'Device Condition', 'ETA', 'Location', 'Internal Remarks', 'Created At'];
-const CSV_WALL_KEYS: (keyof WallItem)[] = ['id', 'productName', 'productSpecName', 'companyName', 'customerName', 'qty', 'productStatus', 'intent', 'recordStatus', 'price', 'color', 'cartoonTypeName', 'dispatchStatus', 'paymentTermName', 'deviceCondition', 'eta', 'location', 'internalRemarks', 'createdAt'];
+const CSV_WALL_KEYS: (keyof WallItem)[] = [
+    'id',
+    'listing_id',
+    'product_name',
+    'company_name',
+    'contact_person_name',
+    'contact_person_email',
+    'contact_person_phone',
+    'product_category',
+    'product_subcategory',
+    'product_description',
+    'product_specs',
+    'product_status',
+    'quantity',
+    'price',
+    'want_to',
+    'listing_type',
+    'shipping_options',
+    'payment_method',
+    'warranty',
+    'return_policy',
+    'listing_url',
+    'brand',
+    'product_images',
+    'rating',
+    'reviews_count',
+    'created_date',
+    'last_updated',
+    'visibility',
+    'priority',
+    'assigned_to',
+    'inquiry_count',
+    'view_count',
+    'interaction_type',
+    'action'
+];
 
 function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
      if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
@@ -317,44 +406,49 @@ const WallListing = () => {
         } catch (e) { setLoadingStatus('failed'); return { unwrap: () => Promise.reject(e) }; }
     }, []);
 
-    useEffect(() => {
-        dispatchSimulated({ type: 'wall/get' });
-    }, [dispatchSimulated]);
 
     useEffect(() => {
         const mapped = apiRawData.map((apiItem): WallItem => ({
             id: apiItem.id,
-            productId: apiItem.product_id,
-            productSpecId: apiItem.product_spec_id,
-            companyId: apiItem.company_id || '',
-            customerId: apiItem.customer_id,
-            qty: apiItem.qty,
-            productStatus: apiItem.product_status,
-            intent: apiItem.want_to as WallIntent, // Cast if API is string
-            recordStatus: apiItem.status as WallRecordStatus, // Cast if API is string
+            listing_id: apiItem.listing_id,
+            product_name: apiItem.product_name,
+            company_name: apiItem.company_name,
+            contact_person_name: apiItem.contact_person_name,
+            contact_person_email: apiItem.contact_person_email,
+            contact_person_phone: apiItem.contact_person_phone,
+            product_category: apiItem.product_category,
+            product_subcategory: apiItem.product_subcategory,
+            product_description: apiItem.product_description,
+            product_specs: apiItem.product_specs,
+            product_status: apiItem.product_status,
+            quantity: apiItem.quantity,
             price: apiItem.price,
-            color: apiItem.color,
-            cartoonTypeId: apiItem.cartoon_type_id,
-            dispatchStatus: apiItem.dispatch_status,
-            paymentTermId: apiItem.payment_term_id,
-            deviceCondition: apiItem.device_condition as WallProductCondition,
-            eta: apiItem.eta,
-            location: apiItem.location,
-            internalRemarks: apiItem.internal_remarks,
-            createdAt: new Date(apiItem.created_at),
-            updatedAt: new Date(apiItem.updated_at),
-            productName: apiItem.product?.name,
-            productIconUrl: apiItem.product?.icon_url,
-            productSpecName: apiItem.product_spec?.name,
-            companyName: apiItem.company?.name,
-            customerName: apiItem.customer?.name,
-            customerEmail: apiItem.customer?.email,
-            customerPhone: apiItem.customer?.phone,
-            cartoonTypeName: dummyCartoonTypes.find(ct => ct.id === apiItem.cartoon_type_id)?.name,
-            paymentTermName: dummyPaymentTerms.find(pt => pt.id === apiItem.payment_term_id)?.name,
+            want_to: apiItem.want_to,
+            listing_type: apiItem.listing_type,
+            shipping_options: apiItem.shipping_options,
+            payment_method: apiItem.payment_method,
+            warranty: apiItem.warranty,
+            return_policy: apiItem.return_policy,
+            listing_url: apiItem.listing_url,
+            brand: apiItem.brand,
+            product_images: apiItem.product_images || [],
+            rating: apiItem.rating,
+            reviews_count: apiItem.reviews_count,
+            created_date: new Date(apiItem.created_date),
+            last_updated: new Date(apiItem.last_updated),
+            visibility: apiItem.visibility,
+            priority: apiItem.priority,
+            assigned_to: apiItem.assigned_to,
+            inquiry_count: apiItem.inquiry_count,
+            view_count: apiItem.view_count,
+            interaction_type: apiItem.interaction_type,
+            action: apiItem.action,
         }));
+    
         setAllWallItems(mapped);
     }, [apiRawData]);
+    
+
 
     const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState(false);
     const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
@@ -580,12 +674,7 @@ const WallListing = () => {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item =>
                 String(item.id).toLowerCase().includes(query) ||
-                (item.productName && item.productName.toLowerCase().includes(query)) ||
-                (item.productSpecName && item.productSpecName.toLowerCase().includes(query)) ||
-                (item.companyName && item.companyName.toLowerCase().includes(query)) ||
-                (item.customerName && item.customerName.toLowerCase().includes(query)) ||
-                item.intent.toLowerCase().includes(query) ||
-                item.recordStatus.toLowerCase().includes(query)
+                (item.product_name && item.product_name.toLowerCase().includes(query))
             );
         }
         const { order, key } = tableData.sort as OnSortParam;
@@ -634,24 +723,229 @@ const WallListing = () => {
 
 
     const columns: ColumnDef<WallItem>[] = useMemo(() => [
-        { header: 'Status', accessorKey: 'recordStatus', size: 120, cell: (props: CellContext<WallItem, any>) => <Tag className={`${recordStatusColor[props.row.original.recordStatus] || 'bg-gray-200'} capitalize`}>{props.row.original.recordStatus}</Tag> },
-        { header: 'Product', accessorKey: 'productName', size: 200, cell: (props: CellContext<WallItem, any>) => (
-            <div className="flex items-center gap-2">
-                <Avatar size="sm" shape="rounded" src={props.row.original.productIconUrl || undefined} icon={<TbBox />} />
-                <div>
-                    <div>{props.row.original.productName || '-'}</div>
-                    <div className="text-xs text-gray-500">{props.row.original.productSpecName || 'N/A'}</div>
-                </div>
+        {
+            header: 'ID',
+            accessorKey: 'id',
+            size: 100,
+            enableSorting: true,
+            cell: (props) => <span>{props.row.original.id}</span>,
+        },
+        {
+          header: 'Listing ID',
+          accessorKey: 'listing_id',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.listing_id ?? '-'}</span>,
+        },
+        {
+          header: 'Product Name',
+          accessorKey: 'product_name',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_name ?? '-'}</span>,
+        },
+        {
+          header: 'Company Name',
+          accessorKey: 'company_name',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.company_name ?? '-'}</span>,
+        },
+        {
+          header: 'Contact Person Name',
+          accessorKey: 'contact_person_name',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.contact_person_name ?? '-'}</span>,
+        },
+        {
+          header: 'Contact Person Email',
+          accessorKey: 'contact_person_email',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.contact_person_email ?? '-'}</span>,
+        },
+        {
+          header: 'Contact Person Phone',
+          accessorKey: 'contact_person_phone',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.contact_person_phone ?? '-'}</span>,
+        },
+        {
+          header: 'Product Category',
+          accessorKey: 'product_category',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_category ?? '-'}</span>,
+        },
+        {
+          header: 'Product Subcategory',
+          accessorKey: 'product_subcategory',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_subcategory ?? '-'}</span>,
+        },
+        {
+          header: 'Product Description',
+          accessorKey: 'product_description',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_description ?? '-'}</span>,
+        },
+        {
+          header: 'Product Specifications',
+          accessorKey: 'product_specs',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_specs ?? '-'}</span>,
+        },
+        {
+          header: 'Product Status',
+          accessorKey: 'product_status',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_status ?? '-'}</span>,
+        },
+        {
+          header: 'Quantity Available',
+          accessorKey: 'quantity',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.quantity ?? '-'}</span>,
+        },
+        {
+          header: 'Price',
+          accessorKey: 'price',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.price ?? '-'}</span>,
+        },
+        {
+          header: 'Want to (Buy/Sell)',
+          accessorKey: 'want_to',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.want_to ?? '-'}</span>,
+        },
+        {
+          header: 'Listing Type',
+          accessorKey: 'listing_type',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.listing_type ?? '-'}</span>,
+        },
+        {
+          header: 'Shipping Options',
+          accessorKey: 'shipping_options',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.shipping_options ?? '-'}</span>,
+        },
+        {
+          header: 'Payment Method',
+          accessorKey: 'payment_method',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.payment_method ?? '-'}</span>,
+        },
+        {
+          header: 'Warranty',
+          accessorKey: 'warranty',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.warranty ?? '-'}</span>,
+        },
+        {
+          header: 'Return Policy',
+          accessorKey: 'return_policy',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.return_policy ?? '-'}</span>,
+        },
+        {
+          header: 'Listing URL',
+          accessorKey: 'listing_url',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.listing_url ?? '-'}</span>,
+        },
+        {
+          header: 'Brand',
+          accessorKey: 'brand',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.brand ?? '-'}</span>,
+        },
+        {
+          header: 'Product Images',
+          accessorKey: 'product_images',
+          enableSorting: false,
+          cell: (props) => (
+            <div className="flex gap-1 flex-wrap">
+              {props.row.original.product_images?.map((img, index) => (
+                <img key={index} src={img} alt="Product" className="w-8 h-8 rounded object-cover" />
+              )) ?? <span>-</span>}
             </div>
-        )},
-        { header: 'Company', accessorKey: 'companyName', size: 150, cell: (props: CellContext<WallItem, any>) => props.row.original.companyName || props.row.original.companyId },
-        { header: 'Member', accessorKey: 'customerName', size: 150, cell: (props: CellContext<WallItem, any>) => props.row.original.customerName || `ID: ${props.row.original.customerId}` },
-        { header: 'Qty', accessorKey: 'qty', size: 80, cell: (props: CellContext<WallItem, any>) => props.row.original.qty },
-        { header: 'Product Status', accessorKey: 'productStatus', size: 130, cell: (props: CellContext<WallItem, any>) => <Tag className="capitalize">{props.row.original.productStatus}</Tag> },
-        { header: 'Want to', accessorKey: 'intent', size: 100, cell: (props: CellContext<WallItem, any>) => props.row.original.intent },
-        { header: 'Created At', accessorKey: 'createdAt', size: 160, cell: (props: CellContext<WallItem, any>) => dayjs(props.row.original.createdAt).format('YYYY-MM-DD HH:mm') },
-        { header: 'Actions', id: 'actions', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: CellContext<WallItem, any>) => <ActionColumn onView={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} onWallLink={() => handleWallLink(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+          ),
+        },
+        {
+          header: 'Rating',
+          accessorKey: 'rating',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.rating ?? '-'}</span>,
+        },
+        {
+          header: 'Reviews Count',
+          accessorKey: 'reviews_count',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.reviews_count ?? '-'}</span>,
+        },
+        {
+          header: 'Created Date',
+          accessorKey: 'created_date',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.created_date ? new Date(props.row.original.created_date).toLocaleDateString() : '-'}</span>,
+        },
+        {
+          header: 'Last Updated',
+          accessorKey: 'last_updated',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.last_updated ? new Date(props.row.original.last_updated).toLocaleDateString() : '-'}</span>,
+        },
+        {
+          header: 'Visibility',
+          accessorKey: 'visibility',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.visibility ?? '-'}</span>,
+        },
+        {
+          header: 'Priority',
+          accessorKey: 'priority',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.priority ?? '-'}</span>,
+        },
+        {
+          header: 'Assigned To',
+          accessorKey: 'assigned_to',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.assigned_to ?? '-'}</span>,
+        },
+        {
+          header: 'Inquiry Count',
+          accessorKey: 'inquiry_count',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.inquiry_count ?? '-'}</span>,
+        },
+        {
+          header: 'View Count',
+          accessorKey: 'view_count',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.view_count ?? '-'}</span>,
+        },
+        {
+          header: 'Interaction Type',
+          accessorKey: 'interaction_type',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.interaction_type ?? '-'}</span>,
+        },
+        // Existing Actions column
+        {
+            header: 'Actions',
+            id: 'actions',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
+            cell: (props: CellContext<WallItem, any>) => (
+                <ActionColumn
+                    onView={() => openViewDrawer(props.row.original)}
+                    onEdit={() => openEditDrawer(props.row.original)}
+                    onChangeStatus={() => handleChangeStatus(props.row.original)}
+                    onWallLink={() => handleWallLink(props.row.original)}
+                    onDelete={() => handleDeleteClick(props.row.original)}
+                />
+            )
+        },
     ], [openViewDrawer, openEditDrawer, handleChangeStatus, handleWallLink, handleDeleteClick]);
+      
 
     return (
         <>
@@ -695,97 +989,114 @@ const WallListing = () => {
                     </div>
                 }
             >
-                <Form id="wallItemForm" onSubmit={formMethods.handleSubmit(onFormSubmit)} className="flex flex-col gap-y-4 h-full">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto p-1">
-                        <FormItem label="Product" invalid={!!formMethods.formState.errors.productId} errorMessage={formMethods.formState.errors.productId?.message}>
-                            <Controller name="productId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyProducts.map(p=>({value: p.id, label: p.name}))} value={dummyProducts.map(p=>({value: p.id, label: p.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product" /> )} />
-                        </FormItem>
-                        <FormItem label="Product Specification" invalid={!!formMethods.formState.errors.productSpecId} errorMessage={formMethods.formState.errors.productSpecId?.message}>
-                            <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyProductSpecs.filter(s => s.productId === formMethods.watch('productId')).map(s=>({value: s.id, label: s.name}))} value={dummyProductSpecs.map(s=>({value: s.id, label: s.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Specification" isDisabled={!formMethods.watch('productId')} /> )} />
-                        </FormItem>
-                        <FormItem label="Company" invalid={!!formMethods.formState.errors.companyId} errorMessage={formMethods.formState.errors.companyId?.message}>
-                            <Controller name="companyId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCompanies.map(c=>({value: c.id, label: c.name}))} value={dummyCompanies.map(c=>({value: c.id, label: c.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Company" /> )} />
-                        </FormItem>
-                        <FormItem label="Member/Customer" invalid={!!formMethods.formState.errors.customerId} errorMessage={formMethods.formState.errors.customerId?.message}>
-                            <Controller name="customerId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCustomers.map(c=>({value: c.id, label: c.name}))} value={dummyCustomers.map(c=>({value: c.id, label: c.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Member" /> )} />
-                        </FormItem>
-                        <FormItem label="Quantity" invalid={!!formMethods.formState.errors.qty} errorMessage={formMethods.formState.errors.qty?.message}>
-                            <Controller name="qty" control={formMethods.control} render={({ field }) => <InputNumber {...field} placeholder="Enter Quantity" min={1} />} />
-                        </FormItem>
-                        <FormItem label="Product Status" invalid={!!formMethods.formState.errors.productStatus} errorMessage={formMethods.formState.errors.productStatus?.message}>
-                            <Controller name="productStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={productStatusOptions} value={productStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Product Status" /> )} />
-                        </FormItem>
-                        <FormItem label="Intent (Want to)" invalid={!!formMethods.formState.errors.intent} errorMessage={formMethods.formState.errors.intent?.message}>
-                            <Controller name="intent" control={formMethods.control} render={({ field }) => (<UiSelect options={intentOptions} value={intentOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Intent" /> )} />
-                        </FormItem>
-                        <FormItem label="Record Status" invalid={!!formMethods.formState.errors.recordStatus} errorMessage={formMethods.formState.errors.recordStatus?.message}>
-                            <Controller name="recordStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={recordStatusOptions} value={recordStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Record Status" /> )} />
-                        </FormItem>
-                        <FormItem label="Price ($)" invalid={!!formMethods.formState.errors.price} errorMessage={formMethods.formState.errors.price?.message}>
-                            <Controller name="price" control={formMethods.control} render={({ field }) => <InputNumber {...field} placeholder="Enter Price" prefix="$" min={0} precision={2} />} />
-                        </FormItem>
-                         <FormItem label="Color" invalid={!!formMethods.formState.errors.color} errorMessage={formMethods.formState.errors.color?.message}>
-                            <Controller name="color" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Blue Titanium" />} />
-                        </FormItem>
-                        <FormItem label="Cartoon Type" invalid={!!formMethods.formState.errors.cartoonTypeId} errorMessage={formMethods.formState.errors.cartoonTypeId?.message}>
-                            <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCartoonTypes.map(ct=>({value: ct.id, label: ct.name}))} value={dummyCartoonTypes.map(ct=>({value: ct.id, label: ct.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Cartoon Type" isClearable /> )} />
-                        </FormItem>
-                        <FormItem label="Dispatch Status" invalid={!!formMethods.formState.errors.dispatchStatus} errorMessage={formMethods.formState.errors.dispatchStatus?.message}>
-                            <Controller name="dispatchStatus" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Ready, Shipped" />} />
-                        </FormItem>
-                         <FormItem label="Payment Term" invalid={!!formMethods.formState.errors.paymentTermId} errorMessage={formMethods.formState.errors.paymentTermId?.message}>
-                            <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (<UiSelect options={dummyPaymentTerms.map(pt=>({value: pt.id, label: pt.name}))} value={dummyPaymentTerms.map(pt=>({value: pt.id, label: pt.name})).find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Payment Term" isClearable /> )} />
-                        </FormItem>
-                        <FormItem label="Device Condition" invalid={!!formMethods.formState.errors.deviceCondition} errorMessage={formMethods.formState.errors.deviceCondition?.message}>
-                            <Controller name="deviceCondition" control={formMethods.control} render={({ field }) => (<UiSelect options={deviceConditionOptions} value={deviceConditionOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} placeholder="Select Device Condition" /> )} />
-                        </FormItem>
-                        <FormItem label="ETA" invalid={!!formMethods.formState.errors.eta} errorMessage={formMethods.formState.errors.eta?.message}>
-                            <Controller name="eta" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., 3-5 business days, In Stock" />} />
-                        </FormItem>
-                        <FormItem label="Location" invalid={!!formMethods.formState.errors.location} errorMessage={formMethods.formState.errors.location?.message}>
-                            <Controller name="location" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., Warehouse A, Dubai" />} />
-                        </FormItem>
-                         <FormItem label="Internal Remarks" className="md:col-span-2" invalid={!!formMethods.formState.errors.internalRemarks} errorMessage={formMethods.formState.errors.internalRemarks?.message}>
-                            <Controller name="internalRemarks" control={formMethods.control} render={({ field }) => <Textarea {...field} rows={3} placeholder="Add any internal notes here..." />} />
-                        </FormItem>
-                    </div>
-                </Form>
+            <Form id="wallItemForm" onSubmit={formMethods.handleSubmit(onFormSubmit)} className="flex flex-col gap-y-4 h-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto p-1">
+                {[
+                { name: 'listing_id', label: 'Listing ID' },
+                { name: 'product_name', label: 'Product Name' },
+                { name: 'company_name', label: 'Company Name' },
+                { name: 'contact_person_name', label: 'Contact Person' },
+                { name: 'contact_person_email', label: 'Email', type: 'email' },
+                { name: 'contact_person_phone', label: 'Phone' },
+                { name: 'product_category', label: 'Product Category' },
+                { name: 'product_subcategory', label: 'Product Subcategory' },
+                { name: 'product_description', label: 'Description', textarea: true },
+                { name: 'product_specs', label: 'Specifications', textarea: true },
+                { name: 'product_status', label: 'Status' },
+                { name: 'quantity', label: 'Quantity', number: true },
+                { name: 'price', label: 'Price', number: true },
+                { name: 'want_to', label: 'Intent' },
+                { name: 'listing_type', label: 'Listing Type' },
+                { name: 'shipping_options', label: 'Shipping Options' },
+                { name: 'payment_method', label: 'Payment Method' },
+                { name: 'warranty', label: 'Warranty' },
+                { name: 'return_policy', label: 'Return Policy' },
+                { name: 'listing_url', label: 'Listing URL' },
+                { name: 'brand', label: 'Brand' },
+                { name: 'rating', label: 'Rating', number: true },
+                { name: 'reviews_count', label: 'Reviews Count', number: true },
+                { name: 'created_date', label: 'Created Date' },
+                { name: 'last_updated', label: 'Last Updated' },
+                { name: 'visibility', label: 'Visibility' },
+                { name: 'priority', label: 'Priority' },
+                { name: 'assigned_to', label: 'Assigned To' },
+                { name: 'inquiry_count', label: 'Inquiry Count', number: true },
+                { name: 'view_count', label: 'View Count', number: true },
+                { name: 'interaction_type', label: 'Interaction Type' },
+                { name: 'action', label: 'Action' },
+                ].map(({ name, label, number, textarea, type }) => (
+                <FormItem
+                    key={name}
+                    label={label}
+                    invalid={!!formMethods.formState.errors[name]}
+                    errorMessage={formMethods.formState.errors[name]?.message}
+                    className={textarea ? 'md:col-span-2' : ''}
+                >
+                    <Controller
+                    name={name}
+                    control={formMethods.control}
+                    render={({ field }) =>
+                        textarea ? (
+                        <Textarea {...field} rows={3} placeholder={`Enter ${label}`} />
+                        ) : number ? (
+                        <InputNumber {...field} placeholder={`Enter ${label}`} />
+                        ) : (
+                        <Input {...field} type={type || 'text'} placeholder={`Enter ${label}`} />
+                        )
+                    }
+                    />
+                </FormItem>
+                ))}
+
+                <FormItem
+                label="Product Images (comma-separated URLs)"
+                className="md:col-span-2"
+                invalid={!!formMethods.formState.errors.product_images}
+                errorMessage={formMethods.formState.errors.product_images?.message}
+                >
+                <Controller
+                    name="product_images"
+                    control={formMethods.control}
+                    render={({ field }) => (
+                    <Textarea
+                        {...field}
+                        rows={3}
+                        placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
+                        onChange={(e) =>
+                        field.onChange(
+                            e.target.value.split(',').map((s) => s.trim())
+                        )
+                        }
+                        value={field.value?.join(', ') || ''}
+                    />
+                    )}
+                />
+                </FormItem>
+            </div>
+            </Form>
+
             </Drawer>
 
             <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
                 {editingItem && (
                     <div className="p-4 space-y-3">
-                        <h6 className="text-lg font-semibold border-b pb-2 mb-3">Item ID: {editingItem.id}</h6>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                            <div><strong>Product:</strong> {editingItem.productName || '-'} ({editingItem.productSpecName || 'N/A'})</div>
-                            <div><strong>Company:</strong> {editingItem.companyName || editingItem.companyId}</div>
-                            <div><strong>Member/Customer:</strong> {editingItem.customerName || `ID: ${editingItem.customerId}`}</div>
-                            <div><strong>Email:</strong> {editingItem.customerEmail || '-'}</div>
-                            <div><strong>Phone:</strong> {editingItem.customerPhone || '-'}</div>
-                            <div><strong>Quantity:</strong> {editingItem.qty}</div>
-                            <div><strong>Intent:</strong> <Tag className="capitalize">{editingItem.intent}</Tag></div>
-                            <div><strong>Record Status:</strong> <Tag className={`${recordStatusColor[editingItem.recordStatus] || ''} capitalize`}>{editingItem.recordStatus}</Tag></div>
-                            <div><strong>Product Status:</strong> <Tag className="capitalize">{editingItem.productStatus}</Tag></div>
-                            <div><strong>Price:</strong> {editingItem.price !== null && editingItem.price !== undefined ? `$${editingItem.price.toFixed(2)}` : '-'}</div>
-                            <div><strong>Color:</strong> {editingItem.color || '-'}</div>
-                            <div><strong>Cartoon Type:</strong> {editingItem.cartoonTypeName || '-'}</div>
-                            <div><strong>Dispatch Status:</strong> {editingItem.dispatchStatus || '-'}</div>
-                            <div><strong>Payment Term:</strong> {editingItem.paymentTermName || '-'}</div>
-                            <div><strong>Device Condition:</strong> {editingItem.deviceCondition || '-'}</div>
-                            <div><strong>ETA:</strong> {editingItem.eta || '-'}</div>
-                            <div><strong>Location:</strong> {editingItem.location || '-'}</div>
-                            <div><strong>Created At:</strong> {dayjs(editingItem.createdAt).format('YYYY-MM-DD HH:mm:ss')}</div>
-                            <div><strong>Last Updated:</strong> {dayjs(editingItem.updatedAt).format('YYYY-MM-DD HH:mm:ss')}</div>
+                    <h6 className="text-lg font-semibold border-b pb-2 mb-3">Item ID: {editingItem.id}</h6>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                        {Object.entries(editingItem).map(([key, value]) => (
+                        <div key={key}>
+                            <strong className="capitalize">{key.replace(/([A-Z])/g, ' $1')}:</strong>{' '}
+                            {typeof value === 'object' && value !== null
+                            ? JSON.stringify(value)
+                            : value != null && value !== ''
+                            ? value.toString()
+                            : '-'}
                         </div>
-                        {editingItem.internalRemarks && (
-                            <div className="mt-2 pt-2 border-t">
-                                <strong>Internal Remarks:</strong>
-                                <p className="whitespace-pre-wrap bg-gray-50 dark:bg-gray-700 p-2 rounded">{editingItem.internalRemarks}</p>
-                            </div>
-                        )}
+                        ))}
+                    </div>
                     </div>
                 )}
-            </Drawer>
+                </Drawer>
+
 
             <Drawer title="Filter Wall Listings" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
                 footer={<div className="text-right w-full">
@@ -824,7 +1135,7 @@ const WallListing = () => {
                 onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onConfirm={onConfirmSingleDelete} loading={isDeleting}>
-                <p>Are you sure you want to delete item <strong>ID: {itemToDelete?.id}</strong> ({itemToDelete?.productName})?</p>
+                <p>Are you sure you want to delete item <strong>ID: {itemToDelete?.id}</strong> ({itemToDelete?.product_name})?</p>
             </ConfirmDialog>
 
              <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} title="Import Wall Items">

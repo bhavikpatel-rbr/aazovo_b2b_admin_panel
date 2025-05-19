@@ -26,7 +26,7 @@ const FormListActionTools = () => {
             <Button
                 variant="solid"
                 icon={<TbPlus className="text-lg" />}
-                onClick={() => navigate('/concepts/customers/customer-create')}
+                onClick={() => navigate('/business-entities/create-inquiry')}
             >
                 Add New
             </Button>

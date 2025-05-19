@@ -8,27 +8,11 @@ import type { FormSectionBaseProps } from '../types'
 
 type PrimaryDetailSectionProps = FormSectionBaseProps
 
-type CountryOption = {
-    label: string
-    dialCode: string
-    value: string
-}
-
 
 const PrimaryDetailSection = ({
     control,
     errors,
 }: PrimaryDetailSectionProps) => {
-    const dialCodeList = useMemo(() => {
-        const newCountryList: Array<CountryOption> = JSON.parse(
-            JSON.stringify(countryList),
-        )
-
-        return newCountryList.map((country) => {
-            country.label = country.dialCode
-            return country
-        })
-    }, [])
 
     return (
     <Card id="companyDetails">

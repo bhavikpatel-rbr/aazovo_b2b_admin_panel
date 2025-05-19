@@ -20,7 +20,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import { TbBox, TbUser } from 'react-icons/tb'
-
+import CreateSellerForm from './SellerCreate/CreateSeller'
 // Icons
 import {
     TbPencil,
@@ -41,22 +41,25 @@ import type { TableQueries } from '@/@types/common' // Ensure this type path is 
 export type OpportunityItem = {
     id: string
     status: 'pending' | 'active' | 'on_hold' | 'closed'
-    productName: string
-    productImage: string | null
-    memberId: string // Generic Member ID
-    role: 'Seller' | 'Buyer' // Differentiate role
-    mobileNo: string | null
-    qty: number
-    productStatus:
-        | 'new'
-        | 'used_like_new'
-        | 'used_good'
-        | 'used_fair'
-        | 'for_parts'
-    intent: 'for_sale' | 'auction' | 'trade_offer' | 'looking_to_buy' | 'bid'
-    productSpecs: string
-    createdDate: Date
-}
+  
+    opportunity_id: string // Unique identifier for the opportunity record.
+    buy_listing_id: string // Listing ID of the Buy intent product.
+    sell_listing_id: string // Listing ID of the Sell intent product.
+    product_name: string // Common product name matched between listings.
+    product_category: string // Product category.
+    product_subcategory: string // Product subcategory.
+    brand: string // Brand name matched between listings.
+    price_match_type: 'Exact' | 'Range' | 'Not Matched' // Price Range Match.
+    quantity_match: 'Sufficient' | 'Partial' | 'Not Matched' // Quantity Match.
+    location_match?: 'Local' | 'National' | 'Not Matched' // Location Match (optional).
+    match_score: number // Match Score (%).
+    opportunity_status: 'New' | 'Shortlisted' | 'Converted' | 'Rejected' // Opportunity Status.
+    created_date: string // ISO date string for when the opportunity was created.
+    last_updated: string // ISO date string for last update.
+    assigned_to: string // Team or person managing this opportunity.
+    notes?: string // Notes or remarks (optional).
+  }
+  
 // --- End Item Type Definition ---
 
 // --- Constants ---
@@ -67,220 +70,128 @@ const recordStatusColor: Record<OpportunityItem['status'], string> = {
     closed: 'bg-red-500',
 }
 
-const productConditionColor: Record<OpportunityItem['productStatus'], string> =
-    {
-        new: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100 border border-sky-300 dark:border-sky-500/30',
-        used_like_new:
-            'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100 border border-emerald-300 dark:border-emerald-500/30',
-        used_good:
-            'bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-100 border border-lime-300 dark:border-lime-500/30',
-        used_fair:
-            'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100 border border-amber-300 dark:border-amber-500/30',
-        for_parts:
-            'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100 border border-red-300 dark:border-red-500/30',
-    }
+// const productConditionColor: Record<OpportunityItem['productStatus'], string> =
+//     {
+//         new: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100 border border-sky-300 dark:border-sky-500/30',
+//         used_like_new:
+//             'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100 border border-emerald-300 dark:border-emerald-500/30',
+//         used_good:
+//             'bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-100 border border-lime-300 dark:border-lime-500/30',
+//         used_fair:
+//             'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100 border border-amber-300 dark:border-amber-500/30',
+//         for_parts:
+//             'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100 border border-red-300 dark:border-red-500/30',
+//     }
 
 const initialDummySellerData: OpportunityItem[] = [
     {
-        id: 'SD001',
-        role: 'Seller',
-        status: 'active',
-        productName: 'Gaming Laptop RTX 4070',
-        productImage: '/img/products/laptop_gaming.jpg',
-        memberId: 'SellerA',
-        mobileNo: '+1-555-111-2222',
-        qty: 1,
-        productStatus: 'used_like_new',
-        intent: 'for_sale',
-        productSpecs: '16GB RAM, 1TB SSD, Black',
-        createdDate: new Date(2023, 10, 2, 10, 0),
+      id: 'OPP001',
+      status: 'active',
+  
+      opportunity_id: 'opportunity-001',
+      buy_listing_id: 'BUY123',
+      sell_listing_id: 'SELL456',
+      product_name: 'Gaming Laptop RTX 4070',
+      product_category: 'Electronics',
+      product_subcategory: 'Laptops',
+      brand: 'ASUS',
+      price_match_type: 'Exact',
+      quantity_match: 'Sufficient',
+      location_match: 'Local',
+      match_score: 95.5,
+      opportunity_status: 'Shortlisted',
+      created_date: '2023-10-02T10:00:00Z',
+      last_updated: '2023-10-04T15:30:00Z',
+      assigned_to: 'Team A',
+      notes: 'High match score. Customer interested in purchase.'
     },
     {
-        id: 'SD002',
-        role: 'Seller',
-        status: 'pending',
-        productName: 'Vintage Camera AE-1',
-        productImage: '/img/products/camera_ae1.jpg',
-        memberId: 'SellerB',
-        mobileNo: null,
-        qty: 1,
-        productStatus: 'used_good',
-        intent: 'auction',
-        productSpecs: 'Canon, 50mm lens included',
-        createdDate: new Date(2023, 10, 1, 14, 30),
-    },
-    {
-        id: 'SD003',
-        role: 'Seller',
-        status: 'active',
-        productName: 'Office Chair Ergonomic',
-        productImage: null,
-        memberId: 'SellerC',
-        mobileNo: '+44-20-1234-5678',
-        qty: 5,
-        productStatus: 'new',
-        intent: 'for_sale',
-        productSpecs: 'Mesh back, Lumbar support',
-        createdDate: new Date(2023, 9, 30, 9, 0),
-    },
-    {
-        id: 'SD004',
-        role: 'Seller',
-        status: 'on_hold',
-        productName: 'Smartphone Pixel 7',
-        productImage: '/img/products/phone_pixel7.jpg',
-        memberId: 'SellerA',
-        mobileNo: '+1-555-111-2222',
-        qty: 1,
-        productStatus: 'used_good',
-        intent: 'trade_offer',
-        productSpecs: '128GB, Obsidian',
-        createdDate: new Date(2023, 9, 29, 11, 15),
-    },
-    {
-        id: 'SD005',
-        role: 'Seller',
-        status: 'closed',
-        productName: 'Broken PS5 Console',
-        productImage: null,
-        memberId: 'SellerD',
-        mobileNo: null,
-        qty: 1,
-        productStatus: 'for_parts',
-        intent: 'for_sale',
-        productSpecs: 'No power, Disc drive issue',
-        createdDate: new Date(2023, 9, 15, 18, 0),
-    },
-    {
-        id: 'SD006',
-        role: 'Seller',
-        status: 'active',
-        productName: 'Designer Handbag',
-        productImage: '/img/products/handbag_designer.jpg',
-        memberId: 'SellerE',
-        mobileNo: '+1-212-555-0000',
-        qty: 1,
-        productStatus: 'used_like_new',
-        intent: 'for_sale',
-        productSpecs: 'Leather, Tan',
-        createdDate: new Date(2023, 10, 3, 8, 45),
-    },
-    {
-        id: 'SD007',
-        role: 'Seller',
-        status: 'pending',
-        productName: 'Bulk T-Shirts',
-        productImage: null,
-        memberId: 'SellerF',
-        mobileNo: '+1-888-555-BULK',
-        qty: 100,
-        productStatus: 'new',
-        intent: 'for_sale',
-        productSpecs: 'White, Size L, Cotton',
-        createdDate: new Date(2023, 10, 2, 16, 20),
-    },
-    {
-        id: 'SD008',
-        role: 'Seller',
-        status: 'active',
-        productName: 'Collectible Action Figure',
-        productImage: '/img/products/figure_action.jpg',
-        memberId: 'SellerB',
-        mobileNo: null,
-        qty: 1,
-        productStatus: 'new',
-        intent: 'auction',
-        productSpecs: 'Limited Edition, Boxed',
-        createdDate: new Date(2023, 9, 28, 20, 0),
-    },
-]
+      id: 'OPP002',
+      status: 'pending',
+  
+      opportunity_id: 'opportunity-002',
+      buy_listing_id: 'BUY124',
+      sell_listing_id: 'SELL457',
+      product_name: 'Wireless Earbuds Pro',
+      product_category: 'Electronics',
+      product_subcategory: 'Audio',
+      brand: 'Sony',
+      price_match_type: 'Range',
+      quantity_match: 'Partial',
+      location_match: 'National',
+      match_score: 80.0,
+      opportunity_status: 'New',
+      created_date: '2023-11-15T09:00:00Z',
+      last_updated: '2023-11-15T10:00:00Z',
+      assigned_to: 'Team B',
+      notes: 'Location differs, but specs and price match closely.'
+    }
+  ]
+  
 
-const initialDummyBuyerData: OpportunityItem[] = [
+  const initialDummyBuyerData: OpportunityItem[] = [
     {
-        id: 'BD001',
-        role: 'Buyer',
-        status: 'active',
-        productName: 'Used Smartphone Pixel 6',
-        productImage: null,
-        memberId: 'BuyerX',
-        mobileNo: '+1-555-999-8888',
-        qty: 1,
-        productStatus: 'used_good',
-        intent: 'looking_to_buy',
-        productSpecs: '128GB, Any color',
-        createdDate: new Date(2023, 10, 3, 11, 0),
+      id: 'OPP003',
+      status: 'active',
+      opportunity_id: 'opportunity-003',
+      buy_listing_id: 'BUY789',
+      sell_listing_id: 'SELL321',
+      product_name: 'Used Smartphone Pixel 6',
+      product_category: 'Electronics',
+      product_subcategory: 'Smartphones',
+      brand: 'Google',
+      price_match_type: 'Range',
+      quantity_match: 'Sufficient',
+      location_match: 'National',
+      match_score: 88.2,
+      opportunity_status: 'New',
+      created_date: '2023-10-03T11:00:00Z',
+      last_updated: '2023-10-05T09:45:00Z',
+      assigned_to: 'Team C',
+      notes: 'Customer prefers unlocked models. Price range is flexible.'
     },
     {
-        id: 'BD002',
-        role: 'Buyer',
-        status: 'pending',
-        productName: 'RTX 3080 Graphics Card',
-        productImage: null,
-        memberId: 'BuyerY',
-        mobileNo: null,
-        qty: 1,
-        productStatus: 'new',
-        intent: 'bid',
-        productSpecs: 'Non-LHR preferred',
-        createdDate: new Date(2023, 10, 2, 18, 15),
+      id: 'OPP004',
+      status: 'pending',
+      opportunity_id: 'opportunity-004',
+      buy_listing_id: 'BUY890',
+      sell_listing_id: 'SELL432',
+      product_name: 'Office Desk Chair',
+      product_category: 'Furniture',
+      product_subcategory: 'Office Chairs',
+      brand: 'IKEA',
+      price_match_type: 'Exact',
+      quantity_match: 'Sufficient',
+      location_match: 'Local',
+      match_score: 92.5,
+      opportunity_status: 'Shortlisted',
+      created_date: '2023-10-06T14:30:00Z',
+      last_updated: '2023-10-06T16:15:00Z',
+      assigned_to: 'Team A',
+      notes: 'Buyer looking for bulk purchase of ergonomic models.'
     },
     {
-        id: 'BD003',
-        role: 'Buyer',
-        status: 'active',
-        productName: 'Bulk USB Cables',
-        productImage: null,
-        memberId: 'BuyerZ',
-        mobileNo: '+1-800-555-CBLS',
-        qty: 50,
-        productStatus: 'new',
-        intent: 'looking_to_buy',
-        productSpecs: 'USB-A to USB-C, 1m',
-        createdDate: new Date(2023, 9, 28, 10, 5),
-    },
-    {
-        id: 'BD004',
-        role: 'Buyer',
-        status: 'closed',
-        productName: 'Mechanical Keyboard - Parts',
-        productImage: null,
-        memberId: 'BuyerX',
-        mobileNo: '+1-555-999-8888',
-        qty: 1,
-        productStatus: 'for_parts',
-        intent: 'looking_to_buy',
-        productSpecs: 'Need specific keycaps',
-        createdDate: new Date(2023, 9, 25, 13, 40),
-    },
-    {
-        id: 'BD005',
-        role: 'Buyer',
-        status: 'active',
-        productName: 'Vintage Camera AE-1',
-        productImage: null,
-        memberId: 'BuyerW',
-        mobileNo: null,
-        qty: 1,
-        productStatus: 'used_good',
-        intent: 'looking_to_buy',
-        productSpecs: 'Working condition, 50mm lens',
-        createdDate: new Date(2023, 10, 4, 9, 0),
-    },
-    {
-        id: 'BD006',
-        role: 'Buyer',
-        status: 'pending',
-        productName: 'Office Chair Ergonomic',
-        productImage: null,
-        memberId: 'BuyerV',
-        mobileNo: '+44-20-8765-4321',
-        qty: 2,
-        productStatus: 'new',
-        intent: 'bid',
-        productSpecs: 'Mesh back, Headrest',
-        createdDate: new Date(2023, 10, 3, 17, 30),
-    },
-]
+      id: 'OPP005',
+      status: 'on_hold',
+      opportunity_id: 'opportunity-005',
+      buy_listing_id: 'BUY901',
+      sell_listing_id: 'SELL543',
+      product_name: 'Air Conditioner 1.5 Ton',
+      product_category: 'Home Appliances',
+      product_subcategory: 'Air Conditioners',
+      brand: 'Samsung',
+      price_match_type: 'Not Matched',
+      quantity_match: 'Partial',
+      location_match: 'Not Matched',
+      match_score: 61.3,
+      opportunity_status: 'Rejected',
+      created_date: '2023-10-07T10:15:00Z',
+      last_updated: '2023-10-08T08:00:00Z',
+      assigned_to: 'Team D',
+      notes: 'Mismatch in quantity and shipping constraints.'
+    }
+  ]
+  
 
 // Tab Definitions
 const TABS = {
@@ -289,16 +200,26 @@ const TABS = {
 }
 // --- End Constants ---
 
+// --- Updated Status Colors ---
+const statusColor: Record<OpportunityItem['status'], string> = {
+    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
+    closed: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
+    pending: 'bg-red-200 dark:bg-yellow-200 text-red-600 dark:text-red-600',
+    on_hold: 'bg-red-200 :bg-yellow-200 text-red-600 dark:text-red-600',
+}
+
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
     onEdit,
     onClone,
     onChangeStatus,
+    onViewDetail,
     onDelete,
 }: {
     onEdit: () => void
     onClone?: () => void
     onChangeStatus: () => void
+    onViewDetail: () => void
     onDelete: () => void
 }) => {
     const iconButtonClass =
@@ -453,6 +374,7 @@ const ItemTableTools = ({
 // --- End ItemTableTools ---
 
 // --- ItemActionTools Component ---
+// --- ItemActionTools Component ---
 const ItemActionTools = ({
     allItems,
     activeTab,
@@ -461,49 +383,66 @@ const ItemActionTools = ({
     activeTab: string
 }) => {
     const navigate = useNavigate()
-    // CSV Data prep
+
+    // CSV Data prep with full OpportunityItem fields
     const csvData = useMemo(() => {
         return allItems.map((item) => ({
             id: item.id,
+            opportunity_id: item.opportunity_id,
+            buy_listing_id: item.buy_listing_id,
+            sell_listing_id: item.sell_listing_id,
+            product_name: item.product_name,
+            product_category: item.product_category,
+            product_subcategory: item.product_subcategory,
+            brand: item.brand,
+            price_match_type: item.price_match_type,
+            quantity_match: item.quantity_match,
+            location_match: item.location_match,
+            match_score: item.match_score,
+            opportunity_status: item.opportunity_status,
+            created_date: item.created_date,
+            last_updated: item.last_updated,
+            assigned_to: item.assigned_to,
+            notes: item.notes,
             status: item.status,
-            productName: item.productName,
-            memberId: item.memberId,
-            role: item.role,
-            mobileNo: item.mobileNo ?? 'N/A',
-            qty: item.qty,
-            productStatus: item.productStatus,
-            intent: item.intent,
-            productSpecs: item.productSpecs,
-            createdDate: item.createdDate.toISOString(),
         }))
     }, [allItems])
+
     const csvHeaders = [
-        { label: 'Record ID', key: 'id' },
+        { label: 'ID', key: 'id' },
+        { label: 'Opportunity ID', key: 'opportunity_id' },
+        { label: 'Buy Listing ID', key: 'buy_listing_id' },
+        { label: 'Sell Listing ID', key: 'sell_listing_id' },
+        { label: 'Product Name', key: 'product_name' },
+        { label: 'Category', key: 'product_category' },
+        { label: 'Subcategory', key: 'product_subcategory' },
+        { label: 'Brand', key: 'brand' },
+        { label: 'Price Match Type', key: 'price_match_type' },
+        { label: 'Quantity Match', key: 'quantity_match' },
+        { label: 'Location Match', key: 'location_match' },
+        { label: 'Match Score (%)', key: 'match_score' },
+        { label: 'Opportunity Status', key: 'opportunity_status' },
+        { label: 'Created Date', key: 'created_date' },
+        { label: 'Last Updated', key: 'last_updated' },
+        { label: 'Assigned To', key: 'assigned_to' },
+        { label: 'Notes/Remarks', key: 'notes' },
         { label: 'Status', key: 'status' },
-        { label: 'Product', key: 'productName' },
-        { label: 'Member ID', key: 'memberId' },
-        { label: 'Role', key: 'role' },
-        { label: 'Mobile No', key: 'mobileNo' },
-        { label: 'Qty', key: 'qty' },
-        { label: 'Product Status', key: 'productStatus' },
-        { label: 'Intent', key: 'intent' },
-        { label: 'Specs', key: 'productSpecs' },
-        { label: 'Created Date', key: 'createdDate' },
     ]
 
     const handleAddItem = () => {
         const targetRoute =
             activeTab === TABS.SELLER
-                ? '/opportunities/seller/create'
-                : '/opportunities/buyer/create'
+                ? '/sales-leads/seller/create'
+                : '/sales-leads/buyer/create'
         console.log(
             `Navigate to Add New ${activeTab === TABS.SELLER ? 'Seller' : 'Buyer'} Data page: ${targetRoute}`,
         )
-        navigate(targetRoute) // Use navigate
+        navigate(targetRoute)
     }
 
     return (
         <div className="flex flex-col md:flex-row gap-3">
+            {/* Uncomment to enable CSV export */}
             {/* <CSVLink filename={`opportunities_${activeTab}.csv`} data={csvData} headers={csvHeaders} >
                 <Button icon={<TbCloudDownload />} className="w-full" block> Download </Button>
             </CSVLink> */}
@@ -519,6 +458,7 @@ const ItemActionTools = ({
         </div>
     )
 }
+
 // --- End ItemActionTools ---
 
 // --- ItemSelected Component ---
@@ -588,7 +528,7 @@ const ItemSelected = ({
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
-                confirmButtonColor="red-600"
+                // confirmButtonColor="red-600"
             >
                 <p>
                     Are you sure you want to delete the selected{' '}
@@ -605,6 +545,7 @@ const ItemSelected = ({
 // --- Main Opportunities Component ---
 const Opportunities = () => {
     const navigate = useNavigate()
+    const [forms, setForms] = useState<OpportunityItem[]>(initialDummySellerData) // Make forms stateful
 
     // --- Lifted State ---
     const [isLoading, setIsLoading] = useState(false)
@@ -676,56 +617,72 @@ const Opportunities = () => {
         // Apply Search
         if (currentTableData.query) {
             const query = currentTableData.query.toLowerCase()
-            processedData = processedData.filter(
-                (item) =>
-                    item.id.toLowerCase().includes(query) ||
-                    item.status.toLowerCase().includes(query) ||
-                    item.productName.toLowerCase().includes(query) ||
-                    item.productSpecs.toLowerCase().includes(query) ||
-                    item.memberId.toLowerCase().includes(query) ||
-                    (item.mobileNo?.toLowerCase().includes(query) ?? false) ||
-                    item.qty.toString().includes(query) ||
-                    item.productStatus.toLowerCase().includes(query) ||
-                    item.intent.toLowerCase().includes(query),
+            processedData = processedData.filter((item) =>
+                item.id.toLowerCase().includes(query) ||
+                item.opportunity_id?.toLowerCase().includes(query) ||
+                item.buy_listing_id?.toLowerCase().includes(query) ||
+                item.sell_listing_id?.toLowerCase().includes(query) ||
+                item.product_name?.toLowerCase().includes(query) ||
+                item.product_category?.toLowerCase().includes(query) ||
+                item.product_subcategory?.toLowerCase().includes(query) ||
+                item.brand?.toLowerCase().includes(query) ||
+                item.price_match_type?.toLowerCase().includes(query) ||
+                item.quantity_match?.toLowerCase().includes(query) ||
+                item.location_match?.toLowerCase().includes(query) ||
+                item.match_score?.toString().toLowerCase().includes(query) ||
+                item.opportunity_status?.toLowerCase().includes(query) ||
+                item.created_date?.toString().toLowerCase().includes(query) ||
+                item.last_updated?.toString().toLowerCase().includes(query) ||
+                item.assigned_to?.toLowerCase().includes(query) ||
+                item.notes?.toLowerCase().includes(query) ||
+                item.status?.toLowerCase().includes(query)
             )
         }
+        
 
         // Apply Sorting
         const { order, key } = currentTableData.sort as OnSortParam
         if (order && key) {
             const sortedData = [...processedData]
             sortedData.sort((a, b) => {
-                if (key === 'createdDate') {
-                    const timeA = a.createdDate.getTime()
-                    const timeB = b.createdDate.getTime()
+                // Handle date fields (support both camelCase and snake_case keys)
+                if (key === 'createdDate' || key === 'created_date') {
+                    const timeA = new Date(a[key as keyof OpportunityItem] as any).getTime()
+                    const timeB = new Date(b[key as keyof OpportunityItem] as any).getTime()
                     return order === 'asc' ? timeA - timeB : timeB - timeA
                 }
-                if (key === 'qty') {
-                    const qtyA = a.qty ?? 0
-                    const qtyB = b.qty ?? 0
-                    return order === 'asc' ? qtyA - qtyB : qtyB - qtyA
+                if (key === 'lastUpdated' || key === 'last_updated') {
+                    const timeA = new Date(a[key as keyof OpportunityItem] as any).getTime()
+                    const timeB = new Date(b[key as keyof OpportunityItem] as any).getTime()
+                    return order === 'asc' ? timeA - timeB : timeB - timeA
                 }
-                if (key === 'mobileNo') {
-                    const aValue = a[key] ?? ''
-                    const bValue = b[key] ?? ''
-                    if (aValue === null && bValue === null) return 0
-                    if (aValue === null) return order === 'asc' ? -1 : 1
-                    if (bValue === null) return order === 'asc' ? 1 : -1
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
+
+                // Handle numeric fields
+                if (key === 'qty' || key === 'match_score') {
+                    const numA = (a[key as keyof OpportunityItem] as number) ?? 0
+                    const numB = (b[key as keyof OpportunityItem] as number) ?? 0
+                    return order === 'asc' ? numA - numB : numB - numA
                 }
-                const aValue = a[key as keyof OpportunityItem] ?? ''
-                const bValue = b[key as keyof OpportunityItem] ?? ''
+
+                // Handle mobileNo or other string fields (null-safe)
+                const aValue = (a[key as keyof OpportunityItem] ?? '') as string
+                const bValue = (b[key as keyof OpportunityItem] ?? '') as string
+
+                if (aValue === null && bValue === null) return 0
+                if (aValue === null) return order === 'asc' ? -1 : 1
+                if (bValue === null) return order === 'asc' ? 1 : -1
+
                 if (typeof aValue === 'string' && typeof bValue === 'string') {
                     return order === 'asc'
                         ? aValue.localeCompare(bValue)
                         : bValue.localeCompare(aValue)
                 }
+
                 return 0
             })
             processedData = sortedData
         }
+
 
         // Apply Pagination
         const pageIndex = currentTableData.pageIndex as number
@@ -822,24 +779,30 @@ const Opportunities = () => {
 
     const handleEdit = useCallback(
         (item: OpportunityItem) => {
-            console.log(`Edit ${item.role} item:`, item.id)
+            console.log(`Edit ${item.product_name} item:`, item.id)
             const editRoute = `/opportunities/${currentTab}/edit/${item.id}`
-            navigate(editRoute) // Use navigate
+            navigate(editRoute)
         },
         [navigate, currentTab],
     )
-
+    
     const handleClone = useCallback(
         (itemToClone: OpportunityItem) => {
-            console.log(`Cloning ${itemToClone.role} item:`, itemToClone.id)
-            const newId = `${currentTab === TABS.SELLER ? 'SD' : 'BD'}${Math.floor(Math.random() * 9000) + 1000}`
+            console.log(`Cloning ${itemToClone.product_name} item:`, itemToClone.id)
+    
+            // Generate new ID: prefix + random 4-digit number
+            const newIdPrefix = currentTab === TABS.SELLER ? 'SD' : 'BD'
+            const newId = `${newIdPrefix}${Math.floor(Math.random() * 9000) + 1000}`
+    
             const clonedItem: OpportunityItem = {
                 ...itemToClone,
                 id: newId,
-                status: 'pending',
-                createdDate: new Date(),
+                status: 'pending', // reset status for cloned item
+                // createdDate: new Date(), // reset createdDate to now
             }
-            setCurrentItems((prev: OpportunityItem[]) => [clonedItem, ...prev])
+    
+            setCurrentItems((prev) => [clonedItem, ...prev])
+    
             toast.push(
                 <Notification
                     title="Record Copied"
@@ -850,27 +813,30 @@ const Opportunities = () => {
         },
         [setCurrentItems, currentTab],
     )
-
+    
     const handleChangeStatus = useCallback(
         (item: OpportunityItem) => {
             const statuses: OpportunityItem['status'][] = [
                 'pending',
                 'active',
-                'completed',
-                'rejected',
+                // 'completed',
+                // 'rejected',
                 'on_hold',
             ]
             const currentStatusIndex = statuses.indexOf(item.status)
             const nextStatusIndex = (currentStatusIndex + 1) % statuses.length
             const newStatus = statuses[nextStatusIndex]
+    
             console.log(
-                `Changing status of ${item.role} item ${item.id} from ${item.status} to ${newStatus}`,
+                `Changing status of ${item.product_name} item ${item.id} from ${item.status} to ${newStatus}`,
             )
-            setCurrentItems((currentItems: OpportunityItem[]) =>
+    
+            setCurrentItems((currentItems) =>
                 currentItems.map((i) =>
                     i.id === item.id ? { ...i, status: newStatus } : i,
                 ),
             )
+    
             toast.push(
                 <Notification
                     title="Status Changed"
@@ -881,16 +847,19 @@ const Opportunities = () => {
         },
         [setCurrentItems],
     )
-
+    
     const handleDelete = useCallback(
         (itemToDelete: OpportunityItem) => {
-            console.log(`Deleting ${itemToDelete.role} item:`, itemToDelete.id)
-            setCurrentItems((currentItems: OpportunityItem[]) =>
+            console.log(`Deleting ${itemToDelete.product_name} item:`, itemToDelete.id)
+    
+            setCurrentItems((currentItems) =>
                 currentItems.filter((item) => item.id !== itemToDelete.id),
             )
-            setCurrentSelectedItems((prevSelected: OpportunityItem[]) =>
+    
+            setCurrentSelectedItems((prevSelected) =>
                 prevSelected.filter((item) => item.id !== itemToDelete.id),
             )
+    
             toast.push(
                 <Notification
                     title="Record Deleted"
@@ -901,6 +870,7 @@ const Opportunities = () => {
         },
         [setCurrentItems, setCurrentSelectedItems],
     )
+    
 
     const handleDeleteSelected = useCallback(() => {
         console.log(
@@ -925,6 +895,35 @@ const Opportunities = () => {
         setCurrentSelectedItems,
         currentTab,
     ])
+    
+    const handleViewDetails = (form: OpportunityItem) => {
+        // Navigate to a hypothetical form details page
+        console.log('Navigating to view form:', form.id)
+        // navigate(`/forms/details/${form.id}`) // Example navigation
+    }
+
+    const handleCloneForm = (item: OpportunityItem) => {
+        // Generate a new ID (e.g. with 'F' prefix + random number)
+        const newId = `F${Math.floor(Math.random() * 9000) + 1000}`
+      
+        const clonedItem: OpportunityItem = {
+          ...item,
+          id: newId,
+          status: 'pending', // or 'inactive' if you want, but your type doesn't have 'inactive'
+          opportunity_status: 'New', // reset status to 'New' on clone
+          created_date: new Date().toISOString(), // reset creation date to now
+          last_updated: new Date().toISOString(), // reset last updated date to now
+          notes: item.notes ? `${item.notes} (Clone)` : undefined,
+          // You can reset or adjust other fields as needed, e.g., assigned_to
+          assigned_to: '', // reset assigned user/team
+        }
+      
+        setForms((prev) => [clonedItem, ...prev])
+      
+        // Optionally navigate to the edit page of the cloned item
+        // navigate(`/forms/edit/${newId}`)
+      }
+      
 
     const handleTabChange = (tabKey: string) => {
         if (tabKey === currentTab) return // Do nothing if clicking the active tab
@@ -953,142 +952,152 @@ const Opportunities = () => {
     // --- End Lifted Handlers ---
 
     // --- Define Columns in Parent ---
-    const columns: ColumnDef<OpportunityItem>[] = useMemo(
-        () => [
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                width: 120,
-                cell: (props) => {
-                    const { status } = props.row.original
-                    return (
-                        <Tag
-                            className={`${recordStatusColor[status]} text-white capitalize`}
-                        >
-                            {status}
-                        </Tag>
-                    )
-                },
-            },
-            {
-                header: 'Product',
-                accessorKey: 'productName',
-                enableSorting: true,
-                cell: (props) => {
-                    const { productName, productImage } = props.row.original
-                    return (
-                        <div className="flex items-center gap-2">
-                            <Avatar
-                                size={30}
-                                shape="square"
-                                src={productImage}
-                                icon={<TbBox />}
-                            />
-                            <span className="font-semibold">{productName}</span>
-                        </div>
-                    )
-                },
-            },
-            {
-                header: 'Specs',
-                accessorKey: 'productSpecs',
-                enableSorting: false,
-                width: 180,
-            },
-            // Show 'Seller ID' or 'Buyer ID' based on tab - can be done here or use a generic 'Member ID'
-            {
-                header: currentTab === TABS.SELLER ? 'Seller ID' : 'Buyer ID',
-                accessorKey: 'memberId',
-                enableSorting: true,
-                width: 120,
-            },
-            {
-                header: 'Mobile No',
-                accessorKey: 'mobileNo',
-                enableSorting: true,
-                width: 150,
-                cell: (props) => (
-                    <span>{props.row.original.mobileNo ?? '-'}</span>
-                ),
-            },
-            {
-                header: 'Qty',
-                accessorKey: 'qty',
-                enableSorting: true,
-                width: 80,
-            },
-            {
-                header: 'Prod. Status',
-                accessorKey: 'productStatus',
-                enableSorting: true,
-                width: 140,
-                cell: (props) => {
-                    const { productStatus } = props.row.original
-                    const displayStatus = productStatus
-                        .replace(/_/g, ' ')
-                        .replace(/\b\w/g, (l) => l.toUpperCase())
-                    return (
-                        <Tag
-                            className={`${productConditionColor[productStatus]} font-semibold border ${productConditionColor[productStatus].replace('bg-', 'border-').replace('/20', '')}`}
-                        >
-                            {displayStatus}
-                        </Tag>
-                    )
-                },
-            },
-            {
-                header: 'Intent',
-                accessorKey: 'intent',
-                enableSorting: true,
-                width: 130,
-                cell: (props) => {
-                    const displayIntent = props.row.original.intent
-                        .replace(/_/g, ' ')
-                        .replace(/\b\w/g, (l) => l.toUpperCase())
-                    return <span>{displayIntent}</span>
-                },
-            },
-            {
-                header: 'Created Date',
-                accessorKey: 'createdDate',
-                enableSorting: true,
-                width: 180,
-                cell: (props) => {
-                    const date = props.row.original.createdDate
-                    return (
-                        <span>
-                            {date.toLocaleDateString()}{' '}
-                            {date.toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            })}
-                        </span>
-                    )
-                }, // Shorten time format
-            },
-            {
-                header: '',
-                id: 'action',
-                width: 130,
-                cell: (props) => (
-                    <ActionColumn
-                        onClone={() => handleClone(props.row.original)}
-                        onChangeStatus={() =>
-                            handleChangeStatus(props.row.original)
-                        }
-                        onEdit={() => handleEdit(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                    />
-                ),
-            },
-        ],
-        [handleClone, handleChangeStatus, handleEdit, handleDelete, currentTab], // Add currentTab as dependency for column header change
-    )
+    const columns: ColumnDef<OpportunityItem>[] = useMemo(() => [
+        {
+          header: 'ID',
+          accessorKey: 'id',
+          size: 100,
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.id}</span>,
+        },
+        {
+          header: 'Opportunity ID',
+          accessorKey: 'opportunity_id',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.opportunity_id}</span>,
+        },
+        {
+          header: 'Buy Listing ID',
+          accessorKey: 'buy_listing_id',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.buy_listing_id}</span>,
+        },
+        {
+          header: 'Sell Listing ID',
+          accessorKey: 'sell_listing_id',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.sell_listing_id}</span>,
+        },
+        {
+          header: 'Product Name',
+          accessorKey: 'product_name',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_name}</span>,
+        },
+        {
+          header: 'Category',
+          accessorKey: 'product_category',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_category}</span>,
+        },
+        {
+          header: 'Subcategory',
+          accessorKey: 'product_subcategory',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.product_subcategory}</span>,
+        },
+        {
+          header: 'Brand',
+          accessorKey: 'brand',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.brand}</span>,
+        },
+        {
+          header: 'Price Match',
+          accessorKey: 'price_match_type',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.price_match_type}</span>,
+        },
+        {
+          header: 'Quantity Match',
+          accessorKey: 'quantity_match',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.quantity_match}</span>,
+        },
+        {
+          header: 'Location Match',
+          accessorKey: 'location_match',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.location_match ?? '-'}</span>,
+        },
+        {
+          header: 'Match Score (%)',
+          accessorKey: 'match_score',
+          enableSorting: true,
+          cell: (props) => <span>{Math.ceil(props.row.original.match_score)}%</span>,
+        },
+        {
+          header: 'Opportunity Status',
+          accessorKey: 'opportunity_status',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.opportunity_status}</span>,
+        },
+        {
+          header: 'Created Date',
+          accessorKey: 'created_date',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.created_date}</span>,
+        },
+        {
+          header: 'Last Updated',
+          accessorKey: 'last_updated',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.last_updated}</span>,
+        },
+        {
+          header: 'Assigned To',
+          accessorKey: 'assigned_to',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.assigned_to}</span>,
+        },
+        {
+          header: 'Notes',
+          accessorKey: 'notes',
+          enableSorting: true,
+          cell: (props) => <span>{props.row.original.notes ?? '-'}</span>,
+        },
+        {
+            header: 'Status',
+            accessorKey: 'status',
+            size: 120,
+            enableSorting: true,
+            cell: (props) => (
+              <div className="flex items-center">
+                <Tag className={statusColor[props.row.original.status]}>
+                  <span className="capitalize">{props.row.original.status}</span>
+                </Tag>
+              </div>
+            ),
+          },
+        {
+          header: 'Actions',
+          id: 'action',
+          size: 160,
+          meta: { HeaderClass: 'text-center' },
+          cell: (props) => (
+            <ActionColumn
+              onClone={() => handleCloneForm(props.row.original)}
+              onChangeStatus={() => handleChangeStatus(props.row.original)}
+              onEdit={() => handleEdit(props.row.original)}
+              onViewDetail={() => handleViewDetails(props.row.original)}
+              onDelete={() => handleDelete(props.row.original)}
+            />
+          ),
+        },
+      ], [
+        handleCloneForm,
+        handleChangeStatus,
+        handleEdit,
+        handleViewDetails,
+        handleDelete,
+        currentTab,
+      ])
+      
     // --- End Define Columns ---
 
     // --- Render Main Component ---
     return (
+        <>
         <Container className="h-full">
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                 {/* Header Section */}
@@ -1164,6 +1173,8 @@ const Opportunities = () => {
                 activeTab={currentTab}
             />
         </Container>
+        <CreateSellerForm/>
+        </>
     )
 }
 // --- End Main Component ---

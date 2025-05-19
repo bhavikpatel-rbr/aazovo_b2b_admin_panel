@@ -623,13 +623,13 @@ const LeadsListing = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                                             <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
                                             <Button
-                                                                        variant="solid"
-                                                                        icon={<TbPlus />}
-                                                                        onClick={openAddDrawer}
-                                                                    >
-                                                                        {' '}
-                                                                        Add New{' '}
-                                                                    </Button>
+                                                variant="solid"
+                                                icon={<TbPlus />}
+                                                onClick={openAddDrawer}
+                                            >
+                                                {' '}
+                                                Add New{' '}
+                                            </Button>
                                         </div>
                     <LeadTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onAddNew={openAddDrawer} />
                     <div className="mt-4">

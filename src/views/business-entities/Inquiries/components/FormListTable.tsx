@@ -19,12 +19,24 @@ import type { TableQueries } from '@/@types/common'
 // --- Define Form Type ---
 export type FormItem = {
     id: string;
-    name: string; // Name
-    email: string; // Email
-    phone: string; // Phone
-    quantity: string; // Quantity
-    requirements: string; // Requirements
-    date: string; // Date
+    inquiry_id: string;
+    company_name: string;
+    contact_person_name: string;
+    contact_person_email: string;
+    contact_person_phone: string;
+    inquiry_type: string;
+    inquiry_subject: string;
+    inquiry_description: string;
+    inquiry_priority: string;
+    inquiry_status: string;
+    assigned_to: string;
+    inquiry_date: string;
+    response_date: string;
+    resolution_date: string;
+    follow_up_date: string;
+    feedback_status: string;
+    inquiry_resolution: string;
+    inquiry_attachments: string[];
     status: 'active' | 'inactive'; // Status
 };
 // --- End Form Type Definition ---
@@ -97,54 +109,75 @@ const ActionColumn = ({
 // --- Initial Dummy Data ---
 const initialDummyForms: FormItem[] = [
     {
-        id: 'F001',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+1-123-456-7890',
-        quantity: '10',
-        requirements: 'Product A, Product B',
-        date: '2023-05-01',
-        status: 'active',
+        id: 'F123',
+        inquiry_id: 'INQ001',
+        company_name: 'TechSoft Solutions',
+        contact_person_name: 'Alice Johnson',
+        contact_person_email: 'alice.johnson@techsoft.com',
+        contact_person_phone: '+1-555-123-4567',
+        inquiry_type: 'Product',
+        inquiry_subject: 'Request for product pricing',
+        inquiry_description: 'We are interested in getting a quotation for your enterprise software solution.',
+        inquiry_priority: 'High',
+        inquiry_status: 'New',
+        assigned_to: 'Sales Team',
+        inquiry_date: '2025-05-01',
+        response_date: '2025-05-02',
+        resolution_date: '',
+        follow_up_date: '2025-05-05',
+        feedback_status: 'Pending',
+        inquiry_resolution: '',
+        inquiry_attachments: [
+        'https://example.com/attachments/inquiry001/file1.pdf',
+        'https://example.com/attachments/inquiry001/file2.png',
+        ],
+        status: 'active', // Example status
     },
     {
-        id: 'F002',
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        phone: '+1-987-654-3210',
-        quantity: '20',
-        requirements: 'Product C',
-        date: '2023-05-02',
-        status: 'inactive',
+        id: 'F124',
+        inquiry_id: 'INQ002',
+        company_name: 'GreenLeaf Corp',
+        contact_person_name: 'Bob Smith',
+        contact_person_email: 'bob@greenleaf.com',
+        contact_person_phone: '+44-20-7946-0958',
+        inquiry_type: 'Service',
+        inquiry_subject: 'Technical support needed',
+        inquiry_description: 'We are facing issues with our integration and need technical assistance.',
+        inquiry_priority: 'Medium',
+        inquiry_status: 'In Progress',
+        assigned_to: 'Tech Support',
+        inquiry_date: '2025-04-28',
+        response_date: '2025-04-29',
+        resolution_date: '',
+        follow_up_date: '2025-05-03',
+        feedback_status: 'Pending',
+        inquiry_resolution: '',
+        inquiry_attachments: [],
+        status: 'active', // Example status
     },
     {
-        id: 'F003',
-        name: 'Michael Johnson',
-        email: 'michael.johnson@example.com',
-        phone: '+44-20-7946-0958',
-        quantity: '15',
-        requirements: 'Product D, Product E',
-        date: '2023-05-03',
-        status: 'active',
-    },
-    {
-        id: 'F004',
-        name: 'Emily Davis',
-        email: 'emily.davis@example.com',
-        phone: '+91-98765-43210',
-        quantity: '5',
-        requirements: 'Product F',
-        date: '2023-05-04',
-        status: 'inactive',
-    },
-    {
-        id: 'F005',
-        name: 'William Brown',
-        email: 'william.brown@example.com',
-        phone: '+81-3-1234-5678',
-        quantity: '25',
-        requirements: 'Product G, Product H',
-        date: '2023-05-05',
-        status: 'active',
+        id: 'F125',
+        inquiry_id: 'INQ003',
+        company_name: 'BlueOcean Ltd.',
+        contact_person_name: 'Clara Lee',
+        contact_person_email: 'clara.lee@blueocean.com',
+        contact_person_phone: '+91-9876543210',
+        inquiry_type: 'General',
+        inquiry_subject: 'Partnership inquiry',
+        inquiry_description: 'We are exploring potential partnership opportunities with your company.',
+        inquiry_priority: 'Low',
+        inquiry_status: 'Resolved',
+        assigned_to: 'Partnership Team',
+        inquiry_date: '2025-03-15',
+        response_date: '2025-03-16',
+        resolution_date: '2025-03-18',
+        follow_up_date: '2025-03-25',
+        feedback_status: 'Received',
+        inquiry_resolution: 'Provided details and scheduled a follow-up call.',
+        inquiry_attachments: [
+        'https://example.com/attachments/inquiry003/proposal.pdf',
+        ],
+        status: 'inactive', // Example status
     },
 ];
 // --- End Dummy Data ---
@@ -174,12 +207,14 @@ const FormListTable = () => {
             filteredData = forms.filter(
                 (form) =>
                     form.id.toLowerCase().includes(query) ||
-                    form.name.toLowerCase().includes(query) ||
-                    form.email.toLowerCase().includes(query) ||
-                    form.phone.toLowerCase().includes(query) ||
-                    form.quantity.toLowerCase().includes(query) ||
-                    form.requirements.toLowerCase().includes(query) ||
-                    form.date.toLowerCase().includes(query) ||
+                    (form.id?.toLowerCase() ?? '').includes(query) ||
+                    (form.inquiry_id?.toLowerCase() ?? '').includes(query) ||
+                    (form.company_name?.toLowerCase() ?? '').includes(query) ||
+                    (form.contact_person_name?.toLowerCase() ?? '').includes(query) ||
+                    (form.contact_person_email?.toLowerCase() ?? '').includes(query) ||
+                    (form.contact_person_phone?.toLowerCase() ?? '').includes(query) ||
+                    (form.inquiry_type?.toLowerCase() ?? '').includes(query) ||
+                    (form.inquiry_subject?.toLowerCase() ?? '').includes(query) ||
                     form.status.toLowerCase().includes(query)
             );
         }
@@ -232,13 +267,40 @@ const FormListTable = () => {
         const clonedForm: FormItem = {
             ...form,
             id: newId,
-            name: `${form.name} (Clone)`,
-            email: form.email,
-            phone: form.phone,
-            quantity: form.quantity,
-            requirements: form.requirements,
-            date: form.date,
-            status: 'inactive', // Cloned forms start as inactive
+            // Append "(Clone)" to some key string fields to indicate cloning
+            inquiry_id: `${form.inquiry_id} (Clone)`,
+            company_name: `${form.company_name} (Clone)`,
+            contact_person_name: `${form.contact_person_name} (Clone)`,
+
+            // Keep emails, phones as is
+            contact_person_email: form.contact_person_email,
+            contact_person_phone: form.contact_person_phone,
+
+            // Append "(Clone)" to inquiry subject to distinguish
+            inquiry_subject: `${form.inquiry_subject} (Clone)`,
+
+            // Reset status to inactive for cloned forms
+            status: 'inactive',
+
+            // Optionally, reset or clear dates and other fields as needed
+            inquiry_date: '',
+            response_date: '',
+            resolution_date: '',
+            follow_up_date: '',
+
+            // Clear resolution and feedback for cloned form
+            inquiry_resolution: '',
+            feedback_status: '',
+
+            // Leave attachments empty or clone as needed (here we clear)
+            inquiry_attachments: [],
+
+            // Keep other string fields as they were
+            inquiry_type: form.inquiry_type,
+            inquiry_description: form.inquiry_description,
+            inquiry_priority: form.inquiry_priority,
+            inquiry_status: form.inquiry_status,
+            assigned_to: form.assigned_to,
         };
         setForms((prev) => [clonedForm, ...prev]);
     };
@@ -269,40 +331,122 @@ const FormListTable = () => {
                 cell: (props) => <span>{props.row.original.id}</span>,
             },
             {
-                header: 'Name',
-                accessorKey: 'name',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.name}</span>,
+                header: 'Inquiry ID',
+                accessorKey: 'inquiry_id',
+                size: 100,
+            },
+            {
+                header: 'Company Name',
+                accessorKey: 'company_name',
+                size: 160,
+            },
+            {
+                header: 'Contact Person',
+                accessorKey: 'contact_person_name',
+                size: 160,
             },
             {
                 header: 'Email',
-                accessorKey: 'email',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.email}</span>,
+                accessorKey: 'contact_person_email',
+                size: 200,
             },
             {
                 header: 'Phone',
-                accessorKey: 'phone',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.phone}</span>,
+                accessorKey: 'contact_person_phone',
+                size: 140,
             },
             {
-                header: 'Quantity',
-                accessorKey: 'quantity',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.quantity}</span>,
+                header: 'Inquiry Type',
+                accessorKey: 'inquiry_type',
+                size: 140,
             },
             {
-                header: 'Requirements',
-                accessorKey: 'requirements',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.requirements}</span>,
+                header: 'Subject',
+                accessorKey: 'inquiry_subject',
+                size: 200,
             },
             {
-                header: 'Date',
-                accessorKey: 'date',
-                enableSorting: true,
-                cell: (props) => <span>{props.row.original.date}</span>,
+                header: 'Description',
+                accessorKey: 'inquiry_description',
+                size: 300,
+                cell: ({ row }) => (
+                <div className="line-clamp-2 text-sm text-gray-700">
+                    {row.original.inquiry_description}
+                </div>
+                ),
+            },
+            {
+                header: 'Priority',
+                accessorKey: 'inquiry_priority',
+                size: 100,
+            },
+            {
+                header: 'Assigned To',
+                accessorKey: 'assigned_to',
+                size: 160,
+            },
+            {
+                header: 'Inquiry Date',
+                accessorKey: 'inquiry_date',
+                size: 140,
+                cell: ({ row }) =>
+                new Date(row.original.inquiry_date).toLocaleDateString(),
+            },
+            {
+                header: 'Response Date',
+                accessorKey: 'response_date',
+                size: 140,
+                cell: ({ row }) =>
+                new Date(row.original.response_date).toLocaleDateString(),
+            },
+            {
+                header: 'Resolution Date',
+                accessorKey: 'resolution_date',
+                size: 140,
+                cell: ({ row }) =>
+                new Date(row.original.resolution_date).toLocaleDateString(),
+            },
+            {
+                header: 'Follow-up Date',
+                accessorKey: 'follow_up_date',
+                size: 140,
+                cell: ({ row }) =>
+                new Date(row.original.follow_up_date).toLocaleDateString(),
+            },
+            {
+                header: 'Feedback Status',
+                accessorKey: 'feedback_status',
+                size: 150,
+            },
+            {
+                header: 'Resolution Notes',
+                accessorKey: 'inquiry_resolution',
+                size: 300,
+                cell: ({ row }) => (
+                <div className="line-clamp-2 text-sm text-gray-700">
+                    {row.original.inquiry_resolution}
+                </div>
+                ),
+            },
+            {
+                header: 'Attachments',
+                accessorKey: 'inquiry_attachments',
+                size: 200,
+                cell: ({ row }) => (
+                <div className="flex flex-col gap-1">
+                    {row.original.inquiry_attachments.map((url, i) => (
+                    <a
+                        key={i}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline text-sm"
+                    >
+                        File {i + 1}
+                    </a>
+                    ))}
+                </div>
+                ),
             },
             {
                 header: 'Status',
