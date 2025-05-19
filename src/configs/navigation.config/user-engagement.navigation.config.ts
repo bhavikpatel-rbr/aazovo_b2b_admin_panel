@@ -20,7 +20,7 @@ const userengagementNavigationConfig: NavigationTree[] = [
             },
             subMenu: [
               {
-                              key: 'marketing.subscriber',
+                              key: 'userengagement.subscriber',
                               path: `${MARKETING_PREFIX_PATH}/subscriber`,
                               title: 'Subscriber',
                               translateKey: 'nav.marketing.subscriber',
@@ -29,23 +29,23 @@ const userengagementNavigationConfig: NavigationTree[] = [
                               authority: [ADMIN, USER],
                               meta: {
                                   description: {
-                                      translateKey: 'nav.marketing.subscriberDesc',
+                                      translateKey: 'nav.userengagement.subscriberDesc',
                                       label: 'Manage subscribers',
                                   },
                               },
                               subMenu: [],
                           },
                           {
-                              key: 'marketing.requestFeedback',
+                              key: 'userengagement.requestFeedback',
                               path: `${MARKETING_PREFIX_PATH}/request-feedback`,
                               title: 'Request & Feedback',
-                              translateKey: 'nav.marketing.requestFeedback',
+                              translateKey: 'nav.userengagement.requestFeedback',
                               icon: 'requestFeedback',
                               type: NAV_ITEM_TYPE_ITEM,
                               authority: [ADMIN, USER],
                               meta: {
                                   description: {
-                                      translateKey: 'nav.marketing.requestFeedbackDesc',
+                                      translateKey: 'nav.userengagement.requestFeedbackDesc',
                                       label: 'Handle requests and feedback',
                                   },
                               },

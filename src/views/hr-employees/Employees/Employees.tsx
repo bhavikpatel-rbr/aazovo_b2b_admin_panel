@@ -1,166 +1,111 @@
-// src/views/your-path/EmployeesListing.tsx (New file name)
+// src/views/your-path/EmployeesListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import cloneDeep from 'lodash/cloneDeep'
-import classNames from 'classnames'
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'; // Added useEffect
+// import { Link, useNavigate } from 'react-router-dom'; // useNavigate will be replaced by drawer logic for add/edit
+import cloneDeep from 'lodash/cloneDeep';
+import classNames from 'classnames';
+import { useForm, Controller } from 'react-hook-form'; // Added
+import { zodResolver } from '@hookform/resolvers/zod';   // Added
+import { z } from 'zod';                                 // Added
 
 // UI Components
-import AdaptiveCard from '@/components/shared/AdaptiveCard'
-import Container from '@/components/shared/Container'
-import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
-import Tag from '@/components/ui/Tag'
-import Button from '@/components/ui/Button'
-import Dialog from '@/components/ui/Dialog' // Keep for potential view/change pwd modals
-import Avatar from '@/components/ui/Avatar' // For Name/initials
-import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import { TbUserCircle, TbKey, TbFilter, TbCloudUpload, TbPlus } from 'react-icons/tb' // Icons
+import AdaptiveCard from '@/components/shared/AdaptiveCard';
+import Container from '@/components/shared/Container';
+import DataTable from '@/components/shared/DataTable';
+import Tooltip from '@/components/ui/Tooltip';
+import Tag from '@/components/ui/Tag';
+import Button from '@/components/ui/Button';
+import Dialog from '@/components/ui/Dialog';
+import Avatar from '@/components/ui/Avatar';
+import Notification from '@/components/ui/Notification';
+import toast from '@/components/ui/toast';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import StickyFooter from '@/components/shared/StickyFooter';
+import DebouceInput from '@/components/shared/DebouceInput';
+import { Drawer, Form, FormItem, Input, Select as UiSelect } from '@/components/ui'; // Added Drawer, Form, FormItem, UiSelect, Textarea
 
 // Icons
 import {
-    TbPencil, // Edit
-    TbTrash, // Delete
-    TbEye, // View
-    // TbSwitchHorizontal, // Status change (can be handled differently or removed if status is simple active/inactive)
-    TbChecks, // Selected Footer
-    TbSearch,
-    TbCloudDownload, // Optional export
-    TbUserPlus, // Add user
-} from 'react-icons/tb'
-
+    TbPencil, TbTrash, TbEye, TbKey, TbChecks, TbSearch, TbFilter,TbCloudUpload , TbPlus, TbUserCircle,
+    TbMail, TbPhone, TbBuildingSkyscraper, TbBriefcase, TbCalendar, TbUsers // Additional icons for form
+} from 'react-icons/tb';
+import DatePicker from '@/components/ui/DatePicker'; // Added DatePicker for date selection
+import { Select } from '@/components/ui/Select'; // Added Select for dropdowns
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
-import { Input } from '@/components/ui'
+import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
+import type { TableQueries } from '@/@types/common';
 
 // --- Define Item Type ---
+export type EmployeeStatus = 'active' | 'inactive' | 'on_leave' | 'terminated';
 export type EmployeeItem = {
-    id: string // Unique Employee ID
-    status: 'active' | 'inactive' | 'on_leave' | 'terminated' // Employee statuses
-    name: string
-    email: string
-    mobile: string | null
-    department: string
-    designation: string
-    roles: string[] // Array of role names/IDs
-    avatar?: string | null // Optional avatar image URL
-    createdAt: Date
-}
+    id: string;
+    status: EmployeeStatus;
+    name: string;
+    email: string;
+    mobile: string | null;
+    department: string;
+    designation: string;
+    roles: string[];
+    avatar?: string | null;
+    createdAt: Date;
+    // Add other fields if needed for forms, e.g., joiningDate, address, etc.
+    joiningDate?: Date | null;
+    bio?: string | null;
+};
 // --- End Item Type ---
 
 // --- Constants ---
-const employeeStatusColor: Record<EmployeeItem['status'], string> = {
-    active: 'bg-emerald-500',
-    inactive: 'bg-gray-500',
-    on_leave: 'bg-amber-500',
-    terminated: 'bg-red-500',
-}
+const EMPLOYEE_STATUS_OPTIONS: { value: EmployeeStatus; label: string }[] = [
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'on_leave', label: 'On Leave' },
+    { value: 'terminated', label: 'Terminated' },
+];
+const employeeStatusValues = EMPLOYEE_STATUS_OPTIONS.map(s => s.value) as [EmployeeStatus, ...EmployeeStatus[]];
 
+const employeeStatusColor: Record<EmployeeItem['status'], string> = {
+    active: 'bg-emerald-500', inactive: 'bg-gray-500',
+    on_leave: 'bg-amber-500', terminated: 'bg-red-500',
+};
+
+// --- Zod Schema for Add/Edit Employee Form ---
+const employeeFormSchema = z.object({
+    name: z.string().min(1, 'Name is required.').max(100),
+    email: z.string().email('Invalid email address.').min(1, 'Email is required.'),
+    mobile: z.string().nullable().optional().refine(val => !val || /^\+?[1-9]\d{1,14}$/.test(val), { message: "Invalid phone number format." }),
+    department: z.string().min(1, 'Department is required.').max(100),
+    designation: z.string().min(1, 'Designation is required.').max(100),
+    status: z.enum(employeeStatusValues),
+    roles: z.array(z.string()).min(1, "At least one role is required."), // Assuming roles are strings for simplicity
+    // Add more fields as needed for the form
+    joiningDate: z.date().nullable().optional(),
+    bio: z.string().max(500).nullable().optional(),
+    // For add new, password might be here. For edit, it's often separate.
+    // password: z.string().min(8, "Password must be at least 8 characters").optional(), // Only for add
+});
+type EmployeeFormData = z.infer<typeof employeeFormSchema>;
+
+// --- Zod Schema for Filter Form ---
+const employeeFilterFormSchema = z.object({
+    filterDepartments: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterDesignations: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterStatuses: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+    filterRoles: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+});
+type EmployeeFilterFormData = z.infer<typeof employeeFilterFormSchema>;
+
+
+// --- Initial Dummy Data (extended slightly for form example) ---
 const initialDummyEmployees: EmployeeItem[] = [
-    {
-        id: 'EMP001',
-        status: 'active',
-        name: 'Alice Wonderland',
-        email: 'alice.w@company.com',
-        mobile: '+1-555-1001',
-        department: 'Engineering',
-        designation: 'Software Engineer II',
-        roles: ['Developer', 'Code Reviewer'],
-        avatar: '/img/avatars/thumb-1.jpg',
-        createdAt: new Date(2022, 5, 15),
-    },
-    {
-        id: 'EMP002',
-        status: 'active',
-        name: 'Bob The Builder',
-        email: 'bob.b@company.com',
-        mobile: '+1-555-1002',
-        department: 'Marketing',
-        designation: 'Marketing Manager',
-        roles: ['Manager', 'Campaign Planner'],
-        avatar: '/img/avatars/thumb-2.jpg',
-        createdAt: new Date(2021, 8, 1),
-    },
-    {
-        id: 'EMP003',
-        status: 'on_leave',
-        name: 'Charlie Chaplin',
-        email: 'charlie.c@company.com',
-        mobile: null,
-        department: 'Sales',
-        designation: 'Sales Representative',
-        roles: ['Sales Rep'],
-        avatar: '/img/avatars/thumb-3.jpg',
-        createdAt: new Date(2022, 11, 10),
-    },
-    {
-        id: 'EMP004',
-        status: 'active',
-        name: 'Diana Prince',
-        email: 'diana.p@company.com',
-        mobile: '+1-555-1004',
-        department: 'HR',
-        designation: 'HR Specialist',
-        roles: ['HR Admin', 'Recruiter'],
-        avatar: '/img/avatars/thumb-4.jpg',
-        createdAt: new Date(2023, 2, 20),
-    },
-    {
-        id: 'EMP005',
-        status: 'inactive',
-        name: 'Ethan Hunt',
-        email: 'ethan.h@company.com',
-        mobile: '+1-555-1005',
-        department: 'Operations',
-        designation: 'Logistics Coordinator',
-        roles: ['Logistics'],
-        avatar: '/img/avatars/thumb-5.jpg',
-        createdAt: new Date(2022, 1, 5),
-    },
-    {
-        id: 'EMP006',
-        status: 'terminated',
-        name: 'Fiona Shrek',
-        email: 'fiona.s@company.com',
-        mobile: null,
-        department: 'Finance',
-        designation: 'Accountant',
-        roles: ['Finance User'],
-        avatar: '/img/avatars/thumb-6.jpg',
-        createdAt: new Date(2021, 3, 12),
-    },
-    {
-        id: 'EMP007',
-        status: 'active',
-        name: 'George Jungle',
-        email: 'george.j@company.com',
-        mobile: '+1-555-1007',
-        department: 'Support',
-        designation: 'Support Team Lead',
-        roles: ['Support Lead', 'Agent'],
-        avatar: '/img/avatars/thumb-7.jpg',
-        createdAt: new Date(2023, 0, 30),
-    },
-    {
-        id: 'EMP008',
-        status: 'active',
-        name: 'Hermione Granger',
-        email: 'hermione.g@company.com',
-        mobile: '+44-20-1111-2222',
-        department: 'Engineering',
-        designation: 'Senior Software Engineer',
-        roles: ['Developer', 'Architect'],
-        avatar: '/img/avatars/thumb-8.jpg',
-        createdAt: new Date(2020, 10, 22),
-    },
-]
+    { id: 'EMP001', status: 'active', name: 'Alice Wonderland', email: 'alice.w@company.com', mobile: '+1-555-1001', department: 'Engineering', designation: 'Software Engineer II', roles: ['Developer', 'Code Reviewer'], avatar: '/img/avatars/thumb-1.jpg', createdAt: new Date(2022, 5, 15), joiningDate: new Date(2022,5,15), bio: 'Loves coding and tea parties.' },
+    { id: 'EMP002', status: 'active', name: 'Bob The Builder', email: 'bob.b@company.com', mobile: '+1-555-1002', department: 'Marketing', designation: 'Marketing Manager', roles: ['Manager', 'Campaign Planner'], avatar: '/img/avatars/thumb-2.jpg', createdAt: new Date(2021, 8, 1), joiningDate: new Date(2021,8,1) },
+    { id: 'EMP003', status: 'on_leave', name: 'Charlie Chaplin', email: 'charlie.c@company.com', mobile: null, department: 'Sales', designation: 'Sales Representative', roles: ['Sales Rep'], avatar: '/img/avatars/thumb-3.jpg', createdAt: new Date(2022, 11, 10), joiningDate: new Date(2022,11,10) },
+    // ... Add more employees from your original list
+];
 // --- End Constants ---
 
+// --- Reusable ActionColumn, EmployeeTable, EmployeeSearch, EmployeeSelectedFooter (mostly unchanged, minor prop adjustments if needed) ---
+// ActionColumn definition remains the same from your example.
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
     onView,
@@ -239,8 +184,7 @@ const ActionColumn = ({
         </div>
     )
 }
-// --- End ActionColumn ---
-
+// EmployeeTable definition remains the same.
 // --- EmployeeTable Component ---
 const EmployeeTable = ({
     columns,
@@ -284,8 +228,7 @@ const EmployeeTable = ({
         />
     )
 }
-// --- End EmployeeTable ---
-
+// EmployeeSearch definition remains the same.
 // --- EmployeeSearch Component ---
 type EmployeeSearchProps = {
     onInputChange: (value: string) => void
@@ -305,75 +248,7 @@ const EmployeeSearch = React.forwardRef<HTMLInputElement, EmployeeSearchProps>(
 )
 EmployeeSearch.displayName = 'EmployeeSearch'
 // --- End EmployeeSearch ---
-
-// --- EmployeeTableTools Component ---
-const EmployeeTableTools = ({
-    onSearchChange,
-}: {
-    onSearchChange: (query: string) => void
-}) => {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
-            <div className="flex-grow">
-                <EmployeeSearch onInputChange={onSearchChange} />
-            </div>
-             <Button icon={<TbFilter/>} className=''>
-                Filter
-            </Button>
-            <Button icon={<TbCloudUpload/>}>Export</Button>
-        </div>
-    )
-    // Filter button could be added here
-}
-// --- End EmployeeTableTools ---
-
-// --- EmployeeActionTools Component ---
-const EmployeeActionTools = ({
-    allEmployees,
-}: {
-    allEmployees: EmployeeItem[]
-}) => {
-    const navigate = useNavigate()
-    const csvData = useMemo(
-        () =>
-            allEmployees.map((e) => ({
-                ...e,
-                roles: e.roles.join(', '),
-                createdAt: e.createdAt.toISOString(),
-            })),
-        [allEmployees],
-    )
-    const csvHeaders = [
-        { label: 'ID', key: 'id' },
-        { label: 'Status', key: 'status' },
-        { label: 'Name', key: 'name' },
-        { label: 'Email', key: 'email' },
-        { label: 'Mobile', key: 'mobile' },
-        { label: 'Department', key: 'department' },
-        { label: 'Designation', key: 'designation' },
-        { label: 'Roles', key: 'roles' },
-        { label: 'Created At', key: 'createdAt' },
-    ]
-    const handleAdd = () => navigate('/employees/create') // Adjust route
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            {' '}
-            {/* <CSVLink ... /> */}{' '}
-            <Button
-                variant="solid"
-                icon={<TbPlus />}
-                onClick={handleAdd}
-                block
-            >
-                {' '}
-                Add New {' '}
-            </Button>{' '}
-        </div>
-    )
-}
-// --- End EmployeeActionTools ---
-
+// EmployeeSelected definition remains the same.
 // --- EmployeeSelected Component ---
 const EmployeeSelected = ({
     selectedEmployees,
@@ -448,7 +323,8 @@ const EmployeeSelected = ({
     )
 }
 // --- End EmployeeSelected ---
-
+// DetailViewDialog and ChangePasswordDialog remain the same.
+// --- Detail/Password Change Dialogs (Example placeholders) ---
 // --- Detail/Password Change Dialogs (Example placeholders) ---
 const EmployeeDetailViewDialog = ({
     isOpen,
@@ -582,420 +458,343 @@ const ChangePasswordDialog = ({
 }
 // --- End Dialogs ---
 
+// --- Modified EmployeeTableTools ---
+const EmployeeTableTools = ({ onSearchChange, onFilter, onExport }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }) => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex-grow"><EmployeeSearch onInputChange={onSearchChange} /></div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        </div>
+    </div>
+);
+
+// CSV Export for Employees (Adapted from Countries)
+const CSV_HEADERS_EMPLOYEE = ['ID', 'Name', 'Email', 'Mobile', 'Department', 'Designation', 'Roles', 'Status', 'Joining Date', 'Created At'];
+type EmployeeExportItem = Omit<EmployeeItem, 'roles' | 'createdAt' | 'joiningDate'> & { rolesCsv: string; createdAtCsv: string; joiningDateCsv?: string };
+
+function exportToCsvEmployees(filename: string, rows: EmployeeItem[]) {
+    if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
+    const transformedRows: EmployeeExportItem[] = rows.map(row => ({
+        ...row,
+        rolesCsv: row.roles.join(', '),
+        joiningDateCsv: row.joiningDate ? new Date(row.joiningDate).toLocaleDateString() : 'N/A',
+        createdAtCsv: new Date(row.createdAt).toLocaleDateString(),
+    }));
+    const csvKeysEmployeeExport: (keyof EmployeeExportItem)[] = ['id', 'name', 'email', 'mobile', 'department', 'designation', 'rolesCsv', 'status', 'joiningDateCsv', 'createdAtCsv'];
+    // ... (rest of CSV export logic from Countries.tsx, adapting headers and keys)
+    const separator = ',';
+    const csvContent =
+        CSV_HEADERS_EMPLOYEE.join(separator) + '\n' +
+        transformedRows.map((row) => {
+            return csvKeysEmployeeExport.map((k) => {
+                let cell = row[k];
+                if (cell === null || cell === undefined) cell = '';
+                else cell = String(cell).replace(/"/g, '""');
+                if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+                return cell;
+            }).join(separator);
+        }).join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename);
+        link.style.visibility = 'hidden'; document.body.appendChild(link); link.click();
+        document.body.removeChild(link); URL.revokeObjectURL(url); return true;
+    }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+    return false;
+}
+
+
 // --- Main EmployeesListing Component ---
 const EmployeesListing = () => {
-    const navigate = useNavigate()
+    // const navigate = useNavigate(); // Not used for add/edit if using drawers
 
     // --- State ---
-    const [isLoading, setIsLoading] = useState(false)
-    const [employees, setEmployees] = useState<EmployeeItem[]>(
-        initialDummyEmployees,
-    )
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-    const [selectedEmployees, setSelectedEmployees] = useState<EmployeeItem[]>(
-        [],
-    )
-    const [detailViewOpen, setDetailViewOpen] = useState(false)
-    const [changePwdOpen, setChangePwdOpen] = useState(false)
-    const [currentItem, setCurrentItem] = useState<EmployeeItem | null>(null) // For both view and pwd change
-    // --- End State ---
+    const [employees, setEmployees] = useState<EmployeeItem[]>(initialDummyEmployees);
+    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle'); // Mimicking Redux status
 
-    // --- Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...employees]
-        // Apply Search
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [editingEmployee, setEditingEmployee] = useState<EmployeeItem | null>(null);
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<EmployeeItem | null>(null); // Renamed from countryToDelete
+
+    const [filterCriteria, setFilterCriteria] = useState<EmployeeFilterFormData>({});
+    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' });
+    const [selectedEmployees, setSelectedEmployees] = useState<EmployeeItem[]>([]); // Renamed from selectedItems
+
+    // Detail/Password Dialog States (from original component)
+    const [detailViewOpen, setDetailViewOpen] = useState(false);
+    const [changePwdOpen, setChangePwdOpen] = useState(false);
+    const [currentItemForDialog, setCurrentItemForDialog] = useState<EmployeeItem | null>(null);
+
+
+    // React Hook Form instances
+    const addFormMethods = useForm<EmployeeFormData>({ resolver: zodResolver(employeeFormSchema), mode: 'onChange' });
+    const editFormMethods = useForm<EmployeeFormData>({ resolver: zodResolver(employeeFormSchema), mode: 'onChange' });
+    const filterFormMethods = useForm<EmployeeFilterFormData>({ resolver: zodResolver(employeeFilterFormSchema), defaultValues: filterCriteria });
+
+    // --- CRUD and Drawer Handlers ---
+    const openAddDrawer = () => {
+        addFormMethods.reset({ name: '', email: '', mobile: '', department: '', designation: '', status: 'active', roles: [], joiningDate: null, bio: '' });
+        setIsAddDrawerOpen(true);
+    };
+    const closeAddDrawer = () => { addFormMethods.reset(); setIsAddDrawerOpen(false); };
+    const onAddEmployeeSubmit = async (data: EmployeeFormData) => {
+        setIsSubmitting(true); setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
+        const newEmployee: EmployeeItem = {
+            id: `EMP${Date.now()}`, ...data, avatar: null, // Default avatar or handle upload
+            createdAt: new Date(),
+            joiningDate: data.joiningDate ? new Date(data.joiningDate) : null,
+        };
+        setEmployees(prev => [newEmployee, ...prev]);
+        toast.push(<Notification title="Employee Added" type="success">{`Employee "${data.name}" added.`}</Notification>);
+        closeAddDrawer();
+        setIsSubmitting(false); setMasterLoadingStatus('idle');
+    };
+
+    const openEditDrawer = (employee: EmployeeItem) => {
+        setEditingEmployee(employee);
+        editFormMethods.reset({
+            name: employee.name, email: employee.email, mobile: employee.mobile,
+            department: employee.department, designation: employee.designation, status: employee.status,
+            roles: employee.roles, // Assuming roles are simple strings
+            joiningDate: employee.joiningDate ? new Date(employee.joiningDate) : null,
+            bio: employee.bio
+        });
+        setIsEditDrawerOpen(true);
+    };
+    const closeEditDrawer = () => { setEditingEmployee(null); editFormMethods.reset(); setIsEditDrawerOpen(false); };
+    const onEditEmployeeSubmit = async (data: EmployeeFormData) => {
+        if (!editingEmployee) return;
+        setIsSubmitting(true); setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
+        const updatedEmployee: EmployeeItem = {
+            ...editingEmployee, ...data,
+            joiningDate: data.joiningDate ? new Date(data.joiningDate) : null,
+            // Avatar update would be handled separately
+        };
+        setEmployees(prev => prev.map(emp => (emp.id === editingEmployee.id ? updatedEmployee : emp)));
+        toast.push(<Notification title="Employee Updated" type="success">{`Employee "${data.name}" updated.`}</Notification>);
+        closeEditDrawer();
+        setIsSubmitting(false); setMasterLoadingStatus('idle');
+    };
+
+    const handleDeleteClick = (employee: EmployeeItem) => { setItemToDelete(employee); setSingleDeleteConfirmOpen(true); };
+    const onConfirmSingleDelete = async () => { // Adapted from your original handleDelete
+        if (!itemToDelete) return;
+        setIsDeleting(true); setMasterLoadingStatus('loading'); setSingleDeleteConfirmOpen(false);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setEmployees(current => current.filter(e => e.id !== itemToDelete.id));
+        setSelectedEmployees(prev => prev.filter(e => e.id !== itemToDelete.id));
+        toast.push(<Notification title="Employee Deleted" type="success">{`Employee '${itemToDelete.name}' deleted.`}</Notification>);
+        setIsDeleting(false); setMasterLoadingStatus('idle'); setItemToDelete(null);
+    };
+
+    const handleDeleteSelected = async () => { // Adapted from your original
+        if (selectedEmployees.length === 0) { toast.push(<Notification title="No Selection" type="info">Please select employees.</Notification>); return;}
+        setIsDeleting(true); setMasterLoadingStatus('loading');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const selectedIds = new Set(selectedEmployees.map(e => e.id));
+        setEmployees(current => current.filter(e => !selectedIds.has(e.id)));
+        toast.push(<Notification title="Employees Deleted" type="success">{`${selectedIds.size} employee(s) deleted.`}</Notification>);
+        setSelectedEmployees([]);
+        setIsDeleting(false); setMasterLoadingStatus('idle');
+    };
+
+    // --- Filter Drawer Handlers ---
+    const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); };
+    const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
+    const onApplyFiltersSubmit = (data: EmployeeFilterFormData) => {
+        setFilterCriteria(data);
+        setTableData(prev => ({ ...prev, pageIndex: 1 }));
+        closeFilterDrawer();
+    };
+    const onClearFilters = () => {
+        const defaultFilters = { filterDepartments: [], filterDesignations: [], filterStatuses: [], filterRoles: [] };
+        filterFormMethods.reset(defaultFilters);
+        setFilterCriteria(defaultFilters);
+        setTableData(prev => ({ ...prev, pageIndex: 1 }));
+    };
+
+    // --- Data Processing (Filtering, Sorting, Pagination from original) ---
+    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+        let processedData = cloneDeep(employees); // Use local employees state
+
+        // Apply Filters from filterCriteria
+        if (filterCriteria.filterDepartments?.length) { const v = filterCriteria.filterDepartments.map(o => o.value.toLowerCase()); processedData = processedData.filter(e => v.includes(e.department.toLowerCase())); }
+        if (filterCriteria.filterDesignations?.length) { const v = filterCriteria.filterDesignations.map(o => o.value.toLowerCase()); processedData = processedData.filter(e => v.includes(e.designation.toLowerCase())); }
+        if (filterCriteria.filterStatuses?.length) { const v = filterCriteria.filterStatuses.map(o => o.value); processedData = processedData.filter(e => v.includes(e.status)); }
+        if (filterCriteria.filterRoles?.length) { const v = filterCriteria.filterRoles.map(o => o.value.toLowerCase()); processedData = processedData.filter(e => e.roles.some(role => v.includes(role.toLowerCase())));}
+
+
+        // Apply Global Search from tableData.query (from original component)
         if (tableData.query) {
-            const query = tableData.query.toLowerCase()
-            processedData = processedData.filter(
-                (e) =>
-                    e.id.toLowerCase().includes(query) ||
-                    e.name.toLowerCase().includes(query) ||
-                    e.email.toLowerCase().includes(query) ||
-                    (e.mobile?.toLowerCase().includes(query) ?? false) ||
-                    e.department.toLowerCase().includes(query) ||
-                    e.designation.toLowerCase().includes(query) ||
-                    e.roles.some((role) =>
-                        role.toLowerCase().includes(query),
-                    ) ||
-                    e.status.toLowerCase().includes(query),
-            )
+            const query = tableData.query.toLowerCase();
+            processedData = processedData.filter(e =>
+                e.id.toLowerCase().includes(query) || e.name.toLowerCase().includes(query) ||
+                e.email.toLowerCase().includes(query) || (e.mobile?.toLowerCase().includes(query) ?? false) ||
+                e.department.toLowerCase().includes(query) || e.designation.toLowerCase().includes(query) ||
+                e.roles.some(role => role.toLowerCase().includes(query)) || e.status.toLowerCase().includes(query)
+            );
         }
-        // Apply Sorting
-        const { order, key } = tableData.sort as OnSortParam
-        if (order && key) {
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                if (key === 'createdAt') {
-                    return order === 'asc'
-                        ? a.createdAt.getTime() - b.createdAt.getTime()
-                        : b.createdAt.getTime() - a.createdAt.getTime()
-                }
-                if (key === 'roles') {
-                    // Sort by first role alphabetically
-                    const roleA = a.roles?.[0] ?? ''
-                    const roleB = b.roles?.[0] ?? ''
-                    return order === 'asc'
-                        ? roleA.localeCompare(roleB)
-                        : roleB.localeCompare(roleA)
-                }
-                const aValue = a[key as keyof EmployeeItem] ?? ''
-                const bValue = b[key as keyof EmployeeItem] ?? ''
-                if (aValue === null && bValue === null) return 0
-                if (aValue === null) return order === 'asc' ? -1 : 1
-                if (bValue === null) return order === 'asc' ? 1 : -1
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
-                }
-                return 0
-            })
-            processedData = sortedData
+        // Apply Sorting (from original component)
+        const { order, key } = tableData.sort as OnSortParam;
+        if (order && key) { /* ... your existing sort logic ... */
+            processedData.sort((a, b) => {
+                let aVal = a[key as keyof EmployeeItem] as any;
+                let bVal = b[key as keyof EmployeeItem] as any;
+                if (key === 'createdAt' || key === 'joiningDate') { aVal = aVal ? new Date(aVal).getTime() : 0; bVal = bVal ? new Date(bVal).getTime() : 0; }
+                else if (key === 'roles') { aVal = a.roles.join(', '); bVal = b.roles.join(', ');} // Simple role sort
+
+                if (typeof aVal === 'number' && typeof bVal === 'number') return order === 'asc' ? aVal - bVal : bVal - aVal;
+                return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? ''));
+            });
         }
-        // Apply Pagination
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const dataTotal = processedData.length
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
-        return { pageData: dataForPage, total: dataTotal }
-    }, [employees, tableData])
-    // --- End Data Processing ---
 
-    // --- Handlers ---
-    const handleSetTableData = useCallback((data: TableQueries) => {
-        setTableData(data)
-    }, [])
-    const handlePaginationChange = useCallback(
-        (page: number) => {
-            handleSetTableData({ ...tableData, pageIndex: page })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({
-                ...tableData,
-                pageSize: Number(value),
-                pageIndex: 1,
-            })
-            setSelectedEmployees([])
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => {
-            handleSetTableData({ ...tableData, query: query, pageIndex: 1 })
-        },
-        [tableData, handleSetTableData],
-    )
+        const dataToExport = [...processedData];
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number;
+        const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+    }, [employees, tableData, filterCriteria]);
 
-    const handleRowSelect = useCallback(
-        (checked: boolean, row: EmployeeItem) => {
-            setSelectedEmployees((prev) => {
-                if (checked) {
-                    return prev.some((e) => e.id === row.id)
-                        ? prev
-                        : [...prev, row]
-                } else {
-                    return prev.filter((e) => e.id !== row.id)
-                }
-            })
-        },
-        [setSelectedEmployees],
-    )
+    const handleExportData = () => {
+        const success = exportToCsvEmployees('employees_export.csv', allFilteredAndSortedData);
+        if(success) toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
+    };
 
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<EmployeeItem>[]) => {
-            const rowIds = new Set(rows.map((r) => r.original.id))
-            setSelectedEmployees((prev) => {
-                if (checked) {
-                    const originalRows = rows.map((row) => row.original)
-                    const existingIds = new Set(prev.map((e) => e.id))
-                    const newSelection = originalRows.filter(
-                        (e) => !existingIds.has(e.id),
-                    )
-                    return [...prev, ...newSelection]
-                } else {
-                    return prev.filter((e) => !rowIds.has(e.id))
-                }
-            })
-        },
-        [setSelectedEmployees],
-    )
+    // --- Table Interaction Handlers (from original, ensure setSelectedEmployees is used) ---
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({...prev, ...data})), []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedEmployees([]); }, [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: EmployeeItem) => { setSelectedEmployees(prev => checked ? (prev.some(e => e.id === row.id) ? prev : [...prev, row]) : prev.filter(e => e.id !== row.id)); }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<EmployeeItem>[]) => {
+        const originals = currentRows.map(r => r.original);
+        if (checked) setSelectedEmployees(prev => { const oldIds = new Set(prev.map(i => i.id)); return [...prev, ...originals.filter(o => !oldIds.has(o.id))]; });
+        else { const currentIds = new Set(originals.map(o => o.id)); setSelectedEmployees(prev => prev.filter(i => !currentIds.has(i.id))); }
+    }, []);
 
-    const handleViewDetails = useCallback((employee: EmployeeItem) => {
-        setCurrentItem(employee)
-        setDetailViewOpen(true)
-    }, [])
-    const handleCloseDetailView = useCallback(() => {
-        setDetailViewOpen(false)
-        setCurrentItem(null)
-    }, [])
-    const handleChangePassword = useCallback((employee: EmployeeItem) => {
-        setCurrentItem(employee)
-        setChangePwdOpen(true)
-    }, [])
-    const handleCloseChangePwd = useCallback(() => {
-        setChangePwdOpen(false)
-        setCurrentItem(null)
-    }, [])
+    // --- Dialog Handlers (from original) ---
+    const handleViewDetails = useCallback((employee: EmployeeItem) => { setCurrentItemForDialog(employee); setDetailViewOpen(true); }, []);
+    const handleCloseDetailView = useCallback(() => { setDetailViewOpen(false); setCurrentItemForDialog(null); }, []);
+    const handleChangePassword = useCallback((employee: EmployeeItem) => { setCurrentItemForDialog(employee); setChangePwdOpen(true); }, []);
+    const handleCloseChangePwd = useCallback(() => { setChangePwdOpen(false); setCurrentItemForDialog(null); }, []);
 
-    const handleEdit = useCallback(
-        (employee: EmployeeItem) => {
-            console.log('Edit employee:', employee.id)
-            navigate(`/employees/edit/${employee.id}`) // Adjust route
-        },
-        [navigate],
-    )
 
-    // Status change handler (if simple toggle is needed)
-    // const handleChangeStatus = useCallback((employee: EmployeeItem) => { ... }, [setEmployees]);
+    // --- Define Columns (from original, ensure ActionColumn uses new handlers) ---
+    const columns: ColumnDef<EmployeeItem>[] = useMemo(() => [
+        { header: 'Status', accessorKey: 'status', /* ... (keep original cell) ... */ cell: (props) => { const { status } = props.row.original; const displayStatus = status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()); return (<Tag className={`${employeeStatusColor[status]} text-white capitalize`}>{displayStatus}</Tag>) } },
+        { header: 'Name', accessorKey: 'name', /* ... (keep original cell) ... */ cell: (props) => { const { name, email, avatar } = props.row.original; return (<div className="flex items-center"><Avatar size={28} shape="circle" src={avatar} icon={<TbUserCircle />}>{!avatar ? name.charAt(0).toUpperCase() : ''}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name}</span><div className="text-xs text-gray-500">{email}</div></div></div>)} },
+        { header: 'Mobile', accessorKey: 'mobile', cell: (props) => <span>{props.row.original.mobile ?? '-'}</span> },
+        { header: 'Department', accessorKey: 'department' },
+        { header: 'Designation', accessorKey: 'designation' },
+        { header: 'Roles', accessorKey: 'roles', cell: (props) => <div className="flex flex-wrap gap-1">{props.row.original.roles.map((role) => (<Tag key={role} className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100">{role}</Tag>))}</div> },
+        { header: 'Joined At', accessorKey: 'joiningDate', cell: (props) => props.getValue<Date>() ? new Date(props.getValue<Date>()).toLocaleDateString() : '-' }, // Added Joining Date
+        { header: 'Action', id: 'action', size: 200, meta: { HeaderClass: 'text-center' }, cell: (props) => <ActionColumn onView={() => handleViewDetails(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onChangePassword={() => handleChangePassword(props.row.original)} /> },
+    ], [handleViewDetails, handleChangePassword, openEditDrawer, handleDeleteClick]); // Added openEditDrawer, handleDeleteClick to deps
 
-    const handleDelete = useCallback(
-        (employeeToDelete: EmployeeItem) => {
-            console.log('Deleting employee:', employeeToDelete.id)
-            // Confirmation should happen before this in a real app
-            setEmployees((current) =>
-                current.filter((e) => e.id !== employeeToDelete.id),
-            )
-            setSelectedEmployees((prev) =>
-                prev.filter((e) => e.id !== employeeToDelete.id),
-            )
-            toast.push(
-                <Notification
-                    title="Employee Deleted"
-                    type="success"
-                    duration={2000}
-                >{`Employee '${employeeToDelete.name}' deleted.`}</Notification>,
-            )
-        },
-        [setEmployees, setSelectedEmployees],
-    )
+    // Options for Filter Dropdowns
+    const departmentOptions = useMemo(() => { const unique = new Set(employees.map(e => e.department)); return Array.from(unique).map(d => ({ value: d, label: d })); }, [employees]);
+    const designationOptions = useMemo(() => { const unique = new Set(employees.map(e => e.designation)); return Array.from(unique).map(d => ({ value: d, label: d })); }, [employees]);
+    const roleOptions = useMemo(() => { const allRoles = employees.flatMap(e => e.roles); const unique = new Set(allRoles); return Array.from(unique).map(r => ({ value: r, label: r })); }, [employees]);
+    const statusOptionsForFilter = useMemo(() => EMPLOYEE_STATUS_OPTIONS.map(s => ({value: s.value, label: s.label})), []);
 
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected employees:',
-            selectedEmployees.map((e) => e.id),
-        )
-        const selectedIds = new Set(selectedEmployees.map((e) => e.id))
-        setEmployees((current) => current.filter((e) => !selectedIds.has(e.id)))
-        setSelectedEmployees([])
-        toast.push(
-            <Notification
-                title="Employees Deleted"
-                type="success"
-                duration={2000}
-            >{`${selectedIds.size} employee(s) deleted.`}</Notification>,
-        )
-    }, [selectedEmployees, setEmployees, setSelectedEmployees])
-    // --- End Handlers ---
 
-    // --- Define Columns ---
-    const columns: ColumnDef<EmployeeItem>[] = useMemo(
-        () => [
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                width: 120,
-                cell: (props) => {
-                    const { status } = props.row.original
-                    const displayStatus = status
-                        .replace(/_/g, ' ')
-                        .replace(/\b\w/g, (l) => l.toUpperCase())
-                    return (
-                        <Tag
-                            className={`${employeeStatusColor[status]} text-white capitalize`}
-                        >
-                            {displayStatus}
-                        </Tag>
-                    )
-                },
-            },
-            {
-                header: 'Name',
-                accessorKey: 'name',
-                enableSorting: true,
-                cell: (props) => {
-                    const { name, email, avatar } = props.row.original
-                    return (
-                        <div className="flex items-center">
-                            <Avatar
-                                size={28}
-                                shape="circle"
-                                src={avatar}
-                                icon={<TbUserCircle />}
-                            >
-                                {!avatar ? name.charAt(0).toUpperCase() : ''}
-                            </Avatar>
-                            <div className="ml-2 rtl:mr-2">
-                                <span className="font-semibold">{name}</span>
-                                <div className="text-xs text-gray-500">
-                                    {email}
-                                </div>
-                            </div>
-                        </div>
-                    )
-                },
-            },
-            {
-                header: 'Mobile',
-                accessorKey: 'mobile',
-                enableSorting: true,
-                cell: (props) => (
-                    <span>{props.row.original.mobile ?? '-'}</span>
-                ),
-            },
-            {
-                header: 'Department',
-                accessorKey: 'department',
-                enableSorting: true,
-            },
-            {
-                header: 'Designation',
-                accessorKey: 'designation',
-                enableSorting: true,
-            },
-            {
-                header: 'Roles',
-                accessorKey: 'roles',
-                enableSorting: true, // Sorts by first role
-                cell: (props) => (
-                    <div className="flex flex-wrap gap-1">
-                        {props.row.original.roles.map((role) => (
-                            <Tag
-                                key={role}
-                                className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
-                            >
-                                {role}
-                            </Tag>
-                        ))}
-                    </div>
-                ),
-            },
-            {
-                header: 'Created At',
-                accessorKey: 'createdAt',
-                enableSorting: true,
-                width: 180,
-                cell: (props) => {
-                    const date = props.row.original.createdAt
-                    return (
-                        <span>
-                            {date.toLocaleDateString()}{' '}
-                            {date.toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            })}
-                        </span>
-                    )
-                },
-            },
-            {
-                header: 'Action',
-                id: 'action',
-                size: 150, // Wider for more actions
-                meta : { HeaderClass : "text-center" },
-                cell: (props) => (
-                    <ActionColumn
-                        onView={() => handleViewDetails(props.row.original)}
-                        onEdit={() => handleEdit(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                        onChangePassword={() =>
-                            handleChangePassword(props.row.original)
-                        }
-                        // Add onChangeStatus if needed
-                    />
-                ),
-            },
-        ],
-        [handleViewDetails, handleEdit, handleDelete, handleChangePassword], // Update dependencies
-    )
-    // --- End Define Columns ---
-
-    // --- Render Main Component ---
     return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Employees Listing</h5>
-                    <EmployeeActionTools allEmployees={employees} />
-                </div>
+        <>
+            <Container className="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h5 className="mb-4 lg:mb-0">Employees Listing</h5>
+                        {/* Modified "Add New" button to open drawer */}
+                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Employee</Button>
+                    </div>
+                    <div className="mb-4">
+                        <EmployeeTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+                    </div>
+                    <div className="flex-grow overflow-auto">
+                        <EmployeeTable columns={columns} data={pageData} loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedEmployees={selectedEmployees} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
+                    </div>
+                </AdaptiveCard>
+            </Container>
 
-                {/* Tools */}
-                <div className="mb-4">
-                    <EmployeeTableTools onSearchChange={handleSearchChange} />
-                    {/* Filter component could be added here */}
-                </div>
+            <EmployeeSelected selectedEmployees={selectedEmployees} setSelectedEmployees={setSelectedEmployees} onDeleteSelected={handleDeleteSelected} />
+            <EmployeeDetailViewDialog isOpen={detailViewOpen} onClose={handleCloseDetailView} employee={currentItemForDialog} />
+            <ChangePasswordDialog isOpen={changePwdOpen} onClose={handleCloseChangePwd} employee={currentItemForDialog} />
 
-                {/* Active Filters Display (if filter added) */}
-                {/* <ActiveFiltersDisplay ... /> */}
+            {/* Add Employee Drawer */}
+            <Drawer title="Add New Employee" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={700}
+                footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="addEmployeeForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Employee'}</Button> </div> }>
+                <Form id="addEmployeeForm" onSubmit={addFormMethods.handleSubmit(onAddEmployeeSubmit)} className="flex flex-col gap-4 p-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormItem label="Full Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message}><Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbUserCircle />} placeholder="Enter full name" />} /></FormItem>
+                        <FormItem label="Email Address" invalid={!!addFormMethods.formState.errors.email} errorMessage={addFormMethods.formState.errors.email?.message}><Controller name="email" control={addFormMethods.control} render={({ field }) => <Input {...field} type="email" prefix={<TbMail />} placeholder="Enter email" />} /></FormItem>
+                        <FormItem label="Mobile Number" invalid={!!addFormMethods.formState.errors.mobile} errorMessage={addFormMethods.formState.errors.mobile?.message}><Controller name="mobile" control={addFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbPhone />} placeholder="e.g., +1234567890" />} /></FormItem>
+                        <FormItem label="Department" invalid={!!addFormMethods.formState.errors.department} errorMessage={addFormMethods.formState.errors.department?.message}><Controller name="department" control={addFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbBuildingSkyscraper />} placeholder="e.g., Engineering" />} /></FormItem>
+                        <FormItem label="Designation" invalid={!!addFormMethods.formState.errors.designation} errorMessage={addFormMethods.formState.errors.designation?.message}><Controller name="designation" control={addFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbBriefcase />} placeholder="e.g., Software Engineer" />} /></FormItem>
+                        <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message}><Controller name="status" control={addFormMethods.control} render={({ field }) => <UiSelect placeholder="Select status" options={EMPLOYEE_STATUS_OPTIONS} value={EMPLOYEE_STATUS_OPTIONS.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />} /></FormItem>
+                        <FormItem label="Joining Date" invalid={!!addFormMethods.formState.errors.joiningDate} errorMessage={addFormMethods.formState.errors.joiningDate?.message as string}><Controller name="joiningDate" control={addFormMethods.control} render={({ field }) => <DatePicker value={field.value} onChange={field.onChange} placeholder="Select joining date" inputPrefix={<TbCalendar />} />} /></FormItem>
+                        {/* Roles - could be a multi-select or a tag input component if available */}
+                        <FormItem label="Roles (comma-separated)" className="md:col-span-2" invalid={!!addFormMethods.formState.errors.roles} errorMessage={addFormMethods.formState.errors.roles?.message}><Controller name="roles" control={addFormMethods.control} render={({ field }) => <Input {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={e => field.onChange(e.target.value.split(',').map(r => r.trim()).filter(Boolean))} prefix={<TbUsers />} placeholder="Developer, Reviewer" />} /></FormItem>
+                    </div>
+                    <FormItem label="Bio (Optional)" invalid={!!addFormMethods.formState.errors.bio} errorMessage={addFormMethods.formState.errors.bio?.message as string}><Controller name="bio" control={addFormMethods.control} render={({ field }) => <Input textArea {...field} rows={3} placeholder="Short bio about the employee..." />} /></FormItem>
+                </Form>
+            </Drawer>
 
-                {/* Table */}
-                <div className="flex-grow overflow-auto">
-                    <EmployeeTable
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{
-                            total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedEmployees={selectedEmployees}
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
+            {/* Edit Employee Drawer */}
+            <Drawer title="Edit Employee" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={700}
+                footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editEmployeeForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button> </div> }>
+                 <Form id="editEmployeeForm" onSubmit={editFormMethods.handleSubmit(onEditEmployeeSubmit)} className="flex flex-col gap-4 p-1">
+                    {/* Fields are same as Add Drawer, prefilled */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormItem label="Full Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message}><Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbUserCircle />} />} /></FormItem>
+                        <FormItem label="Email Address" invalid={!!editFormMethods.formState.errors.email} errorMessage={editFormMethods.formState.errors.email?.message}><Controller name="email" control={editFormMethods.control} render={({ field }) => <Input {...field} type="email" prefix={<TbMail />} />} /></FormItem>
+                        <FormItem label="Mobile Number" invalid={!!editFormMethods.formState.errors.mobile} errorMessage={editFormMethods.formState.errors.mobile?.message}><Controller name="mobile" control={editFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbPhone />} />} /></FormItem>
+                        <FormItem label="Department" invalid={!!editFormMethods.formState.errors.department} errorMessage={editFormMethods.formState.errors.department?.message}><Controller name="department" control={editFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbBuildingSkyscraper />} />} /></FormItem>
+                        <FormItem label="Designation" invalid={!!editFormMethods.formState.errors.designation} errorMessage={editFormMethods.formState.errors.designation?.message}><Controller name="designation" control={editFormMethods.control} render={({ field }) => <Input {...field} prefix={<TbBriefcase />} />} /></FormItem>
+                        <FormItem label="Status" invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message}><Controller name="status" control={editFormMethods.control} render={({ field }) => <UiSelect options={EMPLOYEE_STATUS_OPTIONS} value={EMPLOYEE_STATUS_OPTIONS.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />} /></FormItem>
+                        <FormItem label="Joining Date" invalid={!!editFormMethods.formState.errors.joiningDate} errorMessage={editFormMethods.formState.errors.joiningDate?.message as string}><Controller name="joiningDate" control={editFormMethods.control} render={({ field }) => <DatePicker value={field.value} onChange={field.onChange} inputPrefix={<TbCalendar />} />} /></FormItem>
+                        <FormItem label="Roles (comma-separated)" className="md:col-span-2" invalid={!!editFormMethods.formState.errors.roles} errorMessage={editFormMethods.formState.errors.roles?.message}><Controller name="roles" control={editFormMethods.control} render={({ field }) => <Input {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={e => field.onChange(e.target.value.split(',').map(r => r.trim()).filter(Boolean))} prefix={<TbUsers />} />} /></FormItem>
+                    </div>
+                    <FormItem label="Bio (Optional)" invalid={!!editFormMethods.formState.errors.bio} errorMessage={editFormMethods.formState.errors.bio?.message as string}><Controller name="bio" control={editFormMethods.control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
+                 </Form>
+            </Drawer>
 
-            {/* Selected Footer */}
-            <EmployeeSelected
-                selectedEmployees={selectedEmployees}
-                setSelectedEmployees={setSelectedEmployees}
-                onDeleteSelected={handleDeleteSelected}
-            />
+            {/* Filter Drawer */}
+            <Drawer title="Filter Employees" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+                footer={ <div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterEmployeeForm" type="submit">Apply</Button></div> }>
+                <Form id="filterEmployeeForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Filter by Department(s)"><Controller name="filterDepartments" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Any Department" options={departmentOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></FormItem>
+                    <FormItem label="Filter by Designation(s)"><Controller name="filterDesignations" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Any Designation" options={designationOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></FormItem>
+                    <FormItem label="Filter by Status(es)"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Any Status" options={statusOptionsForFilter} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></FormItem>
+                    <FormItem label="Filter by Role(s)"><Controller name="filterRoles" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Any Role" options={roleOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></FormItem>
+                </Form>
+            </Drawer>
 
-            {/* Detail View Dialog */}
-            <EmployeeDetailViewDialog
-                isOpen={detailViewOpen}
-                onClose={handleCloseDetailView}
-                employee={currentItem}
-            />
+            {/* Single Delete Confirmation */}
+            <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Employee" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting}>
+                <p>Are you sure you want to delete employee "<strong>{itemToDelete?.name}</strong>"?</p>
+            </ConfirmDialog>
+        </>
+    );
+};
 
-            {/* Change Password Dialog */}
-            <ChangePasswordDialog
-                isOpen={changePwdOpen}
-                onClose={handleCloseChangePwd}
-                employee={currentItem}
-            />
-        </Container>
-    )
-}
-// --- End Main Component ---
+export default EmployeesListing;
 
-export default EmployeesListing
-
-// Helper Function
+// Helper function (if not globally available)
 // function classNames(...classes: (string | boolean | undefined)[]) {
 //     return classes.filter(Boolean).join(' ');
 // }

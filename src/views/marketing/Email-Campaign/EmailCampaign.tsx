@@ -444,6 +444,7 @@ const EmailCampaignListing = () => {
                     currentWizardStep === 2 ? 'Add Values' :
                     currentWizardStep === 3 ? 'Choose Recipients' : 'Review & Send'
                 }`}
+                placement="right" // <--- ADD THIS
                 isOpen={isCreateDrawerOpen} onClose={closeCreateDrawer} onRequestClose={closeCreateDrawer}
                 width="60vw" // Adjusted width
                 bodyClass="p-0" // Remove default padding for custom scroll
