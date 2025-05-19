@@ -976,6 +976,221 @@ export const deleteAllProductSepecificationAsync = async (unitData: any) => {
   }
 }
 
+export const getDepartmentAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/department`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addDepartmentAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/department`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editDepartmentAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/department/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletDepartmentAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/master/department/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllDepartmentAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/master/department/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const getDesignationAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/designation`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addDesignationAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/designation`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editDesignationAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/designation/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletDesignationAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/master/designation/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllDesignationAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/master/designation/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const getNumberSystemsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/number_system`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addNumberSystemsAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/number_system`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editNumberSystemsAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/number_system/${unitData?.id}`, {
+      _method: "PUT", name: unitData?.name, prefix: unitData?.prefix,
+      country_ids: unitData?.country_ids,
+      customer_code_starting: unitData?.customer_code_starting,
+      current_customer_code: unitData?.current_customer_code,
+      non_kyc_customer_code_starting: unitData?.non_kyc_customer_code_starting,
+      non_kyc_current_customer_code: unitData?.non_kyc_current_customer_code,
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletNumberSystemsAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/number_system/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllNumberSystemsAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/setting/number_system/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getDomainsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/domain_management`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addDomainsAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/domain_management`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editDomainsAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/domain_management/${unitData?.id}`, {
+      _method: "PUT", domain: unitData?.domain, prefix: unitData?.prefix,
+      analytics_script: unitData?.analytics_script,
+      currency_id: unitData?.currency_id,
+      country_ids: unitData?.country_ids,
+      customer_code_starting: unitData?.customer_code_starting,
+      current_customer_code: unitData?.current_customer_code,
+      non_kyc_customer_code_starting: unitData?.non_kyc_customer_code_starting,
+      non_kyc_current_customer_code: unitData?.non_kyc_current_customer_code,
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletDomainsAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/domain_management/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteDomainsAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/domain_management/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+
+
 
 
 

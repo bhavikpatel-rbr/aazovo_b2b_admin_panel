@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { addBlogsAsync, addBrandAsync, addcategoryAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, deletBrandListAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllBrandListAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deletePriceListAsync, deletPaymentTermAsync, deletProductSepecificationAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getSlidersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getwallListingAsync } from "./services"
+import { addBlogsAsync, addBrandAsync, addcategoryAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addNumberSystemsAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, deletBrandListAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllBrandListAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentTypeAsync, deleteAllNumberSystemsAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteDomainsAsync, deletePriceListAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductSepecificationAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editNumberSystemsAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getExportMappingsAsync, getNumberSystemsAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getSlidersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getwallListingAsync } from "./services"
 import { AxiosResponse } from "axios"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
@@ -2511,3 +2511,550 @@ export const deleteAllProductSpecificationsAction = createAsyncThunk<any, any>(
 )
 
 
+export const getDesignationsAction = createAsyncThunk(
+  "auth/getDesignation",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getDesignationAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addDesignationAction = createAsyncThunk<any, any>(
+  "auth/addDesignation",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addDesignationAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getProductSpecificationsAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editDesignationAction = createAsyncThunk<any, any>(
+  "auth/editDesignation",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editDesignationAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteDesignationAction = createAsyncThunk<any, any>(
+  "auth/deletDesignation",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletDesignationAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllDesignationsAction = createAsyncThunk<any, any>(
+  "auth/deleteDesignation",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllDesignationAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const getDepartmentsAction = createAsyncThunk(
+  "auth/getDepartments",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getDepartmentAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addDepartmentAction = createAsyncThunk<any, any>(
+  "auth/addDepartments",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addDepartmentAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getProductSpecificationsAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editDepartmentAction = createAsyncThunk<any, any>(
+  "auth/editDepartments",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editDepartmentAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteDepartmentAction = createAsyncThunk<any, any>(
+  "auth/deletDepartments",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletDepartmentAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllDepartmentsAction = createAsyncThunk<any, any>(
+  "auth/deleteDepartments",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllDepartmentAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const getNumberSystemsAction = createAsyncThunk(
+  "auth/getNumberSystemsAction",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getNumberSystemsAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addNumberSystemAction = createAsyncThunk<any, any>(
+  "auth/addNumberSystemAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addNumberSystemsAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getProductSpecificationsAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editNumberSystemAction = createAsyncThunk<any, any>(
+  "auth/editNumberSystemAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editNumberSystemsAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteNumberSystemAction = createAsyncThunk<any, any>(
+  "auth/deleteNumberSystemAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletNumberSystemsAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllNumberSystemsAction = createAsyncThunk<any, any>(
+  "auth/deleteAllNumberSystemsAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllNumberSystemsAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const getDomainsAction = createAsyncThunk(
+  "auth/getDomainsAction",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getDomainsAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addDomainAction = createAsyncThunk<any, any>(
+  "auth/addDomainsAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addDomainsAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getProductSpecificationsAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editDomainAction = createAsyncThunk<any, any>(
+  "auth/editDomainsAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editDomainsAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteDomainAction = createAsyncThunk<any, any>(
+  "auth/deleteDomainsAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletDomainsAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllDomainsAction = createAsyncThunk<any, any>(
+  "auth/deleteAllDomainsAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteDomainsAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getProductSpecificationsAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)

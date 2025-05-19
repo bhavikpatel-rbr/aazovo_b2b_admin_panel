@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getSlidersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction } from "./middleware"
+import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getExportMappingsAction, getNumberSystemsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getSlidersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction } from "./middleware"
 import { deletPaymentTermAsync } from "./services"
 
 const INITIAL_STATE: any = {
@@ -163,6 +163,23 @@ const masterSlice = createSlice({
       ...state,
       ProductSpecificationsData: payload
     }))
+    builder.addCase(getDesignationsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      designationsData: payload
+    }))
+    builder.addCase(getDepartmentsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      departmentsData: payload
+    }))
+    builder.addCase(getNumberSystemsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      numberSystemsData: payload
+    }))
+    builder.addCase(getDomainsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      domainsData: payload
+    }))
+
 
 
   },
