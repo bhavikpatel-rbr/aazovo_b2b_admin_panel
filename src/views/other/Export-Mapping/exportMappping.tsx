@@ -1,1010 +1,1061 @@
-// src/views/your-path/ExportMapping.tsx (Renamed file)
+// src/views/your-path/ExportMapping.tsx
 
 import React, {
-    useState,
-    useMemo,
-    useCallback,
-    Ref,
-    Suspense,
-    lazy,
-    useEffect,
-} from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-// import cloneDeep from 'lodash/cloneDeep'
-
+  useState,
+  useMemo,
+  useCallback,
+  Ref,
+  Suspense,
+  lazy,
+  useEffect,
+} from "react";
+// import { Link, useNavigate } from 'react-router-dom' // useNavigate not used directly in this component
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { useSelector } from "react-redux";
 // UI Components
-import AdaptiveCard from '@/components/shared/AdaptiveCard'
-import Container from '@/components/shared/Container'
-import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
-// import Tag from '@/components/ui/Tag'; // Likely not needed now
-import Button from '@/components/ui/Button'
-import Dialog from '@/components/ui/Dialog' // Keep for potential edit/view modals
-// import Avatar from '@/components/ui/Avatar' // Keep if userName might link to profile
-import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast'
-// import RichTextEditor from '@/components/shared/RichTextEditor'; // Remove if not used
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import { IoEyeOutline } from 'react-icons/io5'
-
+import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import Container from "@/components/shared/Container";
+import DataTable from "@/components/shared/DataTable";
+import Tooltip from "@/components/ui/Tooltip";
+import Button from "@/components/ui/Button";
+// import Dialog from '@/components/ui/Dialog' // Keep if needed for future edit modals
+import Notification from "@/components/ui/Notification";
+import toast from "@/components/ui/toast";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import StickyFooter from "@/components/shared/StickyFooter";
+import DebouceInput from "@/components/shared/DebouceInput";
+import { IoEyeOutline } from "react-icons/io5";
+import { getExportMappingsAction } from "@/reduxtool/master/middleware";
 // Icons
-import {
-    // TbPencil,
-    // TbCopy,
-    // TbSwitchHorizontal, // Removed status change icon
-    // TbTrash,
-    TbChecks,
-    TbSearch,
-    TbCloudDownload, // Keep for potential future export
-    TbUserPlus,
-    TbFilter,
-} from 'react-icons/tb'
-import userIcon from '/img/avatars/thumb-1.jpg'
+import { TbChecks, TbSearch, TbCloudDownload, TbFilter } from "react-icons/tb";
+import userIconPlaceholder from "/img/avatars/thumb-1.jpg"; // Generic placeholder
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
+import type {
+  OnSortParam,
+  ColumnDef,
+  Row,
+} from "@/components/shared/DataTable";
+import type { TableQueries } from "@/@types/common";
 import {
-    Card,
-    Drawer,
-    Tag,
-    Form,
-    FormItem,
-    Input,
-    Select,
-    DatePicker,
-} from '@/components/ui'
-import { Controller, useForm } from 'react-hook-form'
-import { DatePickerRangeProps } from '@/components/ui/DatePicker/DatePickerRange'
+  Card,
+  Drawer,
+  Tag,
+  Form,
+  FormItem,
+  // Input, // Input not directly used in this form, DebounceInput is
+  Select,
+  DatePicker,
+} from "@/components/ui";
+import { Controller, useForm } from "react-hook-form";
+// import { DatePickerRangeProps } from '@/components/ui/DatePicker/DatePickerRange' // Not directly used if DatePickerRange handles its own props
+import { useAppDispatch } from "@/reduxtool/store";
 
 // --- Lazy Load CSVLink ---
 const CSVLink = lazy(() =>
-    import('react-csv').then((module) => ({ default: module.CSVLink })),
-)
+  import("react-csv").then((module) => ({ default: module.CSVLink }))
+);
 
-// --- Define Item Type (Table Row Data) ---
+// --- API Data Structure Types ---
+export type ApiUserRole = {
+  id: number;
+  name: string;
+  display_name: string;
+  pivot: {
+    user_id: string;
+    role_id: string;
+  };
+};
+
+export type ApiUser = {
+  id: number;
+  name: string;
+  roles: ApiUserRole[];
+};
+
+export type ApiExportMapping = {
+  id: number;
+  user_id: string;
+  export_from: string;
+  file_name: string;
+  export_reason: string | null;
+  created_at: string; // ISO Date string
+  updated_at: string; // ISO Date string
+  user: ApiUser | null; // User could potentially be null
+};
+
+// --- Frontend Item Type (Transformed from API) ---
 export type ExportMappingItem = {
-    id: string // Unique ID for the mapping/export record
-    userName: string
-    userRole: string
-    exportFrom: string // e.g., "User List", "Product Catalog", "Order History"
-    fileName: string // e.g., "users_export_2023-10-27.csv"
-    reason: string // e.g., "Monthly Backup", "Audit Request"
-    exportDate: Date // Use Date object for sorting/formatting
-}
+  id: number;
+  userId: number | null; // userId could be null if user data is missing
+  userName: string;
+  userRole: string;
+  exportFrom: string;
+  fileName: string;
+  reason: string | null;
+  exportDate: Date;
+};
 // --- End Item Type Definition ---
 
-// --- Constants ---
-const initialDummyData: ExportMappingItem[] = [
-    {
-        id: 'EM001',
-        userName: 'Alice Johnson',
-        userRole: 'Admin',
-        exportFrom: 'User List',
-        fileName: 'users_2023-10-27.csv',
-        reason: 'Audit Request',
-        exportDate: new Date(2023, 9, 27, 10, 30),
-    },
-    {
-        id: 'EM002',
-        userName: 'Bob Williams',
-        userRole: 'Manager',
-        exportFrom: 'Order History',
-        fileName: 'orders_Q3_2023.xlsx',
-        reason: 'Quarterly Report',
-        exportDate: new Date(2023, 9, 15, 14, 0),
-    },
-    {
-        id: 'EM003',
-        userName: 'Charlie Brown',
-        userRole: 'Support Agent',
-        exportFrom: 'Support Tickets',
-        fileName: 'tickets_oct_week3.csv',
-        reason: 'Weekly Review',
-        exportDate: new Date(2023, 9, 23, 9, 0),
-    },
-    {
-        id: 'EM004',
-        userName: 'Alice Johnson',
-        userRole: 'Admin',
-        exportFrom: 'Product Catalog',
-        fileName: 'products_full_2023-10-20.json',
-        reason: 'Data Migration Prep',
-        exportDate: new Date(2023, 9, 20, 16, 45),
-    },
-    {
-        id: 'EM005',
-        userName: 'David Miller',
-        userRole: 'Sales Rep',
-        exportFrom: 'Customer List',
-        fileName: 'leads_active.csv',
-        reason: 'Campaign Planning',
-        exportDate: new Date(2023, 9, 26, 11, 15),
-    },
-    {
-        id: 'EM006',
-        userName: 'Eve Davis',
-        userRole: 'Analyst',
-        exportFrom: 'Website Analytics',
-        fileName: 'traffic_report_2023-10.pdf',
-        reason: 'Performance Analysis',
-        exportDate: new Date(2023, 10, 1, 8, 55),
-    }, // Nov 1st
-    {
-        id: 'EM007',
-        userName: 'Frank Garcia',
-        userRole: 'Developer',
-        exportFrom: 'API Logs',
-        fileName: 'api_errors_2023-10-25.log',
-        reason: 'Debugging Issue #123',
-        exportDate: new Date(2023, 9, 25, 17, 30),
-    },
-    {
-        id: 'EM008',
-        userName: 'Alice Johnson',
-        userRole: 'Admin',
-        exportFrom: 'User List',
-        fileName: 'users_2023-09-30.csv',
-        reason: 'Monthly Backup',
-        exportDate: new Date(2023, 8, 30, 23, 50),
-    }, // Sep 30th
-    {
-        id: 'EM009',
-        userName: 'Grace Rodriguez',
-        userRole: 'Marketing',
-        exportFrom: 'Campaign Results',
-        fileName: 'fall_promo_summary.xlsx',
-        reason: 'Post-Campaign Analysis',
-        exportDate: new Date(2023, 9, 28, 13, 20),
-    },
-    {
-        id: 'EM010',
-        userName: 'Heidi Martinez',
-        userRole: 'HR Manager',
-        exportFrom: 'Employee Data',
-        fileName: 'headcount_oct23.csv',
-        reason: 'Compliance Reporting',
-        exportDate: new Date(2023, 9, 18, 10, 0),
-    },
-    {
-        id: 'EM011',
-        userName: 'Alice Johnson',
-        userRole: 'Admin',
-        exportFrom: 'System Settings',
-        fileName: 'config_backup_2023-10-27.bak',
-        reason: 'Pre-Update Backup',
-        exportDate: new Date(2023, 9, 27, 9, 0),
-    },
-    {
-        id: 'EM012',
-        userName: 'Ivan Hernandez',
-        userRole: 'Finance',
-        exportFrom: 'Invoice Data',
-        fileName: 'invoices_pending_approval.csv',
-        reason: 'AP Processing',
-        exportDate: new Date(2023, 9, 26, 15, 10),
-    },
-]
-// --- End Constants ---
+// --- Transformation Function ---
+const transformApiDataToExportMappingItem = (
+  apiData: ApiExportMapping
+): ExportMappingItem | null => {
+  if (!apiData) {
+    console.error("Transform: Received null or undefined apiData object.");
+    return null;
+  }
+  try {
+    const exportDate = new Date(apiData.created_at);
+    if (isNaN(exportDate.getTime())) {
+      console.error(
+        `Transform: Invalid created_at date for ID ${apiData.id}:`,
+        apiData.created_at
+      );
+      // Decide: return null, or use a default date, or throw error
+      // For now, let's try to proceed but log heavily or use a placeholder if critical
+    }
+
+    return {
+      id: apiData.id,
+      userId: apiData.user ? parseInt(apiData.user_id, 10) : null,
+      userName: apiData.user?.name || "Unknown User",
+      userRole:
+        apiData.user?.roles && apiData.user.roles.length > 0
+          ? apiData.user.roles[0].display_name
+          : "N/A",
+      exportFrom: apiData.export_from || "N/A",
+      fileName: apiData.file_name || "N/A",
+      reason: apiData.export_reason,
+      exportDate: exportDate,
+    };
+  } catch (error) {
+    console.error(
+      "Error transforming API data for ID:",
+      apiData.id,
+      error,
+      apiData
+    );
+    return null;
+  }
+};
+// --- End Transformation ---
 
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
-    const [isViewDrawerOpen, setIsViewDrawerOpen] = useState<boolean>(false)
-    const openViewDrawer = () => setIsViewDrawerOpen(true)
-    const closeViewDrawer = () => setIsViewDrawerOpen(false)
+  const [isViewDrawerOpen, setIsViewDrawerOpen] = useState<boolean>(false);
+  const openViewDrawer = () => setIsViewDrawerOpen(true);
+  const closeViewDrawer = () => setIsViewDrawerOpen(false);
 
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
+  const iconButtonClass =
+    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
 
-    return (
-        <div className="flex items-center justify-center">
-            {/* Optional Clone Button */}
-            {/* {onClone && (
-                <Tooltip title="Clone Record (if applicable)">
-                    <div
-                        className={classNames(
-                            iconButtonClass,
-                            hoverBgClass,
-                            'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400',
-                        )}
-                        role="button"
-                        onClick={onClone}
-                    >
-                        {' '}
-                        <TbCopy />{' '}
-                    </div>
-                </Tooltip>
-            )} */}
-            <Tooltip title="View Record">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    // onClick={onView}
-                    onClick={openViewDrawer}
-                >
-                    {' '}
-                    <IoEyeOutline />{' '}
-                </div>
-            </Tooltip>
-
-            <Drawer
-                title="Export Mapping"
-                isOpen={isViewDrawerOpen}
-                onClose={closeViewDrawer}
-                onRequestClose={closeViewDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button
-                            size="sm"
-                            className="mr-2"
-                            onClick={closeViewDrawer}
-                        >
-                            Cancel
-                        </Button>
-                    </div>
-                }
-            >
-                <div className="">
-                    <h6 className="text-base font-semibold">Exported By</h6>
-
-                    <figure className="flex gap-2 items-center mt-2">
-                        <img
-                            src={userIcon}
-                            alt=""
-                            className="h-9 w-9 rounded-full"
-                        />
-                        <figcaption className="flex flex-col">
-                            <span className="font-semibold text-black dark:text-white">
-                                {data.userName}
-                            </span>
-                            <span className="text-xs">{data.userRole}</span>
-                        </figcaption>
-                    </figure>
-
-                    <h6 className="text-base font-semibold mt-4">
-                        Exported From
-                    </h6>
-
-                    <p className="mb-2 mt-1">
-                        <span className="font-semibold text-black  dark:text-white">
-                            File Name:{' '}
-                        </span>
-                        <span>{data.fileName}</span>
-                    </p>
-
-                    <Tag className="border border-emerald-600 text-emerald-600 bg-transparent inline w-auto">
-                        User List
-                    </Tag>
-
-                    <br />
-                    <br />
-
-                    <Card className="!mt-5 bg-gray-100 dark:bg-gray-700 border-none">
-                        <h6 className="text-base font-semibold ">
-                            Exported Log
-                        </h6>
-
-                        <p className="mt-2">
-                            <span className="font-semibold  text-black  dark:text-white">
-                                Date:{' '}
-                            </span>
-                            <span>Sat, 09 Mar 2025</span>
-                        </p>
-
-                        <p className="">
-                            <span className="font-semibold text-black  dark:text-white">
-                                File Name:{' '}
-                            </span>
-                            <span>{data.fileName}</span>
-                        </p>
-
-                        <h6 className="text-sm font-semibold text-black  dark:text-white mt-1">
-                            Reason:
-                        </h6>
-                        <p>{data.reason}</p>
-                    </Card>
-                </div>
-            </Drawer>
-            {/* <Tooltip title="Delete Record">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    onClick={onDelete}
-                >
-                    {' '}
-                    <TbTrash />{' '}
-                </div>
-            </Tooltip> */}
+  return (
+    <div className="flex items-center justify-center">
+      <Tooltip title="View Record">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+          )}
+          role="button"
+          onClick={openViewDrawer}
+        >
+          <IoEyeOutline />
         </div>
-    )
-}
+      </Tooltip>
+
+      <Drawer
+        title="Export Mapping Details"
+        isOpen={isViewDrawerOpen}
+        onClose={closeViewDrawer}
+        onRequestClose={closeViewDrawer}
+        footer={
+          <div className="text-right w-full">
+            <Button size="sm" className="mr-2" onClick={closeViewDrawer}>
+              Close
+            </Button>
+          </div>
+        }
+      >
+        <div className="">
+          <h6 className="text-base font-semibold">Exported By</h6>
+          <figure className="flex gap-2 items-center mt-2">
+            <img
+              src={userIconPlaceholder}
+              alt={data.userName}
+              className="h-9 w-9 rounded-full"
+            />
+            <figcaption className="flex flex-col">
+              <span className="font-semibold text-black dark:text-white">
+                {data.userName}
+              </span>
+              <span className="text-xs">{data.userRole}</span>
+            </figcaption>
+          </figure>
+
+          <h6 className="text-base font-semibold mt-4">Exported From</h6>
+          <p className="mb-2 mt-1">
+            <span className="font-semibold text-black dark:text-white">
+              Module:{" "}
+            </span>
+            <span>{data.exportFrom}</span>
+          </p>
+          {data.exportFrom !== "N/A" && (
+            <Tag className="border border-emerald-600 text-emerald-600 bg-transparent inline w-auto mt-1">
+              {data.exportFrom}
+            </Tag>
+          )}
+
+          <Card className="!mt-8 bg-gray-100 dark:bg-gray-700 border-none p-4">
+            <h6 className="text-base font-semibold ">Exported Log</h6>
+            <p className="mt-2">
+              <span className="font-semibold  text-black  dark:text-white">
+                Date:{" "}
+              </span>
+              <span>
+                {!isNaN(data.exportDate.getTime())
+                  ? data.exportDate.toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Invalid Date"}
+              </span>
+            </p>
+            <p className="mt-1">
+              <span className="font-semibold text-black  dark:text-white">
+                File Name:{" "}
+              </span>
+              <span>{data.fileName}</span>
+            </p>
+            {data.reason && (
+              <>
+                <h6 className="text-sm font-semibold text-black  dark:text-white mt-2">
+                  Reason:
+                </h6>
+                <p>{data.reason}</p>
+              </>
+            )}
+          </Card>
+        </div>
+      </Drawer>
+    </div>
+  );
+};
 // --- End ActionColumn ---
 
 // --- ExportMappingTable Component ---
 const ExportMappingTable = ({
-    // Renamed component
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedMappings, // Renamed prop
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
+  columns,
+  data,
+  loading,
+  pagingData,
+  selectedMappings,
+  onPaginationChange,
+  onSelectChange,
+  onSort,
+  onRowSelect,
+  onAllRowSelect,
 }: {
-    columns: ColumnDef<ExportMappingItem>[]
-    data: ExportMappingItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    selectedMappings: ExportMappingItem[] // Use new type
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-    onRowSelect: (checked: boolean, row: ExportMappingItem) => void // Use new type
-    onAllRowSelect: (checked: boolean, rows: Row<ExportMappingItem>[]) => void // Use new type
+  columns: ColumnDef<ExportMappingItem>[];
+  data: ExportMappingItem[];
+  loading: boolean;
+  pagingData: { total: number; pageIndex: number; pageSize: number };
+  selectedMappings: ExportMappingItem[];
+  onPaginationChange: (page: number) => void;
+  onSelectChange: (value: number) => void;
+  onSort: (sort: OnSortParam) => void;
+  onRowSelect: (checked: boolean, row: ExportMappingItem) => void;
+  onAllRowSelect: (checked: boolean, rows: Row<ExportMappingItem>[]) => void;
 }) => {
-    return (
-        <DataTable
-            selectable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            checkboxChecked={
-                (row) =>
-                    selectedMappings.some((selected) => selected.id === row.id) // Use selectedMappings
-            }
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-            onCheckBoxChange={onRowSelect}
-            onIndeterminateCheckBoxChange={onAllRowSelect}
-        />
-    )
-}
+  return (
+    <DataTable
+      selectable
+      columns={columns}
+      data={data}
+      noDataMessage={
+        !loading && data.length === 0
+          ? "No export records found."
+          : "Loading data..."
+      }
+      loading={loading}
+      pagingData={pagingData}
+      checkboxChecked={(row) =>
+        selectedMappings.some((selected) => selected.id === row.id)
+      }
+      onPaginationChange={onPaginationChange}
+      onSelectChange={onSelectChange}
+      onSort={onSort}
+      onCheckBoxChange={onRowSelect}
+      onIndeterminateCheckBoxChange={onAllRowSelect}
+    />
+  );
+};
 // --- End ExportMappingTable ---
 
 // --- ExportMappingSearch Component ---
 type ExportMappingSearchProps = {
-    // Renamed component
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
+  onInputChange: (value: string) => void;
+  ref?: Ref<HTMLInputElement>;
+};
 const ExportMappingSearch = React.forwardRef<
-    HTMLInputElement,
-    ExportMappingSearchProps
+  HTMLInputElement,
+  ExportMappingSearchProps
 >(({ onInputChange }, ref) => {
-    return (
-        <DebouceInput
-            ref={ref}
-            placeholder="Quick Search..." // Updated placeholder
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
-})
-ExportMappingSearch.displayName = 'ExportMappingSearch'
+  return (
+    <DebouceInput
+      ref={ref}
+      placeholder="Search by User, Role, File, Reason..."
+      suffix={<TbSearch className="text-lg" />}
+      onChange={(e) => onInputChange(e.target.value)}
+    />
+  );
+});
+ExportMappingSearch.displayName = "ExportMappingSearch";
 // --- End ExportMappingSearch ---
 
 // --- ExportMappingTableTools Component ---
+type ExportMappingFilterSchema = {
+  userRole: string[];
+  exportFrom: string[];
+  fileExtensions: string[];
+  exportDate: [Date | null, Date | null] | null;
+};
+
 const ExportMappingTableTools = ({
-    // Renamed component
-    onSearchChange,
-    allExportMappings,
+  onSearchChange,
+  allExportMappings,
+  onApplyFilters,
 }: {
-    onSearchChange: (query: string) => void
-    allExportMappings: ExportMappingItem[]
+  onSearchChange: (query: string) => void;
+  allExportMappings: ExportMappingItem[];
+  onApplyFilters: (filters: ExportMappingFilterSchema) => void;
 }) => {
-    const { DatePickerRange } = DatePicker
-    type ExportMappingFilterSchema = {
-        userRole: object
-        exportFrom: object
-        fileExtensions: object
-        exportDate: DatePickerRangeProps
-    }
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-    const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
-    const openFilterDrawer = () => setIsFilterDrawerOpen(true)
+  const { DatePickerRange } = DatePicker;
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
+  const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
+  const openFilterDrawer = () => setIsFilterDrawerOpen(true);
 
-    const { control, handleSubmit } = useForm<ExportMappingFilterSchema>({
-        defaultValues: {
-            userRole: [],
-            exportFrom: [],
-            fileExtensions: [],
-            exportDate: '',
-        },
-    })
+  const { control, handleSubmit, reset } = useForm<ExportMappingFilterSchema>({
+    defaultValues: {
+      userRole: [],
+      exportFrom: [],
+      fileExtensions: [],
+      exportDate: null,
+    },
+  });
 
-    const exportFiltersSubmitHandler = (data: ExportMappingFilterSchema) => {
-        console.log('filter data', data)
-    }
-    const userRoles = [
-        { value: 'Admin', label: 'Admin' },
-        { value: 'Manager', label: 'Manager' },
-        { value: 'Support Agent', label: 'Support Agent' },
-        { value: 'Sales Rep', label: 'Sales Rep' },
-        { value: 'Analyst', label: 'Analyst' },
-        { value: 'Developer', label: 'Developer' },
-        { value: 'Marketing', label: 'Marketing' },
-        { value: 'HR Manager', label: 'HR Manager' },
-    ]
-    const exportFrom = [
-        { value: 'User List', label: 'User List' },
-        { value: 'Order History', label: 'Order History' },
-        { value: 'Support Tickets', label: 'Support Tickets' },
-        { value: 'Product Catalog', label: 'Product Catalog' },
-        { value: 'Customer List', label: 'Customer List' },
-        { value: 'API Logs', label: 'API Logs' },
-    ]
-    // const fileExtensions = [".csv",".xlsx",".json",".pdf",".log",".bak"]
-    const fileExtensions = [
-        { value: '.csv', label: '.csv' },
-        { value: '.xlsx', label: '.xlsx' },
-        { value: '.json', label: '.json' },
-        { value: '.pdf', label: '.pdf' },
-        { value: '.log', label: '.log' },
-        { value: '.bak', label: '.bak' },
-    ]
+  const exportFiltersSubmitHandler = (data: ExportMappingFilterSchema) => {
+    onApplyFilters(data);
+    closeFilterDrawer();
+  };
 
-    return (
-        <div className="flex items-center w-full gap-2">
-            <div className="flex-grow">
-                <ExportMappingSearch onInputChange={onSearchChange} />
-            </div>
-            {/* Filter component removed */}
-            <Button icon={<TbFilter />} className="" onClick={openFilterDrawer}>
-                Filter
+  const handleClearFilters = () => {
+    reset();
+    onApplyFilters({
+      userRole: [],
+      exportFrom: [],
+      fileExtensions: [],
+      exportDate: null,
+    });
+    // closeFilterDrawer(); // No need to close if reset is also applying
+  };
+
+  const userRoles = useMemo(() => {
+    if (!allExportMappings || allExportMappings.length === 0) return [];
+    const roles = new Set(
+      allExportMappings.map((item) => item.userRole).filter(Boolean)
+    );
+    return Array.from(roles)
+      .sort()
+      .map((role) => ({ value: role, label: role }));
+  }, [allExportMappings]);
+
+  const exportFromOptions = useMemo(() => {
+    if (!allExportMappings || allExportMappings.length === 0) return [];
+    const froms = new Set(
+      allExportMappings.map((item) => item.exportFrom).filter(Boolean)
+    );
+    return Array.from(froms)
+      .sort()
+      .map((from) => ({ value: from, label: from }));
+  }, [allExportMappings]);
+
+  const fileExtensionsOptions = [
+    // Renamed for clarity
+    { value: ".csv", label: ".csv" },
+    { value: ".xlsx", label: ".xlsx" },
+    { value: ".json", label: ".json" },
+    { value: ".pdf", label: ".pdf" },
+    { value: ".log", label: ".log" },
+    { value: ".bak", label: ".bak" },
+  ];
+
+  return (
+    <div className="md:flex items-center justify-between w-full gap-2">
+      <div className="flex-grow mb-2 md:mb-0">
+        <ExportMappingSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex gap-2">
+        <Button icon={<TbFilter />} className="" onClick={openFilterDrawer}>
+          Filter
+        </Button>
+        <Suspense
+          fallback={
+            <Button loading icon={<TbCloudDownload />}>
+              Export
             </Button>
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawer}
-                onRequestClose={closeFilterDrawer}
-                bodyClass=""
-            >
-                <Form
-                    size="sm"
-                    onSubmit={handleSubmit(exportFiltersSubmitHandler)}
-                    containerClassName="grid grid-rows-[auto_80px]"
-                >
-                    <div>
-                        <FormItem label="User Role">
-                            <Controller
-                                control={control}
-                                name="userRole"
-                                render={({ field }) => {
-                                    return (
-                                        <Select
-                                            isMulti
-                                            options={userRoles}
-                                            onChange={(selected) => {
-                                                const values = selected.map(
-                                                    (option) => option.value,
-                                                )
-                                                field.onChange(values)
-                                            }}
-                                        />
-                                    )
-                                }}
-                            />
-                        </FormItem>
-                        <FormItem label="Export From">
-                            <Controller
-                                control={control}
-                                name="exportFrom"
-                                render={({ field }) => (
-                                    <Select
-                                        isMulti
-                                        options={exportFrom}
-                                        onChange={(selected) => {
-                                            const values = selected.map(
-                                                (option) => option.value,
-                                            )
-                                            field.onChange(values)
-                                        }}
-                                    />
-                                )}
-                            />
-                        </FormItem>
-                        <FormItem label="File Type">
-                            <Controller
-                                control={control}
-                                name="fileExtensions"
-                                render={({ field }) => (
-                                    <Select
-                                        isMulti
-                                        options={fileExtensions}
-                                        onChange={(selected) => {
-                                            const values = selected.map(
-                                                (option) => option.value,
-                                            )
-                                            field.onChange(values)
-                                        }}
-                                    />
-                                )}
-                            />
-                        </FormItem>
-                        <FormItem label="Export Date">
-                            <Controller
-                                control={control}
-                                name="exportDate"
-                                render={({ field }) => (
-                                    <DatePickerRange
-                                        placeholder="Select dates range"
-                                        {...field}
-                                    />
-                                )}
-                            />
-                        </FormItem>
-                    </div>
-                    <div className="text-right border-t border-t-gray-200 w-full absolute bottom-0 py-4 right-0 pr-6 bg-white dark:bg-gray-700">
-                        <Button
-                            size="sm"
-                            className="mr-2"
-                            type="button"
-                            onClick={closeFilterDrawer}
-                        >
-                            Cancel
-                        </Button>
-                        <Button size="sm" variant="solid" type="submit">
-                            Apply
-                        </Button>
-                    </div>
-                </Form>
-            </Drawer>
-            <ExportMappingExport allMappings={allExportMappings} />
-        </div>
-    )
-}
+          }
+        >
+          <ExportMappingExport allMappings={allExportMappings} />
+        </Suspense>
+      </div>
+      <Drawer
+        title="Filters"
+        isOpen={isFilterDrawerOpen}
+        onClose={closeFilterDrawer}
+        onRequestClose={closeFilterDrawer}
+        bodyClass="flex flex-col overflow-hidden" // Prevent body scroll, form will scroll
+        footer={
+          <div className="text-right border-t border-gray-200 dark:border-gray-700 w-full py-4 px-6 bg-white dark:bg-gray-800">
+            <Button size="sm" className="mr-2" onClick={handleClearFilters}>
+              Clear All
+            </Button>
+            <Button size="sm" variant="solid" type="submit" form="filterForm">
+              Apply
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          id="filterForm"
+          size="sm"
+          onSubmit={handleSubmit(exportFiltersSubmitHandler)}
+          className="flex-grow overflow-y-auto p-6" // Scrollable form content
+        >
+          <FormItem label="User Role">
+            <Controller
+              control={control}
+              name="userRole"
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select roles"
+                  options={userRoles}
+                  value={userRoles.filter((option) =>
+                    field.value.includes(option.value)
+                  )}
+                  onChange={(selected) => {
+                    field.onChange(
+                      selected ? selected.map((opt) => opt.value) : []
+                    );
+                  }}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Exported From (Module)">
+            <Controller
+              control={control}
+              name="exportFrom"
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select modules"
+                  options={exportFromOptions}
+                  value={exportFromOptions.filter((option) =>
+                    field.value.includes(option.value)
+                  )}
+                  onChange={(selected) => {
+                    field.onChange(
+                      selected ? selected.map((opt) => opt.value) : []
+                    );
+                  }}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="File Type">
+            <Controller
+              control={control}
+              name="fileExtensions"
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select file types"
+                  options={fileExtensionsOptions}
+                  value={fileExtensionsOptions.filter((option) =>
+                    field.value.includes(option.value)
+                  )}
+                  onChange={(selected) => {
+                    field.onChange(
+                      selected ? selected.map((opt) => opt.value) : []
+                    );
+                  }}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Export Date Range">
+            <Controller
+              control={control}
+              name="exportDate"
+              render={({ field }) => (
+                <DatePickerRange
+                  placeholder="Select date range"
+                  value={field.value} // Expects [Date | null, Date | null] | null
+                  onChange={(dateRange) => field.onChange(dateRange)}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </Drawer>
+    </div>
+  );
+};
 // --- End ExportMappingTableTools ---
 
-// --- ExportMappingActionTools Component ---
+// --- ExportMappingActionTools (CSV Export) Component ---
 const ExportMappingExport = ({
-    allMappings,
+  allMappings,
 }: {
-    allMappings: ExportMappingItem[]
+  allMappings: ExportMappingItem[];
 }) => {
-    // Renamed prop and component
-    const navigate = useNavigate()
+  const csvData = useMemo(() => {
+    return allMappings.map((item) => ({
+      id: item.id,
+      userName: item.userName,
+      userRole: item.userRole,
+      exportFrom: item.exportFrom,
+      fileName: item.fileName,
+      reason: item.reason || "",
+      exportDate: !isNaN(item.exportDate.getTime())
+        ? item.exportDate.toISOString()
+        : "Invalid Date",
+    }));
+  }, [allMappings]);
 
-    // Prepare data for CSV
-    const csvData = useMemo(() => {
-        return allMappings.map((item) => ({
-            ...item,
-            // Format date for CSV
-            exportDate: item.exportDate.toISOString(), // Or use another format
-        }))
-    }, [allMappings])
+  const csvHeaders = [
+    { label: "Record ID", key: "id" },
+    { label: "User Name", key: "userName" },
+    { label: "User Role", key: "userRole" },
+    { label: "Exported From Module", key: "exportFrom" },
+    { label: "File Name", key: "fileName" },
+    { label: "Reason", key: "reason" },
+    { label: "Export Date", key: "exportDate" },
+  ];
 
-    const csvHeaders = [
-        { label: 'Record ID', key: 'id' },
-        { label: 'User Name', key: 'userName' },
-        { label: 'User Role', key: 'userRole' },
-        { label: 'Exported From', key: 'exportFrom' },
-        { label: 'File Name', key: 'fileName' },
-        { label: 'Reason', key: 'reason' },
-        { label: 'Date', key: 'exportDate' },
-    ]
-
-    const [dialogIsOpen, setIsOpen] = useState<boolean>(false)
-    const openDialog = () => setIsOpen(true)
-    const closeDialog = () => setIsOpen(false)
-
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-            <CSVLink
-                filename="export_mappings.csv"
-                data={csvData}
-                headers={csvHeaders}
-            >
-                <Button
-                    icon={<TbCloudDownload />}
-                    className="w-full"
-                    onClick={openDialog}
-                >
-                    {' '}
-                    Export{' '}
-                </Button>
-            </CSVLink>
-        </div>
-    )
-}
+  return (
+    <CSVLink
+      filename={`export_mappings_log_${
+        new Date().toISOString().split("T")[0]
+      }.csv`}
+      data={csvData}
+      headers={csvHeaders}
+      asyncOnClick={true}
+    >
+      <Button icon={<TbCloudDownload />} disabled={allMappings.length === 0}>
+        Export All
+      </Button>
+    </CSVLink>
+  );
+};
 // --- End ExportMappingActionTools ---
 
 // --- ExportMappingSelected Component ---
 const ExportMappingSelected = ({
-    // Renamed component
-    selectedMappings, // Renamed prop
-    setSelectedMappings, // Renamed prop
-    onDeleteSelected,
+  selectedMappings,
+  onDeleteSelected,
 }: {
-    selectedMappings: ExportMappingItem[] // Use new type
-    setSelectedMappings: React.Dispatch<
-        React.SetStateAction<ExportMappingItem[]>
-    > // Use new type
-    onDeleteSelected: () => void
+  selectedMappings: ExportMappingItem[];
+  setSelectedMappings: React.Dispatch<
+    React.SetStateAction<ExportMappingItem[]>
+  >;
+  onDeleteSelected: () => void;
 }) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
-    }
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
+  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
+  const handleConfirmDelete = () => {
+    onDeleteSelected();
+    setDeleteConfirmationOpen(false);
+  };
 
-    if (selectedMappings.length === 0) return null
+  if (selectedMappings.length === 0) return null;
 
-    return (
-        <>
-            <StickyFooter
-                className="flex items-center m-0 justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
+  return (
+    <>
+      <StickyFooter
+        className="flex items-center m-0 justify-between py-4 bg-white dark:bg-gray-800"
+        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
+      >
+        <div className="flex items-center justify-between w-full px-4 sm:px-8">
+          <span className="flex items-center gap-2">
+            <span className="text-lg text-primary-600 dark:text-primary-400">
+              <TbChecks />
+            </span>
+            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
+              <span className="heading-text">{selectedMappings.length}</span>
+              <span>
+                Record{selectedMappings.length > 1 ? "s" : ""} selected
+              </span>
+            </span>
+          </span>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="plain"
+              className="text-red-500 border-2 border-red-400 hover:text-red-500"
+              onClick={handleDeleteClick}
+              // Consider adding a disabled state if delete is in progress
             >
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            {' '}
-                            <TbChecks />{' '}
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedMappings.length}
-                            </span>{' '}
-                            {/* Use selectedMappings */}
-                            <span>
-                                Record{selectedMappings.length > 1 ? 's' : ''}{' '}
-                                selected
-                            </span>{' '}
-                            {/* Updated text */}
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-500 border-2 border-red-400 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                        >
-                            {' '}
-                            Delete{' '}
-                        </Button>
-                    </div>
-                </div>
-            </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedMappings.length} Record${selectedMappings.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-            >
-                <p>
-                    Are you sure you want to delete the selected item(s) ?
-                    {/* {selectedMappings.length > 1 ? 's' : ''}? This action cannot */}
-                    {/* be undone. */}
-                </p>
-            </ConfirmDialog>
-        </>
-    )
-}
+              Delete
+            </Button>
+          </div>
+        </div>
+      </StickyFooter>
+      <ConfirmDialog
+        isOpen={deleteConfirmationOpen}
+        type="danger"
+        title={`Delete ${selectedMappings.length} Record${
+          selectedMappings.length > 1 ? "s" : ""
+        }`}
+        onClose={handleCancelDelete}
+        onRequestClose={handleCancelDelete}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+      >
+        <p>
+          Are you sure you want to delete the selected item(s)? This action
+          cannot be undone.
+        </p>
+      </ConfirmDialog>
+    </>
+  );
+};
 // --- End ExportMappingSelected ---
 
 // --- Main ExportMapping Component ---
 const ExportMapping = () => {
-    // Renamed Component
-    const navigate = useNavigate()
+  const dispatch = useAppDispatch();
 
-    // --- Lifted State ---
-    const [isLoading, setIsLoading] = useState(false)
-    const [exportMappings, setExportMappings] =
-        useState<ExportMappingItem[]>(initialDummyData) // Renamed state
+  const [isLoading, setIsLoading] = useState(true);
+  const [exportMappings, setExportMappings] = useState<ExportMappingItem[]>([]);
 
-    // const { exportMappingData = [], status: masterLoadingStatus = 'idle' } =
-    //         useSelector(masterSelector)
-    // const dispatch = useAppDispatch();
+  const {
+    exportMappingData: apiExportMappings = [],
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector);
 
-    useEffect(() => { 
-        console.log('test');
-        // dispatch(getBrandAction())
-     }, []);
+  useEffect(() => {
+    dispatch(getExportMappingsAction());
+  }, [dispatch]);
 
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-    const [selectedMappings, setSelectedMappings] = useState<
-        ExportMappingItem[]
-    >([]) // Renamed state
-    // Filter state removed
+  useEffect(() => {
+    console.log("Master loading status:", masterLoadingStatus);
+    // console.log("API Export Mappings (raw):", JSON.stringify(apiExportMappings, null, 2)); // More readable log
 
-    // --- End Lifted State ---
+    if (masterLoadingStatus === "idle") {
+      if (!Array.isArray(apiExportMappings)) {
+        console.error("apiExportMappings is not an array:", apiExportMappings);
+        toast.push(
+          <Notification title="Data Error" type="danger" duration={5000}>
+            Received invalid data format for export mappings. Please contact
+            support.
+          </Notification>
+        );
+        setExportMappings([]);
+        setIsLoading(false);
+        return;
+      }
 
-    // --- Memoized Data Processing ---
-    const { pageData, total } = useMemo(() => {
-        let processedData = [...exportMappings] // Use new state name
+      const transformedData = (apiExportMappings as ApiExportMapping[])
+        .map(transformApiDataToExportMappingItem)
+        .filter((item): item is ExportMappingItem => item !== null);
 
-        // --- Apply Search ---
-        if (tableData.query) {
-            const query = tableData.query.toLowerCase()
-            // Search across relevant fields
-            processedData = processedData.filter(
-                (item) =>
-                    item.id.toLowerCase().includes(query) ||
-                    item.userName.toLowerCase().includes(query) ||
-                    item.userRole.toLowerCase().includes(query) ||
-                    item.exportFrom.toLowerCase().includes(query) ||
-                    item.fileName.toLowerCase().includes(query) ||
-                    item.reason.toLowerCase().includes(query),
-                // Don't search date as string directly unless needed
-            )
-        }
+      console.log("Transformed Export Mappings:", transformedData);
+      setExportMappings(transformedData);
+      setIsLoading(false);
+    } else if (masterLoadingStatus === "failed") {
+      toast.push(
+        <Notification
+          title="Failed to load export mappings"
+          type="danger"
+          duration={5000}
+        >
+          There was an error fetching the data. Please try refreshing the page
+          or contact support if the issue persists.
+        </Notification>
+      );
+      setIsLoading(false);
+      setExportMappings([]);
+    } else if (
+      masterLoadingStatus === "loading" ||
+      masterLoadingStatus === "idle"
+    ) {
+      setIsLoading(true);
+    }
+  }, [apiExportMappings, masterLoadingStatus]);
 
-        // --- Apply Sorting ---
-        const { order, key } = tableData.sort as OnSortParam
-        if (order && key) {
-            const sortedData = [...processedData]
-            sortedData.sort((a, b) => {
-                // Sort by Date
-                if (key === 'exportDate') {
-                    const timeA = a.exportDate.getTime()
-                    const timeB = b.exportDate.getTime()
-                    return order === 'asc' ? timeA - timeB : timeB - timeA
-                }
+  const [tableData, setTableData] = useState<TableQueries>({
+    pageIndex: 1,
+    pageSize: 10,
+    sort: { order: "", key: "" },
+    query: "",
+  });
+  const [selectedMappings, setSelectedMappings] = useState<ExportMappingItem[]>(
+    []
+  );
+  const [activeFilters, setActiveFilters] = useState<
+    Partial<ExportMappingFilterSchema>
+  >({});
 
-                // Default string sort for other keys
-                const aValue = a[key as keyof ExportMappingItem] ?? ''
-                const bValue = b[key as keyof ExportMappingItem] ?? ''
+  const { pageData, total } = useMemo(() => {
+    let processedData = [...exportMappings];
 
-                // Ensure comparison is between strings if accessing properties like name, role etc.
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
-                }
-                // Add other type comparisons if needed (e.g., numbers)
-                return 0
-            })
-            processedData = sortedData
-        }
-
-        // --- Apply Pagination ---
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const dataTotal = processedData.length
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = processedData.slice(
-            startIndex,
-            startIndex + pageSize,
+    // --- Apply Filters ---
+    if (activeFilters.userRole && activeFilters.userRole.length > 0) {
+      processedData = processedData.filter((item) =>
+        activeFilters.userRole!.includes(item.userRole)
+      );
+    }
+    if (activeFilters.exportFrom && activeFilters.exportFrom.length > 0) {
+      processedData = processedData.filter((item) =>
+        activeFilters.exportFrom!.includes(item.exportFrom)
+      );
+    }
+    if (
+      activeFilters.fileExtensions &&
+      activeFilters.fileExtensions.length > 0
+    ) {
+      processedData = processedData.filter((item) =>
+        activeFilters.fileExtensions!.some((ext) =>
+          item.fileName.toLowerCase().endsWith(ext.toLowerCase())
         )
+      );
+    }
+    if (activeFilters.exportDate) {
+      const [startDate, endDate] = activeFilters.exportDate;
+      processedData = processedData.filter((item) => {
+        if (isNaN(item.exportDate.getTime())) return false; // Skip invalid dates
+        const itemDate = item.exportDate.getTime();
+        // Ensure start and end dates are at the beginning/end of their respective days
+        const start = startDate
+          ? new Date(new Date(startDate).setHours(0, 0, 0, 0)).getTime()
+          : null;
+        const end = endDate
+          ? new Date(new Date(endDate).setHours(23, 59, 59, 999)).getTime()
+          : null;
 
-        return { pageData: dataForPage, total: dataTotal }
-    }, [exportMappings, tableData]) // Use new state name in dependency
-    // --- End Memoized Data Processing ---
+        if (start && end) return itemDate >= start && itemDate <= end;
+        if (start) return itemDate >= start;
+        if (end) return itemDate <= end;
+        return true;
+      });
+    }
 
-    // --- Lifted Handlers (Update parameter types and state setters) ---
-    const handleSetTableData = useCallback((data: TableQueries) => {
-        setTableData(data)
-    }, [])
-    const handlePaginationChange = useCallback(
-        (page: number) => {
-            handleSetTableData({ ...tableData, pageIndex: page })
-        },
-        [tableData, handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({
-                ...tableData,
-                pageSize: Number(value),
-                pageIndex: 1,
+    // --- Apply Search ---
+    if (tableData.query) {
+      const query = tableData.query.toLowerCase();
+      processedData = processedData.filter(
+        (item) =>
+          item.id.toString().includes(query) ||
+          item.userName.toLowerCase().includes(query) ||
+          item.userRole.toLowerCase().includes(query) ||
+          item.exportFrom.toLowerCase().includes(query) ||
+          item.fileName.toLowerCase().includes(query) ||
+          (item.reason && item.reason.toLowerCase().includes(query))
+      );
+    }
+
+    // --- Apply Sorting ---
+    const { order, key } = tableData.sort as OnSortParam;
+    if (order && key) {
+      processedData.sort((a, b) => {
+        let aValue = a[key as keyof ExportMappingItem];
+        let bValue = b[key as keyof ExportMappingItem];
+
+        if (key === "exportDate") {
+          const timeA = !isNaN((aValue as Date)?.getTime())
+            ? (aValue as Date).getTime()
+            : order === "asc"
+            ? Infinity
+            : -Infinity;
+          const timeB = !isNaN((bValue as Date)?.getTime())
+            ? (bValue as Date).getTime()
+            : order === "asc"
+            ? Infinity
+            : -Infinity;
+          return order === "asc" ? timeA - timeB : timeB - timeA;
+        }
+
+        aValue = aValue === null || aValue === undefined ? "" : String(aValue);
+        bValue = bValue === null || bValue === undefined ? "" : String(bValue);
+
+        return order === "asc"
+          ? (aValue as string).localeCompare(bValue as string, undefined, {
+              numeric: true,
+              sensitivity: "base",
             })
-            setSelectedMappings([])
+          : (bValue as string).localeCompare(aValue as string, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+      });
+    }
+
+    const pageIndex = tableData.pageIndex as number;
+    const pageSize = tableData.pageSize as number;
+    const dataTotal = processedData.length;
+    const startIndex = (pageIndex - 1) * pageSize;
+    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+
+    return { pageData: dataForPage, total: dataTotal };
+  }, [exportMappings, tableData, activeFilters]);
+
+  const handleSetTableData = useCallback(
+    (
+      data: Partial<TableQueries> | ((prevState: TableQueries) => TableQueries)
+    ) => {
+      setTableData((prev) =>
+        typeof data === "function"
+          ? data(prev)
+          : { ...prev, ...data, pageIndex: data.pageIndex ?? prev.pageIndex }
+      ); // Ensure pageIndex is maintained or updated
+    },
+    []
+  );
+
+  const handlePaginationChange = useCallback(
+    (page: number) => {
+      handleSetTableData({ pageIndex: page });
+    },
+    [handleSetTableData]
+  );
+  const handleSelectChange = useCallback(
+    (value: number) => {
+      handleSetTableData({
+        pageSize: Number(value),
+        pageIndex: 1,
+      });
+      setSelectedMappings([]);
+    },
+    [handleSetTableData]
+  );
+  const handleSort = useCallback(
+    (sort: OnSortParam) => {
+      handleSetTableData({ sort: sort, pageIndex: 1 });
+    },
+    [handleSetTableData]
+  );
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      handleSetTableData({ query: query, pageIndex: 1 });
+    },
+    [handleSetTableData]
+  );
+
+  const handleApplyFilters = useCallback(
+    (filters: ExportMappingFilterSchema) => {
+      setActiveFilters(filters);
+      handleSetTableData({ pageIndex: 1 });
+    },
+    [handleSetTableData]
+  );
+
+  const handleRowSelect = useCallback(
+    (checked: boolean, row: ExportMappingItem) => {
+      setSelectedMappings((prev) => {
+        if (checked) {
+          return prev.some((i) => i.id === row.id) ? prev : [...prev, row];
+        } else {
+          return prev.filter((i) => i.id !== row.id);
+        }
+      });
+    },
+    []
+  );
+
+  const handleAllRowSelect = useCallback(
+    (checked: boolean, rows: Row<ExportMappingItem>[]) => {
+      const pageRowOriginals = rows.map((r) => r.original);
+      const pageRowIds = new Set(pageRowOriginals.map((r) => r.id));
+
+      if (checked) {
+        setSelectedMappings((prev) => {
+          const newItems = pageRowOriginals.filter(
+            (original) => !prev.some((selected) => selected.id === original.id)
+          );
+          return [...prev, ...newItems];
+        });
+      } else {
+        setSelectedMappings((prev) =>
+          prev.filter((item) => !pageRowIds.has(item.id))
+        );
+      }
+    },
+    []
+  );
+
+  const handleDeleteSelected = useCallback(() => {
+    const selectedIds = new Set(selectedMappings.map((i) => i.id));
+    // TODO: Here you would typically dispatch an action to delete these from the backend
+    // For now, we'll just filter them from the local state
+    setExportMappings((currentMappings) =>
+      currentMappings.filter((i) => !selectedIds.has(i.id))
+    );
+    setSelectedMappings([]);
+    toast.push(
+      <Notification
+        title={`${selectedIds.size} item(s) deleted`}
+        type="success"
+        duration={2500}
+      >
+        Selected records have been removed from view.
+      </Notification>
+    );
+  }, [selectedMappings /* dispatch */]); // Add dispatch if you implement backend delete
+
+  const columns: ColumnDef<ExportMappingItem>[] = useMemo(
+    () => [
+      {
+        header: "Exported By",
+        accessorKey: "userName",
+        enableSorting: true,
+        size: 200,
+        cell: (props) => {
+          const { userName, userRole } = props.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <img
+                src={userIconPlaceholder}
+                alt={userName}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+              <div>
+                <span className="font-semibold block"> {userName}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {userRole}
+                </span>
+              </div>
+            </div>
+          );
         },
-        [tableData, handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ ...tableData, sort: sort, pageIndex: 1 })
+      },
+      {
+        header: "Exported From",
+        accessorKey: "exportFrom",
+        enableSorting: true,
+        size: 220,
+        cell: (props) => {
+          const { exportFrom, fileName } = props.row.original;
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold"> {exportFrom}</span>
+              <Tooltip title={fileName} placement="top">
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] block">
+                  {fileName}
+                </span>
+              </Tooltip>
+            </div>
+          );
         },
-        [tableData, handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => {
-            handleSetTableData({ ...tableData, query: query, pageIndex: 1 })
+      },
+      {
+        header: "Reason",
+        accessorKey: "reason",
+        enableSorting: true,
+        size: 250,
+        cell: (props) => (
+          <Tooltip title={props.row.original.reason || ""}>
+            <span className="truncate block max-w-[230px]">
+              {props.row.original.reason || "-"}
+            </span>
+          </Tooltip>
+        ),
+      },
+      {
+        header: "Date",
+        accessorKey: "exportDate",
+        enableSorting: true,
+        size: 180,
+        cell: (props) => {
+          const date = props.row.original.exportDate;
+          return (
+            <span>
+              {!isNaN(date.getTime())
+                ? `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`
+                : "Invalid Date"}
+            </span>
+          );
         },
-        [tableData, handleSetTableData],
-    )
+      },
+      {
+        header: "Action",
+        id: "action",
+        size: 80,
+        cell: (props) => <ActionColumn data={props.row.original} />,
+      },
+    ],
+    []
+  );
 
-    const handleRowSelect = useCallback(
-        (checked: boolean, row: ExportMappingItem) => {
-            // Use new type
-            setSelectedMappings((prev) => {
-                // Use new state setter
-                if (checked) {
-                    return prev.some((i) => i.id === row.id)
-                        ? prev
-                        : [...prev, row]
-                } else {
-                    return prev.filter((i) => i.id !== row.id)
-                }
-            })
-        },
-        [],
-    ) // Add setSelectedMappings if linting complains
+  return (
+    <Container className="h-full">
+      <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+        <div className="lg:flex items-center justify-between mb-4">
+          <h5 className="mb-4 lg:mb-0">Export Mapping Log</h5>
+        </div>
 
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<ExportMappingItem>[]) => {
-            // Use new type
-            const rowIds = new Set(rows.map((r) => r.original.id))
-            if (checked) {
-                const originalRows = rows.map((row) => row.original)
-                setSelectedMappings((prev) => {
-                    // Use new state setter
-                    const existingIds = new Set(prev.map((i) => i.id))
-                    const newSelection = originalRows.filter(
-                        (i) => !existingIds.has(i.id),
-                    )
-                    return [...prev, ...newSelection]
-                })
-            } else {
-                setSelectedMappings((prev) =>
-                    prev.filter((i) => !rowIds.has(i.id)),
-                ) // Use new state setter
-            }
-        },
-        [],
-    ) // Add setSelectedMappings if linting complains
+        <div className="mb-4">
+          <ExportMappingTableTools
+            onSearchChange={handleSearchChange}
+            allExportMappings={exportMappings}
+            onApplyFilters={handleApplyFilters}
+          />
+        </div>
 
-    const handleDeleteSelected = useCallback(() => {
-        console.log(
-            'Deleting selected mappings:',
-            selectedMappings.map((i) => i.id),
-        ) // Use new state
-        const selectedIds = new Set(selectedMappings.map((i) => i.id))
-        setExportMappings((currentMappings) =>
-            currentMappings.filter((i) => !selectedIds.has(i.id)),
-        ) // Use new state setter
-        setSelectedMappings([]) // Use new state setter
-    }, [selectedMappings]) // Add setExportMappings, setSelectedMappings if linting complains
-    // --- End Lifted Handlers ---
+        <div className="flex-grow overflow-auto">
+          {" "}
+          {/* Ensure table container can scroll if content overflows */}
+          <ExportMappingTable
+            columns={columns}
+            data={pageData}
+            loading={isLoading}
+            pagingData={{
+              total,
+              pageIndex: tableData.pageIndex as number,
+              pageSize: tableData.pageSize as number,
+            }}
+            selectedMappings={selectedMappings}
+            onPaginationChange={handlePaginationChange}
+            onSelectChange={handleSelectChange}
+            onSort={handleSort}
+            onRowSelect={handleRowSelect}
+            onAllRowSelect={handleAllRowSelect}
+          />
+        </div>
+      </AdaptiveCard>
 
-    // --- Define Columns in Parent ---
-    const columns: ColumnDef<ExportMappingItem>[] = useMemo(
-        () => [
-            {
-                header: 'Exported By',
-                accessorKey: 'userName',
-                enableSorting: true,
-                size: 180,
-                cell: (props) => {
-                    const { userName, userRole } = props.row.original
-                    return (
-                        <div className="flex flex-col">
-                            <span className="font-semibold"> {userName}</span>
-                            <span className="text-xs">{userRole}</span>
-                        </div>
-                    )
-                },
-            },
-            {
-                header: 'Exported From',
-                accessorKey: 'exportFrom',
-                enableSorting: true,
-                size: 200,
-                cell: (props) => {
-                    const { exportFrom, fileName } = props.row.original
-                    return (
-                        <div className="flex flex-col">
-                            <span className="font-semibold"> {exportFrom}</span>
-                            <span className="text-xs">{fileName}</span>
-                        </div>
-                    )
-                },
-            },
-            {
-                header: 'Reason',
-                accessorKey: 'reason',
-                enableSorting: true,
-                size: 200,
-            }, // Maybe don't sort reason?
-            {
-                header: 'Date',
-                accessorKey: 'exportDate',
-                enableSorting: true,
-                size: 200,
-                cell: (props) => {
-                    const date = props.row.original.exportDate
-                    return (
-                        <span>
-                            {date.toLocaleDateString()}{' '}
-                            {date.toLocaleTimeString()}
-                        </span>
-                    )
-                },
-            },
-            {
-                header: 'Action',
-                id: 'action',
-                width: 80, // Adjust width for actions
-                meta: { HeaderClass: 'text-center' },
-                cell: (props) => <ActionColumn data={props.row.original} />,
-            },
-        ],
-        [], // Update dependencies
-    )
-    // --- End Define Columns ---
+      <ExportMappingSelected
+        selectedMappings={selectedMappings}
+        setSelectedMappings={setSelectedMappings} // Prop is passed, even if not used in this specific version
+        onDeleteSelected={handleDeleteSelected}
+      />
+    </Container>
+  );
+};
 
-    // --- Render Main Component ---
-    return (
-        <Container className="h-full">
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header Section */}
-                <div className="lg:flex items-center justify-between mb-4">
-                    <h5 className="mb-4 lg:mb-0">Export Mapping</h5>{' '}
-                    {/* Updated title */}
-                </div>
+export default ExportMapping;
 
-                {/* Tools Section */}
-                <div className="mb-4">
-                    <ExportMappingTableTools
-                        onSearchChange={handleSearchChange}
-                        allExportMappings={exportMappings} // Pass data for export
-                    />{' '}
-                    {/* Use updated component */}
-                </div>
-
-                {/* Table Section */}
-                <div className="flex-grow overflow-auto">
-                    <ExportMappingTable // Use updated component
-                        columns={columns}
-                        data={pageData}
-                        loading={isLoading}
-                        pagingData={{
-                            total,
-                            pageIndex: tableData.pageIndex as number,
-                            pageSize: tableData.pageSize as number,
-                        }}
-                        selectedMappings={selectedMappings} // Use updated prop
-                        onPaginationChange={handlePaginationChange}
-                        onSelectChange={handleSelectChange}
-                        onSort={handleSort}
-                        onRowSelect={handleRowSelect}
-                        onAllRowSelect={handleAllRowSelect}
-                    />
-                </div>
-            </AdaptiveCard>
-
-            {/* Selected Actions Footer */}
-            <ExportMappingSelected // Use updated component
-                selectedMappings={selectedMappings} // Use updated prop
-                setSelectedMappings={setSelectedMappings} // Use updated prop
-                onDeleteSelected={handleDeleteSelected}
-            />
-        </Container>
-    )
-}
-// --- End Main Component ---
-
-export default ExportMapping // Updated export name
-
-// Helper Function
 function classNames(...classes: (string | boolean | undefined)[]) {
-    return classes.filter(Boolean).join(' ')
+  return classes.filter(Boolean).join(" ");
 }

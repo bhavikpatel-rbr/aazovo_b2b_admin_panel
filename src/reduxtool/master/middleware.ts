@@ -2153,7 +2153,7 @@ export const editTrendingImageAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editTrandingImageAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getUnitAction())
+        dispatch(getTrendingImagesAction())
         dispatch(
           showMessage({
             ...defaultMessageObj,

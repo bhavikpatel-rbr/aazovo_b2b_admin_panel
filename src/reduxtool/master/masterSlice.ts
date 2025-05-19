@@ -114,7 +114,7 @@ const masterSlice = createSlice({
     }))
     builder.addCase(getExportMappingsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      exportMappingData: payload
+      apiExportMappings: payload
     }))
     builder.addCase(getCategoriesAction.fulfilled, (state, { payload }) => ({
       ...state,

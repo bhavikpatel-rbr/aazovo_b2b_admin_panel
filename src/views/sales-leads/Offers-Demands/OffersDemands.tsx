@@ -750,14 +750,15 @@ const OffersDemands = () => {
                 },
             },
             {
-                header: '',
+                header: 'Actions',
                 id: 'action',
-                width: 100, // Adjusted width for fewer actions
+                size: 160,
+                meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
                     <ActionColumn
-                        onClone={() => handleClone(props.row.original)} // Keep clone optional
-                        onEdit={() => handleEdit(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
+                                onClone={() => handleClone(props.row.original)} // Keep clone optional
+                                onEdit={() => handleEdit(props.row.original)}
+                                onDelete={() => handleDelete(props.row.original)}
                     />
                 ),
             },
