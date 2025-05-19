@@ -867,6 +867,66 @@ export const deleteAllTrandingImageAsync = async (unitData: any) => {
   }
 }
 
+export const getTrandingCarouseAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/other/trending_carousel`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addTrandingCarouselAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_carousel`, unitData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editTrandingCarouselAsync = async (unitData: any) => {
+  console.log(unitData);
+
+  console.log({ unitData });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_carousel/${unitData?.id}`, { _method: "PUT", images: unitData?.images, links: unitData?.links })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+
+export const deletTrandingCarouselAsync = async (unitData: any) => {
+
+  console.log("unitData", unitData);
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_carousel/delete`, { ids: unitData?.id.toString() })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllTrandingCarouselAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_carousel/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 
 
 
