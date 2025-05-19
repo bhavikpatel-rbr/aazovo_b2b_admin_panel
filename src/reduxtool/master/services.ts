@@ -708,4 +708,73 @@ export const deleteAllPriceListAsync = async (unitData: any) => {
   }
 }
 
+export const getSlidersAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/slider`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addSlidersAsync = async (unitData: FormData) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/setting/slider`, unitData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const editSlidersListAsync = async (brandId: number | string, formData: FormData) => {
+  console.log("editBrandListAsync - brandId:", brandId);
+  console.log("editBrandListAsync - formData to be sent:");
+  for (const pair of formData.entries()) {
+    console.log(pair[0] + ': ' + pair[1]);
+  }
+
+  try {
+    // The formData already contains _method: 'PUT'
+    // Axios will automatically set 'Content-Type': 'multipart/form-data'
+    // when the second argument to post/put is a FormData instance.
+    const response = await axiosInstance.post(
+      `${config.apiURL}/setting/slider/${brandId}`, // Use brandId in the URL
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const deletSlidersListAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/slider/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllSlidersListAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/setting/slider/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 
