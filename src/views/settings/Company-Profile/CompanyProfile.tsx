@@ -95,7 +95,7 @@ const CompanyProfile = () => {
     // CRITICAL: Check what 'masterSelector' returns.
     // 'rawProfileArrayFromState' is the key used in previous examples. If your slice returns the profile object directly, adjust accordingly.
     // e.g., const { companyProfile: actualProfileData, status: masterLoadingStatus } = useSelector(masterSelector);
-    const { rawProfileArrayFromState, status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
+    const { rawProfileArrayFromState, status: masterLoadingStatus = 'succeeded' } = useSelector(masterSelector);
     const actualProfileData = rawProfileArrayFromState === undefined ? null : rawProfileArrayFromState;
 
     const [currentProfileUI, setCurrentProfileUI] = useState<CompanyProfileUIData | null>(null);
@@ -160,25 +160,24 @@ const CompanyProfile = () => {
                 };
                 setCurrentProfileUI(uiProfile);
 
-                // const formValuesToReset: CompanyProfileFormData = {
-                //     name: uiProfile.name || '',
-                //     address: uiProfile.address || '',
-                //     support_email: uiProfile.support_email || '',
-                //     mobile: uiProfile.mobile || '',
-                //     logo: null, // File input reset to null
-                //     gst: uiProfile.gst || '',
-                //     facebook: uiProfile.facebook || '',
-                //     instagram: uiProfile.instagram || '',
-                //     linkedin: uiProfile.linkedin || '',
-                //     youtube: uiProfile.youtube || '',
-                //     twitter: uiProfile.twitter || '',
-                //     logo_for_meta: null, // File input reset to null
-                //     notification_email: uiProfile.notification_email || '',
-                // };
-                
-                // console.log('[CompanyProfile] PREPARED formValuesToReset:', formValuesToReset);
-                // formMethods.reset(formValuesToReset);
-                // console.log('[CompanyProfile] Form RESET called. isDirty should be false now.');
+                const formValuesToReset: CompanyProfileFormData = {
+                    name: uiProfile.name || '',
+                    address: uiProfile.address || '',
+                    support_email: uiProfile.support_email || '',
+                    mobile: uiProfile.mobile || '',
+                    logo: null, // logo is a File; can't set it from a string
+                    gst: uiProfile.gst || '',
+                    facebook: uiProfile.facebook || '',
+                    instagram: uiProfile.instagram || '',
+                    linkedin: uiProfile.linkedin || '',
+                    youtube: uiProfile.youtube || '',
+                    twitter: uiProfile.twitter || '',
+                    logo_for_meta: null,
+                    notification_email: uiProfile.notification_email || '',
+                };
+
+                formMethods.reset(formValuesToReset);
+
                 
                 setIsLoadingInitial(false);
             } else { // masterLoadingStatus === 'succeeded' but no effectiveApiProfile found
@@ -251,6 +250,7 @@ const CompanyProfile = () => {
             // Re-fetch is good, formMethods.reset() will be triggered by the useEffect watching Redux state
             dispatch(getCompanyProfileAction()); 
         } catch (error: any) {
+            alert('Error updating profile: ' + error);
             const errorMessage = error.response?.data?.message || error.message || 'Update failed.';
             toast.push(<Notification title="Update Failed" type="danger" duration={3000}>{errorMessage}</Notification>);
         } finally {

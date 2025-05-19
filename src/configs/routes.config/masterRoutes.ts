@@ -76,6 +76,15 @@ const masterRoutes: Routes = [
             pageContainerType: 'contained',
         },
     },
+    {
+        key: 'master.productSpecification',
+        path: `${MASTER_PREFIX_PATH}/product-specification`,
+        component: lazy(() => import('@/views/master/Product-Specification')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
 ];
 
 export default masterRoutes;

@@ -52,6 +52,22 @@ const masterNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
+                key: 'master.productSpecification',
+                path: `${MASTER_PREFIX_PATH}/product-specification`,
+                title: 'Product Specification',
+                translateKey: 'nav.master.productSpecification',
+                icon: 'productSpecification',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.master.productSpecificationDesc',
+                        label: 'Manage product specifications',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'master.currency',
                 path: `${MASTER_PREFIX_PATH}/currency`,
                 title: 'Currency',
