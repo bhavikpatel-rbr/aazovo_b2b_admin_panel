@@ -757,9 +757,9 @@ export const editSlidersListAsync = async (brandId: number | string, formData: F
   }
 };
 
-export const deleteSlidersListAsync = async (unitData: any) => {
+export const deletSlidersListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/setting/slider/${unitData}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/slider/${unitData.id}`)
     return response
   } catch (err) {
     return isAxiosError(err)
