@@ -40,24 +40,6 @@ const hrEmployeesRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
-    {
-        key: 'hrEmployees.jobDepartments',
-        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-departments`,
-        component: lazy(() => import('@/views/hr-employees/Job-Departments')),
-        authority: [ADMIN, USER],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
-    {
-        key: 'hrEmployees.jobApplications',
-        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-applications`,
-        component: lazy(() => import('@/views/hr-employees/Job-Application')),
-        authority: [ADMIN, USER],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
 ];
 
 export default hrEmployeesRoute;
