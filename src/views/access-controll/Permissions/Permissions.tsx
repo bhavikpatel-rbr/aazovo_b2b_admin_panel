@@ -303,7 +303,17 @@ const PermissionsListing = () => {
         { header: 'Display Name', accessorKey: 'name', enableSorting: true },
         { header: 'Module/Group', accessorKey: 'module', enableSorting: true, cell: props => props.getValue<string>() || 'General' },
         { header: 'Description', accessorKey: 'description', enableSorting: false, cell: props => <Tooltip title={props.row.original.description} wrapperClass="w-full"><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-md">{props.row.original.description}</span></Tooltip> },
-        { header: 'Actions', id: 'action', size: 200, meta: { headerClass: 'text-center', cellClass: 'text-center' }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+        {
+            header: 'Actions',
+            id: 'action',
+            size: 200,
+            meta: { HeaderClass: 'text-center' },
+            cell: (props) => (
+                <div className="flex items-center justify-center gap-2">
+                    <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />
+                </div>
+            ),
+        },
     ], []); // openEditDrawer, handleDeleteClick are stable
 
     return (

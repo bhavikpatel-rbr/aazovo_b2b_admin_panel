@@ -741,13 +741,17 @@ const [selectedForms, setSelectedForms] = useState<CmsManagementItem[]>([]);
                 ),
             },
             {
-                header: 'Action',
+                header: 'Actions',
                 id: 'action',
+                size: 200,
+                meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
-                    <ActionColumn
+                    <div className="flex items-center justify-center gap-2">
+                                            <ActionColumn
                         onEdit={() => openEditDrawer(props.row.original)} // Open edit drawer
                         onDelete={() => console.log('Delete', props.row.original)}
                     />
+                    </div>
                 ),
             },
         ],

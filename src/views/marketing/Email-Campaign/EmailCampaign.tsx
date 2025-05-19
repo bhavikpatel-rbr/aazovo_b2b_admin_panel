@@ -440,36 +440,92 @@ const EmailCampaignListing = () => {
 
             <Drawer
                 title={`Create Email Campaign - Step ${currentWizardStep} of 4: ${
-                    currentWizardStep === 1 ? 'Choose Template' :
-                    currentWizardStep === 2 ? 'Add Values' :
-                    currentWizardStep === 3 ? 'Choose Recipients' : 'Review & Send'
+                    currentWizardStep === 1
+                        ? 'Choose Template'
+                        : currentWizardStep === 2
+                        ? 'Add Values'
+                        : currentWizardStep === 3
+                        ? 'Choose Recipients'
+                        : 'Review & Send'
                 }`}
-                placement="right" // <--- ADD THIS
-                isOpen={isCreateDrawerOpen} onClose={closeCreateDrawer} onRequestClose={closeCreateDrawer}
-                width="60vw" // Adjusted width
-                bodyClass="p-0" // Remove default padding for custom scroll
+                isOpen={isCreateDrawerOpen}
+                onClose={closeCreateDrawer}
+                onRequestClose={closeCreateDrawer}
+                width={700}
                 footer={
                     <div className="flex justify-between w-full p-4 border-t dark:border-gray-700">
-                        <div>{currentWizardStep > 1 && <Button onClick={prevStep} disabled={isSubmittingCampaign} icon={<TbPlayerTrackPrev />}>Back</Button>}</div>
+                        <div>
+                            {currentWizardStep > 1 && (
+                                <Button
+                                    onClick={prevStep}
+                                    disabled={isSubmittingCampaign}
+                                    icon={<TbPlayerTrackPrev />}
+                                >
+                                    Back
+                                </Button>
+                            )}
+                        </div>
                         <div className="flex gap-2">
-                            {currentWizardStep < 4 && <Button variant="solid" onClick={nextStep} disabled={isSubmittingCampaign} icon={<TbPlayerTrackNext />}>Next</Button>}
+                            {currentWizardStep < 4 && (
+                                <Button
+                                    variant="solid"
+                                    onClick={nextStep}
+                                    disabled={isSubmittingCampaign}
+                                    icon={<TbPlayerTrackNext />}
+                                >
+                                    Next
+                                </Button>
+                            )}
                             {currentWizardStep === 4 && (
                                 <>
-                                <Button variant="outline" onClick={() => { /* Save as Draft */ closeCreateDrawer(); toast.push(<Notification title="Info">Campaign Saved as Draft (simulated).</Notification>) }} disabled={isSubmittingCampaign}>Save as Draft</Button>
-                                <Button variant="solid" color={campaignFormMethods.watch('sendOption') === 'schedule' ? "blue" : "emerald"} form="campaignCreationForm" type="submit" loading={isSubmittingCampaign} disabled={!campaignFormMethods.formState.isValid || isSubmittingCampaign} icon={<TbSend />}>
-                                    {campaignFormMethods.watch('sendOption') === 'schedule' ? 'Schedule Campaign' : 'Send Campaign Now'}
-                                </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            // Save as Draft
+                                            closeCreateDrawer();
+                                            toast.push(
+                                                <Notification title="Info">
+                                                    Campaign Saved as Draft (simulated).
+                                                </Notification>
+                                            );
+                                        }}
+                                        disabled={isSubmittingCampaign}
+                                    >
+                                        Save as Draft
+                                    </Button>
+                                    <Button
+                                        variant="solid"
+                                        color={
+                                            campaignFormMethods.watch('sendOption') === 'schedule'
+                                                ? 'blue'
+                                                : 'emerald'
+                                        }
+                                        form="campaignCreationForm"
+                                        type="submit"
+                                        loading={isSubmittingCampaign}
+                                        disabled={
+                                            !campaignFormMethods.formState.isValid ||
+                                            isSubmittingCampaign
+                                        }
+                                        icon={<TbSend />}
+                                    >
+                                        {campaignFormMethods.watch('sendOption') === 'schedule'
+                                            ? 'Schedule Campaign'
+                                            : 'Send Campaign Now'}
+                                    </Button>
                                 </>
                             )}
                         </div>
                     </div>
                 }
             >
-                <div className="p-6 h-[calc(100vh-140px)] overflow-y-auto"> {/* Adjust height based on header/footer of drawer */}
-                    <Form id="campaignCreationForm" onSubmit={campaignFormMethods.handleSubmit(onCampaignFormSubmit)} className="flex flex-col">
-                        {renderWizardStep()}
-                    </Form>
-                </div>
+                <Form
+                    id="campaignCreationForm"
+                    onSubmit={campaignFormMethods.handleSubmit(onCampaignFormSubmit)}
+                    className="flex flex-col"
+                >
+                    {renderWizardStep()}
+                </Form>
             </Drawer>
 
             <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={700}>

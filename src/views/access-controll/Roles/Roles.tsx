@@ -337,7 +337,17 @@ const RolesListing = () => {
         { header: 'Display Name', accessorKey: 'displayName', enableSorting: true },
         { header: 'Description', accessorKey: 'description', enableSorting: false, cell: props => <Tooltip title={props.row.original.description} wrapperClass="w-full"><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">{props.row.original.description}</span></Tooltip> },
         { header: 'Date Added', accessorKey: 'addedDate', enableSorting: true, size: 180, cell: (props) => new Date(props.getValue<Date>()).toLocaleDateString() },
-        { header: 'Actions', id: 'action', size: 200, meta: { headerClass: 'text-center', cellClass: 'text-center' }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onViewPermissions={() => handleViewPermissions(props.row.original)} /> },
+            {
+            header: 'Actions',
+            id: 'action',
+            size: 200,
+            meta: { HeaderClass: 'text-center' },
+            cell: (props) => (
+                <div className="flex items-center justify-center gap-2">
+                    <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onViewPermissions={() => handleViewPermissions(props.row.original)} />
+                </div>
+            ),
+        },
     ], [handleViewPermissions]); // openEditDrawer, handleDeleteClick are stable
 
     return (

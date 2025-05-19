@@ -295,8 +295,15 @@ const AutoEmailTemplatesListing = () => {
             { header: 'Category', accessorKey: 'categoryName', size: 150, enableSorting: true, cell: props => CATEGORY_OPTIONS_AET.find(o=>o.value === props.getValue())?.label || props.getValue() },
             { header: 'Department', accessorKey: 'departmentName', size: 150, enableSorting: true, cell: props => DEPARTMENT_OPTIONS_AET.find(o=>o.value === props.getValue())?.label || props.getValue() },
             {
-                header: 'Actions', id: 'actions', meta:{ headerClass: "text-center", cellClass: "text-center" }, size: 100,
-                cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
+                header: 'Actions',
+                id: 'action',
+                size: 200,
+                meta: { HeaderClass: 'text-center' },
+                cell: (props) => (
+                    <div className="flex items-center justify-center gap-2">
+                        <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />
+                    </div>
+                ),
             },
         ],
         [openEditDrawer, handleDeleteClick],

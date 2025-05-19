@@ -394,8 +394,15 @@ const LeadManagement = () => {
             { header: 'Remarks', accessorKey: 'remarks', size: 150, cell: props => <div className="truncate w-36" title={props.getValue() as string}>{props.getValue()}</div> },
             { header: 'Date', accessorKey: 'date', size: 100, cell: props => new Date(props.getValue() as string).toLocaleDateString() },
             {
-                header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 120,
-                cell: props => <ActionColumn item={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onView={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} />,
+                header: 'Actions',
+                id: 'action',
+                size: 200,
+                meta: { HeaderClass: 'text-center' },
+                cell: (props) => (
+                    <div className="flex items-center justify-center gap-2">
+                        <ActionColumn item={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onView={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} />
+                    </div>
+                ),
             },
         ],
         [], // Dependencies for memoization
