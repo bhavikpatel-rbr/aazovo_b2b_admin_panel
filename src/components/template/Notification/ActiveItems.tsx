@@ -8,7 +8,6 @@ import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Tooltip from '@/components/ui/Tooltip'
 import NotificationAvatar from './NotificationAvatar'
-import NotificationToggle from './NotificationToggle'
 import { HiOutlineMailOpen } from 'react-icons/hi'
 import {
     apiGetNotificationList,
@@ -19,8 +18,10 @@ import useResponsive from '@/utils/hooks/useResponsive'
 import { useNavigate } from 'react-router-dom'
 
 import type { DropdownRef } from '@/components/ui/Dropdown'
-import { Avatar } from '@/components/ui'
-import { PiEnvelopeLight, PiWarningLight } from 'react-icons/pi'
+import { Avatar, Tag } from '@/components/ui'
+import { PiBellDuotone, PiEnvelopeLight, PiWarningLight } from 'react-icons/pi'
+import { BsActivity } from 'react-icons/bs'
+import { LiaUserCheckSolid } from 'react-icons/lia'
 
 type NotificationList = {
     id: string
@@ -35,9 +36,23 @@ type NotificationList = {
     readed: boolean
 }
 
+const NotificationToggle = ({
+    className,
+    dot,
+}: {
+    className?: string
+    dot: boolean
+}) => {
+    return (
+        <div className={classNames('text-2xl', className)}>
+            <LiaUserCheckSolid />
+        </div>
+    )
+}
+
 const notificationHeight = 'h-[280px]'
 
-const _Notification = ({ className }: { className?: string }) => {
+const _ActiveItems = ({ className }: { className?: string }) => {
     const [notificationList, setNotificationList] = useState<
         NotificationList[]
     >([])
@@ -122,16 +137,8 @@ const _Notification = ({ className }: { className?: string }) => {
         >
             <Dropdown.Item variant="header">
                 <div className="dark:border-gray-700 px-2 flex items-center justify-between mb-1">
-                    <h6>Notifications</h6>
-                    <Tooltip title="Mark all as read">
-                        <Button
-                            variant="plain"
-                            shape="circle"
-                            size="sm"
-                            icon={<HiOutlineMailOpen className="text-xl" />}
-                            onClick={onMarkAllAsRead}
-                        />
-                    </Tooltip>
+                    <h6>Active</h6>
+                    
                 </div>
             </Dropdown.Item>
             <ScrollBar
@@ -177,39 +184,119 @@ const _Notification = ({ className }: { className?: string }) => {
                 } */}
                 <div >
                     <div
-                        className={`relative rounded-xl flex px-4 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
+                        className={`relative rounded-xl flex flex-col px-3 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
                     >
-                        <div>
-                            <Avatar icon={<PiWarningLight className='!stroke-2'/>} className='bg-red-500'/>
-                        </div>
-                        <div className="mx-3">
-                                <span className="font-semibold heading-text">Login Security</span>
+                        <div className="">
+                            <div className='flex justify-between mb-1'>
+                                <span className="font-semibold heading-text">XYZ Company</span>
+                                <Tag className='text-[10px] bg-red-100'>Companies</Tag>
+                            </div>
                             <div className="text-xs">
-                                <span>3 failed login attempts by user@example.com</span>
-                                <span className="text-primary"> 10 min</span>
+                                <span>Notes : Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum, commodi.</span>
+                                <span className="text-primary"> 19 May 2025</span>
                             </div>
                         </div>
-                        <Badge
-                            className="absolute top-4 ltr:right-4 rtl:left-4 mt-1.5 bg-gray-300 dark:bg-gray-600 bg-primary"
-                        />
                     </div>
                     <div
-                        className={`relative rounded-xl flex px-4 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
+                        className={`relative rounded-xl flex flex-col px-3 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
                     >
-                        <div>
-                            <Avatar icon={<PiEnvelopeLight/>} className='bg-primary'/>
-                        </div>
-                        <div className="mx-3">
-                                <span className="font-semibold heading-text">Inquiry</span>
+                        <div className="">
+                            <div className='flex justify-between mb-1'>
+                                <span className="font-semibold heading-text">XYZ Company</span>
+                                <Tag className='text-[10px] bg-green-100'>Members</Tag>
+                            </div>
                             <div className="text-xs">
-                                <span>New Inquiry from ABC member from wall listing.</span>
-                                <span className="text-primary"> 10 min</span>
+                                <span>Notes : Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum, commodi.</span>
+                                <span className="text-primary"> 19 May 2025</span>
                             </div>
                         </div>
-                        <Badge
-                            className="absolute top-4 ltr:right-4 rtl:left-4 mt-1.5 bg-gray-300 dark:bg-gray-600 bg-primary"
-                        />
                     </div>
+                    <div
+                        className={`relative rounded-xl flex flex-col px-3 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
+                    >
+                        <div className="">
+                            <div className='flex justify-between mb-1'>
+                                <span className="font-semibold heading-text">XYZ Company</span>
+                                <Tag className='text-[10px] bg-blue-100'>Products</Tag>
+                            </div>
+                            <div className="text-xs">
+                                <span>Notes : Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum, commodi.</span>
+                                <span className="text-primary"> 19 May 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div
+                        className={`relative rounded-xl flex flex-col px-3 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
+                    >
+                        <div className="">
+                            <div className='flex justify-between mb-1'>
+                                <span className="font-semibold heading-text">XYZ Company</span>
+                                <Tag className='text-[10px] bg-violet-100'>Wall listings</Tag>
+                            </div>
+                            <div className="text-xs">
+                                <span>Notes : Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum, commodi.</span>
+                                <span className="text-primary"> 19 May 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        className={`relative rounded-xl flex flex-col px-3 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
+                    >
+                        <div className="">
+                            <div className='flex justify-between mb-1'>
+                                <span className="font-semibold heading-text">XYZ Company</span>
+                                <Tag className='text-[10px] bg-violet-100'>Opportunities</Tag>
+                            </div>
+                            <div className="text-xs">
+                                <span>Notes : Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum, commodi.</span>
+                                <span className="text-primary"> 19 May 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        className={`relative rounded-xl flex flex-col px-3 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
+                    >
+                        <div className="">
+                            <div className='flex justify-between mb-1'>
+                                <span className="font-semibold heading-text">XYZ Company</span>
+                                <Tag className='text-[10px] bg-pink-100'>Partners</Tag>
+                            </div>
+                            <div className="text-xs">
+                                <span>Notes : Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum, commodi.</span>
+                                <span className="text-primary"> 19 May 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                     <div
+                        className={`relative rounded-xl flex flex-col px-3 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
+                    >
+                        <div className="">
+                            <div className='flex justify-between mb-1'>
+                                <span className="font-semibold heading-text">XYZ Company</span>
+                                <Tag className='text-[10px] bg-orange-100'>Teams</Tag>
+                            </div>
+                            <div className="text-xs">
+                                <span>Notes : Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum, commodi.</span>
+                                <span className="text-primary"> 19 May 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                     <div
+                        className={`relative rounded-xl flex flex-col px-3 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700`}
+                    >
+                        <div className="">
+                            <div className='flex justify-between mb-1'>
+                                <span className="font-semibold heading-text">XYZ Company</span>
+                                <Tag className='text-[10px] bg-violet-100'>Leads</Tag>
+                            </div>
+                            <div className="text-xs">
+                                <span>Notes : Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatum, commodi.</span>
+                                <span className="text-primary"> 19 May 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                 </div>
                 {loading && (
                     <div
@@ -247,7 +334,7 @@ const _Notification = ({ className }: { className?: string }) => {
                         variant="solid"
                         onClick={handleViewAllActivity}
                     >
-                        View All
+                        Add New
                     </Button>
                 </div>
             </Dropdown.Item>
@@ -255,6 +342,6 @@ const _Notification = ({ className }: { className?: string }) => {
     )
 }
 
-const Notification = withHeaderItem(_Notification)
+const ActiveItems = withHeaderItem(_ActiveItems)
 
-export default Notification
+export default ActiveItems

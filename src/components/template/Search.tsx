@@ -16,6 +16,7 @@ import { PiMagnifyingGlassDuotone } from 'react-icons/pi'
 import { MdOutlinePushPin } from "react-icons/md";
 import { Link } from 'react-router-dom'
 import Highlighter from 'react-highlight-words'
+import Checkbox from '../ui/Checkbox/Checkbox'
 
 type SearchData = {
     key: string
@@ -28,17 +29,57 @@ type SearchData = {
 
 type SearchResult = {
     title: string
+    pinned : boolean
     data: SearchData[]
 }
 
 const recommendedSearch: SearchResult[] = [
     {
-        title: 'Recommended',
+        title: 'Pinned',
+        pinned : true,
         data: [
             {
                 key: 'guide.documentation',
                 path: `${GUIDE_PREFIX_PATH}/documentation/introduction`,
-                title: 'Documentation',
+                title: 'Dashboard (Active)',
+                icon: 'dashboardAnalytic',
+                category: 'Docs',
+                categoryTitle: 'Guide',
+            },
+            {
+                key: 'guide.changeLog',
+                path: `${GUIDE_PREFIX_PATH}/changelog`,
+                title: 'Company',
+                icon: 'company',
+                category: 'Docs',
+                categoryTitle: 'Guide',
+            },
+            {
+                key: 'uiComponent.common.button',
+                path: `${UI_COMPONENTS_PREFIX_PATH}/button`,
+                title: 'Member',
+                icon: 'account',
+                category: 'Common',
+                categoryTitle: 'UI Components',
+            },
+            {
+                key: 'uiComponent.common.button',
+                path: `${UI_COMPONENTS_PREFIX_PATH}/button`,
+                title: 'Leads',
+                icon: 'leads',
+                category: 'Common',
+                categoryTitle: 'UI Components',
+            },
+        ],
+    },
+    {
+        title: 'Recommended',
+        pinned : false,
+        data: [
+            {
+                key: 'guide.documentation',
+                path: `${GUIDE_PREFIX_PATH}/documentation/introduction`,
+                title: 'All Documents',
                 icon: 'documentation',
                 category: 'Docs',
                 categoryTitle: 'Guide',
@@ -46,7 +87,7 @@ const recommendedSearch: SearchResult[] = [
             {
                 key: 'guide.changeLog',
                 path: `${GUIDE_PREFIX_PATH}/changelog`,
-                title: 'Changelog',
+                title: 'Activity Log',
                 icon: 'changeLog',
                 category: 'Docs',
                 categoryTitle: 'Guide',
@@ -54,7 +95,7 @@ const recommendedSearch: SearchResult[] = [
             {
                 key: 'uiComponent.common.button',
                 path: `${UI_COMPONENTS_PREFIX_PATH}/button`,
-                title: 'Button',
+                title: 'Opportunities',
                 icon: 'uiCommonButton',
                 category: 'Common',
                 categoryTitle: 'UI Components',
@@ -70,17 +111,18 @@ const ListItem = (props: {
     isLast?: boolean
     keyWord: string
     onNavigate: () => void
+    pinned : boolean
 }) => {
-    const { icon, label, url = '', keyWord, onNavigate } = props
+    const { icon, label, url = '', keyWord, onNavigate, pinned } = props
 
     return (
-        <Link to={url} onClick={onNavigate}>
-            <div
-                className={classNames(
-                    'flex items-center justify-between rounded-xl p-3 cursor-pointer user-select',
-                    'hover:bg-gray-100 dark:hover:bg-gray-700',
-                )}
-            >
+        <div
+            className={classNames(
+                'flex items-center justify-between rounded-xl cursor-pointer user-select pr-3',
+                'hover:bg-gray-100 dark:hover:bg-gray-700',
+            )}
+        >
+            <Link to={url} onClick={onNavigate} className='p-2'>
                 <div className="flex items-center gap-2">
                     <div
                         className={classNames(
@@ -89,6 +131,7 @@ const ListItem = (props: {
                     >
                         {icon && navigationIcon[icon]}
                     </div>
+
                     <div className="text-gray-900 dark:text-gray-300">
                         <Highlighter
                             autoEscape
@@ -101,9 +144,10 @@ const ListItem = (props: {
                         />
                     </div>
                 </div>
-                <HiChevronRight className="text-lg" />
-            </div>
-        </Link>
+                {/* <HiChevronRight className="text-lg" /> */}
+            </Link>
+            <Checkbox defaultChecked={pinned}/>
+        </div>
     )
 }
 
@@ -174,7 +218,7 @@ const _Search = ({ className }: { className?: string }) => {
                 className={classNames(className, 'text-2xl')}
                 onClick={handleSearchOpen}
             >
-                <MdOutlinePushPin/>
+                <MdOutlinePushPin />
             </div>
             <Dialog
                 contentClassName="!p-0"
@@ -202,18 +246,21 @@ const _Search = ({ className }: { className?: string }) => {
                             {searchResult.map((result) => (
                                 <div key={result.title} className="mb-4">
                                     <h6 className="mb-3">{result.title}</h6>
-                                    {result.data.map((data, index) => (
-                                        <ListItem
-                                            key={data.title + index}
-                                            icon={data.icon}
-                                            label={data.title}
-                                            url={data.path}
-                                            keyWord={
-                                                inputRef.current?.value || ''
-                                            }
-                                            onNavigate={handleNavigate}
-                                        />
-                                    ))}
+                                    <div className='grid grid-cols-2 gap-2'>
+                                        {result.data.map((data, index) => (
+                                            <ListItem
+                                                key={data.title + index}
+                                                icon={data.icon}
+                                                label={data.title}
+                                                url={data.path}
+                                                keyWord={
+                                                    inputRef.current?.value || ''
+                                                }
+                                                onNavigate={handleNavigate}
+                                                pinned={result.pinned}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
                             ))}
                             {searchResult.length === 0 && noResult && (
