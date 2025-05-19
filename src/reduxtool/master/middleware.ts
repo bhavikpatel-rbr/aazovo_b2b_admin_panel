@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { addBlogsAsync, addBrandAsync, addcategoryAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addPriceListAsync, addSlidersAsync, addUnitAsync, deletBrandListAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllBrandListAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllSlidersListAsync, deleteAllUnitAsync, deletePriceListAsync, deletPaymentTermAsync, deletSlidersListAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editPriceListAsync, editSlidersListAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getPriceListAsync, getSlidersAsync, getUnitAsync, getwallListingAsync } from "./services"
+import { addBlogsAsync, addBrandAsync, addcategoryAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDocumentListAsync, addDocumentTypeAsync, addPaymentTermAsync, addPriceListAsync, addSlidersAsync, addTrandingImageAsync, addUnitAsync, deletBrandListAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDocumentListAsync, deletDocumentTypeAsync, deleteAllBrandListAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDocumentTypeAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllSlidersListAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deletePriceListAsync, deletPaymentTermAsync, deletSlidersListAsync, deletTrandingImageAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDocumentListAsync, editDocumentTypeAsync, editPaymentTermAsync, editPriceListAsync, editSlidersListAsync, editTrandingImageAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getcategoryAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDocumentListAsync, getDocumentTypeAsync, getExportMappingsAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getSlidersAsync, getTrandingImageAsync, getUnitAsync, getwallListingAsync } from "./services"
 import { AxiosResponse } from "axios"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
@@ -1145,7 +1145,7 @@ export const getProductsAction = createAsyncThunk(
   "auth/product",
   async (_, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await getBrandAsync()
+      const response: AxiosResponse<any> = await getProductAsync()
       if (response?.data?.status === true) {
         return response?.data?.data
       }
@@ -2095,4 +2095,141 @@ export const updateCompanyProfileAction = createAsyncThunk<
     }
   }
 );
+
+export const getTrendingImagesAction = createAsyncThunk(
+  "auth/getTrandingImage",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getTrandingImageAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addTrendingImageAction = createAsyncThunk<any, any>(
+  "auth/addTrandingImage",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addTrandingImageAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getTrendingImagesAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editTrendingImageAction = createAsyncThunk<any, any>(
+  "auth/editTrandingImage",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editTrandingImageAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getUnitAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteTrendingImageAction = createAsyncThunk<any, any>(
+  "auth/deletTrandingImage",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletTrandingImageAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getTrendingImagesAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteMultipleTrendingImagesAction = createAsyncThunk<any, any>(
+  "auth/TrandingImagedelete",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllTrandingImageAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getTrendingImagesAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
 

@@ -415,7 +415,7 @@ export const deleteAllBrandListAsync = async (unitData: any) => {
 }
 export const getProductAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/master/product`)
+    const response = await axiosInstance.get(`${config.apiURL}/master/product?page=1`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -812,6 +812,60 @@ export const editCompanyProfileListAsync = async (brandId: number | string, form
     return isAxiosError(err);
   }
 };
+
+export const getTrandingImageAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/other/trending_image`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addTrandingImageAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_image`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editTrandingImageAsync = async (unitData: any) => {
+  console.log(unitData);
+
+  console.log(`${config.apiURL}/other/trending_image/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_image/${unitData?.id}`, { _method: "PUT", page_name: unitData?.page_name, product_ids: unitData?.product_ids })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletTrandingImageAsync = async (unitData: any) => {
+
+  console.log("unitData", unitData);
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_image/delete`, { ids: unitData?.id.toString() })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllTrandingImageAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_image/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 
 
