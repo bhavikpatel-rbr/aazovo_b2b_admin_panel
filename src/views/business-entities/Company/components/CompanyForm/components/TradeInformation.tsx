@@ -12,7 +12,7 @@ const TradeDetailSection = ({
 }: TradeDetailSectionProps) => {
 
     return (
-        <Card id="tradeInformation" className="mt-6">
+        <Card id="tradeInformation" className="">
             <h4 className="mb-6">Trade Information</h4>
             <div className="grid md:grid-cols-2 gap-4">
                 <FormItem

@@ -1,54 +1,25 @@
-import { useMemo } from 'react' // Keep if used elsewhere, not directly here
+import { useMemo } from 'react'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select' // Import Select
+import Select from '@/components/ui/Select'
 import { FormItem } from '@/components/ui/Form'
-// import { countryList } from '@/constants/countries.constant' // Keep if you use it for Country select
+// import { countryList } from '@/constants/countries.constant'
 import { Controller } from 'react-hook-form'
-import type { FormSectionBaseProps, CompanyFormSchema } from '../types' // Assuming CompanyFormSchema is needed for field names
+import type { FormSectionBaseProps, CompanyFormSchema } from '../types'
+
 type PrimaryDetailSectionProps = FormSectionBaseProps
 
-// --- Mock Options Data (Replace with your actual data sources) ---
+// --- Mock Options Data (Keep as is or replace) ---
 const ownershipTypeOptions = [
     { value: 'sole_proprietorship', label: 'Sole Proprietorship' },
     { value: 'partnership', label: 'Partnership' },
     { value: 'private_limited', label: 'Private Limited Company' },
-    { value: 'public_limited', label: 'Public Limited Company' },
-    { value: 'llp', label: 'Limited Liability Partnership (LLP)' },
-    { value: 'other', label: 'Other' },
-]
-
-// For City, State, Country, Continent - you'll likely fetch these or have them as constants
-// For simplicity, I'm using placeholder options.
-// It's common for City and State to be dependent on the selected Country.
-const countryOptions = [ // Example, you might use your countryList constant
-    { value: 'IN', label: 'India' },
-    { value: 'US', label: 'United States' },
-    { value: 'GB', label: 'United Kingdom' },
-    // ... more countries
+    // ... other options
 ];
-
-const stateOptions = [ // These would typically be filtered by selected country
-    { value: 'MH', label: 'Maharashtra' },
-    { value: 'CA', label: 'California' },
-    // ... more states
-];
-
-const cityOptions = [ // These would typically be filtered by selected state
-    { value: 'Mumbai', label: 'Mumbai' },
-    { value: 'LosAngeles', label: 'Los Angeles' },
-    // ... more cities
-];
-
-const continentOptions = [
-    { value: 'AS', label: 'Asia' },
-    { value: 'NA', label: 'North America' },
-    { value: 'EU', label: 'Europe' },
-    { value: 'AF', label: 'Africa' },
-    { value: 'SA', label: 'South America' },
-    { value: 'OC', label: 'Oceania/Australia' },
-    { value: 'AN', label: 'Antarctica' },
-];
+const countryOptions = [ { value: 'IN', label: 'India' }, /* ... */ ];
+const stateOptions = [ { value: 'MH', label: 'Maharashtra' }, /* ... */ ];
+const cityOptions = [ { value: 'Mumbai', label: 'Mumbai' }, /* ... */ ];
+const continentOptions = [ { value: 'AS', label: 'Asia' }, /* ... */ ];
 // --- End Mock Options Data ---
 
 
@@ -60,7 +31,9 @@ const PrimaryDetailSection = ({
     return (
     <Card id="companyDetails">
         <h4 className="mb-6">Primary Information</h4>
-        <div className="grid md:grid-cols-2 gap-4">
+        {/* Changed to md:grid-cols-3 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {/* Company Name */}
             <FormItem
                 label="Company Name"
                 invalid={Boolean(errors.company_name)}
@@ -69,7 +42,7 @@ const PrimaryDetailSection = ({
                 <Controller
                     name="company_name"
                     control={control}
-                    rules={{ required: 'Company Name is required' }} // Example rule
+                    rules={{ required: 'Company Name is required' }}
                     render={({ field }) => (
                         <Input
                             type="text"
@@ -80,6 +53,8 @@ const PrimaryDetailSection = ({
                     )}
                 />
             </FormItem>
+
+            {/* Company Primary Contact Number */}
             <FormItem
                 label="Company Primary Contact Number"
                 invalid={Boolean(errors.company_primary_contact_number)}
@@ -91,7 +66,7 @@ const PrimaryDetailSection = ({
                     rules={{ required: 'Primary Contact Number is required' }}
                     render={({ field }) => (
                         <Input
-                            type="tel" // Changed to tel for better mobile UX
+                            type="tel"
                             autoComplete="off"
                             placeholder="Primary Contact Number"
                             {...field}
@@ -100,47 +75,7 @@ const PrimaryDetailSection = ({
                 />
             </FormItem>
 
-            {/* New Country Code Input */}
-            <FormItem
-                label="Country Code (Alternate)"
-                // Assuming you'll add a field like 'alternate_contact_country_code' to your schema
-                invalid={Boolean(errors.alternate_contact_country_code)}
-                errorMessage={errors.alternate_contact_country_code?.message as string}
-            >
-                <Controller
-                    name="alternate_contact_country_code" // Ensure this field exists in your CompanyFormSchema
-                    control={control}
-                    render={({ field }) => (
-                        <Input
-                            type="text"
-                            autoComplete="off"
-                            placeholder="+1"
-                            className="w-24" // Make it narrower
-                            {...field}
-                        />
-                    )}
-                />
-            </FormItem>
-
-            <FormItem
-                label="Alternate Contact Number"
-                invalid={Boolean(errors.alternate_contact_number)}
-                errorMessage={errors.alternate_contact_number?.message as string}
-            >
-                <Controller
-                    name="alternate_contact_number"
-                    control={control}
-                    render={({ field }) => (
-                        <Input
-                            type="tel" // Changed to tel
-                            autoComplete="off"
-                            placeholder="Alternate Contact Number"
-                            {...field}
-                        />
-                    )}
-                />
-            </FormItem>
-
+            {/* Company Primary E-mail ID */}
             <FormItem
                 label="Company Primary E-mail ID"
                 invalid={Boolean(errors.company_primary_email_id)}
@@ -161,6 +96,50 @@ const PrimaryDetailSection = ({
                 />
             </FormItem>
 
+            {/* Alternate Contact Number - Combined Field
+                This will now naturally try to fit within one of the 3 columns.
+                The inner flexbox will manage the country code and number input.
+            */}
+            <FormItem
+                label="Alternate Contact Number"
+                invalid={Boolean(errors.alternate_contact_country_code) || Boolean(errors.alternate_contact_number)}
+                errorMessage={
+                    (errors.alternate_contact_country_code?.message as string) ||
+                    (errors.alternate_contact_number?.message as string)
+                }
+            >
+                <div className="flex items-center gap-2">
+                    <Controller
+                        name="alternate_contact_country_code"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                type="text"
+                                autoComplete="off"
+                                placeholder="+1"
+                                className="w-20" // Keep it narrow
+                                {...field}
+                            />
+                        )}
+                    />
+                    <Controller
+                        name="alternate_contact_number"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                type="tel"
+                                autoComplete="off"
+                                placeholder="Alternate Number"
+                                className="flex-grow"
+                                {...field}
+                            />
+                        )}
+                    />
+                </div>
+            </FormItem>
+
+
+            {/* Alternate E-mail ID */}
             <FormItem
                 label="Alternate E-mail ID"
                 invalid={Boolean(errors.alternate_email_id)}
@@ -188,30 +167,35 @@ const PrimaryDetailSection = ({
                 errorMessage={errors.ownership_type?.message as string}
             >
                 <Controller
-                    name="ownership_type" // Ensure this field and its type are in CompanyFormSchema
+                    name="ownership_type"
                     control={control}
                     rules={{ required: 'Ownership type is required' }}
-                    render={({ field }) => ( // field.value, field.onChange
+                    render={({ field }) => (
                         <Select
                             placeholder="Select Ownership Type"
                             options={ownershipTypeOptions}
                             value={ownershipTypeOptions.find(option => option.value === field.value)}
                             onChange={(option) => field.onChange(option?.value)}
-                            {...field} // Pass rest of the field props if Select supports them
+                            {...field}
                         />
                     )}
                 />
             </FormItem>
 
+            {/* Owner/Director/Proprietor Name
+                If this field is long, it might cause wrapping issues on md with 3 cols.
+                You might need to make it md:col-span-2 or md:col-span-3 if it needs more width.
+            */}
             <FormItem
                 label="Owner/Director/Proprietor Name"
                 invalid={Boolean(errors.owner_director_proprietor_name)}
                 errorMessage={errors.owner_director_proprietor_name?.message as string}
+                // className="md:col-span-2" // Example: if it needs more width
             >
                 <Controller
                     name="owner_director_proprietor_name"
                     control={control}
-                    rules={{ required: 'Owner/Director/Proprietor Name is required' }}
+                    rules={{ required: 'Name is required' }}
                     render={({ field }) => (
                         <Input
                             type="text"
@@ -223,19 +207,21 @@ const PrimaryDetailSection = ({
                 />
             </FormItem>
 
+            {/* Company Address
+                This will likely need to span multiple columns in a 3-column layout.
+            */}
             <FormItem
                 label="Company Address"
                 invalid={Boolean(errors.company_address)}
                 errorMessage={errors.company_address?.message as string}
+                className="md:col-span-3" // Make address take full width in 3-col layout
             >
                 <Controller
                     name="company_address"
                     control={control}
-                    rules={{ required: 'Company Address is required' }}
+                    rules={{ required: 'Address is required' }}
                     render={({ field }) => (
                         <Input
-                            // Consider using a textarea for address if your Input component doesn't support multiline well
-                            // Or use a dedicated AddressInput component if you have one
                             type="text"
                             autoComplete="off"
                             placeholder="Company Address"
@@ -252,13 +238,13 @@ const PrimaryDetailSection = ({
                 errorMessage={errors.country?.message as string}
             >
                 <Controller
-                    name="country" // Ensure this field and its type are in CompanyFormSchema
+                    name="country"
                     control={control}
                     rules={{ required: 'Country is required' }}
                     render={({ field }) => (
                         <Select
                             placeholder="Select Country"
-                            options={countryOptions} // Use your actual countryList or fetched data
+                            options={countryOptions}
                             value={countryOptions.find(option => option.value === field.value)}
                             onChange={(option) => field.onChange(option?.value)}
                             {...field}
@@ -275,13 +261,13 @@ const PrimaryDetailSection = ({
                 errorMessage={errors.state?.message as string}
             >
                 <Controller
-                    name="state" // Ensure this field and its type are in CompanyFormSchema
+                    name="state"
                     control={control}
                     rules={{ required: 'State is required' }}
                     render={({ field }) => (
                         <Select
                             placeholder="Select State"
-                            options={stateOptions} // Ideally, filter these based on selected country
+                            options={stateOptions}
                             value={stateOptions.find(option => option.value === field.value)}
                             onChange={(option) => field.onChange(option?.value)}
                             {...field}
@@ -297,13 +283,13 @@ const PrimaryDetailSection = ({
                 errorMessage={errors.city?.message as string}
             >
                 <Controller
-                    name="city" // Ensure this field and its type are in CompanyFormSchema
+                    name="city"
                     control={control}
                     rules={{ required: 'City is required' }}
                     render={({ field }) => (
                         <Select
                             placeholder="Select City"
-                            options={cityOptions} // Ideally, filter these based on selected state
+                            options={cityOptions}
                             value={cityOptions.find(option => option.value === field.value)}
                             onChange={(option) => field.onChange(option?.value)}
                             {...field}
@@ -313,6 +299,7 @@ const PrimaryDetailSection = ({
             </FormItem>
 
 
+            {/* ZIP / Postal Code */}
             <FormItem
                 label="ZIP / Postal Code"
                 invalid={Boolean(errors.zip_postal_code)}
@@ -341,7 +328,7 @@ const PrimaryDetailSection = ({
                 errorMessage={errors.continent_name?.message as string}
             >
                 <Controller
-                    name="continent_name" // Ensure this field and its type are in CompanyFormSchema
+                    name="continent_name"
                     control={control}
                     rules={{ required: 'Continent is required' }}
                     render={({ field }) => (
