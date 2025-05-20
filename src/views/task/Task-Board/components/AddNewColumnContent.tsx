@@ -24,7 +24,7 @@ type FormSchema = {
 };
 
 const validationSchema: ZodType<FormSchema> = z.object({
-    title: z.string().min(1, 'Column title is required!'),
+    title: z.string().min(1, 'Task title is required!'),
     entityType: z.enum(['company', 'member', 'partner', 'lead', 'wall_listing'], {
         required_error: 'Please select an entity type.',
     }),
@@ -147,11 +147,11 @@ const AddNewColumnContent = () => {
 
     return (
         <div>
-            <h5>Add New Column</h5>
+            <h5>Add New Task</h5>
             <div className="mt-4">
                 <Form layout="vertical" onSubmit={handleSubmit(onFormSubmit)}>
                     <FormItem
-                        label="Column title"
+                        label="Task title"
                         invalid={Boolean(errors.title)}
                         errorMessage={errors.title?.message}
                         className="mb-4"
@@ -163,7 +163,7 @@ const AddNewColumnContent = () => {
                                 <Input
                                     type="text"
                                     autoComplete="off"
-                                    placeholder="Enter column title"
+                                    placeholder="Enter task title"
                                     {...field}
                                 />
                             )}
