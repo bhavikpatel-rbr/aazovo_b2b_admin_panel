@@ -3,12 +3,11 @@
 import classNames from 'classnames';
 
 export const navigationList = [
-    { label: 'Primary Info', link: 'companyDetails' },
-    { label: 'Trade Info', link: 'tradeInformation' },
-    { label: 'Company Info', link: 'companyInformation' },
-    { label: 'Certificates', link: 'certificateAndLicenses' },
-    { label: 'Branches', link: 'branches' },
-    { label: 'KYC Docs', link: 'kycDocuments' },
+    { label: 'Company Details', link: 'companyDetails' },
+    { label: 'KYC Documents', link: 'kycDocuments' },
+    { label: 'Bank Details', link: 'bankDetails' },
+    { label: 'Accessibility', link: 'accessibility' },
+    { label: 'Member Management', link: 'memberManagement' },
 ];
 
 export type NavigationItem = typeof navigationList[0];
