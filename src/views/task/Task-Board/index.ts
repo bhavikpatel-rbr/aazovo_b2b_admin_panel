@@ -1,3 +1,3 @@
-import TaskBoard from './TaskBoard'
+import ScrumBoard from './TaskBoard'
 
-export default TaskBoard
+export default ScrumBoard
