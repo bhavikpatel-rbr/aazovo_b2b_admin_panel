@@ -20,7 +20,7 @@ export const createCardObject = (): Ticket => {
         description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
         cover: '',
         members: [],
-        labels: ['Task'],
+        labels: ['New'],
         attachments: [],
         comments: [],
         dueDate: null,

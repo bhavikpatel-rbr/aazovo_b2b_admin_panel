@@ -15,7 +15,7 @@ type FormSchema = {
 }
 
 const validationSchema: ZodType<FormSchema> = z.object({
-    title: z.string().min(1, 'Ticket title is required!'),
+    title: z.string().min(1, 'Task title is required!'),
 })
 
 const AddNewTicketContent = () => {
@@ -48,11 +48,11 @@ const AddNewTicketContent = () => {
 
     return (
         <div>
-            <h5>Add New Ticket</h5>
+            <h5>Add New Task</h5>
             <div className="mt-8">
                 <Form layout="inline" onSubmit={handleSubmit(onFormSubmit)}>
                     <FormItem
-                        label="Column title"
+                        label="Task Name"
                         invalid={Boolean(errors.title)}
                         errorMessage={errors.title?.message}
                     >
