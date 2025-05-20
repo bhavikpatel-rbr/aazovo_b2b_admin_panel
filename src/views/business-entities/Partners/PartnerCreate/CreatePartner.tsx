@@ -20,9 +20,9 @@ const CreatePartner = () => {
 <>
     <Container>
         <AdaptiveCard>
-        <div className="flex flex-col gap-4 max-w-4xl mx-auto p-2">
+        <div className="flex flex-col gap-6 p-6">
             <h5 className="text-2xl font-bold">Fill Partner Details</h5>
-            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                 {/* Partner Name */}
                 <FormItem label="Partner Name" invalid={Boolean(errors.partner_name)} errorMessage={

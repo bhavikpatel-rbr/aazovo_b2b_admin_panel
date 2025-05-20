@@ -452,7 +452,8 @@ const FormListTable = () => {
             {
                 header: 'Actions',
                 id: 'action',
-                size: 140, // Increased for Dropdown
+                size: 130, // Increased for Dropdown
+                meta : {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         rowData={props.row.original}

@@ -407,7 +407,7 @@ const FormListTable = () => {
             )
         },
         {
-            header: 'Action', id: 'action', size:100,
+            header: 'Actions', id: 'action', size:130, meta: { HeaderClass: 'text-center' },
             cell: (props) => (
                 <ActionColumn
                     onChangeStatus={() => handleChangeStatus(props.row.original)}

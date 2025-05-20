@@ -36,7 +36,7 @@ const CreateInquiry = () => {
                 <AdaptiveCard>
                 <div className="flex flex-col gap-6 p-6">
                     <h1 className="text-2xl font-bold">Create Inquiry</h1>
-                    <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Basic Info */}
                         <FormItem label="Inquiry ID" invalid={!!errors.inquiry_id} errorMessage={typeof errors.inquiry_id === 'object' && errors.inquiry_id ? (errors.inquiry_id as { message?: string }).message : undefined}>
                             <Controller
