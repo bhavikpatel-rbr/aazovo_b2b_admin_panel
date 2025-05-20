@@ -16,6 +16,9 @@ import KYCDetailSection from './components/KYC'
 import AccessibilitySection from './components/Accessibility'
 import BankDetailsSection from './components/BankDetails'
 import MemberManagementSection from './components/MemberManagement'
+import { NavLink } from 'react-router-dom'
+import { BiChevronRight } from 'react-icons/bi'
+import { Button } from '@/components/ui'
 type CompanyFormProps = {
     children: ReactNode
     onFormSubmit: (values: CompanyFormSchema) => void
