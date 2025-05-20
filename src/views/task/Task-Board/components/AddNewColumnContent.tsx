@@ -18,27 +18,28 @@ export type EntityType = 'company' | 'member' | 'partner' | 'lead' | 'wall_listi
 
 type FormSchema = {
     title: string;
-    entityType: EntityType;
-    selectedEntityId?: string;
-    selectedOptions?: string[]; // This will effectively not be used if checkboxes are removed
+    // entityType: EntityType;
+    // selectedEntityId?: string;
+    // selectedOptions?: string[]; // This will effectively not be used if checkboxes are removed
 };
 
 const validationSchema: ZodType<FormSchema> = z.object({
-    title: z.string().min(1, 'Task title is required!'),
-    entityType: z.enum(['company', 'member', 'partner', 'lead', 'wall_listing'], {
-        required_error: 'Please select an entity type.',
-    }),
-    selectedEntityId: z.string().optional(), // Make optional, then refine
-    selectedOptions: z.array(z.string()).optional(), // Will be unused but keep in schema for now
-}).refine(data => {
-    if (data.entityType && !data.selectedEntityId) {
-        return false; // selectedEntityId is required if entityType is chosen
-    }
-    return true;
-}, {
-    message: "Please select an item from the list.",
-    path: ["selectedEntityId"], // Error applies to selectedEntityId
-});
+    title: z.string().min(1, 'Column title is required!'),
+    // entityType: z.enum(['company', 'member', 'partner', 'lead', 'wall_listing'], {
+    //     required_error: 'Please select an entity type.',
+    // }),
+    // selectedEntityId: z.string().optional(), // Make optional, then refine
+    // selectedOptions: z.array(z.string()).optional(), // Will be unused but keep in schema for now
+})
+// .refine(data => {
+//     if (data.entityType && !data.selectedEntityId) {
+//         return false; // selectedEntityId is required if entityType is chosen
+//     }
+//     return true;
+// }, {
+//     message: "Please select an item from the list.",
+//     path: ["selectedEntityId"], // Error applies to selectedEntityId
+// });
 // --- End Type Definitions ---
 
 // --- Mock Options Data ---
@@ -88,28 +89,29 @@ const AddNewColumnContent = () => {
     } = useForm<FormSchema>({
         defaultValues: {
             title: '',
-            selectedEntityId: undefined,
-            selectedOptions: [], // Keep for schema, will be empty
+            // selectedEntityId: undefined,
+            // selectedOptions: [], // Keep for schema, will be empty
         },
         resolver: zodResolver(validationSchema),
     });
 
-    const watchedEntityType = watch('entityType');
+    // const watchedEntityType = watch('entityType');
     // const watchedSelectedEntityId = watch('selectedEntityId'); // Not directly needed for checkbox visibility anymore
 
     // Reset selectedEntityId (and selectedOptions implicitly as it's not rendered) when entityType changes
-    useEffect(() => {
-        if (watchedEntityType) {
-            // When entityType changes, clear the selectedEntityId.
-            // selectedOptions is not rendered, so no direct reset needed here,
-            // but ensure it's empty in defaultValues and onFormSubmit if it matters.
-            setValue('selectedEntityId', undefined, { shouldValidate: true });
-            // setValue('selectedOptions', [], { shouldValidate: false }); // Ensure it's always empty
-        }
-    }, [watchedEntityType, setValue]);
+    // useEffect(() => {
+    //     if (watchedEntityType) {
+    //         // When entityType changes, clear the selectedEntityId.
+    //         // selectedOptions is not rendered, so no direct reset needed here,
+    //         // but ensure it's empty in defaultValues and onFormSubmit if it matters.
+    //         setValue('selectedEntityId', undefined, { shouldValidate: true });
+    //         // setValue('selectedOptions', [], { shouldValidate: false }); // Ensure it's always empty
+    //     }
+    // }, [watchedEntityType, setValue]);
 
 
-    const currentSelectOptions = watchedEntityType ? selectOptionsMap[watchedEntityType] : [];
+    // const currentSelectOptions = watchedEntityType ? selectOptionsMap[watchedEntityType] : [];
+    const currentSelectOptions =  [];
 
     const onFormSubmit = async (data: FormSchema) => {
         console.log('Form Data:', data); // data.selectedOptions will be an empty array
@@ -120,14 +122,14 @@ const AddNewColumnContent = () => {
         // Since there are no selectedOptions (checkboxes), the tasks array will be empty.
         // You might want to add a default task or some placeholder content based on selectedEntityId.
         let tasks: any[] = [];
-        if (data.selectedEntityId) {
-            const entityTypeLabel = entityTypeOptions.find(opt => opt.value === data.entityType)?.label;
-            const selectedItemLabel = currentSelectOptions.find(opt => opt.value === data.selectedEntityId)?.label;
-            tasks.push({
-                id: `item-${Date.now()}`,
-                content: `Selected: ${entityTypeLabel} - ${selectedItemLabel}`
-            });
-        }
+        // if (data.selectedEntityId) {
+        //     const entityTypeLabel = entityTypeOptions.find(opt => opt.value === data.entityType)?.label;
+        //     const selectedItemLabel = currentSelectOptions.find(opt => opt.value === data.selectedEntityId)?.label;
+        //     tasks.push({
+        //         id: `item-${Date.now()}`,
+        //         // content: `Selected: ${entityTypeLabel} - ${selectedItemLabel}`
+        //     });
+        // }
 
 
         currentColumns[newColumnTitle] = tasks;
@@ -147,11 +149,11 @@ const AddNewColumnContent = () => {
 
     return (
         <div>
-            <h5>Add New Task</h5>
+            <h5>Add New Column</h5>
             <div className="mt-4">
                 <Form layout="vertical" onSubmit={handleSubmit(onFormSubmit)}>
                     <FormItem
-                        label="Task title"
+                        label="Column title"
                         invalid={Boolean(errors.title)}
                         errorMessage={errors.title?.message}
                         className="mb-4"
@@ -163,14 +165,14 @@ const AddNewColumnContent = () => {
                                 <Input
                                     type="text"
                                     autoComplete="off"
-                                    placeholder="Enter task title"
+                                    placeholder="Enter column title"
                                     {...field}
                                 />
                             )}
                         />
                     </FormItem>
 
-                    <FormItem
+                    {/* <FormItem
                         label="Select Type"
                         invalid={Boolean(errors.entityType)}
                         errorMessage={errors.entityType?.message}
@@ -197,10 +199,10 @@ const AddNewColumnContent = () => {
                                 </Radio.Group>
                             )}
                         />
-                    </FormItem>
+                    </FormItem> */}
 
                     {/* Select dropdown is shown if an entityType is selected */}
-                    {watchedEntityType && (
+                    {/* {watchedEntityType && (
                         <FormItem
                             label={`Select ${entityTypeOptions.find(opt => opt.value === watchedEntityType)?.label || 'Item'}`}
                             invalid={Boolean(errors.selectedEntityId)}
@@ -223,7 +225,7 @@ const AddNewColumnContent = () => {
                                 )}
                             />
                         </FormItem>
-                    )}
+                    )} */}
 
                     {/* Checkbox section is completely removed */}
                     {/* 
@@ -234,7 +236,7 @@ const AddNewColumnContent = () => {
 
                     <FormItem>
                         <Button variant="solid" type="submit" className="mt-4">
-                            Add Task
+                            Add Status
                         </Button>
                     </FormItem>
                 </Form>

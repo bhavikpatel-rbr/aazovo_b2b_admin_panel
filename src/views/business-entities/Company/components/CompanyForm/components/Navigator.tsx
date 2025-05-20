@@ -38,7 +38,7 @@ return (
                     onClick={() => onNavigate(nav.link)}
                     title={nav.label}
                 >
-                    <span className="font-medium text-[10px] xxs:text-xs sm:text-sm truncate">
+                    <span className="font-semibold text-[10px] xxs:text-xs sm:text-sm truncate">
                         {nav.label}
                     </span>
                 </button>

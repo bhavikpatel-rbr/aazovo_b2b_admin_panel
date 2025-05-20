@@ -20,6 +20,8 @@ import { TbPlus, TbDownload, TbTrash } from 'react-icons/tb'
 import isEmpty from 'lodash/isEmpty'
 import { createUID, taskLabelColors, labelList } from '../utils'
 import { Ticket, Comment, Member } from '../types'
+import { Checkbox, FormItem, Select } from '@/components/ui'
+import Textarea from '@/views/ui-components/forms/Input/Textarea'
 
 interface TransformedComment extends Omit<Comment, 'date'> {
     date: Date
@@ -155,8 +157,42 @@ const TicketContent = ({ onTicketClose }: { onTicketClose: () => void }) => {
                             </div>
                         </div>
                     </div>
-                    <ScrollBar className="max-h-[700px] overflow-y-auto">
+                    <ScrollBar className="max-h-[380px] overflow-y-auto">
                         <div className="flex flex-col gap-6">
+                            <div className=''>
+                                <div className="font-semibold mb-2 text-gray-900 dark:text-gray-100 min-w-[150px]">
+                                    Link to:
+                                </div>
+                                <div className="grid grid-cols-3 items-center gap-4">
+                                    <label><Checkbox className='mr-1'/> Company</label>
+                                    <label><Checkbox className='mr-1'/> Member</label>
+                                    <label><Checkbox className='mr-1'/> Partner </label>
+                                    <label><Checkbox className='mr-1'/> Inquiries</label>
+                                    <label><Checkbox className='mr-1'/> Brand</label>
+                                    <label><Checkbox className='mr-1'/> Categories</label>
+                                    <label><Checkbox className='mr-1'/> Products</label>
+                                    <label><Checkbox className='mr-1'/> Wall Listing</label>
+                                    <label><Checkbox className='mr-1'/> Opportunity</label>
+                                    <label><Checkbox className='mr-1'/> Offer & Demand</label>
+                                    <label><Checkbox className='mr-1'/> Leads</label>
+                                    <label><Checkbox className='mr-1'/> Request & Feedback</label>
+                                    <label><Checkbox className='mr-1'/> campaign</label>
+                                    <label><Checkbox className='mr-1'/> Teams</label>
+                                    <label><Checkbox className='mr-1'/> CMS</label>
+                                    <label><Checkbox className='mr-1'/> Others</label>
+                                </div>
+                            </div>
+                            <div className='flex'>
+                                <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 min-w-[150px]">
+                                   Select Link :
+                                </label>
+                                <div className="w-full">
+                                    <Select options={[
+                                        {label: "Lead 1", value: "Lead 1"},
+                                        {label: "Lead 2", value: "Lead 2"},
+                                    ]}/>
+                                </div>
+                            </div>
                             <div className="flex items-center min-h-[30px]">
                                 <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px]">
                                     Assigned to:
@@ -216,7 +252,7 @@ const TicketContent = ({ onTicketClose }: { onTicketClose: () => void }) => {
                             </div>
                             <div className="flex items-center min-h-[30px]">
                                 <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px]">
-                                    Label:
+                                    Status:
                                 </div>
                                 <div className="flex items-center gap-1">
                                     {ticketData.labels?.map((label) => (
@@ -264,6 +300,30 @@ const TicketContent = ({ onTicketClose }: { onTicketClose: () => void }) => {
                                     </Dropdown>
                                 </div>
                             </div>
+                            <div className='flex'>
+                                <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 min-w-[150px]">
+                                   Priority :
+                                </label>
+                                <div className="w-full">
+                                    <Select options={[
+                                        {label: "Low", value: "Low"},
+                                        {label: "Medium", value: "Medium"},
+                                        {label: "High", value: "High"},
+                                        {label: "Urgent", value: "Urgent"},
+                                    ]}/>
+                                </div>
+                            </div>
+                            <div className='flex'>
+                                <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 min-w-[150px]">
+                                   Category :
+                                </label>
+                                <div className="w-full">
+                                    <Select options={[
+                                        {label: "Electronics", value: "Electronics"},
+                                        {label: "Plastic", value: "Plastic"},
+                                    ]}/>
+                                </div>
+                            </div>
                             <div className="flex items-center min-h-[30px]">
                                 <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px]">
                                     Due date:
@@ -277,17 +337,17 @@ const TicketContent = ({ onTicketClose }: { onTicketClose: () => void }) => {
                             {ticketData.description && (
                                 <div className="flex">
                                     <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px]">
-                                        Description:
+                                        Note:
                                     </div>
-                                    <div className="flex">
-                                        <p>{ticketData.description}</p>
+                                    <div className="w-full">
+                                        <Input textArea>{ticketData.description}</Input>
                                     </div>
                                 </div>
                             )}
                         </div>
                         <Tabs className="mt-6" defaultValue="comments">
                             <TabList>
-                                <TabNav value="comments">Comments</TabNav>
+                                <TabNav value="comments">Activity Notes</TabNav>
                                 <TabNav value="attachments">Attachments</TabNav>
                             </TabList>
                             <div className="p-4">

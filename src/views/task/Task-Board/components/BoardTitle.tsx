@@ -10,6 +10,7 @@ import {
     TbCirclePlus,
     TbTrash,
     TbCircleXFilled,
+    TbPlus,
 } from 'react-icons/tb'
 import { useForm, Controller } from 'react-hook-form'
 import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
@@ -165,27 +166,21 @@ const BoardTitle = (props: BoardTitleProps) => {
                             eventKey="renameBoard"
                             onClick={onRenameActive}
                         >
-                            <span className="text-lg">
-                                <TbPencil />
-                            </span>
+                            <TbPencil />
                             <span>Rename</span>
                         </Dropdown.Item>
                         <Dropdown.Item
                             eventKey="addTicket"
                             onClick={onAddNewTicket}
                         >
-                            <span className="text-lg">
-                                <TbCirclePlus />
-                            </span>
-                            <span>Add Ticket</span>
+                            <TbPlus/>
+                            <span>Add Task</span>
                         </Dropdown.Item>
                         <Dropdown.Item
                             eventKey="deleteBoard"
                             onClick={onBoardDelete}
                         >
-                            <span className="text-lg">
-                                <TbTrash />
-                            </span>
+                            <TbTrash />
                             <span>Delete Board</span>
                         </Dropdown.Item>
                     </Dropdown>
@@ -201,7 +196,7 @@ const BoardTitle = (props: BoardTitleProps) => {
                 onConfirm={onDelete}
             >
                 <p>
-                    Are you sure you want to delete this board? All the tickets
+                    Are you sure you want to delete this board? All the tasks
                     under this board will be deleted as well. This action cannot
                     be undone.
                 </p>
