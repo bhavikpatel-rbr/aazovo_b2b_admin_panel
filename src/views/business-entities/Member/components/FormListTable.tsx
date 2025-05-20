@@ -12,9 +12,14 @@ import {
     TbCopy,
     TbSwitchHorizontal,
     TbTrash,
+    TbUserCircle,
+    TbShare,
+    TbDotsVertical,
 } from 'react-icons/tb'
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+import { Dropdown } from '@/components/ui'
+import ActiveItems from '@/components/template/Notification/ActiveItems'
 
 // --- Define Form Type ---
 export type FormItem = {
@@ -54,14 +59,20 @@ const statusColor: Record<FormItem['member_status'], string> = {
 const ActionColumn = ({
     onEdit,
     onViewDetail,
-    onClone,
     onChangeStatus,
 }: {
     onEdit: () => void
     onViewDetail: () => void
-    onClone: () => void
     onChangeStatus: () => void
 }) => {
+    const shareDropdown = [
+        {key: "whatsapp", name : "WhatsApp"},
+        {key: "email", name : "Email"}
+    ]
+    const moreDropdown = [
+        {key: "status_change", name : "Change Status"},
+        {key: "delete", name : "Delete"}
+    ]
     return (
         <div className="flex items-center justify-center gap-1">
             {' '}
@@ -75,7 +86,7 @@ const ActionColumn = ({
                     <TbCopy />
                 </div>
             </Tooltip> */}
-            <Tooltip title="Change Status">
+            {/* <Tooltip title="Change Status">
                 <div
                     className={`text-xl cursor-pointer select-none text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400`}
                     role="button"
@@ -83,7 +94,7 @@ const ActionColumn = ({
                 >
                     <TbSwitchHorizontal />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
             <Tooltip title="Edit">
                 {' '}
                 {/* Keep Edit/View if needed */}
@@ -97,13 +108,48 @@ const ActionColumn = ({
             </Tooltip>
             <Tooltip title="View">
                 <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+                    role="button"
+                    onClick={onViewDetail}
+                >
+                    <TbEye />
+                </div>
+            </Tooltip>
+            <Tooltip title="Share">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+                    role="button"
+                >   
+                <TbShare />
+                {/* <Dropdown title={<TbShare />}>
+                    {
+                        shareDropdown.map(item =>(
+                            <Dropdown.Item key={item.key}>
+                                <span>{item.key}</span>
+                            </Dropdown.Item>
+                        ))
+                    }
+                </Dropdown> */}
+                </div>
+            </Tooltip>
+            <Tooltip title="More">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+                    role="button"
+                >
+                    <TbDotsVertical />
+                </div>
+            </Tooltip>
+            {/* <Tooltip title="Delete">
+                <div
                     className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
                     role="button"
                     onClick={onViewDetail}
                 >
                     <TbTrash />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
+
         </div>
     )
 }
@@ -316,85 +362,126 @@ const FormListTable = () => {
     // --- Columns Definition ---
     const columns: ColumnDef<FormItem>[] = useMemo(
         () => [
-            {
-                header: 'ID',
-                accessorKey: 'id',
-                // Simple cell to display ID, enable sorting
-                enableSorting: true,
-                size:70,
-                cell: (props) => <span>{props.row.original.id}</span>,
-            },
-            { header: 'Member Name', accessorKey: 'member_name' },
-            { header: 'Contact Number', accessorKey: 'member_contact_number' },
-            { header: 'Email ID', accessorKey: 'member_email_id' },
-            {
-                header: 'Photo',
-                accessorKey: 'member_photo',
-                cell: (props) => (
-                    <img
-                        src={props.row.original.member_photo}
-                        alt="Member"
-                        className="h-10 w-10 object-cover rounded-full"
-                    />
-                )
-            },
-            { header: 'Photo Upload', accessorKey: 'member_photo_upload' },
-            { header: 'Role', accessorKey: 'member_role' },
-            {
-                header: 'Member Status',
-                accessorKey: 'member_status',
-                                cell: (props) => {
-                    const { member_status } = props.row.original
+            // {
+            //     header: 'ID',
+            //     accessorKey: 'id',
+            //     // Simple cell to display ID, enable sorting
+            //     enableSorting: true,
+            //     size:70,
+            //     cell: (props) => <span>{props.row.original.id}</span>,
+            // },
+            // { header: 'Icon', accessorKey: 'member_name' },
+            { 
+                header: 'Member', 
+                accessorKey: 'member_name',
+                size: 180,
+                cell : (props) => {
                     return (
                         <div className="flex items-center">
-                            <Tag className={statusColor[member_status]}>
+                            <Avatar
+                                size={32}
+                                shape="circle"
+                                icon={<TbUserCircle />}
+                            >
+                            </Avatar>
+                            <div className="ml-2 rtl:mr-2 text-xs">
+                                <span className="font-semibold">510415 | {props.row.original.member_name}</span>
+                                <div className="text-xs text-gray-500">{props.row.original.member_email_id}</div>
+                                <div className="text-xs text-gray-500">{props.row.original.member_contact_number}</div>
+                                <div className="text-xs text-gray-500"> Gujarat , India </div>
+                            </div>
+                        </div>
+                    )
+                } 
+            },
+            { 
+                header : "Company",
+                accessorKey : "company_name",
+                size: 200,
+                cell : (props) => {
+                    return (
+                        <div className="ml-2 rtl:mr-2 text-xs">
+                            <b className="text-xs text-gray-500">{props.row.original.company_id}</b>
+                            <div className="text-xs text-gray-500">{props.row.original.company_name}</div>
+                        </div>
+                    )
+                }
+            },
+            {
+                header: 'Status', //values can be : Active, Inactive, Unverified, Unregistered
+                accessorKey: 'member_status',
+                size: 140,
+                cell: (props) => {
+                    const { member_status } = props.row.original
+                    return (
+                        <div className="flex flex-col text-xs">
+                            <Tag className={`${statusColor[member_status]} inline`}>
                                 <span className="capitalize">{member_status}</span>
                             </Tag>
+                            {/* <span className="">{props.row.original.member_join_date}</span> */}
+                            <span className="mt-0.5"><b>Joined Date:</b> 22 May, 2025</span>
                         </div>
                     )
                 },
             },
-            { header: 'Join Date', accessorKey: 'member_join_date' },
-            { header: 'Profile Completion %', accessorKey: 'profile_completion' },
-            { header: 'Success Score %', accessorKey: 'success_score' },
-            { header: 'Trust Score %', accessorKey: 'trust_score' },
-            { header: 'Activity Score %', accessorKey: 'activity_score' },
-            {
-                header: 'Associated Brands',
-                accessorKey: 'associated_brands',
-                cell: (props) => props.row.original.associated_brands.join(', ')
+            // { header: 'Join Date', accessorKey: 'member_join_date' },
+            { 
+                header: 'Profile', 
+                accessorKey: 'profile_completion',
+                size: 220,
+                cell : (props) => (
+                    <div className='text-xs flex flex-col'>
+                        <b>INS - Premium</b>
+                        <span><b>RM: </b>Ajay Patel</span>
+                        <span><b>Grade: </b>A</span>
+                    </div>
+                )
             },
             {
-                header: 'Business Category',
-                accessorKey: 'business_category',
-                cell: (props) => props.row.original.business_category.join(', ')
+                header: 'Preferences',
+                accessorKey: 'brands',
+                size:300,
+                cell: props => (
+                    <div className='flex flex-col gap-1'>
+                        <span className="text-xs">
+                            <b className="text-xs">Brands: </b> 
+                            <span className='text-[11px]'>{props.row.original.associated_brands.join(', ')} </span>
+                        </span>
+                        <span className="text-xs">
+                            <b className="text-xs">Category: </b> 
+                            <span className='text-[11px]'>{props.row.original.business_category.join(', ')}</span>
+                        </span>
+                        <span className="text-xs">
+                            <span className='text-[11px]'><b className="text-xs">Interested: </b> {props.row.original.interested_in}</span>
+                        </span>
+                    </div>
+                )
             },
-            { header: 'Interested In', accessorKey: 'interested_in' },
-            { header: 'Company ID', accessorKey: 'company_id' },
-            { header: 'Company Name', accessorKey: 'company_name' },
-            { header: 'Membership Stats', accessorKey: 'membership_stats' },
-            { header: 'Location', accessorKey: 'member_location' },
             {
-                header: 'KYC Status',
-                accessorKey: 'kyc_status',
-                cell: (props) => {
-                    const kyc = props.row.original.kyc_status;
-                    let color = 'bg-gray-200 text-gray-700';
-                    if (kyc === 'Verified') color = 'bg-green-100 text-green-800';
-                    else if (kyc === 'Pending') color = 'bg-yellow-100 text-yellow-800';
-                    else if (kyc === 'Not Submitted') color = 'bg-red-100 text-red-800';
-                    return <Tag className={color}>{kyc}</Tag>;
-                }
+                header: 'Ratio', accessorKey: 'trust_score',
+                size:110,
+                cell: props => (
+                    <div className='flex flex-col gap-1'>
+                        <Tag className="flex gap-1 text-[10px]">
+                            <b className="">Success:</b> {props.row.original.success_score}
+                        </Tag>
+                        <Tag className="flex gap-1 text-[10px]">
+                            <b className="">Trust:</b> {props.row.original.trust_score}
+                        </Tag>
+                        <Tag className="flex gap-1 text-[10px] flex-wrap">
+                            <b className="">Activity:</b> {props.row.original.activity_score}
+                        </Tag>
+                    </div>
+                )
             },
             {
                 header: 'Action', // Keep header empty for actions
                 id: 'action',
-                size: 160, // Adjust width for actions
+                size:100,
                 meta:{HeaderClass: "text-center"},
                 cell: (props) => (
                     <ActionColumn
                         // Pass new handlers
-                        onClone={() => handleCloneForm(props.row.original)}
                         onChangeStatus={() =>
                             handleChangeStatus(props.row.original)
                         }
