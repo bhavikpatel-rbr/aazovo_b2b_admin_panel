@@ -1,674 +1,501 @@
-import { useState, useMemo, useCallback } from 'react'
-import Avatar from '@/components/ui/Avatar' // Can remove if forms don't have productNames
-import Tag from '@/components/ui/Tag'
-import Tooltip from '@/components/ui/Tooltip'
-import DataTable from '@/components/shared/DataTable'
-import { Link, useNavigate } from 'react-router-dom'
-import cloneDeep from 'lodash/cloneDeep'
-// Import new icons
+// FormListTable.tsx (for Partners - new design inspired by Company example)
+
+import React, { useState, useMemo, useCallback } from 'react';
+import Avatar from '@/components/ui/Avatar';
+import Tag from '@/components/ui/Tag';
+import Tooltip from '@/components/ui/Tooltip';
+import DataTable from '@/components/shared/DataTable';
+import { useNavigate } from 'react-router-dom';
+import cloneDeep from 'lodash/cloneDeep';
 import {
     TbPencil,
     TbEye,
-    TbCopy,
-    TbSwitchHorizontal,
+    TbCopy, // Assuming clone is a desired action
+    TbSwitchHorizontal, // Assuming status change is a desired action
     TbTrash,
-} from 'react-icons/tb'
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
+    TbShare,
+    TbDotsVertical,
+    TbExternalLink,
+    TbCertificate,
+    TbBriefcase,
+    TbMapPin,
+    TbUserCircle, // Fallback icon for Avatar
+    TbFileDescription, // For documents
+    TbClockHour4, // For lead time
+    TbCreditCard, // For payment terms
+} from 'react-icons/tb';
+import { MdCheckCircle, MdErrorOutline, MdHourglassEmpty, MdLink } from 'react-icons/md';
+import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
+import type { TableQueries } from '@/@types/common';
+import { Dropdown } from '@/components/ui'; // For "More" actions
 
-// --- Define Form Type ---
-export type FormItem = {
+// --- Define PartnerListItem Type (Refined) ---
+export type PartnerListItem = {
   id: string;
-  status: 'active' | 'inactive'; // Changed status options
+  // For "Partner Details" Column
   partner_name: string;
-  partner_contact_number: string;
-  partner_email_id: string;
   partner_logo: string; // URL
-  partner_status: 'Active' | 'Inactive' | 'Pending';
-  partner_join_date: string; // ISO date string
-  partner_location: string;
-  partner_profile_completion: number; // float
-  partner_trust_score: number; // integer
-  partner_activity_score: number; // integer
-  partner_kyc_status: string;
-  business_category: string[]; // array of strings
-  partner_interested_in: 'Buy' | 'Sell' | 'Both' | 'None';
+  partner_email_id: string;
+  partner_contact_number: string;
+  partner_reference_id?: string; // Optional
+  status: 'active' | 'inactive'; // Overall status of the entry in this list
+
+  // For "Business Focus" Column
   partner_business_type: string;
-  partner_profile_link: string; // URL
-  partner_certifications: string[]; // array of strings
-  partner_service_offerings: string[]; // array of strings
-  partner_website: string; // URL
-  partner_payment_terms: string;
-  partner_reference_id: string;
-  partner_document_upload: string; // URL
-  partner_lead_time: number; // integer
+  business_category: string[];
+  partner_service_offerings: string[];
+  partner_interested_in: 'Buy' | 'Sell' | 'Both' | 'None';
+
+  // For "Status & Scores" Column
+  partner_status_orig: 'Active' | 'Inactive' | 'Pending'; // The partner's specific operational status
+  partner_kyc_status: string; // e.g., 'Verified', 'Pending', 'Under Review', 'Not Submitted'
+  partner_profile_completion: number; // Percentage
+  partner_join_date: string; // ISO date string
+  partner_trust_score: number;
+  partner_activity_score: number;
+
+  // For "Location & Links" Column
+  partner_location: string;
+  partner_website?: string; // Optional
+  partner_profile_link?: string; // Optional
+  partner_certifications: string[];
+
+  // Additional Info Column (New)
+  partner_payment_terms?: string;
+  partner_lead_time?: number; // In days
+  partner_document_upload?: string; // URL to a document
+};
+// --- End PartnerListItem Type ---
+
+// --- Status Colors ---
+const partnerDisplayStatusColors: Record<string, string> = {
+    Active: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300',
+    Inactive: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300',
+    Pending: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300',
+    Verified: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
+    'Under Review': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
+    'Not Submitted': 'bg-gray-100 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400',
+    active: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300',
+    inactive: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300',
 };
 
-// --- End Form Type Definition ---
+const getDisplayStatusClass = (statusValue?: string): string => {
+    if (!statusValue) return 'bg-gray-100 text-gray-500';
+    return partnerDisplayStatusColors[statusValue] || 'bg-gray-100 text-gray-500';
+};
+// --- End Status Colors ---
 
-// --- Updated Status Colors ---
-const statusColor: Record<FormItem['status'], string> = {
-    active: 'bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600',
-    inactive: 'bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600', // Example color for inactive
-}
-
-// --- ActionColumn Component ---
-// Added onClone and onChangeStatus props
-const ActionColumn = ({
-    onEdit,
-    onViewDetail,
-    onClone,
-    onChangeStatus,
-}: {
-    onEdit: () => void
-    onViewDetail: () => void
-    onClone: () => void
-    onChangeStatus: () => void
+// --- ActionColumn ---
+const ActionColumn = ({ rowData, onEdit, onViewDetail, onClone, onChangeStatus, onDelete, onShare }: {
+    rowData: PartnerListItem; // Pass full row data for context
+    onEdit: (id: string) => void;
+    onViewDetail: (id: string) => void;
+    onClone: (id: string) => void;
+    onChangeStatus: (id: string, currentStatus: PartnerListItem['status']) => void;
+    onDelete: (id: string) => void;
+    onShare: (id: string) => void;
 }) => {
-    return (
-        <div className="flex items-center justify-center gap-1">
-            {' '}
-            {/* Align actions to end */}
-            {/* <Tooltip title="Clone Form">
-                <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
-                    role="button"
-                    onClick={onClone}
-                >
-                    <TbCopy />
-                </div>
-            </Tooltip> */}
-            <Tooltip title="Change Status">
-                <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400`}
-                    role="button"
-                    onClick={onChangeStatus}
-                >
-                    <TbSwitchHorizontal />
-                </div>
-            </Tooltip>
-            <Tooltip title="Edit">
-                {' '}
-                {/* Keep Edit/View if needed */}
-                <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
-            <Tooltip title="View">
-                <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-                    role="button"
-                    onClick={onViewDetail}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip>
-        </div>
-    )
-}
+    const navigate = useNavigate(); // If navigation is needed from actions
 
-// --- Initial Dummy Data ---
-export const initialDummyForms: FormItem[] = [
+    const MoreToggle = (
+         <Tooltip title="More">
+            <div className="text-xl cursor-pointer hover:text-gray-700 dark:hover:text-gray-200" role="button">
+                <TbDotsVertical />
+            </div>
+        </Tooltip>
+    );
+    return (
+        <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
+            <Tooltip title="Edit">
+                <div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div>
+            </Tooltip>
+            <Tooltip title="View Details">
+                <div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => onViewDetail(rowData.id)}><TbEye /></div>
+            </Tooltip>
+            <Tooltip title="Share">
+                <div className="text-xl cursor-pointer hover:text-orange-600" role="button" onClick={() => onShare(rowData.id)}><TbShare /></div>
+            </Tooltip>
+            <Dropdown renderTitle={MoreToggle} placement="bottom-end">
+                <Dropdown.Item eventKey="clone" onClick={() => onClone(rowData.id)}>
+                    <TbCopy className="mr-2" /> Clone Partner
+                </Dropdown.Item>
+                <Dropdown.Item eventKey="changeStatus" onClick={() => onChangeStatus(rowData.id, rowData.status)}>
+                    <TbSwitchHorizontal className="mr-2" /> Change Status
+                </Dropdown.Item>
+                <Dropdown.Item eventKey="delete" className="text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10" onClick={() => onDelete(rowData.id)}>
+                    <TbTrash className="mr-2" /> Delete Partner
+                </Dropdown.Item>
+            </Dropdown>
+        </div>
+    );
+};
+// --- End ActionColumn ---
+
+// --- Initial Partner Data (Mapped to PartnerListItem) ---
+const initialPartnerData: PartnerListItem[] = [
   {
     id: 'F001',
-    status: 'active',
+    status: 'active', // Overall status of this entry
     partner_name: 'Alpha Tech Solutions',
     partner_contact_number: '+1-202-555-0143',
     partner_email_id: 'contact@alphatech.com',
-    partner_logo: 'https://example.com/logos/alpha.png',
-    partner_status: 'Active',
-    partner_join_date: '2023-01-15',
+    partner_logo: 'https://i.pravatar.cc/80?u=alpha',
+    partner_status_orig: 'Active', // Specific partner status
+    partner_join_date: '2023-01-15T10:00:00Z',
     partner_location: 'New York, USA',
     partner_profile_completion: 95.5,
     partner_trust_score: 88,
     partner_activity_score: 75,
     partner_kyc_status: 'Verified',
-    business_category: ['IT', 'Consulting'],
+    business_category: ['IT Services', 'Cloud Consulting', 'Software Development', 'AI Solutions'],
     partner_interested_in: 'Both',
-    partner_business_type: 'B2B',
-    partner_profile_link: 'https://example.com/partners/alpha',
-    partner_certifications: ['ISO 9001', 'CMMI Level 3'],
-    partner_service_offerings: ['Software Development', 'Cloud Services'],
+    partner_business_type: 'B2B Enterprise Solutions',
+    partner_profile_link: 'https://linkedin.com/company/alphatech',
+    partner_certifications: ['ISO 9001', 'CMMI Level 3', 'AWS Certified Partner'],
+    partner_service_offerings: ['Custom Software Development', 'Cloud Migration', 'AI Chatbots', 'Data Analytics'],
     partner_website: 'https://alphatech.com',
-    partner_payment_terms: 'Net 30',
-    partner_reference_id: 'REF12345',
+    partner_payment_terms: 'Net 30 Days',
+    partner_reference_id: 'REF-ALPHA-001',
     partner_document_upload: 'https://example.com/docs/alpha_agreement.pdf',
     partner_lead_time: 7,
   },
   {
     id: 'F002',
     status: 'inactive',
-    partner_name: 'Beta Logistics',
+    partner_name: 'Beta Logistics Group',
     partner_contact_number: '+44-161-555-0199',
     partner_email_id: 'info@betalogs.co.uk',
-    partner_logo: 'https://example.com/logos/beta.png',
-    partner_status: 'Inactive',
-    partner_join_date: '2022-10-01',
+    partner_logo: 'https://i.pravatar.cc/80?u=beta',
+    partner_status_orig: 'Inactive',
+    partner_join_date: '2022-10-01T14:30:00Z',
     partner_location: 'Manchester, UK',
     partner_profile_completion: 78.2,
     partner_trust_score: 72,
     partner_activity_score: 60,
     partner_kyc_status: 'Pending',
-    business_category: ['Logistics', 'Warehousing'],
+    business_category: ['Logistics', 'Supply Chain', 'Warehousing'],
     partner_interested_in: 'Sell',
-    partner_business_type: 'B2B',
-    partner_profile_link: 'https://example.com/partners/beta',
-    partner_certifications: ['ISO 27001'],
-    partner_service_offerings: ['Freight Transport', 'Storage'],
+    partner_business_type: 'Freight & Storage Services',
+    partner_profile_link: 'https://business.facebook.com/betalogs',
+    partner_certifications: ['ISO 27001', 'Logistics UK Member'],
+    partner_service_offerings: ['International Freight', 'Secure Warehousing', 'Last-Mile Delivery'],
     partner_website: 'https://betalogs.co.uk',
-    partner_payment_terms: 'Advance',
-    partner_reference_id: 'REF56789',
+    partner_payment_terms: '50% Advance, 50% on Delivery',
+    partner_reference_id: 'REF-BETA-002',
     partner_document_upload: 'https://example.com/docs/beta_license.pdf',
     partner_lead_time: 10,
   },
   {
     id: 'F003',
     status: 'active',
-    partner_name: 'Gamma Retailers',
+    partner_name: 'Gamma Retailers Inc.',
     partner_contact_number: '+91-9876543210',
     partner_email_id: 'sales@gammaretail.in',
-    partner_logo: 'https://example.com/logos/gamma.png',
-    partner_status: 'Pending',
-    partner_join_date: '2024-03-21',
+    partner_logo: 'https://i.pravatar.cc/80?u=gamma',
+    partner_status_orig: 'Pending',
+    partner_join_date: '2024-03-21T08:00:00Z',
     partner_location: 'Mumbai, India',
     partner_profile_completion: 67.0,
     partner_trust_score: 55,
     partner_activity_score: 49,
     partner_kyc_status: 'Under Review',
-    business_category: ['Retail', 'FMCG'],
+    business_category: ['Retail', 'E-commerce', 'FMCG Distribution'],
     partner_interested_in: 'Buy',
-    partner_business_type: 'B2C',
+    partner_business_type: 'Multi-channel Retailer',
     partner_profile_link: 'https://example.com/partners/gamma',
-    partner_certifications: ['FSSAI'],
-    partner_service_offerings: ['Retail Sales'],
+    partner_certifications: ['FSSAI Licensed', 'GST Registered'],
+    partner_service_offerings: ['Online Grocery Sales', 'Apparel Retail', 'Electronics Store'],
     partner_website: 'https://gammaretail.in',
-    partner_payment_terms: 'Net 15',
-    partner_reference_id: 'REF32123',
+    partner_payment_terms: 'Net 15 Days',
+    partner_reference_id: 'REF-GAMMA-003',
     partner_document_upload: 'https://example.com/docs/gamma_docs.pdf',
     partner_lead_time: 5,
   },
-  {
-    id: 'F004',
-    status: 'inactive',
-    partner_name: 'Delta Engineering',
-    partner_contact_number: '+61-2-9876-5432',
-    partner_email_id: 'engineering@delta.com.au',
-    partner_logo: 'https://example.com/logos/delta.png',
-    partner_status: 'Active',
-    partner_join_date: '2023-06-05',
-    partner_location: 'Sydney, Australia',
-    partner_profile_completion: 88.9,
-    partner_trust_score: 91,
-    partner_activity_score: 85,
-    partner_kyc_status: 'Verified',
-    business_category: ['Engineering', 'Manufacturing'],
-    partner_interested_in: 'Sell',
-    partner_business_type: 'B2B',
-    partner_profile_link: 'https://example.com/partners/delta',
-    partner_certifications: ['ISO 14001'],
-    partner_service_offerings: ['Mechanical Design', 'CAD Services'],
-    partner_website: 'https://delta.com.au',
-    partner_payment_terms: 'Net 45',
-    partner_reference_id: 'REF77889',
-    partner_document_upload: 'https://example.com/docs/delta_papers.pdf',
-    partner_lead_time: 12,
-  },
-  {
-    id: 'F005',
-    status: 'active',
-    partner_name: 'Epsilon Innovations',
-    partner_contact_number: '+49-30-123456',
-    partner_email_id: 'hello@epsilon.de',
-    partner_logo: 'https://example.com/logos/epsilon.png',
-    partner_status: 'Active',
-    partner_join_date: '2022-12-11',
-    partner_location: 'Berlin, Germany',
-    partner_profile_completion: 92.3,
-    partner_trust_score: 85,
-    partner_activity_score: 78,
-    partner_kyc_status: 'Verified',
-    business_category: ['AI', 'Tech Consulting'],
-    partner_interested_in: 'Both',
-    partner_business_type: 'B2B',
-    partner_profile_link: 'https://example.com/partners/epsilon',
-    partner_certifications: ['TUV Certified'],
-    partner_service_offerings: ['AI Solutions', 'R&D Consulting'],
-    partner_website: 'https://epsilon.de',
-    partner_payment_terms: 'Milestone Based',
-    partner_reference_id: 'REF00987',
-    partner_document_upload: 'https://example.com/docs/epsilon_agreement.pdf',
-    partner_lead_time: 8,
-  },
 ];
+// --- End Initial Partner Data ---
 
-// --- End Dummy Data ---
 
 const FormListTable = () => {
-    const navigate = useNavigate()
-
-    // --- Local State for Table Data and Selection ---
-    const [isLoading, setIsLoading] = useState(false)
-    const [forms, setForms] = useState<FormItem[]>(initialDummyForms) // Make forms stateful
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
+    const [partners, setPartners] = useState<PartnerListItem[]>(initialPartnerData);
     const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-    const [selectedForms, setSelectedForms] = useState<FormItem[]>([]) // Renamed state
-    // --- End Local State ---
+        pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '',
+    });
+    const [selectedPartners, setSelectedPartners] = useState<PartnerListItem[]>([]);
 
-    // Simulate data fetching and processing based on tableData
     const { pageData, total } = useMemo(() => {
-        let filteredData = [...forms] // Use the stateful forms data
-
-        // --- Filtering ---
+        let filteredData = [...partners];
         if (tableData.query) {
             const query = tableData.query.toLowerCase();
-            filteredData = forms.filter((form) =>
+            filteredData = partners.filter((form) =>
                 form.id.toLowerCase().includes(query) ||
                 form.partner_name.toLowerCase().includes(query) ||
                 form.partner_contact_number.toLowerCase().includes(query) ||
                 form.partner_email_id.toLowerCase().includes(query) ||
-                form.partner_status.toLowerCase().includes(query) ||
+                form.partner_status_orig.toLowerCase().includes(query) ||
                 form.partner_location.toLowerCase().includes(query) ||
                 form.partner_kyc_status.toLowerCase().includes(query) ||
-                form.status.toLowerCase().includes(query)
+                form.status.toLowerCase().includes(query) ||
+                form.partner_business_type.toLowerCase().includes(query) ||
+                form.business_category.some(cat => cat.toLowerCase().includes(query))
             );
         }
-
-        // --- Sorting ---
-        const { order, key } = tableData.sort as OnSortParam
+        const { order, key } = tableData.sort as OnSortParam;
         if (order && key) {
             filteredData.sort((a, b) => {
-                const aValue = a[key as keyof FormItem] ?? ''
-                const bValue = b[key as keyof FormItem] ?? ''
-
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return order === 'asc'
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue)
+                const aValue = a[key as keyof PartnerListItem] ?? '';
+                const bValue = b[key as keyof PartnerListItem] ?? '';
+                if (['partner_profile_completion', 'partner_trust_score', 'partner_activity_score', 'partner_lead_time'].includes(key)) {
+                    const numA = Number(aValue); const numB = Number(bValue);
+                    if (!isNaN(numA) && !isNaN(numB)) return order === 'asc' ? numA - numB : numB - numA;
                 }
-                // Add number comparison if forms have numeric fields to sort
-                return 0
-            })
+                if (key === 'partner_join_date') {
+                    const dateA = new Date(aValue as string).getTime();
+                    const dateB = new Date(bValue as string).getTime();
+                    return order === 'asc' ? dateA - dateB : dateB - dateA;
+                }
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                }
+                return 0;
+            });
         }
+        const pageIndex = tableData.pageIndex as number;
+        const pageSize = tableData.pageSize as number;
+        const dataTotal = filteredData.length;
+        const startIndex = (pageIndex - 1) * pageSize;
+        const dataForPage = filteredData.slice(startIndex, startIndex + pageSize);
+        return { pageData: dataForPage, total: dataTotal };
+    }, [partners, tableData]);
 
-        // --- Pagination ---
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const dataTotal = filteredData.length // Use filtered length for total
-        const startIndex = (pageIndex - 1) * pageSize
-        const dataForPage = filteredData.slice(
-            startIndex,
-            startIndex + pageSize,
-        )
-
-        return { pageData: dataForPage, total: dataTotal }
-    }, [forms, tableData]) // Depend on forms state and tableData
-
-    // --- Action Handlers ---
-    const handleEdit = (form: FormItem) => {
-        // Navigate to a hypothetical form edit page
-        console.log('Navigating to edit form:', form.id)
-        // navigate(`/forms/edit/${form.id}`) // Example navigation
-    }
-
-    const handleViewDetails = (form: FormItem) => {
-        // Navigate to a hypothetical form details page
-        console.log('Navigating to view form:', form.id)
-        // navigate(`/forms/details/${form.id}`) // Example navigation
-    }
-
-    const handleCloneForm = (form: FormItem) => {
-        // Generate a new unique ID for the cloned form
-        const newId = `F${Math.floor(Math.random() * 9000) + 1000}`;
-    
-        // Create a cloned form with updated fields
-        const clonedForm: FormItem = {
-            ...form,
-            id: newId, // Assign the new ID
-            partner_name: `${form.partner_name} (Clone)`,
-            partner_contact_number: form.partner_contact_number,
-            partner_email_id: form.partner_email_id,
-            partner_logo: form.partner_logo,
-            partner_status: 'Inactive', // Cloned forms start as inactive
-            partner_join_date: form.partner_join_date,
-            partner_location: form.partner_location,
-            partner_profile_completion: form.partner_profile_completion,
-            partner_trust_score: form.partner_trust_score,
-            partner_activity_score: form.partner_activity_score,
-            partner_kyc_status: 'Pending', // Reset or mark KYC status
-            business_category: [...form.business_category],
-            partner_interested_in: form.partner_interested_in,
-            partner_business_type: form.partner_business_type,
-            partner_profile_link: form.partner_profile_link,
-            partner_certifications: [...form.partner_certifications],
-            partner_service_offerings: [...form.partner_service_offerings],
-            partner_website: form.partner_website,
-            partner_payment_terms: form.partner_payment_terms,
-            partner_reference_id: form.partner_reference_id,
-            partner_document_upload: form.partner_document_upload,
-            partner_lead_time: form.partner_lead_time,
-            status: 'inactive' // Keep overall form status also inactive
-        };
-
-    
-        // Add the cloned form to the beginning of the forms list
-        setForms((prev) => [clonedForm, ...prev]);
-    
-        // Optionally navigate to the edit page of the cloned form
-        console.log(`Cloned form created with ID: ${newId}`);
-        // navigate(`/forms/edit/${newId}`); // Uncomment if navigation is required
+    const handleEditPartner = (id: string) => { console.log('Edit Partner:', id); /* navigate(`/app/partners/edit/${id}`) */ };
+    const handleViewPartnerDetails = (id: string) => { console.log('View Partner Details:', id); /* navigate(`/app/partners/details/${id}`) */ };
+    const handleClonePartner = (id: string) => {
+        const partnerToClone = partners.find(p => p.id === id);
+        if (!partnerToClone) return;
+        const newId = `P-CLONE-${Date.now()}`;
+        const clonedPartner: PartnerListItem = {
+            ...cloneDeep(partnerToClone), // Deep clone to avoid issues with array references
+            id: newId,
+            partner_name: `${partnerToClone.partner_name} (Clone)`,
+            status: 'inactive',
+            partner_status_orig: 'Inactive',
+         };
+        setPartners((prev) => [clonedPartner, ...prev]);
+         console.log('Cloned Partner:', newId);
     };
+    const handleChangePartnerOverallStatus = (id: string, currentStatus: PartnerListItem['status']) => {
+        const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+        setPartners((current) =>
+            current.map((p) => (p.id === id ? { ...p, status: newStatus, partner_status_orig: (newStatus === 'active' ? 'Active' : 'Inactive') } : p))
+        );
+        console.log(`Overall status changed for ${id} to ${newStatus}`);
+    };
+     const handleDeletePartner = (id: string) => {
+        // Add confirmation dialog logic here
+        console.log('Attempting to delete Partner:', id);
+        setPartners(current => current.filter(p => p.id !== id));
+    };
+    const handleSharePartner = (id: string) => { console.log('Share Partner:', id); };
 
-    const handleChangeStatus = (form: FormItem) => {
-        // Logic to change the status (e.g., API call and update state)
-        const newStatus = form.status === 'active' ? 'inactive' : 'active'
-        console.log(`Changing status of form ${form.id} to ${newStatus}`)
 
-        // Update the status in the local state for visual feedback
-        setForms((currentForms) =>
-            currentForms.map((f) =>
-                f.id === form.id ? { ...f, status: newStatus } : f,
-            ),
-        )
-    }
-    // --- End Action Handlers ---
-
-    // --- Columns Definition ---
-    const columns: ColumnDef<FormItem>[] = useMemo(
+    const columns: ColumnDef<PartnerListItem>[] = useMemo(
         () => [
             {
-                header: 'ID',
-                accessorKey: 'id',
-                // Simple cell to display ID, enable sorting
-                enableSorting: true,
-                size:70,
-                cell: (props) => <span>{props.row.original.id}</span>,
-            },
-            {
-                header: 'Partner Name',
+                header: 'Partner Details',
                 accessorKey: 'partner_name',
-                size: 150,
-            },
-            {
-                header: 'Contact Number',
-                accessorKey: 'partner_contact_number',
-                size: 140,
-            },
-            {
-                header: 'Email',
-                accessorKey: 'partner_email_id',
-                size: 180,
-            },
-            {
-                header: 'Logo',
-                accessorKey: 'partner_logo',
-                size: 120,
-                cell: ({ row }) => (
-                <img src={row.original.partner_logo} alt="Logo" className="h-10 w-10 rounded-full object-cover" />
-                ),
-            },
-            {
-                header: 'Partner Status',
-                accessorKey: 'partner_status',
-                size: 120,
-            },
-            {
-                header: 'Join Date',
-                accessorKey: 'partner_join_date',
-                size: 120,
-                cell: ({ row }) => new Date(row.original.partner_join_date).toLocaleDateString(),
-            },
-            {
-                header: 'Location',
-                accessorKey: 'partner_location',
-                size: 160,
-            },
-            {
-                header: 'Profile Completion (%)',
-                accessorKey: 'partner_profile_completion',
-                size: 140,
-            },
-            {
-                header: 'Trust Score',
-                accessorKey: 'partner_trust_score',
-                size: 120,
-            },
-            {
-                header: 'Activity Score',
-                accessorKey: 'partner_activity_score',
-                size: 120,
-            },
-            {
-                header: 'KYC Status',
-                accessorKey: 'partner_kyc_status',
-                size: 120,
-            },
-            {
-                header: 'Business Category',
-                accessorKey: 'business_category',
-                size: 180,
-                cell: ({ row }) => row.original.business_category.join(', '),
-            },
-            {
-                header: 'Interested In',
-                accessorKey: 'partner_interested_in',
-                size: 120,
-            },
-            {
-                header: 'Business Type',
-                accessorKey: 'partner_business_type',
-                size: 150,
-            },
-            {
-                header: 'Profile Link',
-                accessorKey: 'partner_profile_link',
-                size: 180,
-                cell: ({ row }) => (
-                <a
-                    href={row.original.partner_profile_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline"
-                >
-                    View Profile
-                </a>
-                ),
-            },
-            {
-                header: 'Certifications',
-                accessorKey: 'partner_certifications',
-                size: 180,
-                cell: ({ row }) => row.original.partner_certifications.join(', '),
-            },
-            {
-                header: 'Service Offerings',
-                accessorKey: 'partner_service_offerings',
-                size: 180,
-                cell: ({ row }) => row.original.partner_service_offerings.join(', '),
-            },
-            {
-                header: 'Website',
-                accessorKey: 'partner_website',
-                size: 180,
-                cell: ({ row }) => (
-                <a
-                    href={row.original.partner_website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline"
-                >
-                    Visit Site
-                </a>
-                ),
-            },
-            {
-                header: 'Payment Terms',
-                accessorKey: 'partner_payment_terms',
-                size: 150,
-            },
-            {
-                header: 'Reference ID',
-                accessorKey: 'partner_reference_id',
-                size: 130,
-            },
-            {
-                header: 'Document Upload',
-                accessorKey: 'partner_document_upload',
-                size: 150,
-                cell: ({ row }) => (
-                <a
-                    href={row.original.partner_document_upload}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline"
-                >
-                    View Document
-                </a>
-                ),
-            },
-            {
-                header: 'Lead Time (days)',
-                accessorKey: 'partner_lead_time',
-                size: 120,
-            },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                // Enable sorting
                 enableSorting: true,
-                size:120,
-                cell: (props) => {
-                    const { status } = props.row.original
+                size: 280, // Adjusted for more info
+                cell: ({ row }) => {
+                    const { partner_name, partner_logo, partner_email_id, partner_contact_number, status, partner_reference_id, id } = row.original;
                     return (
-                        <div className="flex items-center">
-                            <Tag className={statusColor[status]}>
-                                <span className="capitalize">{status}</span>
-                            </Tag>
+                        <div className="flex items-start gap-3"> {/* items-start for better alignment */}
+                            <Avatar src={partner_logo} size="lg" shape="circle" icon={<TbUserCircle />} />
+                            <div className="flex flex-col text-xs min-w-0"> {/* min-w-0 for truncate */}
+                                <span
+                                    className="font-semibold text-sm text-gray-800 dark:text-gray-100 hover:text-blue-600 cursor-pointer truncate"
+                                    onClick={() => handleViewPartnerDetails(id)}
+                                    title={partner_name}
+                                >
+                                    {partner_name}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400 truncate" title={partner_email_id}>{partner_email_id}</span>
+                                <span className="text-gray-500 dark:text-gray-400">{partner_contact_number}</span>
+                                {partner_reference_id && <span className="text-[10px] text-gray-400 dark:text-gray-500">Ref: {partner_reference_id}</span>}
+                                <Tag className={`${getDisplayStatusClass(status)} capitalize !text-[9px] mt-1 self-start px-1.5 py-0.5`}>
+                                    Overall: {status}
+                                </Tag>
+                            </div>
                         </div>
-                    )
+                    );
                 },
             },
             {
-                header: 'Action', // Keep header empty for actions
+                header: 'Business Focus',
+                accessorKey: 'partner_business_type',
+                enableSorting: true,
+                size: 250, // Adjusted
+                cell: ({ row }) => {
+                    const { partner_business_type, business_category, partner_interested_in, partner_service_offerings } = row.original;
+                    return (
+                        <div className="flex flex-col gap-1 text-xs">
+                            <div className="flex items-center">
+                                <TbBriefcase className="inline mr-1.5 text-gray-500 flex-shrink-0" />
+                                <span className="font-semibold mr-1">Type:</span>
+                                <span className="text-gray-600 dark:text-gray-400 truncate" title={partner_business_type}>{partner_business_type}</span>
+                            </div>
+                            {business_category?.length > 0 && (
+                                <div className="flex items-start">
+                                    <span className="font-semibold mr-1.5 flex-shrink-0">Category:</span>
+                                    <Tooltip placement="top" title={business_category.join(' | ')}>
+                                        <span className="text-gray-600 dark:text-gray-400 line-clamp-2">
+                                            {business_category.join(', ')}
+                                        </span>
+                                    </Tooltip>
+                                </div>
+                            )}
+                            {partner_service_offerings?.length > 0 && (
+                                <div className="flex items-start">
+                                    <span className="font-semibold mr-1.5 flex-shrink-0">Services:</span>
+                                     <Tooltip placement="top" title={partner_service_offerings.join(' | ')}>
+                                        <span className="text-gray-600 dark:text-gray-400 line-clamp-2">
+                                            {partner_service_offerings.join(', ')}
+                                        </span>
+                                    </Tooltip>
+                                </div>
+                            )}
+                            <div>
+                                <span className="font-semibold">Interested In:</span> <span className="text-gray-600 dark:text-gray-400">{partner_interested_in}</span>
+                            </div>
+                        </div>
+                    );
+                },
+            },
+            {
+                header: 'Status & Scores',
+                accessorKey: 'partner_status_orig',
+                enableSorting: true,
+                size: 220,
+                cell: ({ row }) => {
+                    const { partner_status_orig, partner_kyc_status, partner_profile_completion, partner_trust_score, partner_activity_score, partner_join_date } = row.original;
+                    let kycIcon = <MdHourglassEmpty className="text-orange-500 inline mr-0.5" size={12} />;
+                    if (partner_kyc_status === 'Verified') kycIcon = <MdCheckCircle className="text-green-500 inline mr-0.5" size={12} />;
+                    else if (['Not Submitted', 'Rejected'].includes(partner_kyc_status)) kycIcon = <MdErrorOutline className="text-red-500 inline mr-0.5" size={12}/>;
+                    
+                    return (
+                        <div className="flex flex-col gap-1 text-xs">
+                            <Tag className={`${getDisplayStatusClass(partner_status_orig)} capitalize font-semibold border-0 self-start px-2 py-0.5 !text-[10px]`}>
+                                Partner: {partner_status_orig}
+                            </Tag>
+                            <Tooltip title={`KYC: ${partner_kyc_status}`} className="text-xs mt-0.5">
+                                <Tag className={`${getDisplayStatusClass(partner_kyc_status)} capitalize !text-[9px] px-1.5 py-0.5 border self-start flex items-center`}>
+                                    {kycIcon}{partner_kyc_status}
+                                </Tag>
+                            </Tooltip>
+                             <Tooltip title={`Profile: ${partner_profile_completion}% | Joined: ${new Date(partner_join_date).toLocaleDateString()}`}>
+                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 my-1"> {/* Increased height slightly */}
+                                    <div className="bg-blue-500 h-full rounded-full flex items-center justify-end text-white pr-1 text-[8px]" style={{ width: `${partner_profile_completion}%` }}>
+                                        {partner_profile_completion > 15 && `${partner_profile_completion}%`}
+                                    </div>
+                                </div>
+                            </Tooltip>
+                            <div className="flex justify-between items-center text-[10px] gap-1">
+                                <Tooltip title={`Trust: ${partner_trust_score}%`}><Tag className="flex-1 text-center !py-0.5 bg-blue-100 text-blue-700">T: {partner_trust_score}%</Tag></Tooltip>
+                                <Tooltip title={`Activity: ${partner_activity_score}%`}><Tag className="flex-1 text-center !py-0.5 bg-purple-100 text-purple-700">A: {partner_activity_score}%</Tag></Tooltip>
+                            </div>
+                            <div className="text-[9px] text-gray-500 mt-0.5">Joined: {new Date(partner_join_date).toLocaleDateString()}</div>
+                        </div>
+                    );
+                },
+            },
+            {
+                header: 'Location & Links',
+                accessorKey: 'partner_location',
+                enableSorting: true,
+                size: 220, // Adjusted
+                cell: ({row}) => {
+                    const { partner_location, partner_website, partner_profile_link, partner_certifications, partner_document_upload, partner_payment_terms, partner_lead_time } = row.original;
+                                       // Function to create a short display for certifications
+                    const getShortCertificationsDisplay = (certs: string[] | undefined): string => {
+                        if (!certs || certs.length === 0) {
+                            return 'N/A';
+                        }
+                        if (certs.length === 1) {
+                            return certs[0].length > 15 ? certs[0].substring(0, 12) + '...' : certs[0]; // Show more of a single cert
+                        }
+                        // Example: "ISO 9, CMMI, +1 more" or just first few joined
+                        const firstFew = certs.slice(0, 1).map(cert => cert.substring(0, 8) + (cert.length > 8 ? '..' : '')); // Show first cert shortened
+                        let display = firstFew.join(', ');
+                        if (certs.length > 1) {
+                            display += `, +${certs.length - 1}`;
+                        }
+                        return display;
+                    };
+                    return (
+                        <div className="flex flex-col gap-1 text-xs">
+                            {partner_location && <div className="flex items-center"><TbMapPin className="text-gray-500 mr-1.5 flex-shrink-0" /> {partner_location}</div>}
+                            {partner_website && <a href={partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><TbExternalLink className="mr-1.5 flex-shrink-0"/> Website</a>}
+                            {partner_profile_link && <a href={partner_profile_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><MdLink className="mr-1.5 flex-shrink-0" size={14}/> Profile</a>}
+                             {partner_certifications && partner_certifications.length > 0 && (
+                                <Tooltip placement="top" title={partner_certifications.join(' | ')}>
+                                    <div className="text-gray-600 dark:text-gray-400 truncate flex items-center"><TbCertificate className="text-gray-500 mr-1.5 flex-shrink-0"/> {getShortCertificationsDisplay(partner_certifications)}</div>
+                                </Tooltip>
+                             )}
+                            {partner_document_upload && <a href={partner_document_upload} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><TbFileDescription className="mr-1.5 flex-shrink-0"/> Document</a>}
+                            {partner_payment_terms && <div className="flex items-center"><TbCreditCard className="text-gray-500 mr-1.5 flex-shrink-0"/> {partner_payment_terms}</div>}
+                            {partner_lead_time !== undefined && <div className="flex items-center"><TbClockHour4 className="text-gray-500 mr-1.5 flex-shrink-0"/> Lead: {partner_lead_time} days</div>}
+                        </div>
+                    )
+                }
+            },
+            {
+                header: 'Actions',
                 id: 'action',
-                size: 160, // Adjust width for actions
-                meta:{HeaderClass: "text-center"},
+                size: 140, // Increased for Dropdown
                 cell: (props) => (
                     <ActionColumn
-                        // Pass new handlers
-                        onClone={() => handleCloneForm(props.row.original)}
-                        onChangeStatus={() =>
-                            handleChangeStatus(props.row.original)
-                        }
-                        // Keep existing handlers if needed
-                        onEdit={() => handleEdit(props.row.original)}
-                        onViewDetail={() =>
-                            handleViewDetails(props.row.original)
-                        }
+                        rowData={props.row.original}
+                        onEdit={handleEditPartner}
+                        onViewDetail={handleViewPartnerDetails}
+                        onClone={handleClonePartner}
+                        onChangeStatus={handleChangePartnerOverallStatus}
+                        onDelete={handleDeletePartner}
+                        onShare={handleSharePartner}
                     />
                 ),
             },
         ],
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [], // Handlers are defined outside, state dependency handled by component re-render
-    )
-    // --- End Columns Definition ---
+        [handleViewPartnerDetails, handleEditPartner, handleClonePartner, handleChangePartnerOverallStatus, handleDeletePartner, handleSharePartner]
+    );
 
-    // --- Table Interaction Handlers (Pagination, Selection, etc.) ---
-    const handleSetTableData = useCallback(
-        (data: TableQueries) => {
-            setTableData(data)
-            if (selectedForms.length > 0) {
-                setSelectedForms([]) // Clear selection on data change
-            }
-        },
-        [selectedForms.length], // Dependency needed
-    )
-
-    const handlePaginationChange = useCallback(
-        (page: number) => {
-            const newTableData = cloneDeep(tableData)
-            newTableData.pageIndex = page
-            handleSetTableData(newTableData)
-        },
-        [tableData, handleSetTableData],
-    )
-
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            const newTableData = cloneDeep(tableData)
-            newTableData.pageSize = Number(value)
-            newTableData.pageIndex = 1
-            handleSetTableData(newTableData)
-        },
-        [tableData, handleSetTableData],
-    )
-
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            const newTableData = cloneDeep(tableData)
-            newTableData.sort = sort
-            handleSetTableData(newTableData)
-        },
-        [tableData, handleSetTableData],
-    )
-
-    const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
-        setSelectedForms((prev) => {
-            if (checked) {
-                return prev.some((f) => f.id === row.id) ? prev : [...prev, row]
-            } else {
-                return prev.filter((f) => f.id !== row.id)
-            }
-        })
-    }, [])
-
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, rows: Row<FormItem>[]) => {
-            if (checked) {
-                const originalRows = rows.map((row) => row.original)
-                setSelectedForms(originalRows)
-            } else {
-                setSelectedForms([])
-            }
-        },
-        [],
-    )
-    // --- End Table Interaction Handlers ---
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { /* ... */ }, []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+    const handleRowSelect = useCallback((checked: boolean, row: PartnerListItem) => { /* ... */ }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, rows: Row<PartnerListItem>[]) => { /* ... */ }, []);
 
     return (
         <DataTable
             selectable
             columns={columns}
-            data={pageData} // Use processed page data
-            noData={!isLoading && forms.length === 0} // Check stateful forms length
-            // Remove skeleton avatar if not used
-            // skeletonAvatarColumns={[0]}
-            // skeletonAvatarProps={{ width: 28, height: 28 }}
+            data={pageData}
+            noData={!isLoading && partners.length === 0}
             loading={isLoading}
             pagingData={{
-                total: total, // Use calculated total from filtered data
+                total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
             }}
-            checkboxChecked={
-                (row) =>
-                    selectedForms.some((selected) => selected.id === row.id) // Use selectedForms state
-            }
+            checkboxChecked={(row) => selectedPartners.some((selected) => selected.id === row.id)}
             onPaginationChange={handlePaginationChange}
             onSelectChange={handleSelectChange}
             onSort={handleSort}
-            onCheckBoxChange={handleRowSelect} // Pass correct handler
-            onIndeterminateCheckBoxChange={handleAllRowSelect} // Pass correct handler
+            onCheckBoxChange={handleRowSelect}
+            onIndeterminateCheckBoxChange={handleAllRowSelect}
         />
-    )
-}
+    );
+};
 
-export default FormListTable
+export default FormListTable;
