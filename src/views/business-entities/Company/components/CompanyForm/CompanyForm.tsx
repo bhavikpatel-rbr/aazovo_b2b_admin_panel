@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react'
 import { Form } from '@/components/ui/Form'
 import Card from '@/components/ui/Card' // Keep Card
 import Container from '@/components/shared/Container'
-import PrimarySelectSection from './components/PrimaryDetailSection'
-import TradeInformation from './components/TradeInformation'
-import CompanyInformationDetailSection from './components/CompanyInformation'
-import CertificateDetailSection from './components/Certificates'
+import CompanyDetails from './components/CompanyDetails'
+// import TradeInformation from './components/TradeInformation'
 import Navigator, { NavigationItem } from './components/Navigator'
 // import useLayoutGap from '@/utils/hooks/useLayoutGap' // Not needed for this change
 // import useResponsive from '@/utils/hooks/useResponsive' // Not needed for this change
@@ -14,9 +12,10 @@ import { useForm } from 'react-hook-form'
 import type { ReactNode } from 'react'
 import type { CompanyFormSchema } from './types'
 import type { CommonProps } from '@/@types/common'
-import BranchesDetailSection from './components/Branches'
 import KYCDetailSection from './components/KYC'
-
+import AccessibilitySection from './components/Accessibility'
+import BankDetailsSection from './components/BankDetails'
+import MemberManagementSection from './components/MemberManagement'
 type CompanyFormProps = {
     children: ReactNode
     onFormSubmit: (values: CompanyFormSchema) => void
@@ -26,11 +25,11 @@ type CompanyFormProps = {
 
 type FormSectionKey =
     | 'companyDetails'
-    | 'tradeInformation'
-    | 'companyInformation'
-    | 'certificateAndLicenses'
-    | 'branches'
-    | 'kycDocuments';
+    | 'kycDocuments'
+    | 'bankDetails'
+    | 'accessibility'
+    | 'memberManagement'
+
 
 const CompanyForm = (props: CompanyFormProps) => {
     const { onFormSubmit, children, defaultValues } = props
@@ -61,19 +60,17 @@ const CompanyForm = (props: CompanyFormProps) => {
     const renderActiveSection = () => {
         switch (activeSection) {
             case 'companyDetails':
-                return <PrimarySelectSection control={control} errors={errors} />
-            case 'tradeInformation':
-                return <TradeInformation control={control} errors={errors} />
-            case 'companyInformation':
-                return <CompanyInformationDetailSection control={control} errors={errors} />
-            case 'certificateAndLicenses':
-                return <CertificateDetailSection control={control} errors={errors} />
-            case 'branches':
-                return <BranchesDetailSection control={control} errors={errors} />
+                return <CompanyDetails control={control} errors={errors} />
             case 'kycDocuments':
                 return <KYCDetailSection control={control} errors={errors} />
+            case 'bankDetails':
+                return <BankDetailsSection control={control} errors={errors} />
+            case 'accessibility':
+                return <AccessibilitySection control={control} errors={errors} />
+            case 'memberManagement':
+                return <MemberManagementSection control={control} errors={errors} />
             default:
-                return <PrimarySelectSection control={control} errors={errors} />
+                return <CompanyDetails control={control} errors={errors} />
         }
     }
 
