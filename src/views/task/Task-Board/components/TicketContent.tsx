@@ -347,7 +347,7 @@ const TicketContent = ({ onTicketClose }: { onTicketClose: () => void }) => {
                         </div>
                         <Tabs className="mt-6" defaultValue="comments">
                             <TabList>
-                                <TabNav value="comments">Activity Comments</TabNav>
+                                <TabNav value="comments">Activity Notes</TabNav>
                                 <TabNav value="attachments">Attachments</TabNav>
                             </TabList>
                             <div className="p-4">
