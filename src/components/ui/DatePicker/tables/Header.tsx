@@ -75,7 +75,7 @@ const Header = (props: HeaderProps) => {
                         preventFocus && event.preventDefault()
                     }
                 >
-                    {/* <HiChevronLeft /> */}
+                    <HiChevronLeft />
                 </button>
                 {renderChildren}
                 <button

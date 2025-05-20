@@ -15,6 +15,8 @@ import LayoutBase from '@/components//template/LayoutBase'
 import useResponsive from '@/utils/hooks/useResponsive'
 import { LAYOUT_COLLAPSIBLE_SIDE } from '@/constants/theme.constant'
 import type { CommonProps } from '@/@types/common'
+import ActiveItems from '@/components/template/Notification/ActiveItems'
+import Calender from '@/components/template/Notification/Calender'
 
 const CollapsibleSide = ({ children }: CommonProps) => {
     const { larger, smaller } = useResponsive()
@@ -46,12 +48,8 @@ const CollapsibleSide = ({ children }: CommonProps) => {
                         headerEnd={
                             <>
                                 <Notification />
-                                <div className='text-2xl header-action-item header-action-item-hoverable'>
-                                    <LiaUserCheckSolid/>
-                                </div>
-                                <div className='text-2xl header-action-item header-action-item-hoverable'>
-                                    <IoCalendarOutline/>
-                                </div>
+                                <ActiveItems/>
+                                <Calender/>
                                 <div className='text-2xl header-action-item header-action-item-hoverable'>
                                     <BiTask />
                                 </div>

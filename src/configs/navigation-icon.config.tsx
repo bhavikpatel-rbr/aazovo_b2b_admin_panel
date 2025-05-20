@@ -90,6 +90,8 @@ import {
     PiDotsThreeCircleDuotone,
     PiCircleHalfTiltDuotone,
     PiHouseLineDuotone,
+    PiBriefcaseDuotone,
+    PiTrophy,
 } from 'react-icons/pi'
 import { TbUserPentagon } from "react-icons/tb";
 import type { JSX } from 'react'
@@ -201,6 +203,8 @@ const navigationIcon: NavigationIcons = {
     sharedComponentDoc: <PiShareNetworkDuotone />,
     utilsDoc: <PiToolboxDuotone />,
     changeLog: <PiCodeDuotone />,
+    company : <PiBriefcaseDuotone/>,
+    leads : <PiTrophy/>
 }
 
 export default navigationIcon
