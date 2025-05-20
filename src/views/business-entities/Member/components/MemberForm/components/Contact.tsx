@@ -11,9 +11,9 @@ const ContactDetails = ({
 }: ContactDetailSectionProps) => {
 
     return (
-        <Card id="socialContactInformation" className="mt-6">
+        <Card id="socialContactInformation">
             <h4 className="mb-6">Social & Contact Information</h4>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
                 <FormItem
                     label="WhatsApp No."
                     invalid={Boolean(errors.whatsapp_number)}
@@ -29,15 +29,30 @@ const ContactDetails = ({
                 </FormItem>
 
                 <FormItem
-                    label="Office No."
-                    invalid={Boolean(errors.office_number)}
-                    errorMessage={errors.office_number?.message}
+                    label="Alternate Contact Number"
+                    invalid={Boolean(errors.alternate_contact_number)}
+                    errorMessage={errors.alternate_contact_number?.message}
                 >
                     <Controller
-                        name="office_number"
+                        name="alternate_contact_number"
                         control={control}
                         render={({ field }) => (
-                            <Input type="text" autoComplete="off" placeholder="Enter office number" {...field} />
+                            <Input type="text" autoComplete="off" placeholder="Enter alternate contact number" {...field} />
+                        )}
+                    />
+                </FormItem>
+
+                
+                <FormItem
+                    label="Alternate Email"
+                    invalid={Boolean(errors.alternate_email)}
+                    errorMessage={errors.alternate_email?.message}
+                >
+                    <Controller
+                        name="alternate_email"
+                        control={control}
+                        render={({ field }) => (
+                            <Input type="email" autoComplete="off" placeholder="Enter alternate email" {...field} />
                         )}
                     />
                 </FormItem>
@@ -85,20 +100,6 @@ const ContactDetails = ({
                 </FormItem>
 
                 <FormItem
-                    label="Website"
-                    invalid={Boolean(errors.website)}
-                    errorMessage={errors.website?.message}
-                >
-                    <Controller
-                        name="website"
-                        control={control}
-                        render={({ field }) => (
-                            <Input type="text" autoComplete="off" placeholder="https://yourwebsite.com" {...field} />
-                        )}
-                    />
-                </FormItem>
-
-                <FormItem
                     label="LinkedIn Profile"
                     invalid={Boolean(errors.linkedin_profile)}
                     errorMessage={errors.linkedin_profile?.message}
@@ -127,20 +128,6 @@ const ContactDetails = ({
                 </FormItem>
 
                 <FormItem
-                    label="Twitter Handle"
-                    invalid={Boolean(errors.twitter_handle)}
-                    errorMessage={errors.twitter_handle?.message}
-                >
-                    <Controller
-                        name="twitter_handle"
-                        control={control}
-                        render={({ field }) => (
-                            <Input type="text" autoComplete="off" placeholder="@twitterhandle" {...field} />
-                        )}
-                    />
-                </FormItem>
-
-                <FormItem
                     label="Instagram Handle"
                     invalid={Boolean(errors.instagram_handle)}
                     errorMessage={errors.instagram_handle?.message}
@@ -150,76 +137,6 @@ const ContactDetails = ({
                         control={control}
                         render={({ field }) => (
                             <Input type="text" autoComplete="off" placeholder="@instagramhandle" {...field} />
-                        )}
-                    />
-                </FormItem>
-
-                <FormItem
-                    label="Telegram ID"
-                    invalid={Boolean(errors.telegram_id)}
-                    errorMessage={errors.telegram_id?.message}
-                >
-                    <Controller
-                        name="telegram_id"
-                        control={control}
-                        render={({ field }) => (
-                            <Input type="text" autoComplete="off" placeholder="Enter Telegram ID" {...field} />
-                        )}
-                    />
-                </FormItem>
-
-                <FormItem
-                    label="Snapchat ID"
-                    invalid={Boolean(errors.snapchat_id)}
-                    errorMessage={errors.snapchat_id?.message}
-                >
-                    <Controller
-                        name="snapchat_id"
-                        control={control}
-                        render={({ field }) => (
-                            <Input type="text" autoComplete="off" placeholder="Enter Snapchat ID" {...field} />
-                        )}
-                    />
-                </FormItem>
-
-                <FormItem
-                    label="YouTube Channel"
-                    invalid={Boolean(errors.youtube_channel)}
-                    errorMessage={errors.youtube_channel?.message}
-                >
-                    <Controller
-                        name="youtube_channel"
-                        control={control}
-                        render={({ field }) => (
-                            <Input type="text" autoComplete="off" placeholder="YouTube channel URL" {...field} />
-                        )}
-                    />
-                </FormItem>
-
-                <FormItem
-                    label="Personal Email"
-                    invalid={Boolean(errors.personal_email)}
-                    errorMessage={errors.personal_email?.message}
-                >
-                    <Controller
-                        name="personal_email"
-                        control={control}
-                        render={({ field }) => (
-                            <Input type="email" autoComplete="off" placeholder="Enter personal email" {...field} />
-                        )}
-                    />
-                </FormItem>
-
-                <FormItem
-                    label="Alternate Email"
-                    invalid={Boolean(errors.alternate_email)}
-                    errorMessage={errors.alternate_email?.message}
-                >
-                    <Controller
-                        name="alternate_email"
-                        control={control}
-                        render={({ field }) => (
-                            <Input type="email" autoComplete="off" placeholder="Enter alternate email" {...field} />
                         )}
                     />
                 </FormItem>

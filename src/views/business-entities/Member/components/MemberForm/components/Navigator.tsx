@@ -1,66 +1,55 @@
-import Avatar from '@/components/ui/Avatar'
-// eslint-disable-next-line import/named
-import { Link } from 'react-scroll'
-import { TbMicrophone, TbUsersGroup, TbBusinessplan, TbGitPullRequest, TbCertificate2, TbInfoSquare, TbFileInfo } from 'react-icons/tb'
+// components/Navigator.tsx (For MemberForm - matching CompanyForm's Navigator style)
 
-const navigationList = [
-    {
-        label: 'Personal Details',
-        link: 'personalDetails',
-        icon: <TbFileInfo />,
-    },
-    {
-        label: 'Social & Contact Information',
-        link: 'socialContactInformation',
-        icon: <TbMicrophone />,
-    },
-    {
-        label: 'Member Accessibility',
-        link: 'memberAccessibility',
-        icon: <TbUsersGroup />,
-    },
-    {
-        label: 'Membership Plan Details',
-        link: 'membershipPlanDetails',
-        icon: <TbBusinessplan />,
-    },
-        {
-        label: 'Request & Feedbacks',
-        link: 'requestAndFeedbacks',
-        icon: <TbGitPullRequest />,
-    },
-]
+import classNames from 'classnames';
 
-const Navigator = () => {
-    return (
-        <div className="flex flex-col gap-2">
-            {navigationList.map((nav) => (
-                <Link
-                    key={nav.label}
-                    activeClass="bg-gray-100 dark:bg-gray-700 active"
-                    className="cursor-pointer p-2 rounded-xl group hover:bg-gray-100 dark:hover:bg-gray-700"
-                    to={nav.link}
-                    spy={true}
-                    smooth={true}
-                    duration={500}
-                    offset={-80}
-                >
-                    <span className="flex items-center gap-2">
-                        <Avatar
-                            icon={nav.icon}
-                            className="bg-gray-100 dark:bg-gray-700 group-hover:bg-white group-[.active]:bg-white dark:group-hover:bg-gray-800 dark:group-[.active]:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        />
-                        <span className="flex flex-col flex-1">
-                            <span className="heading-text font-bold">
-                                {nav.label}
-                            </span>
-                            {/* <span>{nav.description}</span> */}
-                        </span>
-                    </span>
-                </Link>
-            ))}
-        </div>
-    )
+// Member Form specific navigation items
+export const navigationList = [
+    { label: 'Personal Details', link: 'personalDetails' }, // Consider shorter labels like "Personal" if space is an issue
+    { label: 'Contact Info', link: 'socialContactInformation' }, // Shorter
+    { label: 'Member Profile', link: 'memberProfile' },              // Shorter
+    { label: 'Accessibilities', link: 'memberAccessibility' },    // Shorter
+    { label: 'Membership Details', link: 'membershipPlanDetails' },// Shorter
+    { label: 'Feedback / Requests', link: 'requestAndFeedbacks' },       // Shorter
+];
+
+export type NavigationItem = typeof navigationList[0];
+
+type NavigatorProps = {
+    activeSection: string;
+    onNavigate: (sectionKey: string) => void;
 }
 
-export default Navigator
+const Navigator = (props: NavigatorProps) => {
+    const { activeSection, onNavigate } = props;
+
+    return (
+        // Copied directly from CompanyForm's Navigator container style
+        <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-hidden">
+            {navigationList.map((nav) => (
+                <button
+                    type="button"
+                    key={nav.link}
+                    className={classNames(
+                        // Copied directly from CompanyForm's Navigator button style
+                        'cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0',
+                        'hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none',
+                        {
+                            // Copied directly from CompanyForm's Navigator active/inactive style
+                            'bg-indigo-50 dark:bg-indigo-700/60 text-[#2a85ff] dark:text-indigo-200 font-semibold': activeSection === nav.link,
+                            'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200': activeSection !== nav.link
+                        }
+                    )}
+                    onClick={() => onNavigate(nav.link)}
+                    title={nav.label} // Shows full label on hover
+                >
+                    {/* Copied directly from CompanyForm's Navigator text span style */}
+                    <span className="font-medium text-[10px] xxs:text-xs sm:text-sm truncate">
+                        {nav.label}
+                    </span>
+                </button>
+            ))}
+        </div>
+    );
+}
+
+export default Navigator;

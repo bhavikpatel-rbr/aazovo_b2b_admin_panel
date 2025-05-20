@@ -4,18 +4,39 @@ import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types'
 import Select from '@/components/ui/Select'
-import Checkbox from '@/components/ui/Checkbox'
 
 type PersonalDetailSectionProps = FormSectionBaseProps
 const PersonalDetails = ({
-    control,
-    errors,
+  control,
+  errors,
 }: PersonalDetailSectionProps) => {
 
-    return (
-        <Card id="personalDetails" className="mt-6">
+  // Example options, replace with your actual data sources
+  const cityOptions = [
+    { label: 'New York', value: 'new_york' },
+    { label: 'London', value: 'london' },
+    { label: 'Tokyo', value: 'tokyo' },
+  ]
+  const stateOptions = [
+    { label: 'New York', value: 'ny' },
+    { label: 'California', value: 'ca' },
+    { label: 'Texas', value: 'tx' },
+  ]
+  const countryOptions = [
+    { label: 'United States', value: 'us' },
+    { label: 'United Kingdom', value: 'uk' },
+    { label: 'Japan', value: 'jp' },
+  ]
+  const continentOptions = [
+    { label: 'North America', value: 'north_america' },
+    { label: 'Europe', value: 'europe' },
+    { label: 'Asia', value: 'asia' },
+  ]
+
+  return (
+    <Card id="personalDetails">
       <h4 className="mb-6">Personal Details</h4>
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
 
         {/* Status Dropdown */}
         <FormItem
@@ -26,18 +47,18 @@ const PersonalDetails = ({
           <Controller
             name="status"
             control={control}
-            render={() => (
-                <Select
-                    size="sm"
-                    className="mb-4"
-                    placeholder="Please Select"
-                    options={[
-                        { label: 'Active', value: 'active' },
-                        { label: 'Inactive', value: 'inactive' },
-                        { label: 'Pending', value: 'pending' },
-                    ]}
-                >
-                </Select>
+            render={({ field }) => (
+              <Select
+                size="sm"
+                className="mb-4"
+                placeholder="Please Select"
+                options={[
+                  { label: 'Active', value: 'active' },
+                  { label: 'Inactive', value: 'inactive' },
+                  { label: 'Pending', value: 'pending' },
+                ]}
+                {...field}
+              />
             )}
           />
         </FormItem>
@@ -102,141 +123,6 @@ const PersonalDetails = ({
           />
         </FormItem>
 
-        {/* Alternate Mobile Number */}
-        <FormItem
-          label="Alternate Mobile Number"
-          invalid={Boolean(errors.alternate_mobile_number)}
-          errorMessage={errors.alternate_mobile_number?.message}
-        >
-          <Controller
-            name="alternate_mobile_number"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="text"
-                autoComplete="off"
-                placeholder="Secondary contact number"
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
-
-        {/* Alternate Email */}
-        <FormItem
-          label="Alternate Email"
-          invalid={Boolean(errors.alternate_email)}
-          errorMessage={errors.alternate_email?.message}
-        >
-          <Controller
-            name="alternate_email"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="email"
-                autoComplete="off"
-                placeholder="Secondary email address"
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
-
-        {/* Password */}
-        <FormItem
-          label="Password"
-          invalid={Boolean(errors.password)}
-          errorMessage={errors.password?.message}
-        >
-          <Controller
-            name="password"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="password"
-                autoComplete="new-password"
-                placeholder="Set password"
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
-
-        {/* Interested Category Dropdown */}
-        <FormItem
-          label="Interested Category"
-          invalid={Boolean(errors.interested_category)}
-          errorMessage={errors.interested_category?.message}
-        >
-          <Controller
-            name="interested_category"
-            control={control}
-            render={() => (
-              <Select
-                    size="sm"
-                    className="mb-4"
-                    placeholder="Please Select"
-                    options={[
-                        { label: 'Category 1', value: 'category1' },
-                        { label: 'Category 2', value: 'category2' },
-                        { label: 'Category 3', value: 'category3' },
-                    ]}
-                >
-                </Select>
-            )}
-          />
-        </FormItem>
-
-        {/* Interested Sub Category Dropdown */}
-        <FormItem
-          label="Interested Sub Category"
-          invalid={Boolean(errors.interested_sub_category)}
-          errorMessage={errors.interested_sub_category?.message}
-        >
-          <Controller
-            name="interested_sub_category"
-            control={control}
-            render={() => (
-              <Select
-                    size="sm"
-                    className="mb-4"
-                    placeholder="Please Select"
-                    options={[ 
-                        { label: 'Sub Category 1', value: 'subcategory1' },
-                        { label: 'Sub Category 2', value: 'subcategory2' },
-                        { label: 'Sub Category 3', value: 'subcategory3' },
-                    ]}
-                >
-                </Select>
-            )}
-          />
-        </FormItem>
-
-        {/* Favourite Brands Multi-Select */}
-        <FormItem
-          label="Favourite Brands"
-          invalid={Boolean(errors.favourite_brands)}
-          errorMessage={errors.favourite_brands?.message}
-        >
-          <Controller
-            name="favourite_brands"
-            control={control}
-            render={() => (
-              <Select
-                    size="sm"
-                    className="mb-4"
-                    placeholder="Please Select"
-                    options={[
-                        { label: 'Brand 1', value: 'brand1' },
-                        { label: 'Brand 2', value: 'brand2' },
-                        { label: 'Brand 3', value: 'brand3' },
-                    ]}
-                >
-                </Select>
-            )}
-          />
-        </FormItem>
-
         {/* Company Name (Temp) */}
         <FormItem
           label="Company Name (Temp)"
@@ -257,129 +143,109 @@ const PersonalDetails = ({
           />
         </FormItem>
 
-        {/* Business Type Dropdown */}
+        {/* City */}
         <FormItem
-          label="Business Type"
-          invalid={Boolean(errors.business_type)}
-          errorMessage={errors.business_type?.message}
+          label="City"
+          invalid={Boolean(errors.city)}
+          errorMessage={errors.city?.message}
         >
           <Controller
-            name="business_type"
-            control={control}
-            render={() => (
-              <Select
-                    size="sm"
-                    className="mb-4"
-                    placeholder="Please Select"
-                    options={[
-                        { label: 'Type 1', value: 'type1' },
-                        { label: 'Type 2', value: 'type2' },
-                        { label: 'Type 3', value: 'type3' },
-                    ]}
-                >
-                </Select>
-            )}
-          />
-        </FormItem>
-
-        {/* Interested For Dropdown */}
-        <FormItem
-          label="Interested For"
-          invalid={Boolean(errors.interested_for)}
-          errorMessage={errors.interested_for?.message}
-        >
-          <Controller
-            name="interested_for"
-            control={control}
-            render={() => (
-              <Select
-                    size="sm"
-                    className="mb-4"
-                    placeholder="Please Select"
-                    options={[
-                        { label: 'Interested For 1', value: 'interested_for1' },
-                        { label: 'Interested For 2', value: 'interested_for2' },
-                        { label: 'Interested For 3', value: 'interested_for3' },
-                    ]}
-                >
-                </Select>
-            )}
-          />
-        </FormItem>
-
-        {/* GMI (RM) Dropdown */}
-        <FormItem
-          label="GMI (RM)"
-          invalid={Boolean(errors.gmi_rm)}
-          errorMessage={errors.gmi_rm?.message}
-        >
-          <Controller
-            name="gmi_rm"
-            control={control}
-render={() => (
-              <Select
-                    size="sm"
-                    className="mb-4"
-                    placeholder="Please Select"
-                    options={[
-                        { label: 'GMI 1', value: 'gmi1' },
-                        { label: 'GMI 2', value: 'gmi2' },
-                        { label: 'GMI 3', value: 'gmi3' },
-                    ]}
-                >
-                </Select>
-            )}
-          />
-        </FormItem>
-
-        {/* Dealing in Bulk Checkbox */}
-        <FormItem
-          label="Dealing in Bulk"
-          invalid={Boolean(errors.dealing_in_bulk)}
-          errorMessage={errors.dealing_in_bulk?.message}
-        >
-          <Controller
-            name="dealing_in_bulk"
+            name="city"
             control={control}
             render={({ field }) => (
-                <Checkbox
-                defaultChecked={!!field.value}
-                onChange={(checked: boolean, e: React.ChangeEvent<HTMLInputElement>) => field.onChange(checked)}
-                >
-                Checkbox
-                </Checkbox>
+              <Select
+                size="sm"
+                placeholder="Select City"
+                options={cityOptions}
+                {...field}
+              />
             )}
           />
         </FormItem>
 
-        {/* Assigned Company Dropdown or Text Input */}
+        {/* State */}
         <FormItem
-          label="Assigned Company"
-          invalid={Boolean(errors.assigned_company)}
-          errorMessage={errors.assigned_company?.message}
+          label="State"
+          invalid={Boolean(errors.state)}
+          errorMessage={errors.state?.message}
         >
           <Controller
-            name="assigned_company"
+            name="state"
             control={control}
-render={() => (
+            render={({ field }) => (
               <Select
-                    size="sm"
-                    className="mb-4"
-                    placeholder="Please Select"
-                    options={[
-                        { label: 'Company 1', value: 'company1' },
-                        { label: 'Company 2', value: 'company2' },
-                        { label: 'Company 3', value: 'company3' },
-                    ]}
-                >
-                </Select>
+                size="sm"
+                placeholder="Select State"
+                options={stateOptions}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+
+        {/* Country */}
+        <FormItem
+          label="Country"
+          invalid={Boolean(errors.country)}
+          errorMessage={errors.country?.message}
+        >
+          <Controller
+            name="country"
+            control={control}
+            render={({ field }) => (
+              <Select
+                size="sm"
+                placeholder="Select Country"
+                options={countryOptions}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+
+        {/* Continent */}
+        <FormItem
+          label="Continent"
+          invalid={Boolean(errors.continent)}
+          errorMessage={errors.continent?.message}
+        >
+          <Controller
+            name="continent"
+            control={control}
+            render={({ field }) => (
+              <Select
+                size="sm"
+                placeholder="Select Continent"
+                options={continentOptions}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+
+        {/* Pincode */}
+        <FormItem
+          label="Pincode"
+          invalid={Boolean(errors.pincode)}
+          errorMessage={errors.pincode?.message}
+        >
+          <Controller
+            name="pincode"
+            control={control}
+            render={({ field }) => (
+              <Input
+                type="text"
+                autoComplete="off"
+                placeholder="Enter pincode"
+                {...field}
+              />
             )}
           />
         </FormItem>
 
       </div>
     </Card>
-    )
+  )
 }
 
-export default PersonalDetails
+export default PersonalDetails;

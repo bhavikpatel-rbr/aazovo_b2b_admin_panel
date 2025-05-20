@@ -211,7 +211,7 @@ const SettingsProfile = () => {
                         )}
                     />
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                     <FormItem
                         label="First name"
                         invalid={Boolean(errors.firstName)}

@@ -16,7 +16,6 @@ const Member = () => {
                             <h5>Member</h5>
                             <FormListActionTools />
                         </div>
-                        <FormListTableTools />
                         <FormListTable />
                     </div>
                 </AdaptiveCard>

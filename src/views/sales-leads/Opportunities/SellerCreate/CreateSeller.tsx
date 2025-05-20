@@ -7,7 +7,7 @@ const CreateSellerForm = () => {
     return (
         <Card>
             <h4 className="mb-6">Create Seller</h4>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
 
                 <FormItem label="Opportunity ID">
                     <Input placeholder="Opportunity ID" />
