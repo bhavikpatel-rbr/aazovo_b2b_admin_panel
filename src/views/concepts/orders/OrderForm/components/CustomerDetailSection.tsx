@@ -74,7 +74,7 @@ const CustomerDetailSection = ({
     return (
         <Card id="customerDetails">
             <h4 className="mb-6">Customer details</h4>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
                 <FormItem
                     label="First Name"
                     invalid={Boolean(errors.firstName)}

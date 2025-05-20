@@ -7,7 +7,7 @@ const CreateOffer = () => {
     return (
         <Card>
             <h4 className="mb-6">Create Offer</h4>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
 
                 <FormItem label="Offer Name">
                     <Input placeholder="Enter offer name" />

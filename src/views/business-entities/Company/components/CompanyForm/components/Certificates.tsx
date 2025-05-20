@@ -15,7 +15,7 @@ const CerificateDetailSection = ({
     return (
         <Card id="certificateAndLicenses">
             <h4 className="mb-6">Certificates</h4>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
                 <FormItem
                     label="Certificate Name"
                     invalid={Boolean(errors.certificate_name)}
