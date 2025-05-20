@@ -348,7 +348,7 @@ const AutoEmailListing = () => {
             { header: 'User Name', accessorKey: 'userName', size: 200, enableSorting: true, cell: props => <div className="flex items-center gap-2"><TbUserCircle className="text-xl"/> {props.getValue<string>()}</div> },
             { header: 'Status', accessorKey: 'status', size: 120, enableSorting: true, cell: props => <Tag className={classNames('capitalize whitespace-nowrap', autoEmailStatusColor[props.getValue<AutoEmailStatus>()])}>{AUTO_EMAIL_STATUS_OPTIONS.find(o=>o.value === props.getValue())?.label}</Tag> },
             {
-                header: 'Actions', id: 'actions', meta:{ headerClass: "text-center", cellClass: "text-center" }, size: 130,
+                header: 'Actions', id: 'actions', size: 200, meta: { HeaderClass: 'text-center' },
                 cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} />,
             },
         ],

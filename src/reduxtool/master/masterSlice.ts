@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDocumentListAction, getDocumentTypeAction, getExportMappingsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getSlidersAction, getUnitAction, getWallItemsAction } from "./middleware"
+import { addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getBugReportsAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getExportMappingsAction, getJobDepartmentsAction, getJobPostsAction, getNumberSystemsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getSlidersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction } from "./middleware"
 import { deletPaymentTermAsync } from "./services"
 
 const INITIAL_STATE: any = {
@@ -114,7 +114,7 @@ const masterSlice = createSlice({
     }))
     builder.addCase(getExportMappingsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      exportMappingData: payload
+      apiExportMappings: payload
     }))
     builder.addCase(getCategoriesAction.fulfilled, (state, { payload }) => ({
       ...state,
@@ -150,6 +150,50 @@ const masterSlice = createSlice({
       ...state,
       rawProfileArrayFromState: payload
     }))
+    builder.addCase(getTrendingImagesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      trendingImagesData: payload
+    }))
+
+    builder.addCase(getTrendingCarouselAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      trendingCarouselData: payload
+    }))
+    builder.addCase(getProductSpecificationsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      ProductSpecificationsData: payload
+    }))
+    builder.addCase(getDesignationsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      designationsData: payload
+    }))
+    builder.addCase(getDepartmentsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      departmentsData: payload
+    }))
+    builder.addCase(getNumberSystemsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      numberSystemsData: payload
+    }))
+    builder.addCase(getDomainsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      domainsData: payload
+    }))
+    builder.addCase(getJobDepartmentsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      jobDepartmentsData: payload
+    }))
+    builder.addCase(getJobPostsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      jobPostsData: payload
+    }))
+
+    builder.addCase(getBugReportsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      bugReportsData: payload
+    }))
+
+
 
 
   },

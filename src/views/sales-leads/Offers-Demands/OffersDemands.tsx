@@ -749,18 +749,23 @@ const OffersDemands = () => {
                     )
                 },
             },
+            // In columns definition
             {
-                header: '',
+                header: 'Actions',
                 id: 'action',
-                width: 100, // Adjusted width for fewer actions
+                size: 200,
+                meta: { HeaderClass: 'text-center' },
                 cell: (props) => (
-                    <ActionColumn
-                        onClone={() => handleClone(props.row.original)} // Keep clone optional
-                        onEdit={() => handleEdit(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                    />
+                    <div className="flex items-center justify-center gap-2">
+                        <ActionColumn
+                            onClone={() => handleClone(props.row.original)}
+                            onEdit={() => handleEdit(props.row.original)}
+                            onDelete={() => handleDelete(props.row.original)}
+                        />
+                    </div>
                 ),
             },
+
         ],
         [
             handleClone,

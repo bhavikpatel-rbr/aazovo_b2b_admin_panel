@@ -41,6 +41,33 @@ const masterRoutes: Routes = [
         },
     },
     {
+        key: 'master.jobApplication',
+        path: `${MASTER_PREFIX_PATH}/job-application`,
+        component: lazy(() => import('@/views/master/Job-Application')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'master.jobPost',
+        path: `${MASTER_PREFIX_PATH}/job-post`,
+        component: lazy(() => import('@/views/master/Job-Posts')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'master.jobDepartment',
+        path: `${MASTER_PREFIX_PATH}/job-department`,
+        component: lazy(() => import('@/views/master/Job-Department')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'master.continents',
         path: `${MASTER_PREFIX_PATH}/continents`,
         component: lazy(() => import('@/views/master/Continents')),
@@ -71,6 +98,15 @@ const masterRoutes: Routes = [
         key: 'master.paymentTerms',
         path: `${MASTER_PREFIX_PATH}/payment-terms`,
         component: lazy(() => import('@/views/master/Payment-Terms')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'master.productSpecification',
+        path: `${MASTER_PREFIX_PATH}/product-specification`,
+        component: lazy(() => import('@/views/master/Product-Specification')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',

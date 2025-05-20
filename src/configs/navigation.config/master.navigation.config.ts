@@ -52,6 +52,70 @@ const masterNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
+                key: 'master.jobApplication',
+                path: `${MASTER_PREFIX_PATH}/job-application`,
+                title: 'Job Application',
+                translateKey: 'nav.master.jobApplication',
+                icon: 'jobApplication',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.master.jobApplication',
+                        label: 'Manage job applications',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'master.jobDepartment',
+                path: `${MASTER_PREFIX_PATH}/job-department`,
+                title: 'Job Department',
+                translateKey: 'nav.master.jobDepartment',
+                icon: 'jobDepartment',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.master.jobDepartment',
+                        label: 'Manage job departments',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'master.jobPost',
+                path: `${MASTER_PREFIX_PATH}/job-post`,
+                title: 'Job Post',
+                translateKey: 'nav.master.jobPost',
+                icon: 'jobPost',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.master.jobPost',
+                        label: 'Manage job posts',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'master.productSpecification',
+                path: `${MASTER_PREFIX_PATH}/product-specification`,
+                title: 'Product Specification',
+                translateKey: 'nav.master.productSpecification',
+                icon: 'productSpecification',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.master.productSpecificationDesc',
+                        label: 'Manage product specifications',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'master.currency',
                 path: `${MASTER_PREFIX_PATH}/currency`,
                 title: 'Currency',

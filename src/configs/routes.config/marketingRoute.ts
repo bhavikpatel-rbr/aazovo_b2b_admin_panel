@@ -5,7 +5,7 @@ import type { Routes } from '@/@types/routes';
 
 const marketingRoute: Routes = [
     {
-        key: 'businessEntities.subscriber',
+        key: 'userengagement.subscriber',
         path: `${MARKETING_PREFIX_PATH}/subscriber`,
         component: lazy(() => import('@/views/business-entities/Subscribers')),
         authority: [ADMIN, USER],
@@ -14,7 +14,7 @@ const marketingRoute: Routes = [
         },
     },
     {
-        key: 'businessEntities.requestFeedback',
+        key: 'userengagement.requestFeedback',
         path: `${MARKETING_PREFIX_PATH}/request-feedback`,
         component: lazy(() => import('@/views/business-entities/RequestFeedback')),
         authority: [ADMIN, USER],

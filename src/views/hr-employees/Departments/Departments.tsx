@@ -1,12 +1,11 @@
-// src/views/your-path/Departments.tsx (New file name)
+// src/views/your-path/Departments.tsx
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
-// import { Link, useNavigate } from 'react-router-dom'; // Not used by Units
 import cloneDeep from 'lodash/cloneDeep';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import classNames from 'classnames'; // Ensure this is installed or replace
+import classNames from 'classnames';
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
@@ -38,23 +37,26 @@ import {
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
 import type { TableQueries } from '@/@types/common';
 
-// Redux (Assuming you might have specific actions for Departments)
-// import { useAppDispatch } from '@/reduxtool/store';
-// import {
-//     getDepartmentsAction,
-//     addDepartmentAction,
-//     editDepartmentAction,
-//     deleteDepartmentAction, // Corrected: delet -> delete
-//     deleteAllDepartmentsAction, // Corrected: deletAll -> deleteAll
-// } from '@/reduxtool/master/departmentMiddleware'; // Example path
-// import { useSelector } from 'react-redux';
-// import { masterSelector } from '@/reduxtool/master/masterSlice'; // Or a specific departmentSlice
+// Redux
+import { useAppDispatch } from '@/reduxtool/store';
+import {
+    getDepartmentsAction,
+    addDepartmentAction,
+    editDepartmentAction,
+    deleteDepartmentAction,
+    deleteAllDepartmentsAction, // Ensure this action exists and handles payload correctly
+} from '@/reduxtool/master/middleware'; // Adjust path if necessary
+import { useSelector } from 'react-redux';
+import { masterSelector } from '@/reduxtool/master/masterSlice';
 
 
-// --- Define Department Type ---
+// --- Define Department Type (Matches your API response for listing) ---
 export type DepartmentItem = {
     id: string | number;
-    name: string; // Department Name
+    name: string;
+    created_by?: string;
+    created_at?: string;
+    updated_at?: string;
 };
 
 // --- Zod Schema for Add/Edit Department Form ---
@@ -163,8 +165,8 @@ const DepartmentsTable = ({ columns, data, loading, pagingData, selectedItems, o
 );
 
 // --- DepartmentsSelectedFooter Component ---
-type DepartmentsSelectedFooterProps = { selectedItems: DepartmentItem[]; onDeleteSelected: () => void; };
-const DepartmentsSelectedFooter = ({ selectedItems, onDeleteSelected }: DepartmentsSelectedFooterProps) => {
+type DepartmentsSelectedFooterProps = { selectedItems: DepartmentItem[]; onDeleteSelected: () => void; isDeleting: boolean };
+const DepartmentsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: DepartmentsSelectedFooterProps) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
     const handleDeleteClick = () => setDeleteConfirmationOpen(true);
     const handleCancelDelete = () => setDeleteConfirmationOpen(false);
@@ -182,13 +184,14 @@ const DepartmentsSelectedFooter = ({ selectedItems, onDeleteSelected }: Departme
                         </span>
                     </span>
                     <div className="flex items-center gap-3">
-                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick}>Delete Selected</Button>
+                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button>
                     </div>
                 </div>
             </StickyFooter>
             <ConfirmDialog
                 isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Department${selectedItems.length > 1 ? 's' : ''}`}
                 onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete}
+                // The loading prop on ConfirmDialog itself might not be needed if the button above shows loading
             >
                 <p>Are you sure you want to delete the selected department{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p>
             </ConfirmDialog>
@@ -196,29 +199,20 @@ const DepartmentsSelectedFooter = ({ selectedItems, onDeleteSelected }: Departme
     );
 };
 
-// --- Initial Dummy Data (for local state example) ---
-const initialDummyDepartments: DepartmentItem[] = [
-    { id: 'DEPT001', name: 'Engineering' }, { id: 'DEPT002', name: 'Marketing' },
-    { id: 'DEPT003', name: 'Sales' }, { id: 'DEPT004', name: 'Human Resources' },
-    { id: 'DEPT005', name: 'Finance' },
-];
 
 // --- Main Departments Component ---
 const Departments = () => {
-    // const dispatch = useAppDispatch();
-    // const { data: departmentsData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector); // Adjust for actual slice
-
-    // Using local state for this example
-    const [departmentsData, setDepartmentsData] = useState<DepartmentItem[]>(initialDummyDepartments);
-    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
+    const dispatch = useAppDispatch();
+    // Assuming 'departmentsData' is a field in your masterSlice state
+    const { departmentsData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
 
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<DepartmentItem | null>(null);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false); // For Add/Edit form submissions
+    const [isDeleting, setIsDeleting] = useState(false); // For single delete and bulk delete operations
 
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<DepartmentItem | null>(null);
@@ -229,7 +223,9 @@ const Departments = () => {
     });
     const [selectedItems, setSelectedItems] = useState<DepartmentItem[]>([]);
 
-    // useEffect(() => { dispatch(getDepartmentsAction()); }, [dispatch]); // For Redux
+    useEffect(() => {
+        dispatch(getDepartmentsAction()); // Fetch initial data
+    }, [dispatch]);
 
     const addFormMethods = useForm<DepartmentFormData>({ resolver: zodResolver(departmentFormSchema), defaultValues: { name: '' }, mode: 'onChange' });
     const editFormMethods = useForm<DepartmentFormData>({ resolver: zodResolver(departmentFormSchema), defaultValues: { name: '' }, mode: 'onChange' });
@@ -239,20 +235,24 @@ const Departments = () => {
     const closeAddDrawer = useCallback(() => { addFormMethods.reset({ name: '' }); setIsAddDrawerOpen(false); }, [addFormMethods]);
 
     const onAddDepartmentSubmit = useCallback(async (data: DepartmentFormData) => {
-        setIsSubmitting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
+        setIsSubmitting(true);
         try {
-            // await dispatch(addDepartmentAction({ name: data.name })).unwrap(); // Redux
-            const newDepartment: DepartmentItem = { id: `DEPT${Date.now()}`, name: data.name };
-            setDepartmentsData(prev => [newDepartment, ...prev]);
+            // The payload for addDepartmentAction should match what your backend API / Redux thunk expects.
+            // Typically, for adding, you might only send the 'name'.
+            // The backend would generate id, created_at, updated_at, created_by.
+            const payload = { name: data.name };
+            await dispatch(addDepartmentAction(payload)).unwrap();
 
             toast.push(<Notification title="Department Added" type="success" duration={2000}>{`Department "${data.name}" added.`}</Notification>);
             closeAddDrawer();
-            // dispatch(getDepartmentsAction()); // Redux
+            dispatch(getDepartmentsAction()); // Re-fetch to get the latest list including the new item
         } catch (error: any) {
             toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{error.message || 'Could not add department.'}</Notification>);
-        } finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
-    }, [closeAddDrawer /*, dispatch*/]);
+            console.error("Add Department Error:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [dispatch, closeAddDrawer]);
 
     const openEditDrawer = useCallback((item: DepartmentItem) => {
         setEditingItem(item);
@@ -262,55 +262,95 @@ const Departments = () => {
     const closeEditDrawer = useCallback(() => { setEditingItem(null); editFormMethods.reset({ name: '' }); setIsEditDrawerOpen(false); }, [editFormMethods]);
 
     const onEditDepartmentSubmit = useCallback(async (data: DepartmentFormData) => {
-        if (!editingItem?.id) { toast.push(<Notification title="Error" type="danger">Cannot edit: Department ID is missing.</Notification>); return; }
-        setIsSubmitting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
+        if (!editingItem?.id) {
+            toast.push(<Notification title="Error" type="danger">Cannot edit: Department ID is missing.</Notification>);
+            return;
+        }
+        setIsSubmitting(true);
         try {
-            // await dispatch(editDepartmentAction({ id: editingItem.id, name: data.name })).unwrap(); // Redux
-            const updatedDepartment: DepartmentItem = { id: editingItem.id, name: data.name };
-            setDepartmentsData(prev => prev.map(d => d.id === updatedDepartment.id ? updatedDepartment : d));
+            // Payload for edit usually includes 'id' and the fields to update.
+            const payload = { id: editingItem.id, name: data.name };
+            await dispatch(editDepartmentAction(payload)).unwrap();
 
             toast.push(<Notification title="Department Updated" type="success" duration={2000}>{`Department "${data.name}" updated.`}</Notification>);
             closeEditDrawer();
-            // dispatch(getDepartmentsAction()); // Redux
+            dispatch(getDepartmentsAction()); // Re-fetch
         } catch (error: any) {
             toast.push(<Notification title="Failed to Update" type="danger" duration={3000}>{error.message || 'Could not update department.'}</Notification>);
-        } finally { setIsSubmitting(false); setMasterLoadingStatus('idle'); }
-    }, [editingItem, closeEditDrawer /*, dispatch*/]);
+            console.error("Edit Department Error:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [dispatch, editingItem, closeEditDrawer]);
 
-    const handleDeleteClick = useCallback((item: DepartmentItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const handleDeleteClick = useCallback((item: DepartmentItem) => {
+        if (item.id === undefined || item.id === null) {
+             toast.push(<Notification title="Error" type="danger">Cannot delete: Department ID is missing.</Notification>);
+             return;
+        }
+        setItemToDelete(item);
+        setSingleDeleteConfirmOpen(true);
+    }, []);
+
     const onConfirmSingleDelete = useCallback(async () => {
-        if (!itemToDelete?.id) { toast.push(<Notification title="Error" type="danger">Cannot delete: Department ID is missing.</Notification>); return; }
-        setIsDeleting(true); setMasterLoadingStatus('loading'); setSingleDeleteConfirmOpen(false);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
+        if (!itemToDelete?.id) {
+            toast.push(<Notification title="Error" type="danger">Cannot delete: Department ID is missing.</Notification>);
+            setSingleDeleteConfirmOpen(false); // Close dialog
+            setItemToDelete(null); // Clear item
+            return;
+        }
+        setIsDeleting(true);
+        setSingleDeleteConfirmOpen(false);
         try {
-            // await dispatch(deleteDepartmentAction({ id: itemToDelete.id })).unwrap(); // Redux
-            setDepartmentsData(prev => prev.filter(d => d.id !== itemToDelete.id));
+            // Payload for delete typically just the 'id'.
+            await dispatch(deleteDepartmentAction({ id: itemToDelete.id })).unwrap();
 
             toast.push(<Notification title="Department Deleted" type="success" duration={2000}>{`Department "${itemToDelete.name}" deleted.`}</Notification>);
-            setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id));
-            // dispatch(getDepartmentsAction()); // Redux
+            setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id)); // Update local selection
+            dispatch(getDepartmentsAction()); // Re-fetch
         } catch (error: any) {
             toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}>{error.message || `Could not delete department.`}</Notification>);
-        } finally { setIsDeleting(false); setMasterLoadingStatus('idle'); setItemToDelete(null); }
-    }, [itemToDelete /*, dispatch*/]);
+            console.error("Delete Department Error:", error);
+        } finally {
+            setIsDeleting(false);
+            setItemToDelete(null);
+        }
+    }, [dispatch, itemToDelete]);
 
     const handleDeleteSelected = useCallback(async () => {
-        if (selectedItems.length === 0) { toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>); return; }
-        setIsDeleting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API
-        try {
-            const idsToDelete = selectedItems.map((item) => item.id);
-            // await dispatch(deleteAllDepartmentsAction({ ids: idsToDelete.join(',') })).unwrap(); // Redux
-            setDepartmentsData(prev => prev.filter(d => !idsToDelete.includes(d.id)));
+        if (selectedItems.length === 0) {
+            toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>);
+            return;
+        }
+        setIsDeleting(true); // Use a single deleting state for simplicity
+        const validItemsToDelete = selectedItems.filter(item => item.id !== undefined && item.id !== null);
 
-            toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${selectedItems.length} department(s) deleted.`}</Notification>);
-            setSelectedItems([]);
-            // dispatch(getDepartmentsAction()); // Redux
+        if (validItemsToDelete.length !== selectedItems.length) {
+            const skippedCount = selectedItems.length - validItemsToDelete.length;
+            toast.push(<Notification title="Deletion Warning" type="warning" duration={3000}>{skippedCount} item(s) could not be processed due to missing IDs.</Notification>);
+        }
+        if (validItemsToDelete.length === 0) {
+            toast.push(<Notification title="No Valid Items" type="info">No valid items to delete.</Notification>);
+            setIsDeleting(false);
+            return;
+        }
+
+        const idsToDelete = validItemsToDelete.map((item) => String(item.id));
+        try {
+            // Payload for bulk delete, e.g., an object with a comma-separated string of IDs or an array of IDs.
+            // Adjust based on what `deleteAllDepartmentsAction` expects.
+            await dispatch(deleteAllDepartmentsAction({ ids: idsToDelete.join(',') })).unwrap();
+
+            toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${validItemsToDelete.length} department(s) deleted.`}</Notification>);
+            setSelectedItems([]); // Clear selection
+            dispatch(getDepartmentsAction()); // Re-fetch
         } catch (error: any) {
             toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message || 'Failed to delete selected departments.'}</Notification>);
-        } finally { setIsDeleting(false); setMasterLoadingStatus('idle'); }
-    }, [selectedItems /*, dispatch*/]);
+            console.error("Delete Selected Departments Error:", error);
+        } finally {
+            setIsDeleting(false);
+        }
+    }, [dispatch, selectedItems]);
 
     const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
@@ -327,8 +367,9 @@ const Departments = () => {
     }, [filterFormMethods]);
 
     const departmentNameOptions = useMemo(() => {
-        if (!Array.isArray(departmentsData)) return [];
-        const uniqueNames = new Set(departmentsData.map((item) => item.name));
+        // Use departmentsData from Redux store
+        const sourceData: DepartmentItem[] = Array.isArray(departmentsData) ? departmentsData : [];
+        const uniqueNames = new Set(sourceData.map((item) => item.name));
         return Array.from(uniqueNames).map((name) => ({ value: name, label: name }));
     }, [departmentsData]);
 
@@ -360,7 +401,7 @@ const Departments = () => {
         const startIndex = (pageIndex - 1) * pageSize;
         const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
         return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
-    }, [departmentsData, tableData, filterCriteria]);
+    }, [departmentsData, tableData, filterCriteria]); // Depends on Redux data
 
     const handleExportData = useCallback(() => {
         const success = exportDepartmentsToCsv('departments_export.csv', allFilteredAndSortedData);
@@ -384,7 +425,7 @@ const Departments = () => {
                 cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
             },
         ],
-        [openEditDrawer, handleDeleteClick],
+        [openEditDrawer, handleDeleteClick], // These are stable if memoized correctly
     );
 
     return (
@@ -399,6 +440,7 @@ const Departments = () => {
                     <div className="mt-4">
                         <DepartmentsTable
                             columns={columns} data={pageData}
+                            // Combined loading state: Redux loading OR form submitting/deleting
                             loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
                             pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             selectedItems={selectedItems}
@@ -409,7 +451,7 @@ const Departments = () => {
                 </AdaptiveCard>
             </Container>
 
-            <DepartmentsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} />
+            <DepartmentsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
             <Drawer title="Add Department" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer}
                 footer={

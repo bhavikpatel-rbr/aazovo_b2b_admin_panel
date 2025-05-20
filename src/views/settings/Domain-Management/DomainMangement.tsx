@@ -1,340 +1,277 @@
 // src/views/your-path/DomainManagementListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
-// import { Link, useNavigate } from 'react-router-dom'; // useNavigate is used if edit navigates to a new page
-import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
+import cloneDeep from 'lodash/cloneDeep';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 // UI Components
-import AdaptiveCard from '@/components/shared/AdaptiveCard'
-import Container from '@/components/shared/Container'
-import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
-import Button from '@/components/ui/Button'
-import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
-import Select from '@/components/ui/Select' // Assuming your Select supports multi-select and single
-import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui' // Added Textarea
+import AdaptiveCard from '@/components/shared/AdaptiveCard';
+import Container from '@/components/shared/Container';
+import DataTable from '@/components/shared/DataTable';
+import Tooltip from '@/components/ui/Tooltip';
+import Button from '@/components/ui/Button';
+import Notification from '@/components/ui/Notification';
+import toast from '@/components/ui/toast';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import StickyFooter from '@/components/shared/StickyFooter';
+import DebouceInput from '@/components/shared/DebouceInput';
+import Select from '@/components/ui/Select';
+import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui';
+import Textarea from '@/views/ui-components/forms/Input/Textarea';
 
 // Icons
 import {
-    TbPencil,
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbFilter,
-    TbPlus,
-    TbCloudUpload,
-    TbWorldWww, // Domain icon
-    TbCurrencyDollar, // Currency icon
-    TbSettingsCog, // Numbering System icon
-    TbCode, // Analytics Script icon
-} from 'react-icons/tb'
+    TbPencil, TbTrash, TbChecks, TbSearch, TbFilter, TbPlus, TbCloudUpload,
+    TbWorldWww, TbCurrencyDollar, TbSettingsCog, TbCode,
+} from 'react-icons/tb';
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
-import type { TableQueries } from '@/@types/common'
-import Textarea from '@/views/ui-components/forms/Input/Textarea'
-// Redux (Keep commented if using local state first)
-// import { useAppDispatch } from '@/reduxtool/store';
-// import { getDomainsAction, addDomainAction, ... } from '@/reduxtool/domain/middleware';
-// import { domainSelector } from '@/reduxtool/domain/domainSlice';
+import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
+import type { TableQueries } from '@/@types/common';
 
+// Redux
+import { useAppDispatch } from '@/reduxtool/store';
+import { shallowEqual, useSelector } from 'react-redux';
+import {
+    getDomainsAction, addDomainAction, editDomainAction, deleteDomainAction,
+    deleteAllDomainsAction, getCountriesAction,
+} from '@/reduxtool/master/middleware';
+import { masterSelector } from '@/reduxtool/master/masterSlice';
 
-// --- Constants ---
-const ALL_AVAILABLE_COUNTRIES = [ // Example, replace with your actual data source
-    { value: 'USA', label: 'United States' }, { value: 'CAN', label: 'Canada' }, { value: 'GBR', label: 'United Kingdom' },
-    { value: 'DEU', label: 'Germany' }, { value: 'FRA', label: 'France' }, { value: 'IND', label: 'India' },
-    { value: 'AUS', label: 'Australia' }, { value: 'JPN', label: 'Japan' }, { value: 'GLOBAL', label: 'Global (All)'}
-];
-const countryValues = ALL_AVAILABLE_COUNTRIES.map(c => c.value) as [string, ...string[]];
+// --- Define Types ---
+export type CountryListItem = { id: string | number; name: string; };
+export type CountryOption = { value: string; label: string };
 
-const SUPPORTED_CURRENCIES = [ // Example, replace with your actual data source
-    { value: 'USD', label: 'USD - United States Dollar' },
-    { value: 'EUR', label: 'EUR - Euro' },
-    { value: 'GBP', label: 'GBP - British Pound Sterling' },
-    { value: 'INR', label: 'INR - Indian Rupee' },
-    { value: 'CAD', label: 'CAD - Canadian Dollar' },
-    { value: 'AUD', label: 'AUD - Australian Dollar' },
-    { value: 'JPY', label: 'JPY - Japanese Yen' },
-];
-const currencyValues = SUPPORTED_CURRENCIES.map(c => c.value) as [string, ...string[]];
-
-
-// --- Define DomainItem Type ---
 export type DomainItem = {
-    id: string | number
-    domain: string
-    currency: string // Currency code (e.g., 'USD')
-    // KYC Member Numbering
-    kycPrefix?: string
-    kycStartNumber: number
-    kycCurrentNumber: number
-    // Temporary Member Numbering
-    tempStartNumber: number
-    tempCurrentNumber: number
-    analyticsScript?: string
-    countries: string[] // Array of country codes
-}
+    id: string | number;
+    domain: string;
+    country_ids: string; // Comma-separated string of country IDs from API
+    prefix?: string;
+    currency_id: string | number; // API returns currency_id
+    analytics_script?: string | null;
+    customer_code_starting?: string;
+    current_customer_code?: string;
+    non_kyc_customer_code_starting?: string;
+    non_kyc_current_customer_code?: string;
+    created_at?: string;
+    updated_at?: string;
+    // For form handling, we'll have a 'countries' array and map currency_id to a code
+};
+
+// --- Constants for Form Selects (Currency) ---
+const SUPPORTED_CURRENCIES = [
+    { value: '1', id: 1, code: 'INR', label: 'INR - Indian Rupee' }, // Assuming '1' is the ID for INR
+    { value: '2', id: 2, code: 'USD', label: 'USD - United States Dollar' }, // Example ID
+    // Add other currencies with their IDs and codes
+];
+const currencyFormOptions = SUPPORTED_CURRENCIES.map(c => ({ value: String(c.id), label: c.label }));
+const currencyAPIValues = SUPPORTED_CURRENCIES.map(c => String(c.id)) as [string, ...string[]];
+
 
 // --- Zod Schema for Add/Edit Form ---
 const domainFormSchema = z.object({
-    domain: z.string()
-        .min(1, 'Domain name is required.')
-        .regex(/^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$/, 'Invalid domain format.'),
-    currency: z.enum(currencyValues, { errorMap: () => ({ message: 'Please select a currency.' })}),
-    kycPrefix: z.string().max(10, 'KYC Prefix too long (max 10 chars).').optional().or(z.literal('')),
-    kycStartNumber: z.coerce.number().int().min(0, 'KYC Start Number must be non-negative.'),
-    kycCurrentNumber: z.coerce.number().int().min(0, 'KYC Current Number must be non-negative.'),
-    tempStartNumber: z.coerce.number().int().min(0, 'Temp Start Number must be non-negative.'),
-    tempCurrentNumber: z.coerce.number().int().min(0, 'Temp Current Number must be non-negative.'),
+    domain: z.string().min(1, 'Domain name is required.').regex(/^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$/, 'Invalid domain format.'),
+    currency_id: z.enum(currencyAPIValues, { errorMap: () => ({ message: 'Please select a currency.' })}), // Form will use currency ID
+    kycPrefix: z.string().max(10, 'KYC Prefix too long.').optional().or(z.literal('')),
+    kycStartNumber: z.coerce.number().int().min(0, 'KYC Start # must be non-negative.'),
+    kycCurrentNumber: z.coerce.number().int().min(0, 'KYC Current # must be non-negative.'),
+    tempStartNumber: z.coerce.number().int().min(0, 'Temp Start # must be non-negative.'),
+    tempCurrentNumber: z.coerce.number().int().min(0, 'Temp Current # must be non-negative.'),
     analyticsScript: z.string().optional().or(z.literal('')),
-    countries: z.array(z.string()).min(1, 'At least one country must be selected.'),
+    countries: z.array(z.string()).min(1, 'At least one country must be selected.'), // Array of country IDs
 }).superRefine((data, ctx) => {
-    if (data.kycCurrentNumber < data.kycStartNumber) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'KYC Current # must be ≥ Start #.', path: ['kycCurrentNumber'] });
-    }
-    if (data.tempCurrentNumber < data.tempStartNumber) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Temp Current # must be ≥ Start #.', path: ['tempCurrentNumber'] });
-    }
+    if (data.kycCurrentNumber < data.kycStartNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'KYC Current # must be ≥ Start #.', path: ['kycCurrentNumber'] });
+    if (data.tempCurrentNumber < data.tempStartNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Temp Current # must be ≥ Start #.', path: ['tempCurrentNumber'] });
 });
-type DomainFormData = z.infer<typeof domainFormSchema>
+type DomainFormData = z.infer<typeof domainFormSchema>;
 
-// --- Initial Dummy Data ---
-const initialDummyDomains: DomainItem[] = [
-    {
-        id: 'DOM001', domain: 'aazovo-global.com', currency: 'USD',
-        kycPrefix: 'GL-K', kycStartNumber: 1000, kycCurrentNumber: 1000,
-        tempStartNumber: 500, tempCurrentNumber: 500,
-        countries: ['GLOBAL'], analyticsScript: '<!-- Global Site Tag (gtag.js) - Google Analytics -->',
-    },
-    {
-        id: 'DOM002', domain: 'aazovo.co.uk', currency: 'GBP',
-        kycPrefix: 'UK-K', kycStartNumber: 100, kycCurrentNumber: 120,
-        tempStartNumber: 50, tempCurrentNumber: 60,
-        countries: ['GBR'],
-    },
-];
+// --- Zod Schema for Filter Form ---
+const filterFormSchema = z.object({
+    filterCountries: z
+        .array(
+            z.object({
+                value: z.string(),
+                label: z.string(), // <--- CORRECTED: Use z.string()
+            })
+        )
+        .optional(),
+    filterCurrency: z
+        .array(
+            z.object({
+                value: z.string(),
+                label: z.string(), // <--- CORRECTED: Use z.string()
+            })
+        )
+        .optional(),
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// --- CSV Exporter ---
-const CSV_HEADERS_DOM = ['ID', 'Domain', 'Currency', 'KYC Prefix', 'KYC Start', 'KYC Current', 'Temp Start', 'Temp Current', 'Countries', 'Analytics Script'];
-const CSV_KEYS_DOM: (keyof DomainItem | 'countriesString')[] = [
-    'id', 'domain', 'currency', 'kycPrefix', 'kycStartNumber', 'kycCurrentNumber',
-    'tempStartNumber', 'tempCurrentNumber', 'countriesString', 'analyticsScript'
-];
-
+// CSV Exporter
+const CSV_HEADERS_DOM = ['ID', 'Domain', 'Currency ID', 'KYC Prefix', 'KYC Start', 'KYC Current', 'Temp Start', 'Temp Current', 'Country IDs', 'Analytics Script'];
+const CSV_KEYS_DOM: (keyof DomainItem)[] = ['id', 'domain', 'currency_id', 'prefix', 'customer_code_starting', 'current_customer_code', 'non_kyc_customer_code_starting', 'non_kyc_current_customer_code', 'country_ids', 'analytics_script'];
+// ... (exportDomainsToCsv function - ensure keys match DomainItem fields)
 function exportDomainsToCsv(filename: string, rows: DomainItem[]) {
-    // ... (Similar exportToCsv logic, prepare countriesString)
-    if (!rows || !rows.length) {
-        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
-        return false;
-    }
-     const preparedRows = rows.map(row => ({
-        ...row,
-        countriesString: row.countries.join('; ')
-    }));
-
+    if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
     const separator = ',';
-    const csvContent =
-        CSV_HEADERS_DOM.join(separator) + '\n' +
-        preparedRows.map((row: any) => CSV_KEYS_DOM.map(k => {
-            let cell: any = row[k];
-            if (cell === null || cell === undefined) cell = '';
-            else cell = String(cell).replace(/"/g, '""');
-            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-            return cell;
-        }).join(separator)).join('\n');
-
+    const csvContent = CSV_HEADERS_DOM.join(separator) + '\n' + rows.map((row: any) => CSV_KEYS_DOM.map(k => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ''; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        return true;
-    }
-    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
-    return false;
+    if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
-// --- ActionColumn (Reusable) ---
-const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => {
-     const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
-    return (
-        <div className="flex items-center justify-center gap-3">
-            <Tooltip title="Edit Domain">
-                <div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400')} role="button" onClick={onEdit}>
-                    <TbPencil />
-                </div>
-            </Tooltip>
-            <Tooltip title="Delete Domain">
-                <div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400')} role="button" onClick={onDelete}>
-                    <TbTrash />
-                </div>
-            </Tooltip>
-        </div>
-    );
-};
+// ActionColumn, ItemSearch, ItemTableTools, DomainsSelectedFooter (No changes to these sub-components)
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => { const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'; const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'; return ( <div className="flex items-center justify-center gap-3"> <Tooltip title="Edit Domain"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="Delete Domain"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> ); };
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; }; const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebouceInput ref={ref} className="w-full" placeholder="Search by domain, ID, currency..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ) ); ItemSearch.displayName = 'ItemSearch';
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }; const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type DomainsSelectedFooterProps = { selectedItems: DomainItem[]; onDeleteSelected: () => void; isDeleting: boolean }; const DomainsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: DomainsSelectedFooterProps) => { const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false); const handleDeleteClick = () => setDeleteConfirmationOpen(true); const handleCancelDelete = () => setDeleteConfirmationOpen(false); const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmationOpen(false); }; if (selectedItems.length === 0) return null; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold flex items-center gap-1 text-sm sm:text-base"> <span className="heading-text">{selectedItems.length}</span> <span>Domain{selectedItems.length > 1 ? 's' : ''} selected</span> </span> </span> <div className="flex items-center gap-3"> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button> </div> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Domain${selectedItems.length > 1 ? 's' : ''}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} > <p>Are you sure you want to delete the selected domain{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p> </ConfirmDialog> </> ); };
 
-
-// --- Search and TableTools ---
-type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; }
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
-    ({ onInputChange }, ref) => (
-        <DebouceInput ref={ref} className="w-full" placeholder="Search by domain, ID, currency..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
-    )
-);
-ItemSearch.displayName = 'ItemSearch';
-
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }
-const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-        <div className="flex-grow">
-            <ItemSearch onInputChange={onSearchChange} />
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
-            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-        </div>
-    </div>
-);
-
-// --- Main Component: DomainManagementListing ---
 const DomainManagementListing = () => {
-    const [domainsData, setDomainsData] = useState<DomainItem[]>(initialDummyDomains);
+    const dispatch = useAppDispatch();
+    const {
+        domainsData = [],
+        CountriesData = [],
+        status: masterLoadingStatus = 'idle'
+    } = useSelector(masterSelector, shallowEqual);
+
+    const [allCountryOptions, setAllCountryOptions] = useState<CountryOption[]>([]);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<DomainItem | null>(null);
     const [itemToDelete, setItemToDelete] = useState<DomainItem | null>(null);
-
-    const [masterLoadingStatus, setMasterLoadingStatus] = useState<'idle' | 'loading'>('idle');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<DomainItem[]>([]);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-    const [filterCriteria, setFilterCriteria] = useState<{ filterCountries?: any[], filterCurrency?: any[] }>({});
+    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterCountries: [], filterCurrency: [] });
+
+    useEffect(() => {
+        dispatch(getDomainsAction());
+        dispatch(getCountriesAction());
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (Array.isArray(CountriesData) && CountriesData.length > 0) {
+            const options = CountriesData.map((country: CountryListItem) => ({
+                value: String(country.id),
+                label: country.name,
+            }));
+            setAllCountryOptions(prevOptions => {
+                if(JSON.stringify(prevOptions) !== JSON.stringify(options)) return options;
+                return prevOptions;
+            });
+        } else if (allCountryOptions.length > 0) {
+            setAllCountryOptions([]);
+        }
+    }, [CountriesData, allCountryOptions.length]);
+
+    const defaultFormValues: DomainFormData = {
+        domain: '', currency_id: currencyAPIValues[0], // Default to first currency ID
+        kycPrefix: '', kycStartNumber: 0, kycCurrentNumber: 0,
+        tempStartNumber: 0, tempCurrentNumber: 0,
+        analyticsScript: '', countries: [],
+    };
 
     const formMethods = useForm<DomainFormData>({
         resolver: zodResolver(domainFormSchema),
-        defaultValues: {
-            domain: '', currency: currencyValues[0], // Default to first currency
-            kycPrefix: '', kycStartNumber: 0, kycCurrentNumber: 0,
-            tempStartNumber: 0, tempCurrentNumber: 0,
-            analyticsScript: '', countries: [],
-        },
+        defaultValues: defaultFormValues,
         mode: 'onChange',
     });
 
-    const filterForm = useForm<{ filterCountries?: any[], filterCurrency?: any[] }>({ defaultValues: {} });
+    const filterFormMethods = useForm<FilterFormData>({
+        resolver: zodResolver(filterFormSchema),
+        defaultValues: filterCriteria,
+    });
 
-    // --- CRUD Handlers ---
-    const openAddDrawer = () => {
-        formMethods.reset(); // Reset to defaultValues in useForm
+    const openAddDrawer = useCallback(() => {
+        formMethods.reset(defaultFormValues);
         setIsAddDrawerOpen(true);
-    };
-    const closeAddDrawer = () => setIsAddDrawerOpen(false);
+    }, [formMethods, defaultFormValues]);
+    const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
-    const openEditDrawer = (item: DomainItem) => {
+    const openEditDrawer = useCallback((item: DomainItem) => {
         setEditingItem(item);
+        const selectedCountryIdsArray = item.country_ids
+            ? item.country_ids.split(',').map(id => id.trim()).filter(id => id)
+            : [];
         formMethods.reset({
-            domain: item.domain, currency: item.currency,
-            kycPrefix: item.kycPrefix || '', kycStartNumber: item.kycStartNumber, kycCurrentNumber: item.kycCurrentNumber,
-            tempStartNumber: item.tempStartNumber, tempCurrentNumber: item.tempCurrentNumber,
-            analyticsScript: item.analyticsScript || '', countries: item.countries,
+            domain: item.domain,
+            currency_id: String(item.currency_id), // API gives currency_id, form expects currency_id (string)
+            kycPrefix: item.prefix || '',
+            kycStartNumber: Number(item.customer_code_starting) || 0,
+            kycCurrentNumber: Number(item.current_customer_code) || 0,
+            tempStartNumber: Number(item.non_kyc_customer_code_starting) || 0,
+            tempCurrentNumber: Number(item.non_kyc_current_customer_code) || 0,
+            analyticsScript: item.analytics_script || '',
+            countries: selectedCountryIdsArray,
         });
         setIsEditDrawerOpen(true);
-    };
-    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingItem(null); };
+    }, [formMethods]);
+    const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
-    const onSubmit = async (data: DomainFormData) => {
+    const onSubmitHandler = async (data: DomainFormData) => {
         setIsSubmitting(true);
-        setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const apiPayload = {
+            domain: data.domain,
+            currency_id: data.currency_id, // Form already provides currency_id as string
+            prefix: data.kycPrefix, // Form's kycPrefix maps to API's prefix
+            customer_code_starting: String(data.kycStartNumber),
+            current_customer_code: String(data.kycCurrentNumber),
+            non_kyc_customer_code_starting: String(data.tempStartNumber),
+            non_kyc_current_customer_code: String(data.tempCurrentNumber),
+            analytics_script: data.analyticsScript,
+            country_ids: data.countries.join(','), // Join array of country IDs
+        };
 
         try {
-            const countriesData = data.countries.map((country: any) => typeof country === 'object' ? country.value : country);
-            const payload = { ...data, countries: countriesData };
-
             if (editingItem) {
-                const updatedItem: DomainItem = { ...editingItem, ...payload };
-                setDomainsData(prev => prev.map(d => d.id === updatedItem.id ? updatedItem : d));
-                toast.push(<Notification title="Domain Updated" type="success">Domain configuration saved.</Notification>);
+                await dispatch(editDomainAction({ id: editingItem.id, ...apiPayload })).unwrap();
+                toast.push(<Notification title="Domain Updated" type="success" duration={2000}>Domain configuration saved.</Notification>);
                 closeEditDrawer();
             } else {
-                const newItem: DomainItem = { ...payload, id: `DOM${Date.now()}` };
-                setDomainsData(prev => [...prev, newItem]);
-                toast.push(<Notification title="Domain Added" type="success">New domain added.</Notification>);
+                await dispatch(addDomainAction(apiPayload)).unwrap();
+                toast.push(<Notification title="Domain Added" type="success" duration={2000}>New domain added.</Notification>);
                 closeAddDrawer();
             }
+            dispatch(getDomainsAction());
         } catch (error: any) {
-            toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger">{error?.message || 'Operation failed.'}</Notification>);
+            toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger" duration={3000}>{error?.message || 'Operation failed.'}</Notification>);
+            console.error("Domain Submit Error:", error);
         } finally {
             setIsSubmitting(false);
-            setMasterLoadingStatus('idle');
         }
     };
+    // Delete Handlers (no change in logic, just ensure correct action and data source)
+    const handleDeleteClick = useCallback((item: DomainItem) => { if (!item.id) { toast.push(<Notification title="Error" type="danger">Cannot delete: Domain ID is missing.</Notification>); return; } setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+    const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteDomainAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Domain Deleted" type="success" duration={2000}>{`Domain "${itemToDelete.domain}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter(d => d.id !== itemToDelete!.id)); dispatch(getDomainsAction()); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{error.message || 'Could not delete domain.'}</Notification>); console.error("Delete Domain Error:", error); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
+    const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const validItems = selectedItems.filter(item => item.id); if (validItems.length === 0) { setIsDeleting(false); return; } const idsToDelete = validItems.map(item => String(item.id)); try { await dispatch(deleteAllDomainsAction({ ids: idsToDelete.join(',') })).unwrap(); toast.push(<Notification title="Domains Deleted" type="success" duration={2000}>{`${validItems.length} domain(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getDomainsAction()); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{error.message || 'Failed to delete selected domains.'}</Notification>); console.error("Bulk Delete Domains Error:", error); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
 
-    const handleDeleteClick = (item: DomainItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
-    const onConfirmSingleDelete = async () => {
-        // ... (delete logic adapted for domainsData)
-        if (!itemToDelete) return;
-        setIsDeleting(true); setMasterLoadingStatus('loading'); setSingleDeleteConfirmOpen(false);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        try {
-            setDomainsData(prev => prev.filter(d => d.id !== itemToDelete!.id));
-            toast.push(<Notification title="Domain Deleted" type="success">{`Domain "${itemToDelete.domain}" deleted.`}</Notification>);
-            setSelectedItems(prev => prev.filter(d => d.id !== itemToDelete!.id));
-        } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message}</Notification>); }
-        finally { setIsDeleting(false); setMasterLoadingStatus('idle'); setItemToDelete(null); }
-    };
-    const handleDeleteSelected = async () => {
-        // ... (delete selected logic adapted for domainsData)
-         if (selectedItems.length === 0) return;
-        setIsDeleting(true); setMasterLoadingStatus('loading');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        try {
-            const idsToDelete = selectedItems.map(item => item.id);
-            setDomainsData(prev => prev.filter(d => !idsToDelete.includes(d.id)));
-            toast.push(<Notification title="Domains Deleted" type="success">{selectedItems.length} domain(s) deleted.</Notification>);
-            setSelectedItems([]);
-        } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message}</Notification>); }
-        finally { setIsDeleting(false); setMasterLoadingStatus('idle'); }
-    };
+    // Filter Handlers
+    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterCountries: data.filterCountries || [], filterCurrency: data.filterCurrency || [] }); setTableData(prev => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
+    const onClearFilters = useCallback(() => { const defaultFilters = { filterCountries: [], filterCurrency: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData(prev => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
 
-    // --- Filter Handlers ---
-    const openFilterDrawer = () => { filterForm.reset(filterCriteria); setIsFilterDrawerOpen(true); };
-    const onApplyFiltersSubmit = (data: { filterCountries?: any[], filterCurrency?: any[] }) => {
-        setFilterCriteria(data);
-        setTableData(prev => ({ ...prev, pageIndex: 1 }));
-        setIsFilterDrawerOpen(false);
-    };
-    const onClearFilters = () => { filterForm.reset({}); setFilterCriteria({}); setTableData(prev => ({ ...prev, pageIndex: 1 })); };
-
-
-    // --- Data Processing (Memoized) ---
+    // Data Processing for Table
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        let processedData: DomainItem[] = cloneDeep(domainsData);
+        const sourceData: DomainItem[] = Array.isArray(domainsData) ? domainsData : [];
+        let processedData: DomainItem[] = cloneDeep(sourceData);
 
         if (filterCriteria.filterCountries && filterCriteria.filterCountries.length > 0) {
-            const selectedCountryCodes = filterCriteria.filterCountries.map((opt: any) => opt.value);
-            processedData = processedData.filter(item => item.countries.some(cc => selectedCountryCodes.includes(cc)));
+            const selectedCountryFilterValues = filterCriteria.filterCountries.map(opt => opt.value);
+            processedData = processedData.filter(item => {
+                if (!item.country_ids) return false;
+                const itemCountryIds = item.country_ids.split(',').map(id => id.trim());
+                return itemCountryIds.some(id => selectedCountryFilterValues.includes(id));
+            });
         }
         if (filterCriteria.filterCurrency && filterCriteria.filterCurrency.length > 0) {
-            const selectedCurrencies = filterCriteria.filterCurrency.map((opt: any) => opt.value);
-            processedData = processedData.filter(item => selectedCurrencies.includes(item.currency));
+            const selectedCurrencyValues = filterCriteria.filterCurrency.map(opt => opt.value); // These are currency IDs
+            processedData = processedData.filter(item => selectedCurrencyValues.includes(String(item.currency_id)));
         }
 
         if (tableData.query && tableData.query.trim() !== '') {
@@ -342,115 +279,107 @@ const DomainManagementListing = () => {
             processedData = processedData.filter(item =>
                 item.domain.toLowerCase().includes(query) ||
                 String(item.id).toLowerCase().includes(query) ||
-                item.currency.toLowerCase().includes(query) ||
-                (item.kycPrefix && item.kycPrefix.toLowerCase().includes(query)) ||
-                item.countries.some(c => c.toLowerCase().includes(query))
+                String(item.currency_id).toLowerCase().includes(query) || // Search by currency_id
+                (item.prefix && item.prefix.toLowerCase().includes(query))
             );
         }
-
         const { order, key } = tableData.sort as OnSortParam;
-        if (order && key && ['id', 'domain', 'currency', 'kycPrefix', 'countriesCount'].includes(key)) {
-             processedData.sort((a, b) => {
+        if (order && key && ['id', 'domain', 'currency_id', 'countriesCount'].includes(String(key))) {
+            processedData.sort((a, b) => {
                 let aVal, bVal;
-                if (key === 'countriesCount') { aVal = a.countries.length; bVal = b.countries.length; }
-                else { aVal = a[key as keyof Omit<DomainItem, 'countries' | 'analyticsScript'>]; bVal = b[key as keyof Omit<DomainItem, 'countries' | 'analyticsScript'>]; }
-
+                if (key === 'countriesCount') { aVal = a.country_ids?.split(',').filter(id=>id).length || 0; bVal = b.country_ids?.split(',').filter(id=>id).length || 0; }
+                else { aVal = a[key as keyof DomainItem]; bVal = b[key as keyof DomainItem]; }
                 if (typeof aVal === 'number' && typeof bVal === 'number') return order === 'asc' ? aVal - bVal : bVal - aVal;
-                const aStr = String(aVal ?? '').toLowerCase();
-                const bStr = String(bVal ?? '').toLowerCase();
+                const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase();
                 return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
             });
         }
 
         const dataToExport = [...processedData];
         const currentTotal = processedData.length;
-        const pageIndex = tableData.pageIndex as number;
-        const pageSize = tableData.pageSize as number;
+        const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number;
         const startIndex = (pageIndex - 1) * pageSize;
         const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-
         return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
     }, [domainsData, tableData, filterCriteria]);
 
-
-    const handleExportData = () => {
-        const success = exportDomainsToCsv('domains_management.csv', allFilteredAndSortedData);
-        if (success) toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
-    };
-
-    // --- Table Interaction Handlers ---
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
+    const handleExportData = useCallback(() => { const success = exportDomainsToCsv('domains_management.csv', allFilteredAndSortedData); if (success) toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported.</Notification>); }, [allFilteredAndSortedData]);
+    // Table interaction handlers
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
     const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
-    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
     const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
-    const handleRowSelect = useCallback((checked: boolean, row: DomainItem) => { /* ...standard */
-         setSelectedItems(prev => {
-            if (checked) return prev.some(item => item.id === row.id) ? prev : [...prev, row];
-            return prev.filter(item => item.id !== row.id);
-        });
-    }, []);
-    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<DomainItem>[]) => { /* ...standard */
-        const originals = currentRows.map(r => r.original);
-        if (checked) {
-            setSelectedItems(prev => {
-                const prevIds = new Set(prev.map(item => item.id));
-                const newToAdd = originals.filter(r => !prevIds.has(r.id));
-                return [...prev, ...newToAdd];
-            });
-        } else {
-            const currentIds = new Set(originals.map(r => r.id));
-            setSelectedItems(prev => prev.filter(item => !currentIds.has(item.id)));
-        }
-    }, []);
+    const handleRowSelect = useCallback((checked: boolean, row: DomainItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<DomainItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-    // --- Column Definitions ---
+
+    // Columns for Listing: ID, Domain, Countries
     const columns: ColumnDef<DomainItem>[] = useMemo(
         () => [
             { header: 'ID', accessorKey: 'id', enableSorting: true, size: 80 },
-            { header: 'Domain', accessorKey: 'domain', enableSorting: true, size: 220,
-              cell: props => <span className="font-semibold text-blue-600 dark:text-blue-400">{props.row.original.domain}</span>
-            },
-            { header: 'Currency', accessorKey: 'currency', enableSorting: true, size: 100 },
-            { header: 'KYC Prefix', accessorKey: 'kycPrefix', enableSorting: true, size: 120 },
             {
-                header: 'Countries', id: 'countriesCount', enableSorting: true, size: 150,
+                header: 'Domain', accessorKey: 'domain', enableSorting: true, size: 250,
+                cell: props => <span className="font-semibold text-blue-600 dark:text-blue-400">{props.row.original.domain}</span>
+            },
+            {
+                header: 'Countries',
+                accessorKey: 'country_ids',
+                id: 'countriesDisplay',
+                enableSorting: true,
+                sortingFn: (rowA, rowB) => {
+                    const countA = rowA.original.country_ids?.split(',').filter(id => id).length || 0;
+                    const countB = rowB.original.country_ids?.split(',').filter(id => id).length || 0;
+                    return countA - countB;
+                },
                 cell: (props) => {
-                    const count = props.row.original.countries.length;
-                    const countryLabels = props.row.original.countries
-                        .map(code => ALL_AVAILABLE_COUNTRIES.find(c => c.value === code)?.label || code)
-                        .slice(0, 2).join(', '); // Show first 2
+                    const countryIdString = props.row.original.country_ids;
+                    if (!countryIdString) return <Tag>N/A</Tag>;
+                    const idsArray = countryIdString.split(',').map(id => id.trim()).filter(id => id);
+                    if (idsArray.length === 0) return <Tag>None</Tag>;
+
+                    const names = idsArray.map(idStr => {
+                        const country = allCountryOptions.find(opt => opt.value === idStr);
+                        return country ? country.label : `ID:${idStr}`;
+                    });
+
+                    const displayLimit = 2;
+                    const displayedNames = names.slice(0, displayLimit);
+                    const remainingCount = names.length - displayLimit;
+
                     return (
-                        <Tooltip title={count > 0 ? props.row.original.countries.map(code => ALL_AVAILABLE_COUNTRIES.find(c => c.value === code)?.label || code).join(', ') : 'No countries'}>
-                            <span className="cursor-default">
-                                {count > 2 ? `${countryLabels}, +${count-2}` : (count > 0 ? countryLabels : `${count} Countries`)}
-                            </span>
+                        <Tooltip title={names.join(', ')} wrapperClassName="whitespace-nowrap max-w-[250px] overflow-hidden text-ellipsis">
+                            <div className="flex flex-wrap gap-1">
+                                {displayedNames.map((name, index) => <Tag key={`${name}-${index}`} className="bg-gray-100 dark:bg-gray-600">{name}</Tag>)}
+                                {remainingCount > 0 && <Tag className="bg-gray-200 dark:bg-gray-500">+{remainingCount} more</Tag>}
+                            </div>
                         </Tooltip>
                     );
                 },
+                size: 300,
             },
             {
-                header: 'Actions', id: 'action', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100,
+                header: 'Actions', id: 'action', meta: { headerClass: "text-center", cellClass: "text-center" }, size: 100,
                 cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
             },
         ],
-        [],
+        [allCountryOptions, openEditDrawer, handleDeleteClick]
     );
 
-    // --- Render Form for Drawer ---
+    // Render Form for Drawer (Full form)
     const renderDrawerForm = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <FormItem label="Domain Name" className="md:col-span-2" invalid={!!formMethods.formState.errors.domain} errorMessage={formMethods.formState.errors.domain?.message}>
                 <Controller name="domain" control={formMethods.control} render={({ field }) => <Input {...field} prefix={<TbWorldWww className="text-lg" />} placeholder="e.g., example.com" />} />
             </FormItem>
-
-            <FormItem label="Currency" invalid={!!formMethods.formState.errors.currency} errorMessage={formMethods.formState.errors.currency?.message}>
-                <Controller name="currency" control={formMethods.control} render={({ field }) => (
-                    <Select placeholder="Select currency" options={SUPPORTED_CURRENCIES} value={SUPPORTED_CURRENCIES.find(c => c.value === field.value)} onChange={opt => field.onChange(opt?.value)} />
+            <FormItem label="Currency" invalid={!!formMethods.formState.errors.currency_id} errorMessage={formMethods.formState.errors.currency_id?.message}>
+                <Controller name="currency_id" control={formMethods.control} render={({ field }) => (
+                    <Select placeholder="Select currency" options={currencyFormOptions} // Use options with IDs as values
+                            value={currencyFormOptions.find(c => c.value === field.value)}
+                            onChange={opt => field.onChange(opt?.value)} />
                 )} />
             </FormItem>
             <div /> {/* Spacer */}
-
             <div className="md:col-span-2 border-t pt-4 mt-2">
                 <h6 className="text-sm font-semibold mb-2 flex items-center gap-2"><TbSettingsCog /> Numbering System For KYC Member</h6>
             </div>
@@ -464,7 +393,6 @@ const DomainManagementListing = () => {
             <FormItem label="Member ID Current Number" invalid={!!formMethods.formState.errors.kycCurrentNumber} errorMessage={formMethods.formState.errors.kycCurrentNumber?.message}>
                 <Controller name="kycCurrentNumber" control={formMethods.control} render={({ field }) => <Input {...field} type="number" placeholder="e.g., 10500" />} />
             </FormItem>
-
             <div className="md:col-span-2 border-t pt-4 mt-2">
                 <h6 className="text-sm font-semibold mb-2 flex items-center gap-2"><TbSettingsCog /> Numbering System For Temporary Member</h6>
             </div>
@@ -474,15 +402,13 @@ const DomainManagementListing = () => {
             <FormItem label="Member ID Current Number" invalid={!!formMethods.formState.errors.tempCurrentNumber} errorMessage={formMethods.formState.errors.tempCurrentNumber?.message}>
                 <Controller name="tempCurrentNumber" control={formMethods.control} render={({ field }) => <Input {...field} type="number" placeholder="e.g., 5250" />} />
             </FormItem>
-
             <FormItem label="Countries (Multi-select)" className="md:col-span-2" invalid={!!formMethods.formState.errors.countries} errorMessage={formMethods.formState.errors.countries?.message as string}>
                 <Controller name="countries" control={formMethods.control} render={({ field }) => (
-                    <Select isMulti placeholder="Select countries..." options={ALL_AVAILABLE_COUNTRIES}
-                            value={ALL_AVAILABLE_COUNTRIES.filter(opt => field.value?.includes(opt.value))}
+                    <Select isMulti placeholder="Select countries..." options={allCountryOptions}
+                            value={allCountryOptions.filter(opt => field.value?.includes(opt.value))}
                             onChange={opts => field.onChange(opts ? opts.map((o:any) => o.value) : [])} />
                 )} />
             </FormItem>
-
             <FormItem label="Analytics Script (Optional)" className="md:col-span-2" invalid={!!formMethods.formState.errors.analyticsScript} errorMessage={formMethods.formState.errors.analyticsScript?.message}>
                 <Controller name="analyticsScript" control={formMethods.control} render={({ field }) => (
                     <Textarea {...field} rows={4} placeholder="Paste your analytics script here (e.g., Google Analytics, Hotjar)" />
@@ -502,104 +428,61 @@ const DomainManagementListing = () => {
                     <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
                     <div className="mt-4">
                         <DataTable
-                            columns={columns}
-                            data={pageData}
+                            columns={columns} data={pageData}
                             loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
                             pagingData={{total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number}}
-                            selectable
-                            checkboxChecked={(row: DomainItem) => selectedItems.some(selected => selected.id === row.id)}
-                            onPaginationChange={handlePaginationChange}
-                            onSelectChange={handleSelectChange}
-                            onSort={handleSort}
-                            onCheckBoxChange={handleRowSelect}
-                            onIndeterminateCheckBoxChange={handleAllRowSelect}
+                            selectable checkboxChecked={(row: DomainItem) => selectedItems.some(selected => selected.id === row.id)}
+                            onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
+                            onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect}
+                           
                         />
                     </div>
                 </AdaptiveCard>
             </Container>
 
-            <StickyFooter /* For Selected Items Actions */
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-                hidden={selectedItems.length === 0}
-            >
-                 <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">{selectedItems.length}</span>
-                            <span>Domain{selectedItems.length > 1 ? 's' : ''} selected</span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteSelected}>Delete Selected</Button>
-                    </div>
-                </div>
-            </StickyFooter>
+            <DomainsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
             <Drawer
                 title={editingItem ? "Edit Domain Configuration" : "Add New Domain"}
                 isOpen={isAddDrawerOpen || isEditDrawerOpen}
                 onClose={editingItem ? closeEditDrawer : closeAddDrawer}
                 onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-                width={700} // Or 'xl' if your Drawer supports size presets
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                        <Button size="sm" variant="solid" form="domainForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
-                            {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add Domain')}
-                        </Button>
-                    </div>
-                }
+                width={700}
+                footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="domainForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}> {isSubmitting ? (editingItem ? 'Saving...' : 'Adding...') : (editingItem ? 'Save Changes' : 'Add Domain')} </Button> </div> }
             >
-                <Form id="domainForm" onSubmit={formMethods.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+                <Form id="domainForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
                     {renderDrawerForm()}
                 </Form>
             </Drawer>
 
-            <Drawer /* Filter Drawer */
-                title="Filter Domains"
-                isOpen={isFilterDrawerOpen}
-                onClose={() => setIsFilterDrawerOpen(false)}
-                onRequestClose={() => setIsFilterDrawerOpen(false)}
-                footer={
-                    <div className="flex justify-between w-full">
-                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
-                        <div>
-                            <Button size="sm" className="mr-2" onClick={() => setIsFilterDrawerOpen(false)} type="button">Cancel</Button>
-                            <Button size="sm" variant="solid" form="filterDomainsForm" type="submit">Apply Filters</Button>
-                        </div>
-                    </div>
-                }
+            <Drawer
+                title="Filter Domains" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} onRequestClose={() => setIsFilterDrawerOpen(false)}
+                footer={ <div className="flex justify-between w-full"> <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button> <div> <Button size="sm" className="mr-2" onClick={() => setIsFilterDrawerOpen(false)} type="button">Cancel</Button> <Button size="sm" variant="solid" form="filterDomainsForm" type="submit">Apply Filters</Button> </div> </div> }
             >
-                <Form id="filterDomainsForm" onSubmit={filterForm.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+                <Form id="filterDomainsForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Filter by Countries">
-                        <Controller name="filterCountries" control={filterForm.control} render={({ field }) => (
-                            <Select isMulti placeholder="Select countries..." options={ALL_AVAILABLE_COUNTRIES}
-                                    value={ALL_AVAILABLE_COUNTRIES.filter(opt => field.value?.includes(opt.value))}
-                                    onChange={opts => field.onChange(opts ? opts.map((o: any) => o.value) : [])} />
+                        <Controller name="filterCountries" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Select countries..." options={allCountryOptions}
+                                    value={field.value || []} // field.value expects array of {value, label}
+                                    onChange={opts => field.onChange(opts || [])} />
                         )} />
                     </FormItem>
                     <FormItem label="Filter by Currency">
-                         <Controller name="filterCurrency" control={filterForm.control} render={({ field }) => (
-                            <Select isMulti placeholder="Select currencies..." options={SUPPORTED_CURRENCIES}
-                                    value={SUPPORTED_CURRENCIES.filter(opt => field.value?.includes(opt.value))}
-                                    onChange={opts => field.onChange(opts ? opts.map((o: any) => o.value) : [])} />
+                         <Controller name="filterCurrency" control={filterFormMethods.control} render={({ field }) => (
+                            <Select isMulti placeholder="Select currencies..." options={currencyFormOptions} // Use options with IDs
+                                    value={field.value || []}
+                                    onChange={opts => field.onChange(opts || [])} />
                         )} />
                     </FormItem>
                 </Form>
             </Drawer>
 
-            <ConfirmDialog /* Single Delete */
-                isOpen={singleDeleteConfirmOpen}
-                type="danger"
-                title="Delete Domain"
+            <ConfirmDialog
+                isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Domain"
                 onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
                 onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-                confirmButtonColor="red-600"
-                onConfirm={onConfirmSingleDelete}
-                loading={isDeleting}
+                confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting}
             >
                 <p>Are you sure you want to delete the domain "<strong>{itemToDelete?.domain}</strong>"? This cannot be undone.</p>
             </ConfirmDialog>
@@ -609,7 +492,6 @@ const DomainManagementListing = () => {
 
 export default DomainManagementListing;
 
-// Helper (already defined in previous examples, ensure it's available or copy it)
 function classNames(...classes: (string | boolean | undefined)[]) {
     return classes.filter(Boolean).join(' ');
 }

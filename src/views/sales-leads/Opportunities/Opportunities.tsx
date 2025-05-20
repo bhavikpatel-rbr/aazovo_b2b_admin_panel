@@ -1173,7 +1173,7 @@ const Opportunities = () => {
                 activeTab={currentTab}
             />
         </Container>
-        <CreateSellerForm/>
+        {/* <CreateSellerForm/> */}
         </>
     )
 }

@@ -1,71 +1,51 @@
-import Avatar from '@/components/ui/Avatar'
-// eslint-disable-next-line import/named
-import { Link } from 'react-scroll'
-import { TbInfoTriangleFilled, TbTrademark, TbBrandOffice, TbCertificate, TbGitBranch, TbCertificate2 } from 'react-icons/tb'
+// Navigator.tsx
 
-const navigationList = [
-    {
-        label: 'Primary Information',
-        link: 'companyDetails',
-        icon: <TbInfoTriangleFilled />,
-    },
-    {
-        label: 'Trade Information',
-        link: 'tradeInformation',
-        icon: <TbTrademark />,
-    },
-    {
-        label: 'Company Information',
-        link: 'companyInformation',
-        icon: <TbBrandOffice />,
-    },
-    {
-        label: 'Certificate & Licenses',
-        link: 'certificateAndLicenses',
-        icon: <TbCertificate />,
-    },
-        {
-        label: 'Branches',
-        link: 'branches',
-        icon: <TbGitBranch />,
-    },
-        {
-        label: 'KYC Documents',
-        link: 'kycDocuments',
-        icon: <TbCertificate2 />,
-    },
-]
+import classNames from 'classnames';
 
-const Navigator = () => {
-    return (
-        <div className="flex flex-col gap-2">
-            {navigationList.map((nav) => (
-                <Link
-                    key={nav.label}
-                    activeClass="bg-gray-100 dark:bg-gray-700 active"
-                    className="cursor-pointer p-2 rounded-xl group hover:bg-gray-100 dark:hover:bg-gray-700"
-                    to={nav.link}
-                    spy={true}
-                    smooth={true}
-                    duration={500}
-                    offset={-80}
-                >
-                    <span className="flex items-center gap-2">
-                        <Avatar
-                            icon={nav.icon}
-                            className="bg-gray-100 dark:bg-gray-700 group-hover:bg-white group-[.active]:bg-white dark:group-hover:bg-gray-800 dark:group-[.active]:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        />
-                        <span className="flex flex-col flex-1">
-                            <span className="heading-text font-bold">
-                                {nav.label}
-                            </span>
-                            {/* <span>{nav.description}</span> */}
-                        </span>
-                    </span>
-                </Link>
-            ))}
-        </div>
-    )
+export const navigationList = [
+    { label: 'Primary Info', link: 'companyDetails' },
+    { label: 'Trade Info', link: 'tradeInformation' },
+    { label: 'Company Info', link: 'companyInformation' },
+    { label: 'Certificates', link: 'certificateAndLicenses' },
+    { label: 'Branches', link: 'branches' },
+    { label: 'KYC Docs', link: 'kycDocuments' },
+];
+
+export type NavigationItem = typeof navigationList[0];
+
+type NavigatorProps = {
+    activeSection: string;
+    onNavigate: (sectionKey: string) => void;
 }
 
-export default Navigator
+const Navigator = (props: NavigatorProps) => {
+    const { activeSection, onNavigate } = props;
+
+return (
+        <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-hidden">
+            {navigationList.map((nav) => (
+                <button
+                    type="button"
+                    key={nav.link}
+                    className={classNames(
+                        'cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0',
+                        'hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none',
+                        {
+                            // Using arbitrary value for text color:
+                            'bg-indigo-50 dark:bg-indigo-700/60 text-[#2a85ff] dark:text-indigo-200 font-semibold': activeSection === nav.link,
+                            'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200': activeSection !== nav.link
+                        }
+                    )}
+                    onClick={() => onNavigate(nav.link)}
+                    title={nav.label}
+                >
+                    <span className="font-medium text-[10px] xxs:text-xs sm:text-sm truncate">
+                        {nav.label}
+                    </span>
+                </button>
+            ))}
+        </div>
+    );
+}
+
+export default Navigator;

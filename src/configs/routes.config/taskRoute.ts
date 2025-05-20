@@ -5,9 +5,9 @@ import type { Routes } from '@/@types/routes';
 
 const taskRoute: Routes = [
     {
-        key: 'task.task',
+        key: 'task.taskBoard',
         path: `${TASK_PREFIX_PATH}/task-board`,
-        component: lazy(() => import('@/views/task/Taks-Board')),
+        component: lazy(() => import('@/views/task/Task-Board')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',
