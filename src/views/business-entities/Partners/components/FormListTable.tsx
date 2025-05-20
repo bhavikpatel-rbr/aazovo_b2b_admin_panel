@@ -246,7 +246,7 @@ const FormListTable = () => {
             filteredData.sort((a, b) => {
                 const aValue = a[key as keyof PartnerListItem] ?? '';
                 const bValue = b[key as keyof PartnerListItem] ?? '';
-                if (['partner_profile_completion', 'partner_trust_score', 'partner_activity_score', 'partner_lead_time'].includes(key)) {
+                if (['partner_profile_completion', 'partner_trust_score', 'partner_activity_score', 'partner_lead_time'].includes(aValue as string)) {
                     const numA = Number(aValue); const numB = Number(bValue);
                     if (!isNaN(numA) && !isNaN(numB)) return order === 'asc' ? numA - numB : numB - numA;
                 }
