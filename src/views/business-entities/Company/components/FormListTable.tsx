@@ -10,6 +10,9 @@ import {
     TbCopy, // Added back for cloning if needed
     TbSwitchHorizontal,
     TbTrash,
+    TbEye,
+    TbShare,
+    TbDotsVertical,
 } from 'react-icons/tb'
 import { MdCheckCircle, MdCancel } from 'react-icons/md' // From Overview.tsx
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
@@ -64,34 +67,15 @@ const getStatusClass = (status: MergedFormItem['status']): string => {
 const ActionColumn = ({
     onEdit,
     onViewDetail, 
-    onClone,
     onChangeStatus,
 }: {
     onEdit: () => void
     onViewDetail: () => void
-    onClone: () => void
     onChangeStatus: () => void
 }) => {
     return (
-        <div className="flex items-center justify-center gap-2">
-            <Tooltip title="Clone Company">
-                <div
-                    className={`text-xl cursor-pointer select-none font-semibold text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400`}
-                    role="button"
-                    onClick={onClone}
-                >
-                    <TbCopy />
-                </div>
-            </Tooltip>
-            <Tooltip title="Change Status">
-                <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400`}
-                    role="button"
-                    onClick={onChangeStatus}
-                >
-                    <TbSwitchHorizontal />
-                </div>
-            </Tooltip>
+        <div className="flex items-center justify-center gap-1">
+            
             <Tooltip title="Edit">
                 <div
                     className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
@@ -101,7 +85,32 @@ const ActionColumn = ({
                     <TbPencil />
                 </div>
             </Tooltip>
-            <Tooltip title="Delete">
+            <Tooltip title="View">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+                    role="button"
+                    onClick={onViewDetail}
+                >
+                    <TbEye />
+                </div>
+            </Tooltip>
+            <Tooltip title="Share">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+                    role="button"
+                >   
+                <TbShare />
+                </div>
+            </Tooltip>
+            <Tooltip title="More">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+                    role="button"
+                >
+                    <TbDotsVertical />
+                </div>
+            </Tooltip>
+            {/* <Tooltip title="Delete">
                 <div
                     className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
                     role="button"
@@ -109,7 +118,7 @@ const ActionColumn = ({
                 >
                     <TbTrash />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
         </div>
     )
 }
@@ -254,25 +263,66 @@ const FormListTable = () => {
                 header: 'Company Info',
                 accessorKey: 'name',
                 enableSorting: true,
-                size: 240,
+                size: 220,
                 cell: ({ row }) => {
                     const { name, type, country, status, company_photo, company_code } = row.original
                     return (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col">
                             <div className="flex items-center gap-2">
-                                {company_photo && <Avatar src={company_photo} alt={name} size="sm" shape="rounded" />}
-                                <h6 className="text-xs font-semibold">{name}</h6>
+                                {company_photo && <Avatar src={company_photo} alt={name} size="sm" shape="circle" />}
+                                <div>
+                                    <h6 className="text-xs font-semibold">{company_code}</h6>
+                                    <span className="text-xs">{name}</span>
+                                </div>
                             </div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                ({"Phone/Email"}) 
-                            </span>
-                             {company_code && <span className="text-xs text-gray-500 dark:text-gray-400">Code: {company_code}</span>}
+                             {/* {company_code && <span className="text-xs text-gray-500 dark:text-gray-400">Code: {company_code}</span>} */}
                             <span className="text-xs">
                                 <span className="font-semibold">Type :</span> {type}
                             </span>
                             <span className="text-xs">
-                                <span className="font-semibold">Country:</span> {country}
+                                <span className="font-semibold">Business Type:</span> Supplier
                             </span>
+                            <div className="text-xs text-gray-500"> Gujarat , India </div>
+                            {/* <span className="text-xs">
+                                <span className="font-semibold">Country:</span> {country}
+                            </span> */}
+                            
+                        </div>
+                    )
+                },
+            },
+            {
+                header: "Contact",
+                accessorKey : "",
+                cell : (props)=>{
+                    return (
+                        <div className='text-xs flex flex-col'>
+                            <span><b>Owner: </b> Nitin Mehta</span>
+                            <span>+91 9683205942</span>
+                            <span>nitinmehta@techno.com</span>
+                            <a href="https://www.google.com" target='_blank'>www.google.com</a>
+                        </div>
+                    )
+                }
+            },
+            { 
+                header: 'Legal IDs',
+                accessorKey: 'gst_number',
+                enableSorting: true,
+                size: 180,
+                cell: ({ row }) => {
+                    const { gst_number, pan_number, status } = row.original
+                    if (!gst_number && !pan_number) return <span className="text-xs text-gray-400">N/A</span>;
+                    return (
+                        <div className="flex flex-col gap-1 text-[10px]">
+                            {gst_number && <div>
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">GST:</span>{' '}
+                                <span className="text-gray-600 dark:text-gray-400 break-all">{gst_number}</span>
+                            </div>}
+                            {pan_number && <div>
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">PAN:</span>{' '}
+                                <span className="text-gray-600 dark:text-gray-400 break-all">{pan_number}</span>
+                            </div>}
                             <span className="text-xs">
                                 <Tag className={`${getStatusClass(status)} capitalize`}>
                                     {status}
@@ -309,7 +359,7 @@ const FormListTable = () => {
                 header: 'Profile & Scores',
                 accessorKey: 'progress', 
                 enableSorting: true,
-                size: 220, 
+                size: 190, 
                 cell: ({ row }) => {
                     const { noOfMember, total_members, member_participation, progress, success_score, trust_score, health_score } = row.original
                     return (
@@ -360,28 +410,7 @@ const FormListTable = () => {
                     )
                 },
             },
-            { 
-                header: 'Legal IDs',
-                accessorKey: 'gst_number',
-                enableSorting: true,
-                size: 180,
-                cell: ({ row }) => {
-                    const { gst_number, pan_number } = row.original
-                    if (!gst_number && !pan_number) return <span className="text-xs text-gray-400">N/A</span>;
-                    return (
-                        <div className="flex flex-col gap-1 text-xs">
-                            {gst_number && <div>
-                                <span className="font-semibold text-gray-700 dark:text-gray-300">GST:</span>{' '}
-                                <span className="text-gray-600 dark:text-gray-400 break-all">{gst_number}</span>
-                            </div>}
-                            {pan_number && <div>
-                                <span className="font-semibold text-gray-700 dark:text-gray-300">PAN:</span>{' '}
-                                <span className="text-gray-600 dark:text-gray-400 break-all">{pan_number}</span>
-                            </div>}
-                        </div>
-                    )
-                },
-            },
+            
             // { // REMOVED
             //     header: 'Opportunities',
             //     accessorKey: 'opportunity', 
@@ -416,9 +445,9 @@ const FormListTable = () => {
                 header: 'Actions',
                 id: 'action',
                 size: 130,
+                meta : {HeaderClass : "text-center"},
                 cell: (props) => (
                     <ActionColumn
-                        onClone={() => handleCloneForm(props.row.original)}
                         onChangeStatus={() => handleChangeStatus(props.row.original)}
                         onEdit={() => handleEdit(props.row.original)}
                         onViewDetail={() => handleDelete(props.row.original)}

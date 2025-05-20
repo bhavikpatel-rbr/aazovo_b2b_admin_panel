@@ -13,7 +13,7 @@ const FormListSearch = (props: CustomerListSearchProps) => {
     return (
         <DebouceInput
             ref={ref}
-            placeholder="Quick search..."
+            placeholder="Quick Search..."
             suffix={<TbSearch className="text-lg" />}
             onChange={(e) => onInputChange(e.target.value)}
         />

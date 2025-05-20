@@ -3,6 +3,8 @@ import Input from '@/components/ui/Input'
 import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types'
+import { Button } from '@/components/ui'
+import { TbPlus } from 'react-icons/tb'
 
 type CerificateDetailSectionProps = FormSectionBaseProps
 
@@ -14,8 +16,8 @@ const CerificateDetailSection = ({
 
     return (
         <Card id="certificateAndLicenses">
-            <h4 className="mb-6">Certificates</h4>
-            <div className="grid md:grid-cols-3 gap-4">
+            <h5 className="mb-6">Certificates</h5>
+            <div className="grid md:grid-cols-2 gap-4">
                 <FormItem
                     label="Certificate Name"
                     invalid={Boolean(errors.certificate_name)}
@@ -54,6 +56,7 @@ const CerificateDetailSection = ({
                     />
                 </FormItem>
             </div>
+            <Button icon={<TbPlus/>} type='button' className='relative float-right mb-4'> Add More</Button>
         </Card>
     )
 }

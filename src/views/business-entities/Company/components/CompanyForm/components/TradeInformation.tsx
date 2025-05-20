@@ -13,8 +13,8 @@ const TradeDetailSection = ({
 
     return (
         <Card id="tradeInformation" className="">
-            <h4 className="mb-6">Trade Information</h4>
-            <div className="grid md:grid-cols-3 gap-4">
+            <h5 className="mb-6">Trade Information</h5>
+            <div className="grid md:grid-cols-2 gap-4">
                 <FormItem
                     label="GST Number"
                     invalid={Boolean(errors.gst_number)}

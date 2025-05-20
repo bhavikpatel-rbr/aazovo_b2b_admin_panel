@@ -4,6 +4,8 @@ import Select from '@/components/ui/Select' // Import Select
 import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps, CompanyFormSchema } from '../types' // Assuming CompanyFormSchema is needed
+import { Button } from '@/components/ui'
+import { TbPlus } from 'react-icons/tb'
 
 type BranchesDetailSectionProps = FormSectionBaseProps
 
@@ -24,6 +26,11 @@ const stateOptions = [ // These would typically be filtered by selected country
     { value: 'ON', label: 'Ontario' },     // Canada
     // ... more states
 ];
+const officeTypeOptions = [ // These would typically be filtered by selected country
+    { value: 'Head Office', label: 'Head Office' }, // India
+    { value: 'Branch', label: 'Branch' }, // India
+    // ... more states
+];
 // --- End Mock Options Data ---
 
 
@@ -34,10 +41,33 @@ const BranchesDetailSection = ({
 
     return (
         <Card id="branches">
-            <h4 className="mb-6">Branch / Head Office Information</h4>
+            <h5 className="mb-6">Branch / Head Office Information</h5>
             <div className="grid md:grid-cols-3 gap-4">
+
+                {/* Office Type as Select */}
                 <FormItem
-                    label="Head Office" // Or Branch Name
+                    label="Office Type"
+                    invalid={Boolean(errors.branch_state)}
+                    errorMessage={errors.branch_state?.message as string}
+                >
+                    <Controller
+                        name="office_type" // Ensure this field exists in CompanyFormSchema
+                        control={control}
+                        rules={{ required: 'Office type is required' }}
+                        render={({ field }) => (
+                            <Select
+                                placeholder="Select Office Type"
+                                options={officeTypeOptions} // Ideally, filter these based on selected country
+                                value={officeTypeOptions.find(option => option.value === field.value)}
+                                onChange={(option) => field.onChange(option?.value)}
+                                {...field}
+                            />
+                        )}
+                    />
+                </FormItem>
+
+                <FormItem
+                    label="Office Name" // Or Branch Name
                     invalid={Boolean(errors.head_office)}
                     errorMessage={errors.head_office?.message as string}
                 >
@@ -120,28 +150,6 @@ const BranchesDetailSection = ({
                     />
                 </FormItem>
 
-                {/* Address - Spanning 2 columns for more space if using md:grid-cols-2 */}
-                <FormItem
-                    label="Address"
-                    className="md:col-span-2" // Make Address take full width on medium screens
-                    invalid={Boolean(errors.branch_address)}
-                    errorMessage={errors.branch_address?.message as string}
-                >
-                    <Controller
-                        name="branch_address"
-                        control={control}
-                        rules={{ required: 'Address is required' }}
-                        render={({ field }) => (
-                            <Input
-                                type="text" // Consider textarea if your Input component supports it or use a dedicated one
-                                autoComplete="off"
-                                placeholder="Full Address (Street, City, etc.)"
-                                {...field}
-                            />
-                        )}
-                    />
-                </FormItem>
-
                 <FormItem
                     label="GST/REG Number"
                     invalid={Boolean(errors.branch_gst_reg_number)}
@@ -160,7 +168,32 @@ const BranchesDetailSection = ({
                         )}
                     />
                 </FormItem>
+
+                {/* Address - Spanning 2 columns for more space if using md:grid-cols-2 */}
+                <FormItem
+                    label="Address"
+                    className="md:col-span-3" // Make Address take full width on medium screens
+                    invalid={Boolean(errors.branch_address)}
+                    errorMessage={errors.branch_address?.message as string}
+                >
+                    <Controller
+                        name="branch_address"
+                        control={control}
+                        rules={{ required: 'Address is required' }}
+                        render={({ field }) => (
+                            <Input
+                                type="text" // Consider textarea if your Input component supports it or use a dedicated one
+                                autoComplete="off"
+                                placeholder="Full Address (Street, City, etc.)"
+                                {...field}
+                            />
+                        )}
+                    />
+                </FormItem>
+
             </div>
+            <Button icon={<TbPlus/>} type='button' className='relative float-right mb-4'> Add More</Button>
+
         </Card>
     )
 }
