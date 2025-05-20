@@ -43,19 +43,19 @@ const ScrumBoardHeader = ({
                             icon={<TbUserPlus />}
                             onClick={onAddMember}
                         />
-                        <Button
+                        {/* <Button
                             size="sm"
                             icon={<TbSettings />}
                             onClick={() =>
                                 navigate('/app/account/settings/profile')
                             }
-                        />
+                        /> */}
                         <Button
                             size="sm"
                             icon={<TbPlus />}
                             onClick={handleAddNewColumn}
                         >
-                            <span>New Task</span>
+                            <span>Add Status</span>
                         </Button>
                     </div>
                 </div>
