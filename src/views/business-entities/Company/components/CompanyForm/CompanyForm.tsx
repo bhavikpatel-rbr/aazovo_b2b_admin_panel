@@ -16,6 +16,9 @@ import type { CompanyFormSchema } from './types'
 import type { CommonProps } from '@/@types/common'
 import BranchesDetailSection from './components/Branches'
 import KYCDetailSection from './components/KYC'
+import { BiChevronRight } from 'react-icons/bi'
+import { NavLink } from 'react-router-dom'
+import { Button } from '@/components/ui'
 
 type CompanyFormProps = {
     children: ReactNode
@@ -78,41 +81,61 @@ const CompanyForm = (props: CompanyFormProps) => {
     }
 
     return (
-        <Form
-            className="flex flex-col"
-            onSubmit={handleSubmit(onSubmit)}
-        >
-            <Container>
-                {/* Horizontal Navigator within Card */}
-                {/* Add padding to the Card's body using bodyClass or directly if supported */}
-                <Card 
-                    className="mb-6" 
-                    // Option 1: If your Card component has a bodyClass prop for internal padding
-                    bodyClass="px-4 md:px-6" // Example: Add horizontal padding
-                    // Option 2: If Card doesn't have bodyClass, you might need to wrap Navigator
-                    // or hope the Card's default padding is sufficient.
-                >
-                    {/* 
-                        If Card's default padding isn't what you want and bodyClass isn't available,
-                        you could add a div wrapper here:
-                        <div className="px-4 md:px-6"> 
-                    */}
-                    <Navigator
-                        activeSection={activeSection}
-                        onNavigate={(sectionKey) => setActiveSection(sectionKey as FormSectionKey)}
-                    />
-                    {/* 
-                        </div> 
-                    */}
-                </Card>
+        <div>
+            <Form
+                className="flex flex-col"
+                onSubmit={handleSubmit(onSubmit)}
+            >
+                <Container>
+                    {/* Horizontal Navigator within Card */}
+                    {/* Add padding to the Card's body using bodyClass or directly if supported */}
 
-                {/* Form Sections Area */}
-                <div className="flex flex-col gap-4">
-                    {renderActiveSection()}
-                </div>
-                {/* {children}  */}
-            </Container>
-        </Form>
+                    <div className='flex gap-1 items-end mb-3 '>
+                        <NavLink to="/business-entities/company">
+                            <h6 className='font-semibold hover:text-primary'>Company</h6>
+                        </NavLink>
+                        <BiChevronRight size={22} color='black'/>
+                        <h6 className='font-semibold text-primary'>Add New Company</h6>
+                    </div>
+
+                    <Card 
+                        className="mb-6" 
+                        // Option 1: If your Card component has a bodyClass prop for internal padding
+                        bodyClass="px-4 md:px-6 py-2" // Example: Add horizontal padding
+                        // Option 2: If Card doesn't have bodyClass, you might need to wrap Navigator
+                        // or hope the Card's default padding is sufficient.
+                    >
+                        {/* 
+                            If Card's default padding isn't what you want and bodyClass isn't available,
+                            you could add a div wrapper here:
+                            <div className="px-4 md:px-6"> 
+                        */}
+                        <Navigator
+                            activeSection={activeSection}
+                            onNavigate={(sectionKey) => setActiveSection(sectionKey as FormSectionKey)}
+                        />
+                        {/* 
+                            </div> 
+                        */}
+                    </Card>
+
+                    {/* Form Sections Area */}
+                    <div className="flex flex-col gap-4">
+                        {renderActiveSection()}
+                    </div>
+                    {/* {children}  */}
+                </Container>
+            </Form>
+            
+            {/* Footer with Save and Cancel buttons */}
+            <Card bodyClass="flex justify-end gap-2" className='mt-4'>
+                <Button type="button" className="px-4 py-2">Cancel</Button>
+                <Button type="button" className="px-4 py-2">Previous</Button>
+                <Button type="button" className="px-4 py-2">Next</Button>
+                <Button type="button" className="px-4 py-2">Draft</Button>
+                <Button type="submit" className="px-4 py-2" variant="solid">Save</Button>
+            </Card>
+        </div>
     )
 }
 

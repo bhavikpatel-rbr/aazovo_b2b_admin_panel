@@ -6,6 +6,7 @@ import { FormItem } from '@/components/ui/Form'
 // import { countryList } from '@/constants/countries.constant'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps, CompanyFormSchema } from '../types'
+import Textarea from '@/views/ui-components/forms/Input/Textarea'
 
 type PrimaryDetailSectionProps = FormSectionBaseProps
 
@@ -30,9 +31,9 @@ const PrimaryDetailSection = ({
 
     return (
     <Card id="companyDetails">
-        <h4 className="mb-6">Primary Information</h4>
+        <h5 className="mb-6">Primary Information</h5>
         {/* Changed to md:grid-cols-3 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {/* Company Name */}
             <FormItem
                 label="Company Name"
@@ -55,7 +56,7 @@ const PrimaryDetailSection = ({
             </FormItem>
 
             {/* Company Primary Contact Number */}
-            <FormItem
+            {/* <FormItem
                 label="Company Primary Contact Number"
                 invalid={Boolean(errors.company_primary_contact_number)}
                 errorMessage={errors.company_primary_contact_number?.message as string}
@@ -73,27 +74,44 @@ const PrimaryDetailSection = ({
                         />
                     )}
                 />
-            </FormItem>
+            </FormItem> */}
 
-            {/* Company Primary E-mail ID */}
             <FormItem
-                label="Company Primary E-mail ID"
-                invalid={Boolean(errors.company_primary_email_id)}
-                errorMessage={errors.company_primary_email_id?.message as string}
+                label="Company Primary Contact Number"
+                invalid={Boolean(errors.alternate_contact_country_code) || Boolean(errors.alternate_contact_number)}
+                errorMessage={
+                    (errors.alternate_contact_country_code?.message as string) ||
+                    (errors.alternate_contact_number?.message as string)
+                }
             >
-                <Controller
-                    name="company_primary_email_id"
-                    control={control}
-                    rules={{ required: 'Primary Email is required', pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' } }}
-                    render={({ field }) => (
-                        <Input
-                            type="email"
-                            autoComplete="off"
-                            placeholder="Primary Email ID"
-                            {...field}
-                        />
-                    )}
-                />
+                <div className="flex items-center gap-2">
+                    <Controller
+                        name="primary_contact_country_code"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                type="text"
+                                autoComplete="off"
+                                placeholder="+1"
+                                className="w-20" // Keep it narrow
+                                {...field}
+                            />
+                        )}
+                    />
+                    <Controller
+                        name="primary_contact_number"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                type="tel"
+                                autoComplete="off"
+                                placeholder="Primary Number"
+                                className="flex-grow"
+                                {...field}
+                            />
+                        )}
+                    />
+                </div>
             </FormItem>
 
             {/* Alternate Contact Number - Combined Field
@@ -137,7 +155,27 @@ const PrimaryDetailSection = ({
                     />
                 </div>
             </FormItem>
-
+            
+            {/* Company Primary E-mail ID */}
+            <FormItem
+                label="Company Primary E-mail ID"
+                invalid={Boolean(errors.company_primary_email_id)}
+                errorMessage={errors.company_primary_email_id?.message as string}
+            >
+                <Controller
+                    name="company_primary_email_id"
+                    control={control}
+                    rules={{ required: 'Primary Email is required', pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' } }}
+                    render={({ field }) => (
+                        <Input
+                            type="email"
+                            autoComplete="off"
+                            placeholder="Primary Email ID"
+                            {...field}
+                        />
+                    )}
+                />
+            </FormItem>
 
             {/* Alternate E-mail ID */}
             <FormItem
@@ -190,7 +228,6 @@ const PrimaryDetailSection = ({
                 label="Owner/Director/Proprietor Name"
                 invalid={Boolean(errors.owner_director_proprietor_name)}
                 errorMessage={errors.owner_director_proprietor_name?.message as string}
-                // className="md:col-span-2" // Example: if it needs more width
             >
                 <Controller
                     name="owner_director_proprietor_name"
@@ -214,7 +251,7 @@ const PrimaryDetailSection = ({
                 label="Company Address"
                 invalid={Boolean(errors.company_address)}
                 errorMessage={errors.company_address?.message as string}
-                className="md:col-span-3" // Make address take full width in 3-col layout
+                className="md:col-span-2" // Make address take full width in 3-col layout
             >
                 <Controller
                     name="company_address"
@@ -225,6 +262,28 @@ const PrimaryDetailSection = ({
                             type="text"
                             autoComplete="off"
                             placeholder="Company Address"
+                            {...field}
+                        />
+                    )}
+                />
+            </FormItem>
+            
+            {/* Continent Name as Select */}
+            <FormItem
+                label="Continent Name"
+                invalid={Boolean(errors.continent_name)}
+                errorMessage={errors.continent_name?.message as string}
+            >
+                <Controller
+                    name="continent_name"
+                    control={control}
+                    rules={{ required: 'Continent is required' }}
+                    render={({ field }) => (
+                        <Select
+                            placeholder="Select Continent"
+                            options={continentOptions}
+                            value={continentOptions.find(option => option.value === field.value)}
+                            onChange={(option) => field.onChange(option?.value)}
                             {...field}
                         />
                     )}
@@ -281,6 +340,7 @@ const PrimaryDetailSection = ({
                 label="City"
                 invalid={Boolean(errors.city)}
                 errorMessage={errors.city?.message as string}
+                className='col-span-2'
             >
                 <Controller
                     name="city"
@@ -321,27 +381,6 @@ const PrimaryDetailSection = ({
             </FormItem>
 
 
-            {/* Continent Name as Select */}
-            <FormItem
-                label="Continent Name"
-                invalid={Boolean(errors.continent_name)}
-                errorMessage={errors.continent_name?.message as string}
-            >
-                <Controller
-                    name="continent_name"
-                    control={control}
-                    rules={{ required: 'Continent is required' }}
-                    render={({ field }) => (
-                        <Select
-                            placeholder="Select Continent"
-                            options={continentOptions}
-                            value={continentOptions.find(option => option.value === field.value)}
-                            onChange={(option) => field.onChange(option?.value)}
-                            {...field}
-                        />
-                    )}
-                />
-            </FormItem>
         </div>
     </Card>
     )

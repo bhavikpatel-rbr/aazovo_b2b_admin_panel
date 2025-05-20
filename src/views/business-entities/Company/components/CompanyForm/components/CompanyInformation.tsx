@@ -40,7 +40,7 @@ const CompanyInformationDetailSection = ({
 
     return (
         <Card id="companyInformation">
-            <h4 className="mb-6">Company Information</h4>
+            <h5 className="mb-6">Company Information</h5>
             <div className="grid md:grid-cols-3 gap-4">
                 <FormItem
                     label="Establishment Year"
