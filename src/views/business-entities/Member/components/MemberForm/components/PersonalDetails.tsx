@@ -38,30 +38,7 @@ const PersonalDetails = ({
       <h4 className="mb-6">Personal Details</h4>
       <div className="grid md:grid-cols-3 gap-4">
 
-        {/* Status Dropdown */}
-        <FormItem
-          label="Status"
-          invalid={Boolean(errors.status)}
-          errorMessage={errors.status?.message}
-        >
-          <Controller
-            name="status"
-            control={control}
-            render={({ field }) => (
-              <Select
-                size="sm"
-                className="mb-4"
-                placeholder="Please Select"
-                options={[
-                  { label: 'Active', value: 'active' },
-                  { label: 'Inactive', value: 'inactive' },
-                  { label: 'Pending', value: 'pending' },
-                ]}
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
+
 
         {/* Full Name */}
         <FormItem
@@ -89,18 +66,34 @@ const PersonalDetails = ({
           invalid={Boolean(errors.mobile_number)}
           errorMessage={errors.mobile_number?.message}
         >
-          <Controller
-            name="mobile_number"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="text"
-                autoComplete="off"
-                placeholder="Primary contact number"
-                {...field}
-              />
-            )}
-          />
+          <div className="flex items-center gap-2">
+            <Controller
+              name="contact_country_code"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="+1"
+                  className="w-20" // Keep it narrow
+                  {...field}
+                />
+              )}
+            />
+            <Controller
+              name="mobile_number"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Primary contact number"
+                  {...field}
+                />
+              )}
+            />
+          </div>
+          
         </FormItem>
 
         {/* Email */}
@@ -128,6 +121,7 @@ const PersonalDetails = ({
           label="Company Name (Temp)"
           invalid={Boolean(errors.company_name_temp)}
           errorMessage={errors.company_name_temp?.message}
+          className='col-span-3'
         >
           <Controller
             name="company_name_temp"
@@ -137,6 +131,53 @@ const PersonalDetails = ({
                 type="text"
                 autoComplete="off"
                 placeholder="Temporary input"
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+
+        {/* Address */}
+        <FormItem
+          label="Address"
+          invalid={Boolean(errors.company_name_temp)}
+          errorMessage={errors.company_name_temp?.message}
+          className='col-span-3'
+        >
+          <Controller
+            name="address"
+            control={control}
+            render={({ field }) => (
+              <Input
+                type="text"
+                autoComplete="off"
+                placeholder="Full Address (Street, City, etc.)"
+                {...field}
+                textArea
+              />
+            )}
+          />
+        </FormItem>
+
+        {/* Status Dropdown */}
+        <FormItem
+          label="Status"
+          invalid={Boolean(errors.status)}
+          errorMessage={errors.status?.message}
+        >
+          <Controller
+            name="status"
+            control={control}
+            render={({ field }) => (
+              <Select
+                size="sm"
+                className="mb-4"
+                placeholder="Please Select"
+                options={[
+                  { label: 'Active', value: 'active' },
+                  { label: 'Inactive', value: 'inactive' },
+                  { label: 'Pending', value: 'pending' },
+                ]}
                 {...field}
               />
             )}

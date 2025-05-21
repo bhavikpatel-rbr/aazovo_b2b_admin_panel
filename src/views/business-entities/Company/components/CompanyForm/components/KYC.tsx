@@ -36,8 +36,8 @@ const KYCDetailSection = ({
 
             return (
                 <>
-                    <div key={doc.name} className="mb-6">
-                        <label className="flex items-center gap-2 mb-1">
+                    <div key={doc.name} className="">
+                        <label className="flex items-center gap-2 mb-3">
                             <Controller
                                 name={checkboxField}
                                 control={control}
@@ -50,20 +50,20 @@ const KYCDetailSection = ({
                                     </Checkbox>
                                 )}
                             />
-                            </label>
-                            <Controller
-                                name={doc.name as keyof CompanyFormFields}
-                                control={control}
-                                render={({ field }) => (
-                                    <Input
-                                        type="file"
-                                        onChange={(e) => {
-                                            const target = e.target as HTMLInputElement;
-                                            field.onChange(target.files?.[0]?.name || '');
-                                        }}
-                                    />
-                                )}
-                            />
+                        </label>
+                        <Controller
+                            name={doc.name as keyof CompanyFormFields}
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="file"
+                                    onChange={(e) => {
+                                        const target = e.target as HTMLInputElement;
+                                        field.onChange(target.files?.[0]?.name || '');
+                                    }}
+                                />
+                            )}
+                        />
 
                         <div className="mt-4">
                             {/* <label className="flex items-center gap-2 mb-1">
