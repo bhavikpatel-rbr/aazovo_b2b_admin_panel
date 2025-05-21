@@ -124,14 +124,7 @@ const CompanyForm = (props: CompanyFormProps) => {
                 </Container>
             </Form>
             
-            {/* Footer with Save and Cancel buttons */}
-            <Card bodyClass="flex justify-end gap-2" className='mt-4'>
-                <Button type="button" className="px-4 py-2">Cancel</Button>
-                <Button type="button" className="px-4 py-2">Previous</Button>
-                <Button type="button" className="px-4 py-2">Next</Button>
-                <Button type="button" className="px-4 py-2">Draft</Button>
-                <Button type="submit" className="px-4 py-2" variant="solid">Save</Button>
-            </Card>
+
         </div>
     )
 }

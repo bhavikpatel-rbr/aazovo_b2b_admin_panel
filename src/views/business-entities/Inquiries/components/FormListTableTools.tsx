@@ -196,14 +196,14 @@ const FormListTableTools = () => {
     // --- End Dynamic Options ---
 
     const handleExport = () => console.log("Export Inquiries Clicked");
-    // const handleImport = () => console.log("Import Inquiries Clicked"); // If needed
+    const handleImport = () => console.log("Import Inquiries Clicked"); // If needed
 
     return (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <FormListSearch onInputChange={(e) => handleInputChange(e.target.value)} /> {/* Pass event target value */}
             <div className="flex items-center gap-2">
                 <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
-                {/* <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button> */}
+                <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
                 <Button icon={<TbCloudUpload />} onClick={handleExport}>Export</Button>
             </div>
 
@@ -229,7 +229,6 @@ const FormListTableTools = () => {
                     </div>
                 }
             >
-                <div className="p-4 overflow-y-auto h-[calc(100vh-130px)]">
                     <UiForm id="filterInquiryForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-5">
                         <UiFormItem label='Record Status'>
                             <Controller name="filterRecordStatus" control={filterFormMethods.control}
@@ -292,7 +291,6 @@ const FormListTableTools = () => {
                         </UiFormItem>
 
                     </UiForm>
-                </div>
             </Drawer>
         </div>
     );
