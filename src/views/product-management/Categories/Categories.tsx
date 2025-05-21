@@ -23,24 +23,23 @@ import {
   Input,
   Select as UiSelect,
   Tag,
+
   Dialog,
 } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
-  TbCopy,
-  TbSwitchHorizontal,
-  TbTrash,
   TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
-  TbCloudUpload,
   TbCloudDownload,
   TbCategory,
   TbBox,
-  TbBuildingStore, // Using TbCategory for categories
+  TbEye,
+  TbShare,
+  TbDotsVertical 
 } from "react-icons/tb";
 
 // Types
@@ -301,73 +300,62 @@ const ActionColumn = ({
   onClone,
   onChangeStatus,
   onDelete,
+  onViewDetail,
 }: {
   onEdit: () => void;
   onClone: () => void;
   onChangeStatus: () => void;
   onDelete: () => void;
+  onViewDetail: () => void;
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Clone Category">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
-          tabIndex={0}
-          onClick={onClone}
-        >
-          <TbCopy />
-        </div>
-      </Tooltip>
-      <Tooltip title="Change Status">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400"
-          )}
-          role="button"
-          tabIndex={0}
-          onClick={onChangeStatus}
-        >
-          <TbSwitchHorizontal />
-        </div>
-      </Tooltip>
-      <Tooltip title="Edit Category">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          )}
-          role="button"
-          tabIndex={0}
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Category">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          tabIndex={0}
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
         </div>
       </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
+        </div>
+      </Tooltip>
+      {/* <Tooltip title="Delete">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+                    role="button"
+                    onClick={onViewDetail}
+                >
+                    <TbTrash />
+                </div>
+            </Tooltip> */}
     </div>
   );
 };
@@ -416,13 +404,13 @@ const CategoryTableTools = (
       >
         Import
       </Button>
-      <Button
+      {/* <Button
         icon={<TbCloudUpload />}
         onClick={onExport}
         className="w-full sm:w-auto"
       >
         Export
-      </Button>
+      </Button> */}
     </div>
   </div>
 );
@@ -1235,7 +1223,7 @@ const Categories = () => {
               icon={<TbPlus />}
               onClick={openAddCategoryDrawer}
             >
-              Add New Category
+              Add New
             </Button>
           </div>
           <CategoryTableTools

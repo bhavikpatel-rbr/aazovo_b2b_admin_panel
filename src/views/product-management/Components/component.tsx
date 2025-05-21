@@ -31,12 +31,11 @@ import { TbClipboardText, TbFilter, TbX, TbUserCircle } from 'react-icons/tb';
 // Icons
 import {
     TbPencil,
-    TbCopy, // Optional Clone
-    TbSwitchHorizontal, // Status change
-    TbTrash,
+    TbEye,
+    TbShare,
+    TbDotsVertical,
     TbChecks,
     TbSearch,
-    TbCloudDownload,
     TbCloudUpload,
     TbPlus,
 } from 'react-icons/tb';
@@ -76,16 +75,55 @@ export const taskStatusColor: Record<TaskItemStatus, string> = {
 };
 
 // --- Reusable ActionColumn Component ---
-export const ActionColumn = ({ onEdit, onChangeStatus, onDelete, onClone }: { onEdit: () => void; onChangeStatus: () => void; onDelete: () => void; onClone?: () => void; }) => {
+export const ActionColumn = ({ onEdit, onChangeStatus, onDelete, onClone, onViewDetail }: { onEdit: () => void; onChangeStatus: () => void; onDelete: () => void; onClone?: () => void; onViewDetail: () => void; }) => {
     const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
     return (
-        <div className="flex items-center justify-center">
-            {/* {onClone && ( <Tooltip title="Clone Task"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400')} role="button" onClick={onClone}><TbCopy /></div></Tooltip> )} */}
-            <Tooltip title="Change Status"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400')} role="button" onClick={onChangeStatus}><TbSwitchHorizontal /></div></Tooltip>
-            <Tooltip title="Edit Task"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
-            <Tooltip title="Delete Task"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+          role="button"
+          onClick={onEdit}
+        >
+          <TbPencil />
         </div>
+      </Tooltip>
+      <Tooltip title="View">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+          role="button"
+          onClick={onViewDetail}
+        >
+          <TbEye />
+        </div>
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
+        </div>
+      </Tooltip>
+      {/* <Tooltip title="Delete">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+                    role="button"
+                    onClick={onViewDetail}
+                >
+                    <TbTrash />
+                </div>
+            </Tooltip> */}
+    </div>
     );
 };
 // --- End ActionColumn ---

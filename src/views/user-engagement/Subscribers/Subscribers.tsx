@@ -188,7 +188,7 @@ const SubscriberSearch = React.forwardRef<
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Search subscribers (Email, Name, ID)..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
