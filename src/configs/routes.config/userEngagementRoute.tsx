@@ -7,7 +7,7 @@ const userEngagementRoute: Routes = [
     {
         key: 'userengagement.subscriber',
         path: `${USER_ENGAGEMENT_ROUTE}/subscriber`,
-        component: lazy(() => import('@/views/business-entities/Subscribers')),
+        component: lazy(() => import('@/views/user-engagement/Subscribers')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',

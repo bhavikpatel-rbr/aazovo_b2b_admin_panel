@@ -20,37 +20,37 @@ const userengagementNavigationConfig: NavigationTree[] = [
             },
             subMenu: [
               {
-                              key: 'userengagement.subscriber',
-                              path: `${USER_ENGAGEMENT_ROUTE}/subscriber`,
-                              title: 'Subscriber',
-                              translateKey: 'nav.userengagement.subscriber',
-                              icon: 'subscriber',
-                              type: NAV_ITEM_TYPE_ITEM,
-                              authority: [ADMIN, USER],
-                              meta: {
-                                  description: {
-                                      translateKey: 'nav.userengagement.subscriberDesc',
-                                      label: 'Manage subscribers',
-                                  },
-                              },
-                              subMenu: [],
-                          },
-                          {
-                              key: 'userengagement.requestFeedback',
-                              path: `${USER_ENGAGEMENT_ROUTE}/request-feedback`,
-                              title: 'Request & Feedback',
-                              translateKey: 'nav.userengagement.requestFeedback',
-                              icon: 'requestFeedback',
-                              type: NAV_ITEM_TYPE_ITEM,
-                              authority: [ADMIN, USER],
-                              meta: {
-                                  description: {
-                                      translateKey: 'nav.userengagement.requestFeedbackDesc',
-                                      label: 'Handle requests and feedback',
-                                  },
-                              },
-                              subMenu: [],
-                          },  
+                key: 'userengagement.subscriber',
+                path: `${USER_ENGAGEMENT_ROUTE}/subscriber`,
+                title: 'Subscriber',
+                translateKey: 'nav.userengagement.subscriber',
+                icon: 'subscriber',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.userengagement.subscriberDesc',
+                        label: 'Manage subscribers',
+                    },
+                },
+                subMenu: [],
+            },
+            {
+                key: 'userengagement.requestFeedback',
+                path: `${USER_ENGAGEMENT_ROUTE}/request-feedback`,
+                title: 'Request & Feedback',
+                translateKey: 'nav.userengagement.requestFeedback',
+                icon: 'requestFeedback',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.userengagement.requestFeedbackDesc',
+                        label: 'Handle requests and feedback',
+                    },
+                },
+                subMenu: [],
+            },  
             ],
         },
         

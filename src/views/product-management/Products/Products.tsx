@@ -77,7 +77,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // MODIFY_PATH
 import Textarea from "@/views/ui-components/forms/Input/Textarea";
 import { useSelector } from "react-redux";
-import { ActionColumn } from "@/views/task/Components/component";
+import { ActionColumn } from "../Components/component";
 
 // --- Type Definitions ---
 type ApiProductItem = {
@@ -773,10 +773,8 @@ const Products = () => {
 
       galleryImages.forEach((img, index) => {
         if (img.file && img.isNew && !img.isDeleted)
-          formData.append(
-            `product_images[${index}]`,
-            img.file
-          ); // Key for new images
+          formData.append(`product_images[${index}]`, img.file);
+        // Key for new images
         else if (img.id && img.isDeleted)
           formData.append("deleted_image_ids[]", String(img.id)); // Key for deleted
       });

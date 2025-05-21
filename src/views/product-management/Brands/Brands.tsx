@@ -29,9 +29,9 @@ import {
 // Icons
 import {
   TbPencil,
-  TbCopy,
-  TbSwitchHorizontal,
-  TbTrash,
+  TbEye,
+  TbShare,
+  TbDotsVertical,
   TbChecks,
   TbSearch,
   TbFilter,
@@ -272,78 +272,61 @@ const showHeaderOptions: { value: "1" | "0"; label: string }[] = [
   { value: "0", label: "No" },
 ];
 
+// --- ActionColumn (can be the more comprehensive one) ---
 const ActionColumn = ({
   onEdit,
-  onClone,
+  onViewDetail,
   onChangeStatus,
-  onDelete,
 }: {
   onEdit: () => void;
-  onClone: () => void;
+  onViewDetail: () => void;
   onChangeStatus: () => void;
-  onDelete: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Clone Brand">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
-          tabIndex={0}
-          onClick={onClone}
-        >
-          <TbCopy />
-        </div>
-      </Tooltip>
-      <Tooltip title="Change Status">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400"
-          )}
-          role="button"
-          tabIndex={0}
-          onClick={onChangeStatus}
-        >
-          <TbSwitchHorizontal />
-        </div>
-      </Tooltip>
-      <Tooltip title="Edit Brand">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          )}
-          role="button"
-          tabIndex={0}
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Brand">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          tabIndex={0}
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
         </div>
       </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
+        </div>
+      </Tooltip>
+      {/* <Tooltip title="Delete">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+                    role="button"
+                    onClick={onViewDetail}
+                >
+                    <TbTrash />
+                </div>
+            </Tooltip> */}
     </div>
   );
 };
@@ -357,7 +340,7 @@ const BrandSearch = React.forwardRef<HTMLInputElement, BrandSearchProps>(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Search brands..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -1138,7 +1121,7 @@ const Brands = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Brands</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Brand
+              Add New
             </Button>
           </div>
           <BrandTableTools
@@ -1206,6 +1189,44 @@ const Brands = () => {
           className="flex flex-col gap-4"
         >
           <FormItem
+            label="Brand Icon"
+            invalid={!!addFormMethods.formState.errors.icon}
+            errorMessage={
+              addFormMethods.formState.errors.icon?.message as string
+            }
+          >
+            <Controller
+              name="icon"
+              control={addFormMethods.control}
+              render={({ field: { onChange, onBlur, name, ref } }) => (
+                <Input
+                  type="file"
+                  name={name}
+                  ref={ref}
+                  onBlur={onBlur}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const file =
+                      e.target.files && e.target.files.length > 0
+                        ? e.target.files[0]
+                        : null;
+                    onChange(file);
+                    if (addFormPreviewUrl)
+                      URL.revokeObjectURL(addFormPreviewUrl);
+                    setAddFormPreviewUrl(
+                      file ? URL.createObjectURL(file) : null
+                    );
+                  }}
+                  accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
+                />
+              )}
+            />
+            {addFormPreviewUrl && (
+              <div className="mt-2">
+                <Avatar src={addFormPreviewUrl} size={80} shape="circle" />
+              </div>
+            )}
+          </FormItem>
+          <FormItem
             label="Brand Name"
             invalid={!!addFormMethods.formState.errors.name}
             errorMessage={addFormMethods.formState.errors.name?.message}
@@ -1250,44 +1271,7 @@ const Brands = () => {
               )}
             />
           </FormItem>
-          <FormItem
-            label="Icon"
-            invalid={!!addFormMethods.formState.errors.icon}
-            errorMessage={
-              addFormMethods.formState.errors.icon?.message as string
-            }
-          >
-            <Controller
-              name="icon"
-              control={addFormMethods.control}
-              render={({ field: { onChange, onBlur, name, ref } }) => (
-                <Input
-                  type="file"
-                  name={name}
-                  ref={ref}
-                  onBlur={onBlur}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const file =
-                      e.target.files && e.target.files.length > 0
-                        ? e.target.files[0]
-                        : null;
-                    onChange(file);
-                    if (addFormPreviewUrl)
-                      URL.revokeObjectURL(addFormPreviewUrl);
-                    setAddFormPreviewUrl(
-                      file ? URL.createObjectURL(file) : null
-                    );
-                  }}
-                  accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
-                />
-              )}
-            />
-            {addFormPreviewUrl && (
-              <div className="mt-2">
-                <Avatar src={addFormPreviewUrl} size={80} shape="circle" />
-              </div>
-            )}
-          </FormItem>
+
           <FormItem
             label="Show in Header?"
             invalid={!!addFormMethods.formState.errors.show_header}

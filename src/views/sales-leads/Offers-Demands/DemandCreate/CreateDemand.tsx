@@ -1,40 +1,38 @@
-import Card from '@/components/ui/Card'
-import Input from '@/components/ui/Input'
-import { FormItem } from '@/components/ui/Form'
-import DatePicker from '@/components/ui/DatePicker'
+import Card from "@/components/ui/Card";
+import Input from "@/components/ui/Input";
+import { FormItem } from "@/components/ui/Form";
+import DatePicker from "@/components/ui/DatePicker";
 
 const CreateDemand = () => {
-    return (
-        <Card>
-            <h4 className="mb-6">Create Demand</h4>
-            <div className="grid md:grid-cols-3 gap-4">
+  return (
+    <Card>
+      <h4 className="mb-6">Create Demand</h4>
+      <div className="grid md:grid-cols-3 gap-4">
+        <FormItem label="Demand Name">
+          <Input placeholder="Enter Demand name" />
+        </FormItem>
 
-                <FormItem label="Demand Name">
-                    <Input placeholder="Enter Demand name" />
-                </FormItem>
+        <FormItem label="Created By">
+          <Input placeholder="User ID or name" />
+        </FormItem>
 
-                <FormItem label="Created By">
-                    <Input placeholder="User ID or name" />
-                </FormItem>
+        <FormItem label="Created Date">
+          <DatePicker
+            labelFormat={{ month: "MMMM", year: "YY" }}
+            defaultValue={new Date()}
+          />
+        </FormItem>
 
-                <FormItem label="Created Date">
-                    <DatePicker
-                        labelFormat={{ month: 'MMMM', year: 'YY' }}
-                        defaultValue={new Date()}
-                    />
-                </FormItem>
+        <FormItem label="Type">
+          <Input value="Demand" disabled />
+        </FormItem>
 
-                <FormItem label="Type">
-                    <Input value="Demand" disabled />
-                </FormItem>
+        <FormItem label="Demand ID">
+          <Input placeholder="Auto-generated or custom ID" />
+        </FormItem>
+      </div>
+    </Card>
+  );
+};
 
-                <FormItem label="Demand ID">
-                    <Input placeholder="Auto-generated or custom ID" />
-                </FormItem>
-
-            </div>
-        </Card>
-    )
-}
-
-export default CreateDemand
+export default CreateDemand;

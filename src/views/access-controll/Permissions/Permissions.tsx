@@ -836,7 +836,7 @@ const PermissionsListing = () => {
               name="module"
               control={addFormMethods.control}
               render={({ field }) => (
-                <Input {...field} placeholder="e.g., Users, Products"  />
+                <Input {...field} placeholder="e.g., Users, Products" />
               )}
             />
           </FormItem>

@@ -378,7 +378,7 @@ const CategorySearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Search categories..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -771,10 +771,8 @@ const Categories = () => {
         if (value === null && key !== "parent_category")
           formData.append(key, ""); // Send empty for most nulls
         else if (key === "parent_category" && value === null)
-          formData.append(
-            key,
-            ""
-          ); // Explicitly send parent_category as empty if null
+          formData.append(key, "");
+        // Explicitly send parent_category as empty if null
         else if (value !== undefined) formData.append(key, String(value));
       }
     });

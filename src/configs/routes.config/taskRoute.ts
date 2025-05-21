@@ -7,7 +7,7 @@ const taskRoute: Routes = [
     {
         key: 'task.taskBoard',
         path: `${TASK_PREFIX_PATH}/task-board`,
-        component: lazy(() => import('@/views/task/Task-Board')),
+        component: lazy(() => import('@/views/task-management/Task-Board')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',
@@ -16,7 +16,7 @@ const taskRoute: Routes = [
     {
         key: 'task.taskList',
         path: `${TASK_PREFIX_PATH}/task-list`,
-        component: lazy(() => import('@/views/task/Task-List')),
+        component: lazy(() => import('@/views/task-management/Task-List')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',
@@ -25,7 +25,7 @@ const taskRoute: Routes = [
     {
         key: 'task.taskFeedback',
         path: `${TASK_PREFIX_PATH}/task-feedback`,
-        component: lazy(() => import('@/views/task/Task-Feedback')),
+        component: lazy(() => import('@/views/task-management/Task-Feedback')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',

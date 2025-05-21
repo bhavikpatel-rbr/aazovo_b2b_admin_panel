@@ -20,16 +20,16 @@ const masterNavigationConfig: NavigationTree[] = [
         },
         subMenu: [
             {
-                key: 'documentMaster.documentType',
+                key: 'master.documentType',
                 path: `${MASTER_PREFIX_PATH}/document-type`,
                 title: 'Document Type',
-                translateKey: 'nav.documentMaster.documentType',
+                translateKey: 'nav.master.documentType',
                 icon: 'documentType',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN],
                 meta: {
                     description: {
-                        translateKey: 'nav.documentMaster.documentTypeDesc',
+                        translateKey: 'nav.master.documentTypeDesc',
                         label: 'Manage document types',
                     },
                 },
@@ -196,16 +196,16 @@ const masterNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'documentMaster.documents',
+                key: 'master.documents',
                 path: `${MASTER_PREFIX_PATH}/documents`,
                 title: 'Documents List',
-                translateKey: 'nav.documentMaster.documents',
+                translateKey: 'nav.master.documents',
                 icon: 'documents',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN],
                 meta: {
                     description: {
-                        translateKey: 'nav.documentMaster.documentsDesc',
+                        translateKey: 'nav.master.documentsDesc',
                         label: 'Manage documents',
                     },
                 },

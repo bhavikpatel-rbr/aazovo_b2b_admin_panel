@@ -480,37 +480,6 @@ const FormListTable = () => {
           );
         },
       },
-
-      // { // REMOVED
-      //     header: 'Opportunities',
-      //     accessorKey: 'opportunity',
-      //     enableSorting: true,
-      //     size: 130,
-      //     cell: ({ row }) => (
-      //         <div>
-      //             <Tooltip title={`Offers: ... | Demands: ... | Total: ${row.original.opportunity || 0} (Actual)`} className="text-xs">
-      //                 <div className="bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 rounded-md p-1.5 text-xs shadow-md inline-block">
-      //                     {row.original.opportunityDisplay || `${row.original.opportunity || 0} Total`}
-      //                 </div>
-      //             </Tooltip>
-      //         </div>
-      //     ),
-      // },
-      // { // REMOVED
-      //     header: 'Leads',
-      //     accessorKey: 'leads',
-      //     enableSorting: true,
-      //     size: 130,
-      //     cell: ({ row }) => (
-      //         <div>
-      //             <Tooltip title={`Success: ... | Lost: ... | Total: ${row.original.leads || 0} (Actual)`} className="text-xs">
-      //                 <div className="bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300 rounded-md p-1.5 text-xs shadow-md inline-block">
-      //                     {row.original.leadsDisplay || `${row.original.leads || 0} Total`}
-      //                 </div>
-      //             </Tooltip>
-      //         </div>
-      //     ),
-      // },
       {
         header: "Actions",
         id: "action",
