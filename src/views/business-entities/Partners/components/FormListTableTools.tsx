@@ -78,32 +78,87 @@ const FormListTableTools = () => {
             </Button>
             {/* Filter Drawer */}
             <Drawer
-                title="Filter Members"
+                title="Filters"
                 isOpen={filterOpen}
                 onClose={closeFilterDrawer}
                 onRequestClose={closeFilterDrawer}
+                width={480}
                 footer={
                     <div className="text-right w-full">
                         <Button size="sm" className="mr-2" onClick={onClearFilters}>
-                            Clear Filters
+                            Clear
                         </Button>
                         <Button size="sm" variant="solid" form="filterMemberForm" type="submit">
-                            Apply Filters
+                            Apply
                         </Button>
                     </div>
                 }
             >
                 <UiForm id="filterMemberForm" className="flex flex-col gap-4">
-                    {/* <UiFormItem label="Status">
-                        <Controller name="filterStatus"
-                            render={({ field }) => <UiSelect isMulti placeholder="Select status..."
-                                                        value={field.value || []} onChange={val => field.onChange(val || [])} />} />
-                    </UiFormItem> */}
-                    {/* Add other filter fields here: created date (needs DatePicker), membership type, RM, member grade */}
+                    <div className='sm:grid grid-cols-2 gap-2'>
+                        <UiFormItem label="Status">
+                            <UiSelect isMulti placeholder="Select Status"
+                                options={[
+                                    {label: "Active", value: "Active"},
+                                    {label: "Inactive", value: "Inactive"},
+                                ]}
+                            />
+                        </UiFormItem>
+                        <UiFormItem label="Verification">
+                            <UiSelect isMulti placeholder="Verification Status"
+                                options={[
+                                    {label: "Verified", value: "Verified"},
+                                    {label: "Pending", value: "Pending"},
+                                ]}
+                            />
+                        </UiFormItem>
+                        <UiFormItem label="Type">
+                            <UiSelect isMulti placeholder="Select Type"
+                                options={[
+                                    {label: "IT", value: "IT"},
+                                    {label: "Logistics", value: "Inactive"},
+                                ]}
+                            />
+                        </UiFormItem>
+                        <UiFormItem label="Score">
+                            <UiSelect isMulti placeholder="Select Score"
+                                options={[
+                                    {label: "0% - 24%", value: "0% - 24%"},
+                                    {label: "25% - 49%", value: "25% - 49%"},
+                                    {label: "50% - 74%", value: "50% - 74%"},
+                                    {label: "75% - 100%", value: "75% - 100%"},
+                                ]}
+                            />
+                        </UiFormItem>
+                        <UiFormItem label="Lead Time">
+                            <UiSelect isMulti placeholder="Select Lead time"
+                                options={[
+                                    {label: "< 7 days", value: "< 7 days"},
+                                ]}
+                            />
+                        </UiFormItem>
+                        <UiFormItem label="Category">
+                            <UiSelect isMulti placeholder="Select Category"
+                                options={[
+                                    {label: "IT Services", value: "IT Services"},
+                                    {label: "Cloud Consulting", value: "Cloud Consulting"},
+                                ]}
+                            />
+                        </UiFormItem>
+                        <UiFormItem label="Country">
+                            <UiSelect isMulti placeholder="Select Country"
+                                options={[
+                                    {label: "India", value: "India"},
+                                    {label: "UAE", value: "UAE"},
+                                    {label: "Nepal", value: "Nepal"},
+                                ]}
+                            />
+                        </UiFormItem>
+                    </div>
                 </UiForm>
             </Drawer>
-                <Button icon={<TbCloudDownload />}>Import</Button>
-                <Button icon={<TbCloudUpload />}>Export</Button>
+            <Button icon={<TbCloudDownload />}>Import</Button>
+            <Button icon={<TbCloudUpload />}>Export</Button>
         </div>
     )
 }

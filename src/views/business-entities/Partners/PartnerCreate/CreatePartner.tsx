@@ -9,6 +9,7 @@ import Card from "@/components/ui/Card"; // Keep Card
 import { NavLink } from "react-router-dom";
 import { BiChevronRight } from "react-icons/bi";
 import DatePicker from "@/components/ui/DatePicker";
+import { TbPlus } from "react-icons/tb";
 const CreatePartner = () => {
   const {
     control,
@@ -451,18 +452,17 @@ const CreatePartner = () => {
 
                 {/* Upload Documents */}
               <FormItem
+                className="col-span-3"
                 label={
-                  <div className="flex items-center w-full">
-                    <span className="form-label mb-2">
-                      Upload Documents
-                    </span>
+                  <div className="flex items-center gap-2 w-full ">
+                    <span className="form-label mb-2">Upload Documents</span>
                     <div className="flex-1 text-right">
                       <Button
                         type="button"
-                        className="px-4 py-2"
                         onClick={() => append({ name: "", file: null })}
+                        icon={<TbPlus/>}
                       >
-                        + Add New
+                        Add New
                       </Button>
                     </div>
                   </div>
@@ -474,41 +474,43 @@ const CreatePartner = () => {
                     : undefined
                 }
               >
-                {fields.map((item, index) => (
-                  <div key={item.id} className="mb-4 border p-3 rounded-md">
-                    <div className="mb-2">
-                      <Controller
-                        name={`partner_documents.${index}.name`}
-                        control={control}
-                        render={({ field }) => (
-                          <Input placeholder="Document Name" {...field} />
-                        )}
-                      />
-                    </div>
-                    <div>
-                      <Controller
-                        name={`partner_documents.${index}.file`}
-                        control={control}
-                        render={({ field: { onChange, ...rest } }) => (
-                          <Input
-                            type="file"
-                            onChange={(e) => onChange(e.target.files[0])}
-                            {...rest}
-                          />
-                        )}
-                      />
-                    </div>
-                    <div className="mt-2 text-right">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => remove(index)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                <div className="md:grid grid-cols-3 gap-2">
+                  {fields.map((item, index) => (
+                    <Card key={item.id} className="">
+                      <div className="mb-2">
+                        <Controller
+                          name={`partner_documents.${index}.name`}
+                          control={control}
+                          render={({ field }) => (
+                            <Input placeholder="Document Name" {...field} />
+                          )}
+                        />
+                      </div>
+                      <div>
+                        <Controller
+                          name={`partner_documents.${index}.file`}
+                          control={control}
+                          render={({ field: { onChange, ...rest } }) => (
+                            <Input
+                              type="file"
+                              onChange={(e) => onChange(e.target.files[0])}
+                              {...rest}
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="mt-2 text-right">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => remove(index)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </FormItem>
             </form>
           </div>
@@ -518,9 +520,6 @@ const CreatePartner = () => {
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
         <Button type="button" className="px-4 py-2">
           Cancel
-        </Button>
-        <Button type="button" className="px-4 py-2">
-          Draft
         </Button>
         <Button type="submit" className="px-4 py-2" variant="solid">
           Save

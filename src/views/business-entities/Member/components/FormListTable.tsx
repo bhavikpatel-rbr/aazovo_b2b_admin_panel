@@ -750,14 +750,15 @@ const FormListTable = () => {
       />
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Members"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
+        width={480}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -765,7 +766,7 @@ const FormListTable = () => {
               form="filterMemberForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -773,149 +774,150 @@ const FormListTable = () => {
         <UiForm
           id="filterMemberForm"
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4"
         >
-          <UiFormItem label="Status">
-            <Controller
-              name="filterStatus"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select status..."
-                  options={memberStatusOptions}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="Continent">
-            <Controller
-              name="filterContinent"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select continent..."
-                  options={continentOptions}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="Business Type">
-            <Controller
-              name="filterBusinessType"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select business type..."
-                  options={businessTypeOptions}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="State">
-            <Controller
-              name="filterState"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select state..."
-                  options={stateOptions} // Ideally dynamic
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="City">
-            <Controller
-              name="filterCity"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select city..."
-                  options={cityOptions} // Ideally dynamic
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="Interested For">
-            <Controller
-              name="filterInterestedFor"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select interest..."
-                  options={interestedForOptions}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="Interested Category">
-            <Controller
-              name="filterInterestedCategory"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select category..."
-                  options={businessTypeOptions} // Assuming same as business type for example
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="Brand">
-            {" "}
-            {/* Assuming associated_brands are the source */}
-            <Controller
-              name="filterBrand"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select brand..."
-                  options={forms
-                    .flatMap((f) => f.associated_brands)
-                    .filter((v, i, a) => a.indexOf(v) === i)
-                    .map((b) => ({ value: b, label: b }))}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="KYC Verified">
-            <Controller
-              name="filterKycVerified"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select KYC status..."
-                  options={kycStatusOptions}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </UiFormItem>
-          {/* Add other filter fields here: created date (needs DatePicker), membership type, RM, member grade */}
+          <div className="sm:grid grid-cols-2 gap-2">
+            <UiFormItem label="Status">
+              <Controller
+                name="filterStatus"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Status"
+                    options={memberStatusOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="Continent">
+              <Controller
+                name="filterContinent"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Continent"
+                    options={continentOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="Business Type">
+              <Controller
+                name="filterBusinessType"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Type"
+                    options={businessTypeOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="State">
+              <Controller
+                name="filterState"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select State"
+                    options={stateOptions} // Ideally dynamic
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="City">
+              <Controller
+                name="filterCity"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select City"
+                    options={cityOptions} // Ideally dynamic
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="Interested For">
+              <Controller
+                name="filterInterestedFor"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Interest"
+                    options={interestedForOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="Interested Category">
+              <Controller
+                name="filterInterestedCategory"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Category"
+                    options={businessTypeOptions} // Assuming same as business type for example
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="Brand">
+              {" "}
+              {/* Assuming associated_brands are the source */}
+              <Controller
+                name="filterBrand"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Brand"
+                    options={forms
+                      .flatMap((f) => f.associated_brands)
+                      .filter((v, i, a) => a.indexOf(v) === i)
+                      .map((b) => ({ value: b, label: b }))}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="KYC Verified">
+              <Controller
+                name="filterKycVerified"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Status"
+                    options={kycStatusOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            {/* Add other filter fields here: created date (needs DatePicker), membership type, RM, member grade */}
+          </div>
         </UiForm>
       </Drawer>
     </>

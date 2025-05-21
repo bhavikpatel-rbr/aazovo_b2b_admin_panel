@@ -13,12 +13,12 @@ import FormListSearch from './FormListSearch'; // Your search component
 // For example: import useInquiryList from './hooks/useInquiryList';
 // For now, I'll mock what it might provide.
 const useInquiryList = () => {
-    const [tableData, setTableDataState] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, query: '', sort: {key: '', order: ''}});
+    const [tableData, setTableDataState] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, query: '', sort: { key: '', order: '' } });
     const [allInquiries, setAllInquiries] = useState<FormItem[]>([]); // Example: fetch this data
     const [filterCriteria, setFilterCriteriaState] = useState({});
 
     const setTableData = (data: Partial<TableQueries>) => {
-        setTableDataState(prev => ({...prev, ...data}));
+        setTableDataState(prev => ({ ...prev, ...data }));
     }
     const setFilterCriteria = (filters: InquiryFilterFormData) => {
         console.log("Context: Setting inquiry filter criteria", filters);
@@ -208,15 +208,15 @@ const FormListTableTools = () => {
             </div>
 
             <Drawer
-                title="Filter Inquiries"
+                title="Filters"
                 isOpen={isFilterDrawerOpen}
                 onClose={closeFilterDrawer}
                 onRequestClose={closeFilterDrawer}
                 width={480}
                 footer={
-                    <div className="text-right w-full p-4 border-t border-gray-200 dark:border-gray-700">
-                        <Button size="sm" className="mr-2" onClick={onClearFilters} variant="plain">
-                            Clear All
+                    <div className="text-right w-full">
+                        <Button size="sm" className="mr-2" onClick={onClearFilters}>
+                            Clear
                         </Button>
                         <Button
                             size="sm"
@@ -229,68 +229,69 @@ const FormListTableTools = () => {
                     </div>
                 }
             >
-                    <UiForm id="filterInquiryForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-5">
+                <UiForm id="filterInquiryForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-5">
+                    <div className='sm:grid grid-cols-2 gap-2'>
                         <UiFormItem label='Record Status'>
                             <Controller name="filterRecordStatus" control={filterFormMethods.control}
-                                render={({ field }) => <UiSelect isMulti placeholder="Select Record Status" options={recordStatusOptions}
-                                                            value={field.value || []} onChange={val => field.onChange(val || [])} />} />
+                                render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={recordStatusOptions}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />} />
                         </UiFormItem>
 
                         <UiFormItem label='Inquiry Type'>
                             <Controller name="filterInquiryType" control={filterFormMethods.control}
-                                render={({ field }) => <UiSelect isMulti placeholder="Select Inquiry Type" options={inquiryTypeOptions}
-                                                            value={field.value || []} onChange={val => field.onChange(val || [])} />} />
+                                render={({ field }) => <UiSelect isMulti placeholder="Select Type" options={inquiryTypeOptions}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />} />
                         </UiFormItem>
 
                         <UiFormItem label='Inquiry Priority'>
                             <Controller name="filterInquiryPriority" control={filterFormMethods.control}
                                 render={({ field }) => <UiSelect isMulti placeholder="Select Priority" options={inquiryPriorityOptions}
-                                                            value={field.value || []} onChange={val => field.onChange(val || [])} />} />
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />} />
                         </UiFormItem>
 
                         <UiFormItem label='Inquiry Status'>
                             <Controller name="filterInquiryStatus" control={filterFormMethods.control}
                                 render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={inquiryStatusOptions}
-                                                            value={field.value || []} onChange={val => field.onChange(val || [])} />} />
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />} />
                         </UiFormItem>
 
                         <UiFormItem label='Assigned To'>
                             <Controller name="filterAssignedTo" control={filterFormMethods.control}
                                 render={({ field }) => <UiSelect isMulti placeholder="Select Assignee" options={assignedToOptions}
-                                                            value={field.value || []} onChange={val => field.onChange(val || [])} />} />
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />} />
                         </UiFormItem>
 
                         <UiFormItem label='Feedback Status'>
                             <Controller name="filterFeedbackStatus" control={filterFormMethods.control}
-                                render={({ field }) => <UiSelect isMulti placeholder="Select Feedback Status" options={feedbackStatusOptions}
-                                                            value={field.value || []} onChange={val => field.onChange(val || [])} />} />
+                                render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={feedbackStatusOptions}
+                                    value={field.value || []} onChange={val => field.onChange(val || [])} />} />
                         </UiFormItem>
 
                         <UiFormItem label='Inquiry Date Range'>
                             <Controller name="filterInquiryDate" control={filterFormMethods.control}
                                 render={({ field }) => <DatePickerRange placeholder='Select Inquiry Dates'
-                                                            value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} />
+                                    value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} />
                         </UiFormItem>
 
                         <UiFormItem label='Response Date Range'>
                             <Controller name="filterResponseDate" control={filterFormMethods.control}
                                 render={({ field }) => <DatePickerRange placeholder='Select Response Dates'
-                                                            value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} />
+                                    value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} />
                         </UiFormItem>
 
                         <UiFormItem label='Resolution Date Range'>
                             <Controller name="filterResolutionDate" control={filterFormMethods.control}
                                 render={({ field }) => <DatePickerRange placeholder='Select Resolution Dates'
-                                                            value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} />
+                                    value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} />
                         </UiFormItem>
 
-                         <UiFormItem label='Follow-up Date Range'>
+                        <UiFormItem label='Follow-up Date Range'>
                             <Controller name="filterFollowUpDate" control={filterFormMethods.control}
                                 render={({ field }) => <DatePickerRange placeholder='Select Follow-up Dates'
-                                                            value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} />
+                                    value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} />
                         </UiFormItem>
-
-                    </UiForm>
+                    </div>
+                </UiForm>
             </Drawer>
         </div>
     );
