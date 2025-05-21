@@ -12,6 +12,7 @@ import { useFileManagerStore } from './store/useFileManagerStore'
 import { apiGetFiles } from '@/services/FileService'
 import useSWRMutation from 'swr/mutation'
 import { GetFileListResponse } from './types'
+import { Card } from '@/components/ui'
 
 const { THead, Th, Tr } = Table
 
@@ -106,7 +107,7 @@ const AllDocuments = () => {
 
     return (
         <>
-            <div>
+            <Card>
                 <FileManagerHeader
                     onEntryClick={handleEntryClick}
                     onDirectoryClick={handleDirectoryClick}
@@ -156,7 +157,7 @@ const AllDocuments = () => {
                         />
                     )}
                 </div>
-            </div>
+            </Card>
             <FileDetails onShare={handleShare} />
             <FileManagerDeleteDialog />
             <FileManagerInviteDialog />
