@@ -1354,6 +1354,15 @@ export const deleteAllBugReportAsync = async (unitData: any) => {
   }
 }
 
+export const getSubscribersAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/subscriber`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 
 
 
