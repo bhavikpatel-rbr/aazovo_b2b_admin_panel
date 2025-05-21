@@ -1,594 +1,1047 @@
 // src/views/your-path/DesignationListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react';
-import cloneDeep from 'lodash/cloneDeep';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import classNames from 'classnames';
+import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import cloneDeep from "lodash/cloneDeep";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
-import AdaptiveCard from '@/components/shared/AdaptiveCard';
-import Container from '@/components/shared/Container';
-import DataTable from '@/components/shared/DataTable';
-import Tooltip from '@/components/ui/Tooltip';
-import Button from '@/components/ui/Button';
-import Notification from '@/components/ui/Notification';
-import toast from '@/components/ui/toast';
-import ConfirmDialog from '@/components/shared/ConfirmDialog';
-import StickyFooter from '@/components/shared/StickyFooter';
-import DebouceInput from '@/components/shared/DebouceInput';
-import Select from '@/components/ui/Select';
-import { Drawer, Form, FormItem, Input } from '@/components/ui';
+import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import Container from "@/components/shared/Container";
+import DataTable from "@/components/shared/DataTable";
+import Tooltip from "@/components/ui/Tooltip";
+import Button from "@/components/ui/Button";
+import Notification from "@/components/ui/Notification";
+import toast from "@/components/ui/toast";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import StickyFooter from "@/components/shared/StickyFooter";
+import DebouceInput from "@/components/shared/DebouceInput";
+import Select from "@/components/ui/Select";
+import { Drawer, Form, FormItem, Input } from "@/components/ui";
 
 // Icons
 import {
-    TbPencil, TbTrash, TbChecks, TbSearch, TbFilter, TbPlus, TbCloudUpload,
-    TbBriefcase, TbUserCircle
-} from 'react-icons/tb';
+  TbPencil,
+  TbTrash,
+  TbChecks,
+  TbSearch,
+  TbFilter,
+  TbPlus,
+  TbCloudUpload,
+  TbBriefcase,
+  TbUserCircle,
+} from "react-icons/tb";
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable';
-import type { TableQueries } from '@/@types/common';
+import type {
+  OnSortParam,
+  ColumnDef,
+  Row,
+} from "@/components/shared/DataTable";
+import type { TableQueries } from "@/@types/common";
 
 // Redux
-import { useAppDispatch } from '@/reduxtool/store'; // For dispatching actions
+import { useAppDispatch } from "@/reduxtool/store"; // For dispatching actions
 import {
-    // Ensure these actions are correctly defined in your middleware
-    // and update the 'designationsData' (or similar) field in your masterSlice
-    getDesignationsAction,
-    addDesignationAction,
-    editDesignationAction,
-    deleteDesignationAction,
-    deleteAllDesignationsAction, // For bulk delete
-} from '@/reduxtool/master/middleware'; // Adjust path as necessary
-import { useSelector } from 'react-redux';
-import { masterSelector } from '@/reduxtool/master/masterSlice'; // Selector for the master state
-
+  // Ensure these actions are correctly defined in your middleware
+  // and update the 'designationsData' (or similar) field in your masterSlice
+  getDesignationsAction,
+  addDesignationAction,
+  editDesignationAction,
+  deleteDesignationAction,
+  deleteAllDesignationsAction, // For bulk delete
+} from "@/reduxtool/master/middleware"; // Adjust path as necessary
+import { useSelector } from "react-redux";
+import { masterSelector } from "@/reduxtool/master/masterSlice"; // Selector for the master state
 
 // --- Define Designation Type ---
 export type DesignationItem = {
-    id: string | number;
-    name: string;
-    created_at?: string;
-    updated_at?: string;
+  id: string | number;
+  name: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 // --- Zod Schema for Add/Edit Designation Form ---
 const designationFormSchema = z.object({
-    name: z
-        .string()
-        .min(1, 'Designation name is required.')
-        .max(150, 'Designation name cannot exceed 150 characters.'),
-    
+  name: z
+    .string()
+    .min(1, "Designation name is required.")
+    .max(150, "Designation name cannot exceed 150 characters."),
 });
 type DesignationFormData = z.infer<typeof designationFormSchema>;
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
-    filterNames: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-    filterCreatedBy: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterNames: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
+  filterCreatedBy: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_DES = ['ID', 'Designation Name',  'Date Created'];
-const CSV_KEYS_DES: (keyof DesignationItem)[] = ['id', 'name', 'created_at'];
+const CSV_HEADERS_DES = ["ID", "Designation Name", "Date Created"];
+const CSV_KEYS_DES: (keyof DesignationItem)[] = ["id", "name", "created_at"];
 
 function exportDesignationsToCsv(filename: string, rows: DesignationItem[]) {
-    if (!rows || !rows.length) {
-        toast.push(<Notification title="No Data" type="info" duration={2000}>Nothing to export.</Notification>);
-        return false;
-    }
-    const separator = ',';
-    const csvContent =
-        CSV_HEADERS_DES.join(separator) + '\n' +
-        rows.map((row) => CSV_KEYS_DES.map((k) => {
-            let cell = row[k];
-            if (k === 'created_at' && cell) {
-                try {
-                    cell = new Date(cell as string).toLocaleDateString();
-                } catch (e) { /* keep original if invalid */ }
-            }
-            if (cell === null || cell === undefined) cell = '';
-            else cell = String(cell).replace(/"/g, '""');
-            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-            return cell;
-        }).join(separator)).join('\n');
-
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        return true;
-    }
-    toast.push(<Notification title="Export Failed" type="danger" duration={3000}>Browser does not support this feature.</Notification>);
+  if (!rows || !rows.length) {
+    toast.push(
+      <Notification title="No Data" type="info" duration={2000}>
+        Nothing to export.
+      </Notification>
+    );
     return false;
+  }
+  const separator = ",";
+  const csvContent =
+    CSV_HEADERS_DES.join(separator) +
+    "\n" +
+    rows
+      .map((row) =>
+        CSV_KEYS_DES.map((k) => {
+          let cell = row[k];
+          if (k === "created_at" && cell) {
+            try {
+              cell = new Date(cell as string).toLocaleDateString();
+            } catch (e) {
+              /* keep original if invalid */
+            }
+          }
+          if (cell === null || cell === undefined) cell = "";
+          else cell = String(cell).replace(/"/g, '""');
+          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+          return cell;
+        }).join(separator)
+      )
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  }
+  toast.push(
+    <Notification title="Export Failed" type="danger" duration={3000}>
+      Browser does not support this feature.
+    </Notification>
+  );
+  return false;
 }
 
 // --- ActionColumn Component ---
-const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => {
-    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
-    return (
-        <div className="flex items-center justify-center gap-3">
-            <Tooltip title="Edit Designation"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" tabIndex={0} onClick={onEdit} onKeyDown={(e) => e.key === 'Enter' && onEdit()}><TbPencil /></div></Tooltip>
-            <Tooltip title="Delete Designation"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" tabIndex={0} onClick={onDelete} onKeyDown={(e) => e.key === 'Enter' && onDelete()}><TbTrash /></div></Tooltip>
+const ActionColumn = ({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}) => {
+  const iconButtonClass =
+    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <Tooltip title="Edit Designation">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+          )}
+          role="button"
+          tabIndex={0}
+          onClick={onEdit}
+          onKeyDown={(e) => e.key === "Enter" && onEdit()}
+        >
+          <TbPencil />
         </div>
-    );
+      </Tooltip>
+      <Tooltip title="Delete Designation">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+          )}
+          role="button"
+          tabIndex={0}
+          onClick={onDelete}
+          onKeyDown={(e) => e.key === "Enter" && onDelete()}
+        >
+          <TbTrash />
+        </div>
+      </Tooltip>
+    </div>
+  );
 };
-ActionColumn.displayName = 'ActionColumn';
+ActionColumn.displayName = "ActionColumn";
 
 // --- DesignationsSearch Component ---
-type DesignationsSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const DesignationsSearch = React.forwardRef<HTMLInputElement, DesignationsSearchProps>(
-    ({ onInputChange }, ref) => (
-        <DebouceInput
-            ref={ref}
-            className="w-full"
-            placeholder="Search by Name, ID, Creator..."
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)}
-        />
-    )
-);
-DesignationsSearch.displayName = 'DesignationsSearch';
+type DesignationsSearchProps = {
+  onInputChange: (value: string) => void;
+  ref?: Ref<HTMLInputElement>;
+};
+const DesignationsSearch = React.forwardRef<
+  HTMLInputElement,
+  DesignationsSearchProps
+>(({ onInputChange }, ref) => (
+  <DebouceInput
+    ref={ref}
+    className="w-full"
+    placeholder="Search by Name, ID, Creator..."
+    suffix={<TbSearch className="text-lg" />}
+    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+      onInputChange(e.target.value)
+    }
+  />
+));
+DesignationsSearch.displayName = "DesignationsSearch";
 
 // --- DesignationsTableTools Component ---
-const DesignationsTableTools = ({ onSearchChange, onFilter, onExport }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }) => (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-        <div className="flex-grow"><DesignationsSearch onInputChange={onSearchChange} /></div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
-            <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-        </div>
+const DesignationsTableTools = ({
+  onSearchChange,
+  onFilter,
+  onExport,
+}: {
+  onSearchChange: (query: string) => void;
+  onFilter: () => void;
+  onExport: () => void;
+}) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+    <div className="flex-grow">
+      <DesignationsSearch onInputChange={onSearchChange} />
     </div>
+    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <Button
+        icon={<TbFilter />}
+        onClick={onFilter}
+        className="w-full sm:w-auto"
+      >
+        Filter
+      </Button>
+      <Button
+        icon={<TbCloudUpload />}
+        onClick={onExport}
+        className="w-full sm:w-auto"
+      >
+        Export
+      </Button>
+    </div>
+  </div>
 );
-DesignationsTableTools.displayName = 'DesignationsTableTools';
+DesignationsTableTools.displayName = "DesignationsTableTools";
 
 // --- DesignationsSelectedFooter Component ---
-type DesignationsSelectedFooterProps = { selectedItems: DesignationItem[]; onDeleteSelected: () => void; disabled?: boolean };
-const DesignationsSelectedFooter = ({ selectedItems, onDeleteSelected, disabled }: DesignationsSelectedFooterProps) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-    const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmationOpen(false); };
-    if (selectedItems.length === 0) return null;
-    return (
-        <>
-            <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
-                <div className="flex items-center justify-between w-full px-4 sm:px-8">
-                    <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">{selectedItems.length}</span>
-                            <span>Designation{selectedItems.length > 1 ? 's' : ''} selected</span>
-                        </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} disabled={disabled}>Delete Selected</Button>
-                    </div>
-                </div>
-            </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Designation${selectedItems.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete}
-                loading={disabled}
-            >
-                <p>Are you sure you want to delete the selected designation{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p>
-            </ConfirmDialog>
-        </>
-    );
+type DesignationsSelectedFooterProps = {
+  selectedItems: DesignationItem[];
+  onDeleteSelected: () => void;
+  disabled?: boolean;
 };
-DesignationsSelectedFooter.displayName = 'DesignationsSelectedFooter';
+const DesignationsSelectedFooter = ({
+  selectedItems,
+  onDeleteSelected,
+  disabled,
+}: DesignationsSelectedFooterProps) => {
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
+  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
+  const handleConfirmDelete = () => {
+    onDeleteSelected();
+    setDeleteConfirmationOpen(false);
+  };
+  if (selectedItems.length === 0) return null;
+  return (
+    <>
+      <StickyFooter
+        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
+        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
+      >
+        <div className="flex items-center justify-between w-full px-4 sm:px-8">
+          <span className="flex items-center gap-2">
+            <span className="text-lg text-primary-600 dark:text-primary-400">
+              <TbChecks />
+            </span>
+            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
+              <span className="heading-text">{selectedItems.length}</span>
+              <span>
+                Designation{selectedItems.length > 1 ? "s" : ""} selected
+              </span>
+            </span>
+          </span>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="plain"
+              className="text-red-600 hover:text-red-500"
+              onClick={handleDeleteClick}
+              disabled={disabled}
+            >
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      </StickyFooter>
+      <ConfirmDialog
+        isOpen={deleteConfirmationOpen}
+        type="danger"
+        title={`Delete ${selectedItems.length} Designation${
+          selectedItems.length > 1 ? "s" : ""
+        }`}
+        onClose={handleCancelDelete}
+        onRequestClose={handleCancelDelete}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        loading={disabled}
+      >
+        <p>
+          Are you sure you want to delete the selected designation
+          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
+        </p>
+      </ConfirmDialog>
+    </>
+  );
+};
+DesignationsSelectedFooter.displayName = "DesignationsSelectedFooter";
 
 // --- Main DesignationListing Component ---
 const DesignationListing = () => {
-    const dispatch = useAppDispatch();
-    // Get data from Redux store. Ensure 'designationsData' key matches your masterSlice.
-    const {
-        designationsData = [], // Default to empty array
-        status: masterLoadingStatus = 'idle',
-       
-    } = useSelector(masterSelector);
+  const dispatch = useAppDispatch();
+  // Get data from Redux store. Ensure 'designationsData' key matches your masterSlice.
+  const {
+    designationsData = [], // Default to empty array
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector);
 
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState<DesignationItem | null>(null);
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<DesignationItem | null>(null);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
-    // isSubmitting and isDeleting are still useful for button loading states independent of global masterLoadingStatus
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+  // isSubmitting and isDeleting are still useful for button loading states independent of global masterLoadingStatus
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<DesignationItem | null>(null);
+  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<DesignationItem | null>(
+    null
+  );
 
-    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterNames: [], filterCreatedBy: [] });
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
+    filterNames: [],
+    filterCreatedBy: [],
+  });
 
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '',
-    });
-    const [selectedItems, setSelectedItems] = useState<DesignationItem[]>([]);
+  const [tableData, setTableData] = useState<TableQueries>({
+    pageIndex: 1,
+    pageSize: 10,
+    sort: { order: "", key: "" },
+    query: "",
+  });
+  const [selectedItems, setSelectedItems] = useState<DesignationItem[]>([]);
 
-    // Fetch initial data
-    useEffect(() => {
-        dispatch(getDesignationsAction());
-    }, [dispatch]);
+  // Fetch initial data
+  useEffect(() => {
+    dispatch(getDesignationsAction());
+  }, [dispatch]);
 
-   
+  const addFormMethods = useForm<DesignationFormData>({
+    resolver: zodResolver(designationFormSchema),
+    defaultValues: { name: "" },
+    mode: "onChange",
+  });
+  const editFormMethods = useForm<DesignationFormData>({
+    resolver: zodResolver(designationFormSchema),
+    defaultValues: { name: "" },
+    mode: "onChange",
+  });
+  const filterFormMethods = useForm<FilterFormData>({
+    resolver: zodResolver(filterFormSchema),
+    defaultValues: filterCriteria,
+  });
 
+  const openAddDrawer = useCallback(() => {
+    addFormMethods.reset({ name: "" });
+    setIsAddDrawerOpen(true);
+  }, [addFormMethods]);
+  const closeAddDrawer = useCallback(() => {
+    addFormMethods.reset({ name: "" });
+    setIsAddDrawerOpen(false);
+  }, [addFormMethods]);
 
-    const addFormMethods = useForm<DesignationFormData>({
-        resolver: zodResolver(designationFormSchema), defaultValues: { name: ''  }, mode: 'onChange',
-    });
-    const editFormMethods = useForm<DesignationFormData>({
-        resolver: zodResolver(designationFormSchema), defaultValues: { name: '' }, mode: 'onChange',
-    });
-    const filterFormMethods = useForm<FilterFormData>({
-        resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria,
-    });
+  const onAddDesignationSubmit = useCallback(
+    async (data: DesignationFormData) => {
+      setIsSubmitting(true);
+      try {
+        // Dispatch Redux action for adding
+        await dispatch(addDesignationAction(data)).unwrap(); // Assuming payload is {name, created_by}
+        toast.push(
+          <Notification
+            title="Designation Added"
+            type="success"
+            duration={2000}
+          >{`Designation "${data.name}" added.`}</Notification>
+        );
+        closeAddDrawer();
+        dispatch(getDesignationsAction()); // Refresh the list from server
+      } catch (error: any) {
+        const message =
+          error?.message ||
+          error?.data?.message ||
+          "Could not add designation.";
+        toast.push(
+          <Notification title="Failed to Add" type="danger" duration={3000}>
+            {message}
+          </Notification>
+        );
+        console.error("Add Designation Error:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [dispatch, closeAddDrawer]
+  );
 
-    const openAddDrawer = useCallback(() => { addFormMethods.reset({ name: '' }); setIsAddDrawerOpen(true); }, [addFormMethods]);
-    const closeAddDrawer = useCallback(() => { addFormMethods.reset({ name: ''}); setIsAddDrawerOpen(false); }, [addFormMethods]);
+  const openEditDrawer = useCallback(
+    (item: DesignationItem) => {
+      setEditingItem(item);
+      editFormMethods.reset({ name: item.name });
+      setIsEditDrawerOpen(true);
+    },
+    [editFormMethods]
+  );
 
-    const onAddDesignationSubmit = useCallback(async (data: DesignationFormData) => {
-        setIsSubmitting(true);
-        try {
-            // Dispatch Redux action for adding
-            await dispatch(addDesignationAction(data)).unwrap(); // Assuming payload is {name, created_by}
-            toast.push(<Notification title="Designation Added" type="success" duration={2000}>{`Designation "${data.name}" added.`}</Notification>);
-            closeAddDrawer();
-            dispatch(getDesignationsAction()); // Refresh the list from server
-        } catch (error: any) {
-            const message = error?.message || error?.data?.message || 'Could not add designation.';
-            toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{message}</Notification>);
-            console.error('Add Designation Error:', error);
-        } finally {
-            setIsSubmitting(false);
+  const closeEditDrawer = useCallback(() => {
+    setEditingItem(null);
+    editFormMethods.reset({ name: "" });
+    setIsEditDrawerOpen(false);
+  }, [editFormMethods]);
+
+  const onEditDesignationSubmit = useCallback(
+    async (data: DesignationFormData) => {
+      if (!editingItem?.id) {
+        toast.push(
+          <Notification title="Error" type="danger">
+            Cannot edit: Designation ID is missing.
+          </Notification>
+        );
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        // Dispatch Redux action for editing
+        const payload = { id: editingItem.id, ...data }; // Payload: {id, name, created_by}
+        await dispatch(editDesignationAction(payload)).unwrap();
+        toast.push(
+          <Notification
+            title="Designation Updated"
+            type="success"
+            duration={2000}
+          >{`Designation "${data.name}" updated.`}</Notification>
+        );
+        closeEditDrawer();
+        dispatch(getDesignationsAction()); // Refresh the list
+      } catch (error: any) {
+        const message =
+          error?.message ||
+          error?.data?.message ||
+          "Could not update designation.";
+        toast.push(
+          <Notification title="Failed to Update" type="danger" duration={3000}>
+            {message}
+          </Notification>
+        );
+        console.error("Edit Designation Error:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [dispatch, editingItem, closeEditDrawer]
+  );
+
+  const handleDeleteClick = useCallback((item: DesignationItem) => {
+    if (item.id === undefined || item.id === null) {
+      toast.push(
+        <Notification title="Error" type="danger">
+          Cannot delete: Designation ID is missing.
+        </Notification>
+      );
+      return;
+    }
+    setItemToDelete(item);
+    setSingleDeleteConfirmOpen(true);
+  }, []);
+
+  const onConfirmSingleDelete = useCallback(async () => {
+    if (!itemToDelete?.id) {
+      toast.push(
+        <Notification title="Error" type="danger">
+          Cannot delete: Designation ID is missing.
+        </Notification>
+      );
+      setIsDeleting(false);
+      setItemToDelete(null);
+      setSingleDeleteConfirmOpen(false);
+      return;
+    }
+    setIsDeleting(true);
+    setSingleDeleteConfirmOpen(false); // Close dialog before async operation
+    try {
+      // Dispatch Redux action for deleting
+      await dispatch(deleteDesignationAction({ id: itemToDelete.id })).unwrap(); // Assuming action takes {id}
+      toast.push(
+        <Notification
+          title="Designation Deleted"
+          type="success"
+          duration={2000}
+        >{`Designation "${itemToDelete.name}" deleted.`}</Notification>
+      );
+      setSelectedItems((prev) =>
+        prev.filter((item) => item.id !== itemToDelete!.id)
+      );
+      dispatch(getDesignationsAction()); // Refresh the list
+    } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.data?.message ||
+        "Could not delete designation.";
+      toast.push(
+        <Notification title="Failed to Delete" type="danger" duration={3000}>
+          {message}
+        </Notification>
+      );
+      console.error("Delete Designation Error:", error);
+    } finally {
+      setIsDeleting(false);
+      setItemToDelete(null);
+    }
+  }, [dispatch, itemToDelete]);
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedItems.length === 0) {
+      toast.push(
+        <Notification title="No Selection" type="info">
+          Please select items to delete.
+        </Notification>
+      );
+      return;
+    }
+    setIsDeleting(true);
+    const validItemsToDelete = selectedItems.filter(
+      (item) => item.id !== undefined && item.id !== null
+    );
+
+    if (validItemsToDelete.length !== selectedItems.length) {
+      toast.push(
+        <Notification title="Deletion Warning" type="warning" duration={3000}>
+          Some selected items had missing IDs and were skipped.
+        </Notification>
+      );
+    }
+    if (validItemsToDelete.length === 0) {
+      toast.push(
+        <Notification title="No Valid Items" type="info">
+          No valid items to delete.
+        </Notification>
+      );
+      setIsDeleting(false);
+      return;
+    }
+    const idsToDelete = validItemsToDelete.map((item) => String(item.id));
+    try {
+      // Dispatch Redux action for bulk deleting
+      await dispatch(
+        deleteAllDesignationsAction({ ids: idsToDelete.join(",") })
+      ).unwrap(); // Expects {ids: "id1,id2"}
+      toast.push(
+        <Notification
+          title="Deletion Successful"
+          type="success"
+          duration={2000}
+        >{`${validItemsToDelete.length} designation(s) deleted.`}</Notification>
+      );
+      setSelectedItems([]);
+      dispatch(getDesignationsAction()); // Refresh the list
+    } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.data?.message ||
+        "Failed to delete selected designations.";
+      toast.push(
+        <Notification title="Deletion Failed" type="danger" duration={3000}>
+          {message}
+        </Notification>
+      );
+      console.error("Delete Selected Designations Error:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [dispatch, selectedItems]);
+
+  const openFilterDrawer = useCallback(() => {
+    filterFormMethods.reset(filterCriteria);
+    setIsFilterDrawerOpen(true);
+  }, [filterFormMethods, filterCriteria]);
+  const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
+    setTableData((prev) => ({ ...prev, ...data }));
+  }, []);
+
+  const onApplyFiltersSubmit = useCallback(
+    (data: FilterFormData) => {
+      setFilterCriteria({
+        filterNames: data.filterNames || [],
+        filterCreatedBy: data.filterCreatedBy || [],
+      });
+      handleSetTableData({ pageIndex: 1 });
+      closeFilterDrawer();
+    },
+    [closeFilterDrawer, handleSetTableData]
+  );
+
+  const onClearFilters = useCallback(() => {
+    const defaultFilters = { filterNames: [], filterCreatedBy: [] };
+    filterFormMethods.reset(defaultFilters);
+    setFilterCriteria(defaultFilters);
+    handleSetTableData({ pageIndex: 1 });
+  }, [filterFormMethods, handleSetTableData]);
+
+  const designationNameOptions = useMemo(() => {
+    if (!Array.isArray(designationsData)) return [];
+    const uniqueNames = new Set(designationsData.map((item) => item.name));
+    return Array.from(uniqueNames).map((name) => ({
+      value: name,
+      label: name,
+    }));
+  }, [designationsData]);
+
+  const createdByOptions = useMemo(() => {
+    if (!Array.isArray(designationsData)) return [];
+    const uniqueCreators = new Set(
+      designationsData.map((item) => item.created_by)
+    );
+    return Array.from(uniqueCreators).map((creator) => ({
+      value: creator,
+      label: creator,
+    }));
+  }, [designationsData]);
+
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    // Data now comes from Redux store (designationsData)
+    const sourceData: DesignationItem[] = Array.isArray(designationsData)
+      ? designationsData
+      : [];
+    let processedData: DesignationItem[] = cloneDeep(sourceData);
+
+    if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
+      const selectedNames = filterCriteria.filterNames.map((opt) =>
+        opt.value.toLowerCase()
+      );
+      processedData = processedData.filter(
+        (item) => item.name && selectedNames.includes(item.name.toLowerCase())
+      );
+    }
+
+    if (tableData.query && tableData.query.trim() !== "") {
+      const query = tableData.query.toLowerCase().trim();
+      processedData = processedData.filter(
+        (item) =>
+          String(item.id).toLowerCase().includes(query) ||
+          (item.name && item.name.toLowerCase().includes(query))
+      );
+    }
+    const { order, key } = tableData.sort as OnSortParam;
+    if (
+      order &&
+      key &&
+      processedData.length > 0 &&
+      processedData[0].hasOwnProperty(key)
+    ) {
+      processedData.sort((a, b) => {
+        const aValue = a[key as keyof DesignationItem];
+        const bValue = b[key as keyof DesignationItem];
+        if (aValue === null || aValue === undefined)
+          return order === "asc" ? -1 : 1;
+        if (bValue === null || bValue === undefined)
+          return order === "asc" ? 1 : -1;
+        if (
+          key === "id" &&
+          typeof aValue === "number" &&
+          typeof bValue === "number"
+        ) {
+          return order === "asc" ? aValue - bValue : bValue - aValue;
         }
-    }, [dispatch, closeAddDrawer]);
+        const aStr = String(aValue).toLowerCase();
+        const bStr = String(bValue).toLowerCase();
+        return order === "asc"
+          ? aStr.localeCompare(bStr)
+          : bStr.localeCompare(aStr);
+      });
+    }
+    const dataToExport = [...processedData];
+    const currentTotal = processedData.length;
+    const pageIndex = tableData.pageIndex as number;
+    const pageSize = tableData.pageSize as number;
+    const startIndex = (pageIndex - 1) * pageSize;
+    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+    return {
+      pageData: dataForPage,
+      total: currentTotal,
+      allFilteredAndSortedData: dataToExport,
+    };
+  }, [designationsData, tableData, filterCriteria]);
 
-    const openEditDrawer = useCallback((item: DesignationItem) => {
-        setEditingItem(item);
-        editFormMethods.reset({ name: item.name});
-        setIsEditDrawerOpen(true);
-    }, [editFormMethods]);
+  const handleExportData = useCallback(() => {
+    const success = exportDesignationsToCsv(
+      "designations_export.csv",
+      allFilteredAndSortedData
+    );
+    if (success)
+      toast.push(
+        <Notification title="Export Successful" type="success" duration={2000}>
+          Data exported.
+        </Notification>
+      );
+  }, [allFilteredAndSortedData]);
 
-    const closeEditDrawer = useCallback(() => {
-        setEditingItem(null);
-        editFormMethods.reset({ name: '' });
-        setIsEditDrawerOpen(false);
-    }, [editFormMethods]);
+  const handlePaginationChange = useCallback(
+    (page: number) => handleSetTableData({ pageIndex: page }),
+    [handleSetTableData]
+  );
+  const handleSelectChange = useCallback(
+    (value: number) => {
+      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
+      setSelectedItems([]);
+    },
+    [handleSetTableData]
+  );
+  const handleSort = useCallback(
+    (sort: OnSortParam) => {
+      handleSetTableData({ sort: sort, pageIndex: 1 });
+    },
+    [handleSetTableData]
+  );
+  const handleSearchChange = useCallback(
+    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
+    [handleSetTableData]
+  );
 
-    const onEditDesignationSubmit = useCallback(async (data: DesignationFormData) => {
-        if (!editingItem?.id) {
-            toast.push(<Notification title="Error" type="danger">Cannot edit: Designation ID is missing.</Notification>);
-            return;
-        }
-        setIsSubmitting(true);
-        try {
-            // Dispatch Redux action for editing
-            const payload = { id: editingItem.id, ...data }; // Payload: {id, name, created_by}
-            await dispatch(editDesignationAction(payload)).unwrap();
-            toast.push(<Notification title="Designation Updated" type="success" duration={2000}>{`Designation "${data.name}" updated.`}</Notification>);
-            closeEditDrawer();
-            dispatch(getDesignationsAction()); // Refresh the list
-        } catch (error: any) {
-            const message = error?.message || error?.data?.message || 'Could not update designation.';
-            toast.push(<Notification title="Failed to Update" type="danger" duration={3000}>{message}</Notification>);
-            console.error('Edit Designation Error:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    }, [dispatch, editingItem, closeEditDrawer]);
+  const handleRowSelect = useCallback(
+    (checked: boolean, row: DesignationItem) => {
+      setSelectedItems((prev) => {
+        if (checked)
+          return prev.some((item) => item.id === row.id)
+            ? prev
+            : [...prev, row];
+        return prev.filter((item) => item.id !== row.id);
+      });
+    },
+    []
+  );
 
-    const handleDeleteClick = useCallback((item: DesignationItem) => {
-        if (item.id === undefined || item.id === null) {
-            toast.push(<Notification title="Error" type="danger">Cannot delete: Designation ID is missing.</Notification>);
-            return;
-        }
-        setItemToDelete(item);
-        setSingleDeleteConfirmOpen(true);
-    }, []);
-
-    const onConfirmSingleDelete = useCallback(async () => {
-        if (!itemToDelete?.id) {
-            toast.push(<Notification title="Error" type="danger">Cannot delete: Designation ID is missing.</Notification>);
-            setIsDeleting(false); setItemToDelete(null); setSingleDeleteConfirmOpen(false);
-            return;
-        }
-        setIsDeleting(true);
-        setSingleDeleteConfirmOpen(false); // Close dialog before async operation
-        try {
-            // Dispatch Redux action for deleting
-            await dispatch(deleteDesignationAction({ id: itemToDelete.id })).unwrap(); // Assuming action takes {id}
-            toast.push(<Notification title="Designation Deleted" type="success" duration={2000}>{`Designation "${itemToDelete.name}" deleted.`}</Notification>);
-            setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id));
-            dispatch(getDesignationsAction()); // Refresh the list
-        } catch (error: any) {
-            const message = error?.message || error?.data?.message || 'Could not delete designation.';
-            toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}>{message}</Notification>);
-            console.error('Delete Designation Error:', error);
-        } finally {
-            setIsDeleting(false);
-            setItemToDelete(null);
-        }
-    }, [dispatch, itemToDelete]);
-
-    const handleDeleteSelected = useCallback(async () => {
-        if (selectedItems.length === 0) {
-            toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>);
-            return;
-        }
-        setIsDeleting(true);
-        const validItemsToDelete = selectedItems.filter(item => item.id !== undefined && item.id !== null);
-
-        if (validItemsToDelete.length !== selectedItems.length) {
-            toast.push(<Notification title="Deletion Warning" type="warning" duration={3000}>Some selected items had missing IDs and were skipped.</Notification>);
-        }
-        if (validItemsToDelete.length === 0) {
-            toast.push(<Notification title="No Valid Items" type="info">No valid items to delete.</Notification>);
-            setIsDeleting(false);
-            return;
-        }
-        const idsToDelete = validItemsToDelete.map((item) => String(item.id));
-        try {
-            // Dispatch Redux action for bulk deleting
-            await dispatch(deleteAllDesignationsAction({ ids: idsToDelete.join(',') })).unwrap(); // Expects {ids: "id1,id2"}
-            toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${validItemsToDelete.length} designation(s) deleted.`}</Notification>);
-            setSelectedItems([]);
-            dispatch(getDesignationsAction()); // Refresh the list
-        } catch (error: any) {
-            const message = error?.message || error?.data?.message || 'Failed to delete selected designations.';
-            toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{message}</Notification>);
-            console.error('Delete Selected Designations Error:', error);
-        } finally {
-            setIsDeleting(false);
-        }
-    }, [dispatch, selectedItems]);
-
-    const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
-    const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
-
-    const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
-        setFilterCriteria({ filterNames: data.filterNames || [], filterCreatedBy: data.filterCreatedBy || [] });
-        handleSetTableData({ pageIndex: 1 });
-        closeFilterDrawer();
-    }, [closeFilterDrawer, handleSetTableData]);
-
-    const onClearFilters = useCallback(() => {
-        const defaultFilters = { filterNames: [], filterCreatedBy: [] };
-        filterFormMethods.reset(defaultFilters);
-        setFilterCriteria(defaultFilters);
-        handleSetTableData({ pageIndex: 1 });
-    }, [filterFormMethods, handleSetTableData]);
-
-    const designationNameOptions = useMemo(() => {
-        if (!Array.isArray(designationsData)) return [];
-        const uniqueNames = new Set(designationsData.map((item) => item.name));
-        return Array.from(uniqueNames).map((name) => ({ value: name, label: name }));
-    }, [designationsData]);
-
-    const createdByOptions = useMemo(() => {
-        if (!Array.isArray(designationsData)) return [];
-        const uniqueCreators = new Set(designationsData.map((item) => item.created_by));
-        return Array.from(uniqueCreators).map((creator) => ({ value: creator, label: creator }));
-    }, [designationsData]);
-
-    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        // Data now comes from Redux store (designationsData)
-        const sourceData: DesignationItem[] = Array.isArray(designationsData) ? designationsData : [];
-        let processedData: DesignationItem[] = cloneDeep(sourceData);
-
-        if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
-            const selectedNames = filterCriteria.filterNames.map((opt) => opt.value.toLowerCase());
-            processedData = processedData.filter((item) => item.name && selectedNames.includes(item.name.toLowerCase()));
-        }
-       
-
-        if (tableData.query && tableData.query.trim() !== '') {
-            const query = tableData.query.toLowerCase().trim();
-            processedData = processedData.filter((item) =>
-                String(item.id).toLowerCase().includes(query) ||
-                (item.name && item.name.toLowerCase().includes(query)) 
-               
-            );
-        }
-        const { order, key } = tableData.sort as OnSortParam;
-        if (order && key && processedData.length > 0 && processedData[0].hasOwnProperty(key)) {
-            processedData.sort((a, b) => {
-                const aValue = a[key as keyof DesignationItem];
-                const bValue = b[key as keyof DesignationItem];
-                if (aValue === null || aValue === undefined) return order === 'asc' ? -1 : 1;
-                if (bValue === null || bValue === undefined) return order === 'asc' ? 1 : -1;
-                if (key === 'id' && typeof aValue === 'number' && typeof bValue === 'number') {
-                    return order === 'asc' ? aValue - bValue : bValue - aValue;
-                }
-                const aStr = String(aValue).toLowerCase();
-                const bStr = String(bValue).toLowerCase();
-                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
-            });
-        }
-        const dataToExport = [...processedData];
-        const currentTotal = processedData.length;
-        const pageIndex = tableData.pageIndex as number;
-        const pageSize = tableData.pageSize as number;
-        const startIndex = (pageIndex - 1) * pageSize;
-        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
-    }, [designationsData, tableData, filterCriteria]);
-
-    const handleExportData = useCallback(() => {
-        const success = exportDesignationsToCsv('designations_export.csv', allFilteredAndSortedData);
-        if (success) toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported.</Notification>);
-    }, [allFilteredAndSortedData]);
-
-    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-    const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
-    const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
-    const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
-
-    const handleRowSelect = useCallback((checked: boolean, row: DesignationItem) => {
-        setSelectedItems((prev) => {
-            if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
-            return prev.filter((item) => item.id !== row.id);
+  const handleAllRowSelect = useCallback(
+    (checked: boolean, currentRows: Row<DesignationItem>[]) => {
+      const currentPageRowOriginals = currentRows.map((r) => r.original);
+      if (checked) {
+        setSelectedItems((prevSelected) => {
+          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
+          const newRowsToAdd = currentPageRowOriginals.filter(
+            (r) => r.id !== undefined && !prevSelectedIds.has(r.id)
+          );
+          return [...prevSelected, ...newRowsToAdd];
         });
-    }, []);
+      } else {
+        const currentPageRowIds = new Set(
+          currentPageRowOriginals
+            .map((r) => r.id)
+            .filter((id) => id !== undefined)
+        );
+        setSelectedItems((prevSelected) =>
+          prevSelected.filter(
+            (item) => item.id !== undefined && !currentPageRowIds.has(item.id)
+          )
+        );
+      }
+    },
+    []
+  );
 
-    const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<DesignationItem>[]) => {
-        const currentPageRowOriginals = currentRows.map((r) => r.original);
-        if (checked) {
-            setSelectedItems((prevSelected) => {
-                const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-                const newRowsToAdd = currentPageRowOriginals.filter((r) => r.id !== undefined && !prevSelectedIds.has(r.id));
-                return [...prevSelected, ...newRowsToAdd];
-            });
-        } else {
-            const currentPageRowIds = new Set(currentPageRowOriginals.map((r) => r.id).filter(id => id !== undefined));
-            setSelectedItems((prevSelected) => prevSelected.filter((item) => item.id !== undefined && !currentPageRowIds.has(item.id)));
-        }
-    }, []);
+  const columns: ColumnDef<DesignationItem>[] = useMemo(
+    () => [
+      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      { header: "Designation Name", accessorKey: "name", enableSorting: true },
 
+      {
+        header: "Actions",
+        id: "action",
+        meta: { headerClass: "text-center", cellClass: "text-center" },
+        size: 120,
+        cell: (props) => (
+          <ActionColumn
+            onEdit={() => openEditDrawer(props.row.original)}
+            onDelete={() => handleDeleteClick(props.row.original)}
+          />
+        ),
+      },
+    ],
+    [openEditDrawer, handleDeleteClick]
+  );
 
-    const columns: ColumnDef<DesignationItem>[] = useMemo(
-        () => [
-            { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
-            { header: 'Designation Name', accessorKey: 'name', enableSorting: true },
-           
-            {
-                header: 'Actions', id: 'action', meta:{ headerClass: "text-center", cellClass: "text-center" }, size: 120,
-                cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />,
-            },
-        ],
-        [openEditDrawer, handleDeleteClick],
-    );
+  // DataTable loading state should reflect Redux loading status and local submitting/deleting states
+  const tableIsLoading =
+    masterLoadingStatus === "loading" || isSubmitting || isDeleting;
 
-    // DataTable loading state should reflect Redux loading status and local submitting/deleting states
-    const tableIsLoading = masterLoadingStatus === 'loading' || isSubmitting || isDeleting;
-
-    return (
-        <>
-            <Container className="h-full">
-                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <h3 className="mb-2 sm:mb-0 flex items-center gap-2 text-lg font-semibold"><TbBriefcase /> Designations</h3>
-                        <Button
-                            variant="solid"
-                            icon={<TbPlus />}
-                            onClick={openAddDrawer}
-                            disabled={tableIsLoading} // Disable if any loading operation is in progress
-                        >
-                            Add New
-                        </Button>
-                    </div>
-                    <DesignationsTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
-                    <div className="mt-4 flex-grow overflow-auto">
-                        <DataTable
-                            columns={columns} data={pageData}
-                            loading={tableIsLoading}
-                            pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-                            selectable
-                            checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)}
-                            onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
-                            onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect}
-                            noData={!tableIsLoading && pageData.length === 0} // Show noData only if not loading and data is empty
-                        />
-                    </div>
-                </AdaptiveCard>
-            </Container>
-
-            <DesignationsSelectedFooter
-                selectedItems={selectedItems}
-                onDeleteSelected={handleDeleteSelected}
-                disabled={isDeleting || masterLoadingStatus === 'loading'}
+  return (
+    <>
+      <Container className="h-full">
+        <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <h3 className="mb-2 sm:mb-0 flex items-center gap-2 text-lg font-semibold">
+              <TbBriefcase /> Designations
+            </h3>
+            <Button
+              variant="solid"
+              icon={<TbPlus />}
+              onClick={openAddDrawer}
+              disabled={tableIsLoading} // Disable if any loading operation is in progress
+            >
+              Add New
+            </Button>
+          </div>
+          <DesignationsTableTools
+            onSearchChange={handleSearchChange}
+            onFilter={openFilterDrawer}
+            onExport={handleExportData}
+          />
+          <div className="mt-4 flex-grow overflow-auto">
+            <DataTable
+              columns={columns}
+              data={pageData}
+              loading={tableIsLoading}
+              pagingData={{
+                total,
+                pageIndex: tableData.pageIndex as number,
+                pageSize: tableData.pageSize as number,
+              }}
+              selectable
+              checkboxChecked={(row) =>
+                selectedItems.some((selected) => selected.id === row.id)
+              }
+              onPaginationChange={handlePaginationChange}
+              onSelectChange={handleSelectChange}
+              onSort={handleSort}
+              onCheckBoxChange={handleRowSelect}
+              onIndeterminateCheckBoxChange={handleAllRowSelect}
+              noData={!tableIsLoading && pageData.length === 0} // Show noData only if not loading and data is empty
             />
+          </div>
+        </AdaptiveCard>
+      </Container>
 
-            <Drawer title="Add Designation" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                        <Button size="sm" variant="solid" form="addDesignationForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>
-                            {isSubmitting ? 'Adding...' : 'Save'}
-                        </Button>
-                    </div>
-                }
-            >
-                <Form id="addDesignationForm" onSubmit={addFormMethods.handleSubmit(onAddDesignationSubmit)} className="flex flex-col gap-y-6">
-                    <FormItem label="Designation Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message}>
-                        <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Designation Name" />} />
-                    </FormItem>
-                   
-                </Form>
-            </Drawer>
+      <DesignationsSelectedFooter
+        selectedItems={selectedItems}
+        onDeleteSelected={handleDeleteSelected}
+        disabled={isDeleting || masterLoadingStatus === "loading"}
+      />
 
-            <Drawer title="Edit Designation" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer}
-                footer={
-                    <div className="text-right w-full">
-                        <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            form="editDesignationForm"
-                            type="submit"
-                            loading={isSubmitting}
-                            disabled={!editFormMethods.formState.isValid || isSubmitting || !editFormMethods.formState.isDirty}
-                        >
-                            {isSubmitting ? 'Saving...' : 'Save Changes'}
-                        </Button>
-                    </div>
-                }
+      <Drawer
+        title="Add Designation"
+        isOpen={isAddDrawerOpen}
+        onClose={closeAddDrawer}
+        onRequestClose={closeAddDrawer}
+        footer={
+          <div className="text-right w-full">
+            <Button
+              size="sm"
+              className="mr-2"
+              onClick={closeAddDrawer}
+              disabled={isSubmitting}
+              type="button"
             >
-                <Form id="editDesignationForm" onSubmit={editFormMethods.handleSubmit(onEditDesignationSubmit)} className="flex flex-col gap-y-6">
-                    <FormItem label="Designation Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message}>
-                        <Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Designation Name" />} />
-                    </FormItem>
-                   
-                </Form>
-            </Drawer>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="addDesignationForm"
+              type="submit"
+              loading={isSubmitting}
+              disabled={!addFormMethods.formState.isValid || isSubmitting}
+            >
+              {isSubmitting ? "Adding..." : "Save"}
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          id="addDesignationForm"
+          onSubmit={addFormMethods.handleSubmit(onAddDesignationSubmit)}
+          className="flex flex-col gap-y-6"
+        >
+          <FormItem
+            label="Designation Name"
+            invalid={!!addFormMethods.formState.errors.name}
+            errorMessage={addFormMethods.formState.errors.name?.message}
+          >
+            <Controller
+              name="name"
+              control={addFormMethods.control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Enter Designation Name" />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </Drawer>
 
-            <Drawer title="Filter Designations" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-                footer={
-                     <div className="flex justify-between w-full">
-                        <Button size="sm" onClick={onClearFilters} type="button">Clear All</Button>
-                        <div>
-                            <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button>
-                            <Button size="sm" variant="solid" form="filterDesignationForm" type="submit">Apply Filters</Button>
-                        </div>
-                    </div>
-                }
+      <Drawer
+        title="Edit Designation"
+        isOpen={isEditDrawerOpen}
+        onClose={closeEditDrawer}
+        onRequestClose={closeEditDrawer}
+        footer={
+          <div className="text-right w-full">
+            <Button
+              size="sm"
+              className="mr-2"
+              onClick={closeEditDrawer}
+              disabled={isSubmitting}
+              type="button"
             >
-                <Form id="filterDesignationForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-6">
-                    <FormItem label="Filter by Designation Name(s)">
-                        <Controller name="filterNames" control={filterFormMethods.control}
-                            render={({ field }) => (
-                                <Select isMulti placeholder="Select designation names..." options={designationNameOptions}
-                                        value={field.value || []} onChange={(selectedVal) => field.onChange(selectedVal || [])} />
-                            )} />
-                    </FormItem>
-                    
-                </Form>
-            </Drawer>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="editDesignationForm"
+              type="submit"
+              loading={isSubmitting}
+              disabled={
+                !editFormMethods.formState.isValid ||
+                isSubmitting ||
+                !editFormMethods.formState.isDirty
+              }
+            >
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          id="editDesignationForm"
+          onSubmit={editFormMethods.handleSubmit(onEditDesignationSubmit)}
+          className="flex flex-col gap-y-6"
+        >
+          <FormItem
+            label="Designation Name"
+            invalid={!!editFormMethods.formState.errors.name}
+            errorMessage={editFormMethods.formState.errors.name?.message}
+          >
+            <Controller
+              name="name"
+              control={editFormMethods.control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Enter Designation Name" />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </Drawer>
 
-            <ConfirmDialog
-                isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Designation"
-                onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-                onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-                onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-                onConfirm={onConfirmSingleDelete} loading={isDeleting}
-            >
-                <p>Are you sure you want to delete the designation "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p>
-            </ConfirmDialog>
-        </>
-    );
+      <Drawer
+        title="Filter Designations"
+        isOpen={isFilterDrawerOpen}
+        onClose={closeFilterDrawer}
+        onRequestClose={closeFilterDrawer}
+        footer={
+          <div className="flex justify-between w-full">
+            <Button size="sm" onClick={onClearFilters} type="button">
+              Clear All
+            </Button>
+            <div>
+              <Button
+                size="sm"
+                className="mr-2"
+                onClick={closeFilterDrawer}
+                type="button"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                form="filterDesignationForm"
+                type="submit"
+              >
+                Apply Filters
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        <Form
+          id="filterDesignationForm"
+          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+          className="flex flex-col gap-y-6"
+        >
+          <FormItem label="Filter by Designation Name(s)">
+            <Controller
+              name="filterNames"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select designation names..."
+                  options={designationNameOptions}
+                  value={field.value || []}
+                  onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </Drawer>
+
+      <ConfirmDialog
+        isOpen={singleDeleteConfirmOpen}
+        type="danger"
+        title="Delete Designation"
+        onClose={() => {
+          setSingleDeleteConfirmOpen(false);
+          setItemToDelete(null);
+        }}
+        onRequestClose={() => {
+          setSingleDeleteConfirmOpen(false);
+          setItemToDelete(null);
+        }}
+        onCancel={() => {
+          setSingleDeleteConfirmOpen(false);
+          setItemToDelete(null);
+        }}
+        onConfirm={onConfirmSingleDelete}
+        loading={isDeleting}
+      >
+        <p>
+          Are you sure you want to delete the designation "
+          <strong>{itemToDelete?.name}</strong>"? This action cannot be undone.
+        </p>
+      </ConfirmDialog>
+    </>
+  );
 };
 
 export default DesignationListing;

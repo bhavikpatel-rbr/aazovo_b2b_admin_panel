@@ -29,7 +29,7 @@ const FileManagerHeader = ({
             <div>
                 {directories.length > 0 ? (
                     <div className="flex items-center gap-2">
-                        <h3 className="flex items-center gap-2 text-base sm:text-2xl">
+                        <h5 className="flex items-center gap-2">
                             <span
                                 className="hover:text-primary cursor-pointer"
                                 role="button"
@@ -55,10 +55,10 @@ const FileManagerHeader = ({
                                     )}
                                 </Fragment>
                             ))}
-                        </h3>
+                        </h5>
                     </div>
                 ) : (
-                    <h3>All Documents</h3>
+                    <h5>All Documents</h5>
                 )}
             </div>
             <div className="flex items-center gap-2">
@@ -66,14 +66,14 @@ const FileManagerHeader = ({
                     value={layout}
                     onChange={(val) => setLayout(val as Layout)}
                 >
-                    <Segment.Item value="grid" className="text-xl px-3">
+                    <Segment.Item value="grid" className="text-xl py-2 px-3">
                         <TbLayoutGrid />
                     </Segment.Item>
-                    <Segment.Item value="list" className="text-xl px-3">
+                    <Segment.Item value="list" className="text-xl py-2 px-3">
                         <TbList />
                     </Segment.Item>
                 </Segment>
-                <UploadFile />
+                {/* <UploadFile /> */}
             </div>
         </div>
     )

@@ -20,32 +20,32 @@ const systemToolsNavigationConfig: NavigationTree[] = [
         },
         subMenu: [
             {
-                key: 'settings.rawData',
+                key: 'systemTools.rawData',
                 path: `${SYSTEM_TOOLS_PREFIX_PATH}/raw-data`,
                 title: 'Raw Data',
-                translateKey: 'nav.settings.rawData',
+                translateKey: 'nav.systemTools.rawData',
                 icon: 'rawData',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN],
                 meta: {
                     description: {
-                        translateKey: 'nav.settings.rawDataDesc',
+                        translateKey: 'nav.systemTools.rawDataDesc',
                         label: 'Access raw data',
                     },
                 },
                 subMenu: [],
             },
             {
-                key: 'master.formBuilder',
+                key: 'systemTools.formBuilder',
                 path: `${SYSTEM_TOOLS_PREFIX_PATH}/form-builder`,
                 title: 'Form Builder',
-                translateKey: 'nav.master.formBuilder',
+                translateKey: 'nav.systemTools.formBuilder',
                 icon: 'formBuilder',
                 type: NAV_ITEM_TYPE_ITEM,
                 authority: [ADMIN],
                 meta: {
                     description: {
-                        translateKey: 'nav.master.formBuilderDesc',
+                        translateKey: 'nav.systemTools.formBuilderDesc',
                         label: 'Manage form builders',
                     },
                 },

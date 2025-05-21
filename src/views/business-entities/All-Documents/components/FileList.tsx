@@ -89,21 +89,21 @@ const FileList = (props: FileListProps) => {
         <div>
             {folders.length > 0 && (
                 <div>
-                    <h4>Companies</h4>
+                    <h5>Companies</h5>
                     {layout === 'grid' && renderFileSegment(folders, true)}
                     {layout === 'list' && renderFileRow(folders, true)}
                 </div>
             )}
             {folders.length > 0 && (
                 <div className='mt-4'>
-                    <h4>Members</h4>
+                    <h5>Members</h5>
                     {layout === 'grid' && renderFileSegment(folders, true)}
                     {layout === 'list' && renderFileRow(folders, true)}
                 </div>
             )}
             {folders.length > 0 && (
                 <div className='mt-4'>
-                    <h4>Partners</h4>
+                    <h5>Partners</h5>
                     {layout === 'grid' && renderFileSegment(folders, true)}
                     {layout === 'list' && renderFileRow(folders, true)}
                 </div>

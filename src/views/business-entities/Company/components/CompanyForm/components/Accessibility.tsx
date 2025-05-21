@@ -5,6 +5,8 @@ import Checkbox from '@/components/ui/Checkbox'
 import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types'
+import { Button } from '@/components/ui'
+import { TbPlus } from 'react-icons/tb'
 
 // --- Mock Options Data (Replace with real data as needed) ---
 const domainOptions = [
@@ -29,13 +31,13 @@ const AccessibilitySection = ({
     return (
         <Card id="accessibility">
             <h4 className="mb-6">Accessibility</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="md:grid md:grid-cols-2 lg:grid-cols-7 lg:gap-2">
                 {/* KYC Verified */}
                 <FormItem
                     label="KYC Verified"
                     invalid={Boolean(errors[KYC_FIELD])}
                     errorMessage={errors[KYC_FIELD]?.message as string}
-                    className="md:col-span-1"
+                    className="col-span-1 lg:col-span-3 "
                 >
                     <Controller
                         name={KYC_FIELD as any}
@@ -56,7 +58,7 @@ const AccessibilitySection = ({
                     label="Enable Billing"
                     invalid={Boolean(errors[BILLING_FIELD])}
                     errorMessage={errors[BILLING_FIELD]?.message as string}
-                    className="md:col-span-1"
+                    className="col-span-1 lg:col-span-4 "
                 >
                     <Controller
                         name={BILLING_FIELD as any}
@@ -73,32 +75,51 @@ const AccessibilitySection = ({
                 </FormItem>
 
                 {/* Enable Billing Photos */}
-                <FormItem
-                    label="Enable Billing Photos"
-                    invalid={Boolean(errors[BILLING_PHOTOS_FIELD])}
-                    errorMessage={errors[BILLING_PHOTOS_FIELD]?.message as string}
-                    className="md:col-span-3"
-                >
-                    <Controller
-                        name={BILLING_PHOTOS_FIELD as any}
-                        control={control}
-                        render={({ field }) => (
-                            <Input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                onChange={e => field.onChange((e.target as HTMLInputElement).files)}
-                            />
-                        )}
-                    />
-                </FormItem>
+                <div className='md:grid grid-cols-2 lg:grid-cols-7 gap-2 col-span-7  mb-6 lg:mb-0'>
+                    <FormItem
+                        label="Enable Billing Documents"
+                        className=" lg:col-span-3"
+                    >
+                        <Controller
+                            name={BILLING_PHOTOS_FIELD as any}
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="text"
+                                />
+                            )}
+                        />
+                    </FormItem>
+                    <FormItem
+                        label="Enable Billing Documents"
+                        invalid={Boolean(errors[BILLING_PHOTOS_FIELD])}
+                        errorMessage={errors[BILLING_PHOTOS_FIELD]?.message as string}
+                        className="lg:col-span-3"
+                    >
+                        <Controller
+                            name={BILLING_PHOTOS_FIELD as any}
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={e => field.onChange((e.target as HTMLInputElement).files)}
+                                />
+                            )}
+                        />
+                    </FormItem>
+                    <div className='flex lg:justify-center items-center'>
+                        <Button type='button' icon={<TbPlus/>}>Add More</Button>
+                    </div>
+                </div>
 
                 {/* Domain Management */}
                 <FormItem
                     label="Domain Management"
                     invalid={Boolean(errors[DOMAIN_MANAGEMENT_FIELD])}
                     errorMessage={errors[DOMAIN_MANAGEMENT_FIELD]?.message as string}
-                    className="md:col-span-1"
+                    className="md:col-span-2 lg:col-span-7"
                 >
                     <Controller
                         name={DOMAIN_MANAGEMENT_FIELD as any}

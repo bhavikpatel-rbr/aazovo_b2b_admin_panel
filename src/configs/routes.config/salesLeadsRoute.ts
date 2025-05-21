@@ -7,7 +7,7 @@ const salesLeadsRoute: Routes = [
     {
         key: 'salesLeads.wallListing',
         path: `${SALES_LEADS_PREFIX_PATH}/wall-listing`,
-        component: lazy(() => import('@/views/product-management/Wall-Listing')),
+        component: lazy(() => import('@/views/sales-Leads/Wall-Listing')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',
@@ -72,15 +72,6 @@ const salesLeadsRoute: Routes = [
         key: 'salesLeads.offersDemands',
         path: `${SALES_LEADS_PREFIX_PATH}/demands/create`,
         component: lazy(() => import('@/views/sales-Leads/Offers-Demands/DemandCreate/CreateDemand')),
-        authority: [ADMIN, USER],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
-    {
-        key: 'salesLeads.inquiries',
-        path: `${SALES_LEADS_PREFIX_PATH}/inquiries`,
-        component: lazy(() => import('@/views/sales-Leads/Inquiries')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',

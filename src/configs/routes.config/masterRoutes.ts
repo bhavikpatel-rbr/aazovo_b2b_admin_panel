@@ -5,18 +5,18 @@ import type { Routes } from '@/@types/routes';
 
 const masterRoutes: Routes = [
     {
-        key: 'documentMaster.documentType',
+        key: 'master.documentType',
         path: `${MASTER_PREFIX_PATH}/document-type`,
-        component: lazy(() => import('@/views/document-master/Document-Type')),
+        component: lazy(() => import('@/views/master/Document-Type')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',
         },
     },
     {
-        key: 'documentMaster.documents',
+        key: 'master.documents',
         path: `${MASTER_PREFIX_PATH}/documents`,
-        component: lazy(() => import('@/views/document-master/Documents')),
+        component: lazy(() => import('@/views/master/Documents-List')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',

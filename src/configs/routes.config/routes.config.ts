@@ -5,16 +5,17 @@ import othersRoute from './othersRoute'
 import businessEntityRoute from './businessEntityRoute'
 import productManagementRoute from './productManagementRoute'
 import salesLeadsRoute from './salesLeadsRoute'
-import marketingRoute from './marketingRoute'
+import emailMessagesRoute from './emailMessagesRoute'
 import taskRoute from './taskRoute'
 import hrEmployeesRoute from './hrEmployeesRoute'
 import accessControllRoute from './accessControllRoutes'
 import masterRoutes from './masterRoutes'
 import systemToolsRoutes from './systemToolsRoutes'
-import settingsRoutes from './settingsRoutes'
-import documentMasterRoutes from './documentMasterRoutes'
+import adminSettingsRoutes from './adminSettingsRoutes'
 import type { Routes } from '@/@types/routes'
 import uiComponentsRoute from './uiComponentsRoute'
+import userEngagementRoute from './userEngagementRoute'
+import webSettingsRoutes from './webSettingsRoute'
 
 export const publicRoutes: Routes = [...authRoute]
 
@@ -26,12 +27,13 @@ export const protectedRoutes: Routes = [
     ...productManagementRoute,
     ...salesLeadsRoute,
     ...taskRoute,
-    ...marketingRoute,
     ...hrEmployeesRoute,
     ...accessControllRoute,
     ...systemToolsRoutes,
     ...masterRoutes,
-    ...settingsRoutes,
-    ...documentMasterRoutes,
+    ...adminSettingsRoutes,
+    ...webSettingsRoutes,
+    ...userEngagementRoute,
     ...uiComponentsRoute,
+    ...emailMessagesRoute,
 ]

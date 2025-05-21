@@ -5,6 +5,8 @@ import Button from '@/components/ui/Button'
 import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types'
+import { TbPlus } from 'react-icons/tb'
+import { NavLink } from 'react-router-dom'
 
 // --- Mock Options Data (Replace with real data as needed) ---
 const memberOptions = [
@@ -118,6 +120,12 @@ const MemberManagementSection = ({
                         />
                     </FormItem>
                 </div>
+            </div>
+            <div className='flex gap-2 justify-end items-center'>
+                <Button type='button' icon={<TbPlus/>}>
+                    <NavLink to="/business-entities/member-create">Create New Member</NavLink>
+                </Button>
+                <Button type='button' icon={<TbPlus/>}>Add Member</Button>
             </div>
         </Card>
         </>

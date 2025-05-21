@@ -7,6 +7,8 @@ import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps, CompanyFormSchema } from '../types'
 import NumericInput from '@/components/shared/NumericInput'
+import { Button } from '@/components/ui'
+import { TbPlus } from 'react-icons/tb'
 type CompanyDetailsProps = FormSectionBaseProps
 
 
@@ -73,9 +75,9 @@ const CompanyDetails = ({
 
     return (
     <Card id="companyDetails">
-        <h4 className="mb-6">Primary Information</h4>
+        <h4 className="mb-4">Primary Information</h4>
         {/* Changed to md:grid-cols-3 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {/* Company Name */}
             <FormItem
                 label="Company Name"
@@ -103,19 +105,35 @@ const CompanyDetails = ({
                 invalid={Boolean(errors.company_primary_contact_number)}
                 errorMessage={errors.company_primary_contact_number?.message as string}
             >
-                <Controller
-                    name="company_primary_contact_number"
-                    control={control}
-                    rules={{ required: 'Primary Contact Number is required' }}
-                    render={({ field }) => (
-                        <Input
-                            type="tel"
-                            autoComplete="off"
-                            placeholder="Primary Contact Number"
-                            {...field}
-                        />
-                    )}
-                />
+                <div className="flex items-center gap-2">
+                    <Controller
+                        name="primary_contact_country_code"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                type="text"
+                                autoComplete="off"
+                                placeholder="+1"
+                                className="w-20" // Keep it narrow
+                                {...field}
+                            />
+                        )}
+                    />
+                    <Controller
+                        name="company_primary_contact_number"
+                        control={control}
+                        rules={{ required: 'Primary Contact Number is required' }}
+                        render={({ field }) => (
+                            <Input
+                                type="tel"
+                                autoComplete="off"
+                                placeholder="Primary Contact Number"
+                                {...field}
+                            />
+                        )}
+                    />
+                </div>
+                
             </FormItem>
 
             {/* Company Primary E-mail ID */}
@@ -233,7 +251,7 @@ const CompanyDetails = ({
                 label="Owner/Director/Proprietor Name"
                 invalid={Boolean(errors.owner_director_proprietor_name)}
                 errorMessage={errors.owner_director_proprietor_name?.message as string}
-                // className="md:col-span-2" // Example: if it needs more width
+                className='md:col-span-3'
             >
                 <Controller
                     name="owner_director_proprietor_name"
@@ -268,6 +286,29 @@ const CompanyDetails = ({
                             type="text"
                             autoComplete="off"
                             placeholder="Company Address"
+                            {...field}
+                            textArea
+                        />
+                    )}
+                />
+            </FormItem>
+                
+            {/* Continent Name as Select */}
+            <FormItem
+                label="Continent Name"
+                invalid={Boolean(errors.continent_name)}
+                errorMessage={errors.continent_name?.message as string}
+            >
+                <Controller
+                    name="continent_name"
+                    control={control}
+                    rules={{ required: 'Continent is required' }}
+                    render={({ field }) => (
+                        <Select
+                            placeholder="Select Continent"
+                            options={continentOptions}
+                            value={continentOptions.find(option => option.value === field.value)}
+                            onChange={(option) => field.onChange(option?.value)}
                             {...field}
                         />
                     )}
@@ -324,6 +365,7 @@ const CompanyDetails = ({
                 label="City"
                 invalid={Boolean(errors.city)}
                 errorMessage={errors.city?.message as string}
+                className='col-span-2'
             >
                 <Controller
                     name="city"
@@ -363,33 +405,11 @@ const CompanyDetails = ({
                 />
             </FormItem>
 
-
-            {/* Continent Name as Select */}
-            <FormItem
-                label="Continent Name"
-                invalid={Boolean(errors.continent_name)}
-                errorMessage={errors.continent_name?.message as string}
-            >
-                <Controller
-                    name="continent_name"
-                    control={control}
-                    rules={{ required: 'Continent is required' }}
-                    render={({ field }) => (
-                        <Select
-                            placeholder="Select Continent"
-                            options={continentOptions}
-                            value={continentOptions.find(option => option.value === field.value)}
-                            onChange={(option) => field.onChange(option?.value)}
-                            {...field}
-                        />
-                    )}
-                />
-            </FormItem>
         </div>
 
         <hr />
-        <h4 className="mb-6 mt-2">Trade Information</h4>
-        <div className="grid md:grid-cols-3 gap-4">
+        <h4 className="mb-4 mt-4">Trade Information</h4>
+        <div className="grid md:grid-cols-2 gap-3">
             <FormItem
                 label="GST Number"
                 invalid={Boolean(errors.gst_number)}
@@ -468,8 +488,8 @@ const CompanyDetails = ({
         </div>
 
         <hr />
-        <h4 className="mb-6 mt-2">Company Information</h4>
-        <div className="grid md:grid-cols-3 gap-4">
+        <h4 className="mb-4 mt-4">Company Information</h4>
+        <div className="grid md:grid-cols-3 gap-3">
             <FormItem
                 label="Establishment Year"
                 invalid={Boolean(errors.company_establishment_year)}
@@ -608,12 +628,13 @@ const CompanyDetails = ({
         </div>
 
         <hr />
-        <h4 className="mb-6 mt-2">Certificates</h4>
-        <div className="grid md:grid-cols-3 gap-4">
+        <h4 className="mb-4 mt-4">Certificates</h4>
+        <div className="grid md:grid-cols-7 gap-3">
             <FormItem
                 label="Certificate Name"
                 invalid={Boolean(errors.certificate_name)}
                 errorMessage={errors.certificate_name?.message}
+                className='col-span-3'
             >
                 <Controller
                     name="certificate_name"
@@ -630,16 +651,17 @@ const CompanyDetails = ({
             </FormItem>
 
             <FormItem
-                label="Upload Certificate (URL)"
+                label="Upload Certificate"
                 invalid={Boolean(errors.upload_certificate)}
                 errorMessage={errors.upload_certificate?.message}
+                className='col-span-3'
             >
                 <Controller
                     name="upload_certificate"
                     control={control}
                     render={({ field }) => (
                         <Input
-                            type="url"
+                            type="file"
                             autoComplete="off"
                             placeholder="https://example.com/certificate.pdf"
                             {...field}
@@ -647,13 +669,17 @@ const CompanyDetails = ({
                     )}
                 />
             </FormItem>
+            {/* <div className='flex justify-center items-center'>
+                <Button type='button' icon={<TbPlus/>}>Add More</Button>
+            </div> */}
         </div>
 
         <hr />
-            <h4 className="mb-6 mt-2">Branch / Head Office Information</h4>
-            <div className="grid md:grid-cols-3 gap-4">
+            <h4 className="mb-4 mt-4">Branch / Head Office Information</h4>
+            <div className="grid md:grid-cols-2 gap-3">
                 <FormItem
-                    label="Head Office" // Or Branch Name
+                    // label="Head Office" // Or Branch Name
+                    label="Office Type" // Or Branch Name
                     invalid={Boolean(errors.head_office)}
                     errorMessage={errors.head_office?.message as string}
                 >
@@ -662,11 +688,61 @@ const CompanyDetails = ({
                         control={control}
                         rules={{ required: 'Office/Branch name is required' }}
                         render={({ field }) => (
+                            // <Input
+                            //     type="text"
+                            //     autoComplete="off"
+                            //     placeholder="e.g., Main Office, Mumbai Branch"
+                            //     {...field}
+                            // />
+                            <Select 
+                                placeholder="Select Office Type"
+                                options={[
+                                    { label: "Head Office", value: "Head Office" },
+                                    { label: "Branch", value: "Branch" },
+                                ]}
+                            />
+                        )}
+                    />
+                </FormItem>
+                    
+                {/* Office Name */}
+                <FormItem
+                    label="Office Name"
+                    invalid={Boolean(errors.branches)}
+                    errorMessage={errors.branches?.message as string}
+                >
+                    <Controller
+                        name="branches"
+                        control={control}
+                        render={({ field }) => (
                             <Input
                                 type="text"
                                 autoComplete="off"
-                                placeholder="e.g., Main Office, Mumbai Branch"
+                                placeholder="e.g. XYZ Pvt. Ltd."
                                 {...field}
+                            />
+                        )}
+                    />
+                </FormItem>
+
+                {/* Address - Spanning 2 columns for more space if using md:grid-cols-2 */}
+                <FormItem
+                    label="Address"
+                    className="md:col-span-2" // Make Address take full width on medium screens
+                    invalid={Boolean(errors.branch_address)}
+                    errorMessage={errors.branch_address?.message as string}
+                >
+                    <Controller
+                        name="branch_address"
+                        control={control}
+                        rules={{ required: 'Address is required' }}
+                        render={({ field }) => (
+                            <Input
+                                type="text" // Consider textarea if your Input component supports it or use a dedicated one
+                                autoComplete="off"
+                                placeholder="Full Address (Street, City, etc.)"
+                                {...field}
+                                textArea
                             />
                         )}
                     />
@@ -693,6 +769,7 @@ const CompanyDetails = ({
                         )}
                     />
                 </FormItem>
+                
 
                 {/* State as Select */}
                 <FormItem
@@ -736,27 +813,7 @@ const CompanyDetails = ({
                     />
                 </FormItem>
 
-                {/* Address - Spanning 2 columns for more space if using md:grid-cols-2 */}
-                <FormItem
-                    label="Address"
-                    className="md:col-span-2" // Make Address take full width on medium screens
-                    invalid={Boolean(errors.branch_address)}
-                    errorMessage={errors.branch_address?.message as string}
-                >
-                    <Controller
-                        name="branch_address"
-                        control={control}
-                        rules={{ required: 'Address is required' }}
-                        render={({ field }) => (
-                            <Input
-                                type="text" // Consider textarea if your Input component supports it or use a dedicated one
-                                autoComplete="off"
-                                placeholder="Full Address (Street, City, etc.)"
-                                {...field}
-                            />
-                        )}
-                    />
-                </FormItem>
+                
 
                 <FormItem
                     label="GST/REG Number"
@@ -777,25 +834,10 @@ const CompanyDetails = ({
                     />
                 </FormItem>
 
-                <FormItem
-                    label="Branches"
-                    invalid={Boolean(errors.branches)}
-                    errorMessage={errors.branches?.message as string}
-                >
-                    <Controller
-                        name="branches"
-                        control={control}
-                        render={({ field }) => (
-                            <Input
-                                type="text"
-                                autoComplete="off"
-                                placeholder="e.g., Branch 1, Branch 2"
-                                {...field}
-                            />
-                        )}
-                    />
-                </FormItem>
             </div>
+            {/* <div className='flex justify-end'>
+                <Button type='button' icon={<TbPlus/>}>Add More</Button>
+            </div> */}
     </Card>
     )
 }

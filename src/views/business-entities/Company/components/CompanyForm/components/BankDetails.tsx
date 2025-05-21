@@ -4,6 +4,8 @@ import Select from '@/components/ui/Select'
 import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types'
+import { Button } from '@/components/ui'
+import { TbPlus } from 'react-icons/tb'
 
 // --- Mock Options Data (Replace with real data as needed) ---
 const bankNameOptions = [
@@ -187,6 +189,9 @@ const BankDetailsSection = ({
                         )}
                     />
                 </FormItem>
+            </div>
+            <div className='flex justify-end'>
+                <Button type='button' icon={<TbPlus/>}>Add More</Button>
             </div>
         </Card>
     )

@@ -6,7 +6,7 @@ const othersRoute: Routes = [
     {
         key: 'exportMapping',
         path: `/export-mapping`,
-        component: lazy(() => import('@/views/other/Export-Mapping')),
+        component: lazy(() => import('@/views/others/Export-Mapping')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',

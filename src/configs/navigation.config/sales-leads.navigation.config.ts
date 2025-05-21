@@ -83,22 +83,6 @@ const salesLeadsNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            // {
-            //     key: 'salesLeads.inquiries',
-            //     path: `${SALES_LEADS_PREFIX_PATH}/inquiries`,
-            //     title: 'Inquiries',
-            //     translateKey: 'nav.salesLeads.inquiries',
-            //     icon: 'inquiries',
-            //     type: NAV_ITEM_TYPE_ITEM,
-            //     authority: [ADMIN, USER],
-            //     meta: {
-            //         description: {
-            //             translateKey: 'nav.salesLeads.inquiriesDesc',
-            //             label: 'Manage inquiries',
-            //         },
-            //     },
-            //     subMenu: [],
-            // },
         ],
     },
 ];
