@@ -26,7 +26,7 @@ import DebouceInput from "@/components/shared/DebouceInput";
 import Checkbox from "@/components/ui/Checkbox";
 import { Form, FormItem as UiFormItem } from "@/components/ui/Form";
 import Badge from "@/components/ui/Badge";
-import { TbClipboardText, TbFilter, TbX, TbUserCircle } from "react-icons/tb";
+import { TbClipboardText, TbFilter, TbX, TbUserCircle, TbEye, TbDotsVertical } from "react-icons/tb";
 
 // Icons
 import {
@@ -48,6 +48,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import { DatePicker, Drawer, Select } from "@/components/ui";
 
 // --- Define Task Item Type ---
 export type TaskItemStatus =
@@ -103,19 +104,6 @@ export const ActionColumn = ({
   return (
     <div className="flex items-center justify-center">
       {/* {onClone && ( <Tooltip title="Clone Task"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400')} role="button" onClick={onClone}><TbCopy /></div></Tooltip> )} */}
-      <Tooltip title="Change Status">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400"
-          )}
-          role="button"
-          onClick={onChangeStatus}
-        >
-          <TbSwitchHorizontal />
-        </div>
-      </Tooltip>
       <Tooltip title="Edit Task">
         <div
           className={classNames(
@@ -129,6 +117,19 @@ export const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
+      <Tooltip title="View">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+          )}
+          role="button"
+        >
+          <TbEye />
+        </div>
+      </Tooltip>
+
       <Tooltip title="Delete Task">
         <div
           className={classNames(
@@ -140,6 +141,18 @@ export const ActionColumn = ({
           onClick={onDelete}
         >
           <TbTrash />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-400"
+          )}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -247,6 +260,8 @@ export const TaskFilter = ({
   const activeFilterCount =
     (filterData.status?.length || 0) + (filterData.assignTo?.length || 0);
 
+  const { DatePickerRange } = DatePicker
+
   return (
     <>
       <Button icon={<TbFilter />} onClick={openDialog} className="relative">
@@ -259,69 +274,78 @@ export const TaskFilter = ({
           />
         )}
       </Button>
-      <Dialog
+      <Drawer
+        title="Filters"
         isOpen={dialogIsOpen}
         onClose={onDialogClose}
         onRequestClose={onDialogClose}
-      >
-        <h4 className="mb-4">Filter Tasks</h4>
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <UiFormItem label="Status" className="mb-4">
-            <Controller
-              name="status"
-              control={control}
-              render={({ field }) => (
-                <Checkbox.Group
-                  vertical
-                  value={field.value || []}
-                  onChange={field.onChange}
-                >
-                  {" "}
-                  {uniqueStatuses.map((stat) => (
-                    <Checkbox
-                      key={stat}
-                      value={stat}
-                      className="mb-1 capitalize"
-                    >
-                      {stat.replace(/_/g, " ")}
-                    </Checkbox>
-                  ))}{" "}
-                </Checkbox.Group>
-              )}
-            />
-          </UiFormItem>
-          <UiFormItem label="Assigned To">
-            <Controller
-              name="assignTo"
-              control={control}
-              render={({ field }) => (
-                <Checkbox.Group
-                  vertical
-                  value={field.value || []}
-                  onChange={field.onChange}
-                >
-                  {" "}
-                  {uniqueAssignees.map((user) => (
-                    <Checkbox key={user} value={user} className="mb-1">
-                      {user}
-                    </Checkbox>
-                  ))}{" "}
-                </Checkbox.Group>
-              )}
-            />
-          </UiFormItem>
-          <div className="flex justify-end items-center gap-2 mt-6">
-            <Button type="button" onClick={handleReset}>
-              {" "}
-              Reset{" "}
+        footer={
+          <div className="text-right w-full">
+            <Button
+              size="sm"
+              className="mr-2"
+            >
+              Clear
             </Button>
-            <Button type="submit" variant="solid">
-              {" "}
-              Apply Filters{" "}
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterInquiryForm" // Unique form ID
+              type="submit"
+            >
+              Apply
             </Button>
           </div>
-        </Form>
-      </Dialog>
+        }
+      >
+        <UiFormItem label="Created By">
+          <Select
+            placeholder="Select Created by"
+            options={[
+              {label:"Ajay Patel", value: "Ajay Patel"},
+              {label:"Rohan Shah", value: "Rohan Shah"},
+            ]}
+            isMulti
+          />
+        </UiFormItem>
+        <UiFormItem label="Assigned To">
+          <Select
+            placeholder="Select Assigned To"
+            options={[
+              {label:"Ajay Patel", value: "Ajay Patel"},
+              {label:"Rohan Shah", value: "Rohan Shah"},
+            ]}
+            isMulti
+          />
+        </UiFormItem>
+        <UiFormItem label="Priority">
+          <Select
+            placeholder="Select Priority"
+            options={[
+              {label:"High", value: "High"},
+              {label:"Low", value: "Low"},
+              {label:"Urgent", value: "Urgent"},
+            ]}
+            isMulti
+          />
+        </UiFormItem>
+        <UiFormItem label="Status">
+          <Select
+            placeholder="Select Status"
+            options={[
+              {label:"Pending", value: "Pending"},
+              {label:"Completed", value: "Completed"},
+            ]}
+            isMulti
+          />
+        </UiFormItem>
+        <UiFormItem label="Created Date">
+          <DatePickerRange placeholder="Select Date Range" />
+        </UiFormItem>
+        <UiFormItem label="Due Date">
+          <DatePickerRange placeholder="Select Date Range" />
+        </UiFormItem>
+      </Drawer>
     </>
   );
 };
@@ -509,9 +533,8 @@ export const TaskSelected = ({
       <ConfirmDialog
         isOpen={deleteConfirmationOpen}
         type="danger"
-        title={`Delete ${selectedTasks.length} Task${
-          selectedTasks.length > 1 ? "s" : ""
-        }`}
+        title={`Delete ${selectedTasks.length} Task${selectedTasks.length > 1 ? "s" : ""
+          }`}
         onClose={handleCancelDelete}
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
@@ -773,80 +796,158 @@ export const useTaskListingLogic = (initialData: TaskItem[]) => {
   const columns: ColumnDef<TaskItem>[] = useMemo(
     () => [
       {
-        header: "Status",
-        accessorKey: "status",
+        header: "Created By",
+        accessorKey: "createdBy",
         enableSorting: true,
-        width: 140,
-        cell: (props) => {
-          const { status } = props.row.original;
-          const displayStatus = status
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (l) => l.toUpperCase());
-          return (
-            <Tag className={`${taskStatusColor[status]} text-white capitalize`}>
-              {displayStatus}
-            </Tag>
-          );
-        },
+        size: 140,
+        cell: (props) => (
+          <div className="flex items-center gap-1.5  text-xs">
+            <Avatar size={32} shape="circle" icon={<TbUserCircle />} />
+            <div className="flex flex-col  gap-0.5 text-xs">
+              {/* <span>{props.row.original.createdBy}</span> */}
+              <span className="font-semibold ">Mahendra Singh Sodhi</span>
+              <span className="">Admin</span>
+            </div>
+          </div>
+        ),
       },
       {
-        header: "Note",
+        header: "Task",
         accessorKey: "note",
         enableSorting: false,
         size: 250,
         cell: (props) => (
-          <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">
-            {props.row.original.note}
-          </span>
+          <div className="flex flex-col gap-0.5 text-[12px]">
+            <span className=" items-center whitespace-nowrap text-ellipsis max-w-[240px] overflow-hidden">
+              <b className="font-semibold">Title : </b> {props.row.original.note}
+            </span>
+
+            <span className="">
+              <b className="font-semibold">Created On : </b> 23 May 2025
+            </span>
+            <span className="">
+              <b className="font-semibold">Due Date : </b> 26 May 2025
+            </span>
+          </div>
         ),
-      }, // Truncate long notes
+      },
+      {
+        header: "Task Details",
+        size: 230,
+        cell: (props) => (
+          <div className="flex flex-col gap-0.5 text-[12px]">
+            <span className="">
+              <b className="font-semibold">Linked to : </b> Wall listings
+            </span>
+            <span className="">
+              <b className="font-semibold">Category : </b> Electronics
+            </span>
+            <span className="">
+              <b className="font-semibold">Labels : </b>
+              <Tag className="text-[10px] bg-blue-100 text-blue-600 ">Bug</Tag>
+              <Tag className="text-[10px] bg-pink-100 text-pink-600 ">Live issue</Tag>
+            </span>
+            <span className="">
+              <b className="font-semibold">Priority : </b>
+              <Tag className="text-[10px] bg-blue-100 text-blue-600 ">High</Tag>
+            </span>
+          </div>
+        )
+      },
       {
         header: "Assigned To",
         accessorKey: "assignTo",
         enableSorting: true,
-        size: 200,
+        size: 120,
         cell: (props) => (
-          <div className="flex items-center gap-2">
-            <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
-            <span>{props.row.original.assignTo}</span>
-          </div>
-        ),
-      },
-      {
-        header: "Created By",
-        accessorKey: "createdBy",
-        enableSorting: true,
-        size: 200,
-        cell: (props) => (
-          <div className="flex items-center gap-2">
-            <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
-            <span>{props.row.original.createdBy}</span>
-          </div>
-        ),
-      },
-      {
-        header: "Created Date",
-        accessorKey: "createdDate",
-        enableSorting: true,
-        size: 180,
-        cell: (props) => {
-          const date = props.row.original.createdDate;
-          return (
+          <div className="flex flex-col gap-2">
+            <figure className="flex gap-1 flex-wrap">
+              <Tooltip
+                title={
+                  <div className="flex flex-col items-center gap-2 text-xs ">
+                    <b className="fonts-semibold">Mukesh Khanna</b>
+                    <span>
+                      <Tag className="fonts-semibold text-[10px]">Accounts</Tag>
+                    </span>
+                  </div>
+                }
+              >
+                <Avatar size={28} shape="circle" icon={<TbUserCircle />} src="/img/avatars/thumb-2.jpg" />
+              </Tooltip>
+              <Tooltip
+                title={
+                  <div className="flex flex-col items-center gap-2 text-xs ">
+                    <b className="fonts-semibold">Mukesh Khanna</b>
+                    <span>
+                      <Tag className="fonts-semibold text-[10px]">Accounts</Tag>
+                    </span>
+                  </div>
+                }
+              >
+                <Avatar size={28} shape="circle" icon={<TbUserCircle />} src="/img/avatars/thumb-3.jpg" />
+              </Tooltip>
+              <Tooltip
+                title={
+                  <div className="flex flex-col items-center gap-2 text-xs ">
+                    <b className="fonts-semibold">Mukesh Khanna</b>
+                    <span>
+                      <Tag className="fonts-semibold text-[10px]">Accounts</Tag>
+                    </span>
+                  </div>
+                }
+              >
+                <Avatar size={28} shape="circle" icon={<TbUserCircle />} src="/img/avatars/thumb-4.jpg" />
+              </Tooltip>
+              <Tooltip
+                title={
+                  <div className="flex flex-col items-center gap-2 text-xs ">
+                    <b className="fonts-semibold">Mukesh Khanna</b>
+                    <span>
+                      <Tag className="fonts-semibold text-[10px]">Accounts</Tag>
+                    </span>
+                  </div>
+                }
+              >
+                <Avatar size={28} shape="circle" icon={<TbUserCircle />} src="/img/avatars/thumb-5.jpg" />
+              </Tooltip>
+              <Tooltip
+                title={
+                  <div className="flex flex-col items-center gap-2 text-xs ">
+                    <b className="fonts-semibold">Mukesh Khanna</b>
+                    <span>
+                      <Tag className="fonts-semibold text-[10px]">Accounts</Tag>
+                    </span>
+                  </div>
+                }
+              >
+                <Avatar size={28} shape="circle" icon={<TbUserCircle />} src="/img/avatars/thumb-6.jpg" />
+              </Tooltip>
+              <Tooltip
+                title={
+                  <div className="flex flex-col items-center gap-2 text-xs ">
+                    <b className="fonts-semibold">Mukesh Khanna</b>
+                    <span>
+                      <Tag className="fonts-semibold text-[10px]">Accounts</Tag>
+                    </span>
+                  </div>
+                }
+              >
+                <Avatar size={28} shape="circle" icon={<TbUserCircle />} src="/img/avatars/thumb-7.jpg" />
+              </Tooltip>
+            </figure>
             <span>
-              {date.toLocaleDateString()}{" "}
-              {date.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              <Tag className={`${taskStatusColor[props.row.original.status]} text-white capitalize`}>
+                {props.row.original.status}
+              </Tag>
             </span>
-          );
-        },
+          </div>
+        ),
       },
       {
         header: "Action",
         id: "action",
         meta: { HeaderClass: "text-center" },
-        size: 130,
+        // size: 130,
         cell: (props) => (
           <ActionColumn
             onEdit={() => handleEdit(props.row.original)}
