@@ -47,7 +47,7 @@ const CreateInquiry = () => {
         </div>
         <AdaptiveCard>
           <div className="flex flex-col gap-6">
-            <h4>Create Inquiry</h4>
+            <h5>New Inquiry</h5>
             <form
               onSubmit={handleSubmit(onSubmit)}
               className="grid grid-cols-1 md:grid-cols-3 gap-4"
@@ -183,6 +183,7 @@ const CreateInquiry = () => {
               <FormItem
                 label="Inquiry Subject"
                 invalid={!!errors.inquiry_subject}
+                className="md:col-span-2"
                 errorMessage={
                   typeof errors.inquiry_subject === "object" &&
                   errors.inquiry_subject
@@ -198,27 +199,7 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-
-              <FormItem
-                label="Inquiry Description"
-                invalid={!!errors.inquiry_description}
-                errorMessage={
-                  typeof errors.inquiry_description === "object" &&
-                  errors.inquiry_description
-                    ? (errors.inquiry_description as { message?: string })
-                        .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_description"
-                  control={control}
-                  render={({ field }) => (
-                    <Input textArea placeholder="Description" {...field} />
-                  )}
-                />
-              </FormItem>
-
+                
               <FormItem
                 label="Priority"
                 invalid={!!errors.inquiry_priority}
@@ -242,6 +223,27 @@ const CreateInquiry = () => {
                       ]}
                       placeholder="Select priority"
                     />
+                  )}
+                />
+              </FormItem>
+              
+              <FormItem
+                label="Inquiry Description"
+                invalid={!!errors.inquiry_description}
+                className="md:col-span-3"
+                errorMessage={
+                  typeof errors.inquiry_description === "object" &&
+                  errors.inquiry_description
+                    ? (errors.inquiry_description as { message?: string })
+                        .message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="inquiry_description"
+                  control={control}
+                  render={({ field }) => (
+                    <Input textArea placeholder="Description" {...field} />
                   )}
                 />
               </FormItem>
@@ -403,6 +405,27 @@ const CreateInquiry = () => {
               </FormItem>
 
               <FormItem
+                label="Resolution (Notes)"
+                invalid={!!errors.inquiry_resolution}
+                className="md:col-span-3"
+                errorMessage={
+                  typeof errors.inquiry_resolution === "object" &&
+                  errors.inquiry_resolution
+                    ? (errors.inquiry_resolution as { message?: string })
+                        .message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="inquiry_resolution"
+                  control={control}
+                  render={({ field }) => (
+                    <Input placeholder="Enter resolution" {...field} textArea/>
+                  )}
+                />
+              </FormItem>
+
+              <FormItem
                 label="Follow-Up Date"
                 invalid={!!errors.follow_up_date}
                 errorMessage={
@@ -453,53 +476,7 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-
-              <FormItem
-                label="Resolution (Notes)"
-                invalid={!!errors.inquiry_resolution}
-                errorMessage={
-                  typeof errors.inquiry_resolution === "object" &&
-                  errors.inquiry_resolution
-                    ? (errors.inquiry_resolution as { message?: string })
-                        .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_resolution"
-                  control={control}
-                  render={({ field }) => (
-                    <Input placeholder="Enter resolution" {...field} />
-                  )}
-                />
-              </FormItem>
-              <FormItem label="Attachments">
-                <Controller
-                  name="inquiry_attachments"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      <Input
-                        type="file"
-                        multiple
-                        onChange={(e) => {
-                          const files = (e.target as HTMLInputElement).files;
-                          const fileList = files ? Array.from(files) : [];
-                          field.onChange(fileList); // Pass the list of files to form state
-                        }}
-                      />
-                      {Array.isArray(field.value) && field.value.length > 0 && (
-                        <ul className="mt-2 text-sm text-gray-600">
-                          {field.value.map((file: File, index: number) => (
-                            <li key={index}>{file.name}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  )}
-                />
-              </FormItem>
-
+                
               <FormItem
                 label="Inquiry From"
                 invalid={!!errors.inquiry_from}
@@ -526,6 +503,34 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
+              
+              <FormItem label="Attachments" className="md:col-span-3">
+                <Controller
+                  name="inquiry_attachments"
+                  control={control}
+                  render={({ field }) => (
+                    <>
+                      <Input
+                        type="file"
+                        multiple
+                        onChange={(e) => {
+                          const files = (e.target as HTMLInputElement).files;
+                          const fileList = files ? Array.from(files) : [];
+                          field.onChange(fileList); // Pass the list of files to form state
+                        }}
+                      />
+                      {Array.isArray(field.value) && field.value.length > 0 && (
+                        <ul className="mt-2 text-sm text-gray-600">
+                          {field.value.map((file: File, index: number) => (
+                            <li key={index}>{file.name}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                />
+              </FormItem>
+              
             </form>
           </div>
         </AdaptiveCard>
@@ -534,9 +539,6 @@ const CreateInquiry = () => {
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
         <Button type="button" className="px-4 py-2">
           Cancel
-        </Button>
-        <Button type="button" className="px-4 py-2">
-          Draft
         </Button>
         <Button type="submit" className="px-4 py-2" variant="solid">
           Save
