@@ -16,7 +16,7 @@ const marketingRoute: Routes = [
     {
         key: 'userengagement.requestFeedback',
         path: `${MARKETING_PREFIX_PATH}/request-feedback`,
-        component: lazy(() => import('@/views/business-entities/RequestFeedback')),
+        component: lazy(() => import('@/views/user-engagement/RequestFeedback')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',

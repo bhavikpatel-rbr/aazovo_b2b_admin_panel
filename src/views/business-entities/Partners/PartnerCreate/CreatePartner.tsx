@@ -449,13 +449,11 @@ const CreatePartner = () => {
               </FormItem>
               {/* Footer with Save and Cancel buttons */}
 
-                {/* Upload Documents */}
+              {/* Upload Documents */}
               <FormItem
                 label={
                   <div className="flex items-center w-full">
-                    <span className="form-label mb-2">
-                      Upload Documents
-                    </span>
+                    <span className="form-label mb-2">Upload Documents</span>
                     <div className="flex-1 text-right">
                       <Button
                         type="button"

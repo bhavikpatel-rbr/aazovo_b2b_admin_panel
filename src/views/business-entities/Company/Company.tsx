@@ -6,7 +6,6 @@ import FormListTable from './components/FormListTable'
 import FormListTableTools from './components/FormListTableTools'
 
 const Company = () => {
-    
 
     return (
         <>

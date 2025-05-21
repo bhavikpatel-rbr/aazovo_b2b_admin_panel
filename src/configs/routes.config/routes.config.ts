@@ -15,6 +15,7 @@ import settingsRoutes from './settingsRoutes'
 import documentMasterRoutes from './documentMasterRoutes'
 import type { Routes } from '@/@types/routes'
 import uiComponentsRoute from './uiComponentsRoute'
+import userEngagementRoute from './userEngagementRoute'
 
 export const publicRoutes: Routes = [...authRoute]
 
@@ -33,5 +34,6 @@ export const protectedRoutes: Routes = [
     ...masterRoutes,
     ...settingsRoutes,
     ...documentMasterRoutes,
+    ...userEngagementRoute,
     ...uiComponentsRoute,
 ]
