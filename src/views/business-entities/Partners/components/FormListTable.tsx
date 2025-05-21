@@ -629,13 +629,16 @@ const FormListTable = () => {
                   </Tag>
                 </Tooltip>
               </div>
-                <div className="text-[10px] text-gray-500 mt-0.5">
-                Joined Date: {new Date(partner_join_date).toLocaleDateString("en-GB", {
+              <div className="text-[10px] text-gray-500 mt-0.5">
+                Joined Date:{" "}
+                {new Date(partner_join_date)
+                  .toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
-                }).replace(/ /g, "/")}
-                </div>
+                  })
+                  .replace(/ /g, "/")}
+              </div>
             </div>
           );
         },

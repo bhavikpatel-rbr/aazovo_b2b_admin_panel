@@ -669,9 +669,9 @@ const CompanyDetails = ({
                     )}
                 />
             </FormItem>
-            <div className='flex justify-center items-center'>
+            {/* <div className='flex justify-center items-center'>
                 <Button type='button' icon={<TbPlus/>}>Add More</Button>
-            </div>
+            </div> */}
         </div>
 
         <hr />
@@ -835,9 +835,9 @@ const CompanyDetails = ({
                 </FormItem>
 
             </div>
-            <div className='flex justify-end'>
+            {/* <div className='flex justify-end'>
                 <Button type='button' icon={<TbPlus/>}>Add More</Button>
-            </div>
+            </div> */}
     </Card>
     )
 }

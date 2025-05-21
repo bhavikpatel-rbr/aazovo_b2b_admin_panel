@@ -569,7 +569,13 @@ const FormListTable = () => {
                 {member_status}
               </Tag>
               <span className="mt-0.5">
-                <b>Joined:</b> {new Date(member_join_date).toLocaleDateString()}
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                Joined Date: &nbsp;&nbsp;&nbsp; {new Date(member_join_date).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                }).replace(/ /g, "/")}
+                </div>
               </span>
             </div>
           );

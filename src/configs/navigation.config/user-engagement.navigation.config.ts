@@ -1,4 +1,4 @@
-import { MARKETING_PREFIX_PATH } from '@/constants/route.constant';
+import { USER_ENGAGEMENT_ROUTE } from '@/constants/route.constant';
 import { NAV_ITEM_TYPE_ITEM, NAV_ITEM_TYPE_COLLAPSE } from '@/constants/navigation.constant';
 import { ADMIN, USER } from '@/constants/roles.constant';
 import type { NavigationTree } from '@/@types/navigation';
@@ -21,9 +21,9 @@ const userengagementNavigationConfig: NavigationTree[] = [
             subMenu: [
               {
                               key: 'userengagement.subscriber',
-                              path: `${MARKETING_PREFIX_PATH}/subscriber`,
+                              path: `${USER_ENGAGEMENT_ROUTE}/subscriber`,
                               title: 'Subscriber',
-                              translateKey: 'nav.marketing.subscriber',
+                              translateKey: 'nav.userengagement.subscriber',
                               icon: 'subscriber',
                               type: NAV_ITEM_TYPE_ITEM,
                               authority: [ADMIN, USER],
@@ -37,7 +37,7 @@ const userengagementNavigationConfig: NavigationTree[] = [
                           },
                           {
                               key: 'userengagement.requestFeedback',
-                              path: `${MARKETING_PREFIX_PATH}/request-feedback`,
+                              path: `${USER_ENGAGEMENT_ROUTE}/request-feedback`,
                               title: 'Request & Feedback',
                               translateKey: 'nav.userengagement.requestFeedback',
                               icon: 'requestFeedback',

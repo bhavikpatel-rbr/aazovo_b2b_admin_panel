@@ -1,20 +1,16 @@
-import { create } from 'zustand'
+import { create } from "zustand";
 // import type { ProductOption, Products, SelectedProduct } from '../types'
 
-export type MemberFormState = {
-}
+export type MemberFormState = {};
 
-type MemberFormAction = {
-}
+type MemberFormAction = {};
 
 const initialState: MemberFormState = {
-    productList: [],
-    productOption: [],
-    selectedProduct: [],
-}
+  productList: [],
+  productOption: [],
+  selectedProduct: [],
+};
 
 export const useMemberFormStore = create<MemberFormState & MemberFormAction>(
-    (set) => ({
-
-    }),
-)
+  (set) => ({})
+);

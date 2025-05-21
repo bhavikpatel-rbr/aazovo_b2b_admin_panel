@@ -450,7 +450,7 @@ const CreatePartner = () => {
               </FormItem>
               {/* Footer with Save and Cancel buttons */}
 
-                {/* Upload Documents */}
+              {/* Upload Documents */}
               <FormItem
                 className="col-span-3"
                 label={
