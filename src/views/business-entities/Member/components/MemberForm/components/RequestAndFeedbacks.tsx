@@ -14,7 +14,7 @@ const RequestAndFeedbacksDetails = ({
     return (
 <Card id="requestAndFeedbacks">
     <h4 className="mb-6">Request & Feedback</h4>
-    <div className="grid md:grid-cols-3 gap-4">
+    <div className=" gap-4">
         {/* Request Description */}
         <FormItem className="md:col-span-2" label="Add Feedback / Requests" invalid={Boolean(errors.request_description)} errorMessage={errors.request_description?.message}>
             <Controller

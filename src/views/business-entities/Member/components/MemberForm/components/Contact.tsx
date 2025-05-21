@@ -33,16 +33,54 @@ const ContactDetails = ({
                     invalid={Boolean(errors.alternate_contact_number)}
                     errorMessage={errors.alternate_contact_number?.message}
                 >
+                    <div className="flex items-center gap-2">
+                        <Controller
+                            name="alternate_contact_country_code"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="text"
+                                    autoComplete="off"
+                                    placeholder="+1"
+                                    className="w-20" // Keep it narrow
+                                    {...field}
+                                />
+                            )}
+                        />
+                        <Controller
+                            name="alternate_contact_number"
+                            control={control}
+                            render={({ field }) => (
+                                <Input type="text" autoComplete="off" placeholder="Enter alternate contact number" {...field} />
+                            )}
+                        />
+                    </div>
+                    
+                </FormItem>
+
+
+                <FormItem
+                    label="Landline Number"
+                >
                     <Controller
-                        name="alternate_contact_number"
+                        name="landline_number"
                         control={control}
                         render={({ field }) => (
-                            <Input type="text" autoComplete="off" placeholder="Enter alternate contact number" {...field} />
+                            <Input type="phone" autoComplete="off" placeholder="Enter Landline Number" {...field} />
                         )}
                     />
                 </FormItem>
-
-                
+                <FormItem
+                    label="Fax Number"
+                >
+                    <Controller
+                        name="fax_number"
+                        control={control}
+                        render={({ field }) => (
+                            <Input type="phone" autoComplete="off" placeholder="Enter Fax Number" {...field} />
+                        )}
+                    />
+                </FormItem>
                 <FormItem
                     label="Alternate Email"
                     invalid={Boolean(errors.alternate_email)}

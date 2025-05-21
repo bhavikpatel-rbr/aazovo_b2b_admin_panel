@@ -14,7 +14,7 @@ const MemebershipPlanDetails = ({
     return (
         <Card id="membershipPlanDetails">
             <h4 className="mb-6">Membership Plan Details</h4>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
                 {/* Membership Plan (Text) */}
                 <FormItem label="Membership Plan">
                     <Input type="text" placeholder="e.g., Premium Plan" />
