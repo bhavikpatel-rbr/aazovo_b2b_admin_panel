@@ -49,26 +49,9 @@ import {
   TbFilter,
   TbPlus,
   TbBox,
-  TbSwitchHorizontal,
+  TbDotsVertical,
+  TbShare,
   TbEye,
-  TbLink,
-  TbCloudDownload,
-  TbUserPlus,
-  TbArrowRightCircle,
-  TbCurrencyDollar,
-  TbPalette,
-  TbTruckDelivery,
-  TbFileDescription,
-  TbMapPin,
-  TbDeviceMobile,
-  TbClockHour4,
-  TbCreditCard,
-  TbBuildingSkyscraper, // For Supplier/Company
-  TbUserCircle, // For Sales Person or Member
-  TbClipboardList, // For Product Spec
-  TbShoppingCart, // For Qty/Intent
-  TbHelpOctagon, // For Enquiry Type
-  TbTag, // For Lead Number
 } from "react-icons/tb";
 
 // Types
@@ -450,66 +433,52 @@ const ActionColumn = ({
   onAssign,
   onChangeStatus,
   onConvertToOpportunity,
+  onViewDetail,
+  onEdit,
 }: {
   onView: () => void;
+  onEdit: () => void;
+  onViewDetail: () => void;
   onDelete: () => void;
   onAssign: () => void;
   onChangeStatus: () => void;
   onConvertToOpportunity: () => void;
 }) => {
-  const iconBtnClass =
-    "text-lg p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-0.5">
-      <Tooltip title="View Details">
-        <Button
-          shape="circle"
-          variant="plain"
-          size="sm"
-          icon={<TbEye />}
-          onClick={onView}
-          className={iconBtnClass}
-        />
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+          role="button"
+          onClick={onEdit}
+        >
+          <TbPencil />
+        </div>
       </Tooltip>
-      <Tooltip title="Assign Lead">
-        <Button
-          shape="circle"
-          variant="plain"
-          size="sm"
-          icon={<TbUserPlus />}
-          onClick={onAssign}
-          className={`${iconBtnClass} hover:text-blue-500`}
-        />
+      <Tooltip title="View">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+          role="button"
+          onClick={onViewDetail}
+        >
+          <TbEye />
+        </div>
       </Tooltip>
-      <Tooltip title="Change Status">
-        <Button
-          shape="circle"
-          variant="plain"
-          size="sm"
-          icon={<TbSwitchHorizontal />}
-          onClick={onChangeStatus}
-          className={`${iconBtnClass} hover:text-amber-500`}
-        />
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
       </Tooltip>
-      <Tooltip title="Convert to Opportunity">
-        <Button
-          shape="circle"
-          variant="plain"
-          size="sm"
-          icon={<TbArrowRightCircle />}
-          onClick={onConvertToOpportunity}
-          className={`${iconBtnClass} hover:text-emerald-500`}
-        />
-      </Tooltip>
-      <Tooltip title="Delete">
-        <Button
-          shape="circle"
-          variant="plain"
-          size="sm"
-          icon={<TbTrash />}
-          onClick={onDelete}
-          className={`${iconBtnClass} hover:text-red-500`}
-        />
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
+        </div>
       </Tooltip>
     </div>
   );
@@ -525,7 +494,7 @@ const LeadSearch = React.forwardRef<HTMLInputElement, LeadSearchProps>(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Search leads..."
+      placeholder="Quick Search..."
       suffix={<TbSearch />}
       onChange={(e) => onInputChange(e.target.value)}
     />

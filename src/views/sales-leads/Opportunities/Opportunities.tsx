@@ -389,7 +389,7 @@ const ItemSearch = React.forwardRef<
 >(({ onInputChange }, ref) => (
   <DebouceInput
     ref={ref}
-    placeholder="Search opportunities (ID, Product, Brand...)"
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -430,7 +430,7 @@ const ItemActionTools = ({
         icon={<TbPlus className="text-lg" />}
         onClick={handleAddItem}
       >
-        Add New Opportunity
+        Add New
       </Button>
     </div>
   );

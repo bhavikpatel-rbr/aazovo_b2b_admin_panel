@@ -371,13 +371,13 @@ const BrandTableTools = ({
       >
         Filter
       </Button>
-      <Button
+      {/* <Button
         icon={<TbCloudDownload />}
         onClick={onImport}
         className="w-full sm:w-auto"
       >
         Import
-      </Button>
+      </Button> */}
       <Button
         icon={<TbCloudUpload />}
         onClick={onExport}

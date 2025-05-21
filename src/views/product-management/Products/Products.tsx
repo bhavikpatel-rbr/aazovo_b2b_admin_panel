@@ -286,7 +286,7 @@ const ProductSearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Search by Name, SKU..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -315,13 +315,13 @@ const ProductTableTools = ({
         Filter
       </Button>
       {/* Placeholder for Export/Import Dropdown - Implement with your Dropdown component */}
-      <Button
+      {/* <Button
         icon={<TbCloudDownload />}
         onClick={onExportImport}
         className="w-full sm:w-auto"
       >
         Export/Import
-      </Button>
+      </Button> */}
     </div>
   </div>
 );
@@ -1058,8 +1058,9 @@ const Products = () => {
       },
       {
         header: "Actions",
-        id: "actions",
-        meta: { thClass: "text-center", tdClass: "text-center" },
+        id: "action",
+        size: 160,
+        meta: { HeaderClass: "text-center" },
         cell: (props: CellContext<ProductItem, any>) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}

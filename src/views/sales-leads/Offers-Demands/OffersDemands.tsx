@@ -20,15 +20,14 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import { TbUserCircle } from "react-icons/tb"; // Placeholder icon for createdBy
-import CreateOffer from "./OfferCreate/CreateOffer";
 // Icons
 import {
   TbPencil,
-  TbCopy, // Optional: Clone action
-  TbTrash,
+  TbEye,
+  TbShare,
+  TbDotsVertical,
   TbChecks,
   TbSearch,
-  TbCloudDownload,
   TbPlus,
 } from "react-icons/tb"; // Ensure react-icons is installed
 
@@ -141,62 +140,58 @@ const ActionColumn = ({
   onEdit,
   onClone,
   onDelete,
+  onViewDetail,
 }: {
   onEdit: () => void;
   onClone?: () => void; // Keep clone optional
   onDelete: () => void;
+  onViewDetail: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
-
   return (
-    <div className="flex items-center justify-end gap-2">
-      {onClone && (
-        <Tooltip title="Clone Record">
-          <div
-            className={classNames(
-              iconButtonClass,
-              hoverBgClass,
-              "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-            )}
-            role="button"
-            onClick={onClone}
-          >
-            {" "}
-            <TbCopy />{" "}
-          </div>
-        </Tooltip>
-      )}
-      {/* Status change removed for this component */}
-      <Tooltip title="Edit Record">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
-          {" "}
-          <TbPencil />{" "}
+          <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Record">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          {" "}
-          <TbTrash />{" "}
+          <TbEye />
         </div>
       </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
+        </div>
+      </Tooltip>
+      {/* <Tooltip title="Delete">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+                    role="button"
+                    onClick={onViewDetail}
+                >
+                    <TbTrash />
+                </div>
+            </Tooltip> */}
     </div>
   );
 };
@@ -258,7 +253,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
     return (
       <DebouceInput
         ref={ref}
-        placeholder="Search by ID, Name, Created By..." // Updated placeholder
+        placeholder="Quick Search..."
         suffix={<TbSearch className="text-lg" />}
         onChange={(e) => onInputChange(e.target.value)}
       />
@@ -318,7 +313,7 @@ const ItemActionTools = ({
     <div className="flex flex-col md:flex-row gap-3">
       {/* <CSVLink ... > Download </Button> </CSVLink> */}
       <Button variant="solid" icon={<TbPlus />} onClick={handleAddItem} block>
-        Add new {activeTab === TABS.OFFER ? "Offer" : "Demand"}
+        Add New
       </Button>
     </div>
   );
@@ -833,7 +828,6 @@ const OffersDemands = () => {
         onDeleteSelected={handleDeleteSelected}
         activeTab={currentTab}
       />
-      <CreateOffer />
     </Container>
   );
 };
