@@ -69,7 +69,7 @@ const TaskFeedback = () => {
   } = useTaskListingLogic(initialTaskFeedbackData); // Use the hook with specific data
 
   return (
-    <Container className="h-full">
+    <Container className="h-auto">
       <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
         <div className="lg:flex items-center justify-between mb-4">
           <h3 className="mb-4 lg:mb-0">{pageTitle}</h3>

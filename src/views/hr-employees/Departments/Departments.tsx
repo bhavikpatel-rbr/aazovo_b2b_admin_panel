@@ -5,7 +5,6 @@ import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -26,6 +25,9 @@ import {
   TbPencil,
   TbTrash,
   TbChecks,
+  TbEye,
+  TbShare,
+  TbDotsVertical,
   TbSearch,
   TbFilter,
   TbPlus,
@@ -130,43 +132,51 @@ function exportDepartmentsToCsv(filename: string, rows: DepartmentItem[]) {
   return false;
 }
 
-// --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
   onDelete,
+  onChangeStatus,
+  onViewDetail,
 }: {
   onEdit: () => void;
   onDelete: () => void;
+  onChangeStatus: () => void;
+  onViewDetail: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
-      <Tooltip title="Edit Department">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Department">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
+        </div>
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -185,7 +195,7 @@ const DepartmentsSearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Quick search departments..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -754,8 +764,8 @@ const Departments = () => {
       {
         header: "Actions",
         id: "action",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
-        size: 100,
+        size: 120,
+        meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
@@ -769,12 +779,12 @@ const Departments = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="mb-2 sm:mb-0 flex items-center gap-2">
-              <TbBuildingCommunity /> Departments
-            </h3>
+            <h5 className="mb-2 sm:mb-0">
+                Departments
+            </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New
             </Button>
@@ -888,7 +898,7 @@ const Departments = () => {
               loading={isSubmitting}
               disabled={!editFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save"}
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         }
@@ -927,7 +937,7 @@ const Departments = () => {
               onClick={onClearFilters}
               type="button"
             >
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -935,7 +945,7 @@ const Departments = () => {
               form="filterDepartmentForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

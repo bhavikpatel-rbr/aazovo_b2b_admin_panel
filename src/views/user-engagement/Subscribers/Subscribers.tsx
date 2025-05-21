@@ -769,7 +769,7 @@ const SubscribersListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Subscribers Listing</h5>
@@ -806,7 +806,7 @@ const SubscribersListing = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -814,7 +814,7 @@ const SubscribersListing = () => {
               form="filterSubscriberForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

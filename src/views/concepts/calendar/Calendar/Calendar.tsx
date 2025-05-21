@@ -93,7 +93,7 @@ const Calendar = () => {
     }
 
     return (
-        <Container className="h-full">
+        <Container className="h-auto">
             <CalendarView
                 editable
                 selectable

@@ -30,7 +30,9 @@ import {
 // Icons
 import {
   TbPencil,
-  TbTrash,
+  TbEye,
+  TbDotsVertical,
+  TbShare,
   TbChecks,
   TbSearch,
   TbFilter,
@@ -114,65 +116,58 @@ const initialDummyRoles: RoleItem[] = [
 ];
 // --- End Constants ---
 
-// --- ActionColumn Component (Updated from your example) ---
+// --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
   onDelete,
-  onViewPermissions,
+  onChangeStatus,
+  onViewDetail,
 }: {
   onEdit: () => void;
   onDelete: () => void;
-  onViewPermissions: () => void;
+  onChangeStatus: () => void;
+  onViewDetail: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      {" "}
-      {/* Changed justify-end to justify-center */}
-      <Tooltip title="View/Edit Permissions">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
-          )}
-          role="button"
-          onClick={onViewPermissions}
-        >
-          <TbLockAccess />
-        </div>
-      </Tooltip>
-      <Tooltip title="Edit Role Details">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Role">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
+        </div>
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
   );
 };
+
 
 // --- RoleSearch Component (Reused from your example) ---
 type RoleSearchProps = {
@@ -183,7 +178,7 @@ const RoleSearch = React.forwardRef<HTMLInputElement, RoleSearchProps>(
   ({ onInputChange }, ref) => (
     <DebouceInput
       ref={ref}
-      placeholder="Search Roles (ID, Name, Description...)"
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -755,12 +750,12 @@ const RolesListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-4 sm:mb-0">{pageTitle}</h5>
+            <h5 className="mb-2 sm:mb-0">{pageTitle}</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Role
+              Add New
             </Button>
           </div>
           <RoleTableTools
@@ -990,7 +985,7 @@ const RolesListing = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -998,7 +993,7 @@ const RolesListing = () => {
               form="filterRoleForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

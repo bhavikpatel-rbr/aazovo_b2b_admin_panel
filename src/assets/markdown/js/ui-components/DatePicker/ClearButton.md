@@ -15,7 +15,7 @@ const ClearButton = () => {
                 <div className="mb-1 font-semibold text-sm">
                     Custom clear button:
                 </div>
-                <DatePicker defaultValue={new Date()} clearButton={<Button size="xs">Clear</Button>} />
+                <DatePicker defaultValue={new Date()} clearButton={<Button size="xs">Clear Filters</Button>} />
             </div>
         </div>
     );

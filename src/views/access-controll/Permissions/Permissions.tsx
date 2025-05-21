@@ -36,6 +36,9 @@ import {
   TbFilter,
   TbPlus,
   TbCloudUpload,
+  TbEye,
+  TbDotsVertical,
+  TbShare,
   TbKey,
   TbShieldLock,
   TbFileDescription, // Additional icons
@@ -120,45 +123,52 @@ const initialDummyPermissions: PermissionItem[] = [
 ];
 // --- End Constants ---
 
-// --- Reusable ActionColumn Component (from your example) ---
+// --- ActionColumn Component (Same as Units.tsx) ---
 const ActionColumn = ({
   onEdit,
   onDelete,
+  onChangeStatus,
+  onViewDetail,
 }: {
   onEdit: () => void;
   onDelete: () => void;
+  onChangeStatus: () => void;
+  onViewDetail: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      {" "}
-      {/* Centered actions */}
-      <Tooltip title="Edit Permission">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Permission">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
+        </div>
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -176,7 +186,7 @@ const PermissionSearch = React.forwardRef<
 >(({ onInputChange }, ref) => (
   <DebouceInput
     ref={ref}
-    placeholder="Search Permissions (ID, Name, Description...)"
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -712,12 +722,12 @@ const PermissionsListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-4 sm:mb-0">{pageTitle}</h5>
+            <h5 className="mb-2 sm:mb-0">{pageTitle}</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Permission
+              Add New
             </Button>
           </div>
           <PermissionTableTools
@@ -969,7 +979,7 @@ const PermissionsListing = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -977,7 +987,7 @@ const PermissionsListing = () => {
               form="filterPermissionForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

@@ -808,7 +808,7 @@ const CompanyProfile = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <Form
           id="companyProfileForm"
           onSubmit={formMethods.handleSubmit(onUpdateProfile)}

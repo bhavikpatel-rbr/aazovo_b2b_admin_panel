@@ -1,12 +1,10 @@
 // src/views/your-path/AutoEmailTemplatesListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useCallback, Ref } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -20,12 +18,14 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Added Tag if needed for status (not in current type)
+import { Drawer, Form, FormItem, Input } from "@/components/ui"; // Added Tag if needed for status (not in current type)
 
 // Icons
 import {
   TbPencil,
-  TbTrash,
+  TbEye,
+  TbShare,
+  TbDotsVertical,
   TbChecks,
   TbSearch,
   TbFilter,
@@ -231,39 +231,46 @@ function exportAutoEmailTemplatesToCsv(
 const ActionColumn = ({
   onEdit,
   onDelete,
+  onViewDetail,
 }: {
   onEdit: () => void;
+  onViewDetail: () => void;
   onDelete: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
-      <Tooltip title="Edit Template">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Template">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
+        </div>
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -282,7 +289,7 @@ const AutoEmailTemplatesSearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Search templates (type, key)..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -858,14 +865,14 @@ const AutoEmailTemplatesListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="mb-4 sm:mb-0 flex items-center gap-2">
-              <TbMailBolt /> Auto Email Templates
-            </h3>
+            <h5 className="mb-2 sm:mb-0">
+              Auto Email Templates
+            </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Template
+              Add New
             </Button>
           </div>
           <AutoEmailTemplatesTableTools
@@ -936,7 +943,7 @@ const AutoEmailTemplatesListing = () => {
                   : "Adding..."
                 : editingItem
                 ? "Save Changes"
-                : "Add Template"}
+                : "Save"}
             </Button>
           </div>
         }
@@ -957,19 +964,10 @@ const AutoEmailTemplatesListing = () => {
         onRequestClose={closeFilterDrawer}
         width={400}
         footer={
-          <div className="flex justify-between w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
+          <div className="text-right w-full">
+            <Button className="mr-2" size="sm" onClick={onClearFilters} type="button">
               Clear All
             </Button>
-            <div>
-              <Button
-                size="sm"
-                className="mr-2"
-                onClick={closeFilterDrawer}
-                type="button"
-              >
-                Cancel
-              </Button>
               <Button
                 size="sm"
                 variant="solid"
@@ -978,7 +976,6 @@ const AutoEmailTemplatesListing = () => {
               >
                 Apply Filters
               </Button>
-            </div>
           </div>
         }
       >

@@ -22,12 +22,14 @@ import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
 import Tag from "@/components/ui/Tag";
 import { Drawer, Form, FormItem, Input } from "@/components/ui";
-
 // Icons
 import {
   TbPencil,
   TbTrash,
   TbChecks,
+  TbEye,
+  TbDotsVertical,
+  TbShare,
   TbSearch,
   TbFilter,
   TbPlus,
@@ -44,10 +46,6 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-// Redux (Optional)
-// import { useAppDispatch, useAppSelector } from '@/reduxtool/store';
-// import { getAutoEmailsAction, addAutoEmailAction, ... } from '@/reduxtool/autoEmail/middleware';
-// import { autoEmailSelector } from '@/reduxtool/autoEmail/autoEmailSlice';
 
 // --- Define Item Type & Constants ---
 export type AutoEmailStatus = "active" | "inactive" | "draft";
@@ -56,10 +54,6 @@ export type AutoEmailItem = {
   emailType: string; // e.g., "Welcome Email", "Password Reset", "Weekly Digest"
   userName: string; // User this email is configured for or by (can be a system user name too)
   status: AutoEmailStatus;
-  // templateId?: string; // Optional, if you link to specific templates
-  // templateName?: string; // Optional
-  // recipient?: string; // Optional, e.g., "New Users", "Subscribers Group A"
-  // createdDate?: string; // ISO String
 };
 
 const AUTO_EMAIL_STATUS_OPTIONS: { value: AutoEmailStatus; label: string }[] = [
@@ -214,55 +208,58 @@ const ActionColumn = ({
   onEdit,
   onDelete,
   onChangeStatus,
+  onViewDetail,
 }: {
   onEdit: () => void;
   onDelete: () => void;
+  onViewDetail: () => void;
   onChangeStatus: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Edit Auto Email">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Change Status">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onChangeStatus}
+          onClick={onViewDetail}
         >
-          <TbSwitchHorizontal />
+          <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Auto Email">
+      <Tooltip title="Share">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
-          onClick={onDelete}
         >
-          <TbTrash />
+          <TbShare />
         </div>
       </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
+        </div>
+      </Tooltip>
+      {/* <Tooltip title="Delete">
+                <div
+                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+                    role="button"
+                    onClick={onViewDetail}
+                >
+                    <TbTrash />
+                </div>
+            </Tooltip> */}
     </div>
   );
 };
@@ -279,7 +276,7 @@ const AutoEmailsSearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Search auto emails..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -899,14 +896,13 @@ const AutoEmailListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="mb-4 sm:mb-0 flex items-center gap-2">
-              <TbMailForward /> Auto Email Management
-            </h3>
+            <h5 className="mb-2 sm:mb-0">Auto Email Management
+            </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Auto Email
+              Add New
             </Button>
           </div>
           <AutoEmailsTableTools
@@ -976,7 +972,7 @@ const AutoEmailListing = () => {
                   : "Adding..."
                 : editingItem
                 ? "Save Changes"
-                : "Add Auto Email"}
+                : "Save Changes"}
             </Button>
           </div>
         }
@@ -996,18 +992,14 @@ const AutoEmailListing = () => {
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
-          <div className="flex justify-between w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>
-            <div>
+          <div className="text-right w-full">
               <Button
                 size="sm"
                 className="mr-2"
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear Filters
               </Button>
               <Button
                 size="sm"
@@ -1017,7 +1009,6 @@ const AutoEmailListing = () => {
               >
                 Apply Filters
               </Button>
-            </div>
           </div>
         }
       >

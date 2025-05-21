@@ -295,7 +295,7 @@ const {
             dispatch(getTrendingImagesAction());
         } catch (error: any) {
             toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{error?.message || 'Could not add item.'}</Notification>);
-            console.error('Add Item Error:', error);
+            console.error('Save Error:', error);
         } finally {
             setIsSubmitting(false);
         }
@@ -493,13 +493,13 @@ const {
 
     return (
         <>
-            <Container className="h-full">
+            <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                         <h5 className="mb-2 sm:mb-0">Trending Images</h5>
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Image Group</Button>
                     </div>
-                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} searchPlaceholder="Search by Page Name or ID..." />
+                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} searchPlaceholder="Quick Search..." />
                     <div className="mt-4">
                         <DataTable
                             columns={columns} data={pageData}
@@ -540,7 +540,7 @@ const {
             </Drawer>
 
             <Drawer title="Filter Image Groups" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-                footer={<div className="flex justify-between w-full"><Button size="sm" onClick={onClearFilters} type="button">Clear All</Button><div><Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button><Button size="sm" variant="solid" form="filterItemsForm" type="submit">Apply Filters</Button></div></div>}>
+                footer={<div className="text-right w-full"><Button size="sm" onClick={onClearFilters} type="button">Clear All</Button><div><Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button><Button size="sm" variant="solid" form="filterItemsForm" type="submit">Apply Filters</Button></div></div>}>
                 <Form id="filterItemsForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Filter by Page Name">
                         <Controller name="filterPageNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select page name(s)..." options={pageNameOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />)} />

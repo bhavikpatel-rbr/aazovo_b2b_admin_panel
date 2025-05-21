@@ -3,7 +3,7 @@ import SpaceSignBoard from '@/assets/svg/SpaceSignBoard'
 
 const AccessDenied = () => {
     return (
-        <Container className="h-full">
+        <Container className="h-auto">
             <div className="h-full flex flex-col items-center justify-center">
                 <SpaceSignBoard height={280} width={280} />
                 <div className="mt-10 text-center">

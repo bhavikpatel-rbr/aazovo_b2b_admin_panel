@@ -516,7 +516,7 @@ const GlobalSettings = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <Form
           id="globalSettingsForm"
           onSubmit={formMethods.handleSubmit(onSaveSettings)}
@@ -564,7 +564,7 @@ const GlobalSettings = () => {
             isSubmitting
           } // Disable if no changes or invalid
         >
-          {isSubmitting ? "Saving..." : "Save Settings"}
+          {isSubmitting ? "Saving..." : "Save Changes"}
         </Button>
       </StickyFooter>
     </>

@@ -1,10 +1,4 @@
-// src/views/your-path/MessageTemplates.tsx (Logically, this is what it becomes)
-// Or, if you intend this to be for "Auto Message Rules" and the previous file was for "Message Templates",
-// then the types and schemas here would need to be adjusted.
-// For now, I'm assuming this file (AutoMessages.tsx) is meant to manage the "Message Templates" themselves.
-
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom'; // useNavigate not used
 import cloneDeep from "lodash/cloneDeep";
 import classNames from "classnames";
 import { useForm, Controller } from "react-hook-form";
@@ -33,6 +27,9 @@ import {
   TbSearch,
   TbFilter,
   TbPlus,
+  TbEye,
+  TbDotsVertical,
+  TbShare,
   TbCloudUpload,
   TbSwitchHorizontal,
 } from "react-icons/tb";
@@ -249,53 +246,47 @@ const ActionColumn = ({
   onEdit,
   onDelete,
   onChangeStatus,
+  onViewDetail,
 }: {
   onEdit: () => void;
   onDelete: () => void;
   onChangeStatus: () => void;
+  onViewDetail: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Change Status">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
-          )}
-          role="button"
-          onClick={onChangeStatus}
-        >
-          <TbSwitchHorizontal />
-        </div>
-      </Tooltip>
+    <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
+        </div>
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -315,7 +306,7 @@ const MessageTemplatesSearch = React.forwardRef<
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Quick search message templates..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -1081,12 +1072,12 @@ const MessageTemplates = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Message Templates</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Template
+              Add New
             </Button>
           </div>
           <MessageTemplatesTableTools
@@ -1147,7 +1138,7 @@ const MessageTemplates = () => {
               loading={isSubmitting}
               disabled={!addFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Adding..." : "Save Template"}
+              {isSubmitting ? "Adding..." : "Save"}
             </Button>
           </div>
         }
@@ -1288,7 +1279,7 @@ const MessageTemplates = () => {
               loading={isSubmitting}
               disabled={!editFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save Template"}
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         }
@@ -1407,7 +1398,7 @@ const MessageTemplates = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -1415,7 +1406,7 @@ const MessageTemplates = () => {
               form="filterMessageTemplateForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

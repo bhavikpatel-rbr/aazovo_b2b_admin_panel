@@ -764,7 +764,7 @@ const FormListTable = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -772,7 +772,7 @@ const FormListTable = () => {
               form="filterMemberForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

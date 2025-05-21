@@ -17,7 +17,7 @@ const ClearButton = () => {
                 </div>
                 <DatePicker
                     defaultValue={new Date()}
-                    clearButton={<Button size="xs">Clear</Button>}
+                    clearButton={<Button size="xs">Clear Filters</Button>}
                 />
             </div>
         </div>

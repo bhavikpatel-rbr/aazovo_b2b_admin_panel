@@ -947,7 +947,7 @@ const RequestAndFeedback = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Request and Feedback</h5>
@@ -1101,7 +1101,7 @@ const RequestAndFeedback = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -1109,7 +1109,7 @@ const RequestAndFeedback = () => {
               form="filterRequestForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

@@ -913,10 +913,10 @@ const HomeCategories = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="mb-4 sm:mb-0 flex items-center gap-2">
+            <h5 className="mb-2 sm:mb-0">
               <TbCategory /> Manage Home Categories
             </h3>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
@@ -1071,7 +1071,7 @@ const HomeCategories = () => {
         onClose={() => setIsFilterDrawerOpen(false)}
         onRequestClose={() => setIsFilterDrawerOpen(false)}
         footer={
-          <div className="flex justify-between w-full">
+          <div className="text-right w-full">
             <Button size="sm" onClick={onClearFilters} type="button">
               Clear All
             </Button>

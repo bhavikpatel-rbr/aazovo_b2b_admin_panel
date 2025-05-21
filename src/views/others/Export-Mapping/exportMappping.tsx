@@ -343,7 +343,7 @@ const ExportMappingTableTools = ({
     <div className="md:flex items-center justify-between w-full gap-2">
       <div className="flex-grow mb-2 md:mb-0">
         <DebouceInput // Assuming DebouceInput is the correct name
-          placeholder="Search by User, Role, File, Reason..."
+          placeholder="Quick Search..."
           suffix={<TbSearch className="text-lg" />}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             onSearchChange(e.target.value)
@@ -394,7 +394,7 @@ const ExportMappingTableTools = ({
               Clear All
             </Button>
             <Button size="sm" variant="solid" type="submit" form="filterForm">
-              Apply
+              Apply Filters
             </Button>
           </div>
         }
@@ -993,7 +993,7 @@ const ExportMapping = () => {
   const tableLoading = isProcessingData || masterLoadingStatus === "loading";
 
   return (
-    <Container className="h-full">
+    <Container className="h-auto">
       <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
         <div className="lg:flex items-center justify-between mb-4">
           <h5 className="mb-4 lg:mb-0">Export Mapping Log</h5>

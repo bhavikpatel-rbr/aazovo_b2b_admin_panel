@@ -1093,7 +1093,7 @@ const Products = () => {
   // --- JSX ---
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           {/* Header & Tabs */}
           <div className="lg:flex items-center justify-between mb-0">

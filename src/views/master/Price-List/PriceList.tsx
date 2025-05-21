@@ -959,7 +959,7 @@ const PriceList = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             {" "}
@@ -1009,7 +1009,7 @@ const PriceList = () => {
           methods: addFormMethods,
           onSubmit: onAddPriceListSubmit,
           submitText: "Adding...",
-          saveText: "Save",
+          saveText: "Save Changes",
         },
         {
           title: "Edit Price List Item",
@@ -1019,7 +1019,7 @@ const PriceList = () => {
           methods: editFormMethods,
           onSubmit: onEditPriceListSubmit,
           submitText: "Saving...",
-          saveText: "Save",
+          saveText: "Save Changes",
         },
       ].map((drawerProps) => (
         <Drawer
@@ -1089,7 +1089,7 @@ const PriceList = () => {
           <div className="text-right w-full">
             {" "}
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear Filters
             </Button>{" "}
             <Button
               size="sm"
@@ -1097,7 +1097,7 @@ const PriceList = () => {
               form="filterPriceListForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>{" "}
           </div>
         }

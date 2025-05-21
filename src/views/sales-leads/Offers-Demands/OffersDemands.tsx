@@ -757,7 +757,7 @@ const OffersDemands = () => {
 
   // --- Render Main Component ---
   return (
-    <Container className="h-full">
+    <Container className="h-auto">
       <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
         {/* Header Section */}
         <div className="lg:flex items-center justify-between mb-4">

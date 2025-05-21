@@ -917,7 +917,7 @@ const Opportunities = () => {
   ); // Added currentTab dependency
 
   return (
-    <Container className="h-full">
+    <Container className="h-auto">
       <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
         <div className="lg:flex items-center justify-between mb-4">
           <h5 className="mb-4 lg:mb-0">Opportunities Management</h5>

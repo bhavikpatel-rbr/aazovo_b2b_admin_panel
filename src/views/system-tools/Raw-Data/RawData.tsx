@@ -718,9 +718,6 @@ const LeadManagement = () => {
       );
   };
 
-  // --- Table Interaction Handlers (Generic) ---
-  // ... (handleSetTableData, handlePaginationChange, handleSelectChange, handleSort, handleSearchChange, handleRowSelect, handleAllRowSelect are standard)
-
   // --- Column Definitions ---
   const columns: ColumnDef<LeadItem>[] = useMemo(
     () => [
@@ -1033,12 +1030,12 @@ const LeadManagement = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="mb-4 sm:mb-0 flex items-center gap-2">
-              <TbMoodCrazyHappy /> Lead Management
-            </h3>
+            <h5 className="mb-2 sm:mb-0">
+                Lead Management
+            </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New Lead
             </Button>
@@ -1109,7 +1106,7 @@ const LeadManagement = () => {
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
         width={900} // Wider drawer for more fields
         footer={
-          <div className="flex justify-between w-full">
+          <div className="text-right w-full">
             {!editingItem && ( // "Save & Add Another" only for Add mode
               <Button
                 size="sm"

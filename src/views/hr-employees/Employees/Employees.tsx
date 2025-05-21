@@ -33,9 +33,9 @@ import {
 // Icons
 import {
   TbPencil,
-  TbTrash,
+  TbDotsVertical,
   TbEye,
-  TbKey,
+  TbShare,
   TbChecks,
   TbSearch,
   TbFilter,
@@ -190,77 +190,50 @@ const initialDummyEmployees: EmployeeItem[] = [
 // ActionColumn definition remains the same from your example.
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
-  onView,
   onEdit,
   onDelete,
-  onChangePassword,
-}: // Add onChangeStatus if needed
-{
-  onView: () => void;
+  onChangeStatus,
+  onViewDetail,
+}: {
   onEdit: () => void;
   onDelete: () => void;
-  onChangePassword: () => void;
+  onChangeStatus: () => void;
+  onViewDetail: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
-
   return (
-    <div className="flex items-center justify-center">
-      {/* View Button */}
-      <Tooltip title="View Details">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-          )}
-          role="button"
-          onClick={onView}
-        >
-          <TbEye />
-        </div>
-      </Tooltip>
-      {/* Edit Button */}
-      <Tooltip title="Edit Employee">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      {/* Change Password Button */}
-      <Tooltip title="Change Password">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onChangePassword}
+          onClick={onViewDetail}
         >
-          <TbKey />
+          <TbEye />
         </div>
       </Tooltip>
-      {/* Delete Button */}
-      <Tooltip title="Delete Employee">
+      <Tooltip title="Share">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
-          onClick={onDelete}
         >
-          <TbTrash />
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -1158,13 +1131,13 @@ const EmployeesListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Employees Listing</h5>
             {/* Modified "Add New" button to open drawer */}
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Employee
+              Add New
             </Button>
           </div>
           <div className="mb-4">
@@ -1631,7 +1604,7 @@ const EmployeesListing = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -1639,7 +1612,7 @@ const EmployeesListing = () => {
               form="filterEmployeeForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

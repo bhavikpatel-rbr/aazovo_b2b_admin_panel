@@ -285,7 +285,7 @@ export const TaskFilter = ({
               size="sm"
               className="mr-2"
             >
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -293,7 +293,7 @@ export const TaskFilter = ({
               form="filterInquiryForm" // Unique form ID
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

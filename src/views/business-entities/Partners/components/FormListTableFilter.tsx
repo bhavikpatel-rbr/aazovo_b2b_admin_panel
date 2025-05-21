@@ -103,7 +103,7 @@ const FormListTableFilter = () => {
               Reset
             </Button>
             <Button type="submit" variant="solid">
-              Apply
+              Apply Filters
             </Button>
           </div>
         </Form>

@@ -26,7 +26,6 @@ import { Drawer, Form, FormItem, Input } from "@/components/ui"; // Ensure Texta
 // Icons
 import {
   TbPencil,
-  TbTrash,
   TbChecks,
   TbSearch,
   TbFilter,
@@ -35,9 +34,9 @@ import {
   TbBriefcase,
   TbMapPin,
   TbUsers,
-  TbFileDescription,
-  TbSwitchHorizontal,
-  TbCalendarEvent, // Specific icons
+  TbEye,
+  TbDotsVertical,
+  TbShare,
 } from "react-icons/tb";
 
 // Types
@@ -261,58 +260,51 @@ function exportJobPostsToCsv(filename: string, rows: JobPostItem[]) {
   return false;
 }
 
-// --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
   onDelete,
   onChangeStatus,
+  onViewDetail,
 }: {
   onEdit: () => void;
   onDelete: () => void;
   onChangeStatus: () => void;
+  onViewDetail: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Edit Job Post">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Change Status">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onChangeStatus}
+          onClick={onViewDetail}
         >
-          <TbSwitchHorizontal />
+          <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Job Post">
+      <Tooltip title="Share">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
-          onClick={onDelete}
         >
-          <TbTrash />
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -894,9 +886,9 @@ const JobPostsListing = () => {
       // { header: 'Created Date', accessorKey: 'createdDate', size: 150, enableSorting: true, cell: props => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' },
       {
         header: "Actions",
-        id: "actions",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
-        size: 140,
+        id: "action",
+        size: 120,
+        meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
@@ -1036,14 +1028,14 @@ const JobPostsListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="mb-4 sm:mb-0 flex items-center gap-2">
-              <TbBriefcase /> Job Posts Management
-            </h3>
+            <h5 className="mb-2 sm:mb-0">
+              Job Posts Management
+            </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Job Post
+              Add New
             </Button>
           </div>
           <JobPostsTableTools
@@ -1113,7 +1105,7 @@ const JobPostsListing = () => {
                   : "Adding..."
                 : editingItem
                 ? "Save Changes"
-                : "Add Job Post"}
+                : "Save"}
             </Button>
           </div>
         }
@@ -1133,7 +1125,7 @@ const JobPostsListing = () => {
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
-          <div className="flex justify-between w-full">
+          <div className="text-right w-full">
             <Button size="sm" onClick={onClearFilters} type="button">
               Clear All
             </Button>

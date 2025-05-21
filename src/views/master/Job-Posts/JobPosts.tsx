@@ -1068,10 +1068,10 @@ const JobPostsListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="mb-4 sm:mb-0 flex items-center gap-2">
+            <h5 className="mb-2 sm:mb-0">
               <TbBriefcase /> Job Posts
             </h3>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
@@ -1148,7 +1148,7 @@ const JobPostsListing = () => {
                   : "Adding..."
                 : editingItem
                 ? "Save Changes"
-                : "Add Job Post"}{" "}
+                : "Save"}
             </Button>{" "}
           </div>
         }
@@ -1168,7 +1168,7 @@ const JobPostsListing = () => {
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
-          <div className="flex justify-between w-full">
+          <div className="text-right w-full">
             {" "}
             <Button size="sm" onClick={onClearFilters} type="button">
               Clear All

@@ -301,7 +301,7 @@ const FormListTableTools = () => {
               form="filterFormInTools" // Unique form ID
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

@@ -1346,7 +1346,7 @@ const LeadsListing = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
@@ -2037,7 +2037,7 @@ const LeadsListing = () => {
               onClick={onClearFilters}
               type="button"
             >
-              Clear
+              Clear Filters
             </Button>
             <Button
               size="sm"
@@ -2045,7 +2045,7 @@ const LeadsListing = () => {
               form="filterLeadForm"
               type="submit"
             >
-              Apply
+              Apply Filters
             </Button>
           </div>
         }

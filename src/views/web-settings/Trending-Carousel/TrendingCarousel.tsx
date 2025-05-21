@@ -855,7 +855,7 @@ const TrendingCarousel = () => {
 
   return (
     <>
-      <Container className="h-full">
+      <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Trending Carousel</h5>
@@ -867,14 +867,14 @@ const TrendingCarousel = () => {
                 masterLoadingStatus === "loading" || isSubmitting || isDeleting
               }
             >
-              Add New Carousel Item
+              Add New
             </Button>
           </div>
 
           <ItemTableTools
             onSearchChange={handleSearchChange}
             onExport={handleExportData}
-            searchPlaceholder="Search by Link, Date (e.g., MM/DD/YYYY), or ID..."
+            searchPlaceholder="Quick Search..."
           />
 
           <div className="mt-4">
@@ -934,7 +934,7 @@ const TrendingCarousel = () => {
               loading={isSubmitting}
               disabled={!formMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Adding..." : "Add Item"}
+              {isSubmitting ? "Adding..." : "Save"}
             </Button>
           </div>
         }
