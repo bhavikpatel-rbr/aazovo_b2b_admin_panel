@@ -51,22 +51,22 @@ const taskNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            {
-                key: 'task.taskFeedback',
-                path: `${TASK_PREFIX_PATH}/task-feedback`,
-                title: 'Task Review',
-                translateKey: 'nav.task.feedback',
-                icon: 'taskFeedback',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.task.feedbackDesc',
-                        label: 'Manage task feedback',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'task.taskFeedback',
+            //     path: `${TASK_PREFIX_PATH}/task-feedback`,
+            //     title: 'Task Review',
+            //     translateKey: 'nav.task.feedback',
+            //     icon: 'taskFeedback',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN, USER],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.task.feedbackDesc',
+            //             label: 'Manage task feedback',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
         ],
     },
 ];
