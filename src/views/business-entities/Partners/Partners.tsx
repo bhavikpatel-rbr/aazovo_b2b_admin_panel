@@ -11,7 +11,7 @@ const Partner = () => {
         <AdaptiveCard>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-              <h5>Partner</h5>
+              <h5>Partners</h5>
               <FormListActionTools />
             </div>
             <FormListTableTools />

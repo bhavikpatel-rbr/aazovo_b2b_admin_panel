@@ -272,20 +272,19 @@ const FormListTableTools = () => {
         </Button>
       </div>
       <Drawer
-        title="Filter Inquiries"
+        title="Filter"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         width={480}
         footer={
-          <div className="text-right w-full p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-right w-full">
             <Button
               size="sm"
               className="mr-2"
               onClick={onClearFilters}
-              variant="plain"
             >
-              Clear All
+              Clear
             </Button>
             <Button
               size="sm"
@@ -303,6 +302,7 @@ const FormListTableTools = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-y-5"
         >
+          <div className="md:grid grid-cols-2 gap-2">
           <UiFormItem label="Record Status">
             <Controller
               name="filterRecordStatus"
@@ -310,7 +310,7 @@ const FormListTableTools = () => {
               render={({ field }) => (
                 <UiSelect
                   isMulti
-                  placeholder="Select Record Status"
+                  placeholder="Select Status"
                   options={recordStatusOptions}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -326,7 +326,7 @@ const FormListTableTools = () => {
               render={({ field }) => (
                 <UiSelect
                   isMulti
-                  placeholder="Select Inquiry Type"
+                  placeholder="Select Type"
                   options={inquiryTypeOptions}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -390,7 +390,7 @@ const FormListTableTools = () => {
               render={({ field }) => (
                 <UiSelect
                   isMulti
-                  placeholder="Select Feedback Status"
+                  placeholder="Select Status"
                   options={feedbackStatusOptions}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -454,6 +454,7 @@ const FormListTableTools = () => {
               )}
             />
           </UiFormItem>
+          </div>
         </UiForm>
       </Drawer>
     </div>
