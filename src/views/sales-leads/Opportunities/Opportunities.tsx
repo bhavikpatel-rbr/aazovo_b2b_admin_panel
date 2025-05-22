@@ -688,14 +688,15 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
     };
     const opportunityType = item.spb_role ? `${item.spb_role} in SPB` : (item.want_to || "General");
     return (
+      <>
         <Card bordered className="m-1 my-2 shadow-lg bg-gray-50 dark:bg-gray-750 rounded-lg">
           <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
-                <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Opportunity Snapshot</h6>
-                <InfoLine icon={<TbIdBadge2 size={14}/>} label="Opp. ID" text={item.opportunity_id} className="font-medium text-sm"/>
-                <InfoLine icon={<TbBox size={14}/>} label="Product" text={item.product_name?.slice(0, 15) + (item.product_name && item.product_name.length > 1 ? "…" : "")} className="font-medium text-sm"/>
-                <InfoLine icon={<TbTag size={14}/>} label="Category" text={`${(item.product_category || 'N/A').toString().slice(0, 15) + ((item.product_category && item.product_category.length > 15) ? "…" : "")}${item.product_subcategory ? ` > ${item.product_subcategory.slice(0, 15) + (item.product_subcategory.length > 15 ? "…" : "")}` : ''}`} />
-                <InfoLine icon={<TbTag size={14}/>} label="Brand" text={item.brand ? item.brand.slice(0, 15) + (item.brand.length > 15 ? "…" : "") : 'N/A'} />
+          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Opportunity Snapshot</h6>
+          <InfoLine icon={<TbIdBadge2 size={14}/>} label="Opp. ID" text={item.opportunity_id} className="font-medium text-sm"/>
+          <InfoLine icon={<TbBox size={14}/>} label="Product" text={item.product_name?.slice(0, 15) + (item.product_name && item.product_name.length > 1 ? "…" : "")} className="font-medium text-sm"/>
+          <InfoLine icon={<TbTag size={14}/>} label="Category" text={`${(item.product_category || 'N/A').toString().slice(0, 15) + ((item.product_category && item.product_category.length > 15) ? "…" : "")}${item.product_subcategory ? ` > ${item.product_subcategory.slice(0, 15) + (item.product_subcategory.length > 15 ? "…" : "")}` : ''}`} />
+          <InfoLine icon={<TbTag size={14}/>} label="Brand" text={item.brand ? item.brand.slice(0, 15) + (item.brand.length > 15 ? "…" : "") : 'N/A'} />
               {item.product_specs && <InfoLine icon={<TbInfoCircle size={14}/>} label="Specs" text={item.product_specs} />}
               <InfoLine icon={<TbChecklist size={14}/>} label="Quantity" text={item.quantity?.toString() || 'N/A'} />
               <InfoLine icon={<TbProgressCheck size={14}/>} label="Product Status" text={item.product_status_listing || 'N/A'} />
@@ -704,34 +705,163 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
             <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
               <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Company & Member</h6>
               <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm mb-2">
-                <div className="flex items-center">
-                    {item.company_id && <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">{item.company_id} |</span>}
-                    <InfoLine icon={<TbBuilding size={14}/>} text={item.company_name} className="font-semibold"/>
-                </div>
+          <div className="flex items-center">
+              {item.company_id && <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">{item.company_id} |</span>}
+              <InfoLine icon={<TbBuilding size={14}/>} text={item.company_name} className="font-semibold"/>
+          </div>
               </div>
               <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm">
-                <div className="flex items-center">
-                    {item.member_id && <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">{item.member_id} |</span>}
-                    <InfoLine icon={<TbUser size={14}/>} text={item.member_name} className="font-semibold"/>
-                </div>
-                <InfoLine text={item.member_type} className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium"/>
-                {item.member_email && <InfoLine icon={<TbMail size={14}/>} text={<a href={`mailto:${item.member_email}`} className="text-blue-500 hover:underline">{item.member_email}</a>} />}
-                {item.member_phone && <InfoLine icon={<TbPhone size={14}/>} text={item.member_phone} />}
+          <div className="flex items-center">
+              {item.member_id && <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">{item.member_id} |</span>}
+              <InfoLine icon={<TbUser size={14}/>} text={item.member_name} className="font-semibold"/>
+          </div>
+          <InfoLine text={item.member_type} className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium"/>
+          {item.member_email && <InfoLine icon={<TbMail size={14}/>} text={<a href={`mailto:${item.member_email}`} className="text-blue-500 hover:underline">{item.member_email}</a>} />}
+          {item.member_phone && <InfoLine icon={<TbPhone size={14}/>} text={item.member_phone} />}
               </div>
               {item.listing_url && <InfoLine icon={<TbLinkIcon size={14}/>} label="Listing" text={<a href={item.listing_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate block max-w-[180px]" title={item.listing_url}>{item.listing_url}</a>} />}
             </div>
             <div className="space-y-1.5">
-                <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Match & Lifecycle</h6>
-                <InfoLine icon={<TbRadar2 size={14}/>} label="Matches Found" text={item.matches_found_count?.toString() || 'N/A'} />
-                <InfoLine icon={<TbTargetArrow size={14}/>} label="Match Score" text={`${item.match_score}%`} />
-                 <div className="flex items-center gap-2">
-                    <InfoLine icon={<TbProgressCheck size={14}/>} label="Opp. Status"/>
-                    <Tag className={`${opportunityStatusTagColor[item.opportunity_status]} capitalize`}>{item.opportunity_status}</Tag>
-                 </div>
-                <FormattedDate label="Created" dateString={item.created_date} />
+          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Match & Lifecycle</h6>
+          <InfoLine icon={<TbRadar2 size={14}/>} label="Other Matched Found" text={'5, 6'} />
+          {/* <InfoLine icon={<TbTargetArrow size={14}/>} label="Match Score" text={`${item.match_score}%`} /> */}
+          <InfoLine icon={<TbTargetArrow size={14}/>} label="Match Score" text={`92%, 91%`} />
+           <div className="flex items-center gap-2">
+              <InfoLine icon={<TbProgressCheck size={14}/>} label="Opp. Status"/>
+              <Tag className={`${opportunityStatusTagColor[item.opportunity_status]} capitalize`}>{item.opportunity_status}</Tag>
+           </div>
+          <FormattedDate label="Created" dateString={item.created_date} />
+          <div className="pt-2 mt-2 border-t dark:border-gray-600">
+            <h6 className="text-sm font-semibold mb-1">Actions</h6>
+            <div className="flex items-center gap-2">
+              <Tooltip title="Edit">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+            role="button"
+            onClick={() => handleExpandedAction('Edit', item.id)}
+          >
+            <TbPencil />
+          </div>
+              </Tooltip>
+              <Tooltip title="Clone">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+            role="button"
+            onClick={() => handleExpandedAction('Clone', item.id)}
+          >
+            <TbCopy />
+          </div>
+              </Tooltip>
+              <Tooltip title="Change Status">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+            role="button"
+            onClick={() => handleExpandedAction('Change Status', item.id)}
+          >
+            <TbSwitchHorizontal />
+          </div>
+              </Tooltip>
+              <Tooltip title="Delete">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+            role="button"
+            onClick={() => handleExpandedAction('Delete', item.id)}
+          >
+            <TbTrash />
+          </div>
+              </Tooltip>
+            </div>
+          </div>
+
             </div>
           </div>
         </Card>
+        <Card bordered className="m-1 my-2 shadow-lg bg-gray-50 dark:bg-gray-750 rounded-lg">
+          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
+          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Opportunity Snapshot</h6>
+          <InfoLine icon={<TbIdBadge2 size={14}/>} label="Opp. ID" text="DEMO-98765" className="font-medium text-sm"/>
+          <InfoLine icon={<TbBox size={14}/>} label="Product" text="Demo Product Name…" className="font-medium text-sm"/>
+          <InfoLine icon={<TbTag size={14}/>} label="Category" text="DemoCat > DemoSubcat" />
+          <InfoLine icon={<TbTag size={14}/>} label="Brand" text="DemoBrand" />
+          <InfoLine icon={<TbInfoCircle size={14}/>} label="Specs" text="Demo Specs, Example, Test" />
+          <InfoLine icon={<TbChecklist size={14}/>} label="Quantity" text="1234" />
+          <InfoLine icon={<TbProgressCheck size={14}/>} label="Product Status" text="Demo Status" />
+          <InfoLine icon={<TbExchange size={14}/>} label="Intent/Role" text="DemoRole" />
+            </div>
+            <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
+              <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Company & Member</h6>
+              <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm mb-2">
+          <div className="flex items-center">
+              <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">DEMO-COMP |</span>
+              <InfoLine icon={<TbBuilding size={14}/>} text="Demo Company Inc." className="font-semibold"/>
+          </div>
+              </div>
+              <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm">
+          <div className="flex items-center">
+              <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">DEMO-MEM |</span>
+              <InfoLine icon={<TbUser size={14}/>} text="Demo Member" className="font-semibold"/>
+          </div>
+          <InfoLine text="DEMO-TYPE" className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium"/>
+          <InfoLine icon={<TbMail size={14}/>} text={<a href="mailto:demo@demo.com" className="text-blue-500 hover:underline">demo@demo.com</a>} />
+          <InfoLine icon={<TbPhone size={14}/>} text="111-2222" />
+              </div>
+              <InfoLine icon={<TbLinkIcon size={14}/>} label="Listing" text={<a href="https://demo-listing.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate block max-w-[180px]" title="https://demo-listing.com">https://demo-listing.com</a>} />
+            </div>
+            <div className="space-y-1.5">
+          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Match & Lifecycle</h6>
+          <InfoLine icon={<TbRadar2 size={14}/>} label="Other Matched Found" text="77, 88" />
+          <InfoLine icon={<TbTargetArrow size={14}/>} label="Match Score" text="98%, 97%" />
+           <div className="flex items-center gap-2">
+              <InfoLine icon={<TbProgressCheck size={14}/>} label="Opp. Status"/>
+              <Tag className="bg-green-200 text-green-700 capitalize">DemoStatus</Tag>
+           </div>
+          <FormattedDate label="Created" dateString="2024-02-15T00:00:00Z" />
+          <div className="pt-2 mt-2 border-t dark:border-gray-600">
+            <h6 className="text-sm font-semibold mb-1">Actions</h6>
+            <div className="flex items-center gap-2">
+              <Tooltip title="Edit">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+            role="button"
+            onClick={() => handleExpandedAction('Edit', 'DEMO-98765')}
+          >
+            <TbPencil />
+          </div>
+              </Tooltip>
+              <Tooltip title="Clone">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+            role="button"
+            onClick={() => handleExpandedAction('Clone', 'DEMO-98765')}
+          >
+            <TbCopy />
+          </div>
+              </Tooltip>
+              <Tooltip title="Change Status">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+            role="button"
+            onClick={() => handleExpandedAction('Change Status', 'DEMO-98765')}
+          >
+            <TbSwitchHorizontal />
+          </div>
+              </Tooltip>
+              <Tooltip title="Delete">
+          <div
+            className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+            role="button"
+            onClick={() => handleExpandedAction('Delete', 'DEMO-98765')}
+          >
+            <TbTrash />
+          </div>
+              </Tooltip>
+            </div>
+          </div>
+            </div>
+          </div>
+        </Card>
+        </>
       );
 };
 
