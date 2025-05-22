@@ -34,6 +34,7 @@ import {
   Input as UiInput,
   Select as UiSelect,
   Button,
+  Dropdown,
 } from "@/components/ui"; // Added Drawer, Button etc.
 
 // --- Define Form Type (Your existing FormItem) ---
@@ -202,7 +203,16 @@ const ActionColumn = ({
           role="button"
           onClick={onMore}
         >
-          <TbDotsVertical />
+          <Dropdown renderTitle={<TbDotsVertical />}  style={{fontSize : "10px"}}>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Assign to company</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Assign to RM/GM</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Feedback or Internal Note</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Request For</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add in Active</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Schedule</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Task</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Alert</Dropdown.Item>
+          </Dropdown>
         </div>
       </Tooltip>
     </div>
@@ -214,7 +224,7 @@ const ActionColumn = ({
 const initialDummyForms: FormItem[] = [
   // Your existing initialDummyForms data...
   {
-    id: "1",
+    id: "567324",
     member_name: "John Doe",
     member_contact_number: "+1234567890",
     member_email_id: "john.doe@example.com",
@@ -237,7 +247,7 @@ const initialDummyForms: FormItem[] = [
     kyc_status: "Verified",
   },
   {
-    id: "2",
+    id: "567325",
     member_name: "Jane Smith",
     member_contact_number: "+1987654321",
     member_email_id: "jane.smith@example.com",
@@ -260,7 +270,7 @@ const initialDummyForms: FormItem[] = [
     kyc_status: "Pending",
   },
   {
-    id: "3",
+    id: "567326",
     member_name: "Alice Johnson",
     member_contact_number: "+1123456789",
     member_email_id: "alice.johnson@example.com",
@@ -514,18 +524,20 @@ const FormListTable = () => {
         accessorKey: "member_name",
         size: 180,
         cell: (props) => (
-          <div className="flex items-center">
-            <Avatar
-              size={32}
-              shape="circle"
-              src={props.row.original.member_photo}
-              icon={<TbUserCircle />}
-            />
-            <div className="ml-2 rtl:mr-2 text-xs">
-              <span className="font-semibold">
-                {" "}
-                {props.row.original.id} | {props.row.original.member_name}
-              </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <Avatar
+                size={32}
+                shape="circle"
+                src={props.row.original.member_photo}
+                icon={<TbUserCircle />}
+                />
+                <div className="text-xs">
+                  <h6 className="text-xs">{props.row.original.id}</h6>
+                  <span>{props.row.original.member_name}</span>
+                </div>
+            </div>
+            <div className="ml-2 mr-2 text-xs">
               <div className="text-xs text-gray-500">
                 {props.row.original.member_email_id}
               </div>
@@ -587,7 +599,10 @@ const FormListTable = () => {
         size: 220,
         cell: (props) => (
           <div className="text-xs flex flex-col">
-            <b>{props.row.original.membership_stats}</b>{" "}
+            <div>
+              <Tag className="text-[10px] mb-1 bg-orange-100 text-orange-400">INS - PREMIUM</Tag>
+            </div>
+            {/* <b>{props.row.original.membership_stats}</b>{" "} */}
             {/* Assuming membership_stats is like "INS - Premium" */}
             <span>
               <b>RM: </b>Ajay Patel
