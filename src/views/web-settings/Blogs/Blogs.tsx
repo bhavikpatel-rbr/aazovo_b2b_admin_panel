@@ -1075,13 +1075,14 @@ const Blogs = () => {
           );
         },
       },
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
       {
         header: "Title",
         accessorKey: "title",
         enableSorting: true,
+        size:260,
         cell: (props) => (
-          <span className="font-semibold">{props.getValue<string>()}</span>
+          <span className="">{props.getValue<string>()}</span>
         ),
       },
       { header: "Slug", accessorKey: "slug", enableSorting: true, size: 200 },
@@ -1108,7 +1109,7 @@ const Blogs = () => {
         header: "Created At",
         accessorKey: "created_at",
         enableSorting: true,
-        size: 180,
+        size: 130,
         cell: (props) =>
           new Date(props.getValue<string>()).toLocaleDateString(),
       },
@@ -1152,7 +1153,7 @@ const Blogs = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Blogs</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Blog
+              Add New
             </Button>
           </div>
           <BlogsTableTools
@@ -1217,6 +1218,7 @@ const Blogs = () => {
           isOpen={drawer.isOpen}
           onClose={drawer.closeFn}
           onRequestClose={drawer.closeFn}
+          width={520}
           footer={
             <div className="text-right w-full">
               <Button
@@ -1298,7 +1300,8 @@ const Blogs = () => {
                 name="blog_descr"
                 control={drawer.methods.control}
                 render={({ field }) => (
-                  <Textarea
+                  <Input
+                    textArea
                     {...field}
                     value={field.value ?? ""}
                     placeholder="Enter main blog content..."
@@ -1370,7 +1373,8 @@ const Blogs = () => {
                 name="meta_descr"
                 control={drawer.methods.control}
                 render={({ field }) => (
-                  <Textarea
+                  <Input
+                    textArea
                     {...field}
                     value={field.value ?? ""}
                     placeholder="SEO Description (max 160 chars)"
@@ -1468,7 +1472,7 @@ const Blogs = () => {
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleIconChange(e, drawer.methods)}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
               />
             </FormItem>
           </Form>

@@ -1053,7 +1053,7 @@ const ProductSpecification = () => {
               name="flag_icon"
               control={addFormMethods.control}
               render={({ field }) => (
-                <Input
+                <Input type='file'
                   {...field}
                   value={field.value ?? ""}
                   placeholder="e.g., /icons/us.svg or fas fa-flag"
@@ -1108,7 +1108,8 @@ const ProductSpecification = () => {
               name="note_details"
               control={addFormMethods.control}
               render={({ field }) => (
-                <Textarea
+                <Input 
+                  textArea
                   {...field}
                   value={field.value ?? ""}
                   placeholder="Enter any relevant notes"
@@ -1167,7 +1168,7 @@ const ProductSpecification = () => {
               name="flag_icon"
               control={editFormMethods.control}
               render={({ field }) => (
-                <Input
+                <Input type='file'
                   {...field}
                   value={field.value ?? ""}
                   placeholder="e.g., /icons/us.svg or fas fa-flag"
@@ -1220,7 +1221,8 @@ const ProductSpecification = () => {
               name="note_details"
               control={editFormMethods.control}
               render={({ field }) => (
-                <Textarea
+                <Input 
+                  textArea
                   {...field}
                   value={field.value ?? ""}
                   placeholder="Enter any relevant notes"

@@ -1483,7 +1483,7 @@ const Sliders = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Sliders</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Slider
+              Add New
             </Button>
           </div>
           <SlidersTableTools
@@ -1542,7 +1542,7 @@ const Sliders = () => {
               loading={isSubmitting}
               disabled={!addFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Adding..." : "Add Slider"}
+              {isSubmitting ? "Adding..." : "Save"}
             </Button>
           </div>
         }
@@ -1581,7 +1581,7 @@ const Sliders = () => {
               loading={isSubmitting}
               disabled={!editFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }

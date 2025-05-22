@@ -1072,7 +1072,7 @@ const JobPostsListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Job Posts</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Job Post
+              Add New
             </Button>
           </div>
           <ItemTableTools
