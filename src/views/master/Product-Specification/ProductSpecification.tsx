@@ -178,7 +178,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -251,7 +251,7 @@ const ItemTableTools = ({
       <div className="flex-grow">
         <ItemSearch
           onInputChange={onSearchChange}
-          placeholder="Search specifications..."
+          placeholder="Quick Search..."
         />
       </div>
       <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -943,7 +943,7 @@ const ProductSpecification = () => {
       {
         header: "Actions",
         id: "action",
-        meta: { headerClass: "text-center", cellClass: "text-center" }, // Corrected meta
+        meta: { HeaderClass: "text-center", cellClass: "text-center" }, // Corrected meta
         size: 120,
         cell: (props) => (
           <ActionColumn
@@ -1233,17 +1233,12 @@ const ProductSpecification = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Specifications"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            {" "}
-            {/* Changed to flex justify-between */}
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>
             <div>
               <Button
                 size="sm"
@@ -1259,7 +1254,7 @@ const ProductSpecification = () => {
                 form="filterProductSpecificationsForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>
             </div>
           </div>
@@ -1270,7 +1265,7 @@ const ProductSpecification = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-y-6"
         >
-          <FormItem label="Filter by Specification Name(s)">
+          <FormItem label="Specification Name(s)">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}
@@ -1285,7 +1280,7 @@ const ProductSpecification = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Country Name(s)">
+          <FormItem label="Country Name(s)">
             <Controller
               name="filterCountryNames"
               control={filterFormMethods.control}

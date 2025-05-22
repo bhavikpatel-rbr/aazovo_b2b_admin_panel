@@ -185,7 +185,7 @@ const DocumentTypeSearch = React.forwardRef<
     <DebouceInput
       ref={ref}
       className="w-full" // Use w-full for better layout in TableTools
-      placeholder="Quick search document types..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -925,14 +925,14 @@ const Documentmaster = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Document Types"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -940,7 +940,7 @@ const Documentmaster = () => {
               form="filterDocumentTypeForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }

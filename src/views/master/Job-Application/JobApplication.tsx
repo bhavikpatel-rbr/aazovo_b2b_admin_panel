@@ -27,9 +27,9 @@ import { FormItem, FormContainer, Form } from "@/components/ui/Form"; // Added F
 import DatePicker from "@/components/ui/DatePicker";
 import { HiOutlineCalendar } from "react-icons/hi";
 import Select from "@/components/ui/Select"; // For drawer forms
-import { Drawer } from "@/components/ui"; // For drawer forms
+import { Drawer, Dropdown } from "@/components/ui"; // For drawer forms
 
-import { TbUserCircle, TbBriefcase, TbLink, TbFilter } from "react-icons/tb"; // Added TbFilter
+import { TbUserCircle, TbBriefcase, TbLink, TbFilter, TbUserPlus } from "react-icons/tb"; // Added TbFilter
 
 // Icons
 import {
@@ -51,6 +51,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- Define Item Type & Status ---
 export type ApplicationStatus =
@@ -273,7 +274,7 @@ const ActionColumn = ({
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
 
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex items-center justify-end">
       <Tooltip title="View Details">
         <div
           className={classNames(
@@ -300,32 +301,6 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Schedule Interview">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
-          )}
-          role="button"
-          onClick={onScheduleInterview}
-        >
-          <TbCalendarEvent />
-        </div>
-      </Tooltip>
-      <Tooltip title="Add Job Link">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-cyan-600 dark:text-gray-400 dark:hover:text-cyan-400"
-          )}
-          role="button"
-          onClick={onAddJobLink}
-        >
-          <TbLink />
-        </div>
-      </Tooltip>
       <Tooltip title="Delete Application">
         <div
           className={classNames(
@@ -339,6 +314,19 @@ const ActionColumn = ({
           <TbTrash />
         </div>
       </Tooltip>
+
+      <Dropdown renderTitle={<BsThreeDotsVertical className="mr-2 cursor-pointer"/>}>
+          <Dropdown.Item>
+              <TbCalendarEvent size={18}/> <span className="text-xs">Schedule Interview</span>
+          </Dropdown.Item>
+          <Dropdown.Item>
+              <TbUserPlus size={18}/> <span className="text-xs">Add Employee</span>
+          </Dropdown.Item>
+          <Dropdown.Item>
+            <TbLink size={18}/> <span className="text-xs">Add Job Link</span>
+          </Dropdown.Item>
+      </Dropdown>
+      
     </div>
   );
 };
@@ -400,7 +388,7 @@ const ApplicationSearch = React.forwardRef<
   return (
     <DebouceInput
       ref={ref}
-      placeholder="Search Applications (Name, Email, Job, Dept...)"
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -1390,7 +1378,7 @@ const JobApplicationListing = () => {
       <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
         {/* Header */}
         <div className="lg:flex items-center justify-between mb-4">
-          <h3 className="mb-4 lg:mb-0">Job Applications</h3>
+          <h5 className="mb-4 lg:mb-0">Job Applications</h5>
           <ApplicationActionTools onAddNewApplicationOpen={openAddDrawer} />
         </div>
 
@@ -1871,14 +1859,14 @@ const JobApplicationListing = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Applications"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear All
+              Clear
             </Button>
             <Button
               size="sm"
@@ -1886,7 +1874,7 @@ const JobApplicationListing = () => {
               form="filterApplicationForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }

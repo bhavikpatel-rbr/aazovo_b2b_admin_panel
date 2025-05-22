@@ -223,7 +223,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center">
       {" "}
       <Tooltip title="Edit Job Post">
         <div
@@ -278,7 +278,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Search job posts..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -897,11 +897,9 @@ const JobPostsListing = () => {
         enableSorting: false,
         size: 250,
         cell: (props) => (
-          <Tooltip title={props.getValue<string>()}>
             <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">
               {props.getValue<string>()}
             </span>
-          </Tooltip>
         ),
       },
       {
@@ -1054,11 +1052,12 @@ const JobPostsListing = () => {
           name="description"
           control={currentFormMethods.control}
           render={({ field }) => (
-            <Textarea
+            <Input
               {...field}
               rows={5}
               prefix={<TbFileText />}
               placeholder="Detailed job description, responsibilities, qualifications..."
+              textArea
             />
           )}
         />
@@ -1071,9 +1070,7 @@ const JobPostsListing = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">
-              <TbBriefcase /> Job Posts
-            </h3>
+            <h5 className="mb-2 sm:mb-0">Job Posts</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New Job Post
             </Button>
@@ -1163,16 +1160,12 @@ const JobPostsListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Job Posts"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            {" "}
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>{" "}
             <div>
               {" "}
               <Button
@@ -1189,7 +1182,7 @@ const JobPostsListing = () => {
                 form="filterJobPostForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>{" "}
             </div>{" "}
           </div>

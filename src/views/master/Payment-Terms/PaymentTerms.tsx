@@ -185,7 +185,7 @@ const PaymentTermSearch = React.forwardRef<
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Quick search payment terms..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -941,14 +941,14 @@ const PaymentTerms = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Payment Terms"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -956,7 +956,7 @@ const PaymentTerms = () => {
               form="filterPaymentTermForm" // Ensure this matches the form id
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
