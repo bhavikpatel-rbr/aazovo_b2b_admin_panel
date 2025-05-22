@@ -21,6 +21,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import { Dropdown } from "@/components/ui";
 
 // --- Define Merged Form Type ---
 export type MergedFormItem = {
@@ -116,18 +117,17 @@ const ActionColumn = ({
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
           role="button"
         >
-          <TbDotsVertical />
+          <Dropdown renderTitle={<TbDotsVertical />} >
+            <Dropdown.Item>Request For</Dropdown.Item>
+            <Dropdown.Item>Add in Active</Dropdown.Item>
+            <Dropdown.Item>Add Schedule</Dropdown.Item>
+            <Dropdown.Item>Add Task</Dropdown.Item>
+            <Dropdown.Item>View Alert</Dropdown.Item>
+          </Dropdown>
+          
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete">
-                <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-                    role="button"
-                    onClick={onViewDetail}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip> */}
+      
     </div>
   );
 };

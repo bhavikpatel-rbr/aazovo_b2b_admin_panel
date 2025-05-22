@@ -669,13 +669,13 @@ const CompanyDetails = ({
                     )}
                 />
             </FormItem>
-            {/* <div className='flex justify-center items-center'>
+            <div className='flex justify-center items-center'>
                 <Button type='button' icon={<TbPlus/>}>Add More</Button>
-            </div> */}
+            </div>
         </div>
 
         <hr />
-            <h4 className="mb-4 mt-4">Branch / Head Office Information</h4>
+            <h4 className="mb-4 mt-4">Office Information</h4>
             <div className="grid md:grid-cols-2 gap-3">
                 <FormItem
                     // label="Head Office" // Or Branch Name
@@ -835,9 +835,9 @@ const CompanyDetails = ({
                 </FormItem>
 
             </div>
-            {/* <div className='flex justify-end'>
+            <div className='flex justify-end'>
                 <Button type='button' icon={<TbPlus/>}>Add More</Button>
-            </div> */}
+            </div>
     </Card>
     )
 }
