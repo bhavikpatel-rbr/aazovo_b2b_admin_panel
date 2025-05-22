@@ -326,7 +326,23 @@ const WallItemEdit = () => {
                     name="product_name"
                     control={formMethods.control}
                     render={({ field }) => (
-                       <Input {...field} placeholder="Enter Product Name"/>
+                        <UiSelect
+                            options={dummyProductSpecsForSelect.map(spec => ({
+                                value: spec.name,
+                                label: spec.name,
+                            }))}
+                            {...field}
+                            value={
+                                dummyProductSpecsForSelect
+                                    .map(spec => ({
+                                        value: spec.name,
+                                        label: spec.name,
+                                    }))
+                                    .find(opt => opt.value === field.value) || null
+                            }
+                            onChange={option => field.onChange(option ? option.value : "")}
+                            placeholder="Select Product Name"
+                        />
                     )}
                 />
             </FormItem>
@@ -339,7 +355,21 @@ const WallItemEdit = () => {
                     name="company_name"
                     control={formMethods.control}
                     render={({ field }) => (
-                        <Input {...field} placeholder="Enter Company Name"/>
+                        <UiSelect
+                            options={[
+                                { value: "ToolMaster Inc. (Existing)", label: "ToolMaster Inc. (Existing)" },
+                                { value: "BuildRight Supplies (Existing)", label: "BuildRight Supplies (Existing)" },
+                            ]}
+                            {...field}
+                            value={
+                                [
+                                    { value: "ToolMaster Inc. (Existing)", label: "ToolMaster Inc. (Existing)" },
+                                    { value: "BuildRight Supplies (Existing)", label: "BuildRight Supplies (Existing)" },
+                                ].find(opt => opt.value === field.value) || null
+                            }
+                            onChange={option => field.onChange(option ? option.value : "")}
+                            placeholder="Select Company Name"
+                        />
                     )}
                 />
             </FormItem>
