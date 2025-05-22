@@ -966,7 +966,7 @@ const Units = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Unit Name(s)">
+          <FormItem label="Unit Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}

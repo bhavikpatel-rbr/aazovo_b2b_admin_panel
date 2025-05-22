@@ -267,8 +267,8 @@ const GlobalSettings = () => {
 
   // Group form items for better organization
   const renderGeneralInfoFields = () => (
-    <Card className="mb-6" header="General Site Information">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+    // <Card className="mb-6" header="General Site Information">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
         <FormItem
           label="Site Name"
           invalid={!!formMethods.formState.errors.siteName}
@@ -309,12 +309,12 @@ const GlobalSettings = () => {
           />
         </FormItem>
       </div>
-    </Card>
+    // </Card>
   );
 
   const renderContactInfoFields = () => (
-    <Card className="mb-6" header="Contact Information">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+    // <Card className="mb-6" header="Contact Information">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
         <FormItem
           label="Contact Email"
           invalid={!!formMethods.formState.errors.contactEmail}
@@ -361,12 +361,12 @@ const GlobalSettings = () => {
         </FormItem>
         {/* Add more address fields: addressLine2, city, state, postalCode, country */}
       </div>
-    </Card>
+    // </Card>
   );
 
   const renderStoreSettingsFields = () => (
-    <Card className="mb-6" header="Store Settings">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+    // <Card className="mb-6" header="Store Settings">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-0">
         <FormItem
           label="Default Currency"
           invalid={!!formMethods.formState.errors.defaultCurrency}
@@ -438,11 +438,11 @@ const GlobalSettings = () => {
           />
         </FormItem>
       </div>
-    </Card>
+    // </Card>
   );
   const renderSEOFields = () => (
-    <Card className="mb-6" header="Default SEO Settings">
-      <div className="grid grid-cols-1 gap-4 p-4">
+    // <Card className="mb-6" header="Default SEO Settings">
+      <div className="grid grid-cols-1 gap-2 mb-0">
         <FormItem
           label="Default Meta Title (Optional)"
           invalid={!!formMethods.formState.errors.defaultMetaTitle}
@@ -467,10 +467,11 @@ const GlobalSettings = () => {
             name="defaultMetaDescription"
             control={formMethods.control}
             render={({ field }) => (
-              <Textarea
+              <Input
                 {...field}
                 rows={3}
                 placeholder="Brief description of your site for search engines."
+                textArea
               />
             )}
           />
@@ -491,12 +492,12 @@ const GlobalSettings = () => {
           />
         </FormItem>
       </div>
-    </Card>
+    // </Card>
   );
 
   const renderAnalyticsFields = () => (
-    <Card className="mb-6" header="Analytics & Tracking">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+    // <Card className="mb-6" header="Analytics & Tracking">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
         <FormItem
           label="Google Analytics ID (Optional)"
           invalid={!!formMethods.formState.errors.googleAnalyticsId}
@@ -511,7 +512,7 @@ const GlobalSettings = () => {
           />
         </FormItem>
       </div>
-    </Card>
+    // </Card>
   );
 
   return (

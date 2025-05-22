@@ -913,22 +913,6 @@ const RequestAndFeedback = () => {
                 <TbEye />
               </div>
             </Tooltip>
-            <Tooltip title="Share">
-              <div
-                className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-                role="button"
-              >
-                <TbShare />
-              </div>
-            </Tooltip>
-            <Tooltip title="More">
-              <div
-                className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-                role="button"
-              >
-                <TbDotsVertical />
-              </div>
-            </Tooltip>
             {/* <Tooltip title="Delete">
                       <div
                           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
@@ -1094,14 +1078,14 @@ const RequestAndFeedback = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Requests"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -1109,7 +1093,7 @@ const RequestAndFeedback = () => {
               form="filterRequestForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -1134,21 +1118,21 @@ const RequestAndFeedback = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatuses"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Select statuses..."
+                  placeholder="Select status..."
                   options={availableStatuses}
                   {...field}
                 />
               )}
             />
           </FormItem>
-          <FormItem label="Filter by From (Source)">
+          <FormItem label="From (Source)">
             <Controller
               name="filterFrom"
               control={filterFormMethods.control}

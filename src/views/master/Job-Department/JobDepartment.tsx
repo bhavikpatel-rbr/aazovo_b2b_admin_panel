@@ -788,7 +788,7 @@ const JobDepartment = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>
               <Button
                 size="sm"
@@ -807,7 +807,7 @@ const JobDepartment = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Department Name(s)">
+          <FormItem label="Department Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}

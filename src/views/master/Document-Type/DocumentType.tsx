@@ -141,7 +141,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -837,7 +837,7 @@ const Documentmaster = () => {
               onClick={closeAddDrawer}
               disabled={isSubmitting}
             >
-              Cancel
+              Clear
             </Button>
             <Button
               size="sm"
@@ -950,7 +950,7 @@ const Documentmaster = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Document Type Name(s)">
+          <FormItem label="Document Type Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}

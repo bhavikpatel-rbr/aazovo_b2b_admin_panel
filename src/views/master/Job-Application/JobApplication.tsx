@@ -1259,7 +1259,7 @@ const JobApplicationListing = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        width: 140,
+        width: 100,
         cell: (props) => {
           const { status } = props.row.original;
           const displayStatus = status
@@ -1309,6 +1309,7 @@ const JobApplicationListing = () => {
         header: "Department",
         accessorKey: "department",
         enableSorting: true,
+        size:200,
       },
       {
         header: "Job Title", // Added Job Title
@@ -1340,9 +1341,10 @@ const JobApplicationListing = () => {
         },
       },
       {
-        header: "",
+        header: "Action",
         id: "action",
-        width: 180,
+        width: 100,
+        meta : { HeaderClass : "text-center" },
         cell: (props) => (
           <ActionColumn
             onView={() => handleViewDetails(props.row.original)}
@@ -1884,7 +1886,7 @@ const JobApplicationListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}
@@ -1899,7 +1901,7 @@ const JobApplicationListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Department">
+          <FormItem label="Department">
             <Controller
               name="filterDepartment"
               control={filterFormMethods.control}

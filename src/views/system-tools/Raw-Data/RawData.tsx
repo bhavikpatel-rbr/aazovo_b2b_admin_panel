@@ -35,6 +35,8 @@ import {
   TbShare,
   TbDotsVertical,
   TbMapPin,
+  TbCancel,
+  TbTrash,
  // Section icons
 } from "react-icons/tb";
 
@@ -340,20 +342,20 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      <Tooltip title="Blacklist">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-800 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
         >
-          <TbShare />
+          <TbCancel size={18} />
         </div>
       </Tooltip>
-      <Tooltip title="More">
+      <Tooltip title="Delete">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-800 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
         >
-          <TbDotsVertical />
+          <TbTrash />
         </div>
       </Tooltip>
     </div>
@@ -999,7 +1001,7 @@ const LeadManagement = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-                Lead Management
+                Raw Data
             </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New

@@ -141,7 +141,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -966,7 +966,7 @@ const PaymentTerms = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Payment Term Name(s)">
+          <FormItem label="Payment Term Name">
             <Controller
               name="filterNames" // This filters by term_name based on options
               control={filterFormMethods.control}

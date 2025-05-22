@@ -155,20 +155,12 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      <Tooltip title="Delete">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
         >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
+          <TbTrash />
         </div>
       </Tooltip>
     </div>
@@ -687,6 +679,7 @@ const PermissionsListing = () => {
       {
         header: "Module/Group",
         accessorKey: "module",
+        size: 180,
         enableSorting: true,
         cell: (props) => props.getValue<string>() || "General",
       },
@@ -972,14 +965,14 @@ const PermissionsListing = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Permissions"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -987,7 +980,7 @@ const PermissionsListing = () => {
               form="filterPermissionForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -997,7 +990,7 @@ const PermissionsListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Name / ID">
+          <FormItem label="Name / ID">
             <Controller
               name="filterName"
               control={filterFormMethods.control}
@@ -1006,7 +999,7 @@ const PermissionsListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Module/Group">
+          <FormItem label="Module/Group">
             <Controller
               name="filterModule"
               control={filterFormMethods.control}

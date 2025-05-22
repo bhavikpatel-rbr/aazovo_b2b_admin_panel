@@ -799,14 +799,14 @@ const SubscribersListing = () => {
       </Container>
 
       <Drawer
-        title="Filter Subscribers"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -814,7 +814,7 @@ const SubscribersListing = () => {
               form="filterSubscriberForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -839,7 +839,7 @@ const SubscribersListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatuses"
               control={filterFormMethods.control}
@@ -853,7 +853,7 @@ const SubscribersListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Source">
+          <FormItem label="Source">
             <Controller
               name="filterSources"
               control={filterFormMethods.control}

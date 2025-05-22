@@ -350,31 +350,6 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-          role="button"
-        >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
-        </div>
-      </Tooltip>
-      {/* <Tooltip title="Delete">
-                <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-                    role="button"
-                    onClick={onViewDetail}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip> */}
     </div>
   );
 };
@@ -1379,6 +1354,7 @@ const Emailtemplates = () => {
           onSubmit={addFormMethods.handleSubmit(onAddTemplateSubmit)}
           className="flex flex-col gap-y-4"
         >
+          <div className="md:grid grid-cols-2 gap-3">
           <FormItem
             label="Name"
             invalid={!!addFormMethods.formState.errors.name}
@@ -1500,6 +1476,7 @@ const Emailtemplates = () => {
             addVariablesArray,
             addFormMethods
           )}
+          </div>
         </Form>
       </Drawer>
 
@@ -1536,8 +1513,9 @@ const Emailtemplates = () => {
         <Form
           id="editEmailTemplateForm"
           onSubmit={editFormMethods.handleSubmit(onEditTemplateSubmit)}
-          className="flex flex-col gap-y-4"
+          className=""
         >
+          <div className="md:grid grid-cols-2 gap-3">
           <FormItem
             label="Name"
             invalid={!!editFormMethods.formState.errors.name}
@@ -1659,19 +1637,20 @@ const Emailtemplates = () => {
             editVariablesArray,
             editFormMethods
           )}
+          </div>
         </Form>
       </Drawer>
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Email Templates"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -1679,7 +1658,7 @@ const Emailtemplates = () => {
               form="filterEmailTemplateForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -1689,7 +1668,7 @@ const Emailtemplates = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Name(s)">
+          <FormItem label="Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}
@@ -1703,7 +1682,7 @@ const Emailtemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Template ID(s)">
+          <FormItem label="Template ID">
             <Controller
               name="filterTemplateIds"
               control={filterFormMethods.control}
@@ -1717,7 +1696,7 @@ const Emailtemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Category(s)">
+          <FormItem label="Category">
             <Controller
               name="filterCategories"
               control={filterFormMethods.control}
@@ -1731,7 +1710,7 @@ const Emailtemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by SubCategory(s)">
+          <FormItem label="SubCategory">
             <Controller
               name="filterSubCategories"
               control={filterFormMethods.control}
@@ -1745,7 +1724,7 @@ const Emailtemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Brand(s)">
+          <FormItem label="Brand">
             <Controller
               name="filterBrands"
               control={filterFormMethods.control}
@@ -1759,7 +1738,7 @@ const Emailtemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Role(s)">
+          <FormItem label="Role">
             <Controller
               name="filterRoles"
               control={filterFormMethods.control}
@@ -1773,7 +1752,7 @@ const Emailtemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Department(s)">
+          <FormItem label="Department">
             <Controller
               name="filterDepartments"
               control={filterFormMethods.control}
@@ -1787,7 +1766,7 @@ const Emailtemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Designation(s)">
+          <FormItem label="Designation">
             <Controller
               name="filterDesignations"
               control={filterFormMethods.control}
@@ -1801,7 +1780,7 @@ const Emailtemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Status(s)">
+          <FormItem label="Status">
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}

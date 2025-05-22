@@ -238,7 +238,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>{" "}
-      <Tooltip title="Change Status">
+      {/* <Tooltip title="Change Status">
         <div
           className={classNames(
             iconButtonClass,
@@ -250,7 +250,7 @@ const ActionColumn = ({
         >
           <TbSwitchHorizontal />
         </div>
-      </Tooltip>{" "}
+      </Tooltip>{" "} */}
       <Tooltip title="Delete Job Post">
         <div
           className={classNames(
@@ -862,7 +862,7 @@ const JobPostsListing = () => {
       {
         header: "Status",
         accessorKey: "status",
-        size: 120,
+        size: 140,
         enableSorting: true,
         cell: (props) => {
           const statusVal = props.getValue<JobPostStatusApi>();
@@ -881,7 +881,7 @@ const JobPostsListing = () => {
       {
         header: "Department",
         accessorKey: "job_department_id",
-        size: 180,
+        size: 200,
         enableSorting: true,
         cell: (props) => {
           const deptId = String(props.getValue());
@@ -895,9 +895,9 @@ const JobPostsListing = () => {
         header: "Description",
         accessorKey: "description",
         enableSorting: false,
-        size: 250,
+        size: 200,
         cell: (props) => (
-            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">
+            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
               {props.getValue<string>()}
             </span>
         ),
@@ -917,14 +917,14 @@ const JobPostsListing = () => {
       {
         header: "Vacancies",
         accessorKey: "vacancies",
-        size: 100,
+        size: 180,
         enableSorting: true,
         meta: { cellClass: "text-center" },
       },
       {
         header: "Actions",
         id: "actions",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
         size: 140,
         cell: (props) => (
           <ActionColumn
@@ -1174,7 +1174,7 @@ const JobPostsListing = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>{" "}
               <Button
                 size="sm"
@@ -1193,7 +1193,7 @@ const JobPostsListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}
@@ -1211,7 +1211,7 @@ const JobPostsListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Department">
+          <FormItem label="Department">
             <Controller
               name="filterDepartment"
               control={filterFormMethods.control}

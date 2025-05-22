@@ -271,7 +271,7 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      {/* <Tooltip title="Share">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
@@ -286,7 +286,7 @@ const ActionColumn = ({
         >
           <TbDotsVertical />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
@@ -1056,10 +1056,11 @@ const DomainManagementListing = () => {
           name="analyticsScript"
           control={formMethods.control}
           render={({ field }) => (
-            <Textarea
+            <Input
               {...field}
               rows={4}
               placeholder="Paste your analytics script here (e.g., Google Analytics, Hotjar)"
+              textArea
             />
           )}
         />
@@ -1164,7 +1165,7 @@ const DomainManagementListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Domains"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={() => setIsFilterDrawerOpen(false)}
         onRequestClose={() => setIsFilterDrawerOpen(false)}
@@ -1177,7 +1178,7 @@ const DomainManagementListing = () => {
                 onClick={() => setIsFilterDrawerOpen(false)}
                 type="button"
               >
-                Clear Filters
+                Clear
               </Button>{" "}
               <Button
                 size="sm"
@@ -1185,7 +1186,7 @@ const DomainManagementListing = () => {
                 form="filterDomainsForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>{" "}
             </div>
         }
@@ -1195,7 +1196,7 @@ const DomainManagementListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Countries">
+          <FormItem label="Countries">
             <Controller
               name="filterCountries"
               control={filterFormMethods.control}
@@ -1210,7 +1211,7 @@ const DomainManagementListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Currency">
+          <FormItem label="Currency">
             <Controller
               name="filterCurrency"
               control={filterFormMethods.control}

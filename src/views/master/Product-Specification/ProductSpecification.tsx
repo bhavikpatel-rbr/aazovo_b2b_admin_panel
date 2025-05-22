@@ -1246,7 +1246,7 @@ const ProductSpecification = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>
               <Button
                 size="sm"
@@ -1265,7 +1265,7 @@ const ProductSpecification = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-y-6"
         >
-          <FormItem label="Specification Name(s)">
+          <FormItem label="Specification Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}
@@ -1280,7 +1280,7 @@ const ProductSpecification = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Country Name(s)">
+          <FormItem label="Country Name">
             <Controller
               name="filterCountryNames"
               control={filterFormMethods.control}

@@ -140,7 +140,7 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
     const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
     const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
     return (
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center">
             <Tooltip title="Edit"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
             <Tooltip title="Delete"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400')} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
         </div>
@@ -488,7 +488,7 @@ const {
     const columns: ColumnDef<TrendingPageImageItem>[] = useMemo(() => [
         { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 250, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
         { header: 'Date Created', accessorKey: 'created_at', enableSorting: true, size: 180, cell: (props) => { const date = props.row.original.created_at; return date ? new Date(date).toLocaleDateString() : 'N/A'; } },
-        { header: 'Actions', id: 'action', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+        { header: 'Actions', id: 'action', meta: { HeaderClass: 'text-center', cellClass: 'text-center' }, size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
     ], [openEditDrawer, handleDeleteClick]);
 
     return (
@@ -539,10 +539,10 @@ const {
                 </Form>
             </Drawer>
 
-            <Drawer title="Filter Image Groups" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-                footer={<div className="text-right w-full"><Button size="sm" onClick={onClearFilters} type="button">Clear All</Button><div><Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button><Button size="sm" variant="solid" form="filterItemsForm" type="submit">Apply Filters</Button></div></div>}>
+            <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+                footer={<div className="text-right w-full"><div><Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Clear</Button><Button size="sm" variant="solid" form="filterItemsForm" type="submit">Apply</Button></div></div>}>
                 <Form id="filterItemsForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-                    <FormItem label="Filter by Page Name">
+                    <FormItem label="Page Name">
                         <Controller name="filterPageNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select page name(s)..." options={pageNameOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />)} />
                     </FormItem>
                 </Form>

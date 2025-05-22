@@ -47,7 +47,9 @@ import {
   TbBuildingSkyscraper,
   TbBriefcase,
   TbCalendar,
-  TbUsers, // Additional icons for form
+  TbUsers,
+  TbTrash,
+  TbKey, // Additional icons for form
 } from "react-icons/tb";
 import DatePicker from "@/components/ui/DatePicker"; // Added DatePicker for date selection
 import { Select } from "@/components/ui/Select"; // Added Select for dropdowns
@@ -220,22 +222,23 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      <Tooltip title="Change Password">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
         >
-          <TbShare />
+          <TbKey />
         </div>
       </Tooltip>
-      <Tooltip title="More">
+      <Tooltip title="Change Password">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
         >
-          <TbDotsVertical />
+          <TbTrash />
         </div>
       </Tooltip>
+      
     </div>
   );
 };
@@ -1597,14 +1600,14 @@ const EmployeesListing = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Employees"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -1612,7 +1615,7 @@ const EmployeesListing = () => {
               form="filterEmployeeForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -1622,7 +1625,7 @@ const EmployeesListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Department(s)">
+          <FormItem label="Department">
             <Controller
               name="filterDepartments"
               control={filterFormMethods.control}
@@ -1637,7 +1640,7 @@ const EmployeesListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Designation(s)">
+          <FormItem label="Designation">
             <Controller
               name="filterDesignations"
               control={filterFormMethods.control}
@@ -1652,7 +1655,7 @@ const EmployeesListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Status(es)">
+          <FormItem label="Status">
             <Controller
               name="filterStatuses"
               control={filterFormMethods.control}
@@ -1667,7 +1670,7 @@ const EmployeesListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Role(s)">
+          <FormItem label="Role">
             <Controller
               name="filterRoles"
               control={filterFormMethods.control}

@@ -32,7 +32,8 @@ import {
   TbPlus,
   TbCloudUpload,
   TbMailBolt,
-  TbKey, // Icon for Auto Email Templates
+  TbKey,
+  TbTrash, // Icon for Auto Email Templates
 } from "react-icons/tb";
 
 // Types
@@ -257,20 +258,13 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      <Tooltip title="Delete">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
+          onClick={onViewDetail}
         >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
+          <TbTrash />
         </div>
       </Tooltip>
     </div>
@@ -958,7 +952,7 @@ const AutoEmailTemplatesListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Auto Email Templates"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
@@ -966,7 +960,7 @@ const AutoEmailTemplatesListing = () => {
         footer={
           <div className="text-right w-full">
             <Button className="mr-2" size="sm" onClick={onClearFilters} type="button">
-              Clear All
+              Clear
             </Button>
               <Button
                 size="sm"
@@ -974,7 +968,7 @@ const AutoEmailTemplatesListing = () => {
                 form="filterAutoEmailTemplateForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>
           </div>
         }
@@ -984,14 +978,14 @@ const AutoEmailTemplatesListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Email Type(s)">
+          <FormItem label="Email Type">
             <Controller
               name="filterEmailTypes"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Email Type"
+                  placeholder="Select Email Type"
                   options={emailTypeOptionsForFilter}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -999,14 +993,14 @@ const AutoEmailTemplatesListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Template Key(s)">
+          <FormItem label="Template Key(s)">
             <Controller
               name="filterTemplateKeys"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Template Key"
+                  placeholder="Select Template Key"
                   options={templateKeyOptionsForFilter}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -1014,14 +1008,14 @@ const AutoEmailTemplatesListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Category">
+          <FormItem label="Category">
             <Controller
               name="filterCategories"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Category"
+                  placeholder="Select Categories"
                   options={CATEGORY_OPTIONS_AET}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -1029,14 +1023,14 @@ const AutoEmailTemplatesListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Department">
+          <FormItem label="Department">
             <Controller
               name="filterDepartments"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Department"
+                  placeholder="Select Department"
                   options={DEPARTMENT_OPTIONS_AET}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}

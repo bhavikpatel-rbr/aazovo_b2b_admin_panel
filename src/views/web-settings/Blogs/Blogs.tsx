@@ -229,8 +229,8 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Clone Blog">
+    <div className="flex items-center justify-center">
+      {/* <Tooltip title="Clone Blog">
         <div
           className={classNames(
             iconButtonClass,
@@ -243,7 +243,7 @@ const ActionColumn = ({
         >
           <TbCopy />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -287,7 +287,7 @@ const BlogsSearch = React.forwardRef<HTMLInputElement, BlogsSearchProps>(
       <DebouceInput
         ref={ref}
         className="w-full"
-        placeholder="Quick search blogs (title, id, slug)..."
+        placeholder="Quick Search..."
         suffix={<TbSearch className="text-lg" />}
         onChange={(e) => onInputChange(e.target.value)}
       />
@@ -1115,7 +1115,7 @@ const Blogs = () => {
       {
         header: "Actions",
         id: "action",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
         size: 120,
         cell: (props) => (
           <ActionColumn
@@ -1150,7 +1150,7 @@ const Blogs = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h3 className="mb-2 sm:mb-0">Manage Blogs</h3>
+            <h5 className="mb-2 sm:mb-0">Blogs</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New Blog
             </Button>
@@ -1476,16 +1476,13 @@ const Blogs = () => {
       ))}
 
       <Drawer
-        title="Filter Blogs"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            {" "}
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>{" "}
+           
             <div>
               {" "}
               <Button
@@ -1494,7 +1491,7 @@ const Blogs = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>{" "}
               <Button
                 size="sm"
@@ -1502,7 +1499,7 @@ const Blogs = () => {
                 form="filterBlogForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>{" "}
             </div>{" "}
           </div>
@@ -1515,7 +1512,7 @@ const Blogs = () => {
           className="flex flex-col gap-4"
         >
           {" "}
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             {" "}
             <Controller
               name="filterStatus"
@@ -1523,7 +1520,7 @@ const Blogs = () => {
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Select status(es)..."
+                  placeholder="Select status..."
                   options={blogStatusOptions}
                   value={field.value || []}
                   onChange={(selectedVal) => field.onChange(selectedVal || [])}
