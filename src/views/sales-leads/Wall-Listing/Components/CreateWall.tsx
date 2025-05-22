@@ -1,13 +1,14 @@
+// src/views/your-path/business-entities/WallItemAdd.tsx
+
 import React, { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import dayjs from "dayjs";
+import dayjs from "dayjs"; // Needed for formatting ETA on submit
 
 // UI Components
 import Card from "@/components/ui/Card";
-import { NavLink } from "react-router-dom";
 import { BiChevronRight } from "react-icons/bi";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
@@ -18,138 +19,65 @@ import {
   FormItem,
   Input,
   Select as UiSelect,
-  // DatePicker, // Add if date pickers are needed in the form
+  DatePicker,
+  Radio,
 } from "@/components/ui";
-import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Assuming path is correct
 
-// Types (Copied from WallListing or a shared types file)
-export type WallRecordStatus =
-  | "Pending"
-  | "Approved"
-  | "Rejected"
-  | "Expired"
-  | "Fulfilled"
-  | string;
+// Types
 export type WallIntent = "Buy" | "Sell" | "Exchange";
-export type WallProductCondition = "New" | "Used" | "Refurbished" | string;
-
-export type ApiWallItem = {
-  // Simplified for this example, real app would use full type
-  id: number;
-  listing_id: string;
-  product_name: string;
-  company_name: string;
-  contact_person_name: string;
-  contact_person_email: string;
-  contact_person_phone: string;
-  product_category: string;
-  product_subcategory?: string;
-  product_description?: string;
-  product_specs?: string;
-  product_status: string;
-  quantity: number;
-  price: number;
-  want_to: string;
-  listing_type: string;
-  shipping_options?: string;
-  payment_method?: string;
-  warranty?: string;
-  return_policy?: string;
-  listing_url?: string;
-  brand: string;
-  product_images: string[];
-  rating?: number;
-  reviews_count?: number;
-  created_date: string;
-  last_updated: string;
-  visibility: string;
-  priority: string;
-  assigned_to?: string;
-  inquiry_count: number;
-  view_count: number;
-  interaction_type?: string;
-  action?: string;
-  status: string;
-  company_id_from_api?: string;
-  cartoon_type_id?: number | null;
-  device_condition?: string | null;
-};
 
 // --- Zod Schema for Add Wall Item Form ---
 const wallItemFormSchema = z.object({
-  productId: z.number().nullable().optional(),
-  productSpecId: z.number().nullable().optional(),
-  companyId: z.string().nullable().optional(),
-  customerId: z.number().nullable().optional(),
+  // Core Product & Company Info
+  product_name: z.string().min(1, "Product Name is required."),
+  company_name: z.string().min(1, "Company Name is required."),
+  
+  // Quantity, Price, Intent
   qty: z
     .number({ required_error: "Quantity is required." })
     .min(0, "Quantity cannot be negative."),
-  productStatus: z
-    .string()
-    .min(1, "Product Status (e.g. In Stock) is required."),
+  price: z.number().min(0, "Price cannot be negative.").nullable().optional(),
   intent: z.enum(["Buy", "Sell", "Exchange"] as const, {
     required_error: "Intent (Want to) is required.",
   }),
-  recordStatus: z.string().min(1, "Record Status (e.g. Pending) is required."),
-  price: z.number().min(0, "Price cannot be negative.").nullable().optional(),
+  
+  // Product & Stock Status
+  productStatus: z.string().min(1, "Product Status is required."), // e.g. In Stock
+  productSpecId: z.number().nullable().optional(), // Select: e.g., 256GB, Grade A
+  deviceCondition: z.string().min(1, "Device condition is required.").nullable(), // Radio: New/Old
   color: z.string().max(50, "Color too long.").nullable().optional(),
+  
+  // Logistics & Terms
   cartoonTypeId: z.number().nullable().optional(),
-  dispatchStatus: z
-    .string()
-    .max(100, "Dispatch status too long.")
-    .nullable()
-    .optional(),
+  dispatchStatus: z.string().max(100, "Dispatch status too long.").nullable().optional(),
+  dispatchMode: z.string().optional().nullable(), // New: Select
   paymentTermId: z.number().nullable().optional(),
-  deviceCondition: z.string().nullable().optional(),
-  eta: z.string().max(100, "ETA details too long.").nullable().optional(),
+  eta: z.date().nullable().optional(),
   location: z.string().max(100, "Location too long.").nullable().optional(),
-  internalRemarks: z.string().nullable().optional(),
-  listing_id: z.string().min(1, "Listing ID is required."),
-  product_name: z.string().min(1, "Product Name is required."),
-  company_name: z.string().min(1, "Company Name is required."),
-  contact_person_name: z.string().min(1, "Contact Person Name is required."),
-  contact_person_email: z
-    .string()
-    .email("Invalid email.")
-    .min(1, "Email is required."),
-  contact_person_phone: z.string().min(1, "Phone is required."),
-  product_category: z.string().min(1, "Product Category is required."),
-  product_subcategory: z.string().optional().nullable(),
-  product_description: z.string().optional().nullable(),
-  product_specs: z.string().optional().nullable(),
-  listing_type: z.string().min(1, "Listing Type is required."),
-  shipping_options: z.string().optional().nullable(),
-  payment_method: z.string().optional().nullable(),
-  warranty: z.string().optional().nullable(),
-  return_policy: z.string().optional().nullable(),
-  listing_url: z
-    .string()
-    .url("Invalid URL.")
-    .or(z.literal(""))
-    .optional()
-    .nullable(),
-  brand: z.string().min(1, "Brand is required."),
-  product_images: z
-    .array(z.string().url("Invalid image URL.").or(z.literal("")))
-    .optional()
-    .default([]),
-  rating: z.number().min(0).max(5).optional().nullable(),
-  reviews_count: z.number().min(0).optional().nullable(),
+  
+  // Listing Configuration
+  listingType: z.string().min(1,"Listing Type is required.").optional().nullable(), // New: Select
   visibility: z.string().min(1, "Visibility is required."),
-  priority: z.string().min(1, "Priority is required."),
-  assigned_to: z.string().optional().nullable(),
-  interaction_type: z.string().optional().nullable(),
-  action: z.string().optional().nullable(),
+  priority: z.string().min(1, "Priority is required.").optional().nullable(), // New: Select
+  adminStatus: z.string().min(1, "Admin Status is required.").optional().nullable(), // New: Select
+  assignedTeamId: z.number().nullable().optional(), // New: Select
+  activeHours: z.string().optional().nullable(),
+  productUrl: z.string().url("Invalid URL format.").or(z.literal("")).optional().nullable(), // New
+  
+  // Policies
+  warrantyInfo: z.string().optional().nullable(), // New: Textarea
+  returnPolicy: z.string().optional().nullable(), // New: Textarea
+  
+  // Remarks
+  internalRemarks: z.string().nullable().optional(),
+
+  // Optional relationship IDs (if needed for backend)
+  productId: z.number().nullable().optional(), // Usually linked when product_name is selected/created
+  customerId: z.number().nullable().optional(), // Usually linked when company_name/contact_person_name is selected/created
 });
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
-// --- Form Options (Copied or imported) ---
-const recordStatusOptions = [
-  { value: "Pending", label: "Pending" },
-  { value: "Approved", label: "Approved" },
-  { value: "Rejected", label: "Rejected" },
-  // ... add other statuses
-];
+// --- Form Options ---
 const intentOptions: { value: WallIntent; label: string }[] = [
   { value: "Buy", label: "Buy" },
   { value: "Sell", label: "Sell" },
@@ -160,16 +88,56 @@ const productStatusOptions = [
   { value: "Low Stock", label: "Low Stock" },
   { value: "Out of Stock", label: "Out of Stock" },
 ];
-const deviceConditionOptions = [
-  { value: "New", label: "New" },
-  { value: "Used", label: "Used" },
-  { value: "Refurbished", label: "Refurbished" },
-];
 const dummyCartoonTypes = [
   { id: 1, name: "Master Carton" },
   { id: 2, name: "Inner Carton" },
+  { id: 3, name: "Pallet" },
 ];
-// Add dummyProducts, dummyCompanies etc. if needed for Select dropdowns in the form
+const dummyProductSpecsForSelect = [ // Example: In a real app, these would come from an API
+  { id: 1, name: "iPhone 15 Pro Max - 256GB - Natural Titanium - US Spec" },
+  { id: 2, name: "Samsung S24 Ultra - 512GB - Phantom Black - EU Spec" },
+  { id: 3, name: "Google Pixel 8 Pro - 128GB - Obsidian - UK Spec" },
+];
+const dummyPaymentTerms = [
+  { id: 1, name: "Net 30 Days" },
+  { id: 2, name: "Net 60 Days" },
+  { id: 3, name: "Due on Receipt" },
+  { id: 4, name: "Prepaid" },
+];
+const deviceConditionRadioOptions = [
+    { value: "New", label: "New" },
+    { value: "Old", label: "Old" },
+];
+const visibilityOptions = [
+    { value: 'public', label: 'Public' },
+    { value: 'internal', label: 'Internal' },
+];
+const priorityOptions = [
+    { value: 'High', label: 'High' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'Low', label: 'Low' },
+];
+const assignedTeamOptions = [ // Example teams
+    { value: 1, label: 'Sales Team Alpha' },
+    { value: 2, label: 'Sales Team Beta' },
+    { value: 3, label: 'Support Team' },
+];
+const listingTypeOptions = [
+    { value: 'Featured', label: 'Featured' },
+    { value: 'Regular', label: 'Regular' },
+];
+const dispatchModeOptions = [
+    { value: 'Courier', label: 'Courier' },
+    { value: 'Pickup', label: 'Pickup' },
+    { value: 'Transport', label: 'Transport (Freight)' },
+    { value: 'Digital', label: 'Digital Delivery' },
+];
+const adminStatusOptions = [
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Approved', label: 'Approved' },
+    { value: 'Rejected', label: 'Rejected' },
+];
+
 
 const WallItemAdd = () => {
   const navigate = useNavigate();
@@ -178,39 +146,45 @@ const WallItemAdd = () => {
   const formMethods = useForm<WallItemFormData>({
     resolver: zodResolver(wallItemFormSchema),
     defaultValues: {
-      listing_id: `LIST-${Date.now().toString().slice(-6)}`,
       product_name: "",
       company_name: "",
-      contact_person_name: "",
-      contact_person_email: "",
-      contact_person_phone: "",
-      product_category: "",
-      brand: "",
-      listing_type: "standard",
-      visibility: "public",
-      priority: "medium",
-      product_images: [],
       qty: 1,
       price: null,
-      productStatus: productStatusOptions[0]?.value,
       intent: "Sell",
-      recordStatus: recordStatusOptions[0]?.value,
-      // Initialize other fields as needed
+      productStatus: productStatusOptions[0]?.value,
+      cartoonTypeId: null,
+      internalRemarks: "",
+      activeHours: "",
+      productSpecId: null,
+      color: "",
+      dispatchStatus: "",
+      paymentTermId: null,
+      eta: null,
+      deviceCondition: null,
+      location: "",
+      listingType: listingTypeOptions[1]?.value, // Default to Regular
+      visibility: visibilityOptions[0]?.value, // Default to Public
+      priority: priorityOptions[1]?.value, // Default to Medium
+      adminStatus: adminStatusOptions[0]?.value, // Default to Pending
+      assignedTeamId: null,
+      productUrl: "",
+      warrantyInfo: "",
+      returnPolicy: "",
+      productId: null,
+      customerId: null,
     },
   });
 
   const onFormSubmit = useCallback(
     async (data: WallItemFormData) => {
       setIsSubmitting(true);
-      console.log("Form data to submit (Add):", data);
+      const submissionData = {
+        ...data,
+        eta: data.eta ? dayjs(data.eta).format("YYYY-MM-DD") : null,
+      };
+      console.log("Form data to submit (Add):", submissionData);
 
-      // Simulate API call
       await new Promise((res) => setTimeout(res, 1000));
-
-      // In a real app, you would dispatch an action to add the item to your backend/store
-      // e.g., dispatch(addWallItem(data));
-      // For now, we'll just show a success message and navigate.
-      // The WallListing page will not reflect this change with the current dummy data setup.
 
       toast.push(
         <Notification title="Success" type="success">
@@ -218,614 +192,309 @@ const WallItemAdd = () => {
         </Notification>
       );
       setIsSubmitting(false);
-      navigate(-1); // Go back to the listing page
+      navigate("/sales-leads/wall-listing");
     },
     [navigate]
   );
 
+  const handleCancel = () => {
+    navigate("/sales-leads/wall-listing");
+  };
+  
+  const handleSaveAsDraft = () => {
+    const currentValues = formMethods.getValues();
+    const draftData = {
+        ...currentValues,
+        eta: currentValues.eta ? dayjs(currentValues.eta).format("YYYY-MM-DD") : null,
+    };
+    console.log("Saving as draft:", draftData);
+    toast.push(
+        <Notification title="Draft Saved" type="info">
+            Item saved as draft. (Simulated)
+        </Notification>
+    );
+  };
+
+
   return (
     <>
-      <div className="flex gap-1 items-end mb-3 ">
-        <NavLink to="/sales-leads/wall-listing">
-          <h6 className="font-semibold hover:text-primary">Wall Listing</h6>
-        </NavLink>
-        <BiChevronRight size={22} color="black" />
-        <h6 className="font-semibold text-primary">Add New Wall</h6>
-      </div>
+        <div className="flex gap-1 items-end mb-3 ">
+            <NavLink to="/sales-leads/wall-listing">
+                <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Wall Listing</h6>
+            </NavLink>
+            <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
+            <h6 className="font-semibold text-primary-600 dark:text-primary-400">Add New Wall Item</h6>
+        </div>
       <Card>
         <Form
           id="wallItemAddForm"
           onSubmit={formMethods.handleSubmit(onFormSubmit)}
           className="flex flex-col gap-y-4"
         >
-          <div className="grid md:grid-cols-3 gap-4">
-            {/* --- Basic Info --- */}
+          <div className="grid md:grid-cols-3 gap-4 p-4">
+            {/* Row 1 */}
             <FormItem
-              label="Listing ID"
-              invalid={!!formMethods.formState.errors.listing_id}
-              errorMessage={formMethods.formState.errors.listing_id?.message}
+                label="Product Name"
+                invalid={!!formMethods.formState.errors.product_name}
+                errorMessage={formMethods.formState.errors.product_name?.message}
             >
-              <Controller
-                name="listing_id"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="Enter Listing ID" />
-                )}
-              />
+                <Controller
+                    name="product_name"
+                    control={formMethods.control}
+                    render={({ field }) => (
+                        <UiSelect
+                            options={dummyProductSpecsForSelect.map(spec => ({
+                                value: spec.name,
+                                label: spec.name,
+                            }))}
+                            {...field}
+                            value={
+                                dummyProductSpecsForSelect
+                                    .map(spec => ({ value: spec.name, label: spec.name }))
+                                    .find(opt => opt.value === field.value) || null
+                            }
+                            onChange={option => field.onChange(option ? option.value : "")}
+                            placeholder="Select Product Name"
+                            isClearable
+                        />
+                    )}
+                />
             </FormItem>
             <FormItem
-              label="Product Name"
-              invalid={!!formMethods.formState.errors.product_name}
-              errorMessage={formMethods.formState.errors.product_name?.message}
+                label="Company Name"
+                invalid={!!formMethods.formState.errors.company_name}
+                errorMessage={formMethods.formState.errors.company_name?.message}
             >
-              <Controller
-                name="product_name"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="Enter Product Name" />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Company Name"
-              invalid={!!formMethods.formState.errors.company_name}
-              errorMessage={formMethods.formState.errors.company_name?.message}
-            >
-              <Controller
-                name="company_name"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="Enter Company Name" />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Company ID (Optional)"
-              invalid={!!formMethods.formState.errors.companyId}
-              errorMessage={formMethods.formState.errors.companyId?.message}
-            >
-              <Controller
-                name="companyId"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value || ""}
-                    placeholder="Enter Company ID"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Brand"
-              invalid={!!formMethods.formState.errors.brand}
-              errorMessage={formMethods.formState.errors.brand?.message}
-            >
-              <Controller
-                name="brand"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="Enter Brand" />
-                )}
-              />
-            </FormItem>
-
-            {/* --- Contact Info --- */}
-            <FormItem
-              label="Contact Person"
-              invalid={!!formMethods.formState.errors.contact_person_name}
-              errorMessage={
-                formMethods.formState.errors.contact_person_name?.message
-              }
-            >
-              <Controller
-                name="contact_person_name"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="Contact Person Name" />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Contact Email"
-              invalid={!!formMethods.formState.errors.contact_person_email}
-              errorMessage={
-                formMethods.formState.errors.contact_person_email?.message
-              }
-            >
-              <Controller
-                name="contact_person_email"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input type="email" {...field} placeholder="Contact Email" />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Contact Phone"
-              invalid={!!formMethods.formState.errors.contact_person_phone}
-              errorMessage={
-                formMethods.formState.errors.contact_person_phone?.message
-              }
-            >
-              <Controller
-                name="contact_person_phone"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="Contact Phone" />
-                )}
-              />
-            </FormItem>
-
-            {/* --- Product Details --- */}
-            <FormItem
-              label="Product Category"
-              invalid={!!formMethods.formState.errors.product_category}
-              errorMessage={
-                formMethods.formState.errors.product_category?.message
-              }
-            >
-              <Controller
-                name="product_category"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="Product Category" />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Product Subcategory"
-              invalid={!!formMethods.formState.errors.product_subcategory}
-              errorMessage={
-                formMethods.formState.errors.product_subcategory?.message
-              }
-            >
-              <Controller
-                name="product_subcategory"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value || ""}
-                    placeholder="Product Subcategory (Optional)"
-                  />
-                )}
-              />
+                <Controller
+                    name="company_name"
+                    control={formMethods.control}
+                    render={({ field }) => (
+                        <UiSelect
+                            options={[
+                                { value: "Acme Corp", label: "Acme Corp" },
+                                { value: "Globex Inc", label: "Globex Inc" },
+                                { value: "Stark Industries", label: "Stark Industries" },
+                                { value: "Wayne Enterprises", label: "Wayne Enterprises" },
+                            ]}
+                            {...field}
+                            value={
+                                [
+                                    { value: "Acme Corp", label: "Acme Corp" },
+                                    { value: "Globex Inc", label: "Globex Inc" },
+                                    { value: "Stark Industries", label: "Stark Industries" },
+                                    { value: "Wayne Enterprises", label: "Wayne Enterprises" },
+                                ].find(opt => opt.value === field.value) || null
+                            }
+                            onChange={option => field.onChange(option ? option.value : "")}
+                            placeholder="Select Company Name"
+                            isClearable
+                        />
+                    )}
+                />
             </FormItem>
             <FormItem
               label="Quantity"
               invalid={!!formMethods.formState.errors.qty}
               errorMessage={formMethods.formState.errors.qty?.message}
             >
-              <Controller
-                name="qty"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <InputNumber {...field} placeholder="Enter Quantity" />
-                )}
-              />
+              <Controller name="qty" control={formMethods.control} render={({ field }) => (<InputNumber {...field} placeholder="Enter Quantity" /> )} />
             </FormItem>
+
+            {/* Row 2 */}
             <FormItem
               label="Price"
               invalid={!!formMethods.formState.errors.price}
               errorMessage={formMethods.formState.errors.price?.message}
             >
-              <Controller
-                name="price"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <InputNumber
-                    {...field}
-                    value={field.value ?? undefined}
-                    placeholder="Enter Price (Optional)"
-                  />
-                )}
-              />
+              <Controller name="price" control={formMethods.control} render={({ field }) => ( <InputNumber {...field} value={field.value ?? undefined} placeholder="Enter Price (Optional)" /> )} />
             </FormItem>
-
-            {/* --- Status & Intent --- */}
             <FormItem
               label="Intent (Want to)"
               invalid={!!formMethods.formState.errors.intent}
               errorMessage={formMethods.formState.errors.intent?.message}
             >
-              <Controller
-                name="intent"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    options={intentOptions}
-                    {...field}
-                    placeholder="Select Intent"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Record Status (Admin)"
-              invalid={!!formMethods.formState.errors.recordStatus}
-              errorMessage={formMethods.formState.errors.recordStatus?.message}
-            >
-              <Controller
-                name="recordStatus"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    options={recordStatusOptions}
-                    {...field}
-                    placeholder="Select Record Status"
-                  />
-                )}
-              />
+              <Controller name="intent" control={formMethods.control} render={({ field }) => ( <UiSelect options={intentOptions} {...field} placeholder="Select Intent" /> )} />
             </FormItem>
             <FormItem
               label="Product Status (Stock)"
               invalid={!!formMethods.formState.errors.productStatus}
               errorMessage={formMethods.formState.errors.productStatus?.message}
             >
-              <Controller
-                name="productStatus"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    options={productStatusOptions}
-                    {...field}
-                    placeholder="Select Product Status"
-                  />
-                )}
-              />
+              <Controller name="productStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={productStatusOptions} {...field} placeholder="Select Product Stock Status" /> )} />
+            </FormItem>
+
+            {/* Row 3 */}
+            <FormItem
+              label="Product Specification"
+              invalid={!!formMethods.formState.errors.productSpecId}
+              errorMessage={formMethods.formState.errors.productSpecId?.message}
+            >
+              <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
+                  <UiSelect options={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name }))} {...field} value={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name })).find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Product Specification (Optional)" />
+                )} />
             </FormItem>
             <FormItem
               label="Device Condition"
               invalid={!!formMethods.formState.errors.deviceCondition}
-              errorMessage={
-                formMethods.formState.errors.deviceCondition?.message
-              }
+              errorMessage={formMethods.formState.errors.deviceCondition?.message}
             >
-              <Controller
-                name="deviceCondition"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    options={deviceConditionOptions}
-                    {...field}
-                    value={
-                      deviceConditionOptions.find(
-                        (opt) => opt.value === field.value
-                      ) || null
-                    }
-                    onChange={(option) =>
-                      field.onChange(option ? option.value : null)
-                    }
-                    placeholder="Select Device Condition (Optional)"
-                  />
-                )}
-              />
+              <Controller name="deviceCondition" control={formMethods.control} render={({ field }) => (
+                  <Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => (<Radio key={opt.value} value={opt.value}>{opt.label}</Radio>))} </Radio.Group>
+                )} />
             </FormItem>
+            <FormItem
+              label="Color"
+              invalid={!!formMethods.formState.errors.color}
+              errorMessage={formMethods.formState.errors.color?.message}
+            >
+              <Controller name="color" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="Enter Color (Optional)" /> )} />
+            </FormItem>
+            
+            {/* Row 4 */}
             <FormItem
               label="Cartoon Type"
               invalid={!!formMethods.formState.errors.cartoonTypeId}
               errorMessage={formMethods.formState.errors.cartoonTypeId?.message}
             >
-              <Controller
-                name="cartoonTypeId"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    options={dummyCartoonTypes.map((ct) => ({
-                      value: ct.id,
-                      label: ct.name,
-                    }))}
-                    {...field}
-                    value={
-                      dummyCartoonTypes
-                        .map((ct) => ({ value: ct.id, label: ct.name }))
-                        .find((opt) => opt.value === field.value) || null
-                    }
-                    onChange={(option) =>
-                      field.onChange(option ? option.value : null)
-                    }
-                    placeholder="Select Cartoon Type (Optional)"
-                  />
-                )}
-              />
+              <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (
+                  <UiSelect options={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name, }))} {...field} value={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name })).find((opt) => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Cartoon Type (Optional)" />
+                )} />
+            </FormItem>
+            <FormItem
+              label="Dispatch Status"
+              invalid={!!formMethods.formState.errors.dispatchStatus}
+              errorMessage={formMethods.formState.errors.dispatchStatus?.message}
+            >
+              <Controller name="dispatchStatus" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., Ready to Ship (Optional)" /> )} />
+            </FormItem>
+            <FormItem
+              label="Dispatch Mode"
+              invalid={!!formMethods.formState.errors.dispatchMode}
+              errorMessage={formMethods.formState.errors.dispatchMode?.message}
+            >
+              <Controller name="dispatchMode" control={formMethods.control} render={({ field }) => ( <UiSelect options={dispatchModeOptions} {...field} placeholder="Select Dispatch Mode (Optional)" /> )} />
             </FormItem>
 
-            {/* --- Listing Config --- */}
+            {/* Row 5 */}
+            <FormItem
+              label="Payment Term"
+              invalid={!!formMethods.formState.errors.paymentTermId}
+              errorMessage={formMethods.formState.errors.paymentTermId?.message}
+            >
+              <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
+                  <UiSelect options={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name }))} {...field} value={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name })).find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Payment Term (Optional)" />
+                )} />
+            </FormItem>
+            <FormItem
+              label="ETA"
+              invalid={!!formMethods.formState.errors.eta}
+              errorMessage={formMethods.formState.errors.eta?.message}
+            >
+              <Controller name="eta" control={formMethods.control} render={({ field }) => ( <DatePicker {...field} value={field.value} placeholder="Select ETA (Optional)" inputFormat="YYYY-MM-DD" /> )} />
+            </FormItem>
+            <FormItem
+              label="Location"
+              invalid={!!formMethods.formState.errors.location}
+              errorMessage={formMethods.formState.errors.location?.message}
+            >
+              <Controller name="location" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="Enter Location (Optional)" /> )} />
+            </FormItem>
+
+            {/* Row 6: Listing Configuration */}
             <FormItem
               label="Listing Type"
-              invalid={!!formMethods.formState.errors.listing_type}
-              errorMessage={formMethods.formState.errors.listing_type?.message}
+              invalid={!!formMethods.formState.errors.listingType}
+              errorMessage={formMethods.formState.errors.listingType?.message}
             >
-              <Controller
-                name="listing_type"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="e.g., featured, standard" />
-                )}
-              />
+              <Controller name="listingType" control={formMethods.control} render={({ field }) => ( <UiSelect options={listingTypeOptions} {...field} placeholder="Select Listing Type" /> )} />
             </FormItem>
             <FormItem
               label="Visibility"
               invalid={!!formMethods.formState.errors.visibility}
               errorMessage={formMethods.formState.errors.visibility?.message}
             >
-              <Controller
-                name="visibility"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="e.g., public, private" />
-                )}
-              />
+              <Controller name="visibility" control={formMethods.control} render={({ field }) => ( <UiSelect options={visibilityOptions} {...field} placeholder="Select Visibility" /> )} />
             </FormItem>
-            <FormItem
+             <FormItem
               label="Priority"
               invalid={!!formMethods.formState.errors.priority}
               errorMessage={formMethods.formState.errors.priority?.message}
             >
-              <Controller
-                name="priority"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="e.g., high, medium, low" />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Assigned To"
-              invalid={!!formMethods.formState.errors.assigned_to}
-              errorMessage={formMethods.formState.errors.assigned_to?.message}
-            >
-              <Controller
-                name="assigned_to"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value || ""}
-                    placeholder="Assigned team/person (Optional)"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Listing URL"
-              invalid={!!formMethods.formState.errors.listing_url}
-              errorMessage={formMethods.formState.errors.listing_url?.message}
-            >
-              <Controller
-                name="listing_url"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    type="url"
-                    {...field}
-                    value={field.value || ""}
-                    placeholder="https://example.com/listing (Optional)"
-                  />
-                )}
-              />
+              <Controller name="priority" control={formMethods.control} render={({ field }) => ( <UiSelect options={priorityOptions} {...field} placeholder="Select Priority" /> )} />
             </FormItem>
 
-            {/* --- Metrics --- */}
+            {/* Row 7: Admin & Active Hours */}
             <FormItem
-              label="Rating (0-5)"
-              invalid={!!formMethods.formState.errors.rating}
-              errorMessage={formMethods.formState.errors.rating?.message}
+              label="Admin Status"
+              invalid={!!formMethods.formState.errors.adminStatus}
+              errorMessage={formMethods.formState.errors.adminStatus?.message}
             >
-              <Controller
-                name="rating"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <InputNumber
-                    {...field}
-                    value={field.value ?? undefined}
-                    min={0}
-                    max={5}
-                    step={0.1}
-                    placeholder="Rating (Optional)"
-                  />
-                )}
-              />
+              <Controller name="adminStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={adminStatusOptions} {...field} placeholder="Select Admin Status" /> )} />
             </FormItem>
             <FormItem
-              label="Reviews Count"
-              invalid={!!formMethods.formState.errors.reviews_count}
-              errorMessage={formMethods.formState.errors.reviews_count?.message}
+              label="Assigned Team"
+              invalid={!!formMethods.formState.errors.assignedTeamId}
+              errorMessage={formMethods.formState.errors.assignedTeamId?.message}
             >
-              <Controller
-                name="reviews_count"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <InputNumber
-                    {...field}
-                    value={field.value ?? undefined}
-                    min={0}
-                    placeholder="Number of Reviews (Optional)"
-                  />
-                )}
-              />
+              <Controller name="assignedTeamId" control={formMethods.control} render={({ field }) => (
+                  <UiSelect options={assignedTeamOptions.map(team => ({ value: team.value, label: team.label }))} {...field} value={assignedTeamOptions.map(team => ({value: team.value, label: team.label})).find(opt => opt.value === field.value) || null} onChange={opt => field.onChange(opt ? opt.value : null)} placeholder="Select Assigned Team (Optional)" />
+                )} />
             </FormItem>
-
-            {/* --- Descriptions & Policies (col-span-2) --- */}
-            <FormItem
-              label="Product Description"
-              className="md:col-span-2"
-              invalid={!!formMethods.formState.errors.product_description}
-              errorMessage={
-                formMethods.formState.errors.product_description?.message
-              }
+             <FormItem
+              label="Active Hours"
+              invalid={!!formMethods.formState.errors.activeHours}
+              errorMessage={formMethods.formState.errors.activeHours?.message}
             >
-              <Controller
-                name="product_description"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Textarea
-                    {...field}
-                    value={field.value || ""}
-                    rows={3}
-                    placeholder="Detailed product description (Optional)"
-                  />
-                )}
-              />
+              <Controller name="activeHours" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM, 24/7" /> )} />
+            </FormItem>
+            
+            {/* Row 8: URL and Policies */}
+             <FormItem
+              label="Product URL"
+              className="md:col-span-1"
+              invalid={!!formMethods.formState.errors.productUrl}
+              errorMessage={formMethods.formState.errors.productUrl?.message}
+            >
+              <Controller name="productUrl" control={formMethods.control} render={({ field }) => ( <Input type="url" {...field} value={field.value || ''} placeholder="https://example.com/product (Optional)" /> )} />
             </FormItem>
             <FormItem
-              label="Product Specifications"
-              className="md:col-span-2"
-              invalid={!!formMethods.formState.errors.product_specs}
-              errorMessage={formMethods.formState.errors.product_specs?.message}
+              label="Warranty Info"
+              className="md:col-span-2" // Span 2 for textarea
+              invalid={!!formMethods.formState.errors.warrantyInfo}
+              errorMessage={formMethods.formState.errors.warrantyInfo?.message}
             >
-              <Controller
-                name="product_specs"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Textarea
-                    {...field}
-                    value={field.value || ""}
-                    rows={3}
-                    placeholder="Technical specifications (Optional)"
-                  />
-                )}
-              />
+              <Controller name="warrantyInfo" control={formMethods.control} render={({ field }) => ( <Input textArea {...field} value={field.value || ""} rows={2} placeholder="Enter warranty details (Optional)" /> )} />
             </FormItem>
-            <FormItem
-              label="Product Images (comma-separated URLs)"
-              className="md:col-span-2"
-              invalid={!!formMethods.formState.errors.product_images}
-              errorMessage={formMethods.formState.errors.product_images?.message?.toString()}
-            >
-              <Controller
-                name="product_images"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Textarea
-                    value={
-                      Array.isArray(field.value) ? field.value.join(", ") : ""
-                    }
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter((s) => s)
-                      )
-                    }
-                    rows={2}
-                    placeholder="https://img1.com/a.jpg, https://img2.com/b.png (Optional)"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Shipping Options"
-              className="md:col-span-2"
-              invalid={!!formMethods.formState.errors.shipping_options}
-              errorMessage={
-                formMethods.formState.errors.shipping_options?.message
-              }
-            >
-              <Controller
-                name="shipping_options"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value || ""}
-                    placeholder="e.g., Courier, Local Pickup (Optional)"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Payment Methods"
-              className="md:col-span-2"
-              invalid={!!formMethods.formState.errors.payment_method}
-              errorMessage={
-                formMethods.formState.errors.payment_method?.message
-              }
-            >
-              <Controller
-                name="payment_method"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value || ""}
-                    placeholder="e.g., Online, COD (Optional)"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Warranty"
-              className="md:col-span-2"
-              invalid={!!formMethods.formState.errors.warranty}
-              errorMessage={formMethods.formState.errors.warranty?.message}
-            >
-              <Controller
-                name="warranty"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value || ""}
-                    placeholder="e.g., 1 Year Manufacturer Warranty (Optional)"
-                  />
-                )}
-              />
-            </FormItem>
+            
             <FormItem
               label="Return Policy"
-              className="md:col-span-2"
-              invalid={!!formMethods.formState.errors.return_policy}
-              errorMessage={formMethods.formState.errors.return_policy?.message}
+              className="md:col-span-3" // Span 3 for full width
+              invalid={!!formMethods.formState.errors.returnPolicy}
+              errorMessage={formMethods.formState.errors.returnPolicy?.message}
             >
-              <Controller
-                name="return_policy"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value || ""}
-                    placeholder="e.g., 7 Days Return (Optional)"
-                  />
-                )}
-              />
+              <Controller name="returnPolicy" control={formMethods.control} render={({ field }) => ( <Input textArea {...field} value={field.value || ""} rows={3} placeholder="Enter return policy (Optional)" /> )} />
             </FormItem>
+
+
             <FormItem
               label="Internal Remarks"
-              className="md:col-span-2"
+              className="md:col-span-3"
               invalid={!!formMethods.formState.errors.internalRemarks}
               errorMessage={
                 formMethods.formState.errors.internalRemarks?.message
               }
             >
-              <Controller
-                name="internalRemarks"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Textarea
-                    {...field}
-                    value={field.value || ""}
-                    rows={3}
-                    placeholder="Internal notes for this listing (Optional)"
-                  />
-                )}
-              />
+              <Controller name="internalRemarks" control={formMethods.control} render={({ field }) => ( <Input textArea {...field} value={field.value || ""} rows={3} placeholder="Internal notes for this listing (Optional)" /> )} />
             </FormItem>
           </div>
         </Form>
       </Card>
-      {/* Footer with Save and Cancel buttons */}
+      
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
-        <Button type="button" className="px-4 py-2">
-          Cancel
-        </Button>
-        <Button type="button" className="px-4 py-2">
-          Draft
-        </Button>
-        <Button type="submit" className="px-4 py-2" variant="solid">
-          Save
+        <Button type="button" onClick={handleCancel} disabled={isSubmitting} > Cancel </Button>
+        <Button type="button" onClick={handleSaveAsDraft} disabled={isSubmitting} > Draft </Button>
+        <Button type="submit" form="wallItemAddForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !formMethods.formState.isDirty || !formMethods.formState.isValid} >
+          {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </Card>
     </>
