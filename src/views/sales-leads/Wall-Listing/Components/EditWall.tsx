@@ -307,7 +307,7 @@ const WallItemEdit = () => {
           <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Wall Listing</h6>
         </NavLink>
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
-        <h6 className="font-semibold text-primary-600 dark:text-primary-400">Edit Wall Item</h6>
+        <h6 className="font-semibold text-primary">Edit Wall Item</h6>
       </div>
       <Card>
         <Form
