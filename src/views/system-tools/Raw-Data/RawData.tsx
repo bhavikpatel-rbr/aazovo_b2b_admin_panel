@@ -25,25 +25,17 @@ import { Drawer, Form, FormItem, Input, Tag, Dialog } from "@/components/ui"; //
 // Icons
 import {
   TbPencil,
-  TbTrash,
   TbChecks,
-  TbSearch,
-  TbFilter,
   TbPlus,
-  TbCloudUpload,
   TbEye,
-  TbBan, // View, Blacklist
   TbUser,
   TbBuilding,
   TbMail,
   TbPhone,
-  TbCategory,
-  TbTag,
-  TbStar,
+  TbShare,
+  TbDotsVertical,
   TbMapPin,
-  TbFileText,
-  TbCalendar,
-  TbMoodCrazyHappy, // Section icons
+ // Section icons
 } from "react-icons/tb";
 
 // Types
@@ -318,77 +310,50 @@ function exportLeadsToCsv(filename: string, rows: LeadItem[]) {
   return false;
 }
 
-// --- ActionColumn ---
+// --- ActionColumn (can be the more comprehensive one) ---
 const ActionColumn = ({
-  item,
   onEdit,
-  onView,
-  onDelete,
-  onBlacklist,
+  onViewDetail,
+  onChangeStatus,
 }: {
-  item: LeadItem; // Pass the whole item to decide on blacklist action
   onEdit: () => void;
-  onView: () => void;
-  onDelete: () => void;
-  onBlacklist: () => void;
+  onViewDetail: () => void;
+  onChangeStatus: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Tooltip title="View Details">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-blue-500"
-          )}
-          role="button"
-          onClick={onView}
-        >
-          <TbEye />
-        </div>
-      </Tooltip>
-      <Tooltip title="Edit Lead">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-500"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      {item.status !== "blacklist" && (
-        <Tooltip title="Blacklist Lead">
-          <div
-            className={classNames(
-              iconButtonClass,
-              hoverBgClass,
-              "text-gray-500 hover:text-orange-500"
-            )}
-            role="button"
-            onClick={onBlacklist}
-          >
-            <TbBan />
-          </div>
-        </Tooltip>
-      )}
-      <Tooltip title="Delete Lead">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-500"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
+        </div>
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -1037,7 +1002,7 @@ const LeadManagement = () => {
                 Lead Management
             </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Lead
+              Add New
             </Button>
           </div>
           {/* <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} searchPlaceholder="Search leads..." /> */}
@@ -1107,20 +1072,6 @@ const LeadManagement = () => {
         width={900} // Wider drawer for more fields
         footer={
           <div className="text-right w-full">
-            {!editingItem && ( // "Save & Add Another" only for Add mode
-              <Button
-                size="sm"
-                variant="outline"
-                type="button"
-                onClick={() =>
-                  formMethods.handleSubmit((data) => onSubmit(data, true))()
-                }
-                loading={isSubmitting}
-                disabled={!formMethods.formState.isValid || isSubmitting}
-              >
-                Save & Add Another
-              </Button>
-            )}
             <div className={editingItem ? "w-full text-right" : ""}>
               {" "}
               {/* Adjust spacing if "Save & Add Another" is present */}

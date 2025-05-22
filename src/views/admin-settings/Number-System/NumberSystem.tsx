@@ -22,14 +22,14 @@ import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 // Icons
 import {
   TbPencil,
-  TbTrash,
+  TbDotsVertical,
+  TbShare,
+  TbEye,
   TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
-  TbSettingsCog,
-  TbWorld,
 } from "react-icons/tb";
 
 // Types
@@ -215,43 +215,50 @@ function exportNumberSystemsToCsv(filename: string, rows: NumberSystemItem[]) {
   return false;
 }
 
-// --- ActionColumn, Search, TableTools, SelectedFooter (No changes needed to these sub-components themselves) ---
+// --- ActionColumn (can be the more comprehensive one) ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
+  onViewDetail,
+  onChangeStatus,
 }: {
   onEdit: () => void;
-  onDelete: () => void;
+  onViewDetail: () => void;
+  onChangeStatus: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
-      <Tooltip title="Edit Number System">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Number System">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
+        </div>
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -266,7 +273,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Search by name, ID, or prefix..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -846,8 +853,8 @@ const NumberSystems = () => {
       {
         header: "Actions",
         id: "action",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
-        size: 100,
+        size: 200,
+        meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
@@ -995,10 +1002,10 @@ const NumberSystems = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-              <TbSettingsCog /> Numbering Systems
-            </h3>
+              Numbering Systems
+            </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New System
+              Add New
             </Button>
           </div>
           <ItemTableTools

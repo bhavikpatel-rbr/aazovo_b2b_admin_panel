@@ -29,15 +29,13 @@ import { Dialog, Drawer, Form, FormItem, Input } from "@/components/ui";
 // Icons
 import {
   TbPencil,
-  TbTrash,
-  TbChecks,
   TbSearch,
   TbFilter,
-  TbPlus,
   TbCloudUpload,
   TbEye,
   TbUserCircle,
-  TbHistory,
+  TbShare,
+  TbDotsVertical,
 } from "react-icons/tb";
 
 // Types
@@ -248,48 +246,52 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
   return false;
 }
 
-// --- ActionColumn Component (Simplified: View, optional Edit) ---
+// --- ActionColumn (can be the more comprehensive one) ---
 const ActionColumn = ({
-  onView,
   onEdit,
+  onViewDetail,
+  onChangeStatus,
 }: {
-  onView: () => void;
-  onEdit?: () => void;
+  onEdit: () => void;
+  onViewDetail: () => void;
+  onChangeStatus: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
-      <Tooltip title="View Details">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-300"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
-          onClick={onView}
+          onClick={onEdit}
+        >
+          <TbPencil />
+        </div>
+      </Tooltip>
+      <Tooltip title="View">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+          role="button"
+          onClick={onViewDetail}
         >
           <TbEye />
         </div>
       </Tooltip>
-      {onEdit && ( // Only show edit if onEdit handler is provided
-        <Tooltip title="Edit Log (Admin)">
-          <div
-            className={classNames(
-              iconButtonClass,
-              hoverBgClass,
-              "text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-300"
-            )}
-            role="button"
-            onClick={onEdit}
-          >
-            <TbPencil />
-          </div>
-        </Tooltip>
-      )}
-      {/* Delete is generally not provided for logs */}
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
+        </div>
+      </Tooltip>
     </div>
   );
 };
@@ -748,9 +750,9 @@ const ChangeLogListing = () => {
       },
       {
         header: "Actions",
-        id: "actions",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
-        size: 80,
+        id: "action",
+        size: 200,
+        meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
             onView={() => openViewDialog(props.row.original)}
@@ -892,8 +894,8 @@ const ChangeLogListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-              <TbHistory /> Change Log Viewer
-            </h3>
+              Change Log Viewer
+            </h5>
             {/* Add New button is typically not present for logs. Kept for structural similarity if needed. */}
             {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add Log Entry (Admin)</Button> */}
           </div>

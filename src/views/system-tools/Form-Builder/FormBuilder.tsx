@@ -34,18 +34,17 @@ import {
 // Icons
 import {
   TbPencil,
-  TbTrash,
   TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
-  TbCopy,
-  TbSwitchHorizontal,
   TbEye,
   TbFileDescription,
   TbListDetails,
   TbQuestionMark,
+  TbDotsVertical,
+  TbShare,
   TbX,
 } from "react-icons/tb";
 
@@ -307,88 +306,50 @@ function exportFormsToCsv(filename: string, rows: FormBuilderItem[]) {
   return false;
 }
 
-// --- ActionColumn Component ---
+// --- ActionColumn (can be the more comprehensive one) ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
+  onViewDetail,
   onChangeStatus,
-  onClone,
-  onView,
 }: {
   onEdit: () => void;
-  onDelete: () => void;
+  onViewDetail: () => void;
   onChangeStatus: () => void;
-  onClone: () => void;
-  onView: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-1.5">
-      <Tooltip title="View Details">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-300"
-          )}
-          role="button"
-          onClick={onView}
-        >
-          <TbEye />
-        </div>
-      </Tooltip>
-      <Tooltip title="Edit Form">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-300"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Clone Form">
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-purple-500 dark:hover:text-purple-300"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onClone}
+          onClick={onViewDetail}
         >
-          <TbCopy />
+          <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Change Status">
+      <Tooltip title="Share">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-amber-500 dark:hover:text-amber-300"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
-          onClick={onChangeStatus}
         >
-          <TbSwitchHorizontal />
+          <TbShare />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Form">
+      <Tooltip title="More">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-300"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
           role="button"
-          onClick={onDelete}
         >
-          <TbTrash />
+          <TbDotsVertical />
         </div>
       </Tooltip>
     </div>
@@ -407,7 +368,7 @@ const FormBuilderSearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Search forms by name or ID..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -1210,10 +1171,10 @@ const FormBuilder = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-              <TbFileDescription /> Form Builder
-            </h3>
+              Form Builder
+            </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Create New Form
+              Add New
             </Button>
           </div>
           <FormBuilderTableTools
@@ -1375,19 +1336,10 @@ const FormBuilder = () => {
         onClose={() => setIsFilterDrawerOpen(false)}
         onRequestClose={() => setIsFilterDrawerOpen(false)}
         footer={
-          <div className="text-right w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
+          <div className="text-right w-full gap-3">
+            <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">
+              Clear Filters
             </Button>
-            <div>
-              <Button
-                size="sm"
-                className="mr-2"
-                onClick={() => setIsFilterDrawerOpen(false)}
-                type="button"
-              >
-                Cancel
-              </Button>
               <Button
                 size="sm"
                 variant="solid"
@@ -1396,7 +1348,6 @@ const FormBuilder = () => {
               >
                 Apply Filters
               </Button>
-            </div>
           </div>
         }
       >

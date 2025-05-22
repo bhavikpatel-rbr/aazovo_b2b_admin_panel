@@ -24,16 +24,16 @@ import Textarea from "@/views/ui-components/forms/Input/Textarea";
 // Icons
 import {
   TbPencil,
-  TbTrash,
   TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
   TbWorldWww,
-  TbCurrencyDollar,
   TbSettingsCog,
-  TbCode,
+  TbDotsVertical,
+  TbShare,
+  TbEye,
 } from "react-icons/tb";
 
 // Types
@@ -241,49 +241,56 @@ function exportDomainsToCsv(filename: string, rows: DomainItem[]) {
   return false;
 }
 
-// ActionColumn, ItemSearch, ItemTableTools, DomainsSelectedFooter (No changes to these sub-components)
+// --- ActionColumn (can be the more comprehensive one) ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
+  onViewDetail,
+  onChangeStatus,
 }: {
   onEdit: () => void;
-  onDelete: () => void;
+  onViewDetail: () => void;
+  onChangeStatus: () => void;
 }) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
-      {" "}
-      <Tooltip title="Edit Domain">
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
-      </Tooltip>{" "}
-      <Tooltip title="Delete Domain">
+      </Tooltip>
+      <Tooltip title="View">
         <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onDelete}
+          onClick={onViewDetail}
         >
-          <TbTrash />
+          <TbEye />
         </div>
-      </Tooltip>{" "}
+      </Tooltip>
+      <Tooltip title="Share">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+          role="button"
+        >
+          <TbShare />
+        </div>
+      </Tooltip>
+      <Tooltip title="More">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+          role="button"
+        >
+          <TbDotsVertical />
+        </div>
+      </Tooltip>
     </div>
   );
 };
+
 type ItemSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -888,8 +895,8 @@ const DomainManagementListing = () => {
       {
         header: "Actions",
         id: "action",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
-        size: 100,
+        size: 200,
+        meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
@@ -1066,10 +1073,10 @@ const DomainManagementListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-              <TbWorldWww className="text-xl" /> Domain Management
-            </h3>
+              Domain Management
+            </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Domain
+              Add New
             </Button>
           </div>
           <ItemTableTools
@@ -1170,7 +1177,7 @@ const DomainManagementListing = () => {
                 onClick={() => setIsFilterDrawerOpen(false)}
                 type="button"
               >
-                Cancel
+                Clear Filters
               </Button>{" "}
               <Button
                 size="sm"
@@ -1180,8 +1187,7 @@ const DomainManagementListing = () => {
               >
                 Apply Filters
               </Button>{" "}
-            </div>{" "}
-          </div>
+            </div>
         }
       >
         <Form
