@@ -918,7 +918,7 @@ const HomeCategories = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Home Categories</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New Category
+              Add New
             </Button>
           </div>
           <HomeCategoryTableTools
@@ -1008,7 +1008,7 @@ const HomeCategories = () => {
               loading={isSubmitting}
               disabled={!formMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Adding..." : "Add Category"}
+              {isSubmitting ? "Adding..." : "Save"}
             </Button>
           </div>
         }

@@ -944,10 +944,10 @@ const AutoEmailListing = () => {
               {isSubmitting
                 ? editingItem
                   ? "Saving..."
-                  : "Adding..."
+                  : "Saving..."
                 : editingItem
                 ? "Save Changes"
-                : "Save Changes"}
+                : "Save"}
             </Button>
           </div>
         }

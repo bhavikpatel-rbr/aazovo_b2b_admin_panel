@@ -805,7 +805,7 @@ const RolesListing = () => {
               loading={isSubmitting}
               disabled={!addFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Adding..." : "Add Role"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>{" "}
           </div>
         }

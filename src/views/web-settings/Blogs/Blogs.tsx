@@ -1197,7 +1197,7 @@ const Blogs = () => {
           formId: "addBlogForm",
           methods: addFormMethods,
           onSubmit: onAddBlogSubmit,
-          submitButtonText: "Add Blog",
+          submitButtonText: "Save",
           submittingText: "Adding...",
         },
         {

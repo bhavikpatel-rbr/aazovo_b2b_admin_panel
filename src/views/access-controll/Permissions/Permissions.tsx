@@ -786,7 +786,7 @@ const PermissionsListing = () => {
               loading={isSubmitting}
               disabled={!addFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Adding..." : "Add Permission"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>{" "}
           </div>
         }

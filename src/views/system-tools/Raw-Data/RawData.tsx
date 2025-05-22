@@ -1001,7 +1001,7 @@ const LeadManagement = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-                Raw Data
+                Row Data
             </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New
@@ -1067,7 +1067,7 @@ const LeadManagement = () => {
 
       {/* Add/Edit Drawer */}
       <Drawer
-        title={editingItem ? "Edit Lead" : "Add New Lead"}
+        title={editingItem ? "Edit Lead" : "Add New Row Data"}
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
@@ -1100,7 +1100,7 @@ const LeadManagement = () => {
                     : "Adding..."
                   : editingItem
                   ? "Save Changes"
-                  : "Add Lead"}
+                  : "Save"}
               </Button>
             </div>
           </div>
