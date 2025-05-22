@@ -9,13 +9,13 @@ import { BiChevronRight } from "react-icons/bi";
 const CreateBuyer = () => {
   return (
         <>
-          <div className="flex gap-1 items-end mb-3 ">
-            <NavLink to="/sales-leads/opportunities">
-              <h6 className="font-semibold hover:text-primary">Opportunities</h6>
-            </NavLink>
-            <BiChevronRight size={22} color="black" />
-            <h6 className="font-semibold text-primary">Add New Buyer</h6>
-          </div>
+    <div className="flex gap-1 items-end mb-3 ">
+      <NavLink to="/sales-leads/opportunities">
+        <h6 className="font-semibold hover:text-primary">Opportunities</h6>
+      </NavLink>
+      <BiChevronRight size={22} color="black" />
+      <h6 className="font-semibold text-primary">Add New Buyer</h6>
+    </div>
     <Card>
       <h4 className="mb-6">Create Buyer</h4>
       <div className="grid md:grid-cols-3 gap-4">
