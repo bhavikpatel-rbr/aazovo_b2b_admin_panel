@@ -141,7 +141,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -185,7 +185,7 @@ const DocumentTypeSearch = React.forwardRef<
     <DebouceInput
       ref={ref}
       className="w-full" // Use w-full for better layout in TableTools
-      placeholder="Quick search document types..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -837,7 +837,7 @@ const Documentmaster = () => {
               onClick={closeAddDrawer}
               disabled={isSubmitting}
             >
-              Cancel
+              Clear
             </Button>
             <Button
               size="sm"
@@ -925,14 +925,14 @@ const Documentmaster = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Document Types"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -940,7 +940,7 @@ const Documentmaster = () => {
               form="filterDocumentTypeForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -950,7 +950,7 @@ const Documentmaster = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Document Type Name(s)">
+          <FormItem label="Document Type Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}

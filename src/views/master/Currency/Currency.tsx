@@ -154,7 +154,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -196,7 +196,7 @@ const CurrencySearch = React.forwardRef<HTMLInputElement, CurrencySearchProps>(
       <DebouceInput
         ref={ref}
         className="w-full"
-        placeholder="Quick search currencies..."
+        placeholder="Quick Search..."
         suffix={<TbSearch className="text-lg" />}
         onChange={(e) => onInputChange(e.target.value)}
       />
@@ -1014,14 +1014,14 @@ const Currency = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Currencies"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -1029,7 +1029,7 @@ const Currency = () => {
               form="filterCurrencyForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -1039,7 +1039,7 @@ const Currency = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Currency Code(s)">
+          <FormItem label="Currency Code">
             <Controller
               name="filterCodes"
               control={filterFormMethods.control}
@@ -1054,7 +1054,7 @@ const Currency = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Currency Symbol(s)">
+          <FormItem label="Currency Symbol">
             <Controller
               name="filterSymbols"
               control={filterFormMethods.control}

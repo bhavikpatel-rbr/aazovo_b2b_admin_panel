@@ -226,40 +226,15 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="View">
+      <Tooltip title="Delete">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
           onClick={onViewDetail}
         >
-          <TbEye />
+          <TbTrash />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-          role="button"
-        >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
-        </div>
-      </Tooltip>
-      {/* <Tooltip title="Delete">
-                <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-                    role="button"
-                    onClick={onViewDetail}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip> */}
     </div>
   );
 };
@@ -899,7 +874,7 @@ const AutoEmailListing = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Auto Email Management
+            <h5 className="mb-2 sm:mb-0">Automation Email
             </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New
@@ -987,7 +962,7 @@ const AutoEmailListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Auto Emails"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
@@ -999,7 +974,7 @@ const AutoEmailListing = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Clear Filters
+                Clear
               </Button>
               <Button
                 size="sm"
@@ -1007,7 +982,7 @@ const AutoEmailListing = () => {
                 form="filterAutoEmailForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>
           </div>
         }
@@ -1017,14 +992,14 @@ const AutoEmailListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Email Type(s)">
+          <FormItem label="Email Type">
             <Controller
               name="filterEmailTypes"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Email Type"
+                  placeholder="Select Email Type"
                   options={emailTypeOptions} // Use dynamic options
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -1032,14 +1007,14 @@ const AutoEmailListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by User Name(s)">
+          <FormItem label="User Name">
             <Controller
               name="filterUserNames"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any User Name"
+                  placeholder="Select User Name"
                   options={userNameOptions} // Use dynamic options
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -1047,14 +1022,14 @@ const AutoEmailListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Status"
+                  placeholder="Select Status"
                   options={AUTO_EMAIL_STATUS_OPTIONS}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}

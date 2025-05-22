@@ -273,22 +273,7 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-          role="button"
-        >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
-        </div>
-      </Tooltip>
+      
     </div>
   );
 };
@@ -1148,6 +1133,7 @@ const MessageTemplates = () => {
           onSubmit={addFormMethods.handleSubmit(onAddTemplateSubmit)}
           className="flex flex-col gap-y-4"
         >
+          <div className="md:grid grid-cols-2 gap-3">
           <FormItem
             label="Template Name"
             invalid={!!addFormMethods.formState.errors.name}
@@ -1213,7 +1199,7 @@ const MessageTemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Subject / Title (Optional)">
+          <FormItem label="Subject / Title (Optional)" className="md:col-span-2">
             <Controller
               name="subject"
               control={addFormMethods.control}
@@ -1223,6 +1209,7 @@ const MessageTemplates = () => {
             />
           </FormItem>
           <FormItem
+            className="col-span-2"
             label="Message Body"
             invalid={!!addFormMethods.formState.errors.body}
             errorMessage={addFormMethods.formState.errors.body?.message}
@@ -1231,15 +1218,16 @@ const MessageTemplates = () => {
               name="body"
               control={addFormMethods.control}
               render={({ field }) => (
-                <Textarea
+                <Input
                   {...field}
                   rows={5}
                   placeholder="Enter message body. Use {{variable_name}} for placeholders."
+                  textArea
                 />
               )}
             />
           </FormItem>
-          <FormItem label="Example Variables (Optional)">
+          <FormItem label="Example Variables (Optional)" className="col-span-2">
             <Controller
               name="variables"
               control={addFormMethods.control}
@@ -1251,6 +1239,7 @@ const MessageTemplates = () => {
               )}
             />
           </FormItem>
+          </div>
         </Form>
       </Drawer>
 
@@ -1289,6 +1278,7 @@ const MessageTemplates = () => {
           onSubmit={editFormMethods.handleSubmit(onEditTemplateSubmit)}
           className="flex flex-col gap-y-4"
         >
+          <div className="md:grid grid-cols-2 gap-3">
           <FormItem
             label="Template Name"
             invalid={!!editFormMethods.formState.errors.name}
@@ -1351,7 +1341,7 @@ const MessageTemplates = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Subject / Title (Optional)">
+          <FormItem label="Subject / Title (Optional)" className="col-span-2">
             <Controller
               name="subject"
               control={editFormMethods.control}
@@ -1361,6 +1351,7 @@ const MessageTemplates = () => {
             />
           </FormItem>
           <FormItem
+            className="col-span-2"
             label="Message Body"
             invalid={!!editFormMethods.formState.errors.body}
             errorMessage={editFormMethods.formState.errors.body?.message}
@@ -1369,15 +1360,16 @@ const MessageTemplates = () => {
               name="body"
               control={editFormMethods.control}
               render={({ field }) => (
-                <Textarea
+                <Input
                   {...field}
                   rows={5}
                   placeholder="Enter message body"
+                  textArea
                 />
               )}
             />
           </FormItem>
-          <FormItem label="Example Variables (Optional)">
+          <FormItem label="Example Variables (Optional)" className="col-span-2">
             <Controller
               name="variables"
               control={editFormMethods.control}
@@ -1386,6 +1378,7 @@ const MessageTemplates = () => {
               )}
             />
           </FormItem>
+          </div>
         </Form>
       </Drawer>
 

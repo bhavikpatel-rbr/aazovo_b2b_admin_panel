@@ -212,7 +212,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -254,7 +254,7 @@ const CountrySearch = React.forwardRef<HTMLInputElement, CountrySearchProps>(
       <DebouceInput
         ref={ref}
         className="w-full"
-        placeholder="Quick search countries..."
+        placeholder="Quick Search..."
         suffix={<TbSearch className="text-lg" />}
         onChange={(e) => onInputChange(e.target.value)}
       />
@@ -1194,14 +1194,14 @@ const Countries = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Countries"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -1209,7 +1209,7 @@ const Countries = () => {
               form="filterCountryForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -1219,7 +1219,7 @@ const Countries = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Continent(s)">
+          <FormItem label="Continent">
             <Controller
               name="filterContinentIds"
               control={filterFormMethods.control}
@@ -1234,7 +1234,7 @@ const Countries = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Country Name(s)">
+          <FormItem label="Country Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}
@@ -1249,7 +1249,7 @@ const Countries = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by ISO Code(s)">
+          <FormItem label="ISO Code">
             <Controller
               name="filterIsos"
               control={filterFormMethods.control}

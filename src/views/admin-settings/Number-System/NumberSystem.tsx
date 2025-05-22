@@ -30,6 +30,7 @@ import {
   TbFilter,
   TbPlus,
   TbCloudUpload,
+  TbTrash,
 } from "react-icons/tb";
 
 // Types
@@ -245,7 +246,15 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      <Tooltip title="Delete">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+          role="button"
+        >
+          <TbTrash />
+        </div>
+      </Tooltip>
+      {/* <Tooltip title="Share">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
@@ -260,7 +269,7 @@ const ActionColumn = ({
         >
           <TbDotsVertical />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
@@ -826,26 +835,26 @@ const NumberSystems = () => {
           const remainingCount = names.length - displayLimit;
 
           return (
-            <Tooltip
-              title={names.join(", ")}
-              wrapperClassName="whitespace-nowrap max-w-[200px] overflow-hidden text-ellipsis"
-            >
-              <div className="flex flex-wrap gap-1">
-                {displayedNames.map((name, index) => (
-                  <Tag
-                    key={`${name}-${index}`}
-                    className="bg-gray-100 dark:bg-gray-600"
-                  >
-                    {name}
-                  </Tag>
-                ))}
-                {remainingCount > 0 && (
-                  <Tag className="bg-gray-200 dark:bg-gray-500">
-                    +{remainingCount} more
-                  </Tag>
-                )}
-              </div>
-            </Tooltip>
+            // <Tooltip
+            //   title={names.join(", ")}
+            //   wrapperClassName="whitespace-nowrap max-w-[200px] overflow-hidden text-ellipsis"
+            // >
+            <div className="flex flex-wrap gap-1">
+              {displayedNames.map((name, index) => (
+                <Tag
+                  key={`${name}-${index}`}
+                  className="bg-gray-100 dark:bg-gray-600"
+                >
+                  {name}
+                </Tag>
+              ))}
+              {remainingCount > 0 && (
+                <Tag className="bg-gray-200 dark:bg-gray-500">
+                  +{remainingCount} more
+                </Tag>
+              )}
+            </div>
+            // </Tooltip>
           );
         },
         size: 250,
@@ -1094,15 +1103,12 @@ const NumberSystems = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Number Systems"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>
             <div>
               <Button
                 size="sm"
@@ -1110,7 +1116,7 @@ const NumberSystems = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>
               <Button
                 size="sm"
@@ -1129,7 +1135,7 @@ const NumberSystems = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Countries">
+          <FormItem label="Countries">
             <Controller
               name="filterCountryIds"
               control={filterFormMethods.control}

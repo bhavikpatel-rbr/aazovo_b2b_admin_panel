@@ -378,7 +378,7 @@ const ExportMappingTableTools = ({
         onRequestClose={closeFilterDrawer}
         bodyClass="flex flex-col overflow-hidden"
         footer={
-          <div className="text-right border-t border-gray-200 dark:border-gray-700 w-full py-4 px-6 bg-white dark:bg-gray-800">
+          <div className="text-right w-full ">
             <Button
               size="sm"
               className="mr-2"
@@ -391,10 +391,10 @@ const ExportMappingTableTools = ({
                 )
               }
             >
-              Clear All
+              Clear
             </Button>
             <Button size="sm" variant="solid" type="submit" form="filterForm">
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -403,7 +403,6 @@ const ExportMappingTableTools = ({
           id="filterForm"
           size="sm"
           onSubmit={handleSubmit(exportFiltersSubmitHandler)}
-          className="flex-grow overflow-y-auto p-6 space-y-4"
         >
           <FormItem label="User Role">
             <Controller
@@ -528,7 +527,7 @@ const ExportMappingExport = ({
   if (disabled || allMappings.length === 0) {
     return (
       <Button icon={<TbCloudDownload />} disabled>
-        Export All
+        Export
       </Button>
     );
   }
@@ -543,7 +542,7 @@ const ExportMappingExport = ({
       asyncOnClick={true}
       uFEFF={true} // For better Excel compatibility with UTF-8
     >
-      <Button icon={<TbCloudDownload />}>Export All</Button>
+      <Button icon={<TbCloudDownload />}>Export</Button>
     </CSVLink>
   );
 };

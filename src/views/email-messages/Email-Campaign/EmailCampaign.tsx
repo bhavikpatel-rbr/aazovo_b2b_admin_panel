@@ -337,22 +337,6 @@ const ActionColumn = ({ onViewDetails, onEdit }: { onViewDetails: () => void; on
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-          role="button"
-        >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
-        </div>
-      </Tooltip>
     </div>
   );
 };
@@ -679,7 +663,7 @@ const EmailCampaignListing = () => {
       {
         header: "Campaign Name",
         accessorKey: "campaignName",
-        size: 200,
+        size: 220,
         enableSorting: true,
         cell: (props) =>
           props.getValue() || (
@@ -1148,7 +1132,7 @@ const EmailCampaignListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-              Email Campaign Log
+              Email Campaign
             </h5>
             <Button
               variant="solid"
@@ -1204,7 +1188,7 @@ const EmailCampaignListing = () => {
         onRequestClose={closeCreateDrawer}
         width={700}
         footer={
-          <div className="flex justify-between w-full p-4 border-t dark:border-gray-700">
+          <div className="flex justify-between w-full dark:border-gray-700">
             <div>
               {currentWizardStep > 1 && (
                 <Button

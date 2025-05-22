@@ -141,7 +141,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -185,7 +185,7 @@ const PaymentTermSearch = React.forwardRef<
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Quick search payment terms..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -941,14 +941,14 @@ const PaymentTerms = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Payment Terms"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -956,7 +956,7 @@ const PaymentTerms = () => {
               form="filterPaymentTermForm" // Ensure this matches the form id
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -966,7 +966,7 @@ const PaymentTerms = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Payment Term Name(s)">
+          <FormItem label="Payment Term Name">
             <Controller
               name="filterNames" // This filters by term_name based on options
               control={filterFormMethods.control}

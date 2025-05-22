@@ -142,7 +142,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -186,7 +186,7 @@ const ContinentSearch = React.forwardRef<
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Quick search continents..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -916,14 +916,14 @@ const Continents = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Continents"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -931,7 +931,7 @@ const Continents = () => {
               form="filterContinentForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -941,7 +941,7 @@ const Continents = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Continent Name(s)">
+          <FormItem label="Continent Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}

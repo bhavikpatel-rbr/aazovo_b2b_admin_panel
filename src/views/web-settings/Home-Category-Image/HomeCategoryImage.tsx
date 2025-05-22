@@ -242,7 +242,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -285,7 +285,7 @@ const HomeCategorySearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Search categories by name..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -736,7 +736,7 @@ const HomeCategories = () => {
                 <Avatar
                   key={idx}
                   size={30}
-                  shape="square"
+                  shape="circle"
                   src={img.url || undefined}
                   icon={<TbPhoto />}
                 />
@@ -773,7 +773,7 @@ const HomeCategories = () => {
       {
         header: "Actions",
         id: "action",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
         size: 100,
         cell: (props) => (
           <ActionColumn
@@ -843,7 +843,7 @@ const HomeCategories = () => {
               render={({ field: inputField, fieldState }) => (
                 <Input
                   {...inputField}
-                  type="url"
+                  type="file"
                   placeholder={`Image ${index + 1} URL`}
                   className="flex-grow"
                   isInvalid={!!fieldState.error}
@@ -916,9 +916,7 @@ const HomeCategories = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">
-              <TbCategory /> Manage Home Categories
-            </h3>
+            <h5 className="mb-2 sm:mb-0">Home Categories</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New Category
             </Button>
@@ -1066,15 +1064,12 @@ const HomeCategories = () => {
 
       {/* Filter Drawer */}
       <Drawer
-        title="Filter Home Categories"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={() => setIsFilterDrawerOpen(false)}
         onRequestClose={() => setIsFilterDrawerOpen(false)}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>
             <div>
               <Button
                 size="sm"
@@ -1082,10 +1077,10 @@ const HomeCategories = () => {
                 onClick={() => setIsFilterDrawerOpen(false)}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>
               <Button size="sm" variant="solid" form="filterForm" type="submit">
-                Apply Filters
+                Apply
               </Button>
             </div>
           </div>
@@ -1096,7 +1091,7 @@ const HomeCategories = () => {
           onSubmit={filterForm.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatus"
               control={filterForm.control}
@@ -1111,7 +1106,7 @@ const HomeCategories = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Category Name">
+          <FormItem label="Category Name">
             <Controller
               name="filterCategoryName"
               control={filterForm.control}

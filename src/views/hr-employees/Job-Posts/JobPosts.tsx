@@ -321,7 +321,7 @@ const JobPostsSearch = React.forwardRef<HTMLInputElement, JobPostsSearchProps>(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Search job posts..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -1120,15 +1120,12 @@ const JobPostsListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Job Posts"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>
             <div>
               <Button
                 size="sm"
@@ -1136,7 +1133,7 @@ const JobPostsListing = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>
               <Button
                 size="sm"
@@ -1144,7 +1141,7 @@ const JobPostsListing = () => {
                 form="filterJobPostForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>
             </div>
           </div>
@@ -1155,14 +1152,14 @@ const JobPostsListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Status"
+                  placeholder="Select Status"
                   options={JOB_POST_STATUS_OPTIONS}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -1170,14 +1167,14 @@ const JobPostsListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Department">
+          <FormItem label="Department">
             <Controller
               name="filterDepartment"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Department"
+                  placeholder="Select Department"
                   options={JOB_DEPARTMENT_OPTIONS}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}

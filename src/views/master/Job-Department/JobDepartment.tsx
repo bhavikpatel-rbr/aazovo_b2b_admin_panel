@@ -146,7 +146,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit Job Department">
         <div
           className={classNames(
@@ -656,7 +656,7 @@ const JobDepartment = () => {
       {
         header: "Actions",
         id: "action",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
+        meta: { HeaderClass: "text-center" },
         size: 100,
         cell: (props) => (
           <ActionColumn
@@ -674,9 +674,7 @@ const JobDepartment = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">
-              <TbBuildingSkyscraper /> Job Departments
-            </h3>
+            <h5 className="mb-2 sm:mb-0">Job Departments</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New
             </Button>
@@ -776,15 +774,13 @@ const JobDepartment = () => {
 
       {/* Filter Drawer (Simplified to filter by name) */}
       <Drawer
-        title="Filter Job Departments"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>
+            
             <div>
               <Button
                 size="sm"
@@ -792,7 +788,7 @@ const JobDepartment = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>
               <Button
                 size="sm"
@@ -811,7 +807,7 @@ const JobDepartment = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Department Name(s)">
+          <FormItem label="Department Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}

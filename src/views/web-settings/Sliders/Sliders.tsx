@@ -310,8 +310,8 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-2">
-      <Tooltip title="Clone Slider">
+    <div className="flex items-center justify-center">
+      {/* <Tooltip title="Clone Slider">
         <div
           className={classNames(
             iconButtonClass,
@@ -324,8 +324,8 @@ const ActionColumn = ({
         >
           <TbCopy />
         </div>
-      </Tooltip>
-      <Tooltip title="Change Status">
+      </Tooltip> */}
+      {/* <Tooltip title="Change Status">
         <div
           className={classNames(
             iconButtonClass,
@@ -338,7 +338,7 @@ const ActionColumn = ({
         >
           <TbSwitchHorizontal />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Tooltip title="Edit Slider">
         <div
           className={classNames(
@@ -381,7 +381,7 @@ const SlidersSearch = React.forwardRef<HTMLInputElement, SlidersSearchProps>(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Search sliders (title, id)..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -1240,7 +1240,59 @@ const Sliders = () => {
         </FormItem>
       )}
       <FormItem
-        label={isEditMode ? "New Image (Optional)" : "Image"}
+        label={isEditMode ? "New Image (Optional)" : "Mobile Image"}
+        invalid={!!formMethods.formState.errors.image}
+        errorMessage={formMethods.formState.errors.image?.message as string}
+        isRequired={!isEditMode}
+      >
+        <Controller
+          name="image"
+          control={formMethods.control}
+          render={({ field: { onChange, onBlur, name, ref } }) => (
+            <Input
+              type="file"
+              name={name}
+              ref={ref}
+              onBlur={onBlur}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const file = e.target.files?.[0] || null;
+                onChange(file);
+                const setPreviewUrl = isEditMode
+                  ? setEditFormPreviewUrl
+                  : setAddFormPreviewUrl;
+                const currentPreviewUrl = isEditMode
+                  ? editFormPreviewUrl
+                  : addFormPreviewUrl;
+                if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
+                setPreviewUrl(file ? URL.createObjectURL(file) : null);
+              }}
+              accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
+            />
+          )}
+        />
+        {(isEditMode ? editFormPreviewUrl : addFormPreviewUrl) && (
+          <div className="mt-2">
+            <Avatar
+              src={isEditMode ? editFormPreviewUrl! : addFormPreviewUrl!}
+              size={80}
+              shape="square"
+            />
+            {isEditMode && (
+              <p className="text-xs text-gray-500 mt-1">
+                Preview of new image.
+              </p>
+            )}
+          </div>
+        )}
+        {isEditMode && (
+          <p className="text-xs text-gray-500 mt-1">
+            Leave blank to keep current image. Selecting a new file will replace
+            it.
+          </p>
+        )}
+      </FormItem>
+      <FormItem
+        label={isEditMode ? "New Image (Optional)" : "Web Image"}
         invalid={!!formMethods.formState.errors.image}
         errorMessage={formMethods.formState.errors.image?.message as string}
         isRequired={!isEditMode}
@@ -1429,7 +1481,7 @@ const Sliders = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Manage Sliders</h5>
+            <h5 className="mb-2 sm:mb-0">Sliders</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New Slider
             </Button>
@@ -1544,15 +1596,12 @@ const Sliders = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Sliders"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>
             <div>
               <Button
                 size="sm"
@@ -1560,7 +1609,7 @@ const Sliders = () => {
                 onClick={closeFilterDrawer}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>
               <Button
                 size="sm"
@@ -1568,7 +1617,7 @@ const Sliders = () => {
                 form="filterSliderForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>
             </div>
           </div>
@@ -1584,14 +1633,14 @@ const Sliders = () => {
                             render={({ field }) => <UiSelect isMulti placeholder="Select titles..." options={sliderTitleOptions}
                                                         value={field.value || []} onChange={val => field.onChange(val || [])} />} />
                     </FormItem> */}
-          <FormItem label="Filter by Status(es)">
+          <FormItem label="Status">
             <Controller
               name="filterStatuses"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <UiSelect
                   isMulti
-                  placeholder="Select statuses..."
+                  placeholder="Select status..."
                   options={uiStatusOptions}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}

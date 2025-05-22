@@ -1161,14 +1161,14 @@ const BugReportListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Bug Reports"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">
-              Clear Filters
+              Clear
             </Button>
               <Button
                 size="sm"
@@ -1176,7 +1176,7 @@ const BugReportListing = () => {
                 form="filterBugReportForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>
           </div>
         }
@@ -1186,7 +1186,7 @@ const BugReportListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}
@@ -1204,7 +1204,7 @@ const BugReportListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Reported By (Internal)">
+          <FormItem label="Reported By (Internal)">
             <Controller
               name="filterReportedBy"
               control={filterFormMethods.control}

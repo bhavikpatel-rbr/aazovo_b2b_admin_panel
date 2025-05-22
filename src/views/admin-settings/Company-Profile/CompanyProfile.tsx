@@ -39,6 +39,8 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
+import { BiChevronRight } from "react-icons/bi";
+import { NavLink } from "react-router-dom";
 
 const LOGO_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "";
 
@@ -440,18 +442,19 @@ const CompanyProfile = () => {
 
   // --- Render Functions for Form Sections ---
   const renderLogoFields = () => (
-    <Card
-      className="mb-6"
-      header={
-        <div className="flex items-center gap-2">
-          <TbPhoto />
-          <span>Logos</span>
-        </div>
-      }
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+    // <Card
+    //   className=""
+    //   header={
+    //     <div className="flex items-center gap-2">
+    //       <TbPhoto />
+    //       <span>Logos</span>
+    //     </div>
+    //   }
+    // >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
         <FormItem
           label="Company Logo"
+          
           invalid={!!formMethods.formState.errors.logo}
           errorMessage={formMethods.formState.errors.logo?.message as string}
         >
@@ -542,20 +545,20 @@ const CompanyProfile = () => {
           </p>
         </FormItem>
       </div>
-    </Card>
+    // </Card>
   );
 
   const renderCompanyInfoFields = () => (
-    <Card
-      className="mb-6"
-      header={
-        <div className="flex items-center gap-2">
-          <TbBuildingSkyscraper />
-          <span>Company Information</span>
-        </div>
-      }
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+    // <Card
+    //   className="mb-6"
+    //   header={
+    //     <div className="flex items-center gap-2">
+    //       <TbBuildingSkyscraper />
+    //       <span>Company Information</span>
+    //     </div>
+    //   }
+    // >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
         <FormItem
           label="Company Name"
           className="md:col-span-2"
@@ -584,11 +587,12 @@ const CompanyProfile = () => {
             name="address"
             control={formMethods.control}
             render={({ field }) => (
-              <Textarea
+              <Input
                 {...field}
                 value={field.value ?? ""}
                 rows={3}
                 placeholder="123 Business Rd..."
+                textArea
               />
             )}
           />
@@ -667,20 +671,20 @@ const CompanyProfile = () => {
           />
         </FormItem>
       </div>
-    </Card>
+    // </Card>
   );
 
   const renderSocialMediaFields = () => (
-    <Card
-      className="mb-6"
-      header={
-        <div className="flex items-center gap-2">
-          <TbLink />
-          <span>Social Media Links</span>
-        </div>
-      }
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+    // <Card
+    //   className="mb-6"
+    //   header={
+    //     <div className="flex items-center gap-2">
+    //       <TbLink />
+    //       <span>Social Media Links</span>
+    //     </div>
+    //   }
+    // >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
         <FormItem
           label="Facebook"
           invalid={!!formMethods.formState.errors.facebook}
@@ -778,7 +782,7 @@ const CompanyProfile = () => {
           />
         </FormItem>
       </div>
-    </Card>
+    // </Card>
   );
 
   const isButtonDisabled =

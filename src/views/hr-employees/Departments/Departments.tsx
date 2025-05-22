@@ -154,29 +154,13 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="View">
+      <Tooltip title="Delete">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
           onClick={onViewDetail}
         >
-          <TbEye />
-        </div>
-      </Tooltip>
-      <Tooltip title="Share">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-          role="button"
-        >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
+          <TbTrash />
         </div>
       </Tooltip>
     </div>
@@ -925,7 +909,7 @@ const Departments = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Departments"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
@@ -937,7 +921,7 @@ const Departments = () => {
               onClick={onClearFilters}
               type="button"
             >
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -945,7 +929,7 @@ const Departments = () => {
               form="filterDepartmentForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -955,7 +939,7 @@ const Departments = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Department Name(s)">
+          <FormItem label="Department Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}

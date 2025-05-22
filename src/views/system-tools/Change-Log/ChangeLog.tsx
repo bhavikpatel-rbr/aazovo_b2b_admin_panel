@@ -723,7 +723,7 @@ const ChangeLogListing = () => {
       {
         header: "Entity Type",
         accessorKey: "entityType",
-        size: 120,
+        size: 140,
         enableSorting: true,
         cell: (props) =>
           ENTITY_TYPE_OPTIONS.find((o) => o.value === props.getValue())
@@ -742,7 +742,7 @@ const ChangeLogListing = () => {
         enableSorting: false,
         cell: (props) => (
           <Tooltip title={props.getValue<string>()} wrapperClass="w-full">
-            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-md">
+            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
               {props.getValue<string>()}
             </span>
           </Tooltip>
@@ -751,7 +751,6 @@ const ChangeLogListing = () => {
       {
         header: "Actions",
         id: "action",
-        size: 200,
         meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn

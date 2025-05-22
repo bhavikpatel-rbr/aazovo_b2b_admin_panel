@@ -84,38 +84,38 @@ const emailMessagesNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            {
-                key: 'emailMessages.autoMessages',
-                path: `${EMAIL_MESSAGES_ROUTE}/auto-messages`,
-                title: 'Auto Send Messages',
-                translateKey: 'nav.emailMessages.autoMessages',
-                icon: 'autoMessages',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.emailMessages.autoMessagesDesc',
-                        label: 'Manage automated messages',
-                    },
-                },
-                subMenu: [],
-            },
-            {
-                key: 'emailMessages.messagesSender',
-                path: `${EMAIL_MESSAGES_ROUTE}/messages-sender`,
-                title: 'Messages Sender',
-                translateKey: 'nav.emailMessages.messagesSender',
-                icon: 'messagesSender',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.emailMessages.messagesSenderDesc',
-                        label: 'Manage message senders',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'emailMessages.autoMessages',
+            //     path: `${EMAIL_MESSAGES_ROUTE}/auto-messages`,
+            //     title: 'Auto Send Messages',
+            //     translateKey: 'nav.emailMessages.autoMessages',
+            //     icon: 'autoMessages',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN, USER],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.emailMessages.autoMessagesDesc',
+            //             label: 'Manage automated messages',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
+            // {
+            //     key: 'emailMessages.messagesSender',
+            //     path: `${EMAIL_MESSAGES_ROUTE}/messages-sender`,
+            //     title: 'Messages Sender',
+            //     translateKey: 'nav.emailMessages.messagesSender',
+            //     icon: 'messagesSender',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN, USER],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.emailMessages.messagesSenderDesc',
+            //             label: 'Manage message senders',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
         ],
     },
 ];
