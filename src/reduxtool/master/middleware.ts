@@ -1,11 +1,149 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { addBlogsAsync, addBrandAsync, addBugReportAsync, addcategoryAsync,deletProductListAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addJobDepartmentAsync, addJobPostsAsync, addNumberSystemsAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentTypeAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllNumberSystemsAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteDomainsAsync, deletePriceListAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductSepecificationAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editJobDepartmentAsync, editJobPostsAsync, editNumberSystemsAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getcategoryAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getExportMappingsAsync, getJobDepartmentAsync, getJobPostsAsync, getNumberSystemsAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getSlidersAsync, getSubscribersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getwallListingAsync } from "./services"
+import { addBlogsAsync, addBrandAsync, addBugReportAsync,getLeadAsync, addLeadAsync, editLeadAsync, deleteLeadAsync, deleteAllLeadAsync, addcategoryAsync,deletProductListAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addJobDepartmentAsync, addJobPostsAsync, addNumberSystemsAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentTypeAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllNumberSystemsAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteDomainsAsync, deletePriceListAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductSepecificationAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editJobDepartmentAsync, editJobPostsAsync, editNumberSystemsAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getcategoryAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getExportMappingsAsync, getJobDepartmentAsync, getJobPostsAsync, getNumberSystemsAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getSlidersAsync, getSubscribersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getwallListingAsync } from "./services"
 import { AxiosResponse } from "axios"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
 import { log } from "console"
 import { json } from "d3-fetch"
+
+
+export const getLeadAction = createAsyncThunk(
+  "auth/getLead",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getLeadAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addLeadAction = createAsyncThunk<any, any>(
+  "auth/addLead",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addLeadAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getLeadAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editLeadAction = createAsyncThunk<any, any>(
+  "auth/editLead",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editLeadAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getLeadAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteLeadAction = createAsyncThunk<any, any>(
+  "auth/deleteLead",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteLeadAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getLeadAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllLeadsAction = createAsyncThunk<any, any>(
+  "auth/deleteAllLead",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllLeadAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getLeadAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
 
 export const getUnitAction = createAsyncThunk(
   "auth/getUnit",
