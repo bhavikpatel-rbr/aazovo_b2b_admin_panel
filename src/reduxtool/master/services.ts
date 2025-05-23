@@ -2,6 +2,55 @@ import axiosInstance, { isAxiosError } from "../../services/api/api"
 import { setUser } from "../../services/api/token"
 import { config } from "../../utils/config"
 
+export const getLeadAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/lead/lead`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addLeadAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/lead/lead`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editLeadAsync = async (leadData: any) => {
+  console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteLeadAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/lead/lead/${leadData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllLeadAsync = async (leadData: any) => {
+  try {
+    console.log("leadData", leadData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/lead/lead/delete`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const getUnitAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/master/unit`)
@@ -397,7 +446,7 @@ export const editBrandListAsync = async (brandId: number | string, formData: For
 
 export const deletBrandListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/master/brand/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/master/brand/${unitData}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -465,7 +514,7 @@ export const editProductListAsync = async (brandId: number | string, formData: F
 
 export const deletProductListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/master/brand/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/master/product/${unitData}`)
     return response
   } catch (err) {
     return isAxiosError(err)
