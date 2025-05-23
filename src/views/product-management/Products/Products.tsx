@@ -1029,94 +1029,90 @@ useEffect(() => {
       </Dialog>
 
 
-      {/* View Product Detail Dialog (Inspired by Drawer, Merged Rows, Right Whitespace) */}
-{/* Refined & Tag-Based Product Detail Dialog */}
-<Dialog
-  isOpen={isViewDetailModalOpen}
-  onClose={closeViewDetailModal}
-  size="sm"
-  contentClassName="!p-0 bg-white dark:bg-slate-800 rounded-md shadow-lg overflow-hidden"
->
-  {productToView ? (
-    <div className="text-sm">
-      {/* Header */}
-      <div className="p-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-        <span className="font-semibold text-slate-700 dark:text-white truncate max-w-[200px]">
-          {productToView.name}
-        </span>
-      </div>
+      {/* Refined & Tag-Based Product Detail Dialog - Multi-column */}
+      <Dialog
+        isOpen={isViewDetailModalOpen}
+        onClose={closeViewDetailModal}
+        size="sm"
+        contentClassName="!p-0 bg-white dark:bg-slate-800 rounded-md shadow-lg overflow-hidden"
+      >
+        {productToView ? (
+          <div className="text-sm">
+            {/* Header */}
+            <div className="p-3 border-slate-200 dark:border-slate-700">
+              <span className="font-semibold text-slate-700 dark:text-white truncate block text-center">
+                {productToView.name}
+              </span>
+            </div>
 
-      {/* Content */}
-      <div className="p-3 space-y-3 text-xs text-slate-600 dark:text-slate-300">
-        {/* Thumbnail */}
-        {productToView.thumbImageFullPath && (
-          <div className="flex justify-center">
-            <Avatar size={42} shape="circle" src={productToView.thumbImageFullPath} className="shadow" />
+            {/* Content */}
+            <div className="p-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600 dark:text-slate-300">
+              {/* Column 1: Overview */}
+              <div className="space-y-2">
+                {/* Thumbnail */}
+                {productToView.thumbImageFullPath && (
+                  <div className="flex justify-center">
+                    <Avatar size={42} shape="circle" src={productToView.thumbImageFullPath} className="shadow" />
+                  </div>
+                )}
+                <div><strong>ID:</strong> {productToView.id}</div>
+                <div><strong>SKU:</strong> {productToView.skuCode || '-'}</div>
+                <div>
+                  <strong>Status:</strong>
+                  <Tag className="ml-1 capitalize text-xs px-1 py-0.5 bg-slate-200 dark:bg-slate-700">
+                    {productToView.status || 'Unknown'}
+                  </Tag>
+                </div>
+              </div>
+
+              {/* Column 2: Classification */}
+              <div className="space-y-2">
+                <div>
+                  <strong>Category:</strong>
+                  <Tag className="ml-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                    {productToView.categoryName || '-'}
+                  </Tag>
+                  {productToView.subCategoryName && (
+                    <Tag className="ml-1 bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 text-xs">
+                      {productToView.subCategoryName}
+                    </Tag>
+                  )}
+                </div>
+                <div><strong>Brand:</strong> {productToView.brandName || '-'}</div>
+                <div><strong>Unit:</strong> {productToView.unitName || '-'}</div>
+                <div><strong>Color:</strong> {productToView.color || '-'}</div>
+              </div>
+
+              {/* Column 3: Logistics */}
+              <div className="space-y-2">
+                <div>
+                  <strong>Origin:</strong>
+                  <Tag className="ml-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                    {productToView.countryName || '-'}
+                  </Tag>
+                </div>
+                <div><strong>HSN:</strong> {productToView.hsnCode || '-'}</div>
+                <div><strong>Tax:</strong> {productToView.taxRate ? `${productToView.taxRate}%` : '-'}</div>
+                <div><strong>Packaging:</strong> {productToView.packagingSize || '-'} / {productToView.packagingType || '-'}</div>
+                <div><strong>Lead:</strong> {productToView.procurementLeadTime || '-'}</div>
+                <div><strong>Shelf:</strong> {productToView.shelfLife || '-'}</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 text-center text-sm">
+            <TbInfoCircle size={36} className="text-slate-400 dark:text-slate-500 mb-2 mx-auto" />
+            <p className="text-slate-600 dark:text-slate-400">No Product Information</p>
+            <p className="text-xs text-slate-500 mt-1">Details could not be loaded.</p>
+            <div className="mt-3">
+              <Button variant="solid" color="blue-600" onClick={closeViewDetailModal} size="sm">
+                Dismiss
+              </Button>
+            </div>
           </div>
         )}
+      </Dialog>
 
-        {/* Product Overview */}
-        <div className="space-y-1">
-          <div><strong>ID:</strong> {productToView.id} | <strong>SKU:</strong> {productToView.skuCode || '-'}</div>
-          <div><strong>Status:</strong> 
-            <Tag className="ml-1 capitalize text-xs px-1 py-0.5 bg-slate-200 dark:bg-slate-700">
-              {productToView.status || 'Unknown'}
-            </Tag>
-          </div>
-        </div>
-
-        {/* Classification */}
-        <div className="space-y-1">
-          <div>
-            <strong>Category:</strong>
-            <Tag className="ml-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
-              {productToView.categoryName || '-'}
-            </Tag>
-            {productToView.subCategoryName && (
-              <Tag className="ml-1 bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 text-xs">
-                {productToView.subCategoryName}
-              </Tag>
-            )}
-          </div>
-          <div>
-            <strong>Brand:</strong> {productToView.brandName || '-'} | <strong>Unit:</strong> {productToView.unitName || '-'}
-          </div>
-        </div>
-
-        {/* Logistics */}
-        <div className="space-y-1">
-          <div>
-            <strong>Origin:</strong>
-            <Tag className="ml-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-              {productToView.countryName || '-'}
-            </Tag>
-            <strong className="ml-2">Color:</strong> {productToView.color || '-'}
-          </div>
-          <div>
-            <strong>HSN:</strong> {productToView.hsnCode || '-'} | <strong>Tax:</strong> {productToView.taxRate ? `${productToView.taxRate}%` : '-'}
-          </div>
-          <div>
-            <strong>Packaging:</strong> {productToView.packagingSize || '-'} / {productToView.packagingType || '-'}
-          </div>
-          <div>
-            <strong>Lead:</strong> {productToView.procurementLeadTime || '-'} | <strong>Shelf:</strong> {productToView.shelfLife || '-'}
-          </div>
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="p-6 text-center text-sm">
-      <TbInfoCircle size={36} className="text-slate-400 dark:text-slate-500 mb-2 mx-auto" />
-      <p className="text-slate-600 dark:text-slate-400">No Product Information</p>
-      <p className="text-xs text-slate-500 mt-1">Details could not be loaded.</p>
-      <div className="mt-3">
-        <Button variant="solid" color="blue-600" onClick={closeViewDetailModal} size="sm">
-          Dismiss
-        </Button>
-      </div>
-    </div>
-  )}
-</Dialog>
 
 
     </>
