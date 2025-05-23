@@ -1029,7 +1029,6 @@ useEffect(() => {
       </Dialog>
 
 
-      {/* View Product Detail Dialog (Inspired by Drawer, Merged Rows, Right Whitespace) */}
       {/* Refined & Tag-Based Product Detail Dialog - Multi-column */}
       <Dialog
         isOpen={isViewDetailModalOpen}
