@@ -19,7 +19,7 @@ import toast from "@/components/ui/toast"; // Ensure toast setup exists
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import { TbUserCircle } from "react-icons/tb"; // Placeholder icon for createdBy
+import { TbFilter, TbUserCircle } from "react-icons/tb"; // Placeholder icon for createdBy
 // Icons
 import {
   TbPencil,
@@ -52,6 +52,43 @@ export type OfferDemandItem = {
 // --- End Item Type Definition ---
 
 // --- Constants ---
+const initialDummyAll: OfferDemandItem[] = [
+  {
+    id: "OFF001",
+    type: "Offer",
+    name: "Discount on Mobiles",
+    createdBy: "AdminUser",
+    createdDate: new Date(2023, 10, 1, 10, 0),
+  },
+  {
+    id: "OFF002",
+    type: "Demand",
+    name: "Free Shipping Weekend",
+    createdBy: "MarketingTeam",
+    createdDate: new Date(2023, 9, 28, 15, 30),
+  },
+  {
+    id: "OFF003",
+    type: "Demand",
+    name: "BOGO on T-Shirts",
+    createdBy: "SalesDept",
+    createdDate: new Date(2023, 9, 25, 9, 0),
+  },
+  {
+    id: "OFF004",
+    type: "Offer",
+    name: "Clearance Sale - Home Goods",
+    createdBy: "AdminUser",
+    createdDate: new Date(2023, 9, 20, 12, 0),
+  },
+  {
+    id: "OFF005",
+    type: "Demand",
+    name: "New User Welcome Credit",
+    createdBy: "MarketingTeam",
+    createdDate: new Date(2023, 10, 3, 8, 0),
+  },
+];
 const initialDummyOffers: OfferDemandItem[] = [
   {
     id: "OFF001",
@@ -130,6 +167,7 @@ const initialDummyDemands: OfferDemandItem[] = [
 
 // Tab Definitions
 const TABS = {
+  ALL: "all",
   OFFER: "offer",
   DEMAND: "demand",
 };
@@ -310,10 +348,16 @@ const ItemActionTools = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-3">
+    <div className="flex flex-col md:flex-row gap-2">
       {/* <CSVLink ... > Download </Button> </CSVLink> */}
-      <Button variant="solid" icon={<TbPlus />} onClick={handleAddItem} block>
-        Add New
+      <Button icon={<TbFilter />} block>
+        Filter
+      </Button>
+      <Button variant="solid" icon={<TbPlus />} onClick={()=>navigate("/sales-leads/offers/create")} block>
+        Add Offer
+      </Button>
+      <Button icon={<TbPlus />} variant="solid" onClick={()=>navigate("/sales-leads/demands/create")} block>
+        Add Demand
       </Button>
     </div>
   );
@@ -405,6 +449,8 @@ const OffersDemands = () => {
 
   // --- Lifted State ---
   const [isLoading, setIsLoading] = useState(false);
+  const [allData, setAllData] =
+    useState<OfferDemandItem[]>(initialDummyAll);
   const [offersData, setOffersData] =
     useState<OfferDemandItem[]>(initialDummyOffers);
   const [demandsData, setDemandsData] =
@@ -428,7 +474,7 @@ const OffersDemands = () => {
 
   // --- Derived State ---
   const currentItems = useMemo(
-    () => (currentTab === TABS.OFFER ? offersData : demandsData),
+    () => (currentTab === TABS.ALL ? allData : currentTab === TABS.OFFER ? offersData : demandsData),
     [currentTab, offersData, demandsData]
   );
   const currentTableData = useMemo(
@@ -654,7 +700,14 @@ const OffersDemands = () => {
     if (tabKey === currentTab) return;
     setCurrentTab(tabKey);
     // Reset the other tab's table config
-    if (tabKey === TABS.OFFER) {
+    if (tabKey === TABS.ALL) {
+      setDemandTableData({
+        pageIndex: 1,
+        pageSize: 10,
+        sort: { order: "", key: "" },
+        query: "",
+      });
+    }else if (tabKey === TABS.OFFER) {
       setDemandTableData({
         pageIndex: 1,
         pageSize: 10,
@@ -679,42 +732,74 @@ const OffersDemands = () => {
   const columns: ColumnDef<OfferDemandItem>[] = useMemo(
     () => [
       {
-        header: "No", // Sequence Number Column
-        // We need access to the row model to get the index
-        cell: (props) => {
-          const { pageIndex, pageSize } = currentTableData; // Get pagination from state
-          // `row.index` is the index within the *current page's* data
-          return (
-            <span>{(pageIndex - 1) * pageSize + props.row.index + 1}</span>
-          );
-        },
-        width: 60, // Adjust width as needed
-        enableSorting: false,
-      },
-      {
         header: "ID",
         accessorKey: "id",
         enableSorting: true,
-        width: 120,
+        size: 60,
       },
       { header: "Name", accessorKey: "name", enableSorting: true },
+      {
+        header: "Section Details",
+        size:200,
+        cell : (props)=>{
+          return (
+            <div>
+              <div className="text-xs">
+                <b>Number of Buyer: </b> {3}
+              </div>
+              <div className="text-xs">
+                <b>Number of Seller: </b> {5}
+              </div>
+              <div className="text-xs">
+                <b>Group A: </b> <br/>
+                <div className="flex flex-col gap-0.5">
+                  Lenovo Tab M10 3/32,
+                  Google Pixel 9A,
+                  Indian Spec 
+                </div>
+              </div>
+              <div className="text-xs">
+                <b>Group B: </b> <br/>
+                <div className="flex flex-col gap-0.5">
+                  Lenovo Tab M10 3/32 @260$,
+                  Google Pixel 9A @350$,
+                  Indian Spec 
+                </div>
+              </div>
+            </div>
+          )
+        }
+      },
       {
         header: "Created By",
         accessorKey: "createdBy",
         enableSorting: true,
         cell: (props) => (
-          <div className="flex items-center gap-2">
-            <Avatar size={28} shape="circle" icon={<TbUserCircle />} />{" "}
-            {/* Simple avatar */}
-            <span>{props.row.original.createdBy}</span>
+          <div className="flex flex-col gap-2">
+            <div>
+              <Avatar size={28} shape="circle" icon={<TbUserCircle />} />{" "}
+              <span>{props.row.original.createdBy}</span>
+            </div>
+            <div className="gap-1 text-xs"><b>Assigned: </b> Manan Patel</div>
           </div>
         ),
       },
+      // {
+      //   header: "Assigned",
+      //   accessorKey: "",
+      //   enableSorting: true,
+      //   cell: (props) => (
+      //     <div className="flex items-center gap-2">
+      //       <Avatar size={28} shape="circle" icon={<TbUserCircle />} />{" "}
+      //       {/* Simple avatar */}
+      //       <span>Mukesh Patel</span>
+      //     </div>
+      //   ),
+      // },
       {
         header: "Created Date",
         accessorKey: "createdDate",
         enableSorting: true,
-        width: 180,
         cell: (props) => {
           const date = props.row.original.createdDate;
           return (
@@ -732,7 +817,7 @@ const OffersDemands = () => {
       {
         header: "Actions",
         id: "action",
-        size: 200,
+        size: 120,
         meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <div className="flex items-center justify-center gap-2">
@@ -761,13 +846,25 @@ const OffersDemands = () => {
       <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
         {/* Header Section */}
         <div className="lg:flex items-center justify-between mb-4">
-          <h3 className="mb-4 lg:mb-0">Offers & Demands</h3>
+          <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
           <ItemActionTools allItems={currentItems} activeTab={currentTab} />
         </div>
 
         {/* Tabs Section */}
         <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <button
+              key={TABS.ALL}
+              onClick={() => handleTabChange(TABS.ALL)}
+              className={classNames(
+                "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm",
+                currentTab === TABS.ALL
+                  ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
+              )}
+            >
+              All
+            </button>
             <button
               key={TABS.OFFER}
               onClick={() => handleTabChange(TABS.OFFER)}
