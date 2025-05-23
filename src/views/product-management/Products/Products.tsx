@@ -1039,7 +1039,7 @@ useEffect(() => {
         {productToView ? (
           <div className="text-sm">
             {/* Header */}
-            <div className="p-3 border-b border-slate-200 dark:border-slate-700">
+            <div className="p-3 border-slate-200 dark:border-slate-700">
               <span className="font-semibold text-slate-700 dark:text-white truncate block text-center">
                 {productToView.name}
               </span>
