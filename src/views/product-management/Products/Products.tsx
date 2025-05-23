@@ -1678,7 +1678,7 @@ const Products = () => {
                     <Controller
                       name="description"
                       control={formMethods.control}
-                      render={({ field }) => <Textarea {...field} rows={8} />}
+                      render={({ field }) => <Input textArea  {...field} rows={8} />}
                     />
                   </FormItem>
                   <FormItem
@@ -1691,7 +1691,7 @@ const Products = () => {
                     <Controller
                       name="short_description"
                       control={formMethods.control}
-                      render={({ field }) => <Textarea {...field} rows={4} />}
+                      render={({ field }) => <Input textArea  {...field} rows={4} />}
                     />
                   </FormItem>
                   <FormItem
@@ -1704,7 +1704,7 @@ const Products = () => {
                     <Controller
                       name="payment_term"
                       control={formMethods.control}
-                      render={({ field }) => <Textarea {...field} rows={3} />}
+                      render={({ field }) => <Input textArea  {...field} rows={3} />}
                     />
                   </FormItem>
                   <FormItem
@@ -1717,7 +1717,7 @@ const Products = () => {
                     <Controller
                       name="delivery_details"
                       control={formMethods.control}
-                      render={({ field }) => <Textarea {...field} rows={3} />}
+                      render={({ field }) => <Input textArea  {...field} rows={3} />}
                     />
                   </FormItem>
                   <FormItem
@@ -1733,7 +1733,7 @@ const Products = () => {
                     <Controller
                       name="product_specification"
                       control={formMethods.control}
-                      render={({ field }) => <Textarea {...field} rows={5} />}
+                      render={({ field }) => <Input textArea  {...field} rows={5} />}
                     />
                   </FormItem>
                 </div>
@@ -1844,7 +1844,7 @@ const Products = () => {
                     <Controller
                       name="meta_descr"
                       control={formMethods.control}
-                      render={({ field }) => <Textarea {...field} rows={4} />}
+                      render={({ field }) => <Input textArea  {...field} rows={4} />}
                     />
                   </FormItem>
                   <FormItem
@@ -1858,7 +1858,7 @@ const Products = () => {
                       name="meta_keyword"
                       control={formMethods.control}
                       render={({ field }) => (
-                        <Textarea
+                        <Input textArea 
                           {...field}
                           rows={3}
                           placeholder="keyword1, keyword2, keyword3"

@@ -862,7 +862,7 @@ const ChangeLogListing = () => {
           name="description"
           control={currentFormMethods.control}
           render={({ field }) => (
-            <Textarea {...field} rows={3} placeholder="Summary of the change" />
+            <Input textArea  {...field} rows={3} placeholder="Summary of the change" />
           )}
         />
       </FormItem>
@@ -876,7 +876,7 @@ const ChangeLogListing = () => {
           name="details"
           control={currentFormMethods.control}
           render={({ field }) => (
-            <Textarea
+            <Input textArea 
               {...field}
               rows={4}
               placeholder='e.g., {"oldValue": "X", "newValue": "Y"}'

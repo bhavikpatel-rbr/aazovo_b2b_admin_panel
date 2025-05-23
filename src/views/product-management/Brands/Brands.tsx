@@ -515,7 +515,6 @@ const Brands = () => {
     useSelector(masterSelector);
 
   useEffect(() => {
-    console.log("test");
     dispatch(getBrandAction());
   }, []);
 

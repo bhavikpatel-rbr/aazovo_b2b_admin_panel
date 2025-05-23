@@ -58,7 +58,7 @@ const demos = [
         mdPath: mdPath,
         title: 'Textarea',
         desc: `Turn Input field to textarea by setting <code>textarea</code> prop to true.`,
-        component: <Textarea />,
+        component: <Input textArea  />,
     },
     {
         mdName: 'Invalid',

@@ -887,7 +887,7 @@ const HomeCategories = () => {
         <Controller
           name="date"
           control={formMethods.control}
-          render={({ field }) => <Input {...field} type="date" />}
+          render={({ field }) => <DatePicker defaultValue={new Date()} />}
         />
       </FormItem>
       <FormItem

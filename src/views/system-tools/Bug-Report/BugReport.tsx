@@ -1002,7 +1002,7 @@ const BugReportListing = () => {
           name="report"
           control={currentFormMethods.control}
           render={({ field }) => (
-            <Textarea
+            <Input textArea 
               {...field}
               rows={6}
               prefix={<TbFileDescription />}

@@ -1098,7 +1098,7 @@ const FormBuilder = () => {
                   name={`questions.${index}.questionText`}
                   control={currentFormMethods.control}
                   render={({ field: qField }) => (
-                    <Textarea
+                    <Input textArea 
                       {...qField}
                       rows={2}
                       placeholder="Enter your question here..."

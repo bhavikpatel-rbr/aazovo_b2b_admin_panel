@@ -17,9 +17,8 @@ import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
-import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import Textarea from "@/views/ui-components/forms/Input/Textarea";
+import DatePicker from "@/components/ui/DatePicker";
 import { Drawer, Form, FormItem, Input, Tag, Dialog } from "@/components/ui"; // Added Dialog for View
 
 // Icons
@@ -971,7 +970,7 @@ const LeadManagement = () => {
         <Controller
           name="date"
           control={formMethods.control}
-          render={({ field }) => <Input {...field} type="date" />}
+          render={({ field }) => <DatePicker defaultValue={new Date()} />}
         />
       </FormItem>
       <FormItem
@@ -984,7 +983,7 @@ const LeadManagement = () => {
           name="remarks"
           control={formInstance.control}
           render={({ field }) => (
-            <Textarea
+            <Input textArea 
               {...field}
               rows={3}
               placeholder="Add any relevant notes or comments..."
@@ -1071,7 +1070,7 @@ const LeadManagement = () => {
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        width={900} // Wider drawer for more fields
+        width={940} // Wider drawer for more fields
         footer={
           <div className="text-right w-full">
             <div className={editingItem ? "w-full text-right" : ""}>

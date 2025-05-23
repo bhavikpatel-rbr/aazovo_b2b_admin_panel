@@ -1015,7 +1015,7 @@ const JobPostsListing = () => {
           name="description"
           control={currentFormMethods.control}
           render={({ field }) => (
-            <Textarea
+            <Input textArea 
               {...field}
               rows={5}
               placeholder="Detailed job description, responsibilities, qualifications..."

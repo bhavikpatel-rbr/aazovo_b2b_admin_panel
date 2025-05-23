@@ -1780,7 +1780,7 @@ const LeadsListing = () => {
                 name="internalRemarks"
                 control={formMethods.control}
                 render={({ field }) => (
-                  <Textarea
+                  <Input textArea 
                     {...field}
                     rows={3}
                     placeholder="Internal notes about this lead or sourcing request..."

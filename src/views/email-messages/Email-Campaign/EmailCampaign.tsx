@@ -835,7 +835,7 @@ const EmailCampaignListing = () => {
                   name="text1"
                   control={control}
                   render={({ field }) => (
-                    <Textarea
+                    <Input textArea 
                       {...field}
                       rows={4}
                       placeholder="Enter content for the first main text block..."
@@ -872,7 +872,7 @@ const EmailCampaignListing = () => {
                   name="text2"
                   control={control}
                   render={({ field }) => (
-                    <Textarea
+                    <Input textArea 
                       {...field}
                       rows={3}
                       placeholder="Enter content for a secondary text block..."

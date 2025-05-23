@@ -1064,7 +1064,7 @@ const RequestAndFeedback = () => {
                   name="internalNotes"
                   control={editFormMethods.control}
                   render={({ field }) => (
-                    <Textarea
+                    <Input textArea 
                       {...field}
                       rows={3}
                       placeholder="Add internal notes about this request or status change..."

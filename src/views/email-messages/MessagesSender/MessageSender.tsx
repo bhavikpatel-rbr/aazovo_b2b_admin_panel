@@ -1287,7 +1287,7 @@ const AutoMessages = () => {
               name="conditions"
               control={addFormMethods.control}
               render={({ field }) => (
-                <Textarea
+                <Input textArea 
                   {...field}
                   rows={3}
                   placeholder="Describe conditions, e.g., user_role = 'premium' AND order_total > 100"
@@ -1409,7 +1409,7 @@ const AutoMessages = () => {
               name="conditions"
               control={editFormMethods.control}
               render={({ field }) => (
-                <Textarea
+                <Input textArea 
                   {...field}
                   rows={3}
                   placeholder="Describe conditions"
