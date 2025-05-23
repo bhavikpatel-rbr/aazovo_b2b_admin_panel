@@ -20,6 +20,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import { Dropdown } from "@/components/ui";
 
 // --- Define Form Type (Using the original FormItem definition) ---
 export type FormItem = {
@@ -120,7 +121,14 @@ const ActionColumn = ({
           role="button"
           onClick={onMore}
         >
-          <TbDotsVertical />
+          <Dropdown renderTitle={<TbDotsVertical size={20}/>} >
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Request For</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add in Active</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Schedule</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Task</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Documents</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Alert</Dropdown.Item>
+          </Dropdown>
         </div>
       </Tooltip>
     </div>

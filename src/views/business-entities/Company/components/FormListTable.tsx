@@ -118,11 +118,12 @@ const ActionColumn = ({
           role="button"
         >
           <Dropdown renderTitle={<TbDotsVertical />} >
-            <Dropdown.Item>Request For</Dropdown.Item>
-            <Dropdown.Item>Add in Active</Dropdown.Item>
-            <Dropdown.Item>Add Schedule</Dropdown.Item>
-            <Dropdown.Item>Add Task</Dropdown.Item>
-            <Dropdown.Item>View Alert</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Request For</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add in Active</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Schedule</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Task</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Documents</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Alert</Dropdown.Item>
           </Dropdown>
           
         </div>

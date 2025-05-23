@@ -211,6 +211,7 @@ const ActionColumn = ({
             <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add in Active</Dropdown.Item>
             <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Schedule</Dropdown.Item>
             <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Task</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Documents</Dropdown.Item>
             <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Alert</Dropdown.Item>
           </Dropdown>
         </div>
@@ -779,7 +780,7 @@ const FormListTable = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -787,7 +788,7 @@ const FormListTable = () => {
               form="filterMemberForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }

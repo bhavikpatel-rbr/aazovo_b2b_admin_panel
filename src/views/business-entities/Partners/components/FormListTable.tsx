@@ -161,7 +161,15 @@ const ActionColumn = ({
           <TbShare />
         </div>
       </Tooltip>
-      <Dropdown renderTitle={MoreToggle} placement="bottom-end">
+      <Dropdown renderTitle={<TbDotsVertical size={20}/>} >
+        <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Request For</Dropdown.Item>
+        <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add in Active</Dropdown.Item>
+        <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Schedule</Dropdown.Item>
+        <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Task</Dropdown.Item>
+        <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Documents</Dropdown.Item>
+        <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Alert</Dropdown.Item>
+      </Dropdown>
+      {/* <Dropdown renderTitle={MoreToggle} placement="bottom-end">
         <Dropdown.Item eventKey="clone" onClick={() => onClone(rowData.id)}>
           <TbCopy className="mr-2" /> Clone Partner
         </Dropdown.Item>
@@ -178,7 +186,7 @@ const ActionColumn = ({
         >
           <TbTrash className="mr-2" /> Delete Partner
         </Dropdown.Item>
-      </Dropdown>
+      </Dropdown> */}
     </div>
   );
 };
