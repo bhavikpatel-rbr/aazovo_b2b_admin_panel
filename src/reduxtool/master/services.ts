@@ -397,7 +397,7 @@ export const editBrandListAsync = async (brandId: number | string, formData: For
 
 export const deletBrandListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/master/brand/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/master/brand/${unitData}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -465,7 +465,7 @@ export const editProductListAsync = async (brandId: number | string, formData: F
 
 export const deletProductListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/master/brand/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/master/product/${unitData}`)
     return response
   } catch (err) {
     return isAxiosError(err)
