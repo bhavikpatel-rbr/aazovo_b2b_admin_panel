@@ -35,6 +35,7 @@ import {
   Input,
   Select as UiSelect,
   DatePicker,
+  Dropdown,
 } from "@/components/ui";
 
 // Icons
@@ -498,7 +499,14 @@ const StyledActionColumn = ({
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
           role="button"
         >
-          <TbDotsVertical />
+          <Dropdown renderTitle={<TbDotsVertical />} >
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Request For</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add in Active</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Schedule</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Task</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Documents</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Alert</Dropdown.Item>
+          </Dropdown>
         </div>
       </Tooltip>
     </div>
