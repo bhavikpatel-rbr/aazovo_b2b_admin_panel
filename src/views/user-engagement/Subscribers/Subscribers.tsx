@@ -48,9 +48,9 @@ import type { TableQueries } from "@/@types/common";
 
 // Redux (Kept for eventual integration, but data is mocked locally for now)
 import { useAppDispatch } from "@/reduxtool/store";
-// import { getSubscribersAction } from '@/reduxtool/master/middleware'; // Adjust path/action
-// import { masterSelector } from '@/reduxtool/master/masterSlice'; // Adjust path/selector
-// import { useSelector } from 'react-redux';
+import { getSubscribersAction } from '@/reduxtool/master/middleware'; // Adjust path/action
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // Adjust path/selector
+import { useSelector } from 'react-redux';
 
 // Type for data coming directly from API
 type ApiSubscriberItem = {
@@ -514,12 +514,12 @@ const SubscribersListing = () => {
   const dispatch = useAppDispatch(); // Kept for eventual Redux integration
 
   // Using mocked data directly for now
-  const rawSubscriberData: ApiSubscriberItem[] = mockApiSubscriberData;
+  // const rawSubscriberData: ApiSubscriberItem[] = mockApiSubscriberData;
   const dataLoadingStatus: "idle" | "loading" | "succeeded" | "failed" =
     "succeeded"; // Simulate loaded
 
-  // const { subscriberData: rawSubscriberData = [], status: dataLoadingStatus = 'idle' } =
-  //     useSelector(masterSelector); // Your original Redux connection
+  const { subscriberData: rawSubscriberData = [] } =
+      useSelector(masterSelector); // Your original Redux connection
 
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
@@ -535,7 +535,7 @@ const SubscribersListing = () => {
   // Effect to fetch data on mount (currently does nothing with mocked data)
   useEffect(() => {
     // When using Redux, this would dispatch the action:
-    // dispatch(getSubscribersAction());
+    dispatch(getSubscribersAction());
     console.log("Simulating data fetch or component mount for subscribers.");
   }, [dispatch]);
 
@@ -783,7 +783,7 @@ const SubscribersListing = () => {
             <SubscriberTable
               columns={columns}
               data={pageData}
-              // loading={dataLoadingStatus === 'loading'}
+              loading={dataLoadingStatus === 'loading'}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
@@ -792,7 +792,7 @@ const SubscribersListing = () => {
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
-              loading={false}
+              // loading={true}
             />
           </div>
         </AdaptiveCard>

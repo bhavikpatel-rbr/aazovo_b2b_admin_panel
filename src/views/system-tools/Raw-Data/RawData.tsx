@@ -19,6 +19,8 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import Select from "@/components/ui/Select";
 import DatePicker from "@/components/ui/DatePicker";
+import DebouceInput from "@/components/shared/DebouceInput";
+
 import { Drawer, Form, FormItem, Input, Tag, Dialog } from "@/components/ui"; // Added Dialog for View
 
 // Icons
@@ -31,8 +33,10 @@ import {
   TbBuilding,
   TbMail,
   TbPhone,
-  TbShare,
-  TbDotsVertical,
+  TbSearch,
+  TbCloudUpload,
+  TbFilter,
+  TbCloudDownload,
   TbMapPin,
   TbCancel,
   TbTrash,
@@ -994,6 +998,60 @@ const LeadManagement = () => {
     </div>
   );
 
+  type ItemSearchProps = {
+    onInputChange: (value: string) => void;
+    ref?: Ref<HTMLInputElement>;
+  };
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
+  ({ onInputChange }, ref) => {
+    return (
+      <DebouceInput
+        ref={ref}
+        placeholder="Quick Search..."
+        suffix={<TbSearch className="text-lg" />}
+        onChange={(e) => onInputChange(e.target.value)}
+      />
+    );
+  }
+);
+  // --- Modified EmployeeTableTools ---
+const EmployeeTableTools = ({
+  onSearchChange,
+  onFilter,
+  onExport,
+}: {
+  onSearchChange: (query: string) => void;
+  onFilter: () => void;
+  onExport: () => void;
+}) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+    <div className="flex-grow">
+      <ItemSearch onInputChange={onSearchChange} />
+    </div>
+    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <Button
+        icon={<TbFilter />}
+        onClick={onFilter}
+        className="w-full sm:w-auto"
+      >
+        Filter
+      </Button>
+              <Button icon={<TbCloudDownload />}>
+                Import
+              </Button>
+      <Button
+        icon={<TbCloudUpload />}
+        onClick={onExport}
+        className="w-full sm:w-auto"
+      >
+        Export
+      </Button>
+    </div>
+  </div>
+);
+  function handleSearchChange (){
+    return;
+  }
   return (
     <>
       <Container className="h-auto">
@@ -1006,7 +1064,9 @@ const LeadManagement = () => {
               Add New
             </Button>
           </div>
-          {/* <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} searchPlaceholder="Search leads..." /> */}
+                    <div className="mb-4">
+          <EmployeeTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          </div>
           <div className="mt-4">
             <DataTable
               columns={columns as ColumnDef<any>[]}
