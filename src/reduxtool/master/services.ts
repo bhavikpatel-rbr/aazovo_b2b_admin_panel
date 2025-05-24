@@ -1460,6 +1460,67 @@ export const deleteAllHomeCategoryAsync = async (unitData: any) => {
   }
 }
 
+export const getRowDataAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/row_data`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addRowDataAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/row_data`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editRowDataAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/row_data/${unitData?.id}`, {
+      _method: "PUT", country_id: unitData?.country_id,
+      category_id: unitData?.category_id
+      , brand_id: unitData?.brand_id
+      , mobile_no: unitData?.mobile_no
+      , email: unitData?.email
+      , name: unitData?.name
+      , company_name: unitData?.company_name
+      , quality: unitData?.quality
+      , city: unitData?.city
+      , status: unitData?.status
+      , remarks: unitData?.remarks
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletRowDataAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/row_data/${unitData}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllRowDataAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/row_data/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 
 
 
