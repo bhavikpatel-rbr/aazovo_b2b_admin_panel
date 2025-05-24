@@ -50,10 +50,46 @@ const hrEmployeesRoute: Routes = [
         },
     },
     {
-        key: 'hrEmployees.jobPosts',
-        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-posts`,
-        component: lazy(() => import('@/views/hr-employees/Job-Posts')),
+        key: 'hrEmployees.jobApplicationsAdd', // Unique key
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-applications/add`,
+        component: lazy(() => import('@/views/hr-employees/Job-Application/components/AddJobApplicationPage')), // Adjust path
         authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'hrEmployees.jobApplicationsEdit', // Unique key
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-applications/edit/:applicationId`, // Path with parameter
+        component: lazy(() => import('@/views/hr-employees/Job-Application/components/EditJobApplicationPage')), // Adjust path
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'hrEmployees.jobApplication',
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-application`,
+        component: lazy(() => import('@/views/hr-employees/Job-Application')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'hrEmployees.jobPost',
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-post`,
+        component: lazy(() => import('@/views/hr-employees/Job-Posts')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'hrEmployees.jobDepartment',
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-department`,
+        component: lazy(() => import('@/views/hr-employees/Job-Department')),
+        authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',
         },

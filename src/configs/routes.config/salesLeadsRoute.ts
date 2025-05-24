@@ -114,7 +114,7 @@ const salesLeadsRoute: Routes = [
     path: `${SALES_LEADS_PREFIX_PATH}/lead/add`,
     component: lazy(
       () =>
-        import('@/views/sales-Leads/Lead/components/AddEditLeadPage') // LAZY LOAD THE WRAPPER
+        import('@/views/sales-leads/Lead/components/AddLeadPage') // LAZY LOAD THE WRAPPER
     ),
     authority: [ADMIN, USER],
     meta: {
@@ -126,7 +126,7 @@ const salesLeadsRoute: Routes = [
     path: `${SALES_LEADS_PREFIX_PATH}/lead/edit/:id`, // :id is a route parameter
     component: lazy(
       () =>
-        import('@/views/sales-Leads/Lead/components/AddEditLeadPage') // LAZY LOAD THE SAME WRAPPER
+        import('@/views/sales-leads/Lead/components/EditLeadPage') // LAZY LOAD THE SAME WRAPPER
     ),
     authority: [ADMIN, USER],
     meta: {
