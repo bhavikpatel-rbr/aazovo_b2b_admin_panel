@@ -40,6 +40,24 @@ const hrEmployeesRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
+    {
+        key: 'hrEmployees.employees',
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/employees/add`,
+        component: lazy(() => import('@/views/hr-employees/Employees/EmployeesCreate/CreateEmployee')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'hrEmployees.jobPosts',
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/job-posts`,
+        component: lazy(() => import('@/views/hr-employees/Job-Posts')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
 ];
 
 export default hrEmployeesRoute;

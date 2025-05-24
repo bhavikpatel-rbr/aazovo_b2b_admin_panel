@@ -72,6 +72,11 @@ export type CompanyFormFields = {
     other_document: string
     other_document_remark: string
     other_document_remark_enabled: boolean
+
+    KYC_FIELD: boolean
+    BILLING_FIELD: boolean
+    BILLING_PHOTOS_FIELD: FileList | null
+    DOMAIN_MANAGEMENT_FIELD: string
 }
 
 // --- Main Schema ---

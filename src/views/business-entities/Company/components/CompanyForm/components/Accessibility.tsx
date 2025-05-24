@@ -17,13 +17,6 @@ const domainOptions = [
 ];
 // --- End Mock Options Data ---
 
-// Use the correct field names from your CompanyFormFields type
-// Replace these with the actual field names from your form schema
-const KYC_FIELD = 'company_kyc_verified';
-const BILLING_FIELD = 'company_enable_billing';
-const BILLING_PHOTOS_FIELD = 'company_billing_photos';
-const DOMAIN_MANAGEMENT_FIELD = 'company_domain_management';
-
 const AccessibilitySection = ({
     control,
     errors,
@@ -35,12 +28,12 @@ const AccessibilitySection = ({
                 {/* KYC Verified */}
                 <FormItem
                     label="KYC Verified"
-                    invalid={Boolean(errors[KYC_FIELD])}
-                    errorMessage={errors[KYC_FIELD]?.message as string}
-                    className="col-span-1 lg:col-span-3 "
+                    invalid={Boolean(errors.KYC_FIELD)}
+                    errorMessage={errors.KYC_FIELD?.message as string}
+                    className="col-span-1 lg:col-span-3"
                 >
                     <Controller
-                        name={KYC_FIELD as any}
+                        name="KYC_FIELD"
                         control={control}
                         render={({ field }) => (
                             <Checkbox
@@ -56,12 +49,12 @@ const AccessibilitySection = ({
                 {/* Enable Billing */}
                 <FormItem
                     label="Enable Billing"
-                    invalid={Boolean(errors[BILLING_FIELD])}
-                    errorMessage={errors[BILLING_FIELD]?.message as string}
-                    className="col-span-1 lg:col-span-4 "
+                    invalid={Boolean(errors.BILLING_FIELD)}
+                    errorMessage={errors.BILLING_FIELD?.message as string}
+                    className="col-span-1 lg:col-span-4"
                 >
                     <Controller
-                        name={BILLING_FIELD as any}
+                        name="BILLING_FIELD"
                         control={control}
                         render={({ field }) => (
                             <Checkbox
@@ -75,29 +68,27 @@ const AccessibilitySection = ({
                 </FormItem>
 
                 {/* Enable Billing Photos */}
-                <div className='md:grid grid-cols-2 lg:grid-cols-7 gap-2 col-span-7  mb-6 lg:mb-0'>
+                <div className='md:grid grid-cols-2 lg:grid-cols-7 gap-2 col-span-7 mb-6 lg:mb-0'>
                     <FormItem
                         label="Enable Billing Documents"
-                        className=" lg:col-span-3"
+                        className="lg:col-span-3"
                     >
                         <Controller
-                            name={BILLING_PHOTOS_FIELD as any}
+                            name="BILLING_PHOTOS_FIELD"
                             control={control}
                             render={({ field }) => (
-                                <Input
-                                    type="text"
-                                />
+                                <Input type="text" />
                             )}
                         />
                     </FormItem>
                     <FormItem
                         label="Enable Billing Documents"
-                        invalid={Boolean(errors[BILLING_PHOTOS_FIELD])}
-                        errorMessage={errors[BILLING_PHOTOS_FIELD]?.message as string}
+                        invalid={Boolean(errors.BILLING_PHOTOS_FIELD)}
+                        errorMessage={errors.BILLING_PHOTOS_FIELD?.message as string}
                         className="lg:col-span-3"
                     >
                         <Controller
-                            name={BILLING_PHOTOS_FIELD as any}
+                            name="BILLING_PHOTOS_FIELD"
                             control={control}
                             render={({ field }) => (
                                 <Input
@@ -110,19 +101,19 @@ const AccessibilitySection = ({
                         />
                     </FormItem>
                     <div className='flex lg:justify-center items-center'>
-                        <Button type='button' icon={<TbPlus/>}>Add More</Button>
+                        <Button type='button' icon={<TbPlus />}>Add More</Button>
                     </div>
                 </div>
 
                 {/* Domain Management */}
                 <FormItem
                     label="Domain Management"
-                    invalid={Boolean(errors[DOMAIN_MANAGEMENT_FIELD])}
-                    errorMessage={errors[DOMAIN_MANAGEMENT_FIELD]?.message as string}
+                    invalid={Boolean(errors.DOMAIN_MANAGEMENT_FIELD)}
+                    errorMessage={errors.DOMAIN_MANAGEMENT_FIELD?.message as string}
                     className="md:col-span-2 lg:col-span-7"
                 >
                     <Controller
-                        name={DOMAIN_MANAGEMENT_FIELD as any}
+                        name="DOMAIN_MANAGEMENT_FIELD"
                         control={control}
                         rules={{ required: 'Domain Management is required' }}
                         render={({ field }) => (
