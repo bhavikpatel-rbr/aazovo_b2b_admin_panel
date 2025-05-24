@@ -109,6 +109,30 @@ const salesLeadsRoute: Routes = [
       pageContainerType: "contained",
     },
   },
+{
+    key: 'salesLeads.leadAdd', // Distinct key
+    path: `${SALES_LEADS_PREFIX_PATH}/lead/add`,
+    component: lazy(
+      () =>
+        import('@/views/sales-Leads/Lead/components/AddEditLeadPage') // LAZY LOAD THE WRAPPER
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: 'contained', // This meta is for your routing/layout system
+    },
+  },
+  {
+    key: 'salesLeads.leadEdit', // Distinct key for edit route
+    path: `${SALES_LEADS_PREFIX_PATH}/lead/edit/:id`, // :id is a route parameter
+    component: lazy(
+      () =>
+        import('@/views/sales-Leads/Lead/components/AddEditLeadPage') // LAZY LOAD THE SAME WRAPPER
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: 'contained',
+    },
+  },
 ];
 
 export default salesLeadsRoute;

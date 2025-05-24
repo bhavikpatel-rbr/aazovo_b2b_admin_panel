@@ -396,8 +396,7 @@ export const deleteAllDocumentListAsync = async (unitData: any) => {
 
 export const getBrandAsync = async () => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/brand/get`)
-
+    const response = await axiosInstance.get(`${config.apiURL}/master/brand/get`)
     return response
   } catch (err) {
     return isAxiosError(err)

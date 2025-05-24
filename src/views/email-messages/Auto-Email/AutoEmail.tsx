@@ -819,13 +819,15 @@ const AutoEmailListing = () => {
         <Controller
           name="emailType"
           control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              prefix={<TbMailForward />}
-              placeholder="e.g., Welcome Email Series"
-            />
-          )}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select Email Type"
+                  options={emailTypeOptions} // Use dynamic options
+                  value={field.value || []}
+                  onChange={(val) => field.onChange(val || [])}
+                />
+              )}
         />
       </FormItem>
       <FormItem
@@ -837,11 +839,13 @@ const AutoEmailListing = () => {
           name="userName"
           control={currentFormMethods.control}
           render={({ field }) => (
-            <Input
-              {...field}
-              prefix={<TbUserCircle />}
-              placeholder="e.g., New Customers, Marketing Team"
-            />
+                <Select
+                  isMulti
+                  placeholder="Select User Name"
+                  options={userNameOptions} // Use dynamic options
+                  value={field.value || []}
+                  onChange={(val) => field.onChange(val || [])}
+                />
           )}
         />
       </FormItem>

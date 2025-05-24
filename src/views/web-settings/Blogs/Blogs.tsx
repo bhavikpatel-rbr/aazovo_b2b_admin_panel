@@ -1336,9 +1336,8 @@ const Blogs = () => {
               />
             </FormItem>
 
-            <h6 className="text-sm font-medium mt-2">
-              Meta Options (Optional)
-            </h6>
+          <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
+
             <FormItem
               label="Meta Title"
               invalid={!!drawer.methods.formState.errors.meta_title}
