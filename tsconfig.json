@@ -19,6 +19,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "src/views/member-management/MemberManagement.tsx", "src/views/master/Continents/.tsx"],
+  "include": ["src", "src/views/member-management/MemberManagement.tsx", "src/views/master/Continents/.tsx", "src/views/hr-employees/Employees/components/EmployeesForm/components/RoleResponsibility.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

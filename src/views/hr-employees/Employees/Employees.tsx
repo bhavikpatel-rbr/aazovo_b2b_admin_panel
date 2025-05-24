@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react"; // Added useEffect
 // import { Link, useNavigate } from 'react-router-dom'; // useNavigate will be replaced by drawer logic for add/edit
 import cloneDeep from "lodash/cloneDeep";
-import classNames from "classnames";
+import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from "react-hook-form"; // Added
 import { zodResolver } from "@hookform/resolvers/zod"; // Added
 import { z } from "zod"; // Added
@@ -636,7 +636,7 @@ function exportToCsvEmployees(filename: string, rows: EmployeeItem[]) {
 
 // --- Main EmployeesListing Component ---
 const EmployeesListing = () => {
-  // const navigate = useNavigate(); // Not used for add/edit if using drawers
+  const navigate = useNavigate('hr-employees/employees/add'); // Not used for add/edit if using drawers
 
   // --- State ---
   const [employees, setEmployees] = useState<EmployeeItem[]>(
@@ -734,20 +734,8 @@ const EmployeesListing = () => {
     setMasterLoadingStatus("idle");
   };
 
-  const openEditDrawer = (employee: EmployeeItem) => {
-    setEditingEmployee(employee);
-    editFormMethods.reset({
-      name: employee.name,
-      email: employee.email,
-      mobile: employee.mobile,
-      department: employee.department,
-      designation: employee.designation,
-      status: employee.status,
-      roles: employee.roles, // Assuming roles are simple strings
-      joiningDate: employee.joiningDate ? new Date(employee.joiningDate) : null,
-      bio: employee.bio,
-    });
-    setIsEditDrawerOpen(true);
+  const openEditPage = (employee: EmployeeItem) => {
+    console.log('test');
   };
   const closeEditDrawer = () => {
     setEditingEmployee(null);
@@ -1102,15 +1090,15 @@ const EmployeesListing = () => {
         cell: (props) => (
           <ActionColumn
             onView={() => handleViewDetails(props.row.original)}
-            onEdit={() => openEditDrawer(props.row.original)}
+            onEdit={() => openEditPage(props.row.original)}
             onDelete={() => handleDeleteClick(props.row.original)}
             onChangePassword={() => handleChangePassword(props.row.original)}
           />
         ),
       },
     ],
-    [handleViewDetails, handleChangePassword, openEditDrawer, handleDeleteClick]
-  ); // Added openEditDrawer, handleDeleteClick to deps
+    [handleViewDetails, handleChangePassword, openEditPage, handleDeleteClick]
+  ); // Added openEditPage, handleDeleteClick to deps
 
   // Options for Filter Dropdowns
   const departmentOptions = useMemo(() => {
@@ -1139,7 +1127,7 @@ const EmployeesListing = () => {
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Employees Listing</h5>
             {/* Modified "Add New" button to open drawer */}
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+            <Button variant="solid" icon={<TbPlus />} onClick={() => navigate('/hr-employees/employees/add')}>
               Add New
             </Button>
           </div>
@@ -1188,415 +1176,6 @@ const EmployeesListing = () => {
         onClose={handleCloseChangePwd}
         employee={currentItemForDialog}
       />
-
-      {/* Add Employee Drawer */}
-      <Drawer
-        title="Add New Employee"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        width={700}
-        footer={
-          <div className="text-right w-full">
-            {" "}
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>{" "}
-            <Button
-              size="sm"
-              variant="solid"
-              form="addEmployeeForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Add Employee"}
-            </Button>{" "}
-          </div>
-        }
-      >
-        <Form
-          id="addEmployeeForm"
-          onSubmit={addFormMethods.handleSubmit(onAddEmployeeSubmit)}
-          className="flex flex-col gap-4 p-1"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormItem
-              label="Full Name"
-              invalid={!!addFormMethods.formState.errors.name}
-              errorMessage={addFormMethods.formState.errors.name?.message}
-            >
-              <Controller
-                name="name"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    prefix={<TbUserCircle />}
-                    placeholder="Enter full name"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Email Address"
-              invalid={!!addFormMethods.formState.errors.email}
-              errorMessage={addFormMethods.formState.errors.email?.message}
-            >
-              <Controller
-                name="email"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    type="email"
-                    prefix={<TbMail />}
-                    placeholder="Enter email"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Mobile Number"
-              invalid={!!addFormMethods.formState.errors.mobile}
-              errorMessage={addFormMethods.formState.errors.mobile?.message}
-            >
-              <Controller
-                name="mobile"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    prefix={<TbPhone />}
-                    placeholder="e.g., +1234567890"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Department"
-              invalid={!!addFormMethods.formState.errors.department}
-              errorMessage={addFormMethods.formState.errors.department?.message}
-            >
-              <Controller
-                name="department"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    prefix={<TbBuildingSkyscraper />}
-                    placeholder="e.g., Engineering"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Designation"
-              invalid={!!addFormMethods.formState.errors.designation}
-              errorMessage={
-                addFormMethods.formState.errors.designation?.message
-              }
-            >
-              <Controller
-                name="designation"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    prefix={<TbBriefcase />}
-                    placeholder="e.g., Software Engineer"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Status"
-              invalid={!!addFormMethods.formState.errors.status}
-              errorMessage={addFormMethods.formState.errors.status?.message}
-            >
-              <Controller
-                name="status"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    placeholder="Select status"
-                    options={EMPLOYEE_STATUS_OPTIONS}
-                    value={EMPLOYEE_STATUS_OPTIONS.find(
-                      (o) => o.value === field.value
-                    )}
-                    onChange={(opt: any) => field.onChange(opt?.value)}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Joining Date"
-              invalid={!!addFormMethods.formState.errors.joiningDate}
-              errorMessage={
-                addFormMethods.formState.errors.joiningDate?.message as string
-              }
-            >
-              <Controller
-                name="joiningDate"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <DatePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    placeholder="Select joining date"
-                    inputPrefix={<TbCalendar />}
-                  />
-                )}
-              />
-            </FormItem>
-            {/* Roles - could be a multi-select or a tag input component if available */}
-            <FormItem
-              label="Roles (comma-separated)"
-              className="md:col-span-2"
-              invalid={!!addFormMethods.formState.errors.roles}
-              errorMessage={addFormMethods.formState.errors.roles?.message}
-            >
-              <Controller
-                name="roles"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={
-                      Array.isArray(field.value) ? field.value.join(", ") : ""
-                    }
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value
-                          .split(",")
-                          .map((r) => r.trim())
-                          .filter(Boolean)
-                      )
-                    }
-                    prefix={<TbUsers />}
-                    placeholder="Developer, Reviewer"
-                  />
-                )}
-              />
-            </FormItem>
-          </div>
-          <FormItem
-            label="Bio (Optional)"
-            invalid={!!addFormMethods.formState.errors.bio}
-            errorMessage={
-              addFormMethods.formState.errors.bio?.message as string
-            }
-          >
-            <Controller
-              name="bio"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  textArea
-                  {...field}
-                  rows={3}
-                  placeholder="Short bio about the employee..."
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      {/* Edit Employee Drawer */}
-      <Drawer
-        title="Edit Employee"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        width={700}
-        footer={
-          <div className="text-right w-full">
-            {" "}
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>{" "}
-            <Button
-              size="sm"
-              variant="solid"
-              form="editEmployeeForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>{" "}
-          </div>
-        }
-      >
-        <Form
-          id="editEmployeeForm"
-          onSubmit={editFormMethods.handleSubmit(onEditEmployeeSubmit)}
-          className="flex flex-col gap-4 p-1"
-        >
-          {/* Fields are same as Add Drawer, prefilled */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormItem
-              label="Full Name"
-              invalid={!!editFormMethods.formState.errors.name}
-              errorMessage={editFormMethods.formState.errors.name?.message}
-            >
-              <Controller
-                name="name"
-                control={editFormMethods.control}
-                render={({ field }) => (
-                  <Input {...field} prefix={<TbUserCircle />} />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Email Address"
-              invalid={!!editFormMethods.formState.errors.email}
-              errorMessage={editFormMethods.formState.errors.email?.message}
-            >
-              <Controller
-                name="email"
-                control={editFormMethods.control}
-                render={({ field }) => (
-                  <Input {...field} type="email" prefix={<TbMail />} />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Mobile Number"
-              invalid={!!editFormMethods.formState.errors.mobile}
-              errorMessage={editFormMethods.formState.errors.mobile?.message}
-            >
-              <Controller
-                name="mobile"
-                control={editFormMethods.control}
-                render={({ field }) => (
-                  <Input {...field} prefix={<TbPhone />} />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Department"
-              invalid={!!editFormMethods.formState.errors.department}
-              errorMessage={
-                editFormMethods.formState.errors.department?.message
-              }
-            >
-              <Controller
-                name="department"
-                control={editFormMethods.control}
-                render={({ field }) => (
-                  <Input {...field} prefix={<TbBuildingSkyscraper />} />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Designation"
-              invalid={!!editFormMethods.formState.errors.designation}
-              errorMessage={
-                editFormMethods.formState.errors.designation?.message
-              }
-            >
-              <Controller
-                name="designation"
-                control={editFormMethods.control}
-                render={({ field }) => (
-                  <Input {...field} prefix={<TbBriefcase />} />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Status"
-              invalid={!!editFormMethods.formState.errors.status}
-              errorMessage={editFormMethods.formState.errors.status?.message}
-            >
-              <Controller
-                name="status"
-                control={editFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    options={EMPLOYEE_STATUS_OPTIONS}
-                    value={EMPLOYEE_STATUS_OPTIONS.find(
-                      (o) => o.value === field.value
-                    )}
-                    onChange={(opt: any) => field.onChange(opt?.value)}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Joining Date"
-              invalid={!!editFormMethods.formState.errors.joiningDate}
-              errorMessage={
-                editFormMethods.formState.errors.joiningDate?.message as string
-              }
-            >
-              <Controller
-                name="joiningDate"
-                control={editFormMethods.control}
-                render={({ field }) => (
-                  <DatePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    inputPrefix={<TbCalendar />}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Roles (comma-separated)"
-              className="md:col-span-2"
-              invalid={!!editFormMethods.formState.errors.roles}
-              errorMessage={editFormMethods.formState.errors.roles?.message}
-            >
-              <Controller
-                name="roles"
-                control={editFormMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={
-                      Array.isArray(field.value) ? field.value.join(", ") : ""
-                    }
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value
-                          .split(",")
-                          .map((r) => r.trim())
-                          .filter(Boolean)
-                      )
-                    }
-                    prefix={<TbUsers />}
-                  />
-                )}
-              />
-            </FormItem>
-          </div>
-          <FormItem
-            label="Bio (Optional)"
-            invalid={!!editFormMethods.formState.errors.bio}
-            errorMessage={
-              editFormMethods.formState.errors.bio?.message as string
-            }
-          >
-            <Controller
-              name="bio"
-              control={editFormMethods.control}
-              render={({ field }) => <Input textArea {...field} rows={3} />}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
 
       {/* Filter Drawer */}
       <Drawer
