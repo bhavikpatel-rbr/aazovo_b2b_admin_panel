@@ -32,8 +32,8 @@ const systemToolsRoutes: Routes = [
         },
     },
     {
-        key: 'systemTools.changeLog',
-        path: `${SYSTEM_TOOLS_PREFIX_PATH}/change-log`,
+        key: 'systemTools.activityLog',
+        path: `${SYSTEM_TOOLS_PREFIX_PATH}/activity-log`,
         component: lazy(() => import('@/views/system-tools/Change-Log')),
         authority: [ADMIN],
         meta: {

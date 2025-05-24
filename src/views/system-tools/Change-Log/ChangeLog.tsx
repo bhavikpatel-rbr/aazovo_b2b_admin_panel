@@ -153,7 +153,7 @@ const initialDummyChangeLogs: ChangeLogItem[] = [
   {
     id: "CL001",
     timestamp: new Date(2023, 10, 6, 14, 30, 15).toISOString(),
-    userName: "Alice Admin",
+    userName: "Alice",
     userId: "U001",
     actionType: "UPDATE",
     entityType: "Product",
@@ -163,7 +163,7 @@ const initialDummyChangeLogs: ChangeLogItem[] = [
   {
     id: "CL002",
     timestamp: new Date(2023, 10, 6, 11, 45, 2).toISOString(),
-    userName: "George Support",
+    userName: "George",
     userId: "U007",
     actionType: "LOGIN",
     entityType: "User",
@@ -308,7 +308,7 @@ const ChangeLogsSearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Search logs..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -332,8 +332,8 @@ const ChangeLogsTableTools = ({
     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
       <Button
         icon={<TbFilter />}
-        onClick={onFilter}
         className="w-full sm:w-auto"
+        onClick={onFilter}
       >
         Filter
       </Button>
@@ -528,11 +528,13 @@ const ChangeLogListing = () => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
   }, [filterFormMethods, filterCriteria]);
+
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
     setFilterCriteria(data);
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     setIsFilterDrawerOpen(false);
   }, []);
+  
   const onClearFilters = useCallback(() => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
@@ -697,7 +699,10 @@ const ChangeLogListing = () => {
         cell: (props) => (
           <div className="flex items-center gap-2">
             <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
-            <span>{props.getValue<string>()}</span>
+            <div className="text-xs">
+              <b>{props.getValue<string>()}</b>
+              <p>{"Admin"}</p>
+            </div>
           </div>
         ),
       },
@@ -720,29 +725,46 @@ const ChangeLogListing = () => {
           </Tag>
         ),
       },
+      // {
+      //   header: "Entity Type",
+      //   accessorKey: "entityType",
+      //   size: 140,
+      //   enableSorting: true,
+      //   cell: (props) =>
+      //     ENTITY_TYPE_OPTIONS.find((o) => o.value === props.getValue())
+      //       ?.label || props.getValue(),
+      // },
       {
-        header: "Entity Type",
-        accessorKey: "entityType",
-        size: 140,
-        enableSorting: true,
-        cell: (props) =>
-          ENTITY_TYPE_OPTIONS.find((o) => o.value === props.getValue())
-            ?.label || props.getValue(),
-      },
-      {
-        header: "Entity ID",
+        header: "Entity",
         accessorKey: "entityId",
         size: 130,
         enableSorting: true,
-        cell: (props) => props.getValue() || "-",
+        cell: (props) => (
+          <div className="text-xs">
+            <b>{props.getValue()}</b>
+            <p>Sales & Lead</p>
+          </div>
+        )
+      },
+      {
+        header: "Status",
+        accessorKey: "status",
+        size: 130,
+        enableSorting: true,
+        cell: (props) => (
+          <div className="text-xs">
+            <Tag>Success</Tag>
+          </div>
+        )
       },
       {
         header: "Description",
         accessorKey: "description",
         enableSorting: false,
         cell: (props) => (
-          <Tooltip title={props.getValue<string>()} wrapperClass="w-full">
-            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
+          <Tooltip title={props.getValue<string>()} wrapperClass="w-full" >
+            <b className="text-xs">127.0.0.1</b>
+            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px] text-xs">
               {props.getValue<string>()}
             </span>
           </Tooltip>
@@ -893,11 +915,12 @@ const ChangeLogListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-              Change Log Viewer
+              Activity Log
             </h5>
             {/* Add New button is typically not present for logs. Kept for structural similarity if needed. */}
             {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add Log Entry (Admin)</Button> */}
           </div>
+          <ChangeLogsTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData}/>
           {/* <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
                     <ActiveFiltersDisplay
                         filterData={filterCriteria}
@@ -1038,16 +1061,13 @@ const ChangeLogListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Change Logs"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={() => setIsFilterDrawerOpen(false)}
         onRequestClose={() => setIsFilterDrawerOpen(false)}
         width={400}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" onClick={onClearFilters} type="button">
-              Clear All
-            </Button>
             <div>
               <Button
                 size="sm"
@@ -1055,7 +1075,7 @@ const ChangeLogListing = () => {
                 onClick={() => setIsFilterDrawerOpen(false)}
                 type="button"
               >
-                Cancel
+                Clear
               </Button>
               <Button
                 size="sm"
@@ -1063,7 +1083,7 @@ const ChangeLogListing = () => {
                 form="filterLogForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>
             </div>
           </div>
@@ -1074,14 +1094,14 @@ const ChangeLogListing = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Action Type(s)">
+          <FormItem label="Action Types">
             <Controller
               name="filterActionType"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Action Type"
+                  placeholder="Select Action Type"
                   options={CHANGE_TYPE_OPTIONS}
                   value={CHANGE_TYPE_OPTIONS.filter((opt) =>
                     field.value?.includes(opt.value)
@@ -1093,14 +1113,14 @@ const ChangeLogListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Entity Type(s)">
+          <FormItem label="Entity Types">
             <Controller
               name="filterEntityType"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Entity Type"
+                  placeholder="Select Entity Type"
                   options={ENTITY_TYPE_OPTIONS}
                   value={ENTITY_TYPE_OPTIONS.filter((opt) =>
                     field.value?.includes(opt.value)
@@ -1112,12 +1132,31 @@ const ChangeLogListing = () => {
               )}
             />
           </FormItem>
-          <FormItem label="User Name (contains)">
+          <FormItem label="User Name">
             <Controller
               name="filterUserName"
               control={filterFormMethods.control}
               render={({ field }) => (
-                <Input {...field} placeholder="Enter username to filter" />
+                <Select {...field} isMulti placeholder="Select username"
+                  options={[
+                    {label: "Rahul", value: "Rahul"},
+                  ]}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Status">
+            <Controller
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select {...field} isMulti placeholder="Select Status"
+                  options={[
+                    {label: "Success", value: "Success"},
+                    {label: "Blocked", value: "Blocked"},
+                    {label: "Failed", value: "Failed"},
+                  ]}
+                />
               )}
             />
           </FormItem>
@@ -1126,7 +1165,7 @@ const ChangeLogListing = () => {
               name="filterDateRange"
               control={filterFormMethods.control}
               render={({ field }) => (
-                <DatePicker.RangePicker
+                <DatePicker.DatePickerRange
                   value={field.value as [Date | null, Date | null] | undefined}
                   onChange={(dates) => field.onChange(dates || [null, null])}
                   placeholder="Start Date - End Date"
