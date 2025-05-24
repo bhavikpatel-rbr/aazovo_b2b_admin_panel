@@ -1424,7 +1424,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             value={
                                 <NumericFormat
                                     displayType="text"
-                                    value="12"
+                                    value="16"
                                     prefix={''}
                                     thousandSeparator={true}
                                 />
