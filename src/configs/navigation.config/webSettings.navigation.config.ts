@@ -19,22 +19,7 @@ const webSettingsNavigationConfig: NavigationTree[] = [
             },
         },
         subMenu: [
-            {
-                key: 'webSettings.cmsManagement',
-                path: `${WEB_SETTINGS_ROUTE}/cms-management`,
-                title: 'CMS Management',
-                translateKey: 'nav.webSettings.cmsManagement',
-                icon: 'cmsManagement',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN],
-                meta: {
-                    description: {
-                        translateKey: 'nav.webSettings.cmsManagementDesc',
-                        label: 'Manage CMS content',
-                    },
-                },
-                subMenu: [],
-            },
+
             {
                 key: 'webSettings.homeCategoryImage',
                 path: `${WEB_SETTINGS_ROUTE}/home-category-image`,

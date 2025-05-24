@@ -1411,6 +1411,54 @@ export const getSubscribersAsync = async () => {
     return isAxiosError(err)
   }
 }
+export const getHomeCategoryAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/other/home_category_image`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addHomeCategoryAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editHomeCategoryAsync = async (unitData: any) => {
+  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image/${unitData?.id}`, { _method: "PUT", category_id: unitData?.category_id, view_more: unitData?.view_more })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletHomeCategoryAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/other/home_category_image/${unitData}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllHomeCategoryAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 
 
