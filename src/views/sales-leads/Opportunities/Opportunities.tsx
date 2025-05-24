@@ -1521,7 +1521,7 @@ const Opportunities = () => {
       }
     },
     {
-      header: "Timestamps & Status",
+      header: "Timestamps",
       accessorKey: "created_date",
       size: 170,
       cell: ({ row }) => {

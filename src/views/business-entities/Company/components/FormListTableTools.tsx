@@ -291,9 +291,8 @@ const FormListTableTools = () => {
               size="sm"
               className="mr-2"
               onClick={onClearFilters}
-              variant="plain"
             >
-              Clear All
+              Clear
             </Button>
             <Button
               size="sm"
@@ -301,7 +300,7 @@ const FormListTableTools = () => {
               form="filterFormInTools" // Unique form ID
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }

@@ -273,11 +273,11 @@ const ActionColumn = ({
 }) => {
   const menuItems = (
     <>
-      <Dropdown.Item eventKey="changeStatus" onClick={onChangeStatus}>
-        <TbSwitchHorizontal /> Change Status
+      <Dropdown.Item eventKey="changeStatus" onClick={onChangeStatus} className="text-xs">
+        <TbSwitchHorizontal size={16}/> Change Status
       </Dropdown.Item>
-      <Dropdown.Item eventKey="sendLaunchMail" onClick={onSendLaunchMail}>
-        <TbMailForward /> Send Launch Mail
+      <Dropdown.Item eventKey="sendLaunchMail" onClick={onSendLaunchMail} className="text-xs">
+        <TbMailForward size={16} /> Send Launch Mail
       </Dropdown.Item>
       {/* <Dropdown.Item eventKey="clone" onClick={onClone} icon={<TbCopy />}>
         Clone Product
@@ -319,7 +319,7 @@ const ActionColumn = ({
         placement="bottom-end"
         renderTitle={
           <Tooltip title="More">
-            <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+            <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 mr-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
               <TbDotsVertical />
             </div>
           </Tooltip>
@@ -787,7 +787,7 @@ useEffect(() => {
       header: "Product", id: "productInfo", size: 300,
       cell: (props: CellContext<ProductItem, any>) => (
         <div className="flex items-center gap-3">
-          <Avatar size="lg" shape="rounded" src={props.row.original.thumbImageFullPath || undefined} icon={<TbBox />}
+          <Avatar size="md" shape="circle" src={props.row.original.thumbImageFullPath || undefined} icon={<TbBox />}
             className={props.row.original.thumbImageFullPath ? "cursor-pointer" : ""}
             onClick={() => props.row.original.thumbImageFullPath && openImageViewer(props.row.original.thumbImageFullPath)} />
           <div>
@@ -798,6 +798,7 @@ useEffect(() => {
       )
     },
     { header: "Category", accessorKey: "categoryName", cell: props => props.row.original.categoryName || "-" },
+    { header: "Sub Cat", accessorKey: "subcategoryName", cell: props => props.row.original.subcategoryName || "-" },
     { header: "Brand", accessorKey: "brandName", cell: props => props.row.original.brandName || "-" },
     {
       header: "Status", accessorKey: "status",
@@ -843,7 +844,7 @@ useEffect(() => {
               </Dropdown>
 
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-                Add New Product
+                Add New
               </Button>
             </div>
           </div>
@@ -876,21 +877,22 @@ useEffect(() => {
         title={editingProduct ? "Edit Product" : "Add New Product"}
         isOpen={isAddEditDrawerOpen}
         onClose={closeAddEditDrawer}
+        onRequestClose={closeAddEditDrawer}
         width={800}
-        bodyClass="flex flex-col h-full"
+        bodyClass="flex flex-col h-full pt-0"
         footer={
-            <div className="text-right p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="text-right w-full">
                 <Button size="sm" className="mr-2" type="button" onClick={closeAddEditDrawer} disabled={isSubmitting}>Cancel</Button>
                 <Button size="sm" variant="solid" form="productForm" type="submit" loading={isSubmitting}
                     disabled={isSubmitting || (!editingProduct && !formMethods.formState.isValid) || (editingProduct && !formMethods.formState.isDirty && !formMethods.formState.isValid) }>
-                    {isSubmitting ? (editingProduct ? "Saving..." : "Adding...") : (editingProduct ? "Save Changes" : "Add Product")}
+                    {isSubmitting ? (editingProduct ? "Saving..." : "Adding...") : "Save"}
                 </Button>
             </div>
         }
       >
         <Form id="productForm" onSubmit={formMethods.handleSubmit(onProductFormSubmit)} className="flex flex-col gap-y-0 h-full">
-            <div className="border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10 py-2 px-4">
-              <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+            <div className="border-b border-gray-200 dark:border-gray-700 sticky top-0 pt-3 bg-white dark:bg-gray-800 z-10 px-4">
+              <nav className=" flex space-x-6" aria-label="Tabs">
                 {[FORM_TABS.GENERAL, FORM_TABS.DESCRIPTION, FORM_TABS.MEDIA, FORM_TABS.META].map(tab => (
                   <button key={tab} type="button" onClick={() => handleFormTabChange(tab)}
                     className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm capitalize flex items-center gap-2 ${currentFormTab === tab ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
@@ -901,9 +903,9 @@ useEffect(() => {
                 ))}
               </nav>
             </div>
-            <div className="flex-grow overflow-y-auto p-4">
+            <div className="flex-grow overflow-y-auto pt-4">
               {currentFormTab === FORM_TABS.GENERAL && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0">
                   <FormItem label="Product Name" isRequired invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
                   <FormItem label="Slug / Url" isRequired invalid={!!formMethods.formState.errors.slug} errorMessage={formMethods.formState.errors.slug?.message}><Controller name="slug" control={formMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
                   <FormItem label="SKU Code" invalid={!!formMethods.formState.errors.sku_code} errorMessage={formMethods.formState.errors.sku_code?.message}><Controller name="sku_code" control={formMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /></FormItem>
@@ -994,14 +996,41 @@ useEffect(() => {
       </Drawer>
 
       {/* Filter Drawer */}
-      <Drawer title="Filter Products" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer}
-        footer={<div className="text-right p-4 border-t"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterProductForm" type="submit">Apply</Button></div>}>
-        <Form id="filterProductForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 p-4">
-          <FormItem label="Name or SKU"><Controller name="filterNameOrSku" control={filterFormMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
-          <FormItem label="Categories"><Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti options={categoryOptions} value={categoryOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value))} />} /></FormItem>
-          <FormItem label="Sub Categories"><Controller name="filterSubCategoryIds" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti options={subcategoryOptions} value={subcategoryOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value))} isDisabled={subcategoryOptions.length === 0} />} /></FormItem>
-          <FormItem label="Brands"><Controller name="filterBrandIds" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti options={brandOptions} value={brandOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value))} />} /></FormItem>
-          <FormItem label="Statuses"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti options={uiProductStatusOptions} value={uiProductStatusOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value))} />} /></FormItem>
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+        footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterProductForm" type="submit">Apply</Button></div>}>
+        <Form id="filterProductForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+          <FormItem label="Name or SKU">
+            <Controller name="filterNameOrSku" control={filterFormMethods.control} render={({ field }) => 
+              <Input {...field} placeholder="Enter Name or SKU"/>} 
+            />
+          </FormItem>
+          <FormItem label="Categories">
+            <Controller 
+              name="filterCategoryIds" 
+              control={filterFormMethods.control} 
+              render={({ field }) => 
+                <UiSelect isMulti placeholder="Select Categories" options={categoryOptions} value={categoryOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value))} />} /></FormItem>
+          <FormItem label="Sub Categories">
+            <Controller 
+              name="filterSubCategoryIds" 
+              control={filterFormMethods.control} 
+              render={({ field }) => 
+                <UiSelect isMulti placeholder="Select Sub Categories" options={subcategoryOptions} value={subcategoryOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value))} isDisabled={subcategoryOptions.length === 0} />} /></FormItem>
+          <FormItem label="Brands">
+            <Controller 
+              name="filterBrandIds" 
+              control={filterFormMethods.control} 
+              render={({ field }) => 
+                <UiSelect isMulti placeholder="Select Brands" options={brandOptions} value={brandOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value))} />} /></FormItem>
+          <FormItem label="Status">
+            <Controller 
+              name="filterStatuses" 
+              control={filterFormMethods.control} 
+              render={({ field }) => 
+                <UiSelect isMulti placeholder="Select Status" options={uiProductStatusOptions} value={uiProductStatusOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value))} 
+                />
+              } 
+            /></FormItem>
         </Form>
       </Drawer>
 

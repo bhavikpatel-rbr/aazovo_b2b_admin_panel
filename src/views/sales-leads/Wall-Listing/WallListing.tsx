@@ -467,10 +467,10 @@ const StyledActionColumn = ({
   onViewDetail: () => void;
 }) => {
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md`}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-md`}
           role="button"
           onClick={onEdit}
         >
@@ -1179,7 +1179,7 @@ const WallListing = () => {
   const columns: ColumnDef<WallItem>[] = useMemo(
     () => [
       {
-        header: "Listing Overview",
+        header: "Overview",
         accessorKey: "product_name",
         size: 280,
         cell: ({ row }) => {
@@ -1199,13 +1199,11 @@ const WallListing = () => {
                     )
                   }
                 />
-                <div>
-                  <span className="font-semibold text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
-                    {product_name}
-                  </span>
+                <div className="font-semibold leading-normal text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
+                  {product_name}
                 </div>
               </div>
-              <span className="text-xs">
+              <span className="text-xs mt-2">
                 <span className="font-semibold">ID :</span> {listing_id}
               </span>
               <span className="text-xs">
@@ -1298,7 +1296,7 @@ const WallListing = () => {
         },
       },
       {
-        header: "Product Details",
+        header: "Details",
         accessorKey: "product_category",
         size: 280,
         cell: ({ row }) => {
@@ -1372,7 +1370,7 @@ const WallListing = () => {
         },
       },
       {
-        header: "Pricing & Engagement",
+        header: "Engagement",
         accessorKey: "price",
         size: 220, // Adjusted size for new share_count
         cell: ({ row }) => {
@@ -1402,7 +1400,7 @@ const WallListing = () => {
                   Qty: {quantity ?? "N/A"}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300 mt-1">
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
                 <Tooltip title="Inquiries">
                   <span className="flex items-center gap-0.5">
                     <TbMessageCircle className="text-gray-500 dark:text-gray-400" />
@@ -1415,20 +1413,11 @@ const WallListing = () => {
                     {share_count}
                   </span>
                 </Tooltip>
-                <Tooltip title={is_bookmarked ? "Unbookmark" : "Bookmark"}>
-                  <button
-                    onClick={() => handleToggleBookmark(row.original)}
-                    className="p-1 bg-transparent border-none cursor-pointer"
-                    aria-label={
-                      is_bookmarked ? "Unbookmark item" : "Bookmark item"
-                    }
-                  >
-                    {is_bookmarked ? (
-                      <TbBookmarkFilled className="text-lg text-blue-500 dark:text-blue-400" />
-                    ) : (
-                      <TbBookmark className="text-lg text-gray-400 hover:text-blue-500 dark:hover:text-blue-400" />
-                    )}
-                  </button>
+                <Tooltip title="Bookmark">
+                  <span className="flex items-center gap-0.5">
+                    <TbBookmark size={14} className="text-gray-500 dark:text-gray-400" />
+                    {9}
+                  </span>
                 </Tooltip>
               </div>
               {created_date && (
@@ -1442,7 +1431,7 @@ const WallListing = () => {
         },
       },
       {
-        header: "Admin Status",
+        header: "Status",
         accessorKey: "recordStatus",
         size: 180,
         cell: ({ row }) => {
@@ -1522,9 +1511,14 @@ const WallListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+                Add New
+              </Button>
+              <Button variant="solid" icon={<TbPlus />} >
+                Add Multiple
+              </Button>
+            </div>
           </div>
           <WallTableTools
             onSearchChange={handleSearchChange}
@@ -1666,10 +1660,11 @@ const WallListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Wall Listings"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
+        width={480}
         footer={
           <div className="text-right w-full">
             <Button
@@ -1686,7 +1681,7 @@ const WallListing = () => {
               form="filterWallForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }
@@ -1694,47 +1689,32 @@ const WallListing = () => {
         <Form
           id="filterWallForm"
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4 h-full"
+          className="flex flex-col gap-2 h-full"
         >
-          <div className="flex-grow overflow-y-auto p-1">
-            <FormItem label="Record Status">
+          <div className="md:grid grid-cols-2 gap-2 overflow-y-auto p-1">
+            <FormItem label="Status">
               <Controller
-                name="filterRecordStatuses"
+                name="filterstatus"
                 control={filterFormMethods.control}
                 render={({ field }) => (
                   <UiSelect
                     isMulti
-                    placeholder="Select record statuses..."
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Status..."
                     options={recordStatusOptions}
                     {...field}
                   />
                 )}
               />
             </FormItem>
-            <FormItem label="Product (Name/ID)">
-              <Controller
-                name="filterProductIds"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select products..."
-                    options={dummyProducts.map((p) => ({
-                      value: p.id,
-                      label: p.name,
-                    }))}
-                    {...field}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Company (Name/ID)">
+             <FormItem label="Companies">
               <Controller
                 name="filterCompanyIds"
                 control={filterFormMethods.control}
                 render={({ field }) => (
                   <UiSelect
                     isMulti
+                    className="text-nowrap text-ellipsis"
                     placeholder="Select companies..."
                     options={dummyCompanies.map((p) => ({
                       value: p.id,
@@ -1752,8 +1732,96 @@ const WallListing = () => {
                 render={({ field }) => (
                   <UiSelect
                     isMulti
+                    className="text-nowrap text-ellipsis"
                     placeholder="Select intents..."
                     options={intentOptions}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Products">
+              <Controller
+                name="filterProductIds"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select products..."
+                    options={dummyProducts.map((p) => ({
+                      value: p.id,
+                      label: p.name,
+                    }))}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Categories">
+              <Controller
+                name="categories"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Categories..."
+                    options={[
+                      {label: "Electronics",value: "Electronics"},
+                    ]}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Sub Categories">
+              <Controller
+                name="subcategories"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Sub Categories..."
+                    options={[
+                      {label: "Mobile",value: "Mobile"},
+                    ]}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Brands">
+              <Controller
+                name="brands"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Brands..."
+                    options={[
+                      {label: "Samsung",value: "Samsung"},
+                    ]}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Product Status">
+              <Controller
+                name="productStatus"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Product Status..."
+                    options={[
+                      {label: "Active",value: "Active"},
+                      {label: "In-Active",value: "In-Active"},
+                    ]}
                     {...field}
                   />
                 )}
@@ -1773,6 +1841,75 @@ const WallListing = () => {
                     }
                     onChange={field.onChange}
                     placeholder="Select date range"
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Source">
+              <Controller
+                name="source"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Source..."
+                    options={[
+                      {label: "in",value: "in"},
+                      {label: "com",value: "com"},
+                    ]}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Product Spec">
+              <Controller
+                name="productSpec"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Product Spec..."
+                    options={[
+                      {label: "India",value: "India"},
+                    ]}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Member Type">
+              <Controller
+                name="productSpec"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Member Type..."
+                    options={[
+                      {label: "INS - Premium",value: "INS - Premium"},
+                    ]}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Created By" className="col-span-2">
+              <Controller
+                name="productSpec"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    className="text-nowrap text-ellipsis"
+                    placeholder="Select Employee..."
+                    options={[
+                      {label: "Mahendra Patel",value: "Mahendra Patel"},
+                    ]}
+                    {...field}
                   />
                 )}
               />

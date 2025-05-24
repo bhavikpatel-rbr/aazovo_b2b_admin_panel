@@ -252,7 +252,7 @@ const uiStatusOptions: { value: BrandStatus; label: string }[] = [
 ];
 const apiStatusOptions: { value: "Active" | "Disabled"; label: string }[] = [
   { value: "Active", label: "Active" },
-  { value: "Disabled", label: "Inactive" },
+  { value: "Disabled", label: "Disabled" },
 ];
 const showHeaderOptions: { value: "1" | "0"; label: string }[] = [
   { value: "1", label: "Yes" },
@@ -949,7 +949,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
         }
       >
         <Form id="addBrandForm" onSubmit={addFormMethods.handleSubmit(onAddBrandSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Brand Icon" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}>
+          <FormItem label="Brand Icon (250 X 250)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}>
             <Controller name="icon" control={addFormMethods.control}
               render={({ field: { onChange, onBlur, name, ref } }) => (
                 <Input type="file" name={name} ref={ref} onBlur={onBlur}
@@ -996,7 +996,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} />
           </FormItem>
           <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}>
-            <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" />} />
+            <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" textArea/>} />
           </FormItem>
         </Form>
       </Drawer>
@@ -1071,23 +1071,23 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
 
       {/* Filter Brands Drawer */}
       <Drawer
-        title="Filter Brands" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+        title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear Filters</Button>
-            <Button size="sm" variant="solid" form="filterBrandForm" type="submit">Apply Filters</Button>
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
+            <Button size="sm" variant="solid" form="filterBrandForm" type="submit">Apply</Button>
           </div>
         }
       >
         <Form id="filterBrandForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Filter by Name(s)">
+          <FormItem label="Name">
             <Controller name="filterNames" control={filterFormMethods.control}
-              render={({ field }) => <UiSelect isMulti placeholder="Select names..." options={brandNameOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />}
+              render={({ field }) => <UiSelect isMulti placeholder="Select Names" options={brandNameOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />}
             />
           </FormItem>
-          <FormItem label="Filter by Status(es)">
+          <FormItem label="Status">
             <Controller name="filterStatuses" control={filterFormMethods.control}
-              render={({ field }) => <UiSelect isMulti placeholder="Select statuses..." options={uiStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />}
+              render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={uiStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />}
             />
           </FormItem>
         </Form>

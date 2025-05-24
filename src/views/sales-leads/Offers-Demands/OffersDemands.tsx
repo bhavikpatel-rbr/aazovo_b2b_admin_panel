@@ -39,6 +39,7 @@ import type {
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common"; // Ensure this type path is correct
 import CreateOfferPage from "./OfferCreate/CreateOffer";
+import { Dropdown } from "@/components/ui";
 
 // --- Define Item Type (Table Row Data) ---
 // Generic type for both Offers and Demands
@@ -218,18 +219,15 @@ const ActionColumn = ({
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
           role="button"
         >
-          <TbDotsVertical />
+          <Dropdown renderTitle={<TbDotsVertical />} >
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add in Active</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Schedule</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Task</Dropdown.Item>
+            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Alert</Dropdown.Item>
+          </Dropdown>
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete">
-                <div
-                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-                    role="button"
-                    onClick={onViewDetail}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip> */}
+      
     </div>
   );
 };
@@ -737,19 +735,29 @@ const OffersDemands = () => {
         enableSorting: true,
         size: 60,
       },
-      { header: "Name", accessorKey: "name", enableSorting: true },
+      { header: "Name", accessorKey: "name", enableSorting: true,
+        cell : (props)=>(
+          <div>
+            <div className="text-xs">
+              <b>{props.getValue()}</b>
+            </div>
+            <div className="text-xs">
+              <span>Number of Buyer: </span> {3}
+            </div>
+            <div className="text-xs">
+              <span>Number of Seller: </span> {5}
+            </div>
+          </div>
+        )
+
+      },
       {
         header: "Section Details",
         size:200,
         cell : (props)=>{
           return (
             <div>
-              <div className="text-xs">
-                <b>Number of Buyer: </b> {3}
-              </div>
-              <div className="text-xs">
-                <b>Number of Seller: </b> {5}
-              </div>
+              
               <div className="text-xs">
                 <b>Group A: </b> <br/>
                 <div className="flex flex-col gap-0.5">
@@ -781,6 +789,15 @@ const OffersDemands = () => {
               <span>{props.row.original.createdBy}</span>
             </div>
             <div className="gap-1 text-xs"><b>Assigned: </b> Manan Patel</div>
+            <div className="gap-1 text-xs">
+              <span>
+                {props.row.original.createdDate.toLocaleDateString()}{" "}
+                {props.row.original.createdDate.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+            </span>
+            </div>
           </div>
         ),
       },
@@ -796,23 +813,23 @@ const OffersDemands = () => {
       //     </div>
       //   ),
       // },
-      {
-        header: "Created Date",
-        accessorKey: "createdDate",
-        enableSorting: true,
-        cell: (props) => {
-          const date = props.row.original.createdDate;
-          return (
-            <span>
-              {date.toLocaleDateString()}{" "}
-              {date.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          );
-        },
-      },
+      // {
+      //   header: "Created Date",
+      //   accessorKey: "createdDate",
+      //   enableSorting: true,
+      //   cell: (props) => {
+      //     const date = props.row.original.createdDate;
+      //     return (
+      //       <span>
+      //         {date.toLocaleDateString()}{" "}
+      //         {date.toLocaleTimeString([], {
+      //           hour: "2-digit",
+      //           minute: "2-digit",
+      //         })}
+      //       </span>
+      //     );
+      //   },
+      // },
       // In columns definition
       {
         header: "Actions",

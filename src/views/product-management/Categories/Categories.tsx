@@ -25,6 +25,7 @@ import {
   Select as UiSelect,
   Tag,
   Dialog,
+  Select,
 } from "@/components/ui";
 
 // Icons
@@ -37,7 +38,7 @@ import {
   TbFilter,
   TbPlus,
   TbCloudUpload,
-  TbCategory , // Or TbCategory for categories
+  TbCategory, // Or TbCategory for categories
   TbBox, // Fallback icon
   TbInfoCircle, // For empty states or info
   // Icons for Detail Rows (if you add them)
@@ -51,7 +52,8 @@ import {
   TbHistory,
   TbCalendarPlus,
   TbCalendarEvent,
-  TbBoxOff, // For not found
+  TbBoxOff,
+  TbCloudDownload, // For not found
 } from "react-icons/tb";
 
 // Types for Categories (as per your first file)
@@ -193,14 +195,14 @@ function exportToCsvCategory(filename: string, rows: CategoryItem[]) {
   const csvContent =
     CSV_HEADERS_CATEGORY.join(separator) + "\n" +
     transformedRows.map((row) =>
-        csvKeys.map((k) => {
-            let cellValue = row[k];
-            if (cellValue === null || cellValue === undefined) cellValue = "";
-            else cellValue = String(cellValue).replace(/"/g, '""');
-            if (String(cellValue).search(/("|,|\n)/g) >= 0) cellValue = `"${cellValue}"`;
-            return cellValue;
-          }).join(separator)
-      ).join("\n");
+      csvKeys.map((k) => {
+        let cellValue = row[k];
+        if (cellValue === null || cellValue === undefined) cellValue = "";
+        else cellValue = String(cellValue).replace(/"/g, '""');
+        if (String(cellValue).search(/("|,|\n)/g) >= 0) cellValue = `"${cellValue}"`;
+        return cellValue;
+      }).join(separator)
+    ).join("\n");
   const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   if (link.download !== undefined) {
@@ -288,7 +290,7 @@ const CategorySearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Search Categories..."
+    placeholder="Quick Search..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
   />
@@ -305,9 +307,9 @@ const CategoryTableTools = ({
     <div className="flex-grow">
       <CategorySearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
-      {/* <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button> */}
+      <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
       <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
     </div>
   </div>
@@ -611,11 +613,11 @@ const Categories = () => {
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter((item) =>
-          item.name?.toLowerCase().includes(query) ||
-          item.slug?.toLowerCase().includes(query) ||
-          String(item.id).toLowerCase().includes(query) ||
-          item.status.toLowerCase().includes(query) ||
-          item.parentCategoryName?.toLowerCase().includes(query)
+        item.name?.toLowerCase().includes(query) ||
+        item.slug?.toLowerCase().includes(query) ||
+        String(item.id).toLowerCase().includes(query) ||
+        item.status.toLowerCase().includes(query) ||
+        item.parentCategoryName?.toLowerCase().includes(query)
       );
     }
     const { order, key } = tableData.sort as OnSortParam;
@@ -720,13 +722,15 @@ const Categories = () => {
 
       {/* Add Category Drawer */}
       <Drawer title="Add Category" isOpen={isAddDrawerOpen} onClose={closeAddCategoryDrawer} onRequestClose={closeAddCategoryDrawer}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeAddCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="addCategoryForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Adding..." : "Save"} </Button> </div> }
+        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeAddCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="addCategoryForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Adding..." : "Save"} </Button> </div>}
       >
         <Form id="addCategoryForm" onSubmit={addFormMethods.handleSubmit(onAddCategorySubmit)} className="flex flex-col gap-4">
           <FormItem label="Category Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired> <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Category Name" />} /> </FormItem>
           <FormItem label="Slug" invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired> <Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter category-slug" />} /> </FormItem>
           <FormItem label="Parent Category" invalid={!!addFormMethods.formState.errors.parent_category} errorMessage={addFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={addFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
-          <FormItem label="Icon" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
+          <FormItem label="Web Icon (467 X 250)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="web-icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
+          <FormItem label="Mobile Icon (500 X 500)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="mobile-icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
+          <FormItem label="Category Banner (500 X 500)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="category-banner" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
           <FormItem label="Show on Home Page?" invalid={!!addFormMethods.formState.errors.show_home_page} errorMessage={addFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
           <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
           <FormItem label="Coming Soon?" invalid={!!addFormMethods.formState.errors.comingsoon} errorMessage={addFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
@@ -735,13 +739,13 @@ const Categories = () => {
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
           <FormItem label="Meta Title" invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /> </FormItem>
           <FormItem label="Meta Description" invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} /> </FormItem>
-          <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" />} /> </FormItem>
+          <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" textArea/>} /> </FormItem>
         </Form>
       </Drawer>
 
       {/* Edit Category Drawer */}
       <Drawer title="Edit Category" isOpen={isEditDrawerOpen} onClose={closeEditCategoryDrawer} onRequestClose={closeEditCategoryDrawer}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editCategoryForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Saving..." : "Save Changes"} </Button> </div> }
+        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editCategoryForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Saving..." : "Save Changes"} </Button> </div>}
       >
         <Form id="editCategoryForm" onSubmit={editFormMethods.handleSubmit(onEditCategorySubmit)} className="flex flex-col gap-4">
           {editingCategory?.icon_full_path && !editFormPreviewUrl && <FormItem label="Current Icon"><Avatar size={80} src={editingCategory.icon_full_path} shape="rounded" icon={<TbCategory />} /></FormItem>}
@@ -762,13 +766,39 @@ const Categories = () => {
       </Drawer>
 
       {/* Filter Categories Drawer */}
-      <Drawer title="Filter Categories" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear Filters</Button> <Button size="sm" variant="solid" form="filterCategoryForm" type="submit">Apply Filters</Button> </div> }
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button> <Button size="sm" variant="solid" form="filterCategoryForm" type="submit">Apply</Button> </div>}
       >
         <Form id="filterCategoryForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Filter by Name(s)"> <Controller name="filterNames" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select names..." options={categoryNameOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
-          <FormItem label="Filter by Parent Category(s)"> <Controller name="filterParentIds" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select parent categories..." options={parentCategoryOptions.filter(opt => opt.value !== null)} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
-          <FormItem label="Filter by Status(es)"> <Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select statuses..." options={uiCategoryStatusOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
+          <FormItem label="Name"> <Controller name="filterNames" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Names" options={categoryNameOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
+          <FormItem label="Parent Category"> <Controller name="filterParentIds" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Parent Categories" options={parentCategoryOptions.filter(opt => opt.value !== null)} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
+          <FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={uiCategoryStatusOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
+          <FormItem label="Show in Home">
+            <Controller name="show-in-home"  control={filterFormMethods.control} render={({field})=>
+              <Select
+                {...field} 
+                isMulti
+                placeholder="Select Yes or No"
+                options={[
+                  {label : "Yes", value: "Yes"},
+                  {label : "No", value: "No"},
+                ]}
+              />
+            }/>
+          </FormItem>
+          <FormItem label="Show in Header">
+            <Controller name="show-in-header"  control={filterFormMethods.control} render={({field})=>
+              <Select
+                {...field} 
+                isMulti
+                placeholder="Select Yes or No"
+                options={[
+                  {label : "Yes", value: "Yes"},
+                  {label : "No", value: "No"},
+                ]}
+              />
+            }/>
+          </FormItem>
         </Form>
       </Drawer>
 
@@ -793,121 +823,121 @@ const Categories = () => {
         <div className="flex justify-center items-center p-4"> {imageToView ? <img src={imageToView} alt="Category Icon Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image.</p>} </div>
       </Dialog>
 
-<Dialog
-  isOpen={isViewDetailModalOpen}
-  onClose={closeViewDetailModal}
-  onRequestClose={closeViewDetailModal}
-  size="sm"
-  title=""
-  contentClassName="!p-0 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-2xl"
->
-  {categoryToView ? (
-    <div className="flex flex-col max-h-[90vh]">
-      {/* Body */}
-      <div className="p-4 space-y-3">
-        <div className="p-3 bg-white dark:bg-slate-700/60 rounded-lg space-y-3">
-          {/* Header: Icon + ID + Edit */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {categoryToView.icon_full_path && (
-                <Avatar
-                  size={48}
-                  shape="rounded"
-                  src={categoryToView.icon_full_path}
-                  icon={<TbCategory />}
-                  className="border-2 border-white dark:border-slate-500 shadow"
-                />
-              )}
-              <div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {categoryToView.name}
-                </p>
-                <p className="text-xs text-slate-600 dark:text-slate-400">ID: {categoryToView.id}</p>
+      <Dialog
+        isOpen={isViewDetailModalOpen}
+        onClose={closeViewDetailModal}
+        onRequestClose={closeViewDetailModal}
+        size="sm"
+        title=""
+        contentClassName="!p-0 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-2xl"
+      >
+        {categoryToView ? (
+          <div className="flex flex-col max-h-[90vh]">
+            {/* Body */}
+            <div className="p-4 space-y-3">
+              <div className="p-3 bg-white dark:bg-slate-700/60 rounded-lg space-y-3">
+                {/* Header: Icon + ID + Edit */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {categoryToView.icon_full_path && (
+                      <Avatar
+                        size={48}
+                        shape="rounded"
+                        src={categoryToView.icon_full_path}
+                        icon={<TbCategory />}
+                        className="border-2 border-white dark:border-slate-500 shadow"
+                      />
+                    )}
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {categoryToView.name}
+                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">ID: {categoryToView.id}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grid of Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 text-sm text-slate-700 dark:text-slate-200">
+                  <DialogDetailRow
+                    label="Status"
+                    value={
+                      <Tag className={`${categoryStatusColor[categoryToView.status]} capitalize font-semibold border-0 text-[10px] px-2 py-0.5 rounded-full`}>
+                        {categoryToView.status}
+                      </Tag>
+                    }
+                  />
+                  <DialogDetailRow
+                    label="Show in Header"
+                    value={categoryToView.showHeader === 1 ? 'Visible' : 'Hidden'}
+                    valueClassName={categoryToView.showHeader === 1 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}
+                  />
+                  <DialogDetailRow
+                    label="Show Home Page"
+                    value={categoryToView.showHomePage === 1 ? 'Yes' : 'No'}
+                    valueClassName={categoryToView.showHomePage === 1 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}
+                  />
+                  <DialogDetailRow
+                    label="Coming Soon"
+                    value={categoryToView.comingSoon === 1 ? 'Yes' : 'No'}
+                    valueClassName={categoryToView.comingSoon === 1 ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-slate-300'}
+                  />
+                  <DialogDetailRow label="Parent Category" value={categoryToView.parentCategoryName || '-'} />
+                  {categoryToView.showPageName && (
+                    <DialogDetailRow label="Display Page Name" value={categoryToView.showPageName} />
+                  )}
+                  <DialogDetailRow label="Slug / URL" value={categoryToView.slug} isLink breakAll />
+                  <DialogDetailRow
+                    label="Created"
+                    value={new Date(categoryToView.createdAt).toLocaleString(undefined, {
+                      year: 'numeric', month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  />
+                  <DialogDetailRow
+                    label="Last Updated"
+                    value={new Date(categoryToView.updatedAt).toLocaleString(undefined, {
+                      year: 'numeric', month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  />
+                </div>
+
+                {/* SEO Section */}
+                {(categoryToView.metaTitle || categoryToView.metaDescription || categoryToView.metaKeyword) && (
+                  <div className="pt-2">
+                    <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                      SEO & Meta
+                    </h6>
+                    <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
+                      {categoryToView.metaTitle && (
+                        <p><span className="font-medium text-slate-500 dark:text-slate-400">Title:</span> {categoryToView.metaTitle}</p>
+                      )}
+                      {categoryToView.metaDescription && (
+                        <p className="whitespace-pre-wrap"><span className="font-medium text-slate-500 dark:text-slate-400">Description:</span> {categoryToView.metaDescription}</p>
+                      )}
+                      {categoryToView.metaKeyword && (
+                        <p><span className="font-medium text-slate-500 dark:text-slate-400">Keywords:</span> {categoryToView.metaKeyword}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
-          {/* Grid of Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 text-sm text-slate-700 dark:text-slate-200">
-            <DialogDetailRow
-              label="Status"
-              value={
-                <Tag className={`${categoryStatusColor[categoryToView.status]} capitalize font-semibold border-0 text-[10px] px-2 py-0.5 rounded-full`}>
-                  {categoryToView.status}
-                </Tag>
-              }
-            />
-            <DialogDetailRow
-              label="Show in Header"
-              value={categoryToView.showHeader === 1 ? 'Visible' : 'Hidden'}
-              valueClassName={categoryToView.showHeader === 1 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}
-            />
-            <DialogDetailRow
-              label="Show Home Page"
-              value={categoryToView.showHomePage === 1 ? 'Yes' : 'No'}
-              valueClassName={categoryToView.showHomePage === 1 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}
-            />
-            <DialogDetailRow
-              label="Coming Soon"
-              value={categoryToView.comingSoon === 1 ? 'Yes' : 'No'}
-              valueClassName={categoryToView.comingSoon === 1 ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-slate-300'}
-            />
-            <DialogDetailRow label="Parent Category" value={categoryToView.parentCategoryName || '-'} />
-            {categoryToView.showPageName && (
-              <DialogDetailRow label="Display Page Name" value={categoryToView.showPageName} />
-            )}
-            <DialogDetailRow label="Slug / URL" value={categoryToView.slug} isLink breakAll />
-            <DialogDetailRow
-              label="Created"
-              value={new Date(categoryToView.createdAt).toLocaleString(undefined, {
-                year: 'numeric', month: 'short', day: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-              })}
-            />
-            <DialogDetailRow
-              label="Last Updated"
-              value={new Date(categoryToView.updatedAt).toLocaleString(undefined, {
-                year: 'numeric', month: 'short', day: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-              })}
-            />
-          </div>
-
-          {/* SEO Section */}
-          {(categoryToView.metaTitle || categoryToView.metaDescription || categoryToView.metaKeyword) && (
-            <div className="pt-2">
-              <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
-                SEO & Meta
-              </h6>
-              <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
-                {categoryToView.metaTitle && (
-                  <p><span className="font-medium text-slate-500 dark:text-slate-400">Title:</span> {categoryToView.metaTitle}</p>
-                )}
-                {categoryToView.metaDescription && (
-                  <p className="whitespace-pre-wrap"><span className="font-medium text-slate-500 dark:text-slate-400">Description:</span> {categoryToView.metaDescription}</p>
-                )}
-                {categoryToView.metaKeyword && (
-                  <p><span className="font-medium text-slate-500 dark:text-slate-400">Keywords:</span> {categoryToView.metaKeyword}</p>
-                )}
-              </div>
+        ) : (
+          <div className="p-8 text-center flex flex-col items-center justify-center" style={{ minHeight: '200px' }}>
+            <TbInfoCircle size={42} className="text-slate-400 dark:text-slate-500 mb-2" />
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No Category Information</p>
+            <p className="text-xs text-slate-500 mt-1">Details for this category could not be loaded.</p>
+            <div className="mt-5">
+              <Button variant="solid" color="blue-600" onClick={closeViewDetailModal} size="sm">
+                Dismiss
+              </Button>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="p-8 text-center flex flex-col items-center justify-center" style={{ minHeight: '200px' }}>
-      <TbInfoCircle size={42} className="text-slate-400 dark:text-slate-500 mb-2" />
-      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No Category Information</p>
-      <p className="text-xs text-slate-500 mt-1">Details for this category could not be loaded.</p>
-      <div className="mt-5">
-        <Button variant="solid" color="blue-600" onClick={closeViewDetailModal} size="sm">
-          Dismiss
-        </Button>
-      </div>
-    </div>
-  )}
-</Dialog>
+          </div>
+        )}
+      </Dialog>
 
 
     </>
