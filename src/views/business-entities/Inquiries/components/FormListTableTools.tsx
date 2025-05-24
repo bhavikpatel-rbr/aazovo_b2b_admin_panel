@@ -272,7 +272,7 @@ const FormListTableTools = () => {
         </Button>
       </div>
       <Drawer
-        title="Filter"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
@@ -284,7 +284,7 @@ const FormListTableTools = () => {
               className="mr-2"
               onClick={onClearFilters}
             >
-              Clear Filters
+              Clear
             </Button>
             <Button
               size="sm"
@@ -292,7 +292,7 @@ const FormListTableTools = () => {
               form="filterInquiryForm" // Unique form ID
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }

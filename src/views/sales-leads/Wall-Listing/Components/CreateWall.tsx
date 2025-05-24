@@ -84,9 +84,8 @@ const intentOptions: { value: WallIntent; label: string }[] = [
   { value: "Exchange", label: "Exchange" },
 ];
 const productStatusOptions = [
-  { value: "In Stock", label: "In Stock" },
-  { value: "Low Stock", label: "Low Stock" },
-  { value: "Out of Stock", label: "Out of Stock" },
+  { value: "Active", label: "Active" },
+  { value: "In-Active", label: "In-Active" },
 ];
 const dummyCartoonTypes = [
   { id: 1, name: "Master Carton" },
@@ -316,21 +315,21 @@ const WallItemAdd = () => {
               <Controller name="intent" control={formMethods.control} render={({ field }) => ( <UiSelect options={intentOptions} {...field} placeholder="Select Intent" /> )} />
             </FormItem>
             <FormItem
-              label="Product Status (Stock)"
+              label="Product Status"
               invalid={!!formMethods.formState.errors.productStatus}
               errorMessage={formMethods.formState.errors.productStatus?.message}
             >
-              <Controller name="productStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={productStatusOptions} {...field} placeholder="Select Product Stock Status" /> )} />
+              <Controller name="productStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={productStatusOptions} {...field} placeholder="Select Product Status" /> )} />
             </FormItem>
 
             {/* Row 3 */}
             <FormItem
-              label="Product Specification"
+              label="Product Spec"
               invalid={!!formMethods.formState.errors.productSpecId}
               errorMessage={formMethods.formState.errors.productSpecId?.message}
             >
               <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name }))} {...field} value={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name })).find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Product Specification (Optional)" />
+                  <UiSelect options={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name }))} {...field} value={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name })).find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Product Spec" />
                 )} />
             </FormItem>
             <FormItem
@@ -492,7 +491,6 @@ const WallItemAdd = () => {
       
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
         <Button type="button" onClick={handleCancel} disabled={isSubmitting} > Cancel </Button>
-        <Button type="button" onClick={handleSaveAsDraft} disabled={isSubmitting} > Draft </Button>
         <Button type="submit" form="wallItemAddForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !formMethods.formState.isDirty || !formMethods.formState.isValid} >
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
