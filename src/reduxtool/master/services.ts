@@ -1355,33 +1355,67 @@ export const getBugReportAsync = async () => {
 
 export const addBugReportAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/bug_report`, unitData)
-    return response
-  } catch (err) {
-    return isAxiosError(err)
-  }
-}
-
-export const editBugReportAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
-  console.log("unitdata", unitData);
-
-  try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/bug_report/${unitData?.id}`, {
-      _method: "PUT", name: unitData?.name
-      , email: unitData?.email
-      , mobile_no: unitData?.mobile_no
-      , report: unitData?.report
-      , status: unitData?.status
-      , reported_by: unitData?.reported_by
-      , created_by: unitData?.created_by
-      , attachment: unitData?.attachment
+    const response = await axiosInstance.post(`${config.apiURL}/other/bug_report`, unitData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     })
     return response
   } catch (err) {
     return isAxiosError(err)
   }
 }
+
+// export const editBugReportAsync = async (unitData: any) => {
+
+//   console.log("unitdata", unitData?.name);
+
+//   try {
+//     const response = await axiosInstance.post(`${config.apiURL}/other/bug_report/${unitData?.id}`, {
+//       _method: "PUT", name: unitData?.name
+//       , email: unitData?.email
+//       , mobile_no: unitData?.mobile_no
+//       , report: unitData?.report
+//       , status: unitData?.status
+//       , reported_by: unitData?.reported_by
+//       , created_by: unitData?.created_by
+//       , attachment: unitData?.attachment
+//     }, {
+//       headers: {
+//         'Content-Type': 'multipart/form-data'
+//       }
+//     })
+//     return response
+//   } catch (err) {
+//     return isAxiosError(err)
+//   }
+// }
+
+export const editBugReportAsync = async (brandId: number | string, formData: FormData) => {
+  console.log("editBrandListAsync - brandId:", brandId);
+  console.log("editBrandListAsync - formData to be sent:");
+  for (const pair of formData.entries()) {
+    console.log(pair[0] + ': ' + pair[1]);
+  }
+
+  try {
+    // The formData already contains _method: 'PUT'
+    // Axios will automatically set 'Content-Type': 'multipart/form-data'
+    // when the second argument to post/put is a FormData instance.
+    const response = await axiosInstance.post(
+      `${config.apiURL}/other/bug_report/${brandId}`, // Use brandId in the URL
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
 
 export const deletBugReportAsync = async (unitData: any) => {
   try {
