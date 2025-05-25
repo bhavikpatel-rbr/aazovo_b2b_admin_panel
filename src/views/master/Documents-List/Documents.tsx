@@ -66,19 +66,19 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 export type DocumentItem = {
   id: string | number; // API returns number, but good to be flexible
   name: string;
-  // category is not in your provided API response for DocumentList,
+  // documentType is not in your provided API response for DocumentList,
   // but it's in your UI. We'll handle it in the form.
-  // If category comes from a separate API (like DocumentType), you'll need to fetch and map it.
-  category?: string; // Optional, as it's not in the base API data for a document item
+  // If documentType comes from a separate API (like DocumentType), you'll need to fetch and map it.
+  document_type?: string; // Optional, as it's not in the base API data for a document item
   created_at?: string; // Optional, from API
   updated_at?: string; // Optional, from API
 };
 
-// --- Define DocumentType (Category) Type if fetched separately ---
+// --- Define _t (documentType) Type if fetched separately ---
 // This is an assumption. If your categories are hardcoded or come from a different source, adjust accordingly.
 export type DocumentType = {
   id: string | number;
-  name: string; // This would be the category name
+  name: string; // This would be the documentType name
 };
 
 // --- Zod Schema for Add/Edit Document Form ---
@@ -87,9 +87,9 @@ const documentFormSchema = z.object({
     .string()
     .min(1, "Document name is required.")
     .max(100, "Name cannot exceed 100 characters."),
-  category: z // Assuming category is a string selected from options
+  document_type: z // Assuming documentType is a string selected from options
     .string()
-    .min(1, "Document category is required."),
+    .min(1, "Document Type is required."),
 });
 type DocumentFormData = z.infer<typeof documentFormSchema>;
 
@@ -98,16 +98,16 @@ const filterFormSchema = z.object({
   filterNames: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  filterCategories: z // Filter by category
+  filterCategories: z // Filter by documentType
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_DOCUMENT = ["ID", "Document Name", "Category"]; // Added Category
-const CSV_KEYS_DOCUMENT: (keyof (DocumentItem & { categoryName?: string }))[] =
-  ["id", "name", "categoryName"];
+const CSV_HEADERS_DOCUMENT = ["ID", "Document Name", "documentType"]; // Added documentType
+const CSV_KEYS_DOCUMENT: (keyof (DocumentItem & { document_typeName?: string }))[] =
+  ["id", "name", "document_typeName"];
 
 function exportToCsvDocument(
   filename: string,
@@ -123,14 +123,14 @@ function exportToCsvDocument(
     return false;
   }
 
-  // Create a map for quick category lookup if category is an ID
-  // const categoryMap = new Map(docTypes.map(dt => [String(dt.id), dt.name]));
+  // Create a map for quick documentType lookup if documentType is an ID
+  // const documentTypeMap = new Map(docTypes.map(dt => [String(dt.id), dt.name]));
 
   const transformedRows = rows.map((row) => ({
     ...row,
-    // If `row.category` is an ID, look it up. If it's already a name, use it.
-    // For now, assuming row.category is already the category name string from the form/state.
-    categoryName: row.category || "N/A",
+    // If `row.document_type` is an ID, look it up. If it's already a name, use it.
+    // For now, assuming row.document_typeis already the documentType name string from the form/state.
+    document_typeName: row.document_type|| "N/A",
   }));
 
   const separator = ",";
@@ -178,8 +178,8 @@ function exportToCsvDocument(
   return false;
 }
 
-// --- Hardcoded Document Category Options (as per your UI) ---
-const documentCategoryOptions = [
+// --- Hardcoded Document Type Options (as per your UI) ---
+const documentTypeOptions = [
   { label: "Tax Document", value: "Tax Document" },
   { label: "ID Proofs", value: "ID Proofs" },
   { label: "Business Registrations", value: "Business Registrations" },
@@ -433,7 +433,7 @@ const Documents = () => {
   // DocumentTypeData might be for categories if fetched from API.
   const {
     DocumentListData = [],
-    // DocumentTypeData = [], // Assuming this holds category data if fetched via API
+    // DocumentTypeData = [], // Assuming this holds documentType data if fetched via API
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
@@ -446,12 +446,12 @@ const Documents = () => {
 
   const addFormMethods = useForm<DocumentFormData>({
     resolver: zodResolver(documentFormSchema),
-    defaultValues: { name: "", category: "" },
+    defaultValues: { name: "", document_type: "" },
     mode: "onChange",
   });
   const editFormMethods = useForm<DocumentFormData>({
     resolver: zodResolver(documentFormSchema),
-    defaultValues: { name: "", category: "" },
+    defaultValues: { name: "", document_type: "" },
     mode: "onChange",
   });
   const filterFormMethods = useForm<FilterFormData>({
@@ -459,7 +459,7 @@ const Documents = () => {
     defaultValues: filterCriteria,
   });
 
-  // const categoryOptionsForSelect = useMemo(() => {
+  // const documentTypeOptionsForSelect = useMemo(() => {
   //     // If categories come from an API (e.g., DocumentTypeData)
   //     // if (!Array.isArray(DocumentTypeData)) return [];
   //     // return DocumentTypeData.map((cat: DocumentType) => ({
@@ -468,22 +468,22 @@ const Documents = () => {
   //     // }));
 
   //     // If categories are hardcoded (as per your UI example)
-  //     return documentCategoryOptions;
+  //     return documentTypeOptions;
   // }, [/* DocumentTypeData */]); // Add DocumentTypeData to dependency array if using API for categories
 
   const openAddDrawer = () => {
-    addFormMethods.reset({ name: "", category: "" });
+    addFormMethods.reset({ name: "", document_type: "" });
     setIsAddDrawerOpen(true);
   };
   const closeAddDrawer = () => {
-    addFormMethods.reset({ name: "", category: "" });
+    addFormMethods.reset({ name: "", document_type: "" });
     setIsAddDrawerOpen(false);
   };
   const onAddDocumentSubmit = async (data: DocumentFormData) => {
     setIsSubmitting(true);
     try {
       // Ensure addDocumentListAction takes the correct payload
-      // Your API for adding a document might only need 'name' and 'category' (or category_id)
+      // Your API for adding a document might only need 'name' and 'documentType' (or documentType_id)
       await dispatch(addDocumentListAction(data)).unwrap();
       toast.push(
         <Notification title="Document Added" type="success" duration={2000}>
@@ -507,13 +507,13 @@ const Documents = () => {
   const openEditDrawer = (doc: DocumentItem) => {
     setEditingDocument(doc);
     editFormMethods.setValue("name", doc.name);
-    // Assuming doc.category holds the category name string or ID for Select
-    editFormMethods.setValue("category", doc.category || "");
+    // Assuming doc.document_typeholds the documentType name string or ID for Select
+    editFormMethods.setValue("document_type", doc.document_type|| "");
     setIsEditDrawerOpen(true);
   };
   const closeEditDrawer = () => {
     setEditingDocument(null);
-    editFormMethods.reset({ name: "", category: "" });
+    editFormMethods.reset({ name: "", document_type: "" });
     setIsEditDrawerOpen(false);
   };
   const onEditDocumentSubmit = async (data: DocumentFormData) => {
@@ -535,7 +535,7 @@ const Documents = () => {
       await dispatch(
         editDocumentListAction({
           id: editingDocument.id,
-          ...data, // name, category
+          ...data, // name, documentType
         })
       ).unwrap();
       toast.push(
@@ -715,7 +715,7 @@ const Documents = () => {
     }));
   }, [DocumentListData]);
 
-  const documentCategoryFilterOptions = useMemo(
+  const documentTypeFilterOptions = useMemo(
     () => {
       // If categories come from API (DocumentTypeData)
       // if (!Array.isArray(DocumentTypeData)) return [];
@@ -723,7 +723,7 @@ const Documents = () => {
       // return Array.from(uniqueCategories).map(catName => ({ value: catName, label: catName }));
 
       // If categories are hardcoded
-      return documentCategoryOptions;
+      return documentTypeOptions;
     },
     [
       /* DocumentTypeData */
@@ -731,10 +731,10 @@ const Documents = () => {
   );
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    // Since category is not directly on DocumentListData items from API,
+    // Since documentType is not directly on DocumentListData items from API,
     // we'll assume it's added/managed client-side or needs mapping if it's an ID.
-    // For now, this calculation assumes 'category' is a string property on DocumentItem for filtering.
-    // If your API sends DocumentListData WITHOUT category, you'll need to adjust how category is handled.
+    // For now, this calculation assumes 'documentType' is a string property on DocumentItem for filtering.
+    // If your API sends DocumentListData WITHOUT documentType, you'll need to adjust how documentType is handled.
     const sourceData: DocumentItem[] = Array.isArray(DocumentListData)
       ? DocumentListData
       : [];
@@ -750,23 +750,22 @@ const Documents = () => {
       );
     }
 
-    // Apply category filters
-    // This assumes item.category is a string that matches the filter value.
-    // If item.category is an ID, you'd need to map it to a name or filter by ID.
+    // Apply documentType filters
+    // This assumes item.document_typeis a string that matches the filter value.
+    // If item.document_typeis an ID, you'd need to map it to a name or filter by ID.
     if (
       filterCriteria.filterCategories &&
       filterCriteria.filterCategories.length > 0
     ) {
       const selectedFilterCategories = filterCriteria.filterCategories.map(
-        (opt) => opt.value.toLowerCase() // Assuming category names are used for filtering
+        (opt) => opt.value.toLowerCase() // Assuming documentType names are used for filtering
       );
       processedData = processedData.filter(
         (item: DocumentItem) =>
-          item.category
-            ? selectedFilterCategories.includes(
-                item.category.trim().toLowerCase()
+          item.document_type? selectedFilterCategories.includes(
+                item.document_type.trim().toLowerCase()
               )
-            : false // If no category, it won't match
+            : false // If no documentType, it won't match
       );
     }
 
@@ -774,13 +773,13 @@ const Documents = () => {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter((item: DocumentItem) => {
         const nameLower = item.name?.trim().toLowerCase() ?? "";
-        const categoryLower = item.category?.trim().toLowerCase() ?? "";
+        const documentTypeLower = item.document_type?.trim().toLowerCase() ?? "";
         const idString = String(item.id ?? "")
           .trim()
           .toLowerCase();
         return (
           nameLower.includes(query) ||
-          categoryLower.includes(query) || // Search by category if present
+          documentTypeLower.includes(query) || // Search by documentType if present
           idString.includes(query)
         );
       });
@@ -789,7 +788,7 @@ const Documents = () => {
     if (
       order &&
       key &&
-      (key === "id" || key === "name" || key === "category") && // Added category for sorting
+      (key === "id" || key === "name" || key === "documentType") && // Added documentType for sorting
       processedData.length > 0
     ) {
       const sortedData = [...processedData];
@@ -895,12 +894,12 @@ const Documents = () => {
         enableSorting: true,
       },
       {
-        // Display category. If category is an ID, you might need to map it to a name here.
-        // For now, assuming 'category' is a string name.
-        header: "Category",
-        accessorKey: "category",
+        // Display documentType. If documentType is an ID, you might need to map it to a name here.
+        // For now, assuming 'documentType' is a string name.
+        header: "Document Type",
+        accessorKey: "documentType",
         enableSorting: true,
-        cell: (props) => props.row.original.category || "N/A",
+        cell: (props) => props.row.original.document_type|| "N/A",
       },
       {
         header: "Actions",
@@ -1008,19 +1007,19 @@ const Documents = () => {
             />
           </FormItem>
           <FormItem
-            label="Document Category"
-            invalid={!!addFormMethods.formState.errors.category}
-            errorMessage={addFormMethods.formState.errors.category?.message}
+            label="Document Type"
+            invalid={!!addFormMethods.formState.errors.document_type}
+            errorMessage={addFormMethods.formState.errors.document_type?.message}
           >
             <Controller
-              name="category"
+              name="document_type"
               control={addFormMethods.control}
               render={({ field }) => (
                 <UiSelect // Using UiSelect to avoid conflict
-                  placeholder="Select Category"
-                  options={documentCategoryOptions} // Hardcoded options
+                  placeholder="Select documentType"
+                  options={documentTypeOptions} // Hardcoded options
                   value={
-                    documentCategoryOptions.find(
+                    documentTypeOptions.find(
                       (option) => option.value === field.value
                     ) || null
                   }
@@ -1081,19 +1080,19 @@ const Documents = () => {
             />
           </FormItem>
           <FormItem
-            label="Document Category"
-            invalid={!!editFormMethods.formState.errors.category}
-            errorMessage={editFormMethods.formState.errors.category?.message}
+            label="Document Type"
+            invalid={!!editFormMethods.formState.errors.document_type}
+            errorMessage={editFormMethods.formState.errors.document_type?.message}
           >
             <Controller
-              name="category"
+              name="document_type"
               control={editFormMethods.control}
               render={({ field }) => (
                 <UiSelect // Using UiSelect to avoid conflict
-                  placeholder="Select Category"
-                  options={documentCategoryOptions} // Hardcoded options
+                  placeholder="Select documentType"
+                  options={documentTypeOptions} // Hardcoded options
                   value={
-                    documentCategoryOptions.find(
+                    documentTypeOptions.find(
                       (option) => option.value === field.value
                     ) || null
                   }
@@ -1148,7 +1147,7 @@ const Documents = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Category">
+          <FormItem label="Document Type">
             <Controller
               name="filterCategories"
               control={filterFormMethods.control}
@@ -1156,7 +1155,7 @@ const Documents = () => {
                 <UiSelect
                   isMulti
                   placeholder="Select categories..."
-                  options={documentCategoryFilterOptions} // Hardcoded options for filter
+                  options={documentTypeFilterOptions} // Hardcoded options for filter
                   value={field.value || []}
                   onChange={(selectedVal) => field.onChange(selectedVal || [])}
                 />
@@ -1183,7 +1182,7 @@ const Documents = () => {
           setDocumentToDelete(null);
         }}
         onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
+        // loading={isDeleting}
       >
         <p>
           Are you sure you want to delete the document "
