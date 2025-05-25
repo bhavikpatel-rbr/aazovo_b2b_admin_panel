@@ -1,7 +1,6 @@
 // src/views/your-path/AutoEmailListing.tsx
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom';
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,25 +17,24 @@ import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
-import DebouceInput from "@/components/shared/DebouceInput";
+import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
 import Tag from "@/components/ui/Tag";
 import { Drawer, Form, FormItem, Input } from "@/components/ui";
+
 // Icons
 import {
   TbPencil,
   TbTrash,
   TbChecks,
   TbEye,
-  TbDotsVertical,
-  TbShare,
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
   TbMailForward,
-  TbUserCircle,
-  TbSwitchHorizontal, // Icons for Auto Email
+  TbUsers,
+  TbToggleRight,
 } from "react-icons/tb";
 
 // Types
@@ -47,386 +45,161 @@ import type {
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
-// --- Define Item Type & Constants ---
-export type AutoEmailStatus = "active" | "inactive" | "draft";
+// Redux
+import { useAppDispatch } from "@/reduxtool/store";
+import { shallowEqual, useSelector } from "react-redux";
+import {
+  getAutoEmailsAction,
+  addAutoEmailAction,
+  editAutoEmailAction,
+  deleteAutoEmailAction,
+  deleteAllAutoEmailsAction,
+  // getEmailTypesAction, // REMOVED - Email types are now static
+  getUsersAction,
+} from "@/reduxtool/master/middleware";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+
+
+// --- Define Types ---
+// export type ApiEmailType = { id: string | number; name: string; }; // No longer needed if static
+export type ApiUser = { id: string | number; name: string; };
+export type SelectOption = { value: string; label: string };
+
+export type AutoEmailApiStatus = "active" | "inactive" | null | string;
+
 export type AutoEmailItem = {
   id: string | number;
-  emailType: string; // e.g., "Welcome Email", "Password Reset", "Weekly Digest"
-  userName: string; // User this email is configured for or by (can be a system user name too)
-  status: AutoEmailStatus;
+  email_type: string;       // This will now be a value from EMAIL_TYPE_OPTIONS
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  status: AutoEmailApiStatus;
+  // For display purposes, we'll derive the label from the static list
+  emailTypeDisplay?: string; 
+  usersDisplay?: string;  
 };
 
-const AUTO_EMAIL_STATUS_OPTIONS: { value: AutoEmailStatus; label: string }[] = [
+// --- CONSTANTS for Dropdowns ---
+const EMAIL_TYPE_OPTIONS: SelectOption[] = [
+    { value: "feedback", label: "Feedback" },
+    { value: "testing", label: "Testing" },
+    { value: "dealdone", label: "Deal Done" },
+    { value: "notification_lead_inquiry", label: "Notification: Lead Inquiry" },
+    { value: "notification_new_registration", label: "Notification: New Registration" },
+    { value: "edit_profile_request", label: "Edit Profile Request" },
+    { value: "wall_enquiry_store", label: "Wall Enquiry Store" },
+    { value: "job_application", label: "Job Application" },
+    { value: "assign_lead", label: "Assign Lead" },
+    { value: "accept_lead", label: "Accept Lead" },
+    { value: "reject_lead", label: "Reject Lead" },
+    { value: "approve_waiting_lead", label: "Approve Waiting Lead" },
+    { value: "approval_lead", label: "Approval Lead" },
+    { value: "deal_done_lead", label: "Deal Done Lead" },
+];
+const emailTypeValues = EMAIL_TYPE_OPTIONS.map(et => et.value) as [string, ...string[]];
+
+
+const AUTO_EMAIL_STATUS_OPTIONS: SelectOption[] = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
-  { value: "draft", label: "Draft" },
 ];
-const autoEmailStatusValues = AUTO_EMAIL_STATUS_OPTIONS.map((s) => s.value) as [
-  AutoEmailStatus,
-  ...AutoEmailStatus[]
-];
+const autoEmailStatusValues = AUTO_EMAIL_STATUS_OPTIONS.map((s) => s.value) as ["active" | "inactive", ...Array<"active" | "inactive">];
 
-const autoEmailStatusColor: Record<AutoEmailStatus, string> = {
-  active:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+const autoEmailStatusColor: Record<string, string> = {
+  active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
   inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
-  draft: "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100",
+  default: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
 };
-
-// Example options for Email Type dropdown in filter/add/edit (can be fetched or predefined)
-const EMAIL_TYPE_FILTER_OPTIONS = [
-  { value: "Welcome Email", label: "Welcome Email" },
-  { value: "Password Reset", label: "Password Reset" },
-  { value: "Weekly Digest", label: "Weekly Digest" },
-  { value: "Order Confirmation", label: "Order Confirmation" },
-];
 
 // --- Zod Schema for Add/Edit Form ---
 const autoEmailFormSchema = z.object({
-  emailType: z
-    .string()
-    .min(1, "Email Type is required.")
-    .max(100, "Email Type too long."),
-  userName: z
-    .string()
-    .min(1, "User Name is required.")
-    .max(100, "User Name too long."),
-  status: z.enum(autoEmailStatusValues, {
-    errorMap: () => ({ message: "Please select a status." }),
+  email_type: z.enum(emailTypeValues, { // Use derived enum values
+    errorMap: () => ({ message: "Email Type is required." }),
   }),
+  user_id: z.array(z.string()).min(1, "At least one User ID is required."),
+  status: z.enum(autoEmailStatusValues, { errorMap: () => ({ message: "Please select a status." }), }),
 });
 type AutoEmailFormData = z.infer<typeof autoEmailFormSchema>;
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
-  filterEmailTypes: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterUserNames: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(), // For multi-select filter
-  filterStatus: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
+  filterEmailTypes: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterUserIds: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// --- Initial Dummy Data ---
-const initialDummyAutoEmails: AutoEmailItem[] = [
-  {
-    id: "AE001",
-    emailType: "Welcome Email",
-    userName: "New Users Automation",
-    status: "active",
-  },
-  {
-    id: "AE002",
-    emailType: "Password Reset",
-    userName: "System Security",
-    status: "active",
-  },
-  {
-    id: "AE003",
-    emailType: "Weekly Digest",
-    userName: "Marketing Team",
-    status: "draft",
-  },
-  {
-    id: "AE004",
-    emailType: "Order Confirmation",
-    userName: "E-commerce System",
-    status: "inactive",
-  },
-];
-
 // --- CSV Exporter ---
-const CSV_HEADERS_AE = ["ID", "Email Type", "User Name", "Status"];
-const CSV_KEYS_AE: (keyof AutoEmailItem)[] = [
-  "id",
-  "emailType",
-  "userName",
-  "status",
+const CSV_HEADERS_AE = ["ID", "Email Type", "User IDs", "Status", "Created At"];
+const CSV_KEYS_AE: (keyof Pick<AutoEmailItem, 'id' | 'user_id' | 'status' | 'created_at'> | 'emailTypeDisplay' | 'usersDisplay')[] = [
+  "id", "emailTypeDisplay", "usersDisplay", "status", "created_at",
 ];
 
-function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[]) {
-  if (!rows || !rows.length) {
-    /* ... no data toast ... */ return false;
-  }
-  const preparedRows = rows.map((row) => ({
-    ...row,
-    status:
-      AUTO_EMAIL_STATUS_OPTIONS.find((s) => s.value === row.status)?.label ||
-      row.status,
-  }));
-  // ... (Standard exportToCsv logic using preparedRows, CSV_HEADERS_AE, CSV_KEYS_AE for relevant keys)
-  const separator = ",";
-  const csvContent =
-    CSV_HEADERS_AE.join(separator) +
-    "\n" +
-    preparedRows
-      .map((row: any) =>
-        CSV_KEYS_AE.map((k) => {
-          let cell: any = row[k];
-          if (k === "status")
-            cell =
-              AUTO_EMAIL_STATUS_OPTIONS.find((s) => s.value === row.status)
-                ?.label || row.status; // Ensure label is used
+function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[], userOptions: SelectOption[]) { // Removed emailTypeOptions from params
+  if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
+  
+  const preparedRows = rows.map((row) => {
+    const emailTypeLabel = EMAIL_TYPE_OPTIONS.find(et => et.value === row.email_type)?.label || row.email_type; // Use static options
+    const userIdsArray = row.user_id ? row.user_id.split(',') : [];
+    const usersLabel = userIdsArray.map(uid => userOptions.find(u => u.value === uid)?.label || uid).join('; ');
+    const statusLabel = AUTO_EMAIL_STATUS_OPTIONS.find(s => s.value === row.status)?.label || String(row.status);
 
-          if (cell === null || cell === undefined) cell = "";
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-          return cell;
-        }).join(separator)
-      )
-      .join("\n");
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
+    return { ...row, emailTypeDisplay: emailTypeLabel, usersDisplay: usersLabel, status: statusLabel };
   });
+  // ... (rest of CSV export logic remains the same)
+  const separator = ",";
+  const csvContent = CSV_HEADERS_AE.join(separator) + "\n" + preparedRows.map((row: any) => CSV_KEYS_AE.map((k) => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ""; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join("\n");
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
-  if (link.download !== undefined) {
-    /* ... download logic ... */
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    return true;
-  }
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
-  return false;
+  if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = "hidden"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; }
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
-// --- ActionColumn Component ---
-const ActionColumn = ({
-  onEdit,
-  onDelete,
-  onChangeStatus,
-  onViewDetail,
-}: {
-  onEdit: () => void;
-  onDelete: () => void;
-  onViewDetail: () => void;
-  onChangeStatus: () => void;
-}) => {
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
-          role="button"
-          onClick={onEdit}
-        >
-          <TbPencil />
-        </div>
-      </Tooltip>
-      <Tooltip title="Delete">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-          role="button"
-          onClick={onViewDetail}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip>
-    </div>
-  );
-};
+// --- ActionColumn, Search, TableTools, Table, SelectedFooter (UI remains same) ---
+const ActionColumn = ({ onEdit, onDelete, onChangeStatus }: { onEdit: () => void; onDelete: () => void; onChangeStatus: () => void; }) => { /* ... as before ... */ return ( <div className="flex items-center justify-center gap-1"> <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="Toggle Status"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400`} role="button" onClick={onChangeStatus}><TbToggleRight /></div></Tooltip> <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> ); };
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search by Email Type, User..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+ItemSearch.displayName = "ItemSearch";
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type AutoEmailsTableProps = { columns: ColumnDef<AutoEmailItem>[]; data: AutoEmailItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: AutoEmailItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: AutoEmailItem) => void; onAllRowSelect: (checked: boolean, rows: Row<AutoEmailItem>[]) => void; };
+const AutoEmailsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: AutoEmailsTableProps) => ( <DataTable selectable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} /> );
+type AutoEmailsSelectedFooterProps = { selectedItems: AutoEmailItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
+const AutoEmailsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: AutoEmailsSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Auto Email{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Auto Email(s)`} onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false); }}> <p>Are you sure you want to delete the selected auto email(s)?</p> </ConfirmDialog> </> ); };
 
-// --- AutoEmailsSearch & AutoEmailsTableTools (Similar to Units) ---
-type AutoEmailsSearchProps = {
-  onInputChange: (value: string) => void;
-  ref?: Ref<HTMLInputElement>;
-};
-const AutoEmailsSearch = React.forwardRef<
-  HTMLInputElement,
-  AutoEmailsSearchProps
->(({ onInputChange }, ref) => (
-  <DebouceInput
-    ref={ref}
-    className="w-full"
-    placeholder="Quick Search..."
-    suffix={<TbSearch className="text-lg" />}
-    onChange={(e) => onInputChange(e.target.value)}
-  />
-));
-AutoEmailsSearch.displayName = "AutoEmailsSearch";
-
-type AutoEmailsTableToolsProps = {
-  onSearchChange: (query: string) => void;
-  onFilter: () => void;
-  onExport: () => void;
-};
-const AutoEmailsTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-}: AutoEmailsTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-    <div className="flex-grow">
-      <AutoEmailsSearch onInputChange={onSearchChange} />
-    </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-      <Button
-        icon={<TbFilter />}
-        onClick={onFilter}
-        className="w-full sm:w-auto"
-      >
-        Filter
-      </Button>
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport}
-        className="w-full sm:w-auto"
-      >
-        Export
-      </Button>
-    </div>
-  </div>
-);
-
-// --- AutoEmailsTable (Similar to UnitsTable) ---
-type AutoEmailsTableProps = {
-  /* ... Same props as UnitsTable, but with AutoEmailItem type ... */
-  columns: ColumnDef<AutoEmailItem>[];
-  data: AutoEmailItem[];
-  loading: boolean;
-  pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: AutoEmailItem[];
-  onPaginationChange: (page: number) => void;
-  onSelectChange: (value: number) => void;
-  onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: AutoEmailItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<AutoEmailItem>[]) => void;
-};
-const AutoEmailsTable = (
-  {
-    columns,
-    data,
-    loading,
-    pagingData,
-    selectedItems,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    onRowSelect,
-    onAllRowSelect,
-  }: AutoEmailsTableProps /* ... DataTable setup ... */
-) => (
-  <DataTable
-    selectable
-    columns={columns}
-    data={data}
-    loading={loading}
-    pagingData={pagingData}
-    checkboxChecked={(row) =>
-      selectedItems.some((selected) => selected.id === row.id)
-    }
-    onPaginationChange={onPaginationChange}
-    onSelectChange={onSelectChange}
-    onSort={onSort}
-    onCheckBoxChange={onRowSelect}
-    onIndeterminateCheckBoxChange={onAllRowSelect}
-    noData={!loading && data.length === 0}
-  />
-);
-
-// --- AutoEmailsSelectedFooter (Similar to UnitsSelectedFooter) ---
-type AutoEmailsSelectedFooterProps = {
-  selectedItems: AutoEmailItem[];
-  onDeleteSelected: () => void;
-};
-const AutoEmailsSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-}: AutoEmailsSelectedFooterProps) => {
-  /* ... Same as UnitsSelectedFooter, text changed to "Auto Email(s)" ... */
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold">
-              {" "}
-              {selectedItems.length} Auto Email
-              {selectedItems.length > 1 ? "s" : ""} selected{" "}
-            </span>
-          </span>
-          <Button
-            size="sm"
-            variant="plain"
-            className="text-red-600 hover:text-red-500"
-            onClick={() => setDeleteConfirmOpen(true)}
-          >
-            Delete Selected
-          </Button>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Auto Email(s)`}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onRequestClose={() => setDeleteConfirmOpen(false)}
-        onCancel={() => setDeleteConfirmOpen(false)}
-        onConfirm={() => {
-          onDeleteSelected();
-          setDeleteConfirmOpen(false);
-        }}
-      >
-        <p>Are you sure you want to delete the selected auto email(s)?</p>
-      </ConfirmDialog>
-    </>
-  );
-};
 
 // --- Main AutoEmailListing Component ---
 const AutoEmailListing = () => {
-  const [autoEmailsData, setAutoEmailsData] = useState<AutoEmailItem[]>(
-    initialDummyAutoEmails
-  );
-  const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "loading"
-  >("idle");
+  const dispatch = useAppDispatch();
+  const {
+    autoEmailsData = [],
+    usersData = [], // Still fetch users for dropdown
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector, shallowEqual);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AutoEmailItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isChangingStatus, setIsChangingStatus] = useState(false);
-
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<AutoEmailItem | null>(null);
-
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
-  const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: "asc", key: "emailType" },
-    query: "",
-  });
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<AutoEmailItem[]>([]);
+
+  const userOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((u: ApiUser) => ({ value: String(u.id), label: u.name })) : [], [usersData]);
+
+  useEffect(() => {
+    dispatch(getAutoEmailsAction());
+    // dispatch(getEmailTypesAction()); // REMOVED
+    dispatch(getUsersAction());
+  }, [dispatch]);
 
   const formMethods = useForm<AutoEmailFormData>({
     resolver: zodResolver(autoEmailFormSchema),
-    defaultValues: { emailType: "", userName: "", status: "draft" },
     mode: "onChange",
   });
 
@@ -435,441 +208,130 @@ const AutoEmailListing = () => {
     defaultValues: filterCriteria,
   });
 
-  // --- CRUD Handlers ---
   const openAddDrawer = useCallback(() => {
-    formMethods.reset();
-    setIsAddDrawerOpen(true);
+    formMethods.reset({
+        email_type: EMAIL_TYPE_OPTIONS[0]?.value || "", // Use static options
+        user_id: [],
+        status: "active",
+    });
+    setEditingItem(null); setIsAddDrawerOpen(true);
   }, [formMethods]);
+
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
-  const openEditDrawer = useCallback(
-    (item: AutoEmailItem) => {
+
+  const openEditDrawer = useCallback( (item: AutoEmailItem) => {
       setEditingItem(item);
-      formMethods.reset(item);
+      const userIdsArray = item.user_id ? item.user_id.split(',').map(id => id.trim()) : [];
+      formMethods.reset({
+        email_type: String(item.email_type),
+        user_id: userIdsArray,
+        status: (item.status === 'active' || item.status === 'inactive') ? item.status : 'inactive',
+      });
       setIsEditDrawerOpen(true);
-    },
-    [formMethods]
+    }, [formMethods]
   );
-  const closeEditDrawer = useCallback(() => {
-    setIsEditDrawerOpen(false);
-    setEditingItem(null);
-  }, []);
+  const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
-  const onAutoEmailFormSubmit = useCallback(
-    async (data: AutoEmailFormData) => {
-      setIsSubmitting(true);
-      setMasterLoadingStatus("loading");
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      try {
-        if (editingItem) {
-          const updatedItem: AutoEmailItem = { ...editingItem, ...data };
-          setAutoEmailsData((prev) =>
-            prev.map((ae) => (ae.id === updatedItem.id ? updatedItem : ae))
-          );
-          toast.push(
-            <Notification title="Auto Email Updated" type="success" />
-          );
-          closeEditDrawer();
-        } else {
-          const newItem: AutoEmailItem = { ...data, id: `AE${Date.now()}` };
-          setAutoEmailsData((prev) => [newItem, ...prev]);
-          toast.push(<Notification title="Auto Email Added" type="success" />);
-          closeAddDrawer();
-        }
-      } catch (e: any) {
-        toast.push(
-          <Notification title="Operation Failed" type="danger">
-            {e.message}
-          </Notification>
-        );
-      } finally {
-        setIsSubmitting(false);
-        setMasterLoadingStatus("idle");
+  const onSubmitHandler = async (data: AutoEmailFormData) => {
+    setIsSubmitting(true);
+    const apiPayload = {
+      email_type: data.email_type,
+      user_id: data.user_id.join(','),
+      status: data.status,
+    };
+    try {
+      if (editingItem) {
+        await dispatch(editAutoEmailAction({ id: editingItem.id, ...apiPayload })).unwrap();
+        toast.push(<Notification title="Auto Email Updated" type="success" />);
+        closeEditDrawer();
+      } else {
+        await dispatch(addAutoEmailAction(apiPayload)).unwrap();
+        toast.push(<Notification title="Auto Email Added" type="success" />);
+        closeAddDrawer();
       }
-    },
-    [editingItem, closeAddDrawer, closeEditDrawer]
-  );
+      dispatch(getAutoEmailsAction());
+    } catch (e: any) { toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger">{(e as Error).message}</Notification>);
+    } finally { setIsSubmitting(false); }
+  };
 
-  const handleDeleteClick = useCallback((item: AutoEmailItem) => {
-    setItemToDelete(item);
-    setSingleDeleteConfirmOpen(true);
-  }, []);
-  const onConfirmSingleDelete = useCallback(async () => {
-    if (!itemToDelete) return;
-    setIsDeleting(true);
-    setMasterLoadingStatus("loading");
-    setSingleDeleteConfirmOpen(false);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    try {
-      setAutoEmailsData((prev) =>
-        prev.filter((ae) => ae.id !== itemToDelete!.id)
-      );
-      toast.push(
-        <Notification
-          title="Auto Email Deleted"
-          type="success"
-        >{`"${itemToDelete.emailType}" for ${itemToDelete.userName} deleted.`}</Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== itemToDelete!.id)
-      );
-    } catch (e: any) {
-      toast.push(
-        <Notification title="Delete Failed" type="danger">
-          {e.message}
-        </Notification>
-      );
-    } finally {
-      setIsDeleting(false);
-      setMasterLoadingStatus("idle");
-      setItemToDelete(null);
-    }
-  }, [itemToDelete]);
-
-  const handleDeleteSelected = useCallback(async () => {
-    /* ... */
-    if (selectedItems.length === 0) {
-      toast.push(
-        <Notification title="No Selection" type="info">
-          Please select items to delete.
-        </Notification>
-      );
-      return;
-    }
-    setIsDeleting(true);
-    setMasterLoadingStatus("loading");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    try {
-      const idsToDelete = selectedItems.map((item) => item.id);
-      setAutoEmailsData((prev) =>
-        prev.filter((ae) => !idsToDelete.includes(ae.id))
-      );
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-        >{`${selectedItems.length} auto email(s) deleted.`}</Notification>
-      );
-      setSelectedItems([]);
-    } catch (e: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger">
-          {e.message || "Failed to delete selected items."}
-        </Notification>
-      );
-    } finally {
-      setIsDeleting(false);
-      setMasterLoadingStatus("idle");
-    }
-  }, [selectedItems]);
-
+  const handleDeleteClick = useCallback((item: AutoEmailItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteAutoEmailAction({ id: itemToDelete.id })).unwrap(); const emailTypeLabel = EMAIL_TYPE_OPTIONS.find(et => et.value === itemToDelete.email_type)?.label || itemToDelete.email_type; toast.push(<Notification title="Auto Email Deleted" type="success">{`Configuration for "${emailTypeLabel}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getAutoEmailsAction()); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{(e as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
+  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id)); try { await dispatch(deleteAllAutoEmailsAction({ ids: idsToDelete.join(',') })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} auto email(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getAutoEmailsAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(e as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
   const handleChangeStatus = useCallback(async (item: AutoEmailItem) => {
     setIsChangingStatus(true);
-    const currentIdx = AUTO_EMAIL_STATUS_OPTIONS.findIndex(
-      (s) => s.value === item.status
-    );
-    const nextStatus =
-      AUTO_EMAIL_STATUS_OPTIONS[
-        (currentIdx + 1) % AUTO_EMAIL_STATUS_OPTIONS.length
-      ].value;
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    const newStatus = item.status === "active" ? "inactive" : "active";
+    const apiPayload = { email_type: String(item.email_type), user_id: item.user_id, status: newStatus };
     try {
-      setAutoEmailsData((prev) =>
-        prev.map((ae) =>
-          ae.id === item.id ? { ...ae, status: nextStatus } : ae
-        )
-      );
-      toast.push(
-        <Notification
-          title="Status Changed"
-          type="success"
-        >{`Status changed to ${
-          AUTO_EMAIL_STATUS_OPTIONS.find((s) => s.value === nextStatus)?.label
-        }.`}</Notification>
-      );
-    } catch (e: any) {
-      toast.push(
-        <Notification title="Status Change Failed" type="danger">
-          {e.message}
-        </Notification>
-      );
-    } finally {
-      setIsChangingStatus(false);
-    }
-  }, []);
+      await dispatch(editAutoEmailAction({ id: item.id, ...apiPayload })).unwrap();
+      toast.push(<Notification title="Status Changed" type="success">{`Status changed to ${newStatus}.`}</Notification>);
+      dispatch(getAutoEmailsAction());
+    } catch (e: any) { toast.push(<Notification title="Status Change Failed" type="danger">{(e as Error).message}</Notification>);
+    } finally { setIsChangingStatus(false); }
+  }, [dispatch]);
 
-  // --- Filter Handlers ---
-  const openFilterDrawer = useCallback(() => {
-    filterFormMethods.reset(filterCriteria);
-    setIsFilterDrawerOpen(true);
-  }, [filterFormMethods, filterCriteria]);
+  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback(
-    (data: FilterFormData) => {
-      setFilterCriteria(data);
-      setTableData((prev) => ({ ...prev, pageIndex: 1 }));
-      closeFilterDrawer();
-    },
-    [closeFilterDrawer]
-  );
-  const onClearFilters = useCallback(() => {
-    const df = filterFormSchema.parse({});
-    filterFormMethods.reset(df);
-    setFilterCriteria(df);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
-  }, [filterFormMethods]);
-
-  // --- Table Interaction Handlers ---
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-    setTableData((prev) => ({ ...prev, ...data }));
-  }, []);
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => {
-      handleSetTableData({ sort: sort, pageIndex: 1 });
-    },
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: AutoEmailItem) => {
-      setSelectedItems((prev) => {
-        if (checked)
-          return prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row];
-        return prev.filter((item) => item.id !== row.id);
-      });
-    },
-    []
-  );
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<AutoEmailItem>[]) => {
-      const cPOR = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((pS) => {
-          const pSIds = new Set(pS.map((i) => i.id));
-          const nRTA = cPOR.filter((r) => !pSIds.has(r.id));
-          return [...pS, ...nRTA];
-        });
-      } else {
-        const cPRIds = new Set(cPOR.map((r) => r.id));
-        setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id)));
-      }
-    },
-    []
-  );
-
-  // --- Data Processing (Memoized) ---
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer, filterFormMethods]);
+  const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
+  
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: AutoEmailItem[] = cloneDeep(autoEmailsData);
-    if (filterCriteria.filterEmailTypes?.length) {
-      const v = filterCriteria.filterEmailTypes.map((et) => et.value);
-      processedData = processedData.filter((item) =>
-        v.includes(item.emailType)
-      );
-    }
-    if (filterCriteria.filterUserNames?.length) {
-      const v = filterCriteria.filterUserNames.map((un) => un.value);
-      processedData = processedData.filter((item) => v.includes(item.userName));
-    }
-    if (filterCriteria.filterStatus?.length) {
-      const v = filterCriteria.filterStatus.map((s) => s.value);
-      processedData = processedData.filter((item) => v.includes(item.status));
-    }
+    const sourceDataWithDisplayNames: AutoEmailItem[] = 
+        Array.isArray(autoEmailsData) ? autoEmailsData.map(item => {
+            const emailTypeLabel = EMAIL_TYPE_OPTIONS.find(et => et.value === String(item.email_type))?.label || String(item.email_type);
+            const userIdsArray = item.user_id ? item.user_id.split(',').map(id => id.trim()) : [];
+            const usersLabel = userIdsArray.map(uid => userOptions.find(u => u.value === uid)?.label || uid).join(', ');
+            return { ...item, emailTypeDisplay: emailTypeLabel, usersDisplay: usersLabel };
+        }) : [];
 
-    if (tableData.query && tableData.query.trim() !== "") {
-      const q = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(
-        (item) =>
-          String(item.id).toLowerCase().includes(q) ||
-          item.emailType.toLowerCase().includes(q) ||
-          item.userName.toLowerCase().includes(q) ||
-          item.status.toLowerCase().includes(q)
-      );
-    }
+    let processedData = cloneDeep(sourceDataWithDisplayNames);
+    if (filterCriteria.filterEmailTypes?.length) { const v = filterCriteria.filterEmailTypes.map(et => et.value); processedData = processedData.filter(item => v.includes(String(item.email_type))); }
+    if (filterCriteria.filterUserIds?.length) { const v = filterCriteria.filterUserIds.map(u => u.value); processedData = processedData.filter(item => item.user_id.split(',').some(uid => v.includes(uid.trim()))); }
+    if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map(s => s.value); processedData = processedData.filter(item => v.includes(String(item.status))); }
+    if (tableData.query) { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => String(item.id).toLowerCase().includes(q) || (item.emailTypeDisplay && item.emailTypeDisplay.toLowerCase().includes(q)) || (item.usersDisplay && item.usersDisplay.toLowerCase().includes(q)) || String(item.status).toLowerCase().includes(q)); }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedData.sort((a, b) => {
-        const aVal = a[key as keyof AutoEmailItem];
-        const bVal = b[key as keyof AutoEmailItem];
-        const aStr = String(aVal ?? "").toLowerCase();
-        const bStr = String(bVal ?? "").toLowerCase();
-        return order === "asc"
-          ? aStr.localeCompare(bStr)
-          : bStr.localeCompare(aStr);
+        let aVal: any, bVal: any;
+        if (key === 'email_type') { aVal = a.emailTypeDisplay; bVal = b.emailTypeDisplay; }
+        else if (key === 'user_id') { aVal = a.usersDisplay; bVal = b.usersDisplay; }
+        else { aVal = a[key as keyof AutoEmailItem]; bVal = b[key as keyof AutoEmailItem]; }
+        if (key === "created_at" || key === "updated_at") { return order === "asc" ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime(); }
+        const aStr = String(aVal ?? "").toLowerCase(); const bStr = String(bVal ?? "").toLowerCase();
+        return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
       });
     }
+    const dataToExport = [...processedData]; const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize; const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+    return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+  }, [autoEmailsData, tableData, filterCriteria, userOptions]); // Removed emailTypeOptions as it's static
 
-    const dataToExport = [...processedData];
-    const currentTotal = processedData.length;
-    const pageIndex = tableData.pageIndex as number;
-    const pageSize = tableData.pageSize as number;
-    const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-    return {
-      pageData: dataForPage,
-      total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
-    };
-  }, [autoEmailsData, tableData, filterCriteria]);
+  const handleExportData = useCallback(() => { exportAutoEmailsToCsv("auto_emails_export.csv", allFilteredAndSortedData, userOptions); }, [allFilteredAndSortedData, userOptions]); // Removed emailTypeOptions
+  const handlePaginationChange = useCallback((page: number) => setTableData(prev => ({ ...prev, pageIndex: page })), []);
+  const handleSelectPageSizeChange = useCallback((value: number) => { setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 })); setSelectedItems([]); }, []);
+  const handleSort = useCallback((sort: OnSortParam) => { setTableData(prev => ({ ...prev, sort: sort, pageIndex: 1 })); }, []);
+  const handleSearchInputChange = useCallback((query: string) => { setTableData(prev => ({ ...prev, query: query, pageIndex: 1 })); }, []);
+  const handleRowSelect = useCallback((checked: boolean, row: AutoEmailItem) => {setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); });}, []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AutoEmailItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-  const handleExportData = useCallback(() => {
-    exportAutoEmailsToCsv("auto_emails_export.csv", allFilteredAndSortedData);
-  }, [allFilteredAndSortedData]);
+  const columns: ColumnDef<AutoEmailItem>[] = useMemo(() => [
+    { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
+    { header: "Email Type", accessorKey: "email_type", size: 250, enableSorting: true, cell: props => EMAIL_TYPE_OPTIONS.find(et => et.value === String(props.getValue()))?.label || String(props.getValue()) }, // Use static options
+    { header: "User(s)", accessorKey: "user_id", size: 250, enableSorting: true, cell: props => { const ids = String(props.getValue()).split(','); return ids.map(id => userOptions.find(u => u.value === id.trim())?.label || id.trim()).join(', '); } },
+    { header: "Status", accessorKey: "status", size: 120, cell: props => <Tag className={classNames("capitalize whitespace-nowrap", autoEmailStatusColor[String(props.getValue())] || autoEmailStatusColor.default)}>{AUTO_EMAIL_STATUS_OPTIONS.find(s => s.value === props.getValue())?.label || String(props.getValue())}</Tag> },
+    { header: "Created At", accessorKey: "created_at", size: 150, cell: props => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' },
+    { header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onChangeStatus={() => handleChangeStatus(props.row.original)} /> },
+  ], [userOptions, openEditDrawer, handleDeleteClick, handleChangeStatus]); // Removed emailTypeOptions as it's static
 
-  // --- Table Column Definitions ---
-  const columns: ColumnDef<AutoEmailItem>[] = useMemo(
-    () => [
-      { header: "ID", accessorKey: "id", size: 100, enableSorting: true },
-      {
-        header: "Email Type",
-        accessorKey: "emailType",
-        size: 250,
-        enableSorting: true,
-      },
-      {
-        header: "User Name",
-        accessorKey: "userName",
-        size: 200,
-        enableSorting: true,
-        cell: (props) => (
-          <div className="flex items-center gap-2">
-            <TbUserCircle className="text-xl" /> {props.getValue<string>()}
-          </div>
-        ),
-      },
-      {
-        header: "Status",
-        accessorKey: "status",
-        size: 120,
-        enableSorting: true,
-        cell: (props) => (
-          <Tag
-            className={classNames(
-              "capitalize whitespace-nowrap",
-              autoEmailStatusColor[props.getValue<AutoEmailStatus>()]
-            )}
-          >
-            {
-              AUTO_EMAIL_STATUS_OPTIONS.find(
-                (o) => o.value === props.getValue()
-              )?.label
-            }
-          </Tag>
-        ),
-      },
-      {
-        header: "Actions",
-        id: "actions",
-        size: 200,
-        meta: { HeaderClass: "text-center" },
-        cell: (props) => (
-          <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
-            onChangeStatus={() => handleChangeStatus(props.row.original)}
-          />
-        ),
-      },
-    ],
-    [openEditDrawer, handleDeleteClick, handleChangeStatus]
-  );
-
-  // --- Options for Filter Dropdowns (derived from data) ---
-  const emailTypeOptions = useMemo(() => {
-    if (!Array.isArray(autoEmailsData)) return [];
-    const uniqueTypes = new Set(autoEmailsData.map((item) => item.emailType));
-    return Array.from(uniqueTypes).map((type) => ({
-      value: type,
-      label: type,
-    }));
-  }, [autoEmailsData]);
-
-  const userNameOptions = useMemo(() => {
-    if (!Array.isArray(autoEmailsData)) return [];
-    const uniqueUsers = new Set(autoEmailsData.map((item) => item.userName));
-    return Array.from(uniqueUsers).map((user) => ({
-      value: user,
-      label: user,
-    }));
-  }, [autoEmailsData]);
-
-  // --- Render Form for Add/Edit Drawer ---
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem
-        label="Email Type"
-        className="md:col-span-2"
-        invalid={!!currentFormMethods.formState.errors.emailType}
-        errorMessage={currentFormMethods.formState.errors.emailType?.message}
-      >
-        <Controller
-          name="emailType"
-          control={currentFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Email Type"
-                  options={emailTypeOptions} // Use dynamic options
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-        />
+      <FormItem label="Email Type" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.email_type} errorMessage={currentFormMethods.formState.errors.email_type?.message}>
+        <Controller name="email_type" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Email Type" options={EMAIL_TYPE_OPTIONS} value={EMAIL_TYPE_OPTIONS.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbMailForward />} />)} />
       </FormItem>
-      <FormItem
-        label="User Name / Group"
-        invalid={!!currentFormMethods.formState.errors.userName}
-        errorMessage={currentFormMethods.formState.errors.userName?.message}
-      >
-        <Controller
-          name="userName"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select User Name"
-                  options={userNameOptions} // Use dynamic options
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-          )}
-        />
+      <FormItem label="User(s)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.user_id} errorMessage={ (currentFormMethods.formState.errors.user_id as any)?.message || (currentFormMethods.formState.errors.user_id as any)?.[0]?.message }>
+        <Controller name="user_id" control={currentFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} prefix={<TbUsers />} />)} />
       </FormItem>
-      <FormItem
-        label="Status"
-        invalid={!!currentFormMethods.formState.errors.status}
-        errorMessage={currentFormMethods.formState.errors.status?.message}
-      >
-        <Controller
-          name="status"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              placeholder="Select Status"
-              options={AUTO_EMAIL_STATUS_OPTIONS}
-              value={AUTO_EMAIL_STATUS_OPTIONS.find(
-                (o) => o.value === field.value
-              )}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
+      <FormItem label="Status" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
+        <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={AUTO_EMAIL_STATUS_OPTIONS} value={AUTO_EMAIL_STATUS_OPTIONS.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbToggleRight />} />)} />
       </FormItem>
-      {/* Add other fields like Template ID, Recipient Group selection if needed */}
     </div>
   );
 
@@ -878,196 +340,30 @@ const AutoEmailListing = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Automation Email
-            </h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New
-            </Button>
+            <h5 className="mb-2 sm:mb-0">Auto Email Configurations</h5>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
-          <AutoEmailsTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleExportData}
-          />
+          <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
-            <AutoEmailsTable
-              columns={columns}
-              data={pageData}
-              loading={
-                masterLoadingStatus === "loading" ||
-                isSubmitting ||
-                isDeleting ||
-                isChangingStatus
-              }
-              pagingData={{
-                total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              selectedItems={selectedItems}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
-            />
+            <AutoEmailsTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting || isChangingStatus} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
-
-      <AutoEmailsSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
-
-      <Drawer
-        title={editingItem ? "Edit Auto Email" : "Add New Auto Email"}
-        isOpen={isAddDrawerOpen || isEditDrawerOpen}
-        onClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        width={700}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={editingItem ? closeEditDrawer : closeAddDrawer}
-              disabled={isSubmitting}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="autoEmailForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!formMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting
-                ? editingItem
-                  ? "Saving..."
-                  : "Saving..."
-                : editingItem
-                ? "Save Changes"
-                : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="autoEmailForm"
-          onSubmit={formMethods.handleSubmit(onAutoEmailFormSubmit)}
-          className="flex flex-col gap-4"
-        >
-          {renderDrawerForm(formMethods)}
+      <AutoEmailsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
+      <Drawer title={editingItem ? "Edit Auto Email" : "Add New Auto Email"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700}
+        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="autoEmailForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div> } >
+        <Form id="autoEmailForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4"> {renderDrawerForm(formMethods)} </Form>
+      </Drawer>
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterAutoEmailForm" type="submit">Apply</Button> </div> } >
+        <Form id="filterAutoEmailForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+          <FormItem label="Email Type"><Controller name="filterEmailTypes" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Email Type" options={EMAIL_TYPE_OPTIONS} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="User Name"><Controller name="filterUserIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any User" options={userOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={AUTO_EMAIL_STATUS_OPTIONS} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
         </Form>
       </Drawer>
-
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
-        footer={
-          <div className="text-right w-full">
-              <Button
-                size="sm"
-                className="mr-2"
-                onClick={closeFilterDrawer}
-                type="button"
-              >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                variant="solid"
-                form="filterAutoEmailForm"
-                type="submit"
-              >
-                Apply
-              </Button>
-          </div>
-        }
-      >
-        <Form
-          id="filterAutoEmailForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem label="Email Type">
-            <Controller
-              name="filterEmailTypes"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Email Type"
-                  options={emailTypeOptions} // Use dynamic options
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="User Name">
-            <Controller
-              name="filterUserNames"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select User Name"
-                  options={userNameOptions} // Use dynamic options
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Status">
-            <Controller
-              name="filterStatus"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Status"
-                  options={AUTO_EMAIL_STATUS_OPTIONS}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Auto Email"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
-      >
-        <p>
-          Are you sure you want to delete the auto email "
-          <strong>{itemToDelete?.emailType}</strong>" for user "
-          <strong>{itemToDelete?.userName}</strong>"?
-        </p>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Auto Email" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} >
+        <p>Are you sure you want to delete the auto email for "<strong>{itemToDelete ? (EMAIL_TYPE_OPTIONS.find(et => et.value === itemToDelete.email_type)?.label || itemToDelete.email_type) : ''}</strong>"?</p>
       </ConfirmDialog>
     </>
   );

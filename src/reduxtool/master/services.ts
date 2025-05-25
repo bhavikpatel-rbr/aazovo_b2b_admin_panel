@@ -1555,6 +1555,216 @@ export const deleteAllRowDataAsync = async (unitData: any) => {
   }
 }
 
+export const getAutoEmailAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/automation_email`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addAutoEmailAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/automation_email`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editAutoEmailAsync = async (leadData: any) => {
+  console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/automation_email/${leadData?.id}`, { _method: "PUT", ...leadData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAutoEmailAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/automation_email/${leadData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllAutoEmailAsync = async (leadData: any) => {
+  try {
+    console.log("leadData", leadData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/setting/automation_email/delete`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const getUsersAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/users/users`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getEmailCampaignsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/mail_campaign`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addEmailCampaignsAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/mail_campaign`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editEmailCampaignsAsync = async (leadData: any) => {
+  console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/mail_campaign/${leadData?.id}`, { _method: "PUT", ...leadData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteEmailCampaignsAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/mail_campaign/${leadData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllEmailCampaignsAsync = async (leadData: any) => {
+  try {
+    console.log("leadData", leadData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/setting/mail_campaign/delete`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const getMailTemplatesAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/mail_template`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const getAutoEmailTemplatesAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/automation_email_template`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addAutoEmailTemplatesAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/automation_email_template`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editAutoEmailTemplatesAsync = async (leadData: any) => {
+  console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/automation_email_template/${leadData?.id}`, { _method: "PUT", ...leadData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAutoEmailTemplatesAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/automation_email_template/${leadData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllAutoEmailTemplatesAsync = async (leadData: any) => {
+  try {
+    console.log("leadData", leadData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/setting/automation_email_template/delete`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getEmailTemplatesAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/email_templates`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addEmailTemplatesAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/email_templates`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editEmailTemplatesAsync = async (leadData: any) => {
+  console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/email_templates/${leadData?.id}`, { _method: "PUT", ...leadData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteEmailTemplatesAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/email_templates/${leadData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllEmailTemplatesAsync = async (leadData: any) => {
+  try {
+    console.log("leadData", leadData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/setting/email_templates/delete`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 
 

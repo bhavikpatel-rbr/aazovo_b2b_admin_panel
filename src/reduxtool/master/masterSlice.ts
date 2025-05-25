@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addContinentAction, addCountryAction, addCurrencyAction, getLeadAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getBugReportsAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getExportMappingsAction, getJobDepartmentsAction, getJobPostsAction, getNumberSystemsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getSlidersAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction, getHomeCategoryAction, getRowDataAction } from "./middleware"
+import { addContinentAction, addCountryAction, addCurrencyAction, getLeadAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getBugReportsAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getExportMappingsAction, getJobDepartmentsAction, getJobPostsAction, getNumberSystemsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getSlidersAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction, getHomeCategoryAction, getRowDataAction, getAutoEmailsAction, getUsersAction, getEmailCampaignsAction, getMailTemplatesAction, getAutoEmailTemplatesAction, getEmailTemplatesAction } from "./middleware"
 import { deletPaymentTermAsync } from "./services"
 
 const INITIAL_STATE: any = {
@@ -209,6 +209,31 @@ const masterSlice = createSlice({
       ...state,
       rowData: payload
     }))
+    builder.addCase(getAutoEmailsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      autoEmailsData: payload
+    }))
+    builder.addCase(getUsersAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      usersData: payload
+    }))
+    builder.addCase(getEmailCampaignsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      emailCampaignsData: payload
+    }))
+    builder.addCase(getMailTemplatesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      mailTemplatesData: payload
+    }))
+    builder.addCase(getAutoEmailTemplatesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      autoEmailTemplatesData: payload
+    }))
+    builder.addCase(getEmailTemplatesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      emailTemplatesData: payload
+    }))
+
 
 
 

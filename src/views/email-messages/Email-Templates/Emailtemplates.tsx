@@ -1,8 +1,11 @@
+// src/views/your-path/EmailTemplatesListing.tsx
+
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm, Controller, useFieldArray, FieldError } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -14,1266 +17,417 @@ import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
-import DebouceInput from "@/components/shared/DebouceInput";
+import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Added Tag
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
-  TbDotsVertical,
-  TbShare,
   TbEye,
   TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
-  TbX, // For removing variables
+  TbX,
+  TbMailBolt,      // For Email Type/Name
+  TbKey,           // For Template ID
+  TbCategory2,     // For Category
+  TbApps,          // For SubCategory
+  TbBuildingArch,  // For Brand
+  TbUsersGroup,    // For Role
+  TbBuildingCommunity, // For Department
+  TbBriefcase,     // For Designation
+  TbVariable,      // For Variables
+  TbTrash,
+  TbFileDescription, // For Title
 } from "react-icons/tb";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-} from "@/components/shared/DataTable";
+import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
-// --- Define Email Template Types ---
+// Redux
+import { useAppDispatch } from "@/reduxtool/store";
+import { shallowEqual, useSelector } from "react-redux";
+import {
+  // !!! REPLACE WITH YOUR ACTUAL ACTIONS !!!
+  getEmailTemplatesAction,
+  addEmailTemplateAction,
+  editEmailTemplateAction,
+  deleteEmailTemplateAction,
+  deleteAllEmailTemplatesAction,
+  getCategoriesAction,
+  // getSubCategoriesForTemplatesAction,
+  getBrandAction,
+  // getRolesForTemplatesAction,
+  getDepartmentsAction,
+  getDesignationsAction,
+} from "@/reduxtool/master/middleware"; // Adjust path
+import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path
+import { categoriesData } from "@/mock/data/helpCenterData";
+
+
+// --- Define Types ---
+export type SelectOption = { value: string; label: string; }; // Generic for dropdowns
+export type ApiLookupItem = { id: string | number; name: string; /* other fields if any */ }; // For fetched dropdown data
+
 export interface TemplateVariable {
-  id?: string; // For react-hook-form field array key (optional, managed by useFieldArray)
-  variableName: string;
-  variableType: "string" | "number" | "date" | "boolean" | "array";
+  // id?: string; // Not needed for submission, managed by useFieldArray
+  name: string; // Changed from variableName
+  type: "string" | "number" | "date" | "boolean" | "array"; // Changed from variableType
 }
 
-export type EmailTemplateItem = {
-  id: string | number; // DB ID
-  name: string;
-  templateId: string; // User-defined template ID
-  roles?: { value: string; label: string }[];
-  departments?: { value: string; label: string }[];
-  designations?: { value: string; label: string }[];
-  categoryId?: string | null;
-  subCategoryId?: string | null;
-  brandId?: string | null;
-  variables?: TemplateVariable[] | null;
-  status: "active" | "inactive" | "draft";
-  createdDate?: Date; // Optional for now, can be added
-  // For display in table, if IDs are stored:
+export type EmailTemplateItem = { // Matches your API listing data
+  id: string | number;
+  name: string; // This is the "name" from your listing (e.g., "test")
+  template_id: string; // This is the "template_id" from your listing (e.g., "welcome_2025")
+  category_id: string;
+  sub_category_id: string | null;
+  brand_id: string | null;
+  role_id: string | null;         // Assuming single ID based on your API
+  department_id: string | null;   // Assuming single ID
+  designation_id: string | null;  // Assuming single ID
+  created_at: string;
+  updated_at: string;
+  // For UI display convenience (derived from fetched lookup lists)
   categoryName?: string;
   subCategoryName?: string;
   brandName?: string;
+  roleName?: string;
+  departmentName?: string;
+  designationName?: string;
+  // Note: 'title' and 'variables' are not in your LISTING example, but in ADD/EDIT payload.
+  // If they are part of the detailed item view, the type would need them.
+  // For now, assuming they are only for add/edit.
 };
 
 // --- Zod Schema for Add/Edit Email Template Form ---
-const selectOptionSchema = z.object({ value: z.string(), label: z.string() });
-
 const variableSchema = z.object({
-  // id: z.string().optional(), // key is managed by useFieldArray, not part of data
-  variableName: z
-    .string()
-    .min(1, "Variable name is required.")
-    .max(50, "Name too long"),
-  variableType: z.enum(["string", "number", "date", "boolean", "array"], {
-    required_error: "Variable type is required.",
-  }),
+  name: z.string().min(1, "Variable name is required.").max(50, "Name too long"),
+  type: z.enum(["string", "number", "date", "boolean", "array"], { required_error: "Variable type is required." }),
 });
 
 const emailTemplateFormSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required.")
-    .max(100, "Name cannot exceed 100 characters."),
-  templateId: z
-    .string()
-    .min(1, "Template ID is required.")
-    .max(50, "Template ID cannot exceed 50 characters."),
-  categoryId: z.string().nullable().optional(),
-  subCategoryId: z.string().nullable().optional(),
-  brandId: z.string().nullable().optional(),
-  roles: z.array(selectOptionSchema).optional().default([]),
-  departments: z.array(selectOptionSchema).optional().default([]),
-  designations: z.array(selectOptionSchema).optional().default([]),
+  name: z.string().min(1, "Name is required.").max(100, "Name cannot exceed 100 characters."),
+  template_id: z.string().min(1, "Template ID is required.").max(50, "Template ID cannot exceed 50 characters."),
+  category_id: z.string().min(1, "Category is required."), // Will store ID
+  sub_category_id: z.string().nullable().optional(),
+  brand_id: z.string().nullable().optional(),
+  role_id: z.string().nullable().optional(), // Assuming single select, string ID
+  department_id: z.string().nullable().optional(), // Assuming single select
+  designation_id: z.string().nullable().optional(), // Assuming single select
+  title: z.string().min(1, "Title is required.").max(200, "Title too long."), // Added 'title'
   variables: z.array(variableSchema).optional().default([]),
 });
 type EmailTemplateFormData = z.infer<typeof emailTemplateFormSchema>;
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
-  filterNames: z.array(selectOptionSchema).optional(),
-  filterTemplateIds: z.array(selectOptionSchema).optional(),
-  filterCategories: z.array(selectOptionSchema).optional(),
-  filterSubCategories: z.array(selectOptionSchema).optional(),
-  filterBrands: z.array(selectOptionSchema).optional(),
-  filterRoles: z.array(selectOptionSchema).optional(),
-  filterDepartments: z.array(selectOptionSchema).optional(),
-  filterDesignations: z.array(selectOptionSchema).optional(),
-  filterStatus: z.array(selectOptionSchema).optional(),
+  filterNames: z.array(z.object({value: z.string(), label: z.string()})).optional(),
+  filterTemplateIds: z.array(z.object({value: z.string(), label: z.string()})).optional(),
+  filterCategoryIds: z.array(z.object({value: z.string(), label: z.string()})).optional(),
+  filterSubCategoryIds: z.array(z.object({value: z.string(), label: z.string()})).optional(),
+  filterBrandIds: z.array(z.object({value: z.string(), label: z.string()})).optional(),
+  filterRoleIds: z.array(z.object({value: z.string(), label: z.string()})).optional(),
+  filterDepartmentIds: z.array(z.object({value: z.string(), label: z.string()})).optional(),
+  filterDesignationIds: z.array(z.object({value: z.string(), label: z.string()})).optional(),
+  // filterStatus: z.array(selectOptionSchema).optional(), // No status in your new API data
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// --- CSV Exporter Utility ---
-const CSV_HEADERS = [
-  "ID",
-  "Name",
-  "Template ID",
-  "Status",
-  "Roles",
-  "Departments",
-  "Designations",
-  "Category ID",
-  "SubCategory ID",
-  "Brand ID",
-  "Variables",
-  "Created Date",
+
+const variableTypeOptions: SelectOption[] = [
+  { value: "string", label: "String" }, { value: "number", label: "Number" },
+  { value: "date", label: "Date" }, { value: "boolean", label: "Boolean" },
+  { value: "array", label: "Array" },
 ];
-const CSV_KEYS: (keyof EmailTemplateItem)[] = [
-  "id",
-  "name",
-  "templateId",
-  "status",
-  "roles",
-  "departments",
-  "designations",
-  "categoryId",
-  "subCategoryId",
-  "brandId",
-  "variables",
-  "createdDate",
+
+// --- CSV Exporter ---
+const CSV_HEADERS = ["ID", "Name", "Template ID", "Category", "SubCategory", "Brand", "Role", "Department", "Designation", "Created At"];
+const CSV_KEYS: (keyof Pick<EmailTemplateItem, 'id'|'name'|'template_id'|'created_at'> | 'categoryName'|'subCategoryName'|'brandName'|'roleName'|'departmentName'|'designationName')[] = [
+  "id", "name", "template_id", "categoryName", "subCategoryName", "brandName", "roleName", "departmentName", "designationName", "created_at",
 ];
 
 function exportToCsv(filename: string, rows: EmailTemplateItem[]) {
-  if (!rows || !rows.length) {
-    toast.push(
-      <Notification title="No Data" type="info">
-        Nothing to export.
-      </Notification>
-    );
-    return false;
-  }
+  if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
+  const preparedRows = rows.map(row => ({
+    ...row, // Includes id, name, template_id, created_at directly
+    categoryName: row.categoryName || String(row.category_id),
+    subCategoryName: row.subCategoryName || (row.sub_category_id ? String(row.sub_category_id) : "N/A"),
+    brandName: row.brandName || (row.brand_id ? String(row.brand_id) : "N/A"),
+    roleName: row.roleName || (row.role_id ? String(row.role_id) : "N/A"),
+    departmentName: row.departmentName || (row.department_id ? String(row.department_id) : "N/A"),
+    designationName: row.designationName || (row.designation_id ? String(row.designation_id) : "N/A"),
+  }));
   const separator = ",";
-
-  const csvContent =
-    CSV_HEADERS.join(separator) +
-    "\n" +
-    rows
-      .map((row) => {
-        return CSV_KEYS.map((k) => {
-          let cell = row[k];
-          if (cell === null || cell === undefined) {
-            cell = "";
-          } else if (Array.isArray(cell)) {
-            if (k === "variables") {
-              cell = (cell as TemplateVariable[])
-                .map((v) => `${v.variableName}:${v.variableType}`)
-                .join(" | ");
-            } else {
-              // Assuming other arrays are {value, label}
-              cell = (cell as { value: string; label: string }[])
-                .map((item) => item.label)
-                .join(" | ");
-            }
-          } else if (cell instanceof Date) {
-            cell = cell.toISOString().split("T")[0]; // Format date as YYYY-MM-DD
-          } else {
-            cell = String(cell).replace(/"/g, '""');
-          }
-          if (String(cell).search(/("|,|\n)/g) >= 0) {
-            cell = `"${cell}"`;
-          }
-          return cell;
-        }).join(separator);
-      })
-      .join("\n");
-
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const csvContent = CSV_HEADERS.join(separator) + "\n" + preparedRows.map((row: any) => CSV_KEYS.map((k) => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ""; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join("\n");
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    return true;
-  }
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
-  return false;
+  if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = "hidden"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; }
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support.</Notification>); return false;
 }
 
-// --- Mock Data for Select Options ---
-const mockCategoryOptions = [
-  { value: "cat1", label: "Onboarding" },
-  { value: "cat2", label: "Transactional" },
-  { value: "cat3", label: "Marketing" },
-  { value: "cat4", label: "Internal" },
-];
-const mockSubCategoryOptions = [
-  { value: "sub1", label: "Welcome Email" },
-  { value: "sub2", label: "Password Reset" },
-  { value: "sub3", label: "Order Confirmation" },
-  { value: "sub4", label: "Newsletter" },
-];
-const mockBrandOptions = [
-  { value: "brandA", label: "Brand A" },
-  { value: "brandB", label: "Brand B" },
-  { value: "brandC", label: "Default Brand" },
-];
-const mockRoleOptions = [
-  { value: "admin", label: "Admin" },
-  { value: "manager", label: "Manager" },
-  { value: "customer", label: "Customer" },
-  { value: "employee", label: "Employee" },
-];
-const mockDepartmentOptions = [
-  { value: "sales", label: "Sales" },
-  { value: "marketing", label: "Marketing" },
-  { value: "support", label: "Support" },
-  { value: "hr", label: "Human Resources" },
-];
-const mockDesignationOptions = [
-  { value: "s_rep", label: "Sales Rep" },
-  { value: "m_mgr", label: "Marketing Manager" },
-  { value: "s_agent", label: "Support Agent" },
-];
-const variableTypeOptions = [
-  { value: "string", label: "String" },
-  { value: "number", label: "Number" },
-  { value: "date", label: "Date" },
-  { value: "boolean", label: "Boolean" },
-  { value: "array", label: "Array" },
-];
-const statusOptions = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "draft", label: "Draft" },
-];
-const templateStatusColor: Record<string, string> = {
-  active:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
-  draft: "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100",
-};
+// --- ActionColumn, Search, TableTools, Table, SelectedFooter (UI remains similar) ---
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => { return ( <div className="flex items-center justify-center gap-2"> <Tooltip title="Edit"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="Delete"><div className="text-xl cursor-pointer text-gray-500 hover:text-red-600" role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> ); };
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search by Name, Template ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+ItemSearch.displayName = "ItemSearch";
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type EmailTemplatesTableProps = { columns: ColumnDef<EmailTemplateItem>[]; data: EmailTemplateItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: EmailTemplateItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: EmailTemplateItem) => void; onAllRowSelect: (checked: boolean, rows: Row<EmailTemplateItem>[]) => void; };
+const EmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: EmailTemplatesTableProps) => ( <DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} /> );
+type EmailTemplatesSelectedFooterProps = { selectedItems: EmailTemplateItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
+const EmailTemplatesSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: EmailTemplatesSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Template{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Template(s)`} onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false); }}> <p>Are you sure you want to delete selected template(s)?</p> </ConfirmDialog> </> ); };
 
-// --- Initial Dummy Data (as in original Emailtemplates.tsx) ---
-const initialDummyTemplates: EmailTemplateItem[] = [
-  {
-    id: "ET001",
-    templateId: "welcome_new_user",
-    status: "active",
-    name: "Welcome - New User Signup",
-    roles: [{ value: "Customer", label: "Customer" }],
-    categoryId: "cat1",
-    categoryName: "Onboarding",
-    subCategoryId: "sub1",
-    subCategoryName: "Welcome Email",
-    brandId: "brandA",
-    brandName: "Brand A",
-    variables: [
-      { variableName: "firstName", variableType: "string" },
-      { variableName: "signupDate", variableType: "date" },
-    ],
-    createdDate: new Date(2023, 9, 1),
-  },
-  {
-    id: "ET002",
-    templateId: "pwd_reset_request",
-    status: "active",
-    name: "Password Reset Request",
-    categoryId: "cat2",
-    categoryName: "Transactional",
-    subCategoryId: "sub2",
-    subCategoryName: "Password Reset",
-    variables: [
-      { variableName: "resetLink", variableType: "string" },
-      { variableName: "userName", variableType: "string" },
-    ],
-    createdDate: new Date(2023, 8, 15),
-  },
-  {
-    id: "ET003",
-    templateId: "promo_q4_sale",
-    status: "draft",
-    name: "Q4 Holiday Promotion",
-    roles: [{ value: "Customer", label: "Customer" }],
-    departments: [{ value: "Marketing", label: "Marketing" }],
-    categoryId: "cat3",
-    categoryName: "Marketing",
-    subCategoryId: "sub4",
-    subCategoryName: "Newsletter", // Example
-    brandId: "brandB",
-    brandName: "Brand B",
-    variables: [
-      { variableName: "discountCode", variableType: "string" },
-      { variableName: "saleEndDate", variableType: "date" },
-    ],
-    createdDate: new Date(2023, 10, 1),
-  },
-];
 
-// --- ActionColumn Component (Simplified like Units.tsx) ---
-const ActionColumn = ({
-  onEdit,
-  onDelete,
-  onViewDetail
-}: {
-  onViewDetail: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) => {
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
-          role="button"
-          onClick={onEdit}
-        >
-          <TbPencil />
-        </div>
-      </Tooltip>
-      <Tooltip title="View">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
-          role="button"
-          onClick={onViewDetail}
-        >
-          <TbEye />
-        </div>
-      </Tooltip>
-    </div>
-  );
-};
-
-// --- EmailTemplatesSearch Component ---
-type EmailTemplatesSearchProps = {
-  onInputChange: (value: string) => void;
-  ref?: Ref<HTMLInputElement>;
-};
-const EmailTemplatesSearch = React.forwardRef<
-  HTMLInputElement,
-  EmailTemplatesSearchProps
->(({ onInputChange }, ref) => {
-  return (
-    <DebouceInput
-      ref={ref}
-      className="w-full"
-      placeholder="Quick Search..."
-      suffix={<TbSearch className="text-lg" />}
-      onChange={(e) => onInputChange(e.target.value)}
-    />
-  );
-});
-EmailTemplatesSearch.displayName = "EmailTemplatesSearch";
-
-// --- EmailTemplatesTableTools Component ---
-const EmailTemplatesTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-}: {
-  onSearchChange: (query: string) => void;
-  onFilter: () => void;
-  onExport: () => void;
-}) => {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-      <div className="flex-grow">
-        <EmailTemplatesSearch onInputChange={onSearchChange} />
-      </div>
-      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-        <Button
-          icon={<TbFilter />}
-          onClick={onFilter}
-          className="w-full sm:w-auto"
-        >
-          Filter
-        </Button>
-        <Button
-          icon={<TbCloudUpload />}
-          onClick={onExport}
-          className="w-full sm:w-auto"
-        >
-          Export
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-// --- EmailTemplatesTable Component ---
-type EmailTemplatesTableProps = {
-  columns: ColumnDef<EmailTemplateItem>[];
-  data: EmailTemplateItem[];
-  loading: boolean;
-  pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: EmailTemplateItem[];
-  onPaginationChange: (page: number) => void;
-  onSelectChange: (value: number) => void;
-  onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: EmailTemplateItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<EmailTemplateItem>[]) => void;
-};
-const EmailTemplatesTable = ({
-  columns,
-  data,
-  loading,
-  pagingData,
-  selectedItems,
-  onPaginationChange,
-  onSelectChange,
-  onSort,
-  onRowSelect,
-  onAllRowSelect,
-}: EmailTemplatesTableProps) => {
-  return (
-    <DataTable
-      selectable
-      columns={columns}
-      data={data}
-      noData={!loading && data.length === 0}
-      loading={loading}
-      pagingData={pagingData}
-      checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
-      }
-      onPaginationChange={onPaginationChange}
-      onSelectChange={onSelectChange}
-      onSort={onSort}
-      onCheckBoxChange={onRowSelect}
-      onIndeterminateCheckBoxChange={onAllRowSelect}
-    />
-  );
-};
-
-// --- EmailTemplatesSelectedFooter Component ---
-type EmailTemplatesSelectedFooterProps = {
-  selectedItems: EmailTemplateItem[];
-  onDeleteSelected: () => void;
-};
-const EmailTemplatesSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-}: EmailTemplatesSelectedFooterProps) => {
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmationOpen(false);
-  };
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              <span className="heading-text">{selectedItems.length}</span>
-              <span>Item{selectedItems.length > 1 ? "s" : ""} selected</span>
-            </span>
-          </span>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={handleDeleteClick}
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Template${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-      >
-        <p>
-          Are you sure you want to delete the selected template
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>
-      </ConfirmDialog>
-    </>
-  );
-};
-
-// --- Main Emailtemplates Component ---
-const Emailtemplates = () => {
-  // Simulated Redux Store and Dispatch
-  const [allEmailTemplates, setAllEmailTemplates] = useState<
-    EmailTemplateItem[]
-  >(initialDummyTemplates);
-  const [loadingStatus, setLoadingStatus] = useState<
-    "idle" | "loading" | "succeeded" | "failed"
-  >("idle");
-
-  const dispatchSimulated = async (action: { type: string; payload?: any }) => {
-    setLoadingStatus("loading");
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate async
-    try {
-      switch (action.type) {
-        case "emailTemplates/get":
-          // In a real app, this would fetch from an API
-          // For now, we just ensure the local state is set.
-          // setAllEmailTemplates(initialDummyTemplates); // Already initialized
-          break;
-        case "emailTemplates/add":
-          setAllEmailTemplates((prev) => [
-            {
-              ...action.payload,
-              id: `ET${Date.now()}`, // Generate ID
-              status: "draft", // Default status
-              createdDate: new Date(),
-            },
-            ...prev,
-          ]);
-          break;
-        case "emailTemplates/edit":
-          setAllEmailTemplates((prev) =>
-            prev.map((item) =>
-              item.id === action.payload.id
-                ? { ...item, ...action.payload }
-                : item
-            )
-          );
-          break;
-        case "emailTemplates/delete":
-          setAllEmailTemplates((prev) =>
-            prev.filter((item) => item.id !== action.payload.id)
-          );
-          break;
-        case "emailTemplates/deleteAll":
-          const idsToDelete = new Set(action.payload.ids.split(","));
-          setAllEmailTemplates((prev) =>
-            prev.filter((item) => !idsToDelete.has(String(item.id)))
-          );
-          break;
-        default:
-          console.warn("Unknown action type:", action.type);
-      }
-      setLoadingStatus("succeeded");
-      return { unwrap: () => Promise.resolve() }; // Mimic unwrap
-    } catch (error) {
-      setLoadingStatus("failed");
-      return { unwrap: () => Promise.reject(error) }; // Mimic unwrap
-    }
-  };
-  // End Simulated Redux
+// --- Main EmailTemplatesListing Component ---
+const EmailTemplatesListing = () => {
+  const dispatch = useAppDispatch();
+  const {
+    emailTemplatesData = [], // For the main table
+    // Data for dropdowns (ensure these are in your masterSlice)
+    CategoriesData = [],
+    aetSubCategories = [], // You'll need to fetch this, possibly based on categoryId
+    BrandData = [],
+    aetRoles = [],
+    departmentsData = [],
+    designationsData = [],
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector, shallowEqual);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] =
-    useState<EmailTemplateItem | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplateItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [templateToDelete, setTemplateToDelete] =
-    useState<EmailTemplateItem | null>(null);
-
+  const [templateToDelete, setTemplateToDelete] = useState<EmailTemplateItem | null>(null);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
+  const [selectedItems, setSelectedItems] = useState<EmailTemplateItem[]>([]);
+const [itemToDelete, setItemToDelete] = useState<EmailTemplateItem | null>(null);
+  // Prepare options for Select components from Redux state
+  const categoryOptions = useMemo(() => Array.isArray(categoriesData) ? categoriesData.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) : [], [categoriesData]);
+  const subCategoryOptions = useMemo(() => Array.isArray(aetSubCategories) ? aetSubCategories.map((sc: ApiLookupItem) => ({ value: String(sc.id), label: sc.name })) : [], [aetSubCategories]);
+  const brandOptions = useMemo(() => Array.isArray(BrandData) ? BrandData.map((b: ApiLookupItem) => ({ value: String(b.id), label: b.name })) : [], [BrandData]);
+  const roleOptions = useMemo(() => Array.isArray(aetRoles) ? aetRoles.map((r: ApiLookupItem) => ({ value: String(r.id), label: r.name })) : [], [aetRoles]);
+  const departmentOptions = useMemo(() => Array.isArray(departmentsData) ? departmentsData.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [departmentsData]);
+  const designationOptions = useMemo(() => Array.isArray(designationsData) ? designationsData.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [designationsData]);
+
 
   useEffect(() => {
-    dispatchSimulated({ type: "emailTemplates/get" });
-  }, []);
+    dispatch(getEmailTemplatesAction());
+    dispatch(getCategoriesAction());
+    // dispatch(getSubCategoriesForTemplatesAction()); // Fetch initially or when category changes
+    dispatch(getBrandAction());
+    // dispatch(getRolesForTemplatesAction());
+    dispatch(getDepartmentsAction());
+    dispatch(getDesignationsAction());
+  }, [dispatch]);
 
-  const addFormMethods = useForm<EmailTemplateFormData>({
-    resolver: zodResolver(emailTemplateFormSchema),
-    defaultValues: {
-      name: "",
-      templateId: "",
-      categoryId: null,
-      subCategoryId: null,
-      brandId: null,
-      roles: [],
-      departments: [],
-      designations: [],
-      variables: [],
-    },
-    mode: "onChange",
-  });
-  const editFormMethods = useForm<EmailTemplateFormData>({
+  const formMethods = useForm<EmailTemplateFormData>({
     resolver: zodResolver(emailTemplateFormSchema),
     mode: "onChange",
   });
+  const { control, handleSubmit, reset, watch, formState: { errors } } = formMethods;
+  const variablesFieldArray = useFieldArray({ control, name: "variables" });
+  
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
 
-  const addVariablesArray = useFieldArray({
-    control: addFormMethods.control,
-    name: "variables",
-  });
-  const editVariablesArray = useFieldArray({
-    control: editFormMethods.control,
-    name: "variables",
-  });
-
-  const openAddDrawer = () => {
-    addFormMethods.reset({
-      name: "",
-      templateId: "",
-      categoryId: null,
-      subCategoryId: null,
-      brandId: null,
-      roles: [],
-      departments: [],
-      designations: [],
-      variables: [],
+  const openAddDrawer = useCallback(() => {
+    reset({
+      name: "", template_id: "",
+      category_id: categoryOptions[0]?.value || null,
+      sub_category_id: null, brand_id: null, role_id: null, department_id: null, designation_id: null,
+      title: "", variables: [],
     });
-    addVariablesArray.replace([]); // Clear field array
-    setIsAddDrawerOpen(true);
-  };
-  const closeAddDrawer = () => {
-    setIsAddDrawerOpen(false);
-  };
-  const onAddTemplateSubmit = async (data: EmailTemplateFormData) => {
-    setIsSubmitting(true);
-    try {
-      await dispatchSimulated({
-        type: "emailTemplates/add",
-        payload: data,
-      }).unwrap();
-      toast.push(
-        <Notification title="Template Added" type="success" duration={2000}>
-          Template "{data.name}" added.
-        </Notification>
-      );
-      closeAddDrawer();
-      // dispatchSimulated({ type: 'emailTemplates/get' }); // Refresh list (simulated)
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Failed to Add" type="danger" duration={3000}>
-          {error.message || "Could not add template."}
-        </Notification>
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    variablesFieldArray.replace([]);
+    setEditingTemplate(null); setIsAddDrawerOpen(true);
+  }, [reset, categoryOptions, variablesFieldArray]);
 
-  const openEditDrawer = (template: EmailTemplateItem) => {
+  const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
+
+  const openEditDrawer = useCallback((template: EmailTemplateItem) => {
     setEditingTemplate(template);
-    editFormMethods.reset({
+    // Note: API listing doesn't have 'title' or 'variables'.
+    // If these are fetched in a separate "get by ID" call, use that data here.
+    // For now, defaulting them or using placeholders.
+    reset({
       name: template.name,
-      templateId: template.templateId,
-      categoryId: template.categoryId || null,
-      subCategoryId: template.subCategoryId || null,
-      brandId: template.brandId || null,
-      roles: template.roles || [],
-      departments: template.departments || [],
-      designations: template.designations || [],
-      variables: template.variables || [],
+      template_id: template.template_id,
+      category_id: String(template.category_id),
+      sub_category_id: template.sub_category_id ? String(template.sub_category_id) : null,
+      brand_id: template.brand_id ? String(template.brand_id) : null,
+      role_id: template.role_id ? String(template.role_id) : null,
+      department_id: template.department_id ? String(template.department_id) : null,
+      designation_id: template.designation_id ? String(template.designation_id) : null,
+      title: (template as any).title || `Edit - ${template.name}`, // Placeholder for title
+      variables: (template as any).variables || [],               // Placeholder for variables
     });
-    editVariablesArray.replace(template.variables || []); // Ensure field array is updated
+    variablesFieldArray.replace((template as any).variables || []);
     setIsEditDrawerOpen(true);
-  };
-  const closeEditDrawer = () => {
-    setEditingTemplate(null);
-    setIsEditDrawerOpen(false);
-  };
-  const onEditTemplateSubmit = async (data: EmailTemplateFormData) => {
-    if (!editingTemplate) return;
+  }, [reset, variablesFieldArray]);
+
+  const closeEditDrawer = useCallback(() => { setEditingTemplate(null); setIsEditDrawerOpen(false); }, []);
+
+  const onSubmitHandler = async (data: EmailTemplateFormData) => {
     setIsSubmitting(true);
-    try {
-      await dispatchSimulated({
-        type: "emailTemplates/edit",
-        payload: { ...data, id: editingTemplate.id },
-      }).unwrap();
-      toast.push(
-        <Notification title="Template Updated" type="success" duration={2000}>
-          Template "{data.name}" updated.
-        </Notification>
-      );
-      closeEditDrawer();
-      // dispatchSimulated({ type: 'emailTemplates/get' }); // Refresh list
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Failed to Update" type="danger" duration={3000}>
-          {error.message || "Could not update template."}
-        </Notification>
-      );
-    } finally {
-      setIsSubmitting(false);
+    // Convert IDs from string (from Select) to number if API expects numbers
+    const apiPayload = {
+      ...data,
+      category_id: data.category_id ? parseInt(data.category_id) : null,
+      sub_category_id: data.sub_category_id ? parseInt(data.sub_category_id) : null,
+      brand_id: data.brand_id ? parseInt(data.brand_id) : null,
+      role_id: data.role_id ? parseInt(data.role_id) : null,
+      department_id: data.department_id ? parseInt(data.department_id) : null,
+      designation_id: data.designation_id ? parseInt(data.designation_id) : null,
+      variables: data.variables?.map(v => ({ name: v.name, type: v.type })) || [] // Ensure correct structure
+    };
+    // Remove null fields if API prefers them omitted
+    for (const key in apiPayload) {
+        if (apiPayload[key as keyof typeof apiPayload] === null) {
+            delete apiPayload[key as keyof typeof apiPayload];
+        }
     }
-  };
 
-  const handleDeleteClick = (template: EmailTemplateItem) => {
-    setTemplateToDelete(template);
-    setSingleDeleteConfirmOpen(true);
-  };
-  const onConfirmSingleDelete = async () => {
-    if (!templateToDelete) return;
-    setIsDeleting(true);
-    setSingleDeleteConfirmOpen(false);
     try {
-      await dispatchSimulated({
-        type: "emailTemplates/delete",
-        payload: { id: templateToDelete.id },
-      }).unwrap();
-      toast.push(
-        <Notification title="Template Deleted" type="success" duration={2000}>
-          Template "{templateToDelete.name}" deleted.
-        </Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== templateToDelete!.id)
-      );
-      // dispatchSimulated({ type: 'emailTemplates/get' }); // Refresh
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Failed to Delete" type="danger" duration={3000}>
-          {error.message || `Could not delete template.`}
-        </Notification>
-      );
-    } finally {
-      setIsDeleting(false);
-      setTemplateToDelete(null);
-    }
-  };
-  const handleDeleteSelected = async () => {
-    if (selectedItems.length === 0) return;
-    setIsDeleting(true);
-    const idsToDelete = selectedItems.map((item) => item.id).join(",");
-    try {
-      await dispatchSimulated({
-        type: "emailTemplates/deleteAll",
-        payload: { ids: idsToDelete },
-      }).unwrap();
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-          duration={2000}
-        >
-          {selectedItems.length} template(s) deleted.
-        </Notification>
-      );
-      setSelectedItems([]);
-      // dispatchSimulated({ type: 'emailTemplates/get' }); // Refresh
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger" duration={3000}>
-          {error.message || "Failed to delete selected templates."}
-        </Notification>
-      );
-    } finally {
-      setIsDeleting(false);
-    }
+      if (editingTemplate) {
+        await dispatch(editEmailTemplateAction({ id: editingTemplate.id, ...apiPayload })).unwrap();
+        toast.push(<Notification title="Template Updated" type="success" />);
+        closeEditDrawer();
+      } else {
+        await dispatch(addEmailTemplateAction(apiPayload)).unwrap();
+        toast.push(<Notification title="Template Added" type="success" />);
+        closeAddDrawer();
+      }
+      dispatch(getEmailTemplatesAction());
+    } catch (e: any) { toast.push(<Notification title={editingTemplate ? "Update Failed" : "Add Failed"} type="danger">{(e as Error).message}</Notification>);
+    } finally { setIsSubmitting(false); }
   };
 
-  const openFilterDrawer = () => {
-    filterFormMethods.reset(filterCriteria);
-    setIsFilterDrawerOpen(true);
-  };
-  const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
-  const onApplyFiltersSubmit = (data: FilterFormData) => {
-    setFilterCriteria(data);
-    handleSetTableData({ pageIndex: 1 }); // Reset to first page on filter apply
-    closeFilterDrawer();
-  };
-  const onClearFilters = () => {
-    const defaultFilters = {}; // Empty object for no filters
-    filterFormMethods.reset(defaultFilters);
-    setFilterCriteria(defaultFilters);
-    handleSetTableData({ pageIndex: 1 });
-  };
-
-  const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: "", key: "" },
-    query: "",
-  });
-  const [selectedItems, setSelectedItems] = useState<EmailTemplateItem[]>([]);
-
-  // Options for filter dropdowns
-  const nameOptions = useMemo(() => {
-    if (!Array.isArray(allEmailTemplates)) return [];
-    return [...new Set(allEmailTemplates.map((t) => t.name))].map((name) => ({
-      value: name,
-      label: name,
-    }));
-  }, [allEmailTemplates]);
-
-  const templateIdOptions = useMemo(() => {
-    if (!Array.isArray(allEmailTemplates)) return [];
-    return [...new Set(allEmailTemplates.map((t) => t.templateId))].map(
-      (id) => ({ value: id, label: id })
-    );
-  }, [allEmailTemplates]);
+  const handleDeleteClick = useCallback((item: EmailTemplateItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteEmailTemplateAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Template Deleted" type="success">{`Template "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getEmailTemplatesAction()); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{(e as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
+  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id)); try { await dispatch(deleteAllEmailTemplatesAction({ ids: idsToDelete.join(',') })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} template(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getEmailTemplatesAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(e as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
+  
+  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+  const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer, filterFormMethods]);
+  const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: EmailTemplateItem[] = cloneDeep(allEmailTemplates);
+    const sourceDataWithDisplayNames: EmailTemplateItem[] = 
+        Array.isArray(emailTemplatesData) ? emailTemplatesData.map(item => ({
+            ...item,
+            categoryName: item.category?.name || categoryOptions.find(c => c.value === String(item.category_id))?.label || String(item.category_id),
+            subCategoryName: (item as any).sub_category?.name || subCategoryOptions.find(sc => sc.value === String(item.sub_category_id))?.label || (item.sub_category_id ? String(item.sub_category_id) : "N/A"),
+            brandName: (item as any).brand?.name || brandOptions.find(b => b.value === String(item.brand_id))?.label || (item.brand_id ? String(item.brand_id) : "N/A"),
+            roleName: (item as any).role?.name || roleOptions.find(r => r.value === String(item.role_id))?.label || (item.role_id ? String(item.role_id) : "N/A"),
+            departmentName: item.department?.name || departmentOptions.find(d => d.value === String(item.department_id))?.label || (item.department_id ? String(item.department_id) : "N/A"),
+            designationName: (item as any).designation?.name || designationOptions.find(d => d.value === String(item.designation_id))?.label || (item.designation_id ? String(item.designation_id) : "N/A"),
+        })) : [];
 
+    let processedData = cloneDeep(sourceDataWithDisplayNames);
     // Apply Filters
-    if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
-      const names = new Set(filterCriteria.filterNames.map((opt) => opt.value));
-      processedData = processedData.filter((item) => names.has(item.name));
-    }
-    if (
-      filterCriteria.filterTemplateIds &&
-      filterCriteria.filterTemplateIds.length > 0
-    ) {
-      const ids = new Set(
-        filterCriteria.filterTemplateIds.map((opt) => opt.value)
-      );
-      processedData = processedData.filter((item) => ids.has(item.templateId));
-    }
-    if (
-      filterCriteria.filterCategories &&
-      filterCriteria.filterCategories.length > 0
-    ) {
-      const cats = new Set(
-        filterCriteria.filterCategories.map((opt) => opt.value)
-      );
-      processedData = processedData.filter(
-        (item) => item.categoryId && cats.has(item.categoryId)
-      );
-    }
-    if (
-      filterCriteria.filterSubCategories &&
-      filterCriteria.filterSubCategories.length > 0
-    ) {
-      const subCats = new Set(
-        filterCriteria.filterSubCategories.map((opt) => opt.value)
-      );
-      processedData = processedData.filter(
-        (item) => item.subCategoryId && subCats.has(item.subCategoryId)
-      );
-    }
-    if (filterCriteria.filterBrands && filterCriteria.filterBrands.length > 0) {
-      const brands = new Set(
-        filterCriteria.filterBrands.map((opt) => opt.value)
-      );
-      processedData = processedData.filter(
-        (item) => item.brandId && brands.has(item.brandId)
-      );
-    }
-    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
-      const statuses = new Set(
-        filterCriteria.filterStatus.map(
-          (opt) => opt.value as EmailTemplateItem["status"]
-        )
-      );
-      processedData = processedData.filter((item) => statuses.has(item.status));
-    }
-    if (filterCriteria.filterRoles && filterCriteria.filterRoles.length > 0) {
-      const roles = new Set(filterCriteria.filterRoles.map((opt) => opt.value));
-      processedData = processedData.filter((item) =>
-        item.roles?.some((r) => roles.has(r.value))
-      );
-    }
-    if (
-      filterCriteria.filterDepartments &&
-      filterCriteria.filterDepartments.length > 0
-    ) {
-      const depts = new Set(
-        filterCriteria.filterDepartments.map((opt) => opt.value)
-      );
-      processedData = processedData.filter((item) =>
-        item.departments?.some((d) => depts.has(d.value))
-      );
-    }
-    if (
-      filterCriteria.filterDesignations &&
-      filterCriteria.filterDesignations.length > 0
-    ) {
-      const desigs = new Set(
-        filterCriteria.filterDesignations.map((opt) => opt.value)
-      );
-      processedData = processedData.filter((item) =>
-        item.designations?.some((d) => desigs.has(d.value))
-      );
-    }
+    if (filterCriteria.filterNames?.length) { const v = filterCriteria.filterNames.map(o => o.value.toLowerCase()); processedData = processedData.filter(item => v.includes(item.name.toLowerCase())); }
+    if (filterCriteria.filterTemplateIds?.length) { const v = filterCriteria.filterTemplateIds.map(o => o.value.toLowerCase()); processedData = processedData.filter(item => v.includes(item.template_id.toLowerCase())); }
+    if (filterCriteria.filterCategoryIds?.length) { const v = filterCriteria.filterCategoryIds.map(o => o.value); processedData = processedData.filter(item => v.includes(String(item.category_id))); }
+    // Add other filters similarly for sub_category_id, brand_id, role_id, department_id, designation_id
 
-    // Apply Search Query
-    if (tableData.query && tableData.query.trim() !== "") {
-      const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) => {
-        return (
-          item.name.toLowerCase().includes(query) ||
-          item.templateId.toLowerCase().includes(query) ||
-          item.status.toLowerCase().includes(query) ||
-          (item.categoryId &&
-            mockCategoryOptions
-              .find((c) => c.value === item.categoryId)
-              ?.label.toLowerCase()
-              .includes(query)) ||
-          (item.subCategoryId &&
-            mockSubCategoryOptions
-              .find((c) => c.value === item.subCategoryId)
-              ?.label.toLowerCase()
-              .includes(query)) ||
-          (item.brandId &&
-            mockBrandOptions
-              .find((c) => c.value === item.brandId)
-              ?.label.toLowerCase()
-              .includes(query)) ||
-          item.roles?.some((r) => r.label.toLowerCase().includes(query)) ||
-          item.departments?.some((d) =>
-            d.label.toLowerCase().includes(query)
-          ) ||
-          item.designations?.some((d) =>
-            d.label.toLowerCase().includes(query)
-          ) ||
-          item.variables?.some((v) =>
-            v.variableName.toLowerCase().includes(query)
-          )
-        );
-      });
-    }
-
-    // Apply Sorting
+    if (tableData.query) { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => String(item.id).toLowerCase().includes(q) || item.name.toLowerCase().includes(q) || item.template_id.toLowerCase().includes(q) || item.categoryName?.toLowerCase().includes(q) || item.departmentName?.toLowerCase().includes(q)); }
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key && processedData.length > 0) {
+    if (order && key) {
       processedData.sort((a, b) => {
-        let aVal = a[key as keyof EmailTemplateItem];
-        let bVal = b[key as keyof EmailTemplateItem];
-
-        if (
-          key === "roles" ||
-          key === "departments" ||
-          key === "designations"
-        ) {
-          aVal = (aVal as { label: string }[])?.[0]?.label || "";
-          bVal = (bVal as { label: string }[])?.[0]?.label || "";
-        } else if (key === "variables") {
-          aVal = (aVal as TemplateVariable[])?.length || 0;
-          bVal = (bVal as TemplateVariable[])?.length || 0;
-        } else if (key === "categoryId") {
-          aVal = mockCategoryOptions.find((c) => c.value === aVal)?.label || "";
-          bVal = mockCategoryOptions.find((c) => c.value === bVal)?.label || "";
-        }
-        // Add similar for subCategory, brand if needed
-
-        if (typeof aVal === "number" && typeof bVal === "number") {
-          return order === "asc" ? aVal - bVal : bVal - aVal;
-        }
-        if (aVal instanceof Date && bVal instanceof Date) {
-          return order === "asc"
-            ? aVal.getTime() - bVal.getTime()
-            : bVal.getTime() - aVal.getTime();
-        }
-        // Default to string comparison
-        return order === "asc"
-          ? String(aVal).localeCompare(String(bVal))
-          : String(bVal).localeCompare(String(aVal));
+        let aVal: any = a[key as keyof EmailTemplateItem]; let bVal: any = b[key as keyof EmailTemplateItem];
+        // Use display names for sorting these ID fields
+        if (key === 'category_id') { aVal = a.categoryName; bVal = b.categoryName; }
+        else if (key === 'sub_category_id') { aVal = a.subCategoryName; bVal = b.subCategoryName; }
+        else if (key === 'brand_id') { aVal = a.brandName; bVal = b.brandName; }
+        else if (key === 'role_id') { aVal = a.roleName; bVal = b.roleName; }
+        else if (key === 'department_id') { aVal = a.departmentName; bVal = b.departmentName; }
+        else if (key === 'designation_id') { aVal = a.designationName; bVal = b.designationName; }
+        else if (key === "created_at" || key === "updated_at") { return order === "asc" ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime(); }
+        
+        const aStr = String(aVal ?? "").toLowerCase(); const bStr = String(bVal ?? "").toLowerCase();
+        return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
       });
     }
+    const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize;
+    return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
+  }, [emailTemplatesData, tableData, filterCriteria, categoryOptions, subCategoryOptions, brandOptions, roleOptions, departmentOptions, designationOptions]);
 
-    const currentTotal = processedData.length;
-    const pageIndex = tableData.pageIndex as number;
-    const pageSize = tableData.pageSize as number;
-    const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+  const handleExportData = useCallback(() => { exportToCsv("email_templates.csv", allFilteredAndSortedData); }, [allFilteredAndSortedData]);
+  const handlePaginationChange = useCallback((page: number) => setTableData(prev => ({ ...prev, pageIndex: page })), []);
+  const handleSelectPageSizeChange = useCallback((value: number) => { setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 })); setSelectedItems([]); }, []);
+  const handleSort = useCallback((sort: OnSortParam) => { setTableData(prev => ({ ...prev, sort: sort, pageIndex: 1 })); }, []);
+  const handleSearchInputChange = useCallback((query: string) => { setTableData(prev => ({ ...prev, query: query, pageIndex: 1 })); }, []);
+  const handleRowSelect = useCallback((checked: boolean, row: EmailTemplateItem) => {setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); });}, []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<EmailTemplateItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-    return {
-      pageData: dataForPage,
-      total: currentTotal,
-      allFilteredAndSortedData: processedData, // For export
-    };
-  }, [allEmailTemplates, tableData, filterCriteria]);
+  const columns: ColumnDef<EmailTemplateItem>[] = useMemo(() => [
+    { header: "Name", accessorKey: "name", size: 200, cell: props => <div><span className="font-semibold">{props.row.original.name}</span><div className="text-xs text-gray-500">{props.row.original.template_id}</div></div> },
+    { header: "Category", accessorKey: "category_id", cell: props => props.row.original.categoryName || String(props.getValue()) },
+    { header: "SubCategory", accessorKey: "sub_category_id", cell: props => props.row.original.subCategoryName || (props.getValue() ? String(props.getValue()) : "N/A") },
+    { header: "Brand", accessorKey: "brand_id", cell: props => props.row.original.brandName || (props.getValue() ? String(props.getValue()) : "N/A") },
+    { header: "Role", accessorKey: "role_id", cell: props => props.row.original.roleName || (props.getValue() ? String(props.getValue()) : "N/A") },
+    { header: "Department", accessorKey: "department_id", cell: props => props.row.original.departmentName || (props.getValue() ? String(props.getValue()) : "N/A") },
+    { header: "Designation", accessorKey: "designation_id", cell: props => props.row.original.designationName || (props.getValue() ? String(props.getValue()) : "N/A") },
+    { header: "Created At", accessorKey: "created_at", cell: props => new Date(props.getValue<string>()).toLocaleDateString() },
+    { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onViewDetail={() => { /* TODO: Implement View Dialog */ }} /> },
+  ], [categoryOptions, subCategoryOptions, brandOptions, roleOptions, departmentOptions, designationOptions, openEditDrawer, handleDeleteClick]);
 
-  const handleExportData = () => {
-    const success = exportToCsv(
-      "email_templates_export.csv",
-      allFilteredAndSortedData
-    );
-    if (success) {
-      toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported.
-        </Notification>
-      );
-    }
-  };
-
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-    setTableData((prev) => ({ ...prev, ...data }));
-  }, []);
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: EmailTemplateItem) => {
-      setSelectedItems((prev) => {
-        if (checked)
-          return prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row];
-        return prev.filter((item) => item.id !== row.id);
-      });
-    },
-    []
-  );
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<EmailTemplateItem>[]) => {
-      const currentPageRowOriginals = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((prevSelected) => {
-          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-          const newRowsToAdd = currentPageRowOriginals.filter(
-            (r) => !prevSelectedIds.has(r.id)
-          );
-          return [...prevSelected, ...newRowsToAdd];
-        });
-      } else {
-        const currentPageRowIds = new Set(
-          currentPageRowOriginals.map((r) => r.id)
-        );
-        setSelectedItems((prevSelected) =>
-          prevSelected.filter((item) => !currentPageRowIds.has(item.id))
-        );
-      }
-    },
-    []
-  );
-
-  const columns: ColumnDef<EmailTemplateItem>[] = useMemo(
-    () => [
-      {
-        header: "Name",
-        accessorKey: "name",
-        enableSorting: true,
-        cell: (props) => {
-          const row = props.row.original;
-          return (
-            <div>
-              <span className="font-semibold">{row.name}</span>
-              <div className="text-xs text-gray-500">{row.templateId}</div>
-            </div>
-          );
-        },
-      },
-      // { header: 'Template ID', accessorKey: 'templateId', enableSorting: true },
-      {
-        header: "Status",
-        accessorKey: "status",
-        enableSorting: true,
-        cell: (props) => (
-          <Tag
-            className={classNames(
-              templateStatusColor[props.row.original.status] ||
-                "bg-gray-100 text-gray-600",
-              "capitalize"
-            )}
-          >
-            {props.row.original.status}
-          </Tag>
-        ),
-      },
-      {
-        header: "Category",
-        accessorKey: "categoryId",
-        enableSorting: true,
-        cell: (props) =>
-          mockCategoryOptions.find(
-            (c) => c.value === props.row.original.categoryId
-          )?.label || "-",
-      },
-      {
-        header: "SubCategory",
-        accessorKey: "subCategoryId",
-        enableSorting: true,
-        cell: (props) =>
-          mockSubCategoryOptions.find(
-            (c) => c.value === props.row.original.subCategoryId
-          )?.label || "-",
-      },
-      {
-        header: "Brand",
-        accessorKey: "brandId",
-        enableSorting: true,
-        cell: (props) =>
-          mockBrandOptions.find((c) => c.value === props.row.original.brandId)
-            ?.label || "-",
-      },
-      {
-        header: "Roles",
-        accessorKey: "roles",
-        enableSorting: true, // Sorting by first role label
-        cell: (props) =>
-          props.row.original.roles?.map((r) => r.label).join(", ") || "-",
-      },
-      {
-        header: "Departments",
-        accessorKey: "departments",
-        enableSorting: true,
-        cell: (props) =>
-          props.row.original.departments?.map((d) => d.label).join(", ") || "-",
-      },
-      {
-        header: "Designations",
-        accessorKey: "designations",
-        enableSorting: true,
-        cell: (props) =>
-          props.row.original.designations?.map((d) => d.label).join(", ") ||
-          "-",
-      },
-      {
-        header: "Variables",
-        accessorKey: "variables",
-        enableSorting: true, // Sorting by count
-        cell: (props) => {
-          const vars = props.row.original.variables;
-          return vars && vars.length > 0 ? (
-            <Tooltip
-              title={vars
-                .map((v) => `${v.variableName} (${v.variableType})`)
-                .join("\n")}
-            >
-              <span>{vars.length} Var(s)</span>
-            </Tooltip>
-          ) : (
-            "-"
-          );
-        },
-      },
-      {
-        header: "Actions",
-        id: "action",
-        meta: { HeaderClass: "text-center" },
-        cell: (props) => (
-          <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
-          />
-        ),
-      },
-    ],
-    // Dependencies for useMemo should include functions that might change if the component re-renders.
-    // Since openEditDrawer and handleDeleteClick are defined with useCallback and stable references,
-    // they technically don't need to be here unless their own dependencies change.
-    // However, it's safer to include them if their behavior might change.
-    // For this example, they are stable.
-    []
-  );
-
-  const renderVariablesFields = (
-    control: any,
-    fieldArray: any,
-    formMethods: any
-  ) => {
-    return (
-      <div>
-        <label className="form-label mb-2">Variables</label>
-        {fieldArray.fields.map((field: any, index: number) => (
-          <div
-            key={field.id}
-            className="flex items-start gap-2 mb-3 p-3 border rounded-md"
-          >
-            <FormItem
-              label={`Name ${index + 1}`}
-              className="flex-grow"
-              invalid={
-                !!formMethods.formState.errors.variables?.[index]?.variableName
-              }
-              errorMessage={
-                formMethods.formState.errors.variables?.[index]?.variableName
-                  ?.message
-              }
-            >
-              <Controller
-                name={`variables.${index}.variableName`}
-                control={control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="e.g., userName" />
-                )}
-              />
+  const renderDrawerForm = (currentFormMethods: typeof formMethods, currentVariablesArray: typeof variablesFieldArray) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+      <FormItem label="Name" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}>
+        <Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbMailBolt />} placeholder="Internal Template Name" />)} />
+      </FormItem>
+      <FormItem label="Template ID (Unique)" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.template_id} errorMessage={currentFormMethods.formState.errors.template_id?.message}>
+        <Controller name="template_id" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbKey />} placeholder="e.g., WELCOME_EMAIL_V1" />)} />
+      </FormItem>
+      <FormItem label="Title (Email Subject/Header)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.title} errorMessage={currentFormMethods.formState.errors.title?.message}>
+          <Controller name="title" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbFileDescription />} placeholder="Actual Email Title/Subject" />)}/>
+      </FormItem>
+      <FormItem label="Category" invalid={!!currentFormMethods.formState.errors.category_id} errorMessage={currentFormMethods.formState.errors.category_id?.message}>
+        <Controller name="category_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory2/>} />)} />
+      </FormItem>
+      <FormItem label="SubCategory (Optional)" invalid={!!currentFormMethods.formState.errors.sub_category_id} errorMessage={currentFormMethods.formState.errors.sub_category_id?.message}>
+        <Controller name="sub_category_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select SubCategory" options={subCategoryOptions} value={subCategoryOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbApps/>} />)} />
+      </FormItem>
+      <FormItem label="Brand (Optional)" invalid={!!currentFormMethods.formState.errors.brand_id} errorMessage={currentFormMethods.formState.errors.brand_id?.message}>
+        <Controller name="brand_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Brand" options={brandOptions} value={brandOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBuildingArch/>} />)} />
+      </FormItem>
+      <FormItem label="Role (Optional)" invalid={!!currentFormMethods.formState.errors.role_id} errorMessage={currentFormMethods.formState.errors.role_id?.message}>
+        <Controller name="role_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Role" options={roleOptions} value={roleOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbUsersGroup/>} />)} />
+      </FormItem>
+      <FormItem label="Department (Optional)" invalid={!!currentFormMethods.formState.errors.department_id} errorMessage={currentFormMethods.formState.errors.department_id?.message}>
+        <Controller name="department_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Department" options={departmentOptions} value={departmentOptions.find(o => o.value === field.value) || (field.value === "" ? {value:"", label:"None"} : null) } onChange={(opt) => field.onChange(opt?.value === "" ? null : opt?.value)} isClearable prefix={<TbBuildingCommunity/>} />)} />
+      </FormItem>
+      <FormItem label="Designation (Optional)" invalid={!!currentFormMethods.formState.errors.designation_id} errorMessage={currentFormMethods.formState.errors.designation_id?.message}>
+        <Controller name="designation_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Designation" options={designationOptions} value={designationOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBriefcase/>} />)} />
+      </FormItem>
+      
+      <div className="md:col-span-2 mt-4">
+        <label className="form-label mb-2 block font-semibold">Template Variables</label>
+        {currentVariablesArray.fields.map((field, index) => (
+          <div key={field.id} className="flex items-start gap-2 mb-3 p-3 border rounded-md dark:border-gray-700">
+            <FormItem label={`Name ${index + 1}`} className="flex-grow" invalid={!!currentFormMethods.formState.errors.variables?.[index]?.name} errorMessage={currentFormMethods.formState.errors.variables?.[index]?.name?.message}>
+              <Controller name={`variables.${index}.name`} control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., userName" />)}/>
             </FormItem>
-            <FormItem
-              label={`Type ${index + 1}`}
-              className="flex-grow"
-              invalid={
-                !!formMethods.formState.errors.variables?.[index]?.variableType
-              }
-              errorMessage={
-                formMethods.formState.errors.variables?.[index]?.variableType
-                  ?.message
-              }
-            >
-              <Controller
-                name={`variables.${index}.variableType`}
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    options={variableTypeOptions}
-                    placeholder="Select Type"
-                    value={variableTypeOptions.find(
-                      (opt) => opt.value === field.value
-                    )}
-                    onChange={(option) => field.onChange(option?.value)}
-                  />
-                )}
-              />
+            <FormItem label={`Type ${index + 1}`} className="flex-grow" invalid={!!currentFormMethods.formState.errors.variables?.[index]?.type} errorMessage={currentFormMethods.formState.errors.variables?.[index]?.type?.message}>
+              <Controller name={`variables.${index}.type`} control={currentFormMethods.control} render={({ field }) => (<Select {...field} options={variableTypeOptions} placeholder="Select Type" value={variableTypeOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option?.value)} />)}/>
             </FormItem>
-            <Button
-              shape="circle"
-              size="sm"
-              icon={<TbX />}
-              className="mt-7"
-              onClick={() => fieldArray.remove(index)}
-              type="button"
-            />
+            <Button shape="circle" size="sm" icon={<TbX />} className="mt-7" onClick={() => currentVariablesArray.remove(index)} type="button"/>
           </div>
         ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            fieldArray.append({ variableName: "", variableType: "string" })
-          }
-        >
-          Add Variable
-        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => currentVariablesArray.append({ name: "", type: "string" })} icon={<TbVariable/>}>Add Variable</Button>
       </div>
-    );
-  };
+    </div>
+  );
 
   return (
     <>
@@ -1281,553 +435,43 @@ const Emailtemplates = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Email Templates</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New
-            </Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Template</Button>
           </div>
-          <EmailTemplatesTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleExportData}
-          />
+          <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
-            <EmailTemplatesTable
-              columns={columns}
-              data={pageData}
-              loading={
-                loadingStatus === "loading" || isSubmitting || isDeleting
-              }
-              pagingData={{
-                total: total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              selectedItems={selectedItems}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
-            />
+            <EmailTemplatesTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
-
-      <EmailTemplatesSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
-
-      {/* Add/Edit Drawers and Dialogs */}
-      {/* Add Drawer */}
-      <Drawer
-        title="Add Email Template"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        width={600}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="addEmailTemplateForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="addEmailTemplateForm"
-          onSubmit={addFormMethods.handleSubmit(onAddTemplateSubmit)}
-          className="flex flex-col gap-y-4"
-        >
-          <div className="md:grid grid-cols-2 gap-3">
-          <FormItem
-            label="Name"
-            invalid={!!addFormMethods.formState.errors.name}
-            errorMessage={addFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Name" />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Template ID"
-            invalid={!!addFormMethods.formState.errors.templateId}
-            errorMessage={addFormMethods.formState.errors.templateId?.message}
-          >
-            <Controller
-              name="templateId"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="e.g., welcome_email" />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Category">
-            <Controller
-              name="categoryId"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Category"
-                  options={mockCategoryOptions}
-                  value={mockCategoryOptions.find(
-                    (opt) => opt.value === field.value
-                  )}
-                  onChange={(option) => field.onChange(option?.value)}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="SubCategory">
-            <Controller
-              name="subCategoryId"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select SubCategory"
-                  options={mockSubCategoryOptions} // Ideally filter based on category
-                  value={mockSubCategoryOptions.find(
-                    (opt) => opt.value === field.value
-                  )}
-                  onChange={(option) => field.onChange(option?.value)}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Brand">
-            <Controller
-              name="brandId"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Brand"
-                  options={mockBrandOptions}
-                  value={mockBrandOptions.find(
-                    (opt) => opt.value === field.value
-                  )}
-                  onChange={(option) => field.onChange(option?.value)}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Roles">
-            <Controller
-              name="roles"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Roles"
-                  options={mockRoleOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Departments">
-            <Controller
-              name="departments"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Departments"
-                  options={mockDepartmentOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Designations">
-            <Controller
-              name="designations"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Designations"
-                  options={mockDesignationOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          {renderVariablesFields(
-            addFormMethods.control,
-            addVariablesArray,
-            addFormMethods
-          )}
-          </div>
+      <EmailTemplatesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
+      
+      <Drawer title={editingTemplate ? "Edit Email Template" : "Add New Email Template"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingTemplate ? closeEditDrawer : closeAddDrawer} onRequestClose={editingTemplate ? closeEditDrawer : closeAddDrawer} width={700}
+        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingTemplate ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form={editingTemplate ? "editEmailTemplateForm" : "addEmailTemplateForm"} type="submit" loading={isSubmitting} disabled={!(editingTemplate ? formMethods.formState.isValid : formMethods.formState.isValid) || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div> } >
+        <Form id={editingTemplate ? "editEmailTemplateForm" : "addEmailTemplateForm"} onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
+          {renderDrawerForm(formMethods, variablesFieldArray)}
         </Form>
       </Drawer>
 
-      {/* Edit Drawer */}
-      <Drawer
-        title="Edit Email Template"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        width={600}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="editEmailTemplateForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        }
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400}
+        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button> <Button size="sm" variant="solid" form="filterEmailTemplatesForm" type="submit">Apply Filters</Button> </div> }
       >
-        <Form
-          id="editEmailTemplateForm"
-          onSubmit={editFormMethods.handleSubmit(onEditTemplateSubmit)}
-          className=""
-        >
-          <div className="md:grid grid-cols-2 gap-3">
-          <FormItem
-            label="Name"
-            invalid={!!editFormMethods.formState.errors.name}
-            errorMessage={editFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Name" />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Template ID"
-            invalid={!!editFormMethods.formState.errors.templateId}
-            errorMessage={editFormMethods.formState.errors.templateId?.message}
-          >
-            <Controller
-              name="templateId"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="e.g., welcome_email" />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Category">
-            <Controller
-              name="categoryId"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Category"
-                  options={mockCategoryOptions}
-                  value={mockCategoryOptions.find(
-                    (opt) => opt.value === field.value
-                  )}
-                  onChange={(option) => field.onChange(option?.value)}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="SubCategory">
-            <Controller
-              name="subCategoryId"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select SubCategory"
-                  options={mockSubCategoryOptions}
-                  value={mockSubCategoryOptions.find(
-                    (opt) => opt.value === field.value
-                  )}
-                  onChange={(option) => field.onChange(option?.value)}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Brand">
-            <Controller
-              name="brandId"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Brand"
-                  options={mockBrandOptions}
-                  value={mockBrandOptions.find(
-                    (opt) => opt.value === field.value
-                  )}
-                  onChange={(option) => field.onChange(option?.value)}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Roles">
-            <Controller
-              name="roles"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Roles"
-                  options={mockRoleOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Departments">
-            <Controller
-              name="departments"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Departments"
-                  options={mockDepartmentOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Designations">
-            <Controller
-              name="designations"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Designations"
-                  options={mockDesignationOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          {renderVariablesFields(
-            editFormMethods.control,
-            editVariablesArray,
-            editFormMethods
-          )}
-          </div>
+        <Form id="filterEmailTemplatesForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+          <FormItem label="Name"><Controller name="filterNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Name" options={emailTemplatesData.map(t=>({value: t.name, label:t.name})).filter((v,i,a)=>a.findIndex(item=>item.value === v.value)===i)} {...field} />)}/></FormItem>
+          <FormItem label="Template ID"><Controller name="filterTemplateIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Template ID" options={emailTemplatesData.map(t=>({value: t.template_id, label:t.template_id})).filter((v,i,a)=>a.findIndex(item=>item.value === v.value)===i)} {...field} />)}/></FormItem>
+          <FormItem label="Category"><Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Category" options={categoryOptions} {...field} />)}/></FormItem>
+          <FormItem label="SubCategory"><Controller name="filterSubCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any SubCategory" options={subCategoryOptions} {...field} />)}/></FormItem>
+          <FormItem label="Brand"><Controller name="filterBrandIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Brand" options={brandOptions} {...field} />)}/></FormItem>
+          <FormItem label="Role"><Controller name="filterRoleIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Role" options={roleOptions} {...field} />)}/></FormItem>
+          <FormItem label="Department"><Controller name="filterDepartmentIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Department" options={departmentOptions} {...field} />)}/></FormItem>
+          <FormItem label="Designation"><Controller name="filterDesignationIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Designation" options={designationOptions} {...field} />)}/></FormItem>
         </Form>
       </Drawer>
 
-      {/* Filter Drawer */}
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterEmailTemplateForm"
-              type="submit"
-            >
-              Apply
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="filterEmailTemplateForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem label="Name">
-            <Controller
-              name="filterNames"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select names..."
-                  options={nameOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Template ID">
-            <Controller
-              name="filterTemplateIds"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select template IDs..."
-                  options={templateIdOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Category">
-            <Controller
-              name="filterCategories"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select categories..."
-                  options={mockCategoryOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="SubCategory">
-            <Controller
-              name="filterSubCategories"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select sub-categories..."
-                  options={mockSubCategoryOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Brand">
-            <Controller
-              name="filterBrands"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select brands..."
-                  options={mockBrandOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Role">
-            <Controller
-              name="filterRoles"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select roles..."
-                  options={mockRoleOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Department">
-            <Controller
-              name="filterDepartments"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select departments..."
-                  options={mockDepartmentOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Designation">
-            <Controller
-              name="filterDesignations"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select designations..."
-                  options={mockDesignationOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Status">
-            <Controller
-              name="filterStatus"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select statuses..."
-                  options={statusOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      {/* Single Delete Confirmation */}
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Email Template"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setTemplateToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setTemplateToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setTemplateToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-      >
-        <p>
-          Are you sure you want to delete the template "
-          <strong>{templateToDelete?.name}</strong>"?
-        </p>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Email Template" onClose={() => { setSingleDeleteConfirmOpen(false); setTemplateToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} onCancel={() => { setSingleDeleteConfirmOpen(false); setTemplateToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setTemplateToDelete(null); }} >
+        <p>Are you sure you want to delete template "<strong>{templateToDelete?.name} ({templateToDelete?.template_id})</strong>"?</p>
       </ConfirmDialog>
     </>
   );
 };
 
-export default Emailtemplates;
-
-// Helper (if not globally available or imported from a shared utility)
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}
+export default EmailTemplatesListing;
