@@ -191,6 +191,8 @@ const SubscribersListing = () => {
         error: masterError = null,
     } = useSelector(masterSelector);
 
+    console.log("rawApiSubscribers",rawApiSubscribers);
+    
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
         filterFormSchema.parse({})
