@@ -3525,33 +3525,70 @@ export const addBugReportAction = createAsyncThunk<any, any>(
   }
 )
 
-export const editBugReportAction = createAsyncThunk<any, any>(
+// export const editBugReportAction = createAsyncThunk<any, any>(
+//   "auth/editBugReportsAction",
+//   async (data, { rejectWithValue, dispatch }) => {
+//     try {
+//       const response: AxiosResponse<any> = await editBugReportAsync(data)
+//       if (response?.data?.status === true) {
+//         dispatch(getProductSpecificationsAction())
+//         dispatch(
+//           showMessage({
+//             ...defaultMessageObj,
+//             type: "success",
+//             messageText: response?.data?.message || "success",
+//           }))
+//         return response?.data?.data
+//       }
+//       dispatch(
+//         showMessage({
+//           ...defaultMessageObj,
+//           type: "error",
+//           messageText: response?.data?.message || "failed",
+//         }))
+//       return rejectWithValue(response)
+//     } catch (error: unknown) {
+//       return rejectWithValue(error as Error)
+//     }
+//   }
+// )
+
+export const editBugReportAction = createAsyncThunk<
+  any, // Return type of the fulfilled action
+  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+>(
   "auth/editBugReportsAction",
-  async (data, { rejectWithValue, dispatch }) => {
+  async (payload, { rejectWithValue, dispatch }) => {
+    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      const response: AxiosResponse<any> = await editBugReportAsync(data)
+      console.log("editBrandAction - payload received:", payload);
+      // *** CHANGE HERE: Pass id and formData separately ***
+      const response: AxiosResponse<any> = await editBugReportAsync(payload.id, payload.formData);
+
       if (response?.data?.status === true) {
-        dispatch(getProductSpecificationsAction())
+        dispatch(getBugReportsAction());
         dispatch(
           showMessage({
             ...defaultMessageObj,
             type: "success",
             messageText: response?.data?.message || "success",
-          }))
-        return response?.data?.data
+          })
+        );
+        return response?.data?.data;
       }
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
           messageText: response?.data?.message || "failed",
-        }))
-      return rejectWithValue(response)
+        })
+      );
+      return rejectWithValue(response);
     } catch (error: unknown) {
-      return rejectWithValue(error as Error)
+      return rejectWithValue(error as Error);
     }
   }
-)
+);
 
 export const deleteBugReportAction = createAsyncThunk<any, any>(
   "auth/deleteBugReportsAction",
