@@ -29,7 +29,7 @@ const navigationConfig: NavigationTree[] = [
     ...webSettingsNavigationConfig,
     ...masterNavigationConfig,
     ...otherNavigationConfig,
-    ...uiComponentNavigationConfig,
+    // ...uiComponentNavigationConfig,
 ]
 
 export default navigationConfig

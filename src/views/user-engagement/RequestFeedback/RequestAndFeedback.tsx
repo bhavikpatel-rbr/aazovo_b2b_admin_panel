@@ -1,1179 +1,442 @@
-// src/views/your-path/RequestAndFeedback.tsx
+// src/views/your-path/RequestAndFeedbackListing.tsx
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-
-dayjs.extend(isBetween);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
+import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import DebouceInput from "@/components/shared/DebouceInput";
-import {
-  Drawer,
-  Form,
-  FormItem,
-  Input,
-  Select,
-  DatePicker,
-  Tag,
-  Tooltip,
-} from "@/components/ui";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
+import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
+import Select from "@/components/ui/Select";
+import { Drawer, Form, FormItem, Input, Tag, Dialog } from "@/components/ui";
+// Input.TextArea is often available directly or via Input component props
 
 // Icons
 import {
+  TbPencil,
+  TbTrash,
+  TbChecks,
+  TbEye,
   TbSearch,
   TbFilter,
+  TbPlus,
   TbCloudUpload,
-  TbShare,
-  TbDotsVertical,
-  TbTrash,
-  TbPencil,
-
-  TbEye,
-  TbChecks,
-
+  TbUserCircle,
+  TbMail,
+  TbPhone,
+  TbBuilding,
+  TbMessageDots, // For feedback/request type
+  TbClipboardText, // For subject
+  TbStar,        // For rating
+  TbPaperclip,   // For attachment
+  TbToggleRight, // For status
 } from "react-icons/tb";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-  CellContext,
-} from "@/components/shared/DataTable"; // Added CellContext
+import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import Textarea from "@/views/ui-components/forms/Input/Textarea";
 
-// --- Define Item Type ---
-export type RequestStatus =
-  | "Open"
-  | "In Progress"
-  | "Resolved"
-  | "Closed"
-  | "Pending Review"
-  | string;
-export type RequestSource =
-  | "Website Form"
-  | "Email"
-  | "Phone Call"
-  | "In-App Feedback"
-  | "Support Ticket"
-  | string;
+// Redux
+import { useAppDispatch } from '@/reduxtool/store';
+import { shallowEqual, useSelector } from "react-redux";
+import {
+  // !!! REPLACE WITH YOUR ACTUAL ACTIONS !!!
+  getRequestFeedbacksAction,
+  addRequestFeedbackAction,
+  editRequestFeedbackAction,
+  deleteRequestFeedbackAction,
+  deleteAllRequestFeedbacksAction,
+  // getCustomersAction, // If needed for customer_id dropdown
+} from '@/reduxtool/master/middleware'; // Adjust path
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // Adjust path
 
-export type RequestFeedbackItem = {
-  id: number | string;
+// --- Define Types ---
+export type SelectOption = { value: string; label: string };
+
+export type RequestFeedbackApiStatus = "unread" | "read" | "in_progress" | "resolved" | "closed" | string;
+export type RequestFeedbackFormStatus = "unread" | "read" | "in_progress" | "resolved" | "closed";
+
+export type RequestFeedbackType = "Feedback" | "Request" | "Complaint" | "Query" | string; // Extend as needed
+
+export type RequestFeedbackItem = { // Matches your API listing data
+  id: string | number;
+  customer_id: string; // Can be "0"
   name: string;
   email: string;
-  phone?: string | null;
-  from: RequestSource;
-  message: string;
-  status: RequestStatus;
-  date: Date;
-  lastUpdated?: Date;
-  assignedTo?: string | null;
-};
-// --- End Item Type Definition ---
-
-// --- Status Colors ---
-const statusColor: Record<RequestStatus, string> = {
-  Open: "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100",
-  "In Progress":
-    "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
-  Resolved:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  Closed: "bg-gray-100 text-gray-600 dark:bg-gray-600/20 dark:text-gray-100",
-  "Pending Review":
-    "bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100",
+  mobile_no: string;
+  company_name?: string | null;
+  feedback_details: string;
+  attachment?: string | null;
+  type: RequestFeedbackType;
+  status: RequestFeedbackApiStatus;
+  created_at: string;
+  updated_at: string;
+  subject?: string | null;
+  rating?: number | string | null; // API might send string or number
+  deleted_at?: string | null;
 };
 
-// --- Zod Schema for Edit/Status Change Form ---
-const requestFeedbackEditFormSchema = z.object({
-  status: z.string().min(1, "Status is required."),
-  internalNotes: z.string().optional(),
+// --- Constants for Form Selects & Display ---
+const TYPE_OPTIONS: SelectOption[] = [
+  { value: "Feedback", label: "Feedback" },
+  { value: "Request", label: "Request" },
+  { value: "Complaint", label: "Complaint" },
+  { value: "Query", label: "General Query" },
+];
+const typeValues = TYPE_OPTIONS.map(t => t.value) as [string, ...string[]];
+
+const STATUS_OPTIONS_FORM: { value: RequestFeedbackFormStatus; label: string }[] = [
+  { value: "unread", label: "Unread" },
+  { value: "read", label: "Read" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "resolved", label: "Resolved" },
+  { value: "closed", label: "Closed" },
+];
+const statusFormValues = STATUS_OPTIONS_FORM.map(s => s.value) as [RequestFeedbackFormStatus, ...RequestFeedbackFormStatus[]];
+
+const statusColors: Record<RequestFeedbackApiStatus, string> = {
+  unread: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
+  read: "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100",
+  in_progress: "bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-100",
+  resolved: "bg-teal-100 text-teal-600 dark:bg-teal-500/20 dark:text-teal-100",
+  closed: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+  default: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+};
+
+const RATING_OPTIONS: SelectOption[] = [
+  { value: "1", label: "1 Star (Poor)" },
+  { value: "2", label: "2 Stars (Fair)" },
+  { value: "3", label: "3 Stars (Average)" },
+  { value: "4", label: "4 Stars (Good)" },
+  { value: "5", label: "5 Stars (Excellent)" },
+];
+const ratingValues = RATING_OPTIONS.map(r => r.value) as [string, ...string[]];
+
+
+// --- Zod Schema for Add/Edit Form ---
+const requestFeedbackFormSchema = z.object({
+  // customer_id: z.string().optional(), // Assuming this might be auto-set or handled differently for new entries
+  name: z.string().min(1, "Name is required.").max(100),
+  email: z.string().email("Invalid email address.").min(1, "Email is required."),
+  mobile_no: z.string().min(1, "Mobile number is required.").max(20),
+  company_name: z.string().max(150).optional().or(z.literal("")),
+  feedback_details: z.string().min(10, "Details must be at least 10 characters.").max(5000),
+  type: z.enum(typeValues, { errorMap: () => ({ message: "Please select a type." }) }),
+  status: z.enum(statusFormValues, { errorMap: () => ({ message: "Please select a status." }) }),
+  subject: z.string().max(255).optional().or(z.literal("")),
+  rating: z.enum(ratingValues).optional().nullable(), // Rating is optional, can be null
+  attachment: z.any().optional(), // For File object
 });
-type RequestFeedbackEditFormData = z.infer<
-  typeof requestFeedbackEditFormSchema
->;
+type RequestFeedbackFormData = z.infer<typeof requestFeedbackFormSchema>;
 
 // --- Zod Schema for Filter Form ---
-const selectOptionSchema = z.object({ value: z.string(), label: z.string() });
 const filterFormSchema = z.object({
-  dateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
-  filterStatuses: z.array(selectOptionSchema).optional().default([]),
-  filterFrom: z.array(selectOptionSchema).optional().default([]),
+  filterType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterRating: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
-// --- End Filter Schema ---
 
-// --- CSV Exporter Utility ---
-const CSV_HEADERS = [
-  "ID",
-  "Name",
-  "Email",
-  "Phone",
-  "From",
-  "Status",
-  "Date",
-  "Message",
-  "Last Updated",
-  "Assigned To",
+// --- CSV Exporter ---
+const CSV_HEADERS_RF = ["ID", "Name", "Email", "Mobile No", "Company", "Type", "Subject", "Details", "Rating", "Status", "Attachment", "Date"];
+const CSV_KEYS_RF: (keyof Pick<RequestFeedbackItem, 'id' | 'name' | 'email' | 'mobile_no' | 'company_name' | 'type' | 'subject' | 'feedback_details' | 'rating' | 'status' | 'attachment' | 'created_at'>)[] = [
+  "id", "name", "email", "mobile_no", "company_name", "type", "subject", "feedback_details", "rating", "status", "attachment", "created_at"
 ];
-const CSV_KEYS: (keyof RequestFeedbackItem)[] = [
-  "id",
-  "name",
-  "email",
-  "phone",
-  "from",
-  "status",
-  "date",
-  "message",
-  "lastUpdated",
-  "assignedTo",
-];
-
-function exportRequestsToCsv(filename: string, rows: RequestFeedbackItem[]) {
-  if (!rows || !rows.length) {
-    toast.push(
-      <Notification title="No Data" type="info">
-        Nothing to export.
-      </Notification>
-    );
-    return false;
-  }
+function exportRequestFeedbacksToCsv(filename: string, rows: RequestFeedbackItem[]) {
+  if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
+  const preparedRows = rows.map((row) => ({
+    ...row,
+    type: TYPE_OPTIONS.find(t => t.value === row.type)?.label || row.type,
+    status: STATUS_OPTIONS_FORM.find(s => s.value === row.status)?.label || row.status,
+    rating: RATING_OPTIONS.find(r => r.value === String(row.rating || ''))?.label || (row.rating ? String(row.rating) : "N/A"),
+    created_at: new Date(row.created_at).toLocaleDateString(),
+  }));
+  // ... (Standard export logic)
   const separator = ",";
-  const csvContent =
-    CSV_HEADERS.join(separator) +
-    "\n" +
-    rows
-      .map((row) => {
-        return CSV_KEYS.map((k) => {
-          let cell = row[k];
-          if (cell === null || cell === undefined) {
-            cell = "";
-          } else if (cell instanceof Date) {
-            cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
-          } else {
-            cell = String(cell).replace(/"/g, '""');
-          }
-          if (String(cell).search(/("|,|\n)/g) >= 0) {
-            cell = `"${cell}"`;
-          }
-          return cell;
-        }).join(separator);
-      })
-      .join("\n");
-
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const csvContent = CSV_HEADERS_RF.join(separator) + "\n" + preparedRows.map((row: any) => CSV_KEYS_RF.map((k) => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ""; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join("\n");
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    return true;
-  }
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
-  return false;
+  if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = "hidden"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; }
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
-// --- Search Component ---
-type RequestSearchProps = {
-  onInputChange: (value: string) => void;
-  ref?: Ref<HTMLInputElement>;
-};
-const RequestSearch = React.forwardRef<HTMLInputElement, RequestSearchProps>(
-  ({ onInputChange }, ref) => {
-    return (
-      <DebouceInput
-        ref={ref}
-        className="w-full"
-        placeholder="Quick Search..."
-        suffix={<TbSearch className="text-lg" />}
-        onChange={(e) => onInputChange(e.target.value)}
-      />
-    );
-  }
-);
-RequestSearch.displayName = "RequestSearch";
+// --- ActionColumn, Search, TableTools, SelectedFooter (UI remains same) ---
+const ItemActionColumn = ({ onEdit, onViewDetail, onDelete }: { onEdit: () => void; onViewDetail: () => void; onDelete: () => void; }) => { return ( <div className="flex items-center justify-center gap-2"> <Tooltip title="Edit"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="View"><div className="text-xl cursor-pointer text-gray-500 hover:text-blue-600" role="button" onClick={onViewDetail}><TbEye /></div></Tooltip> <Tooltip title="Delete"><div className="text-xl cursor-pointer text-gray-500 hover:text-red-600" role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> ); };
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search by Name, Email, Subject..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+ItemSearch.displayName = "ItemSearch";
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type RequestFeedbacksTableProps = { columns: ColumnDef<RequestFeedbackItem>[]; data: RequestFeedbackItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: RequestFeedbackItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: RequestFeedbackItem) => void; onAllRowSelect: (checked: boolean, rows: Row<RequestFeedbackItem>[]) => void; };
+const RequestFeedbacksTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: RequestFeedbacksTableProps) => ( <DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} /> );
+type RequestFeedbacksSelectedFooterProps = { selectedItems: RequestFeedbackItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
+const RequestFeedbacksSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: RequestFeedbacksSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Item{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Item(s)`} onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false); }}> <p>Are you sure you want to delete the selected item(s)?</p> </ConfirmDialog> </> ); };
 
-// --- TableTools Component ---
-const RequestTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-}: {
-  onSearchChange: (query: string) => void;
-  onFilter: () => void;
-  onExport: () => void;
-}) => {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-      <div className="flex-grow">
-        <RequestSearch onInputChange={onSearchChange} />
-      </div>
-      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-        <Button
-          icon={<TbFilter />}
-          onClick={onFilter}
-          className="w-full sm:w-auto"
-        >
-          Filter
-        </Button>
-        <Button
-          icon={<TbCloudUpload />}
-          onClick={onExport}
-          className="w-full sm:w-auto"
-        >
-          Export
-        </Button>
-      </div>
-    </div>
-  );
-};
 
-// --- DataTable Component ---
-type RequestTableProps = {
-  columns: ColumnDef<RequestFeedbackItem>[];
-  data: RequestFeedbackItem[];
-  loading: boolean;
-  pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: RequestFeedbackItem[];
-  onPaginationChange: (page: number) => void;
-  onSelectChange: (value: number) => void;
-  onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: RequestFeedbackItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<RequestFeedbackItem>[]) => void;
-};
-const RequestTable = ({
-  columns,
-  data,
-  loading,
-  pagingData,
-  selectedItems,
-  onPaginationChange,
-  onSelectChange,
-  onSort,
-  onRowSelect,
-  onAllRowSelect,
-}: RequestTableProps) => {
-  return (
-    <DataTable
-      selectable
-      columns={columns}
-      data={data}
-      loading={loading}
-      pagingData={pagingData}
-      checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
-      }
-      onPaginationChange={onPaginationChange}
-      onSelectChange={onSelectChange}
-      onSort={onSort}
-      onCheckBoxChange={onRowSelect}
-      onIndeterminateCheckBoxChange={onAllRowSelect}
-      noData={!loading && data.length === 0}
-    />
-  );
-};
+const RequestAndFeedbackListing = () => {
+  const dispatch = useAppDispatch();
+  const {
+    requestFeedbacksData = [], // Assuming this name in your Redux state
+    // customerData = [], // If you fetch customers for a dropdown
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector, shallowEqual);
 
-// --- SelectedFooter Component ---
-type RequestSelectedFooterProps = {
-  selectedItems: RequestFeedbackItem[];
-  onDeleteSelected: () => void;
-};
-const RequestSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-}: RequestSelectedFooterProps) => {
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmationOpen(false);
-  };
-  if (selectedItems.length === 0) return null;
-
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              <span className="heading-text">{selectedItems.length}</span>
-              <span>Item{selectedItems.length > 1 ? "s" : ""} selected</span>
-            </span>
-          </span>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={handleDeleteClick}
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Item${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-      >
-        <p>
-          Are you sure you want to delete the selected item
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>
-      </ConfirmDialog>
-    </>
-  );
-};
-
-// --- Mock Initial Data ---
-const initialDummyRequests: RequestFeedbackItem[] = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "555-1234",
-    from: "Website Form",
-    message:
-      "The website is a bit slow on mobile devices. Otherwise, great content!",
-    status: "Open",
-    date: dayjs().subtract(2, "day").toDate(),
-    lastUpdated: dayjs().subtract(1, "hour").toDate(),
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    from: "Email",
-    message: "I have a feature request: can you add dark mode?",
-    status: "Pending Review",
-    date: dayjs().subtract(5, "day").toDate(),
-  },
-  {
-    id: 3,
-    name: "Alice Brown",
-    email: "alice.b@example.com",
-    phone: "555-5678",
-    from: "Support Ticket",
-    message: "Login issue resolved. Thanks for the quick help!",
-    status: "Resolved",
-    date: dayjs().subtract(1, "week").toDate(),
-    lastUpdated: dayjs().subtract(2, "day").toDate(),
-    assignedTo: "Support Team B",
-  },
-  {
-    id: 4,
-    name: "Bob Green",
-    email: "bob.g@example.com",
-    from: "In-App Feedback",
-    message: "The new UI is fantastic!",
-    status: "Closed",
-    date: dayjs().subtract(3, "day").toDate(),
-    lastUpdated: dayjs().subtract(3, "day").toDate(),
-  },
-  {
-    id: 5,
-    name: "Charlie Black",
-    email: "charlie.b@example.com",
-    phone: "555-8765",
-    from: "Phone Call",
-    message: "User reported a billing discrepancy. Needs investigation.",
-    status: "In Progress",
-    date: dayjs().subtract(1, "day").toDate(),
-    assignedTo: "Billing Dept",
-  },
-  {
-    id: 6,
-    name: "Diana White",
-    email: "diana.w@example.com",
-    from: "Website Form",
-    message: 'Found a typo on the pricing page under the "Enterprise" plan.',
-    status: "Open",
-    date: dayjs().toDate(),
-  },
-  {
-    id: 7,
-    name: "Edward Grey",
-    email: "ed.grey@example.com",
-    from: "Email",
-    message: "How do I reset my password? The link seems broken.",
-    status: "In Progress",
-    date: dayjs().subtract(4, "hour").toDate(),
-    assignedTo: "Tech Support",
-  },
-  {
-    id: 8,
-    name: "Fiona Purple",
-    email: "fiona.p@example.com",
-    phone: "555-4321",
-    from: "Support Ticket",
-    message: "Request for API documentation update regarding new endpoints.",
-    status: "Pending Review",
-    date: dayjs().subtract(6, "day").toDate(),
-  },
-];
-
-// --- Main RequestAndFeedback Component ---
-const RequestAndFeedback = () => {
-  const [allRequests, setAllRequests] =
-    useState<RequestFeedbackItem[]>(initialDummyRequests);
-  const [loadingStatus, setLoadingStatus] = useState<
-    "idle" | "loading" | "succeeded" | "failed"
-  >("idle");
-
-  const dispatchSimulated = useCallback(
-    async (action: { type: string; payload?: any }) => {
-      setLoadingStatus("loading");
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      try {
-        switch (action.type) {
-          case "requests/get":
-            break;
-          case "requests/update":
-            setAllRequests((prev) =>
-              prev.map((item) =>
-                item.id === action.payload.id
-                  ? { ...item, ...action.payload, lastUpdated: new Date() }
-                  : item
-              )
-            );
-            break;
-          case "requests/delete":
-            setAllRequests((prev) =>
-              prev.filter((item) => item.id !== action.payload.id)
-            );
-            break;
-          case "requests/deleteAll":
-            const idsToDelete = new Set(action.payload.ids.split(","));
-            setAllRequests((prev) =>
-              prev.filter((item) => !idsToDelete.has(String(item.id)))
-            );
-            break;
-          default:
-            console.warn("Unknown action:", action.type);
-        }
-        setLoadingStatus("succeeded");
-        return { unwrap: () => Promise.resolve() };
-      } catch (error) {
-        setLoadingStatus("failed");
-        console.error("Simulated dispatch error:", error);
-        return { unwrap: () => Promise.reject(error) };
-      }
-    },
-    []
-  );
-
-  const [isViewEditDrawerOpen, setIsViewEditDrawerOpen] = useState(false);
-  const [currentItem, setCurrentItem] = useState<RequestFeedbackItem | null>(
-    null
-  );
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<RequestFeedbackItem | null>(null);
+  const [viewingItem, setViewingItem] = useState<RequestFeedbackItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<RequestFeedbackItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
-    filterFormSchema.parse({})
-  );
-  const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: "desc", key: "date" },
-    query: "",
-  });
+  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<RequestFeedbackItem[]>([]);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
 
   useEffect(() => {
-    dispatchSimulated({ type: "requests/get" });
-  }, [dispatchSimulated]);
+    dispatch(getRequestFeedbacksAction());
+    // dispatch(getCustomersAction()); // If needed
+  }, [dispatch]);
 
-  const editFormMethods = useForm<RequestFeedbackEditFormData>({
-    resolver: zodResolver(requestFeedbackEditFormSchema),
+  const formMethods = useForm<RequestFeedbackFormData>({
+    resolver: zodResolver(requestFeedbackFormSchema),
+    mode: "onChange",
   });
+  const { control, handleSubmit, reset, formState: { errors } } = formMethods;
+
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
 
-  const openViewEditDrawer = useCallback(
-    (item: RequestFeedbackItem) => {
-      setCurrentItem(item);
-      editFormMethods.reset({
-        status: item.status,
-        internalNotes: "",
-      });
-      setIsViewEditDrawerOpen(true);
-    },
-    [editFormMethods]
-  );
+  const openAddDrawer = useCallback(() => {
+    reset({
+        // customer_id: "0", // Default or from a user selection if applicable
+        name: "", email: "", mobile_no: "", company_name: "",
+        feedback_details: "", type: TYPE_OPTIONS[0]?.value, 
+        status: STATUS_OPTIONS_FORM[0]?.value,
+        subject: "", rating: null, attachment: undefined,
+    });
+    setSelectedFile(null); setEditingItem(null); setIsAddDrawerOpen(true);
+  }, [reset]); // Removed options from deps as they are static
 
-  const closeViewEditDrawer = useCallback(() => {
-    setCurrentItem(null);
-    setIsViewEditDrawerOpen(false);
-  }, []);
+  const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
-  const onViewEditSubmit = useCallback(
-    async (data: RequestFeedbackEditFormData) => {
-      if (!currentItem) return;
-      setIsSubmitting(true);
-      try {
-        await dispatchSimulated({
-          type: "requests/update",
-          payload: { ...data, id: currentItem.id },
-        }).unwrap();
-        toast.push(
-          <Notification title="Request Updated" type="success">
-            Status changed to {data.status}.
-          </Notification>
-        );
-        closeViewEditDrawer();
-      } catch (error: any) {
-        toast.push(
-          <Notification title="Update Failed" type="danger">
-            {error.message || "Could not update request."}
-          </Notification>
-        );
-      } finally {
-        setIsSubmitting(false);
+  const openEditDrawer = useCallback((item: RequestFeedbackItem) => {
+    setEditingItem(item); setSelectedFile(null);
+    reset({
+      // customer_id: String(item.customer_id),
+      name: item.name, email: item.email, mobile_no: item.mobile_no,
+      company_name: item.company_name || "",
+      feedback_details: item.feedback_details,
+      type: item.type,
+      status: item.status as RequestFeedbackFormStatus, // Cast if API status matches form status values
+      subject: item.subject || "",
+      rating: item.rating ? String(item.rating) : null,
+      attachment: undefined, // File inputs cannot be pre-filled for edit
+    });
+    setIsEditDrawerOpen(true);
+  }, [reset]);
+  const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
+  const openViewDialog = useCallback((item: RequestFeedbackItem) => setViewingItem(item), []);
+  const closeViewDialog = useCallback(() => setViewingItem(null), []);
+
+  const onSubmitHandler = async (data: RequestFeedbackFormData) => {
+    setIsSubmitting(true);
+    const formData = new FormData();
+    // Append common fields
+    formData.append("name", data.name);
+    formData.append("email", data.email);
+    formData.append("mobile_no", data.mobile_no);
+    if(data.company_name) formData.append("company_name", data.company_name);
+    formData.append("feedback_details", data.feedback_details);
+    formData.append("type", data.type);
+    formData.append("status", data.status); // This is form status e.g. "unread"
+    if(data.subject) formData.append("subject", data.subject);
+    if(data.rating) formData.append("rating", data.rating);
+    if(selectedFile) formData.append("attachment", selectedFile);
+
+    if (editingItem) {
+        formData.append("_method", "PUT"); // For Laravel to simulate PUT with FormData
+        formData.append("customer_id", String(editingItem.customer_id)); // Send existing customer_id
+    } else {
+        formData.append("customer_id", "0"); // Default for new non-customer entries, or get from logged-in user
+    }
+    
+    try {
+      if (editingItem) {
+        await dispatch(editRequestFeedbackAction({ id: editingItem.id, formData })).unwrap();
+        toast.push(<Notification title="Entry Updated" type="success" />);
+        closeEditDrawer();
+      } else {
+        await dispatch(addRequestFeedbackAction(formData)).unwrap();
+        toast.push(<Notification title="Entry Added" type="success" />);
+        closeAddDrawer();
       }
-    },
-    [dispatchSimulated, currentItem, closeViewEditDrawer]
-  );
-
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<RequestFeedbackItem | null>(
-    null
-  );
-
-  const handleDeleteClick = useCallback((item: RequestFeedbackItem) => {
-    setItemToDelete(item);
-    setSingleDeleteConfirmOpen(true);
-  }, []);
-
-  const onConfirmSingleDelete = useCallback(async () => {
-    if (!itemToDelete) return;
-    setIsDeleting(true);
-    setSingleDeleteConfirmOpen(false);
-    try {
-      await dispatchSimulated({
-        type: "requests/delete",
-        payload: { id: itemToDelete.id },
-      }).unwrap();
-      toast.push(
-        <Notification title="Deleted" type="success">
-          Request from "{itemToDelete.name}" deleted.
-        </Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== itemToDelete.id)
-      ); // Corrected: use itemToDelete.id
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Delete Failed" type="danger">
-          {error.message || "Could not delete."}
-        </Notification>
-      );
-    } finally {
-      setIsDeleting(false);
-      setItemToDelete(null);
-    }
-  }, [dispatchSimulated, itemToDelete]);
-
-  const handleDeleteSelected = useCallback(async () => {
-    if (selectedItems.length === 0) return;
-    setIsDeleting(true);
-    const idsToDelete = selectedItems.map((item) => item.id).join(",");
-    try {
-      await dispatchSimulated({
-        type: "requests/deleteAll",
-        payload: { ids: idsToDelete },
-      }).unwrap();
-      toast.push(
-        <Notification title="Bulk Delete Successful" type="success">
-          {selectedItems.length} items deleted.
-        </Notification>
-      );
-      setSelectedItems([]);
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Bulk Delete Failed" type="danger">
-          {error.message || "Could not delete selected items."}
-        </Notification>
-      );
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [dispatchSimulated, selectedItems]);
-
-  const openFilterDrawer = useCallback(() => {
-    filterFormMethods.reset(filterCriteria);
-    setIsFilterDrawerOpen(true);
-  }, [filterFormMethods, filterCriteria]);
-  const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-    setTableData((prev) => ({ ...prev, ...data }));
-  }, []);
-
-  const onApplyFiltersSubmit = useCallback(
-    (data: FilterFormData) => {
-      setFilterCriteria(data);
-      handleSetTableData({ pageIndex: 1 });
-      closeFilterDrawer();
-    },
-    [handleSetTableData, closeFilterDrawer]
-  );
-
-  const onClearFilters = useCallback(() => {
-    const defaultFilters = filterFormSchema.parse({});
-    filterFormMethods.reset(defaultFilters);
-    setFilterCriteria(defaultFilters);
-    handleSetTableData({ pageIndex: 1 });
-  }, [filterFormMethods, handleSetTableData]);
-
-  const availableStatuses = useMemo(() => {
-    if (!Array.isArray(allRequests)) return [];
-    const unique = new Set(allRequests.map((req) => req.status));
-    return Array.from(unique)
-      .sort()
-      .map((s) => ({ value: s, label: s }));
-  }, [allRequests]);
-
-  const availableFromOptions = useMemo(() => {
-    if (!Array.isArray(allRequests)) return [];
-    const unique = new Set(allRequests.map((req) => req.from));
-    return Array.from(unique)
-      .sort()
-      .map((s) => ({ value: s, label: s }));
-  }, [allRequests]);
-
-  type ProcessedDataType = {
-    pageData: RequestFeedbackItem[];
-    total: number;
-    allFilteredAndSortedData: RequestFeedbackItem[];
+      dispatch(getRequestFeedbacksAction());
+    } catch (e: any) { toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger">{(e as Error).message}</Notification>);
+    } finally { setIsSubmitting(false); }
   };
 
-  const { pageData, total, allFilteredAndSortedData } =
-    useMemo((): ProcessedDataType => {
-      let processedData: RequestFeedbackItem[] = cloneDeep(allRequests);
+  const handleDeleteClick = useCallback((item: RequestFeedbackItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteRequestFeedbackAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Entry Deleted" type="success">{`Entry from "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getRequestFeedbacksAction()); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{(e as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
+  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id)); try { await dispatch(deleteAllRequestFeedbacksAction({ ids: idsToDelete.join(',') })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} item(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getRequestFeedbacksAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(e as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
+  
+  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+  const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer, filterFormMethods]);
+  const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
 
-      if (
-        filterCriteria.dateRange &&
-        (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])
-      ) {
-        const [startDate, endDate] = filterCriteria.dateRange;
-        const start = startDate ? dayjs(startDate).startOf("day") : null;
-        const end = endDate ? dayjs(endDate).endOf("day") : null;
-        processedData = processedData.filter((item) => {
-          const itemDate = dayjs(item.date);
-          if (start && end) return itemDate.isBetween(start, end, null, "[]");
-          if (start) return itemDate.isSameOrAfter(start, "day");
-          if (end) return itemDate.isSameOrBefore(end, "day");
-          return true;
-        });
-      }
-      if (
-        filterCriteria.filterStatuses &&
-        filterCriteria.filterStatuses.length > 0
-      ) {
-        const statuses = new Set(
-          filterCriteria.filterStatuses.map((opt) => opt.value)
-        );
-        processedData = processedData.filter((item) =>
-          statuses.has(item.status)
-        );
-      }
-      if (filterCriteria.filterFrom && filterCriteria.filterFrom.length > 0) {
-        const fromSources = new Set(
-          filterCriteria.filterFrom.map((opt) => opt.value)
-        );
-        processedData = processedData.filter((item) =>
-          fromSources.has(item.from)
-        );
-      }
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    let processedData: RequestFeedbackItem[] = cloneDeep(Array.isArray(requestFeedbacksData) ? requestFeedbacksData : []);
+    if (filterCriteria.filterType?.length) { const v = filterCriteria.filterType.map(o => o.value); processedData = processedData.filter(item => v.includes(item.type)); }
+    if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map(o => o.value); processedData = processedData.filter(item => v.includes(item.status)); }
+    if (filterCriteria.filterRating?.length) { const v = filterCriteria.filterRating.map(o => o.value); processedData = processedData.filter(item => v.includes(String(item.rating || ''))); }
 
-      if (tableData.query && tableData.query.trim() !== "") {
-        const query = tableData.query.toLowerCase().trim();
-        processedData = processedData.filter(
-          (item) =>
-            String(item.id).toLowerCase().includes(query) ||
-            item.name.toLowerCase().includes(query) ||
-            item.email.toLowerCase().includes(query) ||
-            (item.phone && item.phone.toLowerCase().includes(query)) ||
-            item.from.toLowerCase().includes(query) ||
-            item.message.toLowerCase().includes(query) ||
-            item.status.toLowerCase().includes(query)
-        );
-      }
+    if (tableData.query) { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => String(item.id).toLowerCase().includes(q) || item.name.toLowerCase().includes(q) || item.email.toLowerCase().includes(q) || item.mobile_no.toLowerCase().includes(q) || (item.company_name && item.company_name.toLowerCase().includes(q)) || (item.subject && item.subject.toLowerCase().includes(q)) || item.feedback_details.toLowerCase().includes(q)); }
+    const { order, key } = tableData.sort as OnSortParam;
+    if (order && key) { processedData.sort((a, b) => { const aVal = a[key as keyof RequestFeedbackItem]; const bVal = b[key as keyof RequestFeedbackItem]; if (key === "created_at" || key === "updated_at") { return order === "asc" ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime(); } const aStr = String(aVal ?? "").toLowerCase(); const bStr = String(bVal ?? "").toLowerCase(); return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr); }); }
+    const dataToExport = [...processedData]; const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize;
+    return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: dataToExport };
+  }, [requestFeedbacksData, tableData, filterCriteria]);
 
-      const { order, key } = tableData.sort as OnSortParam;
-      if (order && key && processedData.length > 0) {
-        processedData.sort((a, b) => {
-          let aVal = a[key as keyof RequestFeedbackItem];
-          let bVal = b[key as keyof RequestFeedbackItem];
-          if (aVal instanceof Date && bVal instanceof Date) {
-            return order === "asc"
-              ? aVal.getTime() - bVal.getTime()
-              : bVal.getTime() - aVal.getTime();
-          }
-          if (typeof aVal === "number" && typeof bVal === "number") {
-            return order === "asc" ? aVal - bVal : bVal - aVal;
-          }
-          return order === "asc"
-            ? String(aVal ?? "").localeCompare(String(bVal ?? ""))
-            : String(bVal ?? "").localeCompare(String(aVal ?? ""));
-        });
-      }
+  const handleExportData = useCallback(() => { exportRequestFeedbacksToCsv("request_feedbacks.csv", allFilteredAndSortedData); }, [allFilteredAndSortedData]);
+  const handlePaginationChange = useCallback((page: number) => setTableData(prev => ({ ...prev, pageIndex: page })), []);
+  const handleSelectPageSizeChange = useCallback((value: number) => { setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 })); setSelectedItems([]); }, []);
+  const handleSort = useCallback((sort: OnSortParam) => { setTableData(prev => ({ ...prev, sort: sort, pageIndex: 1 })); }, []);
+  const handleSearchInputChange = useCallback((query: string) => { setTableData(prev => ({ ...prev, query: query, pageIndex: 1 })); }, []);
+  const handleRowSelect = useCallback((checked: boolean, row: RequestFeedbackItem) => {setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); });}, []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<RequestFeedbackItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-      const currentTotal = processedData.length;
-      const pageIndex = tableData.pageIndex as number;
-      const pageSize = tableData.pageSize as number;
-      const startIndex = (pageIndex - 1) * pageSize;
-      const dataForPage = processedData.slice(
-        startIndex,
-        startIndex + pageSize
-      );
+  const itemPath = (filename: any) => {
+    const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000"; // Replace with your actual base URL
+    return filename ? `${baseUrl}/storage/${filename}` : '#'; // Adjust path as per your storage setup
+  };
 
-      return {
-        pageData: dataForPage,
-        total: currentTotal,
-        allFilteredAndSortedData: processedData,
-      };
-    }, [allRequests, tableData, filterCriteria]);
+  const columns: ColumnDef<RequestFeedbackItem>[] = useMemo(() => [
+    { header: "Name", accessorKey: "name", size: 150, cell: props => <span className="font-semibold">{props.getValue<string>() || "N/A"}</span> },
+    { header: "Email", accessorKey: "email", size: 180, cell: props => props.getValue() || "N/A" },
+    { header: "Mobile No", accessorKey: "mobile_no", size: 120, cell: props => props.getValue() || "N/A" },
+    { header: "Type", accessorKey: "type", size: 100, cell: props => <Tag className="capitalize">{TYPE_OPTIONS.find(t => t.value === props.getValue())?.label || props.getValue() || "N/A"}</Tag> },
+    { header: "Subject", accessorKey: "subject", size: 150, cell: props => <div className="truncate w-36" title={props.getValue() as string}>{props.getValue() as string || "N/A"}</div>},
+    { header: "Status", accessorKey: "status", size: 100, cell: props => { const s = props.getValue<RequestFeedbackApiStatus>(); return (<Tag className={classNames("capitalize", statusColors[s] || statusColors.default)}>{STATUS_OPTIONS_FORM.find(opt => opt.value === s)?.label || s || "N/A"}</Tag> );} },
+    { header: "Rating", accessorKey: "rating", size: 80, cell: props => props.getValue() ? `${props.getValue()} Star(s)` : "N/A" },
+    { header: "Date", accessorKey: "created_at", size: 100, cell: props => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : "N/A" },
+    { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 120, cell: (props) => <ItemActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+  ], [openEditDrawer, openViewDialog, handleDeleteClick]);
 
-  const handleExportData = useCallback(() => {
-    exportRequestsToCsv(
-      "requests_feedback_export.csv",
-      allFilteredAndSortedData
-    );
-  }, [allFilteredAndSortedData]);
-
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: RequestFeedbackItem) => {
-      setSelectedItems((prev) => {
-        if (checked)
-          return prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row];
-        return prev.filter((item) => item.id !== row.id);
-      });
-    },
-    []
-  );
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<RequestFeedbackItem>[]) => {
-      const currentPageOriginals = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((prev) => {
-          const prevIds = new Set(prev.map((item) => item.id));
-          const newToAdd = currentPageOriginals.filter(
-            (r) => !prevIds.has(r.id)
-          );
-          return [...prev, ...newToAdd];
-        });
-      } else {
-        const currentPageIds = new Set(currentPageOriginals.map((r) => r.id));
-        setSelectedItems((prev) =>
-          prev.filter((item) => !currentPageIds.has(item.id))
-        );
-      }
-    },
-    []
-  );
-
-  const columns: ColumnDef<RequestFeedbackItem>[] = useMemo(
-    () => [
-      {
-        header: "Name",
-        accessorKey: "name",
-        enableSorting: true,
-        size: 150,
-        cell: (
-          props: CellContext<RequestFeedbackItem, unknown> // Explicitly type props
-        ) => (
-          <div>
-            <div>{props.row.original.name}</div>
-            <div className="text-xs text-gray-500">
-              {props.row.original.email}
-            </div>
-            {props.row.original.phone && (
-              <div className="text-xs text-gray-500">
-                P: {props.row.original.phone}
-              </div>
-            )}
-          </div>
-        ),
-      },
-      { header: "From", accessorKey: "from", enableSorting: true, size: 150 },
-      {
-        header: "Date",
-        accessorKey: "date",
-        enableSorting: true,
-        size: 150,
-        cell: (props: CellContext<RequestFeedbackItem, unknown>) =>
-          dayjs(props.row.original.date).format("YYYY-MM-DD HH:mm"),
-      },
-      {
-        header: "Status",
-        accessorKey: "status",
-        enableSorting: true,
-        size: 130,
-        cell: (props: CellContext<RequestFeedbackItem, unknown>) => {
-          const status = props.row.original.status;
-          const colorClass =
-            statusColor[status] ||
-            "bg-gray-100 text-gray-600 dark:bg-gray-600/20 dark:text-gray-100";
-          return <Tag className={`${colorClass} capitalize`}>{status}</Tag>;
-        },
-      },
-      {
-        header: "Actions",
-        id: "action",
-        size: 120,
-        meta: { HeaderClass: "text-center" },
-        cell: (props: CellContext<RequestFeedbackItem, unknown>) => (
-          <div className="flex items-center justify-center gap-1">
-            <Tooltip title="Edit">
-              <div
-                className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
-                role="button"
-                // onClick={onEdit}
-              >
-                <TbPencil />
-              </div>
-            </Tooltip>
-            <Tooltip title="View">
-              <div
-                className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
-                role="button"
-                // onClick={onViewDetail}
-              >
-                <TbEye />
-              </div>
-            </Tooltip>
-            {/* <Tooltip title="Delete">
-                      <div
-                          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-                          role="button"
-                          onClick={onViewDetail}
-                      >
-                          <TbTrash />
-                      </div>
-                  </Tooltip> */}
-          </div>
-        ),
-      },
-    ],
-    [openViewEditDrawer, handleDeleteClick]
+  const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+      <FormItem label="Name" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}>
+        <Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Full Name" />)} />
+      </FormItem>
+      <FormItem label="Email" invalid={!!currentFormMethods.formState.errors.email} errorMessage={currentFormMethods.formState.errors.email?.message}>
+        <Controller name="email" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail />} placeholder="example@domain.com" />)} />
+      </FormItem>
+      <FormItem label="Mobile No." invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}>
+        <Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone />} placeholder="+XX XXXXXXXXXX" />)} />
+      </FormItem>
+      <FormItem label="Company Name (Optional)" invalid={!!currentFormMethods.formState.errors.company_name} errorMessage={currentFormMethods.formState.errors.company_name?.message}>
+        <Controller name="company_name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbBuilding />} placeholder="Your Company" />)} />
+      </FormItem>
+      <FormItem label="Type" invalid={!!currentFormMethods.formState.errors.type} errorMessage={currentFormMethods.formState.errors.type?.message}>
+        <Controller name="type" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Type" options={TYPE_OPTIONS} value={TYPE_OPTIONS.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbMessageDots/>} />)} />
+      </FormItem>
+      <FormItem label="Status" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
+        <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={STATUS_OPTIONS_FORM} value={STATUS_OPTIONS_FORM.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbToggleRight/>} />)} />
+      </FormItem>
+      <FormItem label="Subject (Optional)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.subject} errorMessage={currentFormMethods.formState.errors.subject?.message}>
+        <Controller name="subject" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbClipboardText/>} placeholder="Brief subject of your message" />)} />
+      </FormItem>
+      <FormItem label="Rating (Optional, for Feedback)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.rating} errorMessage={currentFormMethods.formState.errors.rating?.message}>
+        <Controller name="rating" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Rating" options={RATING_OPTIONS} value={RATING_OPTIONS.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbStar/>} />)} />
+      </FormItem>
+      <FormItem label="Feedback / Request Details" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.feedback_details} errorMessage={currentFormMethods.formState.errors.feedback_details?.message}>
+        <Controller name="feedback_details" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} rows={5} placeholder="Describe your feedback or request in detail..." />)} />
+      </FormItem>
+      <FormItem label="Attachment (Optional)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachment} errorMessage={currentFormMethods.formState.errors.attachment?.message as string}>
+        <Controller name="attachment" control={currentFormMethods.control}
+          render={({ field: { onChange, onBlur, name, ref } }) => (
+            <Input type="file" name={name} ref={ref} onBlur={onBlur}
+              onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); }}
+              prefix={<TbPaperclip />}
+            />
+          )}
+        />
+        {editingItem?.attachment && !selectedFile && (
+            <div className="mt-2 text-sm text-gray-500"> Current: <a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{editingItem.attachment.split('/').pop()}</a> </div>
+          )}
+      </FormItem>
+    </div>
   );
 
   return (
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
-          <div className="lg:flex items-center justify-between mb-4">
-            <h5 className="mb-4 lg:mb-0">Request and Feedback</h5>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <h5 className="mb-2 sm:mb-0">Requests & Feedbacks</h5>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
-          <RequestTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleExportData}
-          />
+          <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
-            <RequestTable
-              columns={columns}
-              data={pageData}
-              loading={
-                loadingStatus === "loading" || isSubmitting || isDeleting
-              }
-              pagingData={{
-                total: total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              selectedItems={selectedItems}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
-            />
+            <RequestFeedbacksTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
-
-      <RequestSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
-
-      <Drawer
-        title={currentItem ? `Details: ${currentItem.name}` : "Details"}
-        isOpen={isViewEditDrawerOpen}
-        onClose={closeViewEditDrawer}
-        onRequestClose={closeViewEditDrawer}
-        width={600}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeViewEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="viewEditRequestForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Update Status"}
-            </Button>
-          </div>
-        }
-      >
-        {currentItem && (
-          <div className="flex flex-col gap-4">
-            <div>
-              <strong>Name:</strong> {currentItem.name}
-            </div>
-            <div>
-              <strong>Email:</strong> {currentItem.email}
-            </div>
-            {currentItem.phone && (
-              <div>
-                <strong>Phone:</strong> {currentItem.phone}
-              </div>
-            )}
-            <div>
-              <strong>From:</strong> {currentItem.from}
-            </div>
-            <div>
-              <strong>Date:</strong>{" "}
-              {dayjs(currentItem.date).format("YYYY-MM-DD HH:mm:ss")}
-            </div>
-            {currentItem.lastUpdated && (
-              <div>
-                <strong>Last Updated:</strong>{" "}
-                {dayjs(currentItem.lastUpdated).format("YYYY-MM-DD HH:mm:ss")}
-              </div>
-            )}
-            {currentItem.assignedTo && (
-              <div>
-                <strong>Assigned To:</strong> {currentItem.assignedTo}
-              </div>
-            )}
-            <div className="p-2 border rounded bg-gray-50 dark:bg-gray-700">
-              <strong>Message:</strong>
-              <p className="whitespace-pre-wrap">{currentItem.message}</p>
-            </div>
-            <hr className="my-2" />
-            <Form
-              id="viewEditRequestForm"
-              onSubmit={editFormMethods.handleSubmit(onViewEditSubmit)}
-              className="flex flex-col gap-y-4"
-            >
-              <FormItem
-                label="Change Status"
-                invalid={!!editFormMethods.formState.errors.status}
-                errorMessage={editFormMethods.formState.errors.status?.message}
-              >
-                <Controller
-                  name="status"
-                  control={editFormMethods.control}
-                  render={({ field }) => (
-                    <Select
-                      placeholder="Select new status"
-                      options={availableStatuses}
-                      value={availableStatuses.find(
-                        (opt) => opt.value === field.value
-                      )}
-                      onChange={(option) => field.onChange(option?.value)}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem label="Internal Notes (Optional)">
-                <Controller
-                  name="internalNotes"
-                  control={editFormMethods.control}
-                  render={({ field }) => (
-                    <Input textArea 
-                      {...field}
-                      rows={3}
-                      placeholder="Add internal notes about this request or status change..."
-                    />
-                  )}
-                />
-              </FormItem>
-            </Form>
-          </div>
-        )}
+      <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
+      <Drawer title={editingItem ? "Edit Entry" : "Add New Entry"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700}
+        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="requestFeedbackForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div> } >
+        <Form id="requestFeedbackForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4"> {renderDrawerForm(formMethods)} </Form>
       </Drawer>
-
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterRequestForm"
-              type="submit"
-            >
-              Apply
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="filterRequestForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem label="Date Range">
-            <Controller
-              name="dateRange"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <DatePicker.DatePickerRange
-                  placeholder="Select date range"
-                  value={
-                    field.value as [Date | null, Date | null] | null | undefined
-                  }
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Status">
-            <Controller
-              name="filterStatuses"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select status..."
-                  options={availableStatuses}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="From (Source)">
-            <Controller
-              name="filterFrom"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select sources..."
-                  options={availableFromOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
+      <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={600}>
+        <div className="p-1">
+            <h5 className="mb-6 border-b pb-4 dark:border-gray-600">Details: {viewingItem?.subject || viewingItem?.name}</h5>
+            {viewingItem && ( <div className="space-y-3 text-sm">
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">ID:</span><span className="w-2/3">{viewingItem.id}</span></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Customer ID:</span><span className="w-2/3">{viewingItem.customer_id === "0" ? "N/A (Guest)" : viewingItem.customer_id}</span></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Name:</span><span className="w-2/3">{viewingItem.name}</span></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Email:</span><span className="w-2/3">{viewingItem.email}</span></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Mobile No:</span><span className="w-2/3">{viewingItem.mobile_no || "N/A"}</span></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Company:</span><span className="w-2/3">{viewingItem.company_name || "N/A"}</span></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Type:</span><Tag className="capitalize">{TYPE_OPTIONS.find(t => t.value === viewingItem.type)?.label || viewingItem.type}</Tag></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Subject:</span><span className="w-2/3">{viewingItem.subject || "N/A"}</span></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Status:</span><Tag className={classNames("capitalize", statusColors[viewingItem.status] || statusColors.default)}>{STATUS_OPTIONS_FORM.find(s => s.value === viewingItem.status)?.label || viewingItem.status}</Tag></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Rating:</span><span className="w-2/3">{RATING_OPTIONS.find(r => r.value === String(viewingItem.rating || ''))?.label || (viewingItem.rating ? `${viewingItem.rating} Stars` : "N/A")}</span></div>
+                {viewingItem.attachment && (<div className="flex items-start"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200 pt-1">Attachment:</span><span className="w-2/3"><a href={itemPath(viewingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{viewingItem.attachment.split('/').pop()}</a></span></div>)}
+                <div className="flex flex-col"><span className="font-semibold text-gray-700 dark:text-gray-200 mb-1">Details:</span><p className="w-full bg-gray-50 dark:bg-gray-700 p-2 rounded whitespace-pre-wrap break-words">{viewingItem.feedback_details}</p></div>
+                <div className="flex"><span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">Reported On:</span><span className="w-2/3">{new Date(viewingItem.created_at).toLocaleString()}</span></div>
+            </div>)}
+            <div className="text-right mt-6"><Button variant="solid" onClick={closeViewDialog}>Close</Button></div>
+        </div>
+      </Dialog>
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400}
+        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button> <Button size="sm" variant="solid" form="filterReqFeedbackForm" type="submit">Apply Filters</Button> </div> } >
+        <Form id="filterReqFeedbackForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+          <FormItem label="Type"><Controller name="filterType" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Type" options={TYPE_OPTIONS} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={STATUS_OPTIONS_FORM} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Rating"><Controller name="filterRating" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Rating" options={RATING_OPTIONS} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
         </Form>
       </Drawer>
-
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Request/Feedback"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-      >
-        <p>
-          Are you sure you want to delete the item from "
-          <strong>{itemToDelete?.name}</strong>"?
-        </p>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Entry" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}>
+        <p>Are you sure you want to delete entry from "<strong>{itemToDelete?.name}</strong>"?</p>
       </ConfirmDialog>
     </>
   );
 };
 
-export default RequestAndFeedback;
+export default RequestAndFeedbackListing;

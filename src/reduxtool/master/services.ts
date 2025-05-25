@@ -1766,6 +1766,86 @@ export const deleteAllEmailTemplatesAsync = async (leadData: any) => {
   }
 }
 
+export const getRequestFeedbacksAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/feedback`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addRequestFeedbacksAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/feedback`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editRequestFeedbacksAsync = async (leadData: any) => {
+  console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/feedback/${leadData?.id}`, { _method: "PUT", ...leadData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteRequestFeedbacksAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/feedback/${leadData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllRequestFeedbacksAsync = async (leadData: any) => {
+  try {
+    console.log("leadData", leadData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/feedback/delete`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const getSellerListingsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/opportunity/seller`)
+    console.log("response", response);
+
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getBuyerListingsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/opportunity/buyer`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const getAutoMatchDataAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/opportunity/autospb`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+
 
 
 
