@@ -413,11 +413,14 @@ const Continents = () => {
     }
   };
 
-  const openEditDrawer = (continent: ContinentItem) => {
-    setEditingContinent(continent);
-    editFormMethods.setValue("name", continent.name);
-    setIsEditDrawerOpen(true);
-  };
+ const openEditDrawer = useCallback((continent: ContinentItem) => {
+  setEditingContinent(continent);
+  // *** Reset the entire edit form with the specific continent's data ***
+  editFormMethods.reset({   
+    name: continent.name,
+  });
+  setIsEditDrawerOpen(true);
+}, [editFormMethods]); // editFormMethods is stable from useForm
   const closeEditDrawer = () => {
     setEditingContinent(null);
     editFormMethods.reset({ name: "" });

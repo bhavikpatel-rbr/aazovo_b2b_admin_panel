@@ -1141,7 +1141,7 @@ const Countries = () => {
                   options={continentOptions}
                   value={
                     continentOptions.find(
-                      (option) => option.value === field.value
+                      (option) => option.value == field.value
                     ) || null
                   }
                   onChange={(option) =>
