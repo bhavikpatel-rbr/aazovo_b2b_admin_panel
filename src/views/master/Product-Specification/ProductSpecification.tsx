@@ -3,6 +3,7 @@ import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Avatar from "@/components/ui/Avatar";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -14,9 +15,9 @@ import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
-import DebouceInput from "@/components/shared/DebouceInput"; // Corrected typo
-import Select from "@/components/ui/Select"; // For Country Dropdown
-import { Drawer, Form, FormItem, Input } from "@/components/ui"; // Added Textarea for notes
+import DebouceInput from "@/components/shared/DebouceInput";
+import Select from "@/components/ui/Select";
+import { Drawer, Form, FormItem, Input } from "@/components/ui";
 
 // Icons
 import {
@@ -27,6 +28,7 @@ import {
   TbFilter,
   TbPlus,
   TbCloudUpload,
+  TbPhoto,
 } from "react-icons/tb";
 
 // Types
@@ -38,51 +40,49 @@ import type {
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
 import {
-  // Actions for Product Specifications (ensure these are created in your middleware)
   getProductSpecificationsAction,
   addProductSpecificationAction,
   editProductSpecificationAction,
   deleteProductSpecificationAction,
   deleteAllProductSpecificationsAction,
-  getCountriesAction, // Action to fetch countries for the dropdown
-} from "@/reduxtool/master/middleware"; // Adjust path if necessary
+  getCountriesAction,
+} from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import Textarea from "@/views/ui-components/forms/Input/Textarea";
 
-// --- Define ProductSpecificationItem Type (based on API and display needs) ---
 export type ProductSpecificationItem = {
   id: string | number;
-  name: string; // Specification name
-  country_id: string | number; // Will be used for edit form
-  country_name: string; // For display in the table (assumed to be available)
+  name: string;
+  country_id: string | number;
+  country_name: string;
   note_details: string | null;
   flag_icon: string | null;
-  created_at?: string; // Optional, if not always needed for display
-  updated_at?: string; // Optional
+  created_at?: string;
+  updated_at?: string;
+  icon_full_path?: string;
 };
 
-// --- Define Country Type (for the dropdown options) ---
 export type CountryOption = {
-  value: string | number; // Country ID
-  label: string; // Country Name
+  value: string | number;
+  label: string;
 };
 
-// --- Zod Schema for Add/Edit Product Specification Form ---
 const productSpecificationFormSchema = z.object({
-  flag_icon: z.string().nullable().optional(), // Optional, can be empty
+  flag_icon: z
+    .union([z.instanceof(File), z.null()])
+    .optional()
+    .nullable(),
   name: z
     .string()
     .min(1, "Specification name is required.")
     .max(100, "Name cannot exceed 100 characters."),
-  country_id: z.string().min(1, "Country is required."), // Country ID from dropdown
-  note_details: z.string().nullable().optional(), // Optional
+  country_id: z.string().min(1, "Country is required."),
+  note_details: z.string().nullable().optional(),
 });
 type ProductSpecificationFormData = z.infer<
   typeof productSpecificationFormSchema
 >;
 
-// --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
   filterNames: z
     .array(z.object({ value: z.string(), label: z.string() }))
@@ -90,14 +90,12 @@ const filterFormSchema = z.object({
   filterCountryNames: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  // Add filter for flag_icon if needed
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// --- CSV Exporter Utility ---
 const CSV_HEADERS = [
   "ID",
-  "Flag Icon",
+  "Flag Icon URL",
   "Specification Name",
   "Country Name",
   "Notes",
@@ -166,7 +164,6 @@ function exportProductSpecificationsToCsv(
   return false;
 }
 
-// --- ActionColumn Component (Identical to Units) ---
 const ActionColumn = ({
   onEdit,
   onDelete,
@@ -214,7 +211,6 @@ const ActionColumn = ({
 };
 ActionColumn.displayName = "ActionColumn";
 
-// --- Search Component (Renamed for specificity) ---
 type ItemSearchProps = {
   onInputChange: (value: string) => void;
   placeholder: string;
@@ -222,7 +218,7 @@ type ItemSearchProps = {
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
   ({ onInputChange, placeholder }, ref) => {
     return (
-      <DebouceInput // Corrected typo
+      <DebouceInput
         ref={ref}
         className="w-full"
         placeholder={placeholder}
@@ -236,7 +232,6 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
 );
 ItemSearch.displayName = "ItemSearch";
 
-// --- TableTools Component (Renamed for specificity) ---
 const ItemTableTools = ({
   onSearchChange,
   onFilter,
@@ -275,7 +270,6 @@ const ItemTableTools = ({
 };
 ItemTableTools.displayName = "ItemTableTools";
 
-// --- SelectedFooter Component (Renamed for specificity) ---
 type ItemSelectedFooterProps = {
   selectedItems: ProductSpecificationItem[];
   onDeleteSelected: () => void;
@@ -333,7 +327,7 @@ const ItemSelectedFooter = ({
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        loading={disabled} // Pass disabled state
+        loading={disabled}
       >
         <p>
           Are you sure you want to delete the selected specification
@@ -345,16 +339,14 @@ const ItemSelectedFooter = ({
 };
 ItemSelectedFooter.displayName = "ItemSelectedFooter";
 
-// --- Main ProductSpecification Component ---
 const ProductSpecification = () => {
   const dispatch = useAppDispatch();
 
-  // Destructure product specification data and country data from masterSelector
   const {
-    ProductSpecificationsData = [], // Ensure this key exists in MasterState
-    CountriesData = [], // Assumes CountriesData is populated by getCountriesAction
+    ProductSpecificationsData = [],
+    CountriesData = [],
     status: masterLoadingStatus = "idle",
-    error: masterError = null, // General error from masterSlice
+    error: masterError = null,
   } = useSelector(masterSelector);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -369,6 +361,9 @@ const ProductSpecification = () => {
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] =
     useState<ProductSpecificationItem | null>(null);
+
+  const [addFormFlagIconPreviewUrl, setAddFormFlagIconPreviewUrl] = useState<string | null>(null);
+  const [editFormFlagIconPreviewUrl, setEditFormFlagIconPreviewUrl] = useState<string | null>(null);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
@@ -385,25 +380,29 @@ const ProductSpecification = () => {
   >([]);
   const [countryOptions, setCountryOptions] = useState<CountryOption[]>([]);
 
-  // Fetch initial data
+  useEffect(() => {
+    return () => {
+      if (addFormFlagIconPreviewUrl) URL.revokeObjectURL(addFormFlagIconPreviewUrl);
+      if (editFormFlagIconPreviewUrl) URL.revokeObjectURL(editFormFlagIconPreviewUrl);
+    };
+  }, [addFormFlagIconPreviewUrl, editFormFlagIconPreviewUrl]);
+
+
   useEffect(() => {
     dispatch(getProductSpecificationsAction());
-    dispatch(getCountriesAction()); // Fetch countries for the dropdown
+    dispatch(getCountriesAction());
   }, [dispatch]);
 
-  // Populate country options for dropdown
   useEffect(() => {
     if (Array.isArray(CountriesData)) {
-      // Assuming CountriesData is an array of { id: any, name: string }
       const options = CountriesData.map((country: any) => ({
-        value: String(country.id), // Ensure value is string for Select component consistency
+        value: String(country.id),
         label: country.name,
       }));
       setCountryOptions(options);
     }
   }, [CountriesData]);
 
-  // Display general API errors
   useEffect(() => {
     if (masterLoadingStatus === "failed" && masterError) {
       const errorMessage =
@@ -418,29 +417,26 @@ const ProductSpecification = () => {
     }
   }, [masterLoadingStatus, masterError]);
 
+  const defaultFormValues: ProductSpecificationFormData = {
+    flag_icon: null,
+    name: "",
+    country_id: "",
+    note_details: "",
+  };
+
   const addFormMethods = useForm<ProductSpecificationFormData>({
     resolver: zodResolver(productSpecificationFormSchema),
-    defaultValues: {
-      flag_icon: "",
-      name: "",
-      country_id: "",
-      note_details: "",
-    },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const editFormMethods = useForm<ProductSpecificationFormData>({
     resolver: zodResolver(productSpecificationFormSchema),
-    defaultValues: {
-      flag_icon: "",
-      name: "",
-      country_id: "",
-      note_details: "",
-    },
-    mode: "onChange",
+    defaultValues: defaultFormValues,
+    mode: "onChange", // Important for isDirty to work correctly
   });
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
-    defaultValues: filterCriteria, // Initialize with current filter criteria
+    defaultValues: filterCriteria,
   });
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
@@ -448,30 +444,55 @@ const ProductSpecification = () => {
   }, []);
 
   const openAddDrawer = useCallback(() => {
-    addFormMethods.reset({
-      flag_icon: "",
-      name: "",
-      country_id: "",
-      note_details: "",
-    });
+    addFormMethods.reset(defaultFormValues);
+    if (addFormFlagIconPreviewUrl) URL.revokeObjectURL(addFormFlagIconPreviewUrl);
+    setAddFormFlagIconPreviewUrl(null);
     setIsAddDrawerOpen(true);
-  }, [addFormMethods]);
+  }, [addFormMethods, addFormFlagIconPreviewUrl]);
 
   const closeAddDrawer = useCallback(() => {
-    addFormMethods.reset({
-      flag_icon: "",
-      name: "",
-      country_id: "",
-      note_details: "",
-    });
+    addFormMethods.reset(defaultFormValues);
+    if (addFormFlagIconPreviewUrl) URL.revokeObjectURL(addFormFlagIconPreviewUrl);
+    setAddFormFlagIconPreviewUrl(null);
     setIsAddDrawerOpen(false);
-  }, [addFormMethods]);
+  }, [addFormMethods, addFormFlagIconPreviewUrl]);
 
   const onAddSubmit = async (data: ProductSpecificationFormData) => {
+    console.log("--- onAddSubmit ---");
+    console.log("Data received by onAddSubmit (from RHF):", JSON.parse(JSON.stringify(data)));
+    
+    if (data.flag_icon instanceof File) {
+      console.log("onAddSubmit: flag_icon is a File:", data.flag_icon.name, data.flag_icon.size);
+    } else {
+      console.log("onAddSubmit: flag_icon is NOT a File. Value:", data.flag_icon);
+    }
+
     setIsSubmitting(true);
+    const formData = new FormData();
+
+    for (const [key, value] of Object.entries(data)) {
+        const formKey = key as keyof ProductSpecificationFormData;
+        if (formKey === "flag_icon") {
+            if (value instanceof File) {
+                formData.append(formKey, value);
+                 console.log(`Appending File to FormData (ADD): ${formKey} = ${value.name}`);
+            }
+        } else if (formKey === 'note_details') {
+            formData.append(formKey, value === null ? "" : String(value));
+            console.log(`Appending to FormData (ADD): ${formKey} = ${value === null ? "" : String(value)}`);
+        } else if (value !== null && value !== undefined) { // Append other fields if they have a value
+            formData.append(formKey, String(value));
+            console.log(`Appending to FormData (ADD): ${formKey} = ${String(value)}`);
+        }
+    }
+    
+    console.log("FormData about to be sent (ADD):");
+    for (let pair of formData.entries()) {
+        console.log(pair[0]+ ': ' + (pair[1] instanceof File ? `File: ${pair[1].name}`: pair[1]));
+    }
+
     try {
-      // The payload should match what addProductSpecificationAction expects
-      await dispatch(addProductSpecificationAction(data)).unwrap();
+      await dispatch(addProductSpecificationAction(formData)).unwrap();
       toast.push(
         <Notification
           title="Specification Added"
@@ -482,18 +503,18 @@ const ProductSpecification = () => {
         </Notification>
       );
       closeAddDrawer();
-      dispatch(getProductSpecificationsAction()); // Refresh list
+      dispatch(getProductSpecificationsAction());
     } catch (error: any) {
       const message =
         error?.message ||
-        error?.data?.message ||
+        error?.response?.data?.message ||
         "Could not add specification.";
       toast.push(
         <Notification title="Failed to Add" type="danger" duration={3000}>
           {message}
         </Notification>
       );
-      console.error("Add Specification Error:", error);
+      console.error("Add Specification Error:", error.response?.data || error);
     } finally {
       setIsSubmitting(false);
     }
@@ -502,72 +523,140 @@ const ProductSpecification = () => {
   const openEditDrawer = useCallback(
     (item: ProductSpecificationItem) => {
       setEditingItem(item);
+      // Set form values for editing
       editFormMethods.reset({
-        flag_icon: item.flag_icon || "",
+        flag_icon: null, // File input should be reset; current icon shown separately
         name: item.name,
-        country_id: String(item.country_id), // Ensure country_id is a string for Select
-        note_details: item.note_details || "",
+        country_id: String(item.country_id),
+        note_details: item.note_details || "", // Ensure null becomes empty string for textarea if needed
       });
+      if (editFormFlagIconPreviewUrl) URL.revokeObjectURL(editFormFlagIconPreviewUrl);
+      setEditFormFlagIconPreviewUrl(null);
       setIsEditDrawerOpen(true);
     },
-    [editFormMethods]
+    [editFormMethods, editFormFlagIconPreviewUrl] // editFormMethods added
   );
 
   const closeEditDrawer = useCallback(() => {
     setEditingItem(null);
-    editFormMethods.reset({
-      flag_icon: "",
-      name: "",
-      country_id: "",
-      note_details: "",
-    });
+    editFormMethods.reset(defaultFormValues); // Reset to default, not necessarily empty
+    if (editFormFlagIconPreviewUrl) URL.revokeObjectURL(editFormFlagIconPreviewUrl);
+    setEditFormFlagIconPreviewUrl(null);
     setIsEditDrawerOpen(false);
-  }, [editFormMethods]);
+  }, [editFormMethods, editFormFlagIconPreviewUrl, defaultFormValues]);
 
   const onEditSubmit = async (data: ProductSpecificationFormData) => {
-    if (
-      !editingItem ||
-      editingItem.id === undefined ||
-      editingItem.id === null
-    ) {
+    console.log("--- onEditSubmit ---");
+    console.log("Data received by onEditSubmit (from RHF):", JSON.parse(JSON.stringify(data)));
+    
+    if (data.flag_icon instanceof File) {
+      console.log("onEditSubmit: flag_icon is a File:", data.flag_icon.name, data.flag_icon.size);
+    } else {
+      console.log("onEditSubmit: flag_icon is NOT a File. Value:", data.flag_icon);
+    }
+
+    if (!editingItem || editingItem.id === undefined || editingItem.id === null) {
       toast.push(
         <Notification title="Error" type="danger">
           Cannot edit: Specification ID is missing.
         </Notification>
       );
-      setIsSubmitting(false);
       return;
     }
+    
+    // Check if form is dirty (no fields changed) AND no new file was selected
+    if (!editFormMethods.formState.isDirty && !(data.flag_icon instanceof File) ) {
+        toast.push(
+            <Notification title="No Changes" type="info" duration={2000}>
+                No changes detected to save.
+            </Notification>
+        );
+        // closeEditDrawer(); // Optionally close drawer if no changes
+        return;
+    }
+
     setIsSubmitting(true);
+    const formData = new FormData();
+    formData.append("_method", "PUT");
+    formData.append("id", String(editingItem.id)); // Crucial: send ID for update
+
+    for (const [key, value] of Object.entries(data)) {
+        const formKey = key as keyof ProductSpecificationFormData;
+
+        if (formKey === "flag_icon") {
+            if (value instanceof File) { // Only append if a new file is selected
+                formData.append(formKey, value);
+                console.log(`Appending File to FormData (EDIT): ${formKey} = ${value.name}`);
+            }
+        } else if (formKey === 'note_details') {
+            formData.append(formKey, value === null ? "" : String(value));
+            console.log(`Appending to FormData (EDIT): ${formKey} = ${value === null ? "" : String(value)}`);
+        } else if (value !== null && value !== undefined) { // Append other fields if they have a value
+            // Check if the current value is different from the original editingItem's value
+            // This ensures only truly changed fields (or fields that were empty and now have value) are sent
+            // This part is tricky because `data` holds the current form state, not necessarily *changed* state for non-file inputs
+            // RHF's `isDirty` helps, but for FormData, we often send all non-file fields that have values.
+            // Let's send if the field is part of `editFormMethods.formState.dirtyFields` or if it has a value
+            // and wasn't just the default `null` for flag_icon
+            if (editFormMethods.formState.dirtyFields[formKey] || (value !== "" && value !== null)) {
+                 formData.append(formKey, String(value));
+                 console.log(`Appending to FormData (EDIT - dirty or has value): ${formKey} = ${String(value)}`);
+            } else {
+                 console.log(`Skipping field in FormData (EDIT - not dirty and no new value): ${formKey}`);
+            }
+        }
+    }
+    
+    console.log("FormData about to be sent (EDIT for ID " + editingItem.id + "):");
+    for (let pair of formData.entries()) {
+        console.log(pair[0]+ ': ' + (pair[1] instanceof File ? `File: ${pair[1].name}`: pair[1]));
+    }
+
+    // Check if formData has more than just _method and id
+    let hasActualChanges = false;
+    for (const key of formData.keys()) {
+        if (key !== '_method' && key !== 'id') {
+            hasActualChanges = true;
+            break;
+        }
+    }
+
+    if (!hasActualChanges) {
+        toast.push(
+            <Notification title="No Changes" type="info" duration={2000}>
+                No actual data changes to submit.
+            </Notification>
+        );
+        setIsSubmitting(false);
+        // closeEditDrawer(); // Optionally close
+        return;
+    }
+
+
     try {
-      // Payload for edit action
-      const payload = {
-        id: editingItem.id,
-        ...data, // Includes flag_icon, name, country_id, note_details
-      };
-      await dispatch(editProductSpecificationAction(payload)).unwrap();
+      await dispatch(editProductSpecificationAction({ id: editingItem.id, formData })).unwrap();
       toast.push(
         <Notification
           title="Specification Updated"
           type="success"
           duration={2000}
         >
-          Specification "{data.name}" updated.
+          Specification "{String(data.name || editingItem.name)}" updated.
         </Notification>
       );
       closeEditDrawer();
-      dispatch(getProductSpecificationsAction()); // Refresh list
+      dispatch(getProductSpecificationsAction());
     } catch (error: any) {
       const message =
         error?.message ||
-        error?.data?.message ||
+        error?.response?.data?.message ||
         "Could not update specification.";
       toast.push(
         <Notification title="Failed to Update" type="danger" duration={3000}>
           {message}
         </Notification>
       );
-      console.error("Edit Specification Error:", error);
+      console.error("Edit Specification Error:", error.response?.data || error);
     } finally {
       setIsSubmitting(false);
     }
@@ -587,17 +676,12 @@ const ProductSpecification = () => {
   }, []);
 
   const onConfirmSingleDelete = async () => {
-    if (
-      !itemToDelete ||
-      itemToDelete.id === undefined ||
-      itemToDelete.id === null
-    ) {
+    if (!itemToDelete || itemToDelete.id === undefined || itemToDelete.id === null) {
       toast.push(
         <Notification title="Error" type="danger">
           Cannot delete: Specification ID is missing.
         </Notification>
       );
-      setIsDeleting(false);
       setItemToDelete(null);
       setSingleDeleteConfirmOpen(false);
       return;
@@ -605,7 +689,6 @@ const ProductSpecification = () => {
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      // deleteProductSpecificationAction might expect just an ID or the full item
       await dispatch(
         deleteProductSpecificationAction({ id: itemToDelete.id })
       ).unwrap();
@@ -621,7 +704,7 @@ const ProductSpecification = () => {
       setSelectedItems((prev) =>
         prev.filter((item) => item.id !== itemToDelete!.id)
       );
-      dispatch(getProductSpecificationsAction()); // Refresh list
+      dispatch(getProductSpecificationsAction());
     } catch (error: any) {
       const message =
         error?.message ||
@@ -684,9 +767,9 @@ const ProductSpecification = () => {
           {validItemsToDelete.length} specification(s) deleted.
         </Notification>
       );
-      setSelectedItems([]); // Clear selection
-      dispatch(getProductSpecificationsAction()); // Refresh list
-    } catch (error: any) {
+      setSelectedItems([]);
+      dispatch(getProductSpecificationsAction());
+    } catch (error: any)      {
       const message =
         error?.message ||
         error?.data?.message ||
@@ -703,7 +786,7 @@ const ProductSpecification = () => {
   };
 
   const openFilterDrawer = useCallback(() => {
-    filterFormMethods.reset(filterCriteria); // Reset form with current criteria
+    filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
   }, [filterFormMethods, filterCriteria]);
 
@@ -714,7 +797,7 @@ const ProductSpecification = () => {
       filterNames: data.filterNames || [],
       filterCountryNames: data.filterCountryNames || [],
     });
-    handleSetTableData({ pageIndex: 1 }); // Reset to first page on filter change
+    handleSetTableData({ pageIndex: 1 });
     closeFilterDrawer();
   };
 
@@ -722,10 +805,9 @@ const ProductSpecification = () => {
     const defaultFilters = { filterNames: [], filterCountryNames: [] };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    handleSetTableData({ pageIndex: 1 }); // Reset to first page
-  }, [filterFormMethods, handleSetTableData]); // Added handleSetTableData to dependencies
+    handleSetTableData({ pageIndex: 1 });
+  }, [filterFormMethods, handleSetTableData]);
 
-  // Memoized options for filter dropdowns
   const specNameFilterOptions = useMemo(() => {
     if (!Array.isArray(ProductSpecificationsData)) return [];
     const uniqueNames = new Set(
@@ -737,18 +819,17 @@ const ProductSpecification = () => {
     }));
   }, [ProductSpecificationsData]);
 
-  const countryNameFilterOptions = useMemo(() => {
-    // This should ideally use the fetched CountriesData if you want to filter by all possible countries
-    // For now, using distinct country names from the ProductSpecificationsData
-    if (!Array.isArray(ProductSpecificationsData)) return [];
-    const uniqueCountryNames = new Set(
-      ProductSpecificationsData.map((item) => item.country_name)
-    );
-    return Array.from(uniqueCountryNames).map((name) => ({
-      value: name,
-      label: name,
-    }));
-  }, [ProductSpecificationsData]);
+const countryNameFilterOptions = useMemo(() => {
+  if (!Array.isArray(ProductSpecificationsData)) return [];
+  const uniqueCountryNames = new Set(
+    ProductSpecificationsData.map((item) => item.country?.name).filter(Boolean)
+  );
+  return Array.from(uniqueCountryNames).map((name) => ({
+    value: name,
+    label: name,
+  }));
+}, [ProductSpecificationsData]);
+
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: ProductSpecificationItem[] = Array.isArray(
@@ -758,7 +839,6 @@ const ProductSpecification = () => {
       : [];
     let processedData: ProductSpecificationItem[] = cloneDeep(sourceData);
 
-    // Apply filters
     if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
       const selectedNames = filterCriteria.filterNames.map((opt) =>
         opt.value.toLowerCase()
@@ -781,7 +861,6 @@ const ProductSpecification = () => {
       );
     }
 
-    // Apply search query
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(
@@ -795,13 +874,12 @@ const ProductSpecification = () => {
       );
     }
 
-    // Apply sorting
     const { order, key } = tableData.sort as OnSortParam;
     if (
       order &&
       key &&
       processedData.length > 0 &&
-      processedData[0].hasOwnProperty(key)
+      Object.prototype.hasOwnProperty.call(processedData[0], key)
     ) {
       processedData.sort((a, b) => {
         const aValue = a[key as keyof ProductSpecificationItem];
@@ -918,16 +996,16 @@ const ProductSpecification = () => {
       {
         header: "Flag Icon",
         accessorKey: "flag_icon",
-        enableSorting: true, // Or false if it's just a display string/URL
-        size: 120,
-        cell: (props) => (
-          // If flag_icon is a URL: <img src={props.row.original.flag_icon} alt="flag" width="20" />
-          // If it's a class for an icon font: <i className={props.row.original.flag_icon}></i>
-          // For now, just display as text:
-          <span className="truncate">
-            {props.row.original.flag_icon || "-"}
-          </span>
-        ),
+        enableSorting: false,
+        size: 100,
+        cell: (props) => {
+          const icon_full_path = props.row.original.icon_full_path;
+          return icon_full_path ? (
+            <Avatar src={icon_full_path} size={30} shape="circle" icon={<TbPhoto />} />
+          ) : (
+            <span className="text-gray-400">-</span>
+          );
+        },
       },
       {
         header: "Specification Name",
@@ -936,14 +1014,23 @@ const ProductSpecification = () => {
       },
       {
         header: "Country Name",
-        accessorKey: "country_name",
+        accessorKey: "country.name", // still needed for sorting/filtering
         enableSorting: true,
+        size: 150,
+        cell: (props) => {
+          const countryName = props.row.original.country?.name;
+          return countryName ? (
+            <span className="text-gray-800">{countryName}</span>
+          ) : (
+            <span className="text-gray-400">-</span>
+          );
+        },
       },
-      // { header: 'Notes', accessorKey: 'note_details', enableSorting: false, size: 200, cell: props => <span className="truncate">{props.row.original.note_details || '-'}</span> },
+
       {
         header: "Actions",
         id: "action",
-        meta: { HeaderClass: "text-center", cellClass: "text-center" }, // Corrected meta
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
         size: 120,
         cell: (props) => (
           <ActionColumn
@@ -953,8 +1040,8 @@ const ProductSpecification = () => {
         ),
       },
     ],
-    [openEditDrawer, handleDeleteClick]
-  ); // Added dependencies
+    [openEditDrawer, handleDeleteClick] // Added dependencies
+  );
 
   return (
     <>
@@ -1010,6 +1097,7 @@ const ProductSpecification = () => {
         disabled={isDeleting || masterLoadingStatus === "loading"}
       />
 
+      {/* Add Drawer */}
       <Drawer
         title="Add Product Specification"
         isOpen={isAddDrawerOpen}
@@ -1045,26 +1133,40 @@ const ProductSpecification = () => {
           className="flex flex-col gap-y-6"
         >
           <FormItem
-            label="Flag Icon (URL or Class)"
+            label="Flag Icon (Image File)"
             invalid={!!addFormMethods.formState.errors.flag_icon}
-            errorMessage={addFormMethods.formState.errors.flag_icon?.message}
+            errorMessage={addFormMethods.formState.errors.flag_icon?.message as string}
           >
             <Controller
               name="flag_icon"
               control={addFormMethods.control}
-              render={({ field }) => (
-                <Input type='file'
-                  {...field}
-                  value={field.value ?? ""}
-                  placeholder="e.g., /icons/us.svg or fas fa-flag"
+              render={({ field: { onChange: rhfOnChange, onBlur, name, ref: fieldRef } }) => (
+                <Input
+                  type="file"
+                  name={name}
+                  ref={fieldRef}
+                  onBlur={onBlur}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
+                    rhfOnChange(file); 
+                    if (addFormFlagIconPreviewUrl) URL.revokeObjectURL(addFormFlagIconPreviewUrl);
+                    setAddFormFlagIconPreviewUrl(file ? URL.createObjectURL(file) : null);
+                  }}
+                  accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
                 />
               )}
             />
+            {addFormFlagIconPreviewUrl && (
+              <div className="mt-2">
+                <Avatar src={addFormFlagIconPreviewUrl} size={60} shape="circle" icon={<TbPhoto />} />
+              </div>
+            )}
           </FormItem>
           <FormItem
             label="Specification Name"
             invalid={!!addFormMethods.formState.errors.name}
             errorMessage={addFormMethods.formState.errors.name?.message}
+            isRequired
           >
             <Controller
               name="name"
@@ -1078,6 +1180,7 @@ const ProductSpecification = () => {
             label="Country"
             invalid={!!addFormMethods.formState.errors.country_id}
             errorMessage={addFormMethods.formState.errors.country_id?.message}
+            isRequired
           >
             <Controller
               name="country_id"
@@ -1087,14 +1190,14 @@ const ProductSpecification = () => {
                   placeholder="Select country"
                   options={countryOptions}
                   value={
-                    countryOptions.find((opt) => opt.value === field.value) ||
+                    countryOptions.find((opt) => opt.value == field.value) ||
                     null
                   }
                   onChange={(opt) => field.onChange(opt?.value)}
                   isLoading={
                     masterLoadingStatus === "loading" &&
                     countryOptions.length === 0
-                  } // Show loading if countries are being fetched
+                  }
                 />
               )}
             />
@@ -1108,7 +1211,7 @@ const ProductSpecification = () => {
               name="note_details"
               control={addFormMethods.control}
               render={({ field }) => (
-                <Input 
+                <Input
                   textArea
                   {...field}
                   value={field.value ?? ""}
@@ -1121,6 +1224,7 @@ const ProductSpecification = () => {
         </Form>
       </Drawer>
 
+      {/* Edit Drawer */}
       <Drawer
         title="Edit Product Specification"
         isOpen={isEditDrawerOpen}
@@ -1144,9 +1248,11 @@ const ProductSpecification = () => {
               type="submit"
               loading={isSubmitting}
               disabled={
-                !editFormMethods.formState.isValid ||
+                // Disable if not valid OR submitting
+                !editFormMethods.formState.isValid || 
                 isSubmitting ||
-                !editFormMethods.formState.isDirty
+                // Also disable if not dirty AND no new file is staged for upload
+                (!editFormMethods.formState.isDirty && !editFormMethods.getValues('flag_icon'))
               }
             >
               {isSubmitting ? "Saving..." : "Save Changes"}
@@ -1159,27 +1265,53 @@ const ProductSpecification = () => {
           onSubmit={editFormMethods.handleSubmit(onEditSubmit)}
           className="flex flex-col gap-y-6"
         >
-          <FormItem
-            label="Flag Icon (URL or Class)"
+           <FormItem
+            label="Flag Icon (Image File)"
             invalid={!!editFormMethods.formState.errors.flag_icon}
-            errorMessage={editFormMethods.formState.errors.flag_icon?.message}
+            errorMessage={editFormMethods.formState.errors.flag_icon?.message as string}
           >
+            {!editFormFlagIconPreviewUrl && editingItem?.icon_full_path && (
+                <div className="mb-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Icon:</p>
+                    <Avatar src={editingItem.icon_full_path} size={60} shape="circle" icon={<TbPhoto />} />
+                </div>
+            )}
+            {editFormFlagIconPreviewUrl && (
+              <div className="mt-2 mb-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">New Icon Preview:</p>
+                <Avatar src={editFormFlagIconPreviewUrl} size={60} shape="circle" icon={<TbPhoto />} />
+              </div>
+            )}
             <Controller
               name="flag_icon"
               control={editFormMethods.control}
-              render={({ field }) => (
-                <Input type='file'
-                  {...field}
-                  value={field.value ?? ""}
-                  placeholder="e.g., /icons/us.svg or fas fa-flag"
+              render={({ field: { onChange: rhfOnChange, onBlur, name, ref: fieldRef } }) => ( 
+                <Input
+                  type="file"
+                  name={name}
+                  ref={fieldRef} 
+                  onBlur={onBlur}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
+                    rhfOnChange(file); 
+                    if (editFormFlagIconPreviewUrl) URL.revokeObjectURL(editFormFlagIconPreviewUrl);
+                    setEditFormFlagIconPreviewUrl(file ? URL.createObjectURL(file) : null);
+                    // Manually trigger validation or dirty state if needed after file change
+                    if(file) editFormMethods.trigger('flag_icon'); // Or trigger for the whole form
+                  }}
+                  accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
                 />
               )}
             />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {editingItem?.flag_icon ? "Leave blank to keep current icon, or select a new file to replace it." : "Upload an icon."}
+            </p>
           </FormItem>
           <FormItem
             label="Specification Name"
             invalid={!!editFormMethods.formState.errors.name}
             errorMessage={editFormMethods.formState.errors.name?.message}
+            isRequired
           >
             <Controller
               name="name"
@@ -1202,11 +1334,14 @@ const ProductSpecification = () => {
                   placeholder="Select country"
                   options={countryOptions}
                   value={
-                    countryOptions.find((opt) => opt.value === field.value) ||
+                    countryOptions.find((opt) => opt.value == field.value) ||
                     null
                   }
-                  onChange={(opt) => field.onChange(opt?.value)}
+                  onChange={(option) =>
+                    field.onChange(option ? option.value : "")
+                  }
                 />
+                
               )}
             />
           </FormItem>
@@ -1221,7 +1356,7 @@ const ProductSpecification = () => {
               name="note_details"
               control={editFormMethods.control}
               render={({ field }) => (
-                <Input 
+                <Input
                   textArea
                   {...field}
                   value={field.value ?? ""}
@@ -1234,6 +1369,7 @@ const ProductSpecification = () => {
         </Form>
       </Drawer>
 
+      {/* Filter Drawer */}
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
@@ -1245,7 +1381,7 @@ const ProductSpecification = () => {
               <Button
                 size="sm"
                 className="mr-2"
-                onClick={closeFilterDrawer}
+                onClick={onClearFilters}
                 type="button"
               >
                 Clear
@@ -1263,7 +1399,7 @@ const ProductSpecification = () => {
         }
       >
         <Form
-          id="filterProductSpecificationsForm" // Corrected ID
+          id="filterProductSpecificationsForm"
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-y-6"
         >
@@ -1275,7 +1411,7 @@ const ProductSpecification = () => {
                 <Select
                   isMulti
                   placeholder="Select specification names..."
-                  options={specNameFilterOptions} // Use memoized options
+                  options={specNameFilterOptions}
                   value={field.value || []}
                   onChange={(selectedVal) => field.onChange(selectedVal || [])}
                 />
@@ -1290,7 +1426,7 @@ const ProductSpecification = () => {
                 <Select
                   isMulti
                   placeholder="Select country names..."
-                  options={countryNameFilterOptions} // Use memoized options
+                  options={countryNameFilterOptions}
                   value={field.value || []}
                   onChange={(selectedVal) => field.onChange(selectedVal || [])}
                 />
@@ -1317,7 +1453,7 @@ const ProductSpecification = () => {
           setItemToDelete(null);
         }}
         onConfirm={onConfirmSingleDelete}
-        loading={isDeleting} // Pass loading state
+        loading={isDeleting}
       >
         <p>
           Are you sure you want to delete the specification "
@@ -1330,7 +1466,6 @@ const ProductSpecification = () => {
 
 export default ProductSpecification;
 
-// Helper (Identical to Units)
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }

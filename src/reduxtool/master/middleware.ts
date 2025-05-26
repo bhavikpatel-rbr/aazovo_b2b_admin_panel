@@ -1454,13 +1454,9 @@ export const addBrandAction = createAsyncThunk<any, any>(
   "auth/addBrand",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await addBrandAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getBrandAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2564,7 +2560,10 @@ export const addProductSpecificationAction = createAsyncThunk<any, any>(
   }
 )
 
-export const editProductSpecificationAction = createAsyncThunk<any, any>(
+export const editProductSpecificationAction = createAsyncThunk<
+  any, // Return type of the fulfilled action
+  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+>(
   "auth/editProductSpecifications",
   async (data, { rejectWithValue, dispatch }) => {
     try {

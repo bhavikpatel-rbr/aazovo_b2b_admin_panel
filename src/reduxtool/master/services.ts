@@ -925,7 +925,7 @@ export const getTrandingCarouseAsync = async () => {
   }
 }
 
-export const addTrandingCarouselAsync = async (unitData: any) => {
+export const addTrandingCarouselAsync = async (unitData: FormData) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/other/trending_carousel`, unitData, {
       headers: {
@@ -987,7 +987,11 @@ export const getProductSepecificationAsync = async () => {
 
 export const addProductSepecificationAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/product_spec`, unitData)
+    const response = await axiosInstance.post(`${config.apiURL}/master/product_spec`, unitData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -995,15 +999,27 @@ export const addProductSepecificationAsync = async (unitData: any) => {
 }
 
 export const editProductSepecificationAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/product_spec/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
-    return response
+    const response = await axiosInstance.post(
+      `${config.apiURL}/master/product_spec/${unitData?.id}`,
+      {
+        _method: "PUT",
+        name: unitData?.name,
+        flag_icon: unitData?.flag_icon, // This won't work if it's a File
+      },
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
+
 
 export const deletProductSepecificationAsync = async (unitData: any) => {
   try {
