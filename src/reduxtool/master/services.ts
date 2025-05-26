@@ -739,7 +739,7 @@ export const editPriceListAsync = async (unitData: any) => {
 
 export const deletePriceListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/other/unit/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/other/price_list/${unitData.id}`)
     return response
   } catch (err) {
     return isAxiosError(err)
