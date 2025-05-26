@@ -726,11 +726,11 @@ export const addPriceListAsync = async (unitData: any) => {
 }
 
 export const editPriceListAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/other/price_list/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
+  console.log(`${config.apiURL}/other/price_list/${unitData?.id}`, { _method: "PUT", product_id: unitData?.product_id, expance: unitData?.expance, margin: unitData?.margin, price: unitData?.price, usd_rate: unitData?.usd_rate });
   console.log("unitData", unitData);
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/price_list/${unitData?.product_id}`, { _method: "PUT", product_id: parseInt(unitData?.product_id), price: parseFloat(unitData?.price), usd_rate: parseFloat(unitData?.usd_rate), expance: parseFloat(unitData?.expance), margin: parseFloat(unitData?.margin) })
+    const response = await axiosInstance.post(`${config.apiURL}/other/price_list/${unitData?.id}`, { _method: "PUT", product_id: parseInt(unitData?.product_id), price: parseFloat(unitData?.price), usd_rate: parseFloat(unitData?.usd_rate), expance: parseFloat(unitData?.expance), margin: parseFloat(unitData?.margin), id: unitData?.id })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -739,7 +739,7 @@ export const editPriceListAsync = async (unitData: any) => {
 
 export const deletePriceListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/other/unit/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/other/price_list/${unitData.id}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -1838,6 +1838,14 @@ export const getBuyerListingsAsync = async () => {
 export const getAutoMatchDataAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/opportunity/autospb`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const getAllproductAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/product`)
     return response
   } catch (err) {
     return isAxiosError(err)
