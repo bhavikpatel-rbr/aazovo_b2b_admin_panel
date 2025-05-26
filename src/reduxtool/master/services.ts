@@ -1472,12 +1472,17 @@ export const getHomeCategoryAsync = async () => {
 
 export const addHomeCategoryAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image`, unitData)
-    return response
+    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image`, unitData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
 }
+
 
 export const editHomeCategoryAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
