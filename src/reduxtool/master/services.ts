@@ -366,7 +366,7 @@ export const editDocumentListAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, document_type: unitData?.document_type })
     return response
   } catch (err) {
     return isAxiosError(err)
