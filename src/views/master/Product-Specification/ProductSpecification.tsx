@@ -819,16 +819,17 @@ const ProductSpecification = () => {
     }));
   }, [ProductSpecificationsData]);
 
-  const countryNameFilterOptions = useMemo(() => {
-    if (!Array.isArray(ProductSpecificationsData)) return [];
-    const uniqueCountryNames = new Set(
-      ProductSpecificationsData.map((item) => item.country_name)
-    );
-    return Array.from(uniqueCountryNames).map((name) => ({
-      value: name,
-      label: name,
-    }));
-  }, [ProductSpecificationsData]);
+const countryNameFilterOptions = useMemo(() => {
+  if (!Array.isArray(ProductSpecificationsData)) return [];
+  const uniqueCountryNames = new Set(
+    ProductSpecificationsData.map((item) => item.country?.name).filter(Boolean)
+  );
+  return Array.from(uniqueCountryNames).map((name) => ({
+    value: name,
+    label: name,
+  }));
+}, [ProductSpecificationsData]);
+
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: ProductSpecificationItem[] = Array.isArray(
@@ -1013,9 +1014,19 @@ const ProductSpecification = () => {
       },
       {
         header: "Country Name",
-        accessorKey: "country_name",
+        accessorKey: "country.name", // still needed for sorting/filtering
         enableSorting: true,
+        size: 150,
+        cell: (props) => {
+          const countryName = props.row.original.country?.name;
+          return countryName ? (
+            <span className="text-gray-800">{countryName}</span>
+          ) : (
+            <span className="text-gray-400">-</span>
+          );
+        },
       },
+
       {
         header: "Actions",
         id: "action",
@@ -1179,7 +1190,7 @@ const ProductSpecification = () => {
                   placeholder="Select country"
                   options={countryOptions}
                   value={
-                    countryOptions.find((opt) => opt.value === field.value) ||
+                    countryOptions.find((opt) => opt.value == field.value) ||
                     null
                   }
                   onChange={(opt) => field.onChange(opt?.value)}
@@ -1314,7 +1325,6 @@ const ProductSpecification = () => {
             label="Country"
             invalid={!!editFormMethods.formState.errors.country_id}
             errorMessage={editFormMethods.formState.errors.country_id?.message}
-            isRequired
           >
             <Controller
               name="country_id"
@@ -1324,11 +1334,14 @@ const ProductSpecification = () => {
                   placeholder="Select country"
                   options={countryOptions}
                   value={
-                    countryOptions.find((opt) => opt.value === field.value) ||
+                    countryOptions.find((opt) => opt.value == field.value) ||
                     null
                   }
-                  onChange={(opt) => field.onChange(opt?.value)}
+                  onChange={(option) =>
+                    field.onChange(option ? option.value : "")
+                  }
                 />
+                
               )}
             />
           </FormItem>
