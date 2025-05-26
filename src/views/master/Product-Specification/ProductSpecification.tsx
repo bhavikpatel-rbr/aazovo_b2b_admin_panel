@@ -59,6 +59,7 @@ export type ProductSpecificationItem = {
   flag_icon: string | null;
   created_at?: string;
   updated_at?: string;
+  icon_full_path?: string;
 };
 
 export type CountryOption = {
@@ -997,9 +998,9 @@ const ProductSpecification = () => {
         enableSorting: false,
         size: 100,
         cell: (props) => {
-          const iconUrl = props.row.original.flag_icon;
-          return iconUrl ? (
-            <Avatar src={iconUrl} size={30} shape="circle" icon={<TbPhoto />} />
+          const icon_full_path = props.row.original.icon_full_path;
+          return icon_full_path ? (
+            <Avatar src={icon_full_path} size={30} shape="circle" icon={<TbPhoto />} />
           ) : (
             <span className="text-gray-400">-</span>
           );
@@ -1258,10 +1259,10 @@ const ProductSpecification = () => {
             invalid={!!editFormMethods.formState.errors.flag_icon}
             errorMessage={editFormMethods.formState.errors.flag_icon?.message as string}
           >
-            {!editFormFlagIconPreviewUrl && editingItem?.flag_icon && (
+            {!editFormFlagIconPreviewUrl && editingItem?.icon_full_path && (
                 <div className="mb-2">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Icon:</p>
-                    <Avatar src={editingItem.flag_icon} size={60} shape="circle" icon={<TbPhoto />} />
+                    <Avatar src={editingItem.icon_full_path} size={60} shape="circle" icon={<TbPhoto />} />
                 </div>
             )}
             {editFormFlagIconPreviewUrl && (
