@@ -205,7 +205,7 @@ const TrendingImages = () => {
 
 const {
     trendingImagesData = [],
-    ProductsData = [] , // Initialize to match API structure
+    productsMasterData = [], // <<< --- ADDED: Fetched products for dropdowns
     status: masterLoadingStatus = 'idle'
 } = useSelector(masterSelector);
 
@@ -229,17 +229,13 @@ const {
     dispatch(getProductsAction()); // Fetch products
 }, [dispatch]);
 
-    useEffect(() => {
-        const fetchProductsForDropdown = async () => {
-            await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API
-            setProductOptions([
-                { value: 'SKU001', label: 'Product Alpha (SKU001)' },
-                { value: 'SKU002', label: 'Product Beta (SKU002)' },
-                { value: 'SKU003', label: 'Product Gamma (SKU003)' },
-            ]);
-        };
-        fetchProductsForDropdown();
-    }, []);
+  const productSelectOptions = useMemo(() => {
+    if (!Array.isArray(productsMasterData)) return [];
+    return productsMasterData.map((p: TrendingPageImageItem) => ({
+      value: String(p.id), // Use product ID as value
+      label: p.name,
+    }));
+  }, [productsMasterData]);
 
     const addFormMethods = useForm<TrendingPageImageFormData>({
         resolver: zodResolver(trendingPageImageFormSchema),
@@ -264,6 +260,7 @@ const {
 
   const openEditDrawer = useCallback((item: TrendingPageImageItem) => {
     setEditingItem(item);
+    console.log('Editing Item:', item);
     // Parse product_ids string to array for the form's trendingProducts field
     const selectedProductIds = item.product_ids
         ? item.product_ids.split(',').map((id :any) => id.trim()).filter(id => id) // Ensure IDs are trimmed and non-empty
@@ -302,8 +299,8 @@ const {
     };
 
     useEffect(() => {
-    if (ProductsData && Array.isArray(ProductsData.data)) { // Access the nested 'data' array
-        const options = ProductsData.data.map((product: any) => ({
+    if (productsMasterData && Array.isArray(productsMasterData)) { // Access the nested 'data' array
+        const options = productsMasterData.map((product: any) => ({
             value: String(product.id), // Using product ID as the value
             label: `${product.name} ${product.sku_code ? `(${product.sku_code})` : ''}`.trim(),
         }));
@@ -311,7 +308,7 @@ const {
     } else {
         setProductOptions([]);
     }
-}, [ProductsData]); // This effect runs when ProductsData from Redux changes
+}, [productsMasterData]); // This effect runs when productsMasterData from Redux changes
 
     const onEditItemSubmit = async (data: TrendingPageImageFormData) => {
         if (!editingItem) return;
@@ -522,7 +519,7 @@ const {
                         <Controller name="page_name" control={addFormMethods.control} render={({ field }) => (<Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                     </FormItem>
                     <FormItem label="Trending Products" invalid={!!addFormMethods.formState.errors.trendingProducts} errorMessage={addFormMethods.formState.errors.trendingProducts?.message}>
-                        <Controller name="trendingProducts" control={addFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select trending products..." options={productOptions} value={productOptions.filter(opt => field.value?.includes(opt.value))} onChange={(selectedVal) => field.onChange(selectedVal ? selectedVal.map(opt => opt.value) : [])} />)} />
+                        <Controller name="trendingProducts" control={addFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select trending products..." options={productSelectOptions} value={productSelectOptions.filter(opt => field.value?.includes(opt.value))} onChange={(selectedVal) => field.onChange(selectedVal ? selectedVal.map(opt => opt.value) : [])} />)} />
                     </FormItem>
                 </Form>
             </Drawer>
