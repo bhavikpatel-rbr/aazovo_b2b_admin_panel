@@ -34,7 +34,8 @@ import {
   TbFileText,
   TbX,
   TbCopy, // Added for Clone
-  TbCloudDownload, // Added for Import
+  TbCloudDownload,
+  TbReload, // Added for Import
 } from "react-icons/tb";
 
 // Types
@@ -56,6 +57,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+import dayjs from "dayjs";
 
 // --- Define Blog Type (Matches API Listing Response) ---
 export type BlogItem = {
@@ -302,19 +304,22 @@ const BlogsTableTools = ({
   onFilter,
   onExport,
   onImport,
+  onClearFilters,
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
   onImport: () => void;
+  onClearFilters: () => void;
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       <div className="flex-grow">
         {" "}
         <BlogsSearch onInputChange={onSearchChange} />{" "}
       </div>
-      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -1111,7 +1116,9 @@ const Blogs = () => {
         enableSorting: true,
         size: 130,
         cell: (props) =>
-          new Date(props.getValue<string>()).toLocaleDateString(),
+          `${new Date(props.getValue<string>()).getDate()} ${new Date(props.getValue<string>()).toLocaleString("en-US", { month: "long" })}, 
+          ${new Date(props.getValue<string>()).getFullYear()},
+          ${new Date(props.getValue<string>()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
       },
       {
         header: "Actions",
@@ -1161,6 +1168,7 @@ const Blogs = () => {
             onFilter={openFilterDrawer}
             onExport={handleExportData}
             onImport={handleImportData}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4 flex-grow overflow-y-auto">
             <BlogsTable

@@ -31,6 +31,7 @@ import {
   TbPhoto,
   TbX,
   TbCategory2,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -158,8 +159,8 @@ const HomeCategoryTable = ({ columns, data, loading, pagingData, selectedItems, 
 const HomeCategorySearch = React.forwardRef<HTMLInputElement, HomeCategorySearchProps>(({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search by Category, Link, ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 HomeCategorySearch.displayName = "HomeCategorySearch";
 
-type HomeCategoryTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
-const HomeCategoryTableTools = React.memo(({ onSearchChange, onFilter, onExport }: HomeCategoryTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><HomeCategorySearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> ));
+type HomeCategoryTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void;};
+const HomeCategoryTableTools = React.memo(({ onSearchChange, onFilter, onExport, onClearFilters }: HomeCategoryTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> <div className="flex-grow"><HomeCategorySearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"><Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> ));
 type HomeCategorySelectedFooterProps = { selectedItems: HomeCategoryItem[]; onDeleteSelected: () => void; isDeleting: boolean };
 const HomeCategorySelectedFooter = React.memo(({ selectedItems, onDeleteSelected, isDeleting }: HomeCategorySelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; const handleDeleteClick = () => setDeleteConfirmOpen(true); const handleCancelDelete = () => setDeleteConfirmOpen(false); const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmOpen(false); }; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold flex items-center gap-1 text-sm sm:text-base"> <span className="heading-text">{selectedItems.length}</span> <span>Categor{selectedItems.length > 1 ? "ies" : "y"} selected</span> </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Categor${selectedItems.length > 1 ? "ies" : "y"}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} loading={isDeleting}> <p>Are you sure you want to delete selected entrie{selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.</p> </ConfirmDialog> </> ); });
 
@@ -454,7 +455,6 @@ const HomeCategoriesListing = () => {
               <span className="text-xs text-gray-400 italic">No images</span>
             )}
             {images.slice(0, 3).map((img, idx) => (
-              <Tooltip title={img.url} key={`img-${idx}`}>
                 <Avatar
                   size={30}
                   shape="circle"
@@ -462,7 +462,6 @@ const HomeCategoriesListing = () => {
                   icon={<TbPhoto />}
                   className="ring-2 ring-white dark:ring-gray-800"
                 />
-              </Tooltip>
             ))}
             {images.length > 3 && (
               <Avatar
@@ -566,7 +565,7 @@ const HomeCategoriesListing = () => {
                 <h5 className="mb-2 sm:mb-0">Home Page Categories</h5>
                 <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === 'loading' || isSubmitting}>Add New Entry</Button>
             </div>
-          <HomeCategoryTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <HomeCategoryTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
             <HomeCategoryTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
