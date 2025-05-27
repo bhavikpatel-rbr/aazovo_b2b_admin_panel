@@ -20,9 +20,8 @@ import { TbDeviceFloppy, TbLoader } from "react-icons/tb"; // Save, Loading icon
 import Textarea from "@/views/ui-components/forms/Input/Textarea";
 
 // Redux (Optional - for fetching/saving settings from a central store/API)
-// import { useAppDispatch, useAppSelector } from '@/reduxtool/store';
-// import { getGlobalSettingsAction, updateGlobalSettingsAction } from '@/reduxtool/settings/middleware';
-// import { settingsSelector, selectGlobalSettings } from '@/reduxtool/settings/settingsSlice';
+import { useAppDispatch } from '@/reduxtool/store';
+import { getGlobalSettingsAction, updateGlobalSettingsAction } from '@/reduxtool/master/middleware';
 
 // --- Define Global Settings Type ---
 export type GlobalSettingsData = {

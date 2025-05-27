@@ -1878,7 +1878,31 @@ export const getAllproductAsync = async () => {
   }
 }
 
+export const getGlobalSettingAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/global_setting`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
 
+export const editGlobalSettingAsync = async (settingId: number | string, formData: FormData) => {
+  try {
+    const response = await axiosInstance.post(
+      `${config.apiURL}/setting/global_setting/${settingId}`, // Use settingId in the URL
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
 
 
 
