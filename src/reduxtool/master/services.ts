@@ -998,16 +998,17 @@ export const addProductSepecificationAsync = async (unitData: any) => {
   }
 }
 
-export const editProductSepecificationAsync = async (unitData: any) => {
-
+export const editProductSepecificationAsync = async ({
+  id,
+  formData,
+}: {
+  id: string | number;
+  formData: FormData;
+}) => {
   try {
     const response = await axiosInstance.post(
-      `${config.apiURL}/master/product_spec/${unitData?.id}`,
-      {
-        _method: "PUT",
-        name: unitData?.name,
-        flag_icon: unitData?.flag_icon, // This won't work if it's a File
-      },
+      `${config.apiURL}/master/product_spec/${id}`,
+      formData, // 👈 pass FormData directly
       {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -1016,9 +1017,10 @@ export const editProductSepecificationAsync = async (unitData: any) => {
     );
     return response;
   } catch (err) {
-    return isAxiosError(err);
+    throw err; // or handle/log properly
   }
 };
+
 
 
 export const deletProductSepecificationAsync = async (unitData: any) => {
@@ -1472,12 +1474,17 @@ export const getHomeCategoryAsync = async () => {
 
 export const addHomeCategoryAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image`, unitData)
-    return response
+    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image`, unitData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
 }
+
 
 export const editHomeCategoryAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
