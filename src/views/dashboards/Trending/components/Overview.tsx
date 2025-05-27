@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Card from '@/components/ui/Card'
 import Select from '@/components/ui/Select'
-import { Avatar, Checkbox, Tooltip } from '@/components/ui'
+import { Avatar, Button, Checkbox, Dropdown, Tooltip } from '@/components/ui'
 import GrowShrinkValue from '@/components/shared/GrowShrinkValue'
 import AbbreviateNumber from '@/components/shared/AbbreviateNumber'
 import Chart from '@/components/shared/Chart'
@@ -11,7 +11,7 @@ import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { options } from '../constants'
 import DataTable1 from './DataTable1'
 import { NumericFormat } from 'react-number-format'
-import { TbCoin, TbShoppingBagCheck, TbEye } from 'react-icons/tb'
+import { TbCoin, TbShoppingBagCheck, TbEye, TbProgressCheck, TbPhone, TbMail, TbChecklist, TbExchange, TbWorld, TbRadar2, TbTargetArrow, TbUsers, TbUser, TbBuilding, TbMinus, TbPlus, TbIdBadge2, TbBox, TbTag, TbInfoCircle, TbPencil, TbLink, TbSend2, TbTrash, TbDotsVertical, TbCopy, TbSwitchHorizontal, TbShare, TbBrandWhatsapp, TbClipboardCheck, TbLock } from 'react-icons/tb'
 import type { ReactNode } from 'react'
 import type { StatisticData, Period, StatisticCategory } from '../types'
 import { COLORS } from '@/constants/chart.constant'
@@ -24,6 +24,7 @@ import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
 import { BsCake } from 'react-icons/bs'
 import { IoMdShare } from 'react-icons/io'
 import { HiOutlineMinusCircle, HiOutlinePlusCircle } from 'react-icons/hi'
+import { Link, useNavigate } from 'react-router-dom'
 
 type StatisticCardProps = {
     title: string
@@ -115,6 +116,23 @@ const Bar = ({
     )
 }
 
+const InfoLine: React.FC<{ icon?: React.ReactNode; text?: string | number | React.ReactNode | null; label?: string; title?: string; className?: string; boldText?: boolean }> = ({ icon, text, label, title, className, boldText }) => {
+    if (text === null || text === undefined || text === "") return null;
+    return (
+        <div className={classNames("flex items-center gap-1 text-xs", className)}>
+            {icon && <span className="text-gray-400 dark:text-gray-500 mr-1">{icon}</span>}
+            {label && <span className="font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">{label}:</span>}
+            <span
+                className={classNames("text-gray-700 dark:text-gray-200 truncate", { "font-semibold": boldText })}
+                title={title || (typeof text === 'string' || typeof text === 'number' ? String(text) : undefined)}
+            >
+                {text}
+            </span>
+        </div>
+    );
+};
+InfoLine.defaultProps = { icon: null, text: null, label: "", title: "", className: "", boldText: false };
+
 const Overview = ({ data }: StatisticGroupsProps) => {
     const [selectedCategory, setSelectedCategory] = useState<StatisticCategory>('Opportunity')
 
@@ -132,6 +150,462 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     }
 
     const isFirstRender = useRef(true)
+
+    const opportunitiesData = [
+        {
+            id: "OPP001", opportunity_id: "SPB-001", product_name: "Eco-Friendly Water Bottles - 1L Capacity, Stainless Steel, Various Colors",
+            status: "active", opportunity_status: "New", match_score: 75, created_date: "2024-03-01T10:00:00Z",
+            buy_listing_id: "BUY-ECO-01", sell_listing_id: "SELL-ECO-02", spb_role: "Seller",
+            product_category: "Lifestyle", product_subcategory: "Drinkware", brand: "EcoLife",
+            product_specs: "India, USA", quantity: 150, product_status_listing: "In Stock", want_to: "Sell",
+            company_name: "GreenSource Supplies Ltd.", company_id: "GS001", member_name: "Alice Green", member_id: "MEM001",
+            member_email: "alice@greensource.com", member_phone: "555-1111", member_type: "Premium",
+            price_match_type: "Range", quantity_match_listing: "Partial", location_match: "National", matches_found_count: 5,
+            last_updated: "2024-03-02T11:00:00Z", assigned_to: "Team Eco", notes: "Seller has bulk stock. Prefers long-term partnership.", listing_url: "https://example.com/ecobottle"
+        },
+        {
+            id: "OPP002", opportunity_id: "SPB-002", product_name: "Handcrafted Leather Wallets - Bi-fold & Tri-fold",
+            status: "pending", opportunity_status: "Shortlisted", match_score: 92, created_date: "2024-03-05T14:30:00Z",
+            buy_listing_id: "BUY-LTHR-03", sell_listing_id: "SELL-LTHR-04", spb_role: "Buyer",
+            product_category: "Accessories", product_subcategory: "Wallets", brand: "Artisan Craft Co.",
+            product_specs: "China, Canada", quantity: 50, product_status_listing: "Low Stock", want_to: "Buy",
+            company_name: "Luxury Goods Incorporated", company_id: "LG002", member_name: "Robert 'Bob' Vance", member_id: "MEM002",
+            member_email: "bob.v@luxurygoods.inc", member_phone: "555-2222", member_type: "INS-PREMIUM",
+            price_match_type: "Exact", quantity_match_listing: "Sufficient", location_match: "Local", matches_found_count: 2,
+            last_updated: "2024-03-06T09:15:00Z", assigned_to: "Team Luxe", notes: "Buyer interested in long-term supply. Requires sample.", listing_url: "https://example.com/leatherwallet"
+        },
+        {
+            id: "OPP003", opportunity_id: "SPB-003", product_name: "Smart Home Security System - Pro Kit with 4 Cameras",
+            status: "on_hold", opportunity_status: "Converted", match_score: 88, created_date: "2024-02-20T16:00:00Z",
+            buy_listing_id: "BUY-SEC-05", sell_listing_id: "SELL-SEC-06", spb_role: "Seller",
+            product_category: "Electronics", product_subcategory: "Home Security", brand: "SecureHome Plus",
+            product_specs: "Europe", quantity: 5, product_status_listing: "In Stock", want_to: "Sell",
+            company_name: "SafeTech Solutions Global", company_id: "STS003", member_name: "Carol Danvers (Captain)", member_id: "MEM003",
+            member_email: "carol.d@safetechglobal.net", member_phone: "555-3333", member_type: "Standard",
+            price_match_type: "Exact", quantity_match_listing: "Sufficient", location_match: "National", matches_found_count: 8,
+            last_updated: "2024-03-01T10:00:00Z", assigned_to: "Team Secure", notes: "Deal closed, awaiting full payment and shipment coordination.", listing_url: "https://example.com/securitysystempro"
+        },
+        {
+            id: "OPP004", opportunity_id: "OPP-S-004", product_name: "Refurbished iPhone 13 Pro - 256GB",
+            status: "active", opportunity_status: "New", match_score: 85, created_date: "2024-03-10T12:00:00Z",
+            sell_listing_id: "SELL-IPHONE-07", spb_role: "Seller",
+            product_category: "Electronics", product_subcategory: "Mobile Phones", brand: "Apple",
+            product_specs: "New Zealand", quantity: 20, product_status_listing: "In Stock", want_to: "Sell",
+            company_name: "GadgetCycle Ltd.", company_id: "GC004", member_name: "Mike Wheeler", member_id: "MEM004",
+            member_email: "mike@gadgetcycle.com", member_phone: "555-4444", member_type: "Premium",
+            matches_found_count: 3,
+            last_updated: "2024-03-11T10:00:00Z", assigned_to: "Team Mobile", notes: "Good condition, competitive price.", listing_url: "https://example.com/iphone13pro"
+        },
+        {
+            id: "OPP005", opportunity_id: "OPP-B-005", product_name: "Bulk Order - Organic Coffee Beans",
+            status: "pending", opportunity_status: "Shortlisted", match_score: 70, created_date: "2024-03-12T09:30:00Z",
+            buy_listing_id: "BUY-COFFEE-08", spb_role: "Buyer",
+            product_category: "Groceries", product_subcategory: "Coffee", brand: "Any (Organic)",
+            product_specs: "Africa", quantity: 100, want_to: "Buy",
+            company_name: "The Daily Grind Cafe", company_id: "DGC005", member_name: "Eleven Hopper", member_id: "MEM005",
+            member_email: "el@dailygrind.coffee", member_phone: "555-5555", member_type: "INS-PREMIUM",
+            matches_found_count: 4,
+            last_updated: "2024-03-12T17:00:00Z", assigned_to: "Team Cafe", notes: "Urgent requirement for new blend.", listing_url: "https://example.com/organiccoffeebeans"
+        }
+    ];
+
+    const opportunitiesColumns = [
+        {
+            id: 'expander',
+            header: () => null,
+            size: 40,
+            cell: ({ row }) => (
+                <Tooltip title={row.getIsExpanded() ? "Collapse" : "Expand Details"}>
+                    <Button
+                        shape="circle"
+                        variant="subtle"
+                        size="xs"
+                        icon={row.getIsExpanded() ? <TbMinus /> : <TbPlus />}
+                        onClick={row.getToggleExpandedHandler()}
+                    />
+                </Tooltip>
+            )
+        },
+        {
+            header: "Products",
+            accessorKey: "opportunity_id",
+            size: 300,
+            cell: ({ row }) => {
+                const item = row.original;
+                return (
+                    <div className="flex items-start gap-3">
+                        <Avatar size={38} shape="circle" className="mt-1 bg-primary-500 text-white text-base flex-shrink-0">
+                            {item.product_name?.substring(0, 2).toUpperCase()}
+                        </Avatar>
+                        <div className="flex flex-col">
+                            <Link to={`/sales-leads/opportunity/detail/${item.id}`} className="font-semibold text-sm text-primary-600 hover:underline dark:text-primary-400 mb-0.5">
+                                {item.opportunity_id}
+                            </Link>
+                            <Tooltip title={item.product_name}>
+                                <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[240px]">
+                                    {item.product_name?.slice(0, 15)}
+                                    {item.product_name && item.product_name.length > 1 ? "…" : ""}
+                                </span>
+                            </Tooltip>
+                            <Tag className={` capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}>{item.status}</Tag>
+                        </div>
+                    </div>
+                )
+            }
+        },
+        {
+            header: "Company, Member & Role",
+            accessorKey: "company_name",
+            size: 280,
+            cell: ({ row }) => {
+                const item = row.original;
+                return (
+                    <div className="text-xs">
+                        <div className="mb-1.5 flex items-center">
+                            <TbBuilding size={14} className="mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                            <div className="flex flex-col">
+                                <span className="font-semibold text-gray-800 dark:text-gray-100 truncate" title={item.company_name}>{item.company_name}</span>
+                                {item.company_id && <span className="text-gray-500 dark:text-gray-400 text-[11px]">{item.company_id}</span>}
+                            </div>
+                        </div>
+                        <div className="border-t border-gray-200 dark:border-gray-700 pt-1.5 flex items-center">
+                            <TbUser size={14} className="mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                            <div className="flex flex-col">
+                                <span className="font-medium text-gray-700 dark:text-gray-200 truncate" title={item.member_name}>{item.member_name}</span>
+                                <div className="flex items-center">
+                                    {item.member_id && <span className="text-gray-500 dark:text-gray-400 text-[11px] mr-1.5">{item.member_id}</span>}
+                                    <Tag className="bg-indigo-100 text-indigo-700 dark:bg-indigo-500/30 dark:text-indigo-300 text-[9px] px-1 py-0.5 align-middle whitespace-nowrap">
+                                        {item.member_type}
+                                    </Tag>
+                                </div>
+                            </div>
+                        </div>
+                        {item.spb_role && (
+                            <Tag className={classNames("mt-1.5 capitalize text-xs px-2 py-0.5", item.spb_role === "Seller" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300" : "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300")}>
+                                <TbUsers className="inline mr-1 text-sm align-middle" /> {item.spb_role}
+                            </Tag>
+                        )}
+                    </div>
+                )
+            }
+        },
+        {
+            header: "Key Details & Matching",
+            accessorKey: "match_score",
+            size: 260,
+            cell: ({ row }) => {
+                const item = row.original;
+                return (
+                    <div className="text-xs space-y-1">
+                        <InfoLine icon={<TbPhone size={13} />} text={item.member_phone || 'N/A'} />
+                        <InfoLine icon={<TbMail size={13} />} text={item.member_email ? <a href={`mailto:${item.member_email}`} className="text-blue-500 hover:underline">{item.member_email}</a> : 'N/A'} />
+                        <div className="pt-1 mt-1 border-t dark:border-gray-600">
+                            <InfoLine icon={<TbChecklist size={13} />} label="Qty" text={item.quantity ?? 'N/A'} />
+                            <InfoLine icon={<TbProgressCheck size={13} />} label="Stock" text={item.product_status_listing ?? 'N/A'} />
+                            <InfoLine icon={<TbExchange size={13} />} label="Want To" text={item.want_to ?? 'N/A'} />
+                        </div>
+                        <div className="pt-1 mt-1 border-t dark:border-gray-600">
+                            <InfoLine icon={<TbWorld size={13} />} label="Specs" text={item.product_specs ? (item.product_specs.length > 20 ? item.product_specs.substring(0, 17) + "..." : item.product_specs) : 'N/A'} title={item.product_specs} />
+                            <InfoLine icon={<TbRadar2 size={13} />} label="Matches" text={item.matches_found_count ?? 'N/A'} />
+                            <InfoLine icon={<TbTargetArrow size={13} />} label="Score" text={`${item.match_score}%`} />
+                        </div>
+                    </div>
+                )
+            }
+        },
+        {
+            header: "Timestamps & Status",
+            accessorKey: "created_date",
+            size: 170,
+            cell: ({ row }) => {
+                const item = row.original;
+                return (
+                    <div className="text-xs space-y-1.5">
+                        {/* <FormattedDate label="Created" dateString={item.created_date} /> */}
+                        <div className="flex items-center gap-1">
+                            {/* <InfoLine icon={<TbProgressCheck size={14} />} label="Opp." /> */}
+                            <Tag className={`capitalize text-[10px] px-1.5 py-0.5 whitespace-nowrap`}>{item.opportunity_status}</Tag>
+                        </div>
+                    </div>
+                )
+            }
+        },
+        {
+            header: "Quick Actions",
+            id: "action_spb",
+            size: 90,
+            cell: () => (
+                <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-center gap-1">
+                        <Tooltip title="Copy">
+                            <div
+                                className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+                                role="button"
+                            >
+                                <TbCopy />
+                            </div>
+                        </Tooltip>
+                        <Tooltip title="Edit">
+                            <div
+                                className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+                                role="button"
+                            >
+                                <TbPencil />
+                            </div>
+                        </Tooltip>
+                        <Tooltip title="View">
+                            <div
+                                className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+                                role="button"
+                            >
+                                <TbEye />
+                            </div>
+                        </Tooltip>
+                        <Tooltip title="Share">
+                            <Dropdown renderTitle={
+                                <div
+                                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
+                                >
+                                    <TbShare />
+                                </div>
+                            }>
+                                <Dropdown.Item><div className="flex gap-2 items-center text-sm"><TbBrandWhatsapp size={20} /> Whatsapp</div></Dropdown.Item>
+                                <Dropdown.Item><div className="flex gap-2 items-center text-sm"><TbMail size={20} /> Email</div></Dropdown.Item>
+                            </Dropdown>
+                        </Tooltip>
+                        <Tooltip title="More">
+                            <Dropdown renderTitle={
+                                <div
+                                    className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
+                                    role="button"
+                                >
+                                    <TbDotsVertical />
+                                </div>
+                            }>
+                                <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                    <div className="flex gap-2 items-center text-xs"><TbPhone size={20} /> Contact Now</div>
+                                </Dropdown.Item>
+                                <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                    <div className="flex gap-2 items-center text-xs"><TbLink size={20} /> Share Link</div>
+                                </Dropdown.Item>
+                                <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                    <div className="flex gap-2 items-center text-xs"><TbClipboardCheck size={20} /> Copy SPB</div>
+                                </Dropdown.Item>
+                                <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                    <div className="flex gap-2 items-center text-xs"><TbLock size={20} /> Lock Match</div>
+                                </Dropdown.Item>
+                                <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                    <div className="flex gap-2 items-center text-xs"><TbTrash size={20} /> Delete</div>
+                                </Dropdown.Item>
+                            </Dropdown>
+
+                        </Tooltip>
+                    </div>
+                </div>
+            )
+        },
+    ]
+    const [expanded, setExpanded] = useState({})
+    const ExpandedOpportunityDetails = ({ row: { original: item } }) => {
+        const navigate = useNavigate();
+        return (
+            <>
+                <Card bordered className="m-1 my-2 rounded-lg">
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
+                            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Opportunity Snapshot</h6>
+                            <InfoLine icon={<TbIdBadge2 size={14} />} label="Opp. ID" text={item.opportunity_id} className="font-medium text-sm" />
+                            <InfoLine icon={<TbBox size={14} />} label="Product" text={item.product_name?.slice(0, 15) + (item.product_name && item.product_name.length > 1 ? "…" : "")} className="font-medium text-sm" />
+                            <InfoLine icon={<TbTag size={14} />} label="Category" text={`${(item.product_category || 'N/A').toString().slice(0, 15) + ((item.product_category && item.product_category.length > 15) ? "…" : "")}${item.product_subcategory ? ` > ${item.product_subcategory.slice(0, 15) + (item.product_subcategory.length > 15 ? "…" : "")}` : ''}`} />
+                            <InfoLine icon={<TbTag size={14} />} label="Brand" text={item.brand ? item.brand.slice(0, 15) + (item.brand.length > 15 ? "…" : "") : 'N/A'} />
+                            {item.product_specs && <InfoLine icon={<TbInfoCircle size={14} />} label="Specs" text={item.product_specs} />}
+                            <InfoLine icon={<TbChecklist size={14} />} label="Quantity" text={item.quantity?.toString() || 'N/A'} />
+                            <InfoLine icon={<TbProgressCheck size={14} />} label="Product Status" text={item.product_status_listing || 'N/A'} />
+                            <InfoLine icon={<TbExchange size={14} />} label="Intent/Role" />
+                        </div>
+                        <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
+                            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Company & Member</h6>
+                            <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm mb-2">
+                                <div className="flex items-center">
+                                    {item.company_id && <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">{item.company_id} |</span>}
+                                    <InfoLine icon={<TbBuilding size={14} />} text={item.company_name} className="font-semibold" />
+                                </div>
+                            </div>
+                            <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm">
+                                <div className="flex items-center">
+                                    {item.member_id && <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">{item.member_id} |</span>}
+                                    <InfoLine icon={<TbUser size={14} />} text={item.member_name} className="font-semibold" />
+                                </div>
+                                <InfoLine text={item.member_type} className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium" />
+                                {item.member_email && <InfoLine icon={<TbMail size={14} />} text={<a href={`mailto:${item.member_email}`} className="text-blue-500 hover:underline">{item.member_email}</a>} />}
+                                {item.member_phone && <InfoLine icon={<TbPhone size={14} />} text={item.member_phone} />}
+                            </div>
+                            {item.listing_url && <InfoLine icon={<TbLink size={14} />} label="Listing" text={<a href={item.listing_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate block max-w-[180px]" title={item.listing_url}>{item.listing_url}</a>} />}
+                        </div>
+                        <div className="space-y-1.5">
+                            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Match & Lifecycle</h6>
+                            <InfoLine icon={<TbRadar2 size={14} />} label="Other Matched Found" text={'5, 6'} />
+                            {/* <InfoLine icon={<TbTargetArrow size={14}/>} label="Match Score" text={`${item.match_score}%`} /> */}
+                            <InfoLine icon={<TbTargetArrow size={14} />} label="Match Score" text={`92%, 91%`} />
+                            <div className="flex items-center gap-2">
+                                <InfoLine icon={<TbProgressCheck size={14} />} label="Opp. Status" />
+                                <Tag className={`capitalize`}>{item.opportunity_status}</Tag>
+                            </div>
+                            <div className="pt-2 mt-2 border-t dark:border-gray-600">
+                                <h6 className="text-sm font-semibold mb-1">Actions</h6>
+                                <div className="flex items-center gap-2">
+                                    <Tooltip title="Edit">
+                                        <div
+                                            className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+                                            role="button"
+                                        >
+                                            <TbPencil />
+                                        </div>
+                                    </Tooltip>
+                                    <Tooltip title="View">
+                                        <div
+                                            className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                                            role="button"
+                                        >
+                                            <TbEye />
+                                        </div>
+                                    </Tooltip>
+                                    <Tooltip title="Make Offer / Demand">
+                                        <div
+                                            className="text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+                                            role="button"
+                                        >
+                                            <TbSend2 />
+                                        </div>
+                                    </Tooltip>
+                                    <Tooltip title="Delete">
+                                        <div
+                                            className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                                            role="button"
+                                        >
+                                            <TbTrash />
+                                        </div>
+                                    </Tooltip>
+                                    <div
+                                        className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                                        role="button"
+                                    >
+                                        <Dropdown renderTitle={<TbDotsVertical />}>
+                                            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                                <div className="flex gap-2 text-xs">Accept</div>
+                                            </Dropdown.Item>
+                                            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                                <div className="flex gap-2 text-xs">Counter</div>
+                                            </Dropdown.Item>
+                                            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                                <div className="flex gap-2 text-xs">Reject</div>
+                                            </Dropdown.Item>
+                                            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                                <div className="flex gap-2 text-xs">Contact Now</div>
+                                            </Dropdown.Item>
+                                            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                                <div className="flex gap-2 text-xs">Add in Active</div>
+                                            </Dropdown.Item>
+                                            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                                <div className="flex gap-2 text-xs">Add Schedule</div>
+                                            </Dropdown.Item>
+                                            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                                <div className="flex gap-2 text-xs">Add Task</div>
+                                            </Dropdown.Item>
+                                            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+                                                <div className="flex gap-2 text-xs">View Alert</div>
+                                            </Dropdown.Item>
+                                        </Dropdown>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </Card>
+                <Card bordered className="m-1 my-2 rounded-lg">
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
+                            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Opportunity Snapshot</h6>
+                            <InfoLine icon={<TbIdBadge2 size={14} />} label="Opp. ID" text="DEMO-98765" className="font-medium text-sm" />
+                            <InfoLine icon={<TbBox size={14} />} label="Product" text="Demo Product Name…" className="font-medium text-sm" />
+                            <InfoLine icon={<TbTag size={14} />} label="Category" text="DemoCat > DemoSubcat" />
+                            <InfoLine icon={<TbTag size={14} />} label="Brand" text="DemoBrand" />
+                            <InfoLine icon={<TbInfoCircle size={14} />} label="Specs" text="Demo Specs, Example, Test" />
+                            <InfoLine icon={<TbChecklist size={14} />} label="Quantity" text="1234" />
+                            <InfoLine icon={<TbProgressCheck size={14} />} label="Product Status" text="Demo Status" />
+                            <InfoLine icon={<TbExchange size={14} />} label="Intent/Role" text="DemoRole" />
+                        </div>
+                        <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
+                            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Company & Member</h6>
+                            <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm mb-2">
+                                <div className="flex items-center">
+                                    <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">DEMO-COMP |</span>
+                                    <InfoLine icon={<TbBuilding size={14} />} text="Demo Company Inc." className="font-semibold" />
+                                </div>
+                            </div>
+                            <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm">
+                                <div className="flex items-center">
+                                    <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">DEMO-MEM |</span>
+                                    <InfoLine icon={<TbUser size={14} />} text="Demo Member" className="font-semibold" />
+                                </div>
+                                <InfoLine text="DEMO-TYPE" className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium" />
+                                <InfoLine icon={<TbMail size={14} />} text={<a href="mailto:demo@demo.com" className="text-blue-500 hover:underline">demo@demo.com</a>} />
+                                <InfoLine icon={<TbPhone size={14} />} text="111-2222" />
+                            </div>
+                            <InfoLine icon={<TbLink size={14} />} label="Listing" text={<a href="https://demo-listing.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate block max-w-[180px]" title="https://demo-listing.com">https://demo-listing.com</a>} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Match & Lifecycle</h6>
+                            <InfoLine icon={<TbRadar2 size={14} />} label="Other Matched Found" text="77, 88" />
+                            <InfoLine icon={<TbTargetArrow size={14} />} label="Match Score" text="98%, 97%" />
+                            <div className="flex items-center gap-2">
+                                <InfoLine icon={<TbProgressCheck size={14} />} label="Opp. Status" />
+                                <Tag className="bg-green-200 text-green-700 capitalize">DemoStatus</Tag>
+                            </div>
+                            <div className="pt-2 mt-2 border-t dark:border-gray-600">
+                                <h6 className="text-sm font-semibold mb-1">Actions</h6>
+                                <div className="flex items-center gap-2">
+                                    <Tooltip title="Edit">
+                                        <div
+                                            className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+                                            role="button"
+                                        >
+                                            <TbPencil />
+                                        </div>
+                                    </Tooltip>
+                                    <Tooltip title="Clone">
+                                        <div
+                                            className="text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
+                                            role="button"
+                                        >
+                                            <TbCopy />
+                                        </div>
+                                    </Tooltip>
+                                    <Tooltip title="Change Status">
+                                        <div
+                                            className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                                            role="button"
+                                        >
+                                            <TbSwitchHorizontal />
+                                        </div>
+                                    </Tooltip>
+                                    <Tooltip title="Delete">
+                                        <div
+                                            className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                                            role="button"
+                                        >
+                                            <TbTrash />
+                                        </div>
+                                    </Tooltip>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            </>
+        );
+    }
 
     const companyData = [
         {
@@ -1668,22 +2142,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div>
                                     </div>
                                     <DataTable1
-                                        columns={companyColumns}
-                                        data={companyData}
+                                        columns={opportunitiesColumns}
+                                        data={opportunitiesData}
+                                        onExpandedChange={() => setExpanded}
                                         getRowCanExpand={() => true}
-                                        renderSubComponent={({ row }) => (
-                                            <div className="p-4 bg-gray-50">
-                                                {/* Render whatever you want for expanded row */}
-                                                <strong>Products:</strong>
-                                                <ul>
-                                                    {row.original.subRows?.map((p, idx) => (
-                                                        <li key={idx}>
-                                                            {p.productName} - {p.brand} ({p.status})
-                                                        </li>
-                                                    )) ?? <li>No products</li>}
-                                                </ul>
-                                            </div>
-                                        )}
+                                        renderSubComponent={({ row }) => <ExpandedOpportunityDetails row={row} />}
                                     />
 
                                     {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
@@ -1803,7 +2266,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {/* Accounts  */}
                         {selectedCategory === 'Accounts' && (
                             <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                {/* <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
@@ -1890,12 +2353,9 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     <DataTable
                                         columns={productColumns}
                                         data={productData}
-                                    // loading={isLoading}
                                     />
 
-                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
-                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
-                                </div>
+                                </div> */}
                             </div>
                         )}
                         {/* Accounts Ends */}
@@ -1903,7 +2363,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {/* Tasks  */}
                         {selectedCategory === 'Tasks' && (
                             <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                {/* <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
@@ -2002,12 +2462,9 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     <DataTable
                                         columns={partnerColumns}
                                         data={wallListingData}
-                                    // loading={isLoading}
                                     />
 
-                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
-                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
-                                </div>
+                                </div> */}
                             </div>
                         )}
                         {/* Tasks */}
@@ -2015,7 +2472,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {/* Web Analytics  */}
                         {selectedCategory === 'Web Analytics' && (
                             <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                {/* <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
@@ -2122,12 +2579,9 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     <DataTable
                                         columns={wallListingColumns}
                                         data={wallListingData}
-                                    // loading={isLoading}
                                     />
 
-                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
-                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
-                                </div>
+                                </div> */}
                             </div>
                         )}
                         {/* Web Analytics Ends */}
@@ -2135,7 +2589,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {/* Marketing  */}
                         {selectedCategory === 'Marketing' && (
                             <div>
-                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                {/* <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
@@ -2228,12 +2682,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     <DataTable
                                         columns={teamColumns}
                                         data={wallListingData}
-                                    // loading={isLoading}
                                     />
-
-                                    {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
-                                    {/* Note :- Trust  = ( Company Activity, response rate and verification */}
-                                </div>
+                                </div> */}
                             </div>
                         )}
                         {/* Marketing */}

@@ -30,6 +30,7 @@ import {
   TbFilter,
   TbPlus,
   TbCloudUpload,
+  TbReload,
   // Add other icons if used by ActionColumn or other parts
 } from "react-icons/tb";
 
@@ -111,10 +112,10 @@ function exportToCsvDocument(filename: string, rows: DocumentItem[], docTypeOpti
 // --- ActionColumn, Search, TableTools, SelectedFooter (UI remains same) ---
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => { /* ... as before ... */ return ( <div className="flex items-center justify-center"> <Tooltip title="Edit"> <div className={"text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"} role="button" onClick={onEdit}><TbPencil /></div> </Tooltip> <Tooltip title="Delete"> <div className={"text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"} role="button" onClick={onDelete}><TbTrash /></div> </Tooltip> </div> ); };
 type DocumentSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const DocumentSearch = React.forwardRef<HTMLInputElement, DocumentSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search Name, Type..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const DocumentSearch = React.forwardRef<HTMLInputElement, DocumentSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 DocumentSearch.displayName = "DocumentSearch";
-type DocumentTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
-const DocumentTableTools = ({ onSearchChange, onFilter, onExport }: DocumentTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><DocumentSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type DocumentTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: ()=> void};
+const DocumentTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: DocumentTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> <div className="flex-grow"><DocumentSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">  <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
 type DocumentTableProps = { columns: ColumnDef<DocumentItem>[]; data: DocumentItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: DocumentItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: DocumentItem) => void; onAllRowSelect: (checked: boolean, rows: Row<DocumentItem>[]) => void; };
 const DocumentTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: DocumentTableProps) => ( <DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} /> );
 type DocumentSelectedFooterProps = { selectedItems: DocumentItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
@@ -280,9 +281,9 @@ const Documents = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Documents List</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Document</Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
-          <DocumentTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <DocumentTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters} />
           <div className="mt-4">
             <DocumentTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
