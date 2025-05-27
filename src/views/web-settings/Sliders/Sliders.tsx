@@ -417,13 +417,13 @@ const SlidersTableTools = ({
       >
         Filter
       </Button>
-      <Button
+      {/* <Button
         icon={<TbCloudDownload />}
         onClick={onImport}
         className="w-full sm:w-auto"
       >
         Import
-      </Button>
+      </Button> */}
       <Button
         icon={<TbCloudUpload />}
         onClick={onExport}
@@ -1670,7 +1670,7 @@ const Sliders = () => {
         </p>
       </ConfirmDialog>
 
-      <Drawer
+      {/* <Drawer
         title="Import Sliders"
         isOpen={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
@@ -1720,7 +1720,7 @@ const Sliders = () => {
             </Button>
           </div>
         </div>
-      </Drawer>
+      </Drawer> */}
 
       <Dialog
         isOpen={isImageViewerOpen}

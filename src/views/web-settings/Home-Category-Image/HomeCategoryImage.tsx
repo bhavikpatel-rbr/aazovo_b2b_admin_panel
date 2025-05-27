@@ -156,7 +156,7 @@ const ActionColumn = React.memo(({ onEdit, onDelete }: { onEdit: () => void; onD
 
 type HomeCategorySearchProps = { onInputChange: (value: string) => void; };
 const HomeCategoryTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: HomeCategoryTableProps) => ( <DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} /> );
-const HomeCategorySearch = React.forwardRef<HTMLInputElement, HomeCategorySearchProps>(({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search by Category, Link, ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const HomeCategorySearch = React.forwardRef<HTMLInputElement, HomeCategorySearchProps>(({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 HomeCategorySearch.displayName = "HomeCategorySearch";
 
 type HomeCategoryTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void;};
@@ -563,7 +563,7 @@ const HomeCategoriesListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                 <h5 className="mb-2 sm:mb-0">Home Page Categories</h5>
-                <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === 'loading' || isSubmitting}>Add New Entry</Button>
+                <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === 'loading' || isSubmitting}>Add New</Button>
             </div>
           <HomeCategoryTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
