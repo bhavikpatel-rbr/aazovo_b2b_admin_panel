@@ -77,8 +77,8 @@ const masterRoutes: Routes = [
         },
     },
     {
-        key: 'master.productSpecification',
-        path: `${MASTER_PREFIX_PATH}/product-specification`,
+        key: 'master.productSpec',
+        path: `${MASTER_PREFIX_PATH}/product-spec`,
         component: lazy(() => import('@/views/master/Product-Specification')),
         authority: [ADMIN],
         meta: {
