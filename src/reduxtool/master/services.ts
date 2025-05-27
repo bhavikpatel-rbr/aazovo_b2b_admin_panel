@@ -808,7 +808,7 @@ export const editSlidersListAsync = async (brandId: number | string, formData: F
 
 export const deletSlidersListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/setting/slider/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/slider/${unitData}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -939,17 +939,21 @@ export const addTrandingCarouselAsync = async (unitData: FormData) => {
 }
 
 export const editTrandingCarouselAsync = async (unitData: any) => {
-  console.log(unitData);
-
-  console.log({ unitData });
-
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/trending_carousel/${unitData?.id}`, { _method: "PUT", images: unitData?.images, links: unitData?.links })
-    return response
+    const response = await axiosInstance.post(
+      `${config.apiURL}/other/trending_carousel/${unitData?.id}`,
+      unitData?.formData, // ✅ send raw FormData
+      {
+        headers: {
+          "Content-Type": "multipart/form-data", // ✅ Required for file + FormData
+        },
+      }
+    );
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
 
 
 
