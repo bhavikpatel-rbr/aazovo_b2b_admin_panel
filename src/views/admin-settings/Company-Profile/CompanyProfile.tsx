@@ -508,9 +508,9 @@ const CompanyProfile = () => {
         }
       >
         <div className="flex gap-2 items-end ">
-          {logoPreviewUrl ? (
+          {metaLogoPreviewUrl ? (
             <img
-              src={logoPreviewUrl}
+              src={metaLogoPreviewUrl}
               alt="New Logo Preview"
               className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
             />
