@@ -983,10 +983,10 @@ export const getProductSepecificationAsync = async () => {
 export const addProductSepecificationAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/master/product_spec`, unitData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -1898,6 +1898,15 @@ export const editGlobalSettingAsync = async (settingId: number | string, formDat
         },
       }
     );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const getMembersAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/customer?page=1`);
     return response;
   } catch (err) {
     return isAxiosError(err);
