@@ -305,7 +305,6 @@ const HomeCategoriesListing = () => {
       console.log("Editing Mode - keep_image_ids[]:", keepImageIds);
     }
 
-    console.log("--- FormData to be sent: ---");
     for (let pair of formDataToSubmit.entries()) {
         if (pair[1] instanceof File) {
             console.log(`  ${pair[0]}: File - ${pair[1].name}, Size - ${pair[1].size}, Type - ${pair[1].type}`);
@@ -313,7 +312,6 @@ const HomeCategoriesListing = () => {
             console.log(`  ${pair[0]}: ${pair[1]}`);
         }
     }
-    console.log("--- End of FormData ---");
     
     try {
       if (editingItem) {
@@ -347,8 +345,8 @@ const HomeCategoriesListing = () => {
     setIsDeleting(true); 
     setSingleDeleteConfirmOpen(false); 
     try { 
-      // Assuming deleteAllHomeCategoryAction can take a single ID string
-      await dispatch(deleteAllHomeCategoryAction({ ids: String(itemToDelete.id) })).unwrap(); 
+      // Assuming deletAllHomeCategoryAction can take a single ID string
+      await dispatch(deletAllHomeCategoryAction({ ids: String(itemToDelete.id) })).unwrap(); 
       const catName = CategoriesData.find((opt: GeneralCategoryListItem) => opt.value === String(itemToDelete.category_id))?.label || String(itemToDelete.id); 
       toast.push(<Notification title="Entry Deleted" type="success" duration={2000}>{`Entry for "${catName}" deleted.`}</Notification>); 
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); 
@@ -369,7 +367,7 @@ const HomeCategoriesListing = () => {
     if (validItems.length === 0) { setIsDeleting(false); return; } 
     const idsToDelete = validItems.map(item => String(item.id)); 
     try { 
-      await dispatch(deleteAllHomeCategoryAction({ ids: idsToDelete.join(',') })).unwrap(); 
+      await dispatch(deletAllHomeCategoryAction({ ids: idsToDelete.join(',') })).unwrap(); 
       toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${validItems.length} entr(ies) deleted.`}</Notification>); 
       setSelectedItems([]); 
       dispatch(getHomeCategoryAction()); 
@@ -447,21 +445,37 @@ const HomeCategoriesListing = () => {
     { header: "Category Name", accessorKey: "category_name", enableSorting: true, size: 200 },
     { header: "View More Link", accessorKey: "view_more", enableSorting: false, size: 250, cell: ({row}) => row.original.view_more ? <a href={row.original.view_more} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block max-w-[200px]" title={row.original.view_more}>{row.original.view_more}</a> : <span className="text-gray-400">-</span> },
     { header: "Images", accessorKey: "images", enableSorting: false, size: 150, 
-      cell: ({row}) => (
-        <div className="flex items-center -space-x-2"> 
-          {row.original.images.length === 0 && <span className="text-xs text-gray-400 italic">No images</span>}
-          {row.original.images.slice(0, 3).map((img, idx) => (
-            <Tooltip title={img.url} key={img.id || `img-${idx}`}>
-              <Avatar size={30} shape="circle" src={img.url || undefined} icon={<TbPhoto />} className="ring-2 ring-white dark:ring-gray-800"/>
-            </Tooltip>
-          ))} 
-          {row.original.images.length > 3 && 
-            <Avatar size={30} shape="circle" className="ring-2 ring-white dark:ring-gray-800 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 text-xs font-semibold">
-              +{row.original.images.length - 3}
-            </Avatar>
-          }
-        </div>
-      )
+      cell: ({ row }) => {
+        const images = Array.isArray(row.original.images) ? row.original.images : [];
+
+        return (
+          <div className="flex items-center -space-x-2">
+            {images.length === 0 && (
+              <span className="text-xs text-gray-400 italic">No images</span>
+            )}
+            {images.slice(0, 3).map((img, idx) => (
+              <Tooltip title={img.url} key={`img-${idx}`}>
+                <Avatar
+                  size={30}
+                  shape="circle"
+                  src={img.url}
+                  icon={<TbPhoto />}
+                  className="ring-2 ring-white dark:ring-gray-800"
+                />
+              </Tooltip>
+            ))}
+            {images.length > 3 && (
+              <Avatar
+                size={30}
+                shape="circle"
+                className="ring-2 ring-white dark:ring-gray-800 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 text-xs font-semibold"
+              >
+                +{images.length - 3}
+              </Avatar>
+            )}
+          </div>
+        );
+      },
     },
     { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
   ], [openEditDrawer, handleDeleteClick]);
