@@ -35,7 +35,8 @@ import Dropdown from "@/components/ui/Dropdown";
 // Icons
 import {
   TbPencil, TbTrash, TbChecks, TbSearch, TbCloudUpload, TbFilter, TbPlus,
-  TbDotsVertical, TbEye, TbUserPlus, TbArrowsExchange, TbRocket, TbInfoCircle
+  TbDotsVertical, TbEye, TbUserPlus, TbArrowsExchange, TbRocket, TbInfoCircle,
+  TbBulb
 } from "react-icons/tb";
 
 // Types
@@ -75,7 +76,7 @@ const leadStatusColor: Record<LeadStatus | 'default', string> = { /* ... (same a
   New: "bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200", Contacted: "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200", Qualified: "bg-indigo-100 text-indigo-700 dark:bg-indigo-700/30 dark:text-indigo-200", "Proposal Sent": "bg-purple-100 text-purple-700 dark:bg-purple-700/30 dark:text-purple-200", Negotiation: "bg-violet-100 text-violet-700 dark:bg-violet-700/30 dark:text-violet-200", "Follow Up": "bg-amber-100 text-amber-700 dark:bg-amber-700/30 dark:text-amber-200", Won: "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200", Lost: "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200", default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
 };
 const enquiryTypeColor: Record<EnquiryType | 'default', string> = { /* ... (same as your original) ... */
-  "Product Info": "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200", "Quote Request": "bg-cyan-100 text-cyan-700 dark:bg-cyan-700/30 dark:text-cyan-200", "Demo Request": "bg-teal-100 text-teal-700 dark:bg-teal-700/30 dark:text-teal-200", Support: "bg-pink-100 text-pink-700 dark:bg-pink-700/30 dark:text-pink-200", Partnership: "bg-lime-100 text-lime-700 dark:bg-lime-700/30 dark:text-lime-200", Sourcing: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-700/30 dark:text-fuchsia-200", Other: "bg-stone-100 text-stone-700 dark:bg-stone-700/30 dark:text-stone-200", default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
+  "Product Info": "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200", "Quote Request": "bg-cyan-100 text-cyan-700 dark:bg-cyan-700/30 dark:text-cyan-200", "Demo Request": "bg-teal-100 text-teal-700 dark:bg-teal-700/30 dark:text-teal-200", Support: "bg-pink-100 text-pink-700 dark:bg-pink-700/30 dark:text-pink-200", Partnership: "bg-lime-100 text-lime-700 dark:bg-lime-700/30 dark:text-lime-200", Sourcing: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-700/30 dark:text-fuchsia-200", Other: "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200", default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
 };
 
 // --- Dummy Data for Selects (used by filters and view dialog) ---
@@ -95,13 +96,19 @@ function exportLeadsToCsv(filename: string, rows: LeadListItem[]) { /* ... (your
 // --- Helper Components (LeadActionColumn, LeadSearch, etc. - Keep your existing complex ones) ---
 const LeadActionColumn = ({ onViewDetail, onEdit, onDelete, onAssign, onChangeStatus, onConvertToOpportunity }: any) => (
     <div className="flex items-center justify-center gap-1"> {/* Reduced gap for tighter look */}
-        <Tooltip title="View"><Button shape="circle" variant="plain" size="sm" icon={<TbEye />} onClick={onViewDetail} /></Tooltip>
-        <Tooltip title="Edit"><Button shape="circle" variant="plain" size="sm" icon={<TbPencil />} onClick={onEdit} /></Tooltip>
-        <Tooltip title="Delete"><Button shape="circle" variant="plain" size="sm" icon={<TbTrash />} onClick={onDelete} /></Tooltip>
-        <Dropdown placement="bottom-end" renderTitle={<Tooltip title="More Actions"><Button shape="circle" variant="plain" size="sm" icon={<TbDotsVertical />} /></Tooltip>}>
-            <Dropdown.Item onClick={onAssign} className="flex items-center gap-2"><TbUserPlus/>Assign Lead</Dropdown.Item>
-            <Dropdown.Item onClick={onChangeStatus} className="flex items-center gap-2"><TbArrowsExchange/>Change Status</Dropdown.Item>
-            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2"><TbRocket/>Convert</Dropdown.Item>
+        <Tooltip title="View"><div className="text-xl" onClick={onViewDetail} ><TbEye /></div></Tooltip>
+        <Tooltip title="Edit"><div className="text-xl" onClick={onEdit}><TbPencil /></div> </Tooltip>
+        <Tooltip title="Delete"><div className="text-xl" onClick={onDelete} > <TbTrash /></div></Tooltip>
+        <Dropdown placement="bottom-end" className="" renderTitle={<Tooltip title="More Actions"><div className="text-xl"><TbDotsVertical /></div></Tooltip>}>
+            <Dropdown.Item onClick={onAssign} className="flex items-center gap-2 text-xs"><TbUserPlus/>Assign Lead</Dropdown.Item>
+            <Dropdown.Item onClick={onChangeStatus} className="flex items-center gap-2 text-xs"><TbArrowsExchange/>Change Status</Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2 text-xs"><TbBulb/>Match Opportunity</Dropdown.Item>
+            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs"><TbRocket/>Convert to deal</Dropdown.Item>
+            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">Request For</Dropdown.Item>
+            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">Add in Active</Dropdown.Item>
+            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">Add Schedule</Dropdown.Item>
+            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">Add Task</Dropdown.Item>
+            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">View Alert</Dropdown.Item>
         </Dropdown>
     </div>
 );
@@ -255,13 +262,53 @@ const LeadsListing = () => {
   const columns: ColumnDef<LeadListItem>[] = useMemo(() => [
     // ... (Keep your existing column definitions) ...
     // Ensure onEdit in LeadActionColumn calls handleOpenEditLeadPage
-    { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<LeadListItem, any>) => <Tag className={`${leadStatusColor[props.row.original.status] || leadStatusColor.default} text-white capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag> },
-    { header: "Enquiry Type", accessorKey: "enquiryType", size: 140, cell: (props: CellContext<LeadListItem, any>) => <Tag className={`${enquiryTypeColor[props.row.original.enquiryType] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiryType}</Tag> },
-    { header: "Lead Number", accessorKey: "leadNumber", size: 130 },
-    { header: "Product", accessorKey: "productName", size: 180, cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || '-' },
-    { header: "Member", accessorKey: "memberName", size: 150, cell: (props: CellContext<LeadListItem, any>) => props.row.original.memberName || props.row.original.memberId },
-    { header: "Sales Person", accessorKey: "salesPersonName", size: 140, cell: (props: CellContext<LeadListItem, any>) => props.row.original.salesPersonName || 'Unassigned' },
-    { header: "Created At", accessorKey: "createdAt", size: 160, cell: (props: CellContext<LeadListItem, any>) => dayjs(props.row.original.createdAt).format("YYYY-MM-DD HH:mm") },
+    { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<LeadListItem, any>) => <Tag className={`${leadStatusColor[props.row.original.status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag> },
+    { header: "Lead", accessorKey: "leadNumber", size: 130, 
+      cell: (props)=>{
+        return (
+          <div className="flex flex-col gap-0.5 text-xs">
+            <span>{props.getValue()}</span>
+            <div>
+              <Tag className={`${enquiryTypeColor[props.row.original.enquiryType] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiryType}</Tag>
+            </div>
+          </div>
+        )
+      }
+    },
+    // { header: "Enquiry Type", accessorKey: "enquiryType", size: 140, cell: (props: CellContext<LeadListItem, any>) => <Tag className={`${enquiryTypeColor[props.row.original.enquiryType] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiryType}</Tag> },
+    { header: "Product", accessorKey: "productName", size: 200, cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || '-' },
+    { header: "Member", accessorKey: "memberName", size: 150, 
+      cell: (props: CellContext<LeadListItem, any>) => {
+        // props.row.original.memberName || props.row.original.memberId
+        return (
+          <div className="flex flex-col gap-0.5 text-xs">
+            {/* <span>Buyer: {props.row.original.memberId}</span> */}
+            <b>Buyer: {props.row.original.memberId}</b>
+            <span>Dharmesh Soni</span>
+            <b>Seller: 7022359</b>
+            <span>Mahesh Bhatt</span>
+          </div>
+        )
+      } 
+    },
+    { header: "Want To", 
+      size: 220,
+      cell : (props)=>{
+        return (
+          <div className="flex flex-col gap-0.5 text-xs">
+            <div>
+              <Tag>Buy</Tag>
+            </div>
+            <span>Qty: 400</span>
+            <span>Target Price: 5000</span>
+            <span>Sales Person : {props.row.original.salesPersonName || "Mukesh"}</span>
+            <b>{dayjs(props.row.original.createdAt).format("DD MMM, YYYY HH:mm")}</b>
+          </div>
+        )
+      }
+    },
+    // { header: "Sales Person", accessorKey: "salesPersonName", size: 140, cell: (props: CellContext<LeadListItem, any>) => props.row.original.salesPersonName || 'Unassigned' },
+    // { header: "Created At", accessorKey: "createdAt", size: 160, cell: (props: CellContext<LeadListItem, any>) => dayjs(props.row.original.createdAt).format("YYYY-MM-DD HH:mm") },
     { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" },
       cell: (props: CellContext<LeadListItem, any>) => (
         <LeadActionColumn

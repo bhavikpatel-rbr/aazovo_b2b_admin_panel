@@ -91,15 +91,18 @@ export const leadStatusOptions: {value: LeadStatus, label: string}[] = [
 ];
 
 export const enquiryTypeOptions: {value: EnquiryType, label: string}[] = [
-  { value: "Product Info", label: "Product Info" }, { value: "Quote Request", label: "Quote Request" },
-  { value: "Demo Request", label: "Demo Request" }, { value: "Support", label: "Support" },
-  { value: "Partnership", label: "Partnership" }, { value: "Sourcing", label: "Sourcing" },
+  { value: "Wall Listing", label: "Wall Listing" },
+  { value: "Manual Lead", label: "Manual Lead" },
+  { value: "From Inquiry", label: "From Inquiry" },
   { value: "Other", label: "Other" },
+  // { value: "Product Info", label: "Product Info" }, { value: "Quote Request", label: "Quote Request" },
+  // { value: "Demo Request", label: "Demo Request" }, { value: "Support", label: "Support" },
+  // { value: "Partnership", label: "Partnership" }, { value: "Sourcing", label: "Sourcing" },
 ];
 
 export const leadIntentOptions: {value: LeadIntent, label: string}[] = [
   { value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" },
-  { value: "Inquire", label: "Inquire" }, { value: "Partner", label: "Partner" },
+  { value: "Both", label: "Both" },
 ];
 
 export const deviceConditionOptions: {value: ProductCondition, label: string}[] = [
