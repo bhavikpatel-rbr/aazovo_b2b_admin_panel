@@ -21,7 +21,7 @@ import Textarea from "@/views/ui-components/forms/Input/Textarea";
 
 // Redux (Optional - for fetching/saving settings from a central store/API)
 import { useAppDispatch } from '@/reduxtool/store';
-import { getGlobalSettingsAction, updateGlobalSettingsAction } from '@/reduxtool/master/middleware';
+import { getGlobalSettingAction, updateGlobalSettingAction } from '@/reduxtool/master/middleware';
 
 // --- Define Global Settings Type ---
 export type GlobalSettingsData = {
@@ -145,7 +145,7 @@ type GlobalSettingsFormData = z.infer<typeof globalSettingsSchema>;
 
 // --- Main GlobalSettings Component ---
 const GlobalSettings = () => {
-  // const dispatch = useAppDispatch(); // For Redux
+  const dispatch = useAppDispatch(); // For Redux
   // const existingSettings = useAppSelector(selectGlobalSettings); // For Redux
   // const settingsStatus = useAppSelector(state => state.settings.status); // For Redux loading
 
@@ -219,7 +219,7 @@ const GlobalSettings = () => {
     };
 
     fetchSettings();
-    // If using Redux: dispatch(getGlobalSettingsAction());
+    dispatch(getGlobalSettingAction());
   }, [formMethods]); // formMethods.reset dependency
 
   // useEffect(() => { // For Redux, to update form when settings are fetched
@@ -237,7 +237,7 @@ const GlobalSettings = () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
     try {
-      // dispatch(updateGlobalSettingsAction(data)); // If using Redux
+      // dispatch(updateGlobalSettingAction(data)); // If using Redux
       setCurrentSettings(data as GlobalSettingsData); // Update local state for demo
       toast.push(
         <Notification title="Settings Saved" type="success" duration={3000}>

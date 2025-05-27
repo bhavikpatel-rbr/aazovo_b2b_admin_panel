@@ -31,6 +31,7 @@ import {
   TbPlus,
   TbCloudUpload,
   TbTrash,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -221,10 +222,12 @@ const ActionColumn = ({
   onEdit,
   onViewDetail,
   onChangeStatus,
+  onDelete, // Uncomment if you want to use delete action
 }: {
   onEdit: () => void;
   onViewDetail: () => void;
   onChangeStatus: () => void;
+  onDelete: () => void;
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
@@ -237,7 +240,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="View">
+      {/* <Tooltip title="View">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
@@ -245,31 +248,16 @@ const ActionColumn = ({
         >
           <TbEye />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Tooltip title="Delete">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
+          onClick={onDelete}
         >
           <TbTrash />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Share">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-          role="button"
-        >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
-        </div>
-      </Tooltip> */}
     </div>
   );
 };
@@ -293,17 +281,20 @@ type ItemTableToolsProps = {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: () => void;
 };
 const ItemTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters,
 }: ItemTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <ItemSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -1021,6 +1012,7 @@ const NumberSystems = () => {
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleExportData}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <DataTable
@@ -1113,7 +1105,7 @@ const NumberSystems = () => {
               <Button
                 size="sm"
                 className="mr-2"
-                onClick={closeFilterDrawer}
+                onClick={() => onClearFilters()}
                 type="button"
               >
                 Clear
@@ -1170,7 +1162,7 @@ const NumberSystems = () => {
           setSingleDeleteConfirmOpen(false);
           setItemToDelete(null);
         }}
-        confirmButtonColor="red-600"
+        // confirmButtonColor="red-600"
         onConfirm={onConfirmSingleDelete}
         loading={isDeleting}
       >

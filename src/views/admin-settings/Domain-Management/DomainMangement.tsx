@@ -1175,7 +1175,7 @@ const DomainManagementListing = () => {
               <Button
                 size="sm"
                 className="mr-2"
-                onClick={() => setIsFilterDrawerOpen(false)}
+                onClick={() => onClearFilters()}
                 type="button"
               >
                 Clear

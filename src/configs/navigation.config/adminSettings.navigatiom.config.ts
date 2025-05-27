@@ -38,7 +38,7 @@ const adminSettingsNavigationConfig: NavigationTree[] = [
             {
                 key: 'adminSettings.adminSlobalSettings',
                 path: `${ADMIN_SETTINGS_ROUTE}/global-adminSettings`,
-                title: 'Global adminSettings',
+                title: 'Global Admin Settings',
                 translateKey: 'nav.adminSettings.adminSlobalSettings',
                 icon: 'adminSlobalSettings',
                 type: NAV_ITEM_TYPE_ITEM,
@@ -46,7 +46,7 @@ const adminSettingsNavigationConfig: NavigationTree[] = [
                 meta: {
                     description: {
                         translateKey: 'nav.adminSettings.adminSlobalSettingsDesc',
-                        label: 'Manage global adminSettings',
+                        label: 'Manage global Admin Settings',
                     },
                 },
                 subMenu: [],
