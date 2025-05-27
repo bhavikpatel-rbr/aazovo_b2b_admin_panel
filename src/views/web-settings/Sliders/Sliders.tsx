@@ -73,14 +73,14 @@ type ApiSliderItem = {
   display_page: string;
   link?: string | null;
   source: "web" | "mobile" | "both";
-  status: "Active" | "Inactive";
+  status: "Active" | "Disabled";
   domain_ids?: string | null;
   slider_color?: string | null;
   created_at: string;
   updated_at: string;
 };
 
-export type SliderStatus = "active" | "inactive";
+export type SliderStatus = "active" | "disabled"; // Use 'disabled' to match API
 export type SliderItem = {
   id: number | string;
   title: string; // Title is still part of the data model
@@ -146,7 +146,7 @@ const sliderFormSchema = z.object({
   source: z.enum(sourceValues, {
     errorMap: () => ({ message: "Please select a source." }),
   }),
-  status: z.enum(["Active", "Inactive"], {
+  status: z.enum(["Active", "Disabled"], {
     errorMap: () => ({ message: "Please select a status." }),
   }),
   domain_ids: z.string().optional().nullable(),
@@ -184,16 +184,16 @@ const SLIDER_IMAGE_BASE_URL =
 
 const uiStatusOptions: { value: SliderStatus; label: string }[] = [
   { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
+  { value: "disabled", label: "Disabled" },
 ];
-const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [
+const apiStatusOptions: { value: "Active" | "Disabled"; label: string }[] = [
   { value: "Active", label: "Active" },
-  { value: "Inactive", label: "Inactive" },
+  { value: "Disabled", label: "Disabled" },
 ];
 const statusColor: Record<SliderStatus, string> = {
   active:
     "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
+  disabled: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
 };
 
 // --- CSV Exporter Utility ---
@@ -645,7 +645,7 @@ const Sliders = () => {
         displayPage: apiItem.display_page,
         link: apiItem.link || null,
         source: apiItem.source,
-        status: apiItem.status === "Active" ? "active" : "inactive",
+        status: apiItem.status === "Active" ? "active" : "disabled",
         domainIds: apiItem.domain_ids || null,
         sliderColor: apiItem.slider_color || null,
         createdAt: apiItem.created_at,
@@ -711,7 +711,7 @@ const Sliders = () => {
       display_page: slider.displayPage,
       link: slider.link,
       source: slider.source,
-      status: slider.status === "active" ? "Active" : "Inactive",
+      status: slider.status === "active" ? "Active" : "Disabled",
       domain_ids: slider.domainIds,
       slider_color: slider.sliderColor,
     });
@@ -780,6 +780,7 @@ const Sliders = () => {
     setIsProcessing(true);
     setSingleDeleteConfirmOpen(false);
     try {
+      console.log("Deleting slider:", sliderToDelete.id);
       await dispatch(deleteSliderAction(sliderToDelete.id)).unwrap();
 
       toast.push(
@@ -871,7 +872,7 @@ const Sliders = () => {
       display_page: slider.displayPage,
       link: slider.link,
       source: slider.source,
-      status: slider.status === "active" ? "Active" : "Inactive",
+      status: slider.status === "active" ? "Active" : "Disabled",
       domain_ids: slider.domainIds,
       slider_color: slider.sliderColor,
     });
@@ -1239,58 +1240,6 @@ const Sliders = () => {
           />
         </FormItem>
       )}
-      <FormItem
-        label={isEditMode ? "New Image (Optional)" : "Mobile Image"}
-        invalid={!!formMethods.formState.errors.image}
-        errorMessage={formMethods.formState.errors.image?.message as string}
-        isRequired={!isEditMode}
-      >
-        <Controller
-          name="image"
-          control={formMethods.control}
-          render={({ field: { onChange, onBlur, name, ref } }) => (
-            <Input
-              type="file"
-              name={name}
-              ref={ref}
-              onBlur={onBlur}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const file = e.target.files?.[0] || null;
-                onChange(file);
-                const setPreviewUrl = isEditMode
-                  ? setEditFormPreviewUrl
-                  : setAddFormPreviewUrl;
-                const currentPreviewUrl = isEditMode
-                  ? editFormPreviewUrl
-                  : addFormPreviewUrl;
-                if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
-                setPreviewUrl(file ? URL.createObjectURL(file) : null);
-              }}
-              accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
-            />
-          )}
-        />
-        {(isEditMode ? editFormPreviewUrl : addFormPreviewUrl) && (
-          <div className="mt-2">
-            <Avatar
-              src={isEditMode ? editFormPreviewUrl! : addFormPreviewUrl!}
-              size={80}
-              shape="square"
-            />
-            {isEditMode && (
-              <p className="text-xs text-gray-500 mt-1">
-                Preview of new image.
-              </p>
-            )}
-          </div>
-        )}
-        {isEditMode && (
-          <p className="text-xs text-gray-500 mt-1">
-            Leave blank to keep current image. Selecting a new file will replace
-            it.
-          </p>
-        )}
-      </FormItem>
       <FormItem
         label={isEditMode ? "New Image (Optional)" : "Web Image"}
         invalid={!!formMethods.formState.errors.image}
@@ -1678,7 +1627,7 @@ const Sliders = () => {
           setSliderToDelete(null);
         }}
         onConfirm={onConfirmSingleDelete}
-        loading={isProcessing}
+        // loading={isProcessing}
       >
         <p>
           Are you sure you want to delete the slider "

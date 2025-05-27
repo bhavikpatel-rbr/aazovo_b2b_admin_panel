@@ -597,7 +597,7 @@ export const editBlogsAsync = async (brandId: number | string, formData: FormDat
 
 export const deletBlogsAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/master/document_master/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/blog/${unitData.id}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -608,7 +608,7 @@ export const deleteAllBlogsAsync = async (unitData: any) => {
   try {
     console.log("unitData", unitData);
 
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/delete`, unitData)
+    const response = await axiosInstance.post(`${config.apiURL}/blog/delete`, unitData)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -808,7 +808,7 @@ export const editSlidersListAsync = async (brandId: number | string, formData: F
 
 export const deletSlidersListAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/setting/slider/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/slider/${unitData}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -837,18 +837,9 @@ export const getCompanyProfileAsync = async () => {
 
 
 export const editCompanyProfileListAsync = async (brandId: number | string, formData: FormData) => {
-  console.log("editBrandListAsync - brandId:", brandId);
-  console.log("editBrandListAsync - formData to be sent:");
-  for (const pair of formData.entries()) {
-    console.log(pair[0] + ': ' + pair[1]);
-  }
-
   try {
-    // The formData already contains _method: 'PUT'
-    // Axios will automatically set 'Content-Type': 'multipart/form-data'
-    // when the second argument to post/put is a FormData instance.
     const response = await axiosInstance.post(
-      `${config.apiURL}/setting/slider/${brandId}`, // Use brandId in the URL
+      `${config.apiURL}/setting/company_profile_setting/${brandId}`, // Use brandId in the URL
       formData,
       {
         headers: {
@@ -939,17 +930,21 @@ export const addTrandingCarouselAsync = async (unitData: FormData) => {
 }
 
 export const editTrandingCarouselAsync = async (unitData: any) => {
-  console.log(unitData);
-
-  console.log({ unitData });
-
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/trending_carousel/${unitData?.id}`, { _method: "PUT", images: unitData?.images, links: unitData?.links })
-    return response
+    const response = await axiosInstance.post(
+      `${config.apiURL}/other/trending_carousel/${unitData?.id}`,
+      unitData?.formData, // ✅ send raw FormData
+      {
+        headers: {
+          "Content-Type": "multipart/form-data", // ✅ Required for file + FormData
+        },
+      }
+    );
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
 
 
 
@@ -1474,7 +1469,7 @@ export const getHomeCategoryAsync = async () => {
 
 export const addHomeCategoryAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image`, unitData, {
+    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image`, unitData?.formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -1487,15 +1482,23 @@ export const addHomeCategoryAsync = async (unitData: any) => {
 
 
 export const editHomeCategoryAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
-
+  console.log('editHomeCategoryAsync - unitData:', unitData);
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/home_category_image/${unitData?.id}`, { _method: "PUT", category_id: unitData?.category_id, view_more: unitData?.view_more })
-    return response
+    // Send the formData directly
+    const response = await axiosInstance.post(
+      `${config.apiURL}/other/home_category_image/${unitData?.id}`,
+      unitData.formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
 
 export const deletHomeCategoryAsync = async (unitData: any) => {
   try {
