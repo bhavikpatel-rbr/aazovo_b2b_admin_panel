@@ -221,10 +221,12 @@ const ActionColumn = ({
   onEdit,
   onViewDetail,
   onChangeStatus,
+  onDelete, // Uncomment if you want to use delete action
 }: {
   onEdit: () => void;
   onViewDetail: () => void;
   onChangeStatus: () => void;
+  onDelete: () => void;
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
@@ -250,26 +252,11 @@ const ActionColumn = ({
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
+          onClick={onDelete}
         >
           <TbTrash />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Share">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-          role="button"
-        >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
-        </div>
-      </Tooltip> */}
     </div>
   );
 };
@@ -1113,7 +1100,7 @@ const NumberSystems = () => {
               <Button
                 size="sm"
                 className="mr-2"
-                onClick={closeFilterDrawer}
+                onClick={() => onClearFilters()}
                 type="button"
               >
                 Clear
@@ -1170,7 +1157,7 @@ const NumberSystems = () => {
           setSingleDeleteConfirmOpen(false);
           setItemToDelete(null);
         }}
-        confirmButtonColor="red-600"
+        // confirmButtonColor="red-600"
         onConfirm={onConfirmSingleDelete}
         loading={isDeleting}
       >
