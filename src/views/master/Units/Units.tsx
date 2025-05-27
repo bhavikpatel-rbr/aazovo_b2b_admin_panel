@@ -28,6 +28,7 @@ import {
   TbFilter,
   TbPlus,
   TbCloudUpload,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -205,19 +206,22 @@ const UnitsTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters,
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: ()=> void
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       {" "}
       <div className="flex-grow">
         {" "}
         <UnitsSearch onInputChange={onSearchChange} />{" "}
       </div>{" "}
-      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
         {" "}
         <Button
           icon={<TbFilter />}
@@ -804,6 +808,7 @@ const Units = () => {
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleExportData}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <UnitsTable

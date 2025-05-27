@@ -30,6 +30,7 @@ import {
   TbFilter,
   TbPlus,
   TbCloudUpload,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -134,7 +135,7 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
 type PriceListSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 const PriceListSearch = React.forwardRef<HTMLInputElement, PriceListSearchProps>(({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search Product Name, ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 PriceListSearch.displayName = "PriceListSearch";
-const PriceListTableTools = ({ onSearchChange, onFilter, onExport }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; }) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><PriceListSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+const PriceListTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: ()=> void; }) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> <div className="flex-grow"><PriceListSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"> <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button><Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
 type PriceListTableProps = { columns: ColumnDef<PriceListItem>[]; data: PriceListItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: PriceListItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: PriceListItem) => void; onAllRowSelect: (checked: boolean, rows: Row<PriceListItem>[]) => void; };
 const PriceListTable = (props: PriceListTableProps) => ( <DataTable selectable columns={props.columns} data={props.data} noData={!props.loading && props.data.length === 0} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} /> );
 type PriceListSelectedFooterProps = { selectedItems: PriceListItem[]; onDeleteSelected: () => void; isDeleting: boolean; }; // Added isDeleting
@@ -300,7 +301,7 @@ console.log("productsMasterData",productsMasterData);
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"> <h5 className="mb-2 sm:mb-0">Price List Management</h5> <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Item</Button> </div>
-          <PriceListTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <PriceListTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters} />
           <div className="mt-4"> <PriceListTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /> </div>
         </AdaptiveCard>
       </Container>
