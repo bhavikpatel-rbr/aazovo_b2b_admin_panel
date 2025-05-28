@@ -937,6 +937,7 @@ const DomainManagementListing = () => {
         label="Currency"
         invalid={!!formMethods.formState.errors.currency_id}
         errorMessage={formMethods.formState.errors.currency_id?.message}
+        className="col-span-2"
       >
         <Controller
           name="currency_id"
@@ -951,50 +952,50 @@ const DomainManagementListing = () => {
           )}
         />
       </FormItem>
-      <div /> {/* Spacer */}
       <div className="md:col-span-2 border-t pt-4 mt-2">
         <h6 className="text-sm font-semibold mb-2 flex items-center gap-2">
           <TbSettingsCog /> Numbering System For KYC Member
         </h6>
       </div>
-      <FormItem
-        label="Prefix For KYC"
-        invalid={!!formMethods.formState.errors.kycPrefix}
-        errorMessage={formMethods.formState.errors.kycPrefix?.message}
-      >
-        <Controller
-          name="kycPrefix"
-          control={formMethods.control}
-          render={({ field }) => <Input {...field} placeholder="e.g., EU-K-" />}
-        />
-      </FormItem>
-      <div /> {/* Spacer */}
-      <FormItem
-        label="Member ID Starting Number"
-        invalid={!!formMethods.formState.errors.kycStartNumber}
-        errorMessage={formMethods.formState.errors.kycStartNumber?.message}
-      >
-        <Controller
-          name="kycStartNumber"
-          control={formMethods.control}
-          render={({ field }) => (
-            <Input {...field} type="number" placeholder="e.g., 10001" />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Member ID Current Number"
-        invalid={!!formMethods.formState.errors.kycCurrentNumber}
-        errorMessage={formMethods.formState.errors.kycCurrentNumber?.message}
-      >
-        <Controller
-          name="kycCurrentNumber"
-          control={formMethods.control}
-          render={({ field }) => (
-            <Input {...field} type="number" placeholder="e.g., 10500" />
-          )}
-        />
-      </FormItem>
+      <div className="col-span-2 md:grid md:grid-cols-3 gap-2">
+        <FormItem
+          label="Prefix For KYC"
+          invalid={!!formMethods.formState.errors.kycPrefix}
+          errorMessage={formMethods.formState.errors.kycPrefix?.message}
+        >
+          <Controller
+            name="kycPrefix"
+            control={formMethods.control}
+            render={({ field }) => <Input {...field} placeholder="e.g., EU-K-" />}
+          />
+        </FormItem>
+        <FormItem
+          label="Member ID Starting Number"
+          invalid={!!formMethods.formState.errors.kycStartNumber}
+          errorMessage={formMethods.formState.errors.kycStartNumber?.message}
+        >
+          <Controller
+            name="kycStartNumber"
+            control={formMethods.control}
+            render={({ field }) => (
+              <Input {...field} type="number" placeholder="e.g., 10001" />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Member ID Current Number"
+          invalid={!!formMethods.formState.errors.kycCurrentNumber}
+          errorMessage={formMethods.formState.errors.kycCurrentNumber?.message}
+        >
+          <Controller
+            name="kycCurrentNumber"
+            control={formMethods.control}
+            render={({ field }) => (
+              <Input {...field} type="number" placeholder="e.g., 10500" />
+            )}
+          />
+        </FormItem>
+      </div>
       <div className="md:col-span-2 border-t pt-4 mt-2">
         <h6 className="text-sm font-semibold mb-2 flex items-center gap-2">
           <TbSettingsCog /> Numbering System For Temporary Member

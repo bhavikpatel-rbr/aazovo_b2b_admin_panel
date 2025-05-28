@@ -13,15 +13,15 @@ const adminSettingsRoutes: Routes = [
             pageContainerType: 'contained',
         },
     },
-    {
-        key: 'adminSettings.adminSlobalSettings',
-        path: `${ADMIN_SETTINGS_ROUTE}/global-adminSettings`,
-        component: lazy(() => import('@/views/admin-settings/Global-Settings')),
-        authority: [ADMIN],
-        meta: {
-            pageContainerType: 'contained',
-        },
-    },
+    // {
+    //     key: 'adminSettings.adminSlobalSettings',
+    //     path: `${ADMIN_SETTINGS_ROUTE}/global-adminSettings`,
+    //     component: lazy(() => import('@/views/admin-settings/Global-Settings')),
+    //     authority: [ADMIN],
+    //     meta: {
+    //         pageContainerType: 'contained',
+    //     },
+    // },
     {
         key: 'adminSettings.domainManagement',
         path: `${ADMIN_SETTINGS_ROUTE}/domain-management`,
