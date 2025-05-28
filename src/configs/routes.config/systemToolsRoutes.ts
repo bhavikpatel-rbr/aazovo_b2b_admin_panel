@@ -1,7 +1,7 @@
-import { lazy } from 'react';
-import { SYSTEM_TOOLS_PREFIX_PATH } from '@/constants/route.constant';
-import { ADMIN } from '@/constants/roles.constant';
-import type { Routes } from '@/@types/routes';
+import { lazy } from 'react'
+import { SYSTEM_TOOLS_PREFIX_PATH } from '@/constants/route.constant'
+import { ADMIN } from '@/constants/roles.constant'
+import type { Routes } from '@/@types/routes'
 
 const systemToolsRoutes: Routes = [
     {
@@ -17,6 +17,16 @@ const systemToolsRoutes: Routes = [
         key: 'systemTools.formBuilder',
         path: `${SYSTEM_TOOLS_PREFIX_PATH}/form-builder`,
         component: lazy(() => import('@/views/system-tools/Form-Builder')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'systemTools.formBuilderForm',
+        path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-create`,
+        component: lazy(() =>import('@/views/system-tools/Form-Builder/FormBuilderForm'),
+        ),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',
@@ -40,6 +50,6 @@ const systemToolsRoutes: Routes = [
             pageContainerType: 'contained',
         },
     },
-];
+]
 
-export default systemToolsRoutes;
+export default systemToolsRoutes
