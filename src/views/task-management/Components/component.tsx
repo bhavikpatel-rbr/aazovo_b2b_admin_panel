@@ -708,15 +708,13 @@ export const useTaskListingLogic = (initialData: TaskItem[]) => {
     },
     [setSelectedTasks]
   );
-  const handleEdit = useCallback(
-    (task: TaskItem) => {
-      console.log(
-        "Edit task:",
-        task.id
-      ); /* navigate(`/tasks/edit/${task.id}`); */
-    },
-    [navigate]
-  );
+    const handleEdit = useCallback(
+      (task: TaskItem) => {
+        navigate(`/task/task-list/edit/${task.id}`);
+      },
+      [navigate]
+    );
+
   const handleClone = useCallback(
     (taskToClone: TaskItem) => {
       console.log("Cloning task:", taskToClone.id);

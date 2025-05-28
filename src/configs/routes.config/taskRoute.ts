@@ -23,14 +23,24 @@ const taskRoute: Routes = [
         },
     },
     {
-        key: 'task.taskFeedback',
-        path: `${TASK_PREFIX_PATH}/task-feedback`,
-        component: lazy(() => import('@/views/task-management/Task-Feedback')),
+        key: 'task.taskList',
+        path: `${TASK_PREFIX_PATH}/task-list/create`,
+        component: lazy(() => import('@/views/task-management/Task-List/components/CreateTaskPage')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',
         },
     },
+    {
+        key: 'task.taskList',
+        path: `${TASK_PREFIX_PATH}/task-list/edit/:id`,
+        component: lazy(() => import('@/views/task-management/Task-List/components/EditTaskPage')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    }
+
 ];
 
 export default taskRoute;
