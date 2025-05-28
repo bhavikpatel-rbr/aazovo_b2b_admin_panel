@@ -55,6 +55,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import { useNavigate } from "react-router-dom";
 // Redux (Optional)
 // import { useAppDispatch } from '@/reduxtool/store';
 // import { getFormsAction, addFormAction, ... } from '@/reduxtool/formbuilder/middleware';
@@ -427,6 +428,7 @@ const FormBuilder = () => {
   const [itemToDelete, setItemToDelete] = useState<FormBuilderItem | null>(
     null
   );
+  const navigate = useNavigate()
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
 
@@ -946,220 +948,222 @@ const FormBuilder = () => {
   // --- Render Form for Drawer ---
   const renderDrawerForm = (
     currentFormMethods: typeof formMethods // Renamed parameter
-  ) => (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-        <FormItem
-          label="Form Name"
-          invalid={!!currentFormMethods.formState.errors.formName}
-          errorMessage={currentFormMethods.formState.errors.formName?.message}
-        >
-          <Controller
-            name="formName"
-            control={currentFormMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                prefix={<TbFileDescription />}
-                placeholder="e.g., Customer Satisfaction Survey"
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Status"
-          invalid={!!currentFormMethods.formState.errors.status}
-          errorMessage={currentFormMethods.formState.errors.status?.message}
-        >
-          <Controller
-            name="status"
-            control={currentFormMethods.control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select status"
-                options={FORM_STATUS_OPTIONS}
-                value={FORM_STATUS_OPTIONS.find((o) => o.value === field.value)}
-                onChange={(opt) => field.onChange(opt?.value)}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Department Name"
-          invalid={!!currentFormMethods.formState.errors.departmentName}
-          errorMessage={
-            currentFormMethods.formState.errors.departmentName?.message
-          }
-        >
-          <Controller
-            name="departmentName"
-            control={currentFormMethods.control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select department"
-                options={DEPARTMENT_OPTIONS}
-                value={DEPARTMENT_OPTIONS.find((o) => o.value === field.value)}
-                onChange={(opt) => field.onChange(opt?.value)}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Category Name"
-          invalid={!!currentFormMethods.formState.errors.categoryName}
-          errorMessage={
-            currentFormMethods.formState.errors.categoryName?.message
-          }
-        >
-          <Controller
-            name="categoryName"
-            control={currentFormMethods.control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select category"
-                options={CATEGORY_OPTIONS}
-                value={CATEGORY_OPTIONS.find((o) => o.value === field.value)}
-                onChange={(opt) => field.onChange(opt?.value)}
-              />
-            )}
-          />
-        </FormItem>
-      </div>
-
-      <div className="border-t my-4 dark:border-gray-600"></div>
-      <h5 className="mb-2 text-base font-semibold flex items-center gap-2">
-        <TbListDetails /> Questions Section
-      </h5>
-      {currentFormMethods.formState.errors.questions &&
-        !Array.isArray(currentFormMethods.formState.errors.questions) && (
-          <p className="text-red-500 text-xs mb-2">
-            {currentFormMethods.formState.errors.questions.message}
-          </p>
-        )}
-      <div className="space-y-6">
-        {questionFields.map((field, index) => (
-          <Card
-            key={field.id}
-            bodyClass="p-4"
-            className="relative bg-gray-50 dark:bg-gray-700/50 border dark:border-gray-600 rounded-lg"
+  ) => {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          <FormItem
+            label="Form Name"
+            invalid={!!currentFormMethods.formState.errors.formName}
+            errorMessage={currentFormMethods.formState.errors.formName?.message}
           >
-            {questionFields.length > 1 && (
-              <Tooltip title="Remove Question Section">
-                <Button
-                  shape="circle"
-                  size="xs"
-                  icon={<TbX />}
-                  onClick={() => removeQuestion(index)}
-                  className="absolute top-2 right-2 !bg-red-100 hover:!bg-red-200 dark:!bg-red-500/30 dark:hover:!bg-red-500/50 text-red-600 dark:text-red-400 !border-red-300 dark:!border-red-500"
+            <Controller
+              name="formName"
+              control={currentFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  prefix={<TbFileDescription />}
+                  placeholder="e.g., Customer Satisfaction Survey"
                 />
-              </Tooltip>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              <FormItem
-                label={`Question Section Title ${index + 1} (Optional)`}
-                className="md:col-span-2"
-                invalid={
-                  !!currentFormMethods.formState.errors.questions?.[index]
-                    ?.questionSectionTitle
-                }
-                errorMessage={
-                  currentFormMethods.formState.errors.questions?.[index]
-                    ?.questionSectionTitle?.message
-                }
-              >
-                <Controller
-                  name={`questions.${index}.questionSectionTitle`}
-                  control={currentFormMethods.control}
-                  render={({ field: qField }) => (
-                    <Input
-                      {...qField}
-                      placeholder="e.g., Personal Information"
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label={`Question ${index + 1}`}
-                className="md:col-span-2"
-                invalid={
-                  !!currentFormMethods.formState.errors.questions?.[index]
-                    ?.questionText
-                }
-                errorMessage={
-                  currentFormMethods.formState.errors.questions?.[index]
-                    ?.questionText?.message
-                }
-              >
-                <Controller
-                  name={`questions.${index}.questionText`}
-                  control={currentFormMethods.control}
-                  render={({ field: qField }) => (
-                    <Input textArea 
-                      {...qField}
-                      rows={2}
-                      placeholder="Enter your question here..."
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label={`Question Type ${index + 1}`}
-                invalid={
-                  !!currentFormMethods.formState.errors.questions?.[index]
-                    ?.questionType
-                }
-                errorMessage={
-                  currentFormMethods.formState.errors.questions?.[index]
-                    ?.questionType?.message
-                }
-              >
-                <Controller
-                  name={`questions.${index}.questionType`}
-                  control={currentFormMethods.control}
-                  render={({ field: qField }) => (
-                    <Select
-                      placeholder="Select type"
-                      options={QUESTION_TYPE_OPTIONS}
-                      value={QUESTION_TYPE_OPTIONS.find(
-                        (o) => o.value === qField.value
-                      )}
-                      onChange={(opt) => qField.onChange(opt?.value)}
-                    />
-                  )}
-                />
-              </FormItem>
-              {/* Placeholder for question options: Implement if needed */}
-              {["checkbox", "radio", "select"].includes(
-                formMethods.watch(`questions.${index}.questionType`)
-              ) && (
-                <div className="md:col-span-2 p-3 bg-gray-100 dark:bg-gray-800 rounded">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Dynamic options editor for Checkbox/Radio/Select types would
-                    go here. (Not implemented in this example).
-                  </p>
-                </div>
               )}
-            </div>
-          </Card>
-        ))}
+            />
+          </FormItem>
+          <FormItem
+            label="Status"
+            invalid={!!currentFormMethods.formState.errors.status}
+            errorMessage={currentFormMethods.formState.errors.status?.message}
+          >
+            <Controller
+              name="status"
+              control={currentFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select status"
+                  options={FORM_STATUS_OPTIONS}
+                  value={FORM_STATUS_OPTIONS.find((o) => o.value === field.value)}
+                  onChange={(opt) => field.onChange(opt?.value)}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Department Name"
+            invalid={!!currentFormMethods.formState.errors.departmentName}
+            errorMessage={
+              currentFormMethods.formState.errors.departmentName?.message
+            }
+          >
+            <Controller
+              name="departmentName"
+              control={currentFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select department"
+                  options={DEPARTMENT_OPTIONS}
+                  value={DEPARTMENT_OPTIONS.find((o) => o.value === field.value)}
+                  onChange={(opt) => field.onChange(opt?.value)}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Category Name"
+            invalid={!!currentFormMethods.formState.errors.categoryName}
+            errorMessage={
+              currentFormMethods.formState.errors.categoryName?.message
+            }
+          >
+            <Controller
+              name="categoryName"
+              control={currentFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select category"
+                  options={CATEGORY_OPTIONS}
+                  value={CATEGORY_OPTIONS.find((o) => o.value === field.value)}
+                  onChange={(opt) => field.onChange(opt?.value)}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+
+        <div className="border-t my-4 dark:border-gray-600"></div>
+        <h5 className="mb-2 text-base font-semibold flex items-center gap-2">
+          <TbListDetails /> Questions Section
+        </h5>
+        {currentFormMethods.formState.errors.questions &&
+          !Array.isArray(currentFormMethods.formState.errors.questions) && (
+            <p className="text-red-500 text-xs mb-2">
+              {currentFormMethods.formState.errors.questions.message}
+            </p>
+          )}
+        <div className="space-y-6">
+          {questionFields.map((field, index) => (
+            <Card
+              key={field.id}
+              bodyClass="p-4"
+              className="relative bg-gray-50 dark:bg-gray-700/50 border dark:border-gray-600 rounded-lg"
+            >
+              {questionFields.length > 1 && (
+                <Tooltip title="Remove Question Section">
+                  <Button
+                    shape="circle"
+                    size="xs"
+                    icon={<TbX />}
+                    onClick={() => removeQuestion(index)}
+                    className="absolute top-2 right-2 !bg-red-100 hover:!bg-red-200 dark:!bg-red-500/30 dark:hover:!bg-red-500/50 text-red-600 dark:text-red-400 !border-red-300 dark:!border-red-500"
+                  />
+                </Tooltip>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <FormItem
+                  label={`Question Section Title ${index + 1} (Optional)`}
+                  className="md:col-span-2"
+                  invalid={
+                    !!currentFormMethods.formState.errors.questions?.[index]
+                      ?.questionSectionTitle
+                  }
+                  errorMessage={
+                    currentFormMethods.formState.errors.questions?.[index]
+                      ?.questionSectionTitle?.message
+                  }
+                >
+                  <Controller
+                    name={`questions.${index}.questionSectionTitle`}
+                    control={currentFormMethods.control}
+                    render={({ field: qField }) => (
+                      <Input
+                        {...qField}
+                        placeholder="e.g., Personal Information"
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={`Question ${index + 1}`}
+                  className="md:col-span-2"
+                  invalid={
+                    !!currentFormMethods.formState.errors.questions?.[index]
+                      ?.questionText
+                  }
+                  errorMessage={
+                    currentFormMethods.formState.errors.questions?.[index]
+                      ?.questionText?.message
+                  }
+                >
+                  <Controller
+                    name={`questions.${index}.questionText`}
+                    control={currentFormMethods.control}
+                    render={({ field: qField }) => (
+                      <Input textArea 
+                        {...qField}
+                        rows={2}
+                        placeholder="Enter your question here..."
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={`Question Type ${index + 1}`}
+                  invalid={
+                    !!currentFormMethods.formState.errors.questions?.[index]
+                      ?.questionType
+                  }
+                  errorMessage={
+                    currentFormMethods.formState.errors.questions?.[index]
+                      ?.questionType?.message
+                  }
+                >
+                  <Controller
+                    name={`questions.${index}.questionType`}
+                    control={currentFormMethods.control}
+                    render={({ field: qField }) => (
+                      <Select
+                        placeholder="Select type"
+                        options={QUESTION_TYPE_OPTIONS}
+                        value={QUESTION_TYPE_OPTIONS.find(
+                          (o) => o.value === qField.value
+                        )}
+                        onChange={(opt) => qField.onChange(opt?.value)}
+                      />
+                    )}
+                  />
+                </FormItem>
+                {/* Placeholder for question options: Implement if needed */}
+                {["checkbox", "radio", "select"].includes(
+                  formMethods.watch(`questions.${index}.questionType`)
+                ) && (
+                  <div className="md:col-span-2 p-3 bg-gray-100 dark:bg-gray-800 rounded">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Dynamic options editor for Checkbox/Radio/Select types would
+                      go here. (Not implemented in this example).
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+        <Button
+          type="button"
+          variant="dashed"
+          icon={<TbPlus />}
+          onClick={() =>
+            appendQuestion({
+              questionSectionTitle: "",
+              questionText: "",
+              questionType: questionTypeValues[0],
+            })
+          }
+          className="mt-4 self-start"
+        >
+          Add Question Section
+        </Button>
       </div>
-      <Button
-        type="button"
-        variant="dashed"
-        icon={<TbPlus />}
-        onClick={() =>
-          appendQuestion({
-            questionSectionTitle: "",
-            questionText: "",
-            questionType: questionTypeValues[0],
-          })
-        }
-        className="mt-4 self-start"
-      >
-        Add Question Section
-      </Button>
-    </div>
-  );
+    )
+  };
 
   return (
     <>
@@ -1169,7 +1173,10 @@ const FormBuilder = () => {
             <h5 className="mb-2 sm:mb-0">
               Form Builder
             </h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+            <Button variant="solid" icon={<TbPlus />} 
+              // onClick={openAddDrawer}
+              onClick={()=>navigate("/system-tools/formbuilder-create")}
+            >
               Add New
             </Button>
           </div>
@@ -1296,13 +1303,13 @@ const FormBuilder = () => {
           </div>
         }
       >
-        <Form
+        {/* <Form
           id="formBuilderForm"
           onSubmit={formMethods.handleSubmit((data) => onSubmit(data, false))}
           className="flex flex-col gap-4"
         >
           {renderDrawerForm(formMethods)}
-        </Form>
+        </Form> */}
       </Drawer>
 
       <Dialog
