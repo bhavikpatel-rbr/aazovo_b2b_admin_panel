@@ -14,16 +14,16 @@ const ThemeColor = () => {
             <p>Here is the default setup for the light and dark modes:</p>
             <SyntaxHighlighter language="css">{`:root {
     --neutral: #ffffff;
-    --primary: #2a85ff;
+    --primary: #00baf2;
     --primary-deep: #0069f6;
     --primary-mild: #4996ff;
-    --primary-subtle: #2a85ff1a;
+    --primary-subtle: #00baf21a;
     --error: #ff6a55;
     --error-subtle: #ff6a551a;
     --success: #10b981;
     --success-subtle: #05eb7624;
-    --info: #2a85ff;
-    --info-subtle: #2a85ff1a;
+    --info: #00baf2;
+    --info-subtle: #00baf21a;
     --warning: #f59e0b;
     --warning-subtle: #ffd40045;
     --gray-50: #fafafa;
@@ -41,16 +41,16 @@ const ThemeColor = () => {
 
 .dark {
     --neutral: #ffffff;
-    --primary: #2a85ff;
+    --primary: #00baf2;
     --primary-deep: #0069f6;
     --primary-mild: #4996ff;
-    --primary-subtle: #2a85ff1a;
+    --primary-subtle: #00baf21a;
     --error: #ff6a55;
     --error-subtle: #ff6a551a; 
     --success: #10b981;
     --success-subtle: #05eb7624;
-    --info: #2a85ff;
-    --info-subtle: #2a85ff1a;
+    --info: #00baf2;
+    --info-subtle: #00baf21a;
     --warning: #f59e0b;
     --warning-subtle: #ffd40045;
     --gray-50: #fafafa;
@@ -91,17 +91,17 @@ export type ThemeVariables = Record<
 /** Default theme schema should corresponding to the CSS variables */
 const defaultTheme: ThemeVariables = {
     light: {
-        primary: "#2a85ff",
+        primary: "#00baf2",
         primaryDeep: "#0069f6",
         primaryMild: "#4996ff",
-        primarySubtle: "#2a85ff1a",
+        primarySubtle: "#00baf21a",
         neutral: "#ffffff",
     },
     dark: {
-        primary: "#2a85ff",
+        primary: "#00baf2",
         primaryDeep: "#0069f6",
         primaryMild: "#4996ff",
-        primarySubtle: "#2a85ff1a",
+        primarySubtle: "#00baf21a",
         neutral: "#ffffff",
     },
 }
@@ -134,17 +134,17 @@ export default presetThemeSchemaConfig`}
 /** Default theme schema should corresponding to the CSS variables */
 const defaultTheme = {
     light: {
-        primary: "#2a85ff",
+        primary: "#00baf2",
         primaryDeep: "#0069f6",
         primaryMild: "#4996ff",
-        primarySubtle: "#2a85ff1a",
+        primarySubtle: "#00baf21a",
         neutral: "#ffffff",
     },
     dark: {
-        primary: "#2a85ff",
+        primary: "#00baf2",
         primaryDeep: "#0069f6",
         primaryMild: "#4996ff",
-        primarySubtle: "#2a85ff1a",
+        primarySubtle: "#00baf21a",
         neutral: "#ffffff",
     },
 }
