@@ -5,16 +5,16 @@
 @layer theme {
 	:root {
 		--neutral: #ffffff;
-		--primary: #2a85ff;
+		--primary: #00baf2;
 		--primary-deep: #0069f6;
 		--primary-mild: #4996ff;
-		--primary-subtle: #2a85ff1a;
+		--primary-subtle: #00baf21a;
 		--error: #ff6a55;
 		--error-subtle: #ff6a551a;
 		--success: #10b981;
 		--success-subtle: #05eb7624;
-		--info: #2a85ff;
-		--info-subtle: #2a85ff1a;
+		--info: #00baf2;
+		--info-subtle: #00baf21a;
 		--warning: #f59e0b;
 		--warning-subtle: #ffd40045;
 		--gray-50: #fafafa;
@@ -32,16 +32,16 @@
 
 	.dark {
 		--neutral: #ffffff;
-		--primary: #2a85ff;
+		--primary: #00baf2;
 		--primary-deep: #0069f6;
 		--primary-mild: #4996ff;
-		--primary-subtle: #2a85ff1a;
+		--primary-subtle: #00baf21a;
 		--error: #ff6a55;
 		--error-subtle: #ff6a551a; 
 		--success: #10b981;
 		--success-subtle: #05eb7624;
-		--info: #2a85ff;
-		--info-subtle: #2a85ff1a;
+		--info: #00baf2;
+		--info-subtle: #00baf21a;
 		--warning: #f59e0b;
 		--warning-subtle: #ffd40045;
 		--gray-50: #fafafa;

@@ -35,22 +35,22 @@ const adminSettingsNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            {
-                key: 'adminSettings.adminSlobalSettings',
-                path: `${ADMIN_SETTINGS_ROUTE}/global-adminSettings`,
-                title: 'Global Admin Settings',
-                translateKey: 'nav.adminSettings.adminSlobalSettings',
-                icon: 'adminSlobalSettings',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN],
-                meta: {
-                    description: {
-                        translateKey: 'nav.adminSettings.adminSlobalSettingsDesc',
-                        label: 'Manage global Admin Settings',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'adminSettings.adminSlobalSettings',
+            //     path: `${ADMIN_SETTINGS_ROUTE}/global-adminSettings`,
+            //     title: 'Global Admin Settings',
+            //     translateKey: 'nav.adminSettings.adminSlobalSettings',
+            //     icon: 'adminSlobalSettings',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.adminSettings.adminSlobalSettingsDesc',
+            //             label: 'Manage global Admin Settings',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
             {
                 key: 'adminSettings.domainManagement',
                 path: `${ADMIN_SETTINGS_ROUTE}/domain-management`,

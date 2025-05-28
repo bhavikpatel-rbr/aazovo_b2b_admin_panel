@@ -35,7 +35,7 @@ export const SignInBase = ({
                     type="streamline"
                     mode={mode}
                     imgClass="mx-auto"
-                    logoWidth={250}
+                    logoWidth={276}
                 />
             </div>
             <div className="mb-3">
@@ -64,13 +64,13 @@ export const SignInBase = ({
                         </label> */}
 
                         {/* Forgot Password Link */}
-                        <ActionLink
+                        {/* <ActionLink
                             to={forgetPasswordUrl}
-                            className="text-sm font-semibold heading-text underline" // Adjusted text size to match label potentially
+                            className="text-sm font-semibold heading-text underline" 
                             themeColor={false}
                         >
                             Forgot password
-                        </ActionLink>
+                        </ActionLink> */}
                     </div>
                 }
                 // --- End of modified passwordHint ---

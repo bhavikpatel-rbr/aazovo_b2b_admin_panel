@@ -109,6 +109,7 @@ const SignInForm = (props: SignInFormProps) => {
                 <Button
                     block
                     loading={isSubmitting}
+                    className='h-10'
                     variant="solid"
                     type="submit"
                 >
