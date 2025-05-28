@@ -34,7 +34,7 @@ return (
                         'hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none',
                         {
                             // Using arbitrary value for text color:
-                            'bg-indigo-50 dark:bg-indigo-700/60 text-[#2a85ff] dark:text-indigo-200 font-semibold': activeSection === nav.link,
+                            'bg-indigo-50 dark:bg-indigo-700/60 text-[#00baf2] dark:text-indigo-200 font-semibold': activeSection === nav.link,
                             'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200': activeSection !== nav.link
                         }
                     )}

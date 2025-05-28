@@ -5,7 +5,7 @@ type SideProps = CommonProps
 
 const Side = ({ children, ...rest }: SideProps) => {
     return (
-        <div className="flex h-full p-6 bg-white dark:bg-gray-800">
+        <div className="flex h-full p-0 bg-white dark:bg-gray-800">
             <div className=" flex flex-col justify-center items-center flex-1">
                 <div className="w-full xl:max-w-[450px] px-8 max-w-[380px]">
                     {children
@@ -16,13 +16,12 @@ const Side = ({ children, ...rest }: SideProps) => {
                 </div>
             </div>
             <div
-                className="py-6 px-10 lg:flex flex-col flex-1 justify-between hidden rounded-2xl items-end relative max-w-[520px] 2xl:max-w-[720px] bg-blue-500" // <-- Add desired background color here (e.g., bg-blue-500)
-            >
+                className="hidden lg:flex flex-col flex-1 justify-center items-center relative max-w-[50%] 2xl:max-w-[50%] bg-primary text-white p-10" // <-- Add desired background color here (e.g., bg-blue-500)
+            >   
                 <img
                     src="/img/others/Loginimage.png"
-                    className="absolute h-full w-full top-0 left-0 rounded-3xl " // <-- Add opacity class (e.g., opacity-75, opacity-50)
+                    className="rounded-3xl w-[592px] h-[592px]" // <-- Add opacity class (e.g., opacity-75, opacity-50)
                 />
-                {/* Optional: Add other content here if needed; it will be above the image */}
             </div>
         </div>
     )

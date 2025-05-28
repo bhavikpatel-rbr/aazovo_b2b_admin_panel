@@ -269,10 +269,9 @@ interface InquiryListSearchProps {
 const InquiryListSearch: React.FC<InquiryListSearchProps> = ({ onInputChange }) => {
   return (
     <DebouceInput
-      placeholder="Quick Search inquiries..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
-      className="max-w-xs"
     />
   );
 };

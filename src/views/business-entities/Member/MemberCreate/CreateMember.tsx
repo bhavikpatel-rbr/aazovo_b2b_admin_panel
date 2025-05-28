@@ -290,7 +290,7 @@ const NavigatorComponent = (props: NavigatorComponentProps) => {
             "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max",
             "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
             {
-                'bg-indigo-50 dark:bg-indigo-700/60 text-[#2a85ff] dark:text-indigo-200 font-semibold':  activeSection === nav.link,
+                'bg-indigo-50 dark:bg-indigo-700/60 text-[#00baf2] dark:text-indigo-200 font-semibold':  activeSection === nav.link,
                 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200':activeSection !== nav.link,
             }
           )}
@@ -560,7 +560,7 @@ const MemberFormComponent = (props: MemberFormComponentProps) => {
                 <h6 className="font-semibold hover:text-primary-600">Member</h6>
             </NavLink>
             <BiChevronRight size={22} />
-            <h6 className="font-semibold text-primary-600">
+            <h6 className="font-semibold text-primary">
                 {isEditMode ? "Edit Member" : "Add New Member"}
             </h6>
         </div>

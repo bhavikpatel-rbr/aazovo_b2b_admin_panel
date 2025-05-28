@@ -291,10 +291,9 @@ interface PartnerListSearchProps {
 const PartnerListSearch: React.FC<PartnerListSearchProps> = ({ onInputChange }) => {
   return (
     <DebouceInput
-      placeholder="Quick Search partners..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
-      className="max-w-xs" // Added for consistency
     />
   );
 };

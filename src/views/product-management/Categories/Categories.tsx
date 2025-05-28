@@ -21,7 +21,7 @@ import {
   Form,
   FormItem,
   Input,
-  Card, // Make sure Card is imported if used in View Dialog
+  Card, 
   Select as UiSelect,
   Tag,
   Dialog,
@@ -32,16 +32,15 @@ import {
 import {
   TbPencil,
   TbEye,
-  TbTrash, // For delete action
+  TbTrash, 
   TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
-  TbCategory, // Or TbCategory for categories
-  TbBox, // Fallback icon
-  TbInfoCircle, // For empty states or info
-  // Icons for Detail Rows (if you add them)
+  TbCategory, 
+  TbBox, 
+  TbInfoCircle, 
   TbLink,
   TbPhone,
   TbLayoutDashboard,
@@ -53,26 +52,26 @@ import {
   TbCalendarPlus,
   TbCalendarEvent,
   TbBoxOff,
-  TbCloudDownload, // For not found
+  TbCloudDownload, 
+  TbPhoto, // Generic photo icon
 } from "react-icons/tb";
 
-// Types for Categories (as per your first file)
+// Types for Categories
 import type {
   OnSortParam,
   ColumnDef,
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import { useAppDispatch } from "@/reduxtool/store"; // MODIFY_PATH
+import { useAppDispatch } from "@/reduxtool/store"; 
 import {
   getCategoriesAction,
   addCategoryAction,
   editCategoryAction,
   deleteCategoryAction,
   deleteAllCategoriesAction,
-  // changeCategoryStatusAction,
-} from "@/reduxtool/master/middleware"; // MODIFY_PATH
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // MODIFY_PATH
+} from "@/reduxtool/master/middleware"; 
+import { masterSelector } from "@/reduxtool/master/masterSlice"; 
 import { useSelector } from "react-redux";
 
 // --- Type Definitions (Categories) ---
@@ -80,19 +79,23 @@ type ApiCategoryItem = {
   id: number;
   name: string;
   slug: string;
-  icon: string | null;
+  web_icon: string | null; // Changed from icon
+  mobile_icon: string | null; // New
+  banner_icon: string | null; // New
   parent_category: string | number | null;
   show_home_page: string | number;
   show_header: string | number;
   show_page_name: string | null;
-  status: "Active" | "Disabled"; // Changed 'Inactive' to 'Disabled' to match schema
+  status: "Active" | "Disabled";
   meta_title: string | null;
   meta_descr: string | null;
   meta_keyword: string | null;
   comingsoon?: string | number;
   created_at: string;
   updated_at: string;
-  icon_full_path?: string;
+  web_icon_full_path?: string; // Changed from icon_full_path
+  mobile_icon_full_path?: string; // New
+  banner_icon_full_path?: string; // New
   parent_category_name?: string;
 };
 export type CategoryStatus = "active" | "disabled";
@@ -100,8 +103,12 @@ export type CategoryItem = {
   id: number;
   name: string;
   slug: string;
-  icon: string | null;
-  icon_full_path: string | null;
+  webIcon: string | null; // Changed
+  webIconFullPath: string | null; // Changed
+  mobileIcon: string | null; // New
+  mobileIconFullPath: string | null; // New
+  bannerIcon: string | null; // New
+  bannerIconFullPath: string | null; // New
   parentId: number | null;
   parentCategoryName?: string;
   showHomePage: number;
@@ -125,7 +132,9 @@ const categoryFormSchema = z.object({
     .transform((val) => (val === "" ? null : val === null ? null : Number(val)))
     .optional()
     .nullable(),
-  icon: z.union([z.instanceof(File), z.null()]).optional().nullable(),
+  web_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(), // Changed from icon
+  mobile_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(), // New
+  category_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(), // New
   show_home_page: z
     .enum(["0", "1"], { errorMap: () => ({ message: "Please select." }) })
     .transform((val) => Number(val)),
@@ -156,16 +165,21 @@ const filterFormCategorySchema = z.object({
     .array(z.object({ value: z.number(), label: z.string() }))
     .optional(),
 });
-type FilterCategoryFormData = z.infer<typeof filterFormCategorySchema>; // Consistent naming
+type FilterCategoryFormData = z.infer<typeof filterFormCategorySchema>; 
 
 // --- CSV Export (Categories) ---
 const CSV_HEADERS_CATEGORY = [
-  "ID", "Name", "Slug", "Icon URL", "Parent ID", "Parent Name",
+  "ID", "Name", "Slug", 
+  "Web Icon URL", "Mobile Icon URL", "Banner Icon URL", // New
+  "Parent ID", "Parent Name",
   "Show Home", "Show Header", "Show Page Name", "Coming Soon", "Status",
   "Meta Title", "Meta Desc", "Meta Keyword", "Created At", "Updated At",
 ];
 type CategoryCsvItem = {
-  id: number; name: string; slug: string; icon_full_path: string | null;
+  id: number; name: string; slug: string; 
+  webIconFullPath: string | null; // New
+  mobileIconFullPath: string | null; // New
+  bannerIconFullPath: string | null; // New
   parentId: number | null; parentCategoryName?: string; showHomePage: number;
   showHeader: number; showPageName: string | null; comingSoon: number;
   status: CategoryStatus; metaTitle: string | null; metaDescription: string | null;
@@ -178,7 +192,10 @@ function exportToCsvCategory(filename: string, rows: CategoryItem[]) {
     return false;
   }
   const transformedRows: CategoryCsvItem[] = rows.map((item) => ({
-    id: item.id, name: item.name, slug: item.slug, icon_full_path: item.icon_full_path,
+    id: item.id, name: item.name, slug: item.slug, 
+    webIconFullPath: item.webIconFullPath, // New
+    mobileIconFullPath: item.mobileIconFullPath, // New
+    bannerIconFullPath: item.bannerIconFullPath, // New
     parentId: item.parentId, parentCategoryName: item.parentCategoryName,
     showHomePage: item.showHomePage, showHeader: item.showHeader, showPageName: item.showPageName,
     comingSoon: item.comingSoon, status: item.status, metaTitle: item.metaTitle,
@@ -187,7 +204,9 @@ function exportToCsvCategory(filename: string, rows: CategoryItem[]) {
     updatedAt: new Date(item.updatedAt).toLocaleString(),
   }));
   const csvKeys: (keyof CategoryCsvItem)[] = [
-    "id", "name", "slug", "icon_full_path", "parentId", "parentCategoryName",
+    "id", "name", "slug", 
+    "webIconFullPath", "mobileIconFullPath", "bannerIconFullPath", // New
+    "parentId", "parentCategoryName",
     "showHomePage", "showHeader", "showPageName", "comingSoon", "status",
     "metaTitle", "metaDescription", "metaKeyword", "createdAt", "updatedAt",
   ];
@@ -221,16 +240,16 @@ function exportToCsvCategory(filename: string, rows: CategoryItem[]) {
 }
 
 // --- Constants & Options (Categories) ---
-const CATEGORY_ICON_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "https://your-api-domain.com/storage/category_icons/";
-const categoryStatusColor: Record<CategoryStatus, string> = { // Renamed for clarity
+const CATEGORY_ICON_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "https://your-api-domain.com/storage/"; // More generic base
+const categoryStatusColor: Record<CategoryStatus, string> = { 
   active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  disabled: "bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-100", // Using rose for disabled
+  disabled: "bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-100", 
 };
-const uiCategoryStatusOptions: { value: CategoryStatus; label: string }[] = [ // Renamed
+const uiCategoryStatusOptions: { value: CategoryStatus; label: string }[] = [ 
   { value: "active", label: "Active" },
   { value: "disabled", label: "Disabled" },
 ];
-const apiCategoryStatusOptions: { value: "Active" | "Disabled"; label: string }[] = [ // Renamed
+const apiCategoryStatusOptions: { value: "Active" | "Disabled"; label: string }[] = [ 
   { value: "Active", label: "Active" },
   { value: "Disabled", label: "Disabled" },
 ];
@@ -241,7 +260,6 @@ const yesNoOptions: { value: "0" | "1"; label: string }[] = [
 
 // --- Helper Components (Categories) ---
 
-// ActionColumn specific for Categories (Edit, View, Delete)
 const CategoryActionColumn = ({
   onEdit,
   onViewDetail,
@@ -378,7 +396,6 @@ const CategorySelectedFooter = ({
   );
 };
 
-// Helper for View Dialog
 interface DialogDetailRowProps {
   label: string; value: string | React.ReactNode; isLink?: boolean;
   preWrap?: boolean; breakAll?: boolean; labelClassName?: string;
@@ -415,35 +432,48 @@ const Categories = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [singleDeleteOpen, setSingleDeleteOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<CategoryItem | null>(null);
-  const [statusChangeConfirmOpen, setStatusChangeConfirmOpen] = useState(false);
-  const [categoryForStatusChange, setCategoryForStatusChange] = useState<CategoryItem | null>(null);
+  // const [statusChangeConfirmOpen, setStatusChangeConfirmOpen] = useState(false); // Kept for reference
+  // const [categoryForStatusChange, setCategoryForStatusChange] = useState<CategoryItem | null>(null); // Kept for reference
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterCategoryFormData>({
     filterNames: [], filterStatuses: [], filterParentIds: [],
   });
 
-  const [addFormPreviewUrl, setAddFormPreviewUrl] = useState<string | null>(null);
-  const [editFormPreviewUrl, setEditFormPreviewUrl] = useState<string | null>(null);
+  // Image Preview States
+  const [addWebIconPreview, setAddWebIconPreview] = useState<string | null>(null);
+  const [addMobileIconPreview, setAddMobileIconPreview] = useState<string | null>(null);
+  const [addBannerPreview, setAddBannerPreview] = useState<string | null>(null);
+
+  const [editWebIconPreview, setEditWebIconPreview] = useState<string | null>(null);
+  const [editMobileIconPreview, setEditMobileIconPreview] = useState<string | null>(null);
+  const [editBannerPreview, setEditBannerPreview] = useState<string | null>(null);
+  
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
 
-  // State for View Detail Modal
   const [isViewDetailModalOpen, setIsViewDetailModalOpen] = useState(false);
-  const [categoryToView, setCategoryToView] = useState<CategoryItem | null>(null); // Specific for category
+  const [categoryToView, setCategoryToView] = useState<CategoryItem | null>(null);
 
   const { CategoriesData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
 
   useEffect(() => { dispatch(getCategoriesAction()); }, [dispatch]);
+
   useEffect(() => {
     return () => {
-      if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl);
-      if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl);
+      if (addWebIconPreview) URL.revokeObjectURL(addWebIconPreview);
+      if (addMobileIconPreview) URL.revokeObjectURL(addMobileIconPreview);
+      if (addBannerPreview) URL.revokeObjectURL(addBannerPreview);
+      if (editWebIconPreview) URL.revokeObjectURL(editWebIconPreview);
+      if (editMobileIconPreview) URL.revokeObjectURL(editMobileIconPreview);
+      if (editBannerPreview) URL.revokeObjectURL(editBannerPreview);
     };
-  }, [addFormPreviewUrl, editFormPreviewUrl]);
+  }, [addWebIconPreview, addMobileIconPreview, addBannerPreview, editWebIconPreview, editMobileIconPreview, editBannerPreview]);
 
   const defaultCategoryFormValues: Omit<CategoryFormData, "show_home_page" | "show_header" | "comingsoon"> &
-  { show_home_page: "0" | "1"; show_header: "0" | "1"; comingsoon: "0" | "1"; icon: null; parent_category: null; } = {
-    name: "", slug: "", parent_category: null, icon: null, show_home_page: "0", show_header: "0",
+  { show_home_page: "0" | "1"; show_header: "0" | "1"; comingsoon: "0" | "1"; web_icon: null; mobile_icon: null; category_icon: null; parent_category: null; } = {
+    name: "", slug: "", parent_category: null, 
+    web_icon: null, mobile_icon: null, category_icon: null, // New icon fields
+    show_home_page: "0", show_header: "0",
     status: "Active", meta_title: null, meta_descr: null, meta_keyword: null,
     comingsoon: "0", show_page_name: null,
   };
@@ -455,9 +485,18 @@ const Categories = () => {
   const parentCategoryOptions = useMemo(() => {
     if (!Array.isArray(CategoriesData)) return [{ value: null, label: "No Parent Category" }];
     const options = CategoriesData.filter(cat => !editingCategory || cat.id !== editingCategory.id)
-      .map((cat: ApiCategoryItem) => ({ value: cat.id, label: cat.name, })); // Use ApiCategoryItem here if CategoriesData is raw
+      .map((cat: ApiCategoryItem) => ({ value: cat.id, label: cat.name, })); 
     return [{ value: null, label: "No Parent Category" }, ...options];
   }, [CategoriesData, editingCategory]);
+
+  const getFullPath = (apiPath?: string | null, filename?: string | null, typeFolder: string = 'category_icons/') => {
+    if (apiPath) return apiPath;
+    if (filename) {
+        if (filename.startsWith("http://") || filename.startsWith("https://")) return filename;
+        return `${CATEGORY_ICON_BASE_URL}${typeFolder}${filename.startsWith("/") ? filename.substring(1) : filename}`;
+    }
+    return null;
+  };
 
   const mappedCategories: CategoryItem[] = useMemo(() => {
     if (!Array.isArray(CategoriesData)) return [];
@@ -465,16 +504,16 @@ const Categories = () => {
     CategoriesData.forEach((cat: ApiCategoryItem) => categoriesMap.set(cat.id, cat.name));
 
     return CategoriesData.map((apiItem: ApiCategoryItem): CategoryItem => {
-      let fullPath: string | null = null;
-      if (apiItem.icon_full_path) fullPath = apiItem.icon_full_path;
-      else if (apiItem.icon) {
-        if (apiItem.icon.startsWith("http://") || apiItem.icon.startsWith("https://")) fullPath = apiItem.icon;
-        else fullPath = `${CATEGORY_ICON_BASE_URL}${apiItem.icon.startsWith("/") ? apiItem.icon.substring(1) : apiItem.icon}`;
-      }
       const parentId = apiItem.parent_category ? Number(apiItem.parent_category) : null;
       return {
-        id: apiItem.id, name: apiItem.name, slug: apiItem.slug, icon: apiItem.icon,
-        icon_full_path: fullPath, parentId: parentId,
+        id: apiItem.id, name: apiItem.name, slug: apiItem.slug, 
+        webIcon: apiItem.web_icon,
+        webIconFullPath: getFullPath(apiItem.web_icon_full_path, apiItem.web_icon, 'category_web_icons/'),
+        mobileIcon: apiItem.mobile_icon,
+        mobileIconFullPath: getFullPath(apiItem.mobile_icon_full_path, apiItem.mobile_icon, 'category_mobile_icons/'),
+        bannerIcon: apiItem.banner_icon,
+        bannerIconFullPath: getFullPath(apiItem.banner_icon_full_path, apiItem.banner_icon, 'category_icons/'),
+        parentId: parentId,
         parentCategoryName: parentId ? categoriesMap.get(parentId) || "Unknown" : undefined,
         showHomePage: Number(apiItem.show_home_page), showHeader: Number(apiItem.show_header),
         showPageName: apiItem.show_page_name,
@@ -486,15 +525,42 @@ const Categories = () => {
     });
   }, [CategoriesData]);
 
+  const resetAddFormPreviews = () => {
+    if (addWebIconPreview) URL.revokeObjectURL(addWebIconPreview);
+    if (addMobileIconPreview) URL.revokeObjectURL(addMobileIconPreview);
+    if (addBannerPreview) URL.revokeObjectURL(addBannerPreview);
+    setAddWebIconPreview(null);
+    setAddMobileIconPreview(null);
+    setAddBannerPreview(null);
+  };
 
-  const openAddCategoryDrawer = () => { addFormMethods.reset(defaultCategoryFormValues); setAddFormPreviewUrl(null); setAddDrawerOpen(true); };
-  const closeAddCategoryDrawer = () => { setAddDrawerOpen(false); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(null); };
+  const resetEditFormPreviews = () => {
+    if (editWebIconPreview) URL.revokeObjectURL(editWebIconPreview);
+    if (editMobileIconPreview) URL.revokeObjectURL(editMobileIconPreview);
+    if (editBannerPreview) URL.revokeObjectURL(editBannerPreview);
+    setEditWebIconPreview(null);
+    setEditMobileIconPreview(null);
+    setEditBannerPreview(null);
+  };
+
+  const openAddCategoryDrawer = () => { 
+    addFormMethods.reset(defaultCategoryFormValues); 
+    resetAddFormPreviews();
+    setAddDrawerOpen(true); 
+  };
+  const closeAddCategoryDrawer = () => { 
+    setAddDrawerOpen(false); 
+    resetAddFormPreviews();
+  };
+
   const onAddCategorySubmit = async (data: CategoryFormData) => {
     setSubmitting(true); const formData = new FormData();
     
     (Object.keys(data) as Array<keyof CategoryFormData>).forEach((key) => {
       const value = data[key];
-      if (key === "icon") { if (value instanceof File) formData.append(key, value); }
+      if (key === "web_icon" || key === "mobile_icon" || key === "category_icon") { 
+        if (value instanceof File) formData.append(key, value); 
+      }
       else if (value !== null && value !== undefined) { formData.append(key, String(value)); }
     });
     try {
@@ -510,7 +576,8 @@ const Categories = () => {
   const openEditCategoryDrawer = (category: CategoryItem) => {
     setEditingCategory(category);
     editFormMethods.reset({
-      name: category.name, slug: category.slug, parent_category: category.parentId, icon: null,
+      name: category.name, slug: category.slug, parent_category: category.parentId, 
+      web_icon: null, mobile_icon: null, category_icon: null, // Files are reset, previews will show current
       show_home_page: String(category.showHomePage) as "0" | "1",
       show_header: String(category.showHeader) as "0" | "1",
       status: category.status === "active" ? "Active" : "Disabled",
@@ -519,14 +586,27 @@ const Categories = () => {
       comingsoon: String(category.comingSoon) as "0" | "1",
       show_page_name: category.showPageName || null,
     });
-    setEditFormPreviewUrl(null); setEditDrawerOpen(true);
+    
+    resetEditFormPreviews(); // Clear any previous dynamic previews
+    // Set previews from existing category data if available
+    if (category.webIconFullPath) setEditWebIconPreview(category.webIconFullPath);
+    if (category.mobileIconFullPath) setEditMobileIconPreview(category.mobileIconFullPath);
+    if (category.bannerIconFullPath) setEditBannerPreview(category.bannerIconFullPath);
+
+    setEditDrawerOpen(true);
   };
-  const closeEditCategoryDrawer = () => { setEditDrawerOpen(false); setEditingCategory(null); if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl); setEditFormPreviewUrl(null); };
+  const closeEditCategoryDrawer = () => { 
+    setEditDrawerOpen(false); 
+    setEditingCategory(null); 
+    resetEditFormPreviews();
+  };
   const onEditCategorySubmit = async (data: CategoryFormData) => {
     if (!editingCategory) return; setSubmitting(true); const formData = new FormData(); formData.append("_method", "PUT");
     (Object.keys(data) as Array<keyof CategoryFormData>).forEach((key) => {
       const value = data[key];
-      if (key === "icon") { if (value instanceof File) formData.append(key, value); }
+      if (key === "web_icon" || key === "mobile_icon" || key === "category_icon") { 
+         if (value instanceof File) formData.append(key, value); 
+      }
       else {
         if (value === null && key !== "parent_category") formData.append(key, "");
         else if (key === "parent_category" && value === null) formData.append(key, "");
@@ -573,7 +653,6 @@ const Categories = () => {
     } finally { setIsProcessing(false); }
   };
 
-  // Functions for View Detail Modal
   const openViewDetailModal = useCallback((category: CategoryItem) => {
     setCategoryToView(category);
     setIsViewDetailModalOpen(true);
@@ -663,13 +742,13 @@ const Categories = () => {
     {
       header: "Name", accessorKey: "name", enableSorting: true,
       cell: (props) => {
-        const { icon_full_path, name } = props.row.original;
+        const { webIconFullPath, name } = props.row.original; // Using webIconFullPath
         return (
           <div className="flex items-center gap-2 min-w-[200px]">
-            <Avatar size={30} shape="circle" src={icon_full_path || undefined} icon={<TbBox />}
-              className={icon_full_path ? "cursor-pointer hover:ring-2 hover:ring-indigo-500" : ""}
-              onClick={() => icon_full_path && openImageViewer(icon_full_path)}
-            >{!icon_full_path && name ? name.charAt(0).toUpperCase() : ""}</Avatar>
+            <Avatar size={30} shape="circle" src={webIconFullPath || undefined} icon={<TbCategory />}
+              className={webIconFullPath ? "cursor-pointer hover:ring-2 hover:ring-indigo-500" : ""}
+              onClick={() => webIconFullPath && openImageViewer(webIconFullPath)}
+            >{!webIconFullPath && name ? name.charAt(0).toUpperCase() : ""}</Avatar>
             <span>{name}</span>
           </div>
         );
@@ -681,7 +760,7 @@ const Categories = () => {
       cell: (props) => { const status = props.row.original.status; return <Tag className={`${categoryStatusColor[status]} capitalize font-semibold border-0`}>{status}</Tag>; },
     },
     {
-      header: "Actions", id: "action", size: 120, // Adjusted for 3 icons
+      header: "Actions", id: "action", size: 120,
       meta: { HeaderClass: "text-center" },
       cell: (props) => (
         <CategoryActionColumn
@@ -691,7 +770,7 @@ const Categories = () => {
         />
       ),
     },
-  ], [openImageViewer, openEditCategoryDrawer, openViewDetailModal, handleDeleteCategoryClick]); // Dependencies for memo
+  ], [openImageViewer, openEditCategoryDrawer, openViewDetailModal, handleDeleteCategoryClick]);
 
 
   const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isProcessing;
@@ -729,13 +808,43 @@ const Categories = () => {
           <FormItem label="Category Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired> <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Category Name" />} /> </FormItem>
           <FormItem label="Slug" invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired> <Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter category-slug" />} /> </FormItem>
           <FormItem label="Parent Category" invalid={!!addFormMethods.formState.errors.parent_category} errorMessage={addFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={addFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
-          <FormItem label="Web Icon (467 X 250)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="web-icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
-          <FormItem label="Mobile Icon (500 X 500)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="mobile-icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
-          <FormItem label="Category Banner (500 X 500)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="category-banner" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
+          
+          <FormItem label="Web Icon (467 X 250)" invalid={!!addFormMethods.formState.errors.web_icon} errorMessage={addFormMethods.formState.errors.web_icon?.message as string}> 
+            <Controller name="web_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                const file = e.target.files?.[0] || null; 
+                onChange(file); 
+                if (addWebIconPreview) URL.revokeObjectURL(addWebIconPreview); 
+                setAddWebIconPreview(file ? URL.createObjectURL(file) : null); 
+              }} accept="image/*" />} /> 
+            {addWebIconPreview && <div className="mt-2"><Avatar src={addWebIconPreview} size={80} shape="rounded" icon={<TbPhoto />} /></div>}
+          </FormItem>
+
+          <FormItem label="Mobile Icon (500 X 500)" invalid={!!addFormMethods.formState.errors.mobile_icon} errorMessage={addFormMethods.formState.errors.mobile_icon?.message as string}> 
+            <Controller name="mobile_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                const file = e.target.files?.[0] || null; 
+                onChange(file); 
+                if (addMobileIconPreview) URL.revokeObjectURL(addMobileIconPreview); 
+                setAddMobileIconPreview(file ? URL.createObjectURL(file) : null); 
+              }} accept="image/*" />} /> 
+            {addMobileIconPreview && <div className="mt-2"><Avatar src={addMobileIconPreview} size={80} shape="rounded" icon={<TbPhoto />} /></div>}
+          </FormItem>
+
+          <FormItem label="Category Banner (Recommended: 1920x400 or similar aspect ratio)" invalid={!!addFormMethods.formState.errors.category_icon} errorMessage={addFormMethods.formState.errors.category_icon?.message as string}> 
+            <Controller name="category_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                const file = e.target.files?.[0] || null; 
+                onChange(file); 
+                if (addBannerPreview) URL.revokeObjectURL(addBannerPreview); 
+                setAddBannerPreview(file ? URL.createObjectURL(file) : null); 
+              }} accept="image/*" />} /> 
+            {addBannerPreview && <div className="mt-2"><img src={addBannerPreview} alt="Banner Preview" style={{width: '100%', maxHeight: '150px', objectFit: 'contain', borderRadius: '4px'}} /></div>}
+          </FormItem>
+
           <FormItem label="Show on Home Page?" invalid={!!addFormMethods.formState.errors.show_home_page} errorMessage={addFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
           <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
           <FormItem label="Coming Soon?" invalid={!!addFormMethods.formState.errors.comingsoon} errorMessage={addFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-          {/* <FormItem label="Show Page Name" invalid={!!addFormMethods.formState.errors.show_page_name} errorMessage={addFormMethods.formState.errors.show_page_name?.message}> <Controller name="show_page_name" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="e.g., Electronics Page" />} /> </FormItem> */}
           <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={addFormMethods.control} render={({ field }) => <UiSelect options={apiCategoryStatusOptions} value={apiCategoryStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
           <FormItem label="Meta Title" invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /> </FormItem>
@@ -749,17 +858,49 @@ const Categories = () => {
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editCategoryForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Saving..." : "Save Changes"} </Button> </div>}
       >
         <Form id="editCategoryForm" onSubmit={editFormMethods.handleSubmit(onEditCategorySubmit)} className="flex flex-col gap-4">
-          {editingCategory?.icon_full_path && !editFormPreviewUrl && <FormItem label="Current Icon"><Avatar size={80} src={editingCategory.icon_full_path} shape="rounded" icon={<TbCategory />} /></FormItem>}
           <FormItem label="Category Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message} isRequired> <Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /> </FormItem>
           <FormItem label="Slug" invalid={!!editFormMethods.formState.errors.slug} errorMessage={editFormMethods.formState.errors.slug?.message} isRequired> <Controller name="slug" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /> </FormItem>
           <FormItem label="Parent Category" invalid={!!editFormMethods.formState.errors.parent_category} errorMessage={editFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={editFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
-          <FormItem label="Web Icon (467 X 250)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="web-icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
-          <FormItem label="Mobile Icon (500 X 500)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="mobile-icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
-          <FormItem label="Category Banner (500 X 500)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}> <Controller name="category-banner" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0] || null; onChange(file); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />} /> {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="rounded" icon={<TbCategory />} /></div>} </FormItem>
+          
+          <FormItem label="Web Icon (467 X 250)" invalid={!!editFormMethods.formState.errors.web_icon} errorMessage={editFormMethods.formState.errors.web_icon?.message as string}> 
+            {editWebIconPreview && <div className="mb-2"><Avatar src={editWebIconPreview} size={80} shape="rounded" icon={<TbPhoto />} /></div>}
+            <Controller name="web_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                const file = e.target.files?.[0] || null; 
+                onChange(file); 
+                if (editWebIconPreview && !editingCategory?.webIconFullPath?.includes(editWebIconPreview)) URL.revokeObjectURL(editWebIconPreview); // Revoke only if it's a blob URL
+                setEditWebIconPreview(file ? URL.createObjectURL(file) : (editingCategory?.webIconFullPath || null)); 
+              }} accept="image/*" />} /> 
+            {!editWebIconPreview && editingCategory?.webIconFullPath && <small className="text-xs text-gray-500">Current icon will be kept if no new file is uploaded.</small>}
+          </FormItem>
+
+          <FormItem label="Mobile Icon (500 X 500)" invalid={!!editFormMethods.formState.errors.mobile_icon} errorMessage={editFormMethods.formState.errors.mobile_icon?.message as string}> 
+            {editMobileIconPreview && <div className="mb-2"><Avatar src={editMobileIconPreview} size={80} shape="rounded" icon={<TbPhoto />} /></div>}
+            <Controller name="mobile_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                const file = e.target.files?.[0] || null; 
+                onChange(file); 
+                if (editMobileIconPreview && !editingCategory?.mobileIconFullPath?.includes(editMobileIconPreview)) URL.revokeObjectURL(editMobileIconPreview);
+                setEditMobileIconPreview(file ? URL.createObjectURL(file) : (editingCategory?.mobileIconFullPath || null)); 
+              }} accept="image/*" />} /> 
+            {!editMobileIconPreview && editingCategory?.mobileIconFullPath && <small className="text-xs text-gray-500">Current icon will be kept if no new file is uploaded.</small>}
+          </FormItem>
+
+          <FormItem label="Category Banner (Recommended: 1920x400 or similar)" invalid={!!editFormMethods.formState.errors.category_icon} errorMessage={editFormMethods.formState.errors.category_icon?.message as string}> 
+            {editBannerPreview && <div className="mb-2"><img src={editBannerPreview} alt="Banner Preview" style={{width: '100%', maxHeight: '150px', objectFit: 'contain', borderRadius: '4px'}} /></div>}
+            <Controller name="category_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                const file = e.target.files?.[0] || null; 
+                onChange(file); 
+                if (editBannerPreview && !editingCategory?.bannerIconFullPath?.includes(editBannerPreview)) URL.revokeObjectURL(editBannerPreview);
+                setEditBannerPreview(file ? URL.createObjectURL(file) : (editingCategory?.bannerIconFullPath || null)); 
+              }} accept="image/*" />} /> 
+            {!editBannerPreview && editingCategory?.bannerIconFullPath && <small className="text-xs text-gray-500">Current banner will be kept if no new file is uploaded.</small>}
+          </FormItem>
+
           <FormItem label="Show on Home Page?" invalid={!!editFormMethods.formState.errors.show_home_page} errorMessage={editFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
           <FormItem label="Show in Header?" invalid={!!editFormMethods.formState.errors.show_header} errorMessage={editFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
           <FormItem label="Coming Soon?" invalid={!!editFormMethods.formState.errors.comingsoon} errorMessage={editFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-          {/* <FormItem label="Show Page Name" invalid={!!editFormMethods.formState.errors.show_page_name} errorMessage={editFormMethods.formState.errors.show_page_name?.message}> <Controller name="show_page_name" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem> */}
           <FormItem label="Status" invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={editFormMethods.control} render={({ field }) => <UiSelect options={apiCategoryStatusOptions} value={apiCategoryStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
           <FormItem label="Meta Title" invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
@@ -776,80 +917,52 @@ const Categories = () => {
           <FormItem label="Name"> <Controller name="filterNames" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Names" options={categoryNameOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
           <FormItem label="Parent Category"> <Controller name="filterParentIds" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Parent Categories" options={parentCategoryOptions.filter(opt => opt.value !== null)} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
           <FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={uiCategoryStatusOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /> </FormItem>
-          <FormItem label="Show in Home">
-            <Controller name="show-in-home"  control={filterFormMethods.control} render={({field})=>
-              <Select
-                {...field} 
-                isMulti
-                placeholder="Select Yes or No"
-                options={[
-                  {label : "Yes", value: "Yes"},
-                  {label : "No", value: "No"},
-                ]}
-              />
-            }/>
-          </FormItem>
-          <FormItem label="Show in Header">
-            <Controller name="show-in-header"  control={filterFormMethods.control} render={({field})=>
-              <Select
-                {...field} 
-                isMulti
-                placeholder="Select Yes or No"
-                options={[
-                  {label : "Yes", value: "Yes"},
-                  {label : "No", value: "No"},
-                ]}
-              />
-            }/>
-          </FormItem>
+          {/* @ts-ignore TODO: fix this type error for show-in-home and show-in-header in filter form */}
+          <FormItem label="Show in Home"> <Controller name="show-in-home"  control={filterFormMethods.control} render={({field})=> <Select {...field} isMulti placeholder="Select Yes or No" options={[{label : "Yes", value: "Yes"}, {label : "No", value: "No"}]} /> }/> </FormItem>
+          {/* @ts-ignore TODO: fix this type error */}
+          <FormItem label="Show in Header"> <Controller name="show-in-header"  control={filterFormMethods.control} render={({field})=> <Select {...field} isMulti placeholder="Select Yes or No" options={[{label : "Yes", value: "Yes"}, {label : "No", value: "No"}]} /> }/> </FormItem>
         </Form>
       </Drawer>
 
-      {/* Confirmation Dialogs */}
       <ConfirmDialog isOpen={singleDeleteOpen} type="danger" title="Delete Category"
         onClose={() => { setSingleDeleteOpen(false); setCategoryToDelete(null); }}
         onRequestClose={() => { setSingleDeleteOpen(false); setCategoryToDelete(null); }}
         onCancel={() => { setSingleDeleteOpen(false); setCategoryToDelete(null); }}
         confirmButtonColor="red-600" onConfirm={onConfirmSingleDeleteCategory} loading={isProcessing}
       ><p>Are you sure you want to delete the category "<strong>{categoryToDelete?.name}</strong>"? This action cannot be undone.</p></ConfirmDialog>
-      {/* Status Change Confirm Dialog - Placeholder, implement if needed */}
-      {/* <ConfirmDialog isOpen={statusChangeConfirmOpen} ... /> */}
 
-
-      {/* Import Drawer (Placeholder) */}
       <Drawer title="Import Categories" isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)}>
         <div className="p-4"> <p className="mb-4">Upload a CSV file to import categories.</p> <Input type="file" accept=".csv" className="mt-2" onChange={e => { if (e.target.files?.[0]) { console.log("File for import:", e.target.files[0].name); toast.push(<Notification title="Import" type="info">File selected. Import processing to be implemented.</Notification>); } }} /> <div className="text-right mt-6"> <Button size="sm" variant="plain" onClick={() => setImportDialogOpen(false)} className="mr-2">Cancel</Button> <Button size="sm" variant="solid" onClick={() => { toast.push(<Notification title="Import" type="info">Import submission to be implemented.</Notification>); }}>Start Import</Button> </div> </div>
       </Drawer>
 
-      {/* Image Viewer Dialog */}
-      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} title="Category Icon" width={600}>
-        <div className="flex justify-center items-center p-4"> {imageToView ? <img src={imageToView} alt="Category Icon Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image.</p>} </div>
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} title="Category Image" width={600}>
+        <div className="flex justify-center items-center p-4"> {imageToView ? <img src={imageToView} alt="Category Image Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image.</p>} </div>
       </Dialog>
 
       <Dialog
         isOpen={isViewDetailModalOpen}
         onClose={closeViewDetailModal}
         onRequestClose={closeViewDetailModal}
-        size="sm"
+        size="md" // Adjusted size for more content
         title=""
         contentClassName="!p-0 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-2xl"
       >
         {categoryToView ? (
           <div className="flex flex-col max-h-[90vh]">
-            {/* Body */}
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 overflow-y-auto">
               <div className="p-3 bg-white dark:bg-slate-700/60 rounded-lg space-y-3">
-                {/* Header: Icon + ID + Edit */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {categoryToView.icon_full_path && (
-                      <Avatar
-                        size={48}
-                        shape="rounded"
-                        src={categoryToView.icon_full_path}
-                        icon={<TbCategory />}
-                        className="border-2 border-white dark:border-slate-500 shadow"
-                      />
+                     {/* Main Icon (Web Icon) Display */}
+                    {categoryToView.webIconFullPath && (
+                        <Avatar
+                            size={48}
+                            shape="rounded"
+                            src={categoryToView.webIconFullPath}
+                            icon={<TbCategory />}
+                            className="border-2 border-white dark:border-slate-500 shadow cursor-pointer"
+                            onClick={() => openImageViewer(categoryToView.webIconFullPath)}
+                        />
                     )}
                     <div>
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -860,8 +973,36 @@ const Categories = () => {
                   </div>
                 </div>
 
-                {/* Grid of Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 text-sm text-slate-700 dark:text-slate-200">
+                {/* Display other icons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    {categoryToView.mobileIconFullPath && (
+                        <div>
+                            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Mobile Icon</p>
+                            <Avatar
+                                size={60}
+                                shape="rounded"
+                                src={categoryToView.mobileIconFullPath}
+                                icon={<TbPhoto />}
+                                className="border dark:border-slate-600 cursor-pointer"
+                                onClick={() => openImageViewer(categoryToView.mobileIconFullPath)}
+                            />
+                        </div>
+                    )}
+                    {categoryToView.bannerIconFullPath && (
+                         <div>
+                            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Banner</p>
+                            <img 
+                                src={categoryToView.bannerIconFullPath} 
+                                alt="Category Banner" 
+                                className="w-full h-auto max-h-28 object-contain rounded border dark:border-slate-600 cursor-pointer"
+                                onClick={() => openImageViewer(categoryToView.bannerIconFullPath)}
+                            />
+                        </div>
+                    )}
+                </div>
+
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 text-sm text-slate-700 dark:text-slate-200 pt-2">
                   <DialogDetailRow
                     label="Status"
                     value={
@@ -906,7 +1047,6 @@ const Categories = () => {
                   />
                 </div>
 
-                {/* SEO Section */}
                 {(categoryToView.metaTitle || categoryToView.metaDescription || categoryToView.metaKeyword) && (
                   <div className="pt-2">
                     <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
