@@ -637,6 +637,7 @@ export const getcategoryAsync = async () => {
 
 export const addcategoryAsync = async (unitData: FormData) => {
   try {
+    console.log(unitData);
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
     const response = await axiosInstance.post(`${config.apiURL}/master/category`, unitData, {
       headers: {
@@ -1801,23 +1802,38 @@ export const getRequestFeedbacksAsync = async () => {
 
 export const addRequestFeedbacksAsync = async (leadData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/feedback`, leadData)
-    return response
+    const response = await axiosInstance.post(`${config.apiURL}/feedback`, leadData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
 
-export const editRequestFeedbacksAsync = async (leadData: any) => {
-  console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
 
+export const editRequestFeedbacksAsync = async (
+  id: number | string,
+  formData: FormData
+) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/feedback/${leadData?.id}`, { _method: "PUT", ...leadData })
-    return response
+    const response = await axiosInstance.post(
+      `${config.apiURL}/feedback/${id}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
+
 
 export const deleteRequestFeedbacksAsync = async (leadData: any) => {
   try {
@@ -1911,8 +1927,40 @@ export const getMembersAsync = async () => {
   }
 };
 
+export const getSubcategoriesByCategoryIdAsync = async (categoryId: string) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/subcategory?category_id=${categoryId}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
+export const getBrandsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/brand`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
+export const getUnitsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/unit`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
-
-
+export const changeProductStatusAsync = async ({ id, status }: { id: string; status: boolean }) => {
+  try {
+    const response = await axiosInstance.put(`${config.apiURL}/master/product/status/${id}`, {
+      status,
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
