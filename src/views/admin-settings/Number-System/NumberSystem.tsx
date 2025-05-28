@@ -31,6 +31,7 @@ import {
   TbPlus,
   TbCloudUpload,
   TbTrash,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -239,7 +240,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="View">
+      {/* <Tooltip title="View">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
@@ -247,7 +248,7 @@ const ActionColumn = ({
         >
           <TbEye />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Tooltip title="Delete">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
@@ -280,17 +281,20 @@ type ItemTableToolsProps = {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: () => void;
 };
 const ItemTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters,
 }: ItemTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <ItemSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -1008,6 +1012,7 @@ const NumberSystems = () => {
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleExportData}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <DataTable

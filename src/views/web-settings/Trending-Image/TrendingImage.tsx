@@ -27,6 +27,7 @@ import {
     TbFilter,
     TbPlus,
     TbCloudUpload,
+    TbReload,
 } from 'react-icons/tb'
 
 // Types
@@ -157,11 +158,12 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
 ItemSearch.displayName = 'ItemSearch';
 
 // --- TableTools Component ---
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; searchPlaceholder: string }
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, searchPlaceholder }: ItemTableToolsProps) => (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters : ()=> void; searchPlaceholder: string }
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, searchPlaceholder, onClearFilters }: ItemTableToolsProps) => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
         <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} placeholder={searchPlaceholder} /></div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+            <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
             <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
             <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
         </div>
@@ -484,7 +486,18 @@ const {
 
     const columns: ColumnDef<TrendingPageImageItem>[] = useMemo(() => [
         { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 250, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
-        { header: 'Date Created', accessorKey: 'created_at', enableSorting: true, size: 180, cell: (props) => { const date = props.row.original.created_at; return date ? new Date(date).toLocaleDateString() : 'N/A'; } },
+        { 
+            header: 'Date Created', 
+            accessorKey: 'created_at', 
+            enableSorting: true, 
+            size: 180, 
+            cell: (props) => { 
+                return (
+                    `${new Date(props.getValue<string>()).getDate()} ${new Date(props.getValue<string>()).toLocaleString("en-US", { month: "long" })}, 
+                    ${new Date(props.getValue<string>()).getFullYear()},
+                    ${new Date(props.getValue<string>()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                )
+            } },
         { header: 'Actions', id: 'action', meta: { HeaderClass: 'text-center', cellClass: 'text-center' }, size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
     ], [openEditDrawer, handleDeleteClick]);
 
@@ -496,7 +509,7 @@ const {
                         <h5 className="mb-2 sm:mb-0">Trending Images</h5>
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
                     </div>
-                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} searchPlaceholder="Quick Search..." />
+                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters} searchPlaceholder="Quick Search..." />
                     <div className="mt-4">
                         <DataTable
                             columns={columns} data={pageData}

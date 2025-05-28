@@ -27,6 +27,7 @@ import {
   TbPlus,
   TbCloudUpload,
   TbPhoto,
+  TbReload,
 } from "react-icons/tb";
 
 // Redux
@@ -245,25 +246,26 @@ type ItemTableToolsProps = {
   onSearchChange: (query: string) => void;
   onExport: () => void;
   searchPlaceholder: string;
+  onClearFilters : ()=> void;
 };
 const ItemTableTools = ({
   onSearchChange,
   onExport,
   searchPlaceholder,
 }: ItemTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <ItemSearch
         onInputChange={onSearchChange}
         placeholder={searchPlaceholder}
       />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
       <Button
         icon={<TbCloudUpload />}
         onClick={onExport}
         className="w-full sm:w-auto"
-      >
+      > 
         Export
       </Button>
     </div>
@@ -834,7 +836,12 @@ const TrendingCarousel = () => {
         size: 180,
         cell: (props) => {
           const date = props.row.original.created_at;
-          return date ? new Date(date).toLocaleDateString() : "N/A"; // Format date for display
+          // return date ? new Date(date).toLocaleDateString() : "N/A"; // Format date for display
+          return (
+            `${new Date(props.getValue<string>()).getDate()} ${new Date(props.getValue<string>()).toLocaleString("en-US", { month: "long" })}, 
+            ${new Date(props.getValue<string>()).getFullYear()},
+            ${new Date(props.getValue<string>()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+          )
         },
       },
       {

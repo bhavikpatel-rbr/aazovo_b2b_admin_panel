@@ -12,7 +12,7 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import StickyFooter from "@/components/shared/StickyFooter";
-import { Form, FormItem, Input, Card } from "@/components/ui"; // Removed UiSelect as SMTP is gone
+import { Form, FormItem, Input, Card, Avatar } from "@/components/ui"; // Removed UiSelect as SMTP is gone
 import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Ensure this path is correct (e.g., '@/components/ui/Textarea')
 
 // Icons
@@ -69,6 +69,8 @@ type ApiCompanyProfileItem = {
   updated_at: string;
   logo_for_meta: string | null;
   notification_email: string;
+  icon_full_path: string;
+  meta_icon_full_path: string;
 };
 
 export type CompanyProfileUIData = Omit<
@@ -84,7 +86,8 @@ export type CompanyProfileUIData = Omit<
   | "smtp_email"
 > & {
   logo_full_path: string | null;
-  meta_logo_full_path: string | null;
+  meta_icon_full_path: string | null;
+  icon_full_path: string | null;
 };
 
 // --- Zod Schema for Company Profile Form (SMTP fields removed) ---
@@ -243,10 +246,12 @@ const CompanyProfile = () => {
           youtube: apiProfile.youtube || null,
           twitter: apiProfile.twitter || null,
           logo_for_meta: apiProfile.logo_for_meta || null,
-          meta_logo_full_path:
-            apiProfile.logo_for_meta && LOGO_BASE_URL
-              ? `${LOGO_BASE_URL}${apiProfile.logo_for_meta}`
-              : null,
+          icon_full_path: apiProfile.icon_full_path,
+          // meta_icon_full_path:
+          //   apiProfile.logo_for_meta && LOGO_BASE_URL
+          //     ? `${LOGO_BASE_URL}${apiProfile.logo_for_meta}`
+          //     : null,
+          meta_icon_full_path: apiProfile.meta_icon_full_path,
           notification_email: apiProfile.notification_email,
         };
         setCurrentProfileUI(uiProfile);
@@ -451,13 +456,29 @@ const CompanyProfile = () => {
     //     </div>
     //   }
     // >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
-        <FormItem
-          label="Company Logo"
-          
-          invalid={!!formMethods.formState.errors.logo}
-          errorMessage={formMethods.formState.errors.logo?.message as string}
-        >
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
+      <FormItem
+        label="Company Logo"
+        className=""
+        invalid={!!formMethods.formState.errors.logo}
+        errorMessage={formMethods.formState.errors.logo?.message as string}
+      >
+        <div className="flex gap-2 items-end">
+          {logoPreviewUrl ? (
+            <img
+              src={logoPreviewUrl}
+              alt="New Logo Preview"
+              className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
+            />
+          ) : (
+            currentProfileUI?.icon_full_path && (
+              <img
+                src={currentProfileUI.icon_full_path}
+                alt="Current Logo"
+                className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
+              />
+            )
+          )}
           <Controller
             name="logo"
             control={formMethods.control}
@@ -476,33 +497,32 @@ const CompanyProfile = () => {
               />
             )}
           />
-          {logoPreviewUrl ? (
+        </div>
+      </FormItem>
+
+      <FormItem
+        label="Meta Logo (Social Share)"
+        invalid={!!formMethods.formState.errors.logo_for_meta}
+        errorMessage={
+          formMethods.formState.errors.logo_for_meta?.message as string
+        }
+      >
+        <div className="flex gap-2 items-end ">
+          {metaLogoPreviewUrl ? (
             <img
-              src={logoPreviewUrl}
+              src={metaLogoPreviewUrl}
               alt="New Logo Preview"
               className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
             />
           ) : (
-            currentProfileUI?.logo_full_path && (
+            currentProfileUI?.meta_icon_full_path && (
               <img
-                src={currentProfileUI.logo_full_path}
-                alt="Current Logo"
+                src={currentProfileUI?.meta_icon_full_path}
+                alt="Current Meta Logo"
                 className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
               />
             )
           )}
-          <p className="text-xs text-gray-500 mt-1">
-            Current: {currentProfileUI?.logo || "No logo"}. Upload to replace.
-          </p>
-        </FormItem>
-
-        <FormItem
-          label="Meta Logo (Social Share)"
-          invalid={!!formMethods.formState.errors.logo_for_meta}
-          errorMessage={
-            formMethods.formState.errors.logo_for_meta?.message as string
-          }
-        >
           <Controller
             name="logo_for_meta"
             control={formMethods.control}
@@ -524,27 +544,9 @@ const CompanyProfile = () => {
               />
             )}
           />
-          {metaLogoPreviewUrl ? (
-            <img
-              src={metaLogoPreviewUrl}
-              alt="New Meta Logo Preview"
-              className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
-            />
-          ) : (
-            currentProfileUI?.meta_logo_full_path && (
-              <img
-                src={currentProfileUI.meta_logo_full_path}
-                alt="Current Meta Logo"
-                className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
-              />
-            )
-          )}
-          <p className="text-xs text-gray-500 mt-1">
-            Current: {currentProfileUI?.logo_for_meta || "No meta logo"}. Upload
-            to replace.
-          </p>
-        </FormItem>
-      </div>
+        </div>
+      </FormItem>
+    </div>
     // </Card>
   );
 
@@ -558,119 +560,119 @@ const CompanyProfile = () => {
     //     </div>
     //   }
     // >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
-        <FormItem
-          label="Company Name"
-          className="md:col-span-2"
-          invalid={!!formMethods.formState.errors.name}
-          errorMessage={formMethods.formState.errors.name?.message}
-        >
-          <Controller
-            name="name"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                placeholder="Your Company LLC"
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Address"
-          className="md:col-span-2"
-          invalid={!!formMethods.formState.errors.address}
-          errorMessage={formMethods.formState.errors.address?.message}
-        >
-          <Controller
-            name="address"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                rows={3}
-                placeholder="123 Business Rd..."
-                textArea
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Support Email"
-          invalid={!!formMethods.formState.errors.support_email}
-          errorMessage={formMethods.formState.errors.support_email?.message}
-        >
-          <Controller
-            name="support_email"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="email"
-                placeholder="support@example.com"
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Notification Email"
-          invalid={!!formMethods.formState.errors.notification_email}
-          errorMessage={
-            formMethods.formState.errors.notification_email?.message
-          }
-        >
-          <Controller
-            name="notification_email"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="email"
-                placeholder="noreply@example.com"
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Mobile Number"
-          invalid={!!formMethods.formState.errors.mobile}
-          errorMessage={formMethods.formState.errors.mobile?.message}
-        >
-          <Controller
-            name="mobile"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="tel"
-                placeholder="+1-XXX-XXX-XXXX"
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="GSTIN (Optional)"
-          invalid={!!formMethods.formState.errors.gst}
-          errorMessage={formMethods.formState.errors.gst?.message}
-        >
-          <Controller
-            name="gst"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                placeholder="Your Company GSTIN"
-              />
-            )}
-          />
-        </FormItem>
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
+      <FormItem
+        label="Company Name"
+        className="md:col-span-2"
+        invalid={!!formMethods.formState.errors.name}
+        errorMessage={formMethods.formState.errors.name?.message}
+      >
+        <Controller
+          name="name"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              placeholder="Your Company LLC"
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Address"
+        className="md:col-span-2"
+        invalid={!!formMethods.formState.errors.address}
+        errorMessage={formMethods.formState.errors.address?.message}
+      >
+        <Controller
+          name="address"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              rows={3}
+              placeholder="123 Business Rd..."
+              textArea
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Support Email"
+        invalid={!!formMethods.formState.errors.support_email}
+        errorMessage={formMethods.formState.errors.support_email?.message}
+      >
+        <Controller
+          name="support_email"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              type="email"
+              placeholder="support@example.com"
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Notification Email"
+        invalid={!!formMethods.formState.errors.notification_email}
+        errorMessage={
+          formMethods.formState.errors.notification_email?.message
+        }
+      >
+        <Controller
+          name="notification_email"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              type="email"
+              placeholder="noreply@example.com"
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Mobile Number"
+        invalid={!!formMethods.formState.errors.mobile}
+        errorMessage={formMethods.formState.errors.mobile?.message}
+      >
+        <Controller
+          name="mobile"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              type="tel"
+              placeholder="+1-XXX-XXX-XXXX"
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="GSTIN (Optional)"
+        invalid={!!formMethods.formState.errors.gst}
+        errorMessage={formMethods.formState.errors.gst?.message}
+      >
+        <Controller
+          name="gst"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              placeholder="Your Company GSTIN"
+            />
+          )}
+        />
+      </FormItem>
+    </div>
     // </Card>
   );
 
@@ -684,104 +686,104 @@ const CompanyProfile = () => {
     //     </div>
     //   }
     // >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
-        <FormItem
-          label="Facebook"
-          invalid={!!formMethods.formState.errors.facebook}
-          errorMessage={formMethods.formState.errors.facebook?.message}
-        >
-          <Controller
-            name="facebook"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="url"
-                placeholder="https://facebook.com/yourcompany"
-                prefix={<TbBrandFacebook />}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Instagram"
-          invalid={!!formMethods.formState.errors.instagram}
-          errorMessage={formMethods.formState.errors.instagram?.message}
-        >
-          <Controller
-            name="instagram"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="url"
-                placeholder="https://instagram.com/yourcompany"
-                prefix={<TbBrandInstagram />}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="LinkedIn"
-          invalid={!!formMethods.formState.errors.linkedin}
-          errorMessage={formMethods.formState.errors.linkedin?.message}
-        >
-          <Controller
-            name="linkedin"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="url"
-                placeholder="https://linkedin.com/company/yourcompany"
-                prefix={<TbBrandLinkedin />}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="YouTube"
-          invalid={!!formMethods.formState.errors.youtube}
-          errorMessage={formMethods.formState.errors.youtube?.message}
-        >
-          <Controller
-            name="youtube"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="url"
-                placeholder="https://youtube.com/yourcompany"
-                prefix={<TbBrandYoutube />}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Twitter (X)"
-          className="md:col-span-2"
-          invalid={!!formMethods.formState.errors.twitter}
-          errorMessage={formMethods.formState.errors.twitter?.message}
-        >
-          <Controller
-            name="twitter"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="url"
-                placeholder="https://twitter.com/yourcompany"
-                prefix={<TbBrandTwitter />}
-              />
-            )}
-          />
-        </FormItem>
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
+      <FormItem
+        label="Facebook"
+        invalid={!!formMethods.formState.errors.facebook}
+        errorMessage={formMethods.formState.errors.facebook?.message}
+      >
+        <Controller
+          name="facebook"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              type="url"
+              placeholder="https://facebook.com/yourcompany"
+              prefix={<TbBrandFacebook />}
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Instagram"
+        invalid={!!formMethods.formState.errors.instagram}
+        errorMessage={formMethods.formState.errors.instagram?.message}
+      >
+        <Controller
+          name="instagram"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              type="url"
+              placeholder="https://instagram.com/yourcompany"
+              prefix={<TbBrandInstagram />}
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="LinkedIn"
+        invalid={!!formMethods.formState.errors.linkedin}
+        errorMessage={formMethods.formState.errors.linkedin?.message}
+      >
+        <Controller
+          name="linkedin"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              type="url"
+              placeholder="https://linkedin.com/company/yourcompany"
+              prefix={<TbBrandLinkedin />}
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="YouTube"
+        invalid={!!formMethods.formState.errors.youtube}
+        errorMessage={formMethods.formState.errors.youtube?.message}
+      >
+        <Controller
+          name="youtube"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              type="url"
+              placeholder="https://youtube.com/yourcompany"
+              prefix={<TbBrandYoutube />}
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Twitter (X)"
+        className="md:col-span-2"
+        invalid={!!formMethods.formState.errors.twitter}
+        errorMessage={formMethods.formState.errors.twitter?.message}
+      >
+        <Controller
+          name="twitter"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              type="url"
+              placeholder="https://twitter.com/yourcompany"
+              prefix={<TbBrandTwitter />}
+            />
+          )}
+        />
+      </FormItem>
+    </div>
     // </Card>
   );
 
@@ -818,7 +820,7 @@ const CompanyProfile = () => {
           onSubmit={formMethods.handleSubmit(onUpdateProfile)}
         >
           <AdaptiveCard className="h-full" bodyClass="p-0 md:p-0">
-            <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 pt-2 md:p-6 md:pt-2 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold">
                 Company Profile Settings
               </h3>
