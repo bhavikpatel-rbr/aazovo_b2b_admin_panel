@@ -569,6 +569,25 @@ const EditTaskPage = () => {
                 </div>
               </div>
 
+                {/* Activity Type Section */}
+                <div className="flex flex-col">
+                <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                  Activity Type:
+                </label>
+                <div className="w-full">
+                  <Controller
+                  name="note"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} placeholder="Enter activity type..." />
+                  )}
+                  />
+                  {errors.note && (
+                  <p className="text-red-500 text-xs mt-1">{errors.note.message}</p>
+                  )}
+                </div>
+                </div>
+
               {/* Note (Task Title/Main Description) Section */}
               <div className="flex flex-col">
                 <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">

@@ -48,6 +48,7 @@ const createTaskSchema = z.object({
   dueDate: z.date({ required_error: "Due date is required." }),
   note: z.string().min(1, "Note/Task title is required.").max(500), // This can be the main task title/description
   description: z.string().optional(), // Additional details
+  activity_type: z.string().optional()
   // comments and attachments will be handled outside the main form data
 });
 type CreateTaskFormData = z.infer<typeof createTaskSchema>;
@@ -102,6 +103,7 @@ const CreateTaskPage = () => {
         category: DUMMY_CATEGORY_OPTIONS[0]?.value,
         dueDate: new Date(),
         note: "",
+        activity_type: "",
     }
   });
 
@@ -405,6 +407,23 @@ const CreateTaskPage = () => {
                     {errors.dueDate && <p className="text-red-500 text-xs mt-1">{errors.dueDate.message}</p>}
                 </div>
               </div>
+
+                {/* Activity Type Section */}
+                <div className="flex items-center">
+                <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
+                  Activity Type: <span className="text-red-500">*</span>
+                </label>
+                <div className="w-full">
+                  <Controller
+                  name="activity_type"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} placeholder="Enter activity type..." />
+                  )}
+                  />
+                  {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
+                </div>
+                </div>
 
               {/* Note (Task Title/Main Description) Section */}
               <div className="flex flex-col"> {/* Changed to flex-col for better label placement */}
