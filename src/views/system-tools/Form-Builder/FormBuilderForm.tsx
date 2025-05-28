@@ -382,13 +382,6 @@ const FormBuilderForm = () => {
         <BiChevronRight size={22} />
         <h6 className="font-semibold text-primary">Add New Form</h6>
       </div>
-
-      <div className="border-gray-100 p-3 text-right">
-        <Button icon={<TbLayoutList />} onClick={createSection}>
-          Add Section
-        </Button>
-      </div>
-
       <Card>
         <h5 className="mb-6">Form Information</h5>
         <Form>
@@ -479,7 +472,11 @@ const FormBuilderForm = () => {
               />
             ))}
           </div>
-
+          <div className="border-gray-100 mt-3 text-right">
+            <Button className='w-[200px] h-[40px] text-sm' variant='solid' type="button" icon={<TbLayoutList />} onClick={createSection}>
+              Add Section
+            </Button>
+          </div>
           <div className='text-right mt-2'>
             <Button type='button' className='mr-2 w-24'>Cancel</Button>
             <Button type='button' variant='solid' className='w-24'>Save</Button>
