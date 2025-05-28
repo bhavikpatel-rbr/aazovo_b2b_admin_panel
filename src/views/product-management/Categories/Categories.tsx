@@ -491,6 +491,7 @@ const Categories = () => {
   const closeAddCategoryDrawer = () => { setAddDrawerOpen(false); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(null); };
   const onAddCategorySubmit = async (data: CategoryFormData) => {
     setSubmitting(true); const formData = new FormData();
+    
     (Object.keys(data) as Array<keyof CategoryFormData>).forEach((key) => {
       const value = data[key];
       if (key === "icon") { if (value instanceof File) formData.append(key, value); }

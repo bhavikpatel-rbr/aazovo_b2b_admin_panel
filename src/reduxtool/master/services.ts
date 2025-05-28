@@ -872,8 +872,6 @@ export const addTrandingImageAsync = async (unitData: any) => {
 }
 
 export const editTrandingImageAsync = async (unitData: any) => {
-  console.log(unitData);
-
   console.log(`${config.apiURL}/other/trending_image/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {

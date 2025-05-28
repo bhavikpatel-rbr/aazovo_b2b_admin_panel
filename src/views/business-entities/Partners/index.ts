@@ -1,3 +1,3 @@
-import Partners from './Partners'
+import Partner from './Partners'
 
-export default Partners
+export default Partner

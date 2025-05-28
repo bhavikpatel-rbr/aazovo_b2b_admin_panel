@@ -283,9 +283,9 @@ interface FormListSearchProps {
 const FormListSearch: React.FC<FormListSearchProps> = ({ onInputChange }) => {
   return (
     <UiInput
-      placeholder="Search members..."
+      placeholder="Quick Search..."
       onChange={onInputChange}
-      className="max-w-xs"
+      // className="max-w-xs"
       // Add any other props like prefix icon if needed
     />
   );
