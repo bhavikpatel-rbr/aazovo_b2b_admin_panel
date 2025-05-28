@@ -744,7 +744,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
           <h6 className="font-semibold hover:text-primary-600">Company</h6>
         </NavLink>
         <BiChevronRight size={22} />
-        <h6 className="font-semibold text-primary-600">
+        <h6 className="font-semibold text-primary">
           {isEditMode ? "Edit Company" : "Add New Company"}
         </h6>
       </div>

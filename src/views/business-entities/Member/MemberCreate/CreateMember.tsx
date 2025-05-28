@@ -560,7 +560,7 @@ const MemberFormComponent = (props: MemberFormComponentProps) => {
                 <h6 className="font-semibold hover:text-primary-600">Member</h6>
             </NavLink>
             <BiChevronRight size={22} />
-            <h6 className="font-semibold text-primary-600">
+            <h6 className="font-semibold text-primary">
                 {isEditMode ? "Edit Member" : "Add New Member"}
             </h6>
         </div>

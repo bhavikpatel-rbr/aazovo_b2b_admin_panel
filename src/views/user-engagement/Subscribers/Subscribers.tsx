@@ -144,7 +144,7 @@ const SubscriberSearch = React.forwardRef<HTMLInputElement, SubscriberSearchProp
             <DebouceInput
                 ref={ref}
                 className="w-full"
-                placeholder="Search subscribers (Email, ID)..."
+                placeholder="Quick Search..."
                 suffix={<TbSearch className="text-lg" />}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)}
             />
@@ -359,9 +359,9 @@ const SubscribersListing = () => {
             <Container className="h-full">
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <h3 className="mb-2 sm:mb-0 flex items-center gap-2 text-lg font-semibold">
-                            <TbMail /> Subscribers
-                        </h3>
+                        <h5 className="mb-2 sm:mb-0">
+                            Subscribers
+                        </h5>
                     </div>
                     <SubscriberTableTools
                         onSearchChange={handleSearchChange}
