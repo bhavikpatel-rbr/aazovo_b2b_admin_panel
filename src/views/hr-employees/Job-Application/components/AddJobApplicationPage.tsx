@@ -1,14 +1,14 @@
 // src/views/hiring/AddJobApplicationPage.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useForm, Controller, useFieldArray, useWatch, UseFormSetValue } from 'react-hook-form'; // Added UseFormSetValue
+import { useForm, Controller, useFieldArray, useWatch, UseFormSetValue } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, NavLink } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 // UI Components
 import Input from '@/components/ui/Input';
-import { FormItem, FormContainer } from '@/components/ui/Form'; // Removed Form as we use native form tag
+import { FormItem, FormContainer } from '@/components/ui/Form';
 import { Select as UiSelect, DatePicker, Button, Radio, Card } from '@/components/ui';
 import Notification from '@/components/ui/Notification';
 import toast from '@/components/ui/toast';
@@ -18,6 +18,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 // Icons
 import { BiChevronRight } from 'react-icons/bi';
 import { TbPlus, TbTrash } from 'react-icons/tb';
+import { useAppDispatch } from "@/reduxtool/store";
 
 // Types and Schema
 import type { ApplicationFormData, FamilyMemberData, EducationDetailData, EmploymentDetailData } from '../types';
@@ -26,16 +27,20 @@ import {
     applicationStatusOptions,
     genderOptions,
     maritalStatusOptions,
-    // countryOptions, // Will be defined locally for cascading logic
-    // stateOptions, // Will be dynamic
-    // cityOptions, // Will be dynamic
     bloodGroupOptions,
     nationalityOptions,
 } from '../types';
 
+import {
+    getJobApplicationsAction,
+    // deleteJobApplicationAction, // Not used in this component
+    // deleteAllJobApplicationsAction, // Not used in this component
+    addJobApplicationAction,
+} from '@/reduxtool/master/middleware';
+// import { masterSelector } from '@/reduxtool/master/masterSlice'; // Not used in this component
+
 
 // --- Sample Data for Cascading Dropdowns ---
-// In a real app, fetch this from an API or a shared data module
 const countriesData = [
     { value: 'USA', label: 'United States' },
     { value: 'CAN', label: 'Canada' },
@@ -44,27 +49,10 @@ const countriesData = [
 ];
 
 const statesByCountryData: Record<string, Array<{ value: string; label: string }>> = {
-    USA: [
-        { value: 'NY', label: 'New York' },
-        { value: 'CA', label: 'California' },
-        { value: 'TX', label: 'Texas' },
-    ],
-    CAN: [
-        { value: 'ON', label: 'Ontario' },
-        { value: 'QC', label: 'Quebec' },
-        { value: 'BC', label: 'British Columbia' },
-    ],
-    IND: [
-        { value: 'MH', label: 'Maharashtra' },
-        { value: 'KA', label: 'Karnataka' },
-        { value: 'DL', label: 'Delhi' },
-        { value: 'TN', label: 'Tamil Nadu'},
-    ],
-    GBR: [
-        { value: 'ENG', label: 'England' },
-        { value: 'SCT', label: 'Scotland' },
-        { value: 'WAL', label: 'Wales' },
-    ],
+    USA: [ { value: 'NY', label: 'New York' }, { value: 'CA', label: 'California' }, { value: 'TX', label: 'Texas' } ],
+    CAN: [ { value: 'ON', label: 'Ontario' }, { value: 'QC', label: 'Quebec' }, { value: 'BC', label: 'British Columbia' } ],
+    IND: [ { value: 'MH', label: 'Maharashtra' }, { value: 'KA', label: 'Karnataka' }, { value: 'DL', label: 'Delhi' }, { value: 'TN', label: 'Tamil Nadu'} ],
+    GBR: [ { value: 'ENG', label: 'England' }, { value: 'SCT', label: 'Scotland' }, { value: 'WAL', label: 'Wales' } ],
 };
 
 const citiesByStateData: Record<string, Array<{ value: string; label: string }>> = {
@@ -77,7 +65,7 @@ const citiesByStateData: Record<string, Array<{ value: string; label: string }>>
     MH: [ { value: 'Mumbai', label: 'Mumbai' }, { value: 'Pune', label: 'Pune' }, { value: 'Nagpur', label: 'Nagpur' } ],
     KA: [ { value: 'Bangalore', label: 'Bengaluru' }, { value: 'Mysore', label: 'Mysuru' }, { value: 'Mangalore', label: 'Mangaluru' } ],
     DL: [ { value: 'NewDelhi', label: 'New Delhi' } ],
-    TN: [ { value: 'Chennai', label: 'Chennai' }, { value: 'Coimbatore', label: 'Coimbatore'}],
+    TN: [ { value: 'Chennai', label: 'Chennai' }, { value: 'Coimbatore', label: 'Coimbatore'} ],
     ENG: [ { value: 'London', label: 'London' }, { value: 'Manchester', label: 'Manchester' }, { value: 'Birmingham', label: 'Birmingham' }],
     SCT: [ { value: 'Edinburgh', label: 'Edinburgh' }, { value: 'Glasgow', label: 'Glasgow' }],
     WAL: [ { value: 'Cardiff', label: 'Cardiff' }, { value: 'Swansea', label: 'Swansea' }],
@@ -104,30 +92,27 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
         }
     }, [dob]);
 
-    // Update state options when country changes
     useEffect(() => {
         if (selectedCountry) {
             setStateOptions(statesByCountryData[selectedCountry] || []);
-            setValue('state', undefined); // Reset state
-            setValue('city', undefined);  // Reset city
+            setValue('state', undefined, { shouldValidate: true, shouldDirty: true });
+            setValue('city', undefined, { shouldValidate: true, shouldDirty: true });
         } else {
             setStateOptions([]);
-            setValue('state', undefined);
-            setValue('city', undefined);
+            setValue('state', undefined, { shouldValidate: true, shouldDirty: true });
+            setValue('city', undefined, { shouldValidate: true, shouldDirty: true });
         }
     }, [selectedCountry, setValue]);
 
-    // Update city options when state changes
     useEffect(() => {
         if (selectedState) {
             setCityOptions(citiesByStateData[selectedState] || []);
-            setValue('city', undefined); // Reset city
+            setValue('city', undefined, { shouldValidate: true, shouldDirty: true });
         } else {
             setCityOptions([]);
-            setValue('city', undefined);
+            setValue('city', undefined, { shouldValidate: true, shouldDirty: true });
         }
     }, [selectedState, setValue]);
-
 
     return (
         <Card id="personalDetails" className="mb-6">
@@ -148,7 +133,6 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
                 <FormItem label="Marital Status" error={errors.maritalStatus?.message}><Controller name="maritalStatus" control={control} render={({ field }) => <UiSelect placeholder="Select Marital Status" options={maritalStatusOptions} value={maritalStatusOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
                 <FormItem label="Blood Group" error={errors.bloodGroup?.message}><Controller name="bloodGroup" control={control} render={({ field }) => <UiSelect placeholder="Select Blood Group" options={bloodGroupOptions} value={bloodGroupOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
                 
-                {/* Cascading Dropdowns */}
                 <FormItem label="Country" error={errors.country?.message}>
                     <Controller name="country" control={control} render={({ field }) => 
                         <UiSelect 
@@ -210,7 +194,6 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
                 <FormItem label="Resume URL (Optional)" error={errors.resumeUrl?.message} className="lg:col-span-1 md:col-span-2"><Controller name="resumeUrl" control={control} render={({ field }) => <Input {...field} placeholder="https://link-to-resume.pdf" />} /></FormItem>
                 <FormItem label="Job Application Link (Optional)" error={errors.jobApplicationLink?.message} className="lg:col-span-2 md:col-span-2"><Controller name="jobApplicationLink" control={control} render={({ field }) => <Input {...field} placeholder="https://job-portal/apply/123" />} /></FormItem>
                 <FormItem label="Notes / Cover Letter (Optional)" error={errors.notes?.message || errors.coverLetter?.message} className="md:col-span-3"><Controller name="coverLetter" control={control} render={({ field }) => <Input {...field} textArea rows={3} placeholder="Enter notes or cover letter content..." />} /></FormItem>
-
             </div>
         </Card>
     );
@@ -219,7 +202,6 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
 // Section 2: Family Details
 const FamilyDetailsSection = ({ control, errors }: { control: any, errors: any }) => {
     const { fields, append, remove } = useFieldArray({ control, name: "familyDetails" });
-
     return (
         <Card id="familyDetails" className="mb-6">
             <div className="flex justify-between items-center mb-4">
@@ -346,6 +328,7 @@ const EmploymentDetailsSection = ({ control, errors, workExperienceType }: { con
 
 // --- Main AddJobApplicationPage Component ---
 const AddJobApplicationPage = () => {
+    const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
@@ -355,7 +338,7 @@ const AddJobApplicationPage = () => {
         defaultValues: {
             department: "", name: "", email: "", mobileNo: null, gender: undefined, dateOfBirth: null, age: null,
             nationality: undefined, maritalStatus: undefined, bloodGroup: undefined, 
-            country: undefined, state: undefined, city: undefined, // Initialize for cascading
+            country: undefined, state: undefined, city: undefined,
             localAddress: "", permanentAddress: "", workExperienceType: undefined,
             jobId: null, jobTitle: "", applicationDate: new Date(), status: "new", resumeUrl: null,
             coverLetter: null, notes: null, jobApplicationLink: null,
@@ -364,44 +347,128 @@ const AddJobApplicationPage = () => {
             educationalDetails: [],
             employmentDetails: [],
         },
-        mode: 'onChange', // Or 'onBlur' or 'onSubmit'
+        mode: 'onChange', 
     });
 
-    const workExperienceType = watch("workExperienceType");
-
-    const onSubmit = async (data: ApplicationFormData) => {
+      // This is the active submit handler linked to the form
+      const onSubmitHandler = async (formData: ApplicationFormData) => {
         setIsSubmitting(true);
+
+        // Construct the payload with necessary transformations
         const payload = {
-            ...data,
-            dateOfBirth: data.dateOfBirth ? dayjs(data.dateOfBirth).format('YYYY-MM-DD') : null,
-            applicationDate: dayjs(data.applicationDate).format('YYYY-MM-DD'),
-            familyDetails: data.familyDetails?.map(fd => ({
-                ...fd,
-                familyDateOfBirth: fd.familyDateOfBirth ? dayjs(fd.familyDateOfBirth).format('YYYY-MM-DD') : null,
-            })),
-            educationalDetails: data.educationalDetails?.map(ed => ({
-                ...ed,
-                educationFromDate: ed.educationFromDate ? dayjs(ed.educationFromDate).format('YYYY-MM-DD') : null, // Check for null
-                educationToDate: ed.educationToDate ? dayjs(ed.educationToDate).format('YYYY-MM-DD') : null,     // Check for null
-            })),
-            employmentDetails: data.workExperienceType === 'experienced' ? data.employmentDetails?.map(emp => ({
+        job_department_id: formData.department,
+        name: formData.name,
+        email: formData.email,
+        mobile_no: formData.mobileNo ?? "",
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        nationality: formData.nationality,
+        marital_status: formData.maritalStatus,
+        emg_mobile_no: formData.emergencyMobileNo,
+        emg_relation: formData.emergencyRelation,
+        gender: formData.gender,
+        age: formData.age,
+        dob: formData.dateOfBirth ? dayjs(formData.dateOfBirth).format("YYYY-MM-DD") : null,
+        blood_group: formData.bloodGroup,
+        local_address: formData.localAddress,
+        permanent_address: formData.permanentAddress,
+        work_experience: formData.
+         === "experienced" ? 1 : 0,
+        total_experience: "", // Optional: Add if collected
+        expected_salary: "",  // Optional: Add if collected
+        notice_period: "",    // Optional: Add if collected
+        reference: "",        // Optional: Add if collected
+        reference_specify: "",// Optional: Add if collected
+
+        // Rename and map array values
+        education_details: formData.educationalDetails?.map(ed => ({
+            ...ed,
+            educationFromDate: dayjs(ed.educationFromDate).format("YYYY-MM-DD"),
+            educationToDate: dayjs(ed.educationToDate).format("YYYY-MM-DD"),
+        })) ?? [],
+
+        employee_details: formData.
+         === "experienced"
+            ? formData.employmentDetails?.map(emp => ({
                 ...emp,
-                periodServiceFrom: emp.periodServiceFrom ? dayjs(emp.periodServiceFrom).format('YYYY-MM-DD') : null, // Check for null
-                periodServiceTo: emp.periodServiceTo ? dayjs(emp.periodServiceTo).format('YYYY-MM-DD') : null,       // Check for null
-            })) : [],
+                periodServiceFrom: dayjs(emp.periodServiceFrom).format("YYYY-MM-DD"),
+                periodServiceTo: dayjs(emp.periodServiceTo).format("YYYY-MM-DD"),
+            }))
+            : [],
+
+        family_details: formData.familyDetails?.map(fd => ({
+            ...fd,
+            familyDateOfBirth: fd.familyDateOfBirth
+            ? dayjs(fd.familyDateOfBirth).format("YYYY-MM-DD")
+            : null,
+        })) ?? [],
+
+        emergency_contact_details: [], // Optional if needed
+
+        first_interview: "", // Optional: Fill if available
+        first_int_remarks: "",
+        second_interview: "",
+        second_int_remarks: "",
+        final_interview: "",
+        final_int_remarks: "",
+
+        status: formData.status, // Should be one of: new, screening, etc.
+        remarks: formData.notes ?? "",
+        job_link_token: formData.jobApplicationLink ?? "",
+        job_link_datetime: "", // Optional: Add if collected
+
+        job_title: formData.jobTitle,
+        job_id: formData.jobId,
+        application_date: dayjs(formData.applicationDate).format("YYYY-MM-DD"),
+        resume_url: formData.resumeUrl ?? "",
+        application_link: formData.jobApplicationLink ?? "",
+        note: formData.coverLetter ?? "",
         };
-        console.log("Submitting New Application Payload:", payload);
+
+        
+        console.log("Submitting New Application Payload:", payload); // Verify payload content
+
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            toast.push(<Notification title="Success" type="success">Application submitted successfully.</Notification>);
-            reset(); 
-            navigate('/hiring/job-applications');
+            await dispatch(addJobApplicationAction(payload)).unwrap();
+            toast.push(
+              <Notification
+                title="Job Application Added" // Corrected title
+                type="success"
+                duration={2000}
+              >
+                New job application added successfully. {/* Corrected message */}
+              </Notification>
+            );
+          dispatch(getJobApplicationsAction()); // Refresh the list
+          reset(); // Reset form fields
+          navigate('/hiring/job-applications'); // Navigate to the list page
         } catch (error: any) {
-            toast.push(<Notification title="Error" type="danger">{error.message || "Submission failed."}</Notification>);
+          toast.push(
+            <Notification
+              title="Add Application Failed" // Corrected title
+              type="danger"
+              duration={3000}
+            >
+              {/* Attempt to get a more specific error message */}
+              {error?.data?.message || error?.message || "Operation failed."}
+            </Notification>
+          );
+          console.error("Job Application Submit Error:", error); // Corrected console log
         } finally {
-            setIsSubmitting(false);
+          setIsSubmitting(false);
         }
-    };
+      };
+
+      useEffect(() => {
+        // Optionally fetch initial data if needed, though for an "add" page,
+        // getJobApplicationsAction might be more relevant after a successful add.
+        // If you need some data for dropdowns that isn't static, fetch it here.
+        // dispatch(getJobApplicationsAction()); // This was here, might be for updating list in background
+      }, [dispatch]);
+
+
+    // The old `onSubmit` function is removed as its logic is merged into `onSubmitHandler`
 
     const handleCancel = () => {
         if (isDirty) setCancelConfirmOpen(true);
@@ -411,7 +478,8 @@ const AddJobApplicationPage = () => {
     return (
         <Container className="h-full">
             <FormContainer>
-                <form onSubmit={handleSubmit(onSubmit)}>
+                {/* The form now correctly uses onSubmitHandler */}
+                <form onSubmit={handleSubmit(onSubmitHandler)}>
                     <div className='flex gap-1 items-center mb-3'>
                         <NavLink to="/hiring/job-applications">
                             <h6 className='font-semibold hover:text-primary-600 dark:hover:text-primary-400'>Job Applications</h6>
@@ -420,7 +488,10 @@ const AddJobApplicationPage = () => {
                         <h6 className='font-semibold text-primary-600 dark:text-primary-400'>Add New Application</h6>
                     </div>
 
-                    <PersonalDetailsSection control={control} errors={errors} workExperienceType={workExperienceType} setValue={setValue} />
+                    <PersonalDetailsSection control={control} errors={errors} 
+                    ={
+                        
+                    } setValue={setValue} />
                     <FamilyDetailsSection control={control} errors={errors} />
                     <EmergencyContactSection control={control} errors={errors} />
                     <EducationalDetailsSection control={control} errors={errors} />

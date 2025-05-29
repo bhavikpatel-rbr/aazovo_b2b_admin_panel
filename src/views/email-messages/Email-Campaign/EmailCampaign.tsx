@@ -465,7 +465,13 @@ const handleSelectPageSizeChange = useCallback((value: number) => { setTableData
               </FormItem>
               {[1,2,3,4,5,6].map(i => (
                 <FormItem key={`image_${i}`} label={`Image ${i} URL (for {{image${i}}})`} invalid={!!(formErrors as any)[`image_${i}`]} errorMessage={(formErrors as any)[`image_${i}`]?.message}>
-                    <Controller name={`image_${i}` as any} control={control} render={({ field }) => (<Input {...field} type="url" prefix={<TbPhoto />} placeholder={`https://example.com/image${i}.png`} />)}/>
+                  <Controller
+                    name={`image_${i}` as any}
+                    control={control}
+                    render={({ field }) => (
+                      <Input {...field} type="url" prefix={<TbPhoto />} placeholder={`https://example.com/image${i}.png`} />
+                    )}
+                  />
                 </FormItem>
               ))}
               <FormItem label="Final Text (for {{text}})" className="md:col-span-2" invalid={!!formErrors.text_final} errorMessage={formErrors.text_final?.message}>

@@ -1890,7 +1890,7 @@ export const getMembersAsync = async () => {
 
 export const getSubcategoriesByCategoryIdAsync = async (categoryId: string) => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/master/subcategory?category_id=${categoryId}`)
+    const response = await axiosInstance.post(`${config.apiURL}/master/sub_category?category_id=${categoryId}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -1953,3 +1953,61 @@ export const importRowDataAsync = async () => {
     return isAxiosError(err);
   }
 };
+
+export const getJobApplicationAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/other/job_application`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addJobApplicationAsync = async (applicationData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_application`, applicationData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editJobApplicationAsync = async (applicationData: any) => {
+  console.log(`${config.apiURL}/other/job_application/${applicationData?.id}`, { _method: "PUT", ...applicationData });
+
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_application/${applicationData?.id}`, { _method: "PUT", ...applicationData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteJobApplicationAsync = async (applicationData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/jother/job_application/${applicationData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllJobApplicationAsync = async (applicationData: any) => {
+  try {
+    console.log("applicationData", applicationData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_application/delete`, applicationData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getRolesAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/roles/role`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
