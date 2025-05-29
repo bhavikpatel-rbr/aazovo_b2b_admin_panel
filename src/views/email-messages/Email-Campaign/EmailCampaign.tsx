@@ -41,7 +41,7 @@ import {
   TbTrash,
   TbPhoto,
   TbPhone,
-  TbFileDescription,
+  TbToggleRight,
   TbForms,
   TbMail, // For email list
   TbFileImport, // For file import

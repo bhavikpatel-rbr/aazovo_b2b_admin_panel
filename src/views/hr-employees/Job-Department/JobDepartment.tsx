@@ -519,6 +519,7 @@ const JobDepartment = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+    closeFilterDrawer();
   }, [filterFormMethods]);
 
   const jobDepartmentNameOptions = useMemo(() => {
@@ -785,7 +786,7 @@ const JobDepartment = () => {
               <Button
                 size="sm"
                 className="mr-2"
-                onClick={closeFilterDrawer}
+                onClick={onClearFilters}
                 type="button"
               >
                 Clear

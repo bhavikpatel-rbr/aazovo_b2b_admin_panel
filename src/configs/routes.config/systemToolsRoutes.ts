@@ -23,9 +23,19 @@ const systemToolsRoutes: Routes = [
         },
     },
     {
-        key: 'systemTools.formBuilderForm',
+        key: 'systemTools.formBuilder',
         path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-create`,
-        component: lazy(() =>import('@/views/system-tools/Form-Builder/FormBuilderForm'),
+        component: lazy(() =>import('@/views/system-tools/Form-Builder/components/FormBuilderAddPage'),
+        ),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'systemTools.formBuilder',
+        path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-edit:id`,
+        component: lazy(() =>import('@/views/system-tools/Form-Builder/components/FormBuilderEditPage'),
         ),
         authority: [ADMIN],
         meta: {

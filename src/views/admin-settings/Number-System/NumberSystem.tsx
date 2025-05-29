@@ -63,21 +63,25 @@ export type CountryListItem = {
 export type CountryOption = { value: string; label: string };
 
 // --- Define NumberSystemItem Type (Matches your API response for the LISTING) ---
-// For Add/Edit, the form will have more fields, but the API might expect a subset or all.
 export type NumberSystemItem = {
   id: string | number;
   name: string;
   prefix?: string;
   country_ids: string; // Comma-separated string
-  customer_code_starting?: string; // Corresponds to kycStartNumber in original schema
-  current_customer_code?: string; // Corresponds to kycCurrentNumber
-  non_kyc_customer_code_starting?: string; // Corresponds to tempStartNumber
-  non_kyc_current_customer_code?: string; // Corresponds to tempCurrentNumber
+  customer_code_starting?: string; // Corresponds to customer_code_starting
+  current_customer_code?: string; // Corresponds to current_customer_code
+  non_kyc_customer_code_starting?: string; // Corresponds to non_kyc_customer_code_starting
+  non_kyc_current_customer_code?: string; // Corresponds to non_kyc_current_customer_code
+  // New fields for company numbering
+  company_code_starting?: string;
+  current_company_code?: string;
+  non_kyc_company_code_starting?: string;
+  non_kyc_current_company_code?: string;
   created_at?: string;
   updated_at?: string;
 };
 
-// --- Zod Schema for Add/Edit Form (Restored Full Fields) ---
+// --- Zod Schema for Add/Edit Form ---
 const numberSystemFormSchema = z
   .object({
     name: z
@@ -90,41 +94,74 @@ const numberSystemFormSchema = z
       .optional()
       .or(z.literal("")),
     // KYC Member Numbering
-    kycStartNumber: z.coerce
+    customer_code_starting: z.coerce
       .number()
       .int()
       .min(0, "KYC Start Number must be non-negative."),
-    kycCurrentNumber: z.coerce
+    current_customer_code: z.coerce
       .number()
       .int()
       .min(0, "KYC Current Number must be non-negative."),
     // Temporary Member Numbering
-    tempStartNumber: z.coerce
+    non_kyc_customer_code_starting: z.coerce
       .number()
       .int()
       .min(0, "Temp Start Number must be non-negative."),
-    tempCurrentNumber: z.coerce
+    non_kyc_current_customer_code: z.coerce
       .number()
       .int()
       .min(0, "Temp Current Number must be non-negative."),
+    // Verified Company Numbering
+    company_code_starting: z.coerce
+      .number()
+      .int()
+      .min(0, "Verified Company Start Number must be non-negative."),
+    current_company_code: z.coerce
+      .number()
+      .int()
+      .min(0, "Verified Company Current Number must be non-negative."),
+    // Temporary Company Numbering
+    non_kyc_company_code_starting: z.coerce
+      .number()
+      .int()
+      .min(0, "Temporary Company Start Number must be non-negative."),
+    non_kyc_current_company_code: z.coerce
+      .number()
+      .int()
+      .min(0, "Temporary Company Current Number must be non-negative."),
     country_ids: z
       .array(z.string())
       .min(1, "At least one country must be selected."),
   })
   .superRefine((data, ctx) => {
-    // Ensure current numbers are not less than start numbers
-    if (data.kycCurrentNumber < data.kycStartNumber) {
+    if (data.current_customer_code < data.customer_code_starting) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "KYC Current Number cannot be less than KYC Start Number.",
-        path: ["kycCurrentNumber"],
+        path: ["current_customer_code"],
       });
     }
-    if (data.tempCurrentNumber < data.tempStartNumber) {
+    if (data.non_kyc_current_customer_code < data.non_kyc_customer_code_starting) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Temp Current Number cannot be less than Temp Start Number.",
-        path: ["tempCurrentNumber"],
+        path: ["non_kyc_current_customer_code"],
+      });
+    }
+    if (data.current_company_code < data.company_code_starting) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Verified Company Current Number cannot be less than Verified Company Start Number.",
+        path: ["current_company_code"],
+      });
+    }
+    if (data.non_kyc_current_company_code < data.non_kyc_company_code_starting) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Temporary Company Current Number cannot be less than Temporary Company Start Number.",
+        path: ["non_kyc_current_company_code"],
       });
     }
   });
@@ -139,7 +176,6 @@ const filterFormSchema = z.object({
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- CSV Exporter Utility ---
-// For CSV, we'll export based on the primary display fields + API fields
 const CSV_HEADERS_NS = [
   "ID",
   "Name",
@@ -149,6 +185,10 @@ const CSV_HEADERS_NS = [
   "KYC Current",
   "Temp Start",
   "Temp Current",
+  "Verified Company Start",
+  "Verified Company Current",
+  "Temporary Company Start",
+  "Temporary Company Current",
 ];
 const CSV_KEYS_NS: (keyof NumberSystemItem)[] = [
   "id",
@@ -159,10 +199,13 @@ const CSV_KEYS_NS: (keyof NumberSystemItem)[] = [
   "current_customer_code",
   "non_kyc_customer_code_starting",
   "non_kyc_current_customer_code",
+  "company_code_starting",
+  "current_company_code",
+  "non_kyc_company_code_starting",
+  "non_kyc_current_company_code",
 ];
 
 function exportNumberSystemsToCsv(filename: string, rows: NumberSystemItem[]) {
-  // ... (CSV export logic - same as before, ensure keys match NumberSystemItem)
   if (!rows || !rows.length) {
     toast.push(
       <Notification title="No Data" type="info" duration={2000}>
@@ -220,13 +263,9 @@ function exportNumberSystemsToCsv(filename: string, rows: NumberSystemItem[]) {
 // --- ActionColumn (can be the more comprehensive one) ---
 const ActionColumn = ({
   onEdit,
-  onViewDetail,
-  onChangeStatus,
-  onDelete, // Uncomment if you want to use delete action
+  onDelete,
 }: {
   onEdit: () => void;
-  onViewDetail: () => void;
-  onChangeStatus: () => void;
   onDelete: () => void;
 }) => {
   return (
@@ -240,18 +279,9 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="View">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
-          role="button"
-          onClick={onViewDetail}
-        >
-          <TbEye />
-        </div>
-      </Tooltip> */}
       <Tooltip title="Delete">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} // Changed hover to red for delete
           role="button"
           onClick={onDelete}
         >
@@ -434,10 +464,14 @@ const NumberSystems = () => {
   const defaultFormValues: NumberSystemFormData = {
     name: "",
     prefix: "",
-    kycStartNumber: 0,
-    kycCurrentNumber: 0,
-    tempStartNumber: 0,
-    tempCurrentNumber: 0,
+    customer_code_starting: 0,
+    current_customer_code: 0,
+    non_kyc_customer_code_starting: 0,
+    non_kyc_current_customer_code: 0,
+    company_code_starting: 0,
+    current_company_code: 0,
+    non_kyc_company_code_starting: 0,
+    non_kyc_current_company_code: 0,
     country_ids: [],
   };
 
@@ -455,7 +489,7 @@ const NumberSystems = () => {
   const openAddDrawer = useCallback(() => {
     formMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(true);
-  }, [formMethods, defaultFormValues]); // Added defaultFormValues
+  }, [formMethods, defaultFormValues]);
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
   const openEditDrawer = useCallback(
@@ -470,10 +504,18 @@ const NumberSystems = () => {
       formMethods.reset({
         name: item.name,
         prefix: item.prefix || "",
-        kycStartNumber: Number(item.customer_code_starting) || 0,
-        kycCurrentNumber: Number(item.current_customer_code) || 0,
-        tempStartNumber: Number(item.non_kyc_customer_code_starting) || 0,
-        tempCurrentNumber: Number(item.non_kyc_current_customer_code) || 0,
+        customer_code_starting: Number(item.customer_code_starting) || 0,
+        current_customer_code: Number(item.current_customer_code) || 0,
+        non_kyc_customer_code_starting: Number(item.non_kyc_customer_code_starting) || 0,
+        non_kyc_current_customer_code: Number(item.non_kyc_current_customer_code) || 0,
+        company_code_starting:
+          Number(item.company_code_starting) || 0,
+        current_company_code:
+          Number(item.current_company_code) || 0,
+        non_kyc_company_code_starting:
+          Number(item.non_kyc_company_code_starting) || 0,
+        non_kyc_current_company_code:
+          Number(item.non_kyc_current_company_code) || 0,
         country_ids: selectedCountryIds,
       });
       setIsEditDrawerOpen(true);
@@ -487,15 +529,18 @@ const NumberSystems = () => {
 
   const onSubmitHandler = async (data: NumberSystemFormData) => {
     setIsSubmitting(true);
-    // Map form data to API payload structure
     const apiPayload = {
       name: data.name,
       prefix: data.prefix || null,
       country_ids: data.country_ids.join(","),
-      customer_code_starting: String(data.kycStartNumber),
-      current_customer_code: String(data.kycCurrentNumber),
-      non_kyc_customer_code_starting: String(data.tempStartNumber),
-      non_kyc_current_customer_code: String(data.tempCurrentNumber),
+      customer_code_starting: String(data.customer_code_starting),
+      current_customer_code: String(data.current_customer_code),
+      non_kyc_customer_code_starting: String(data.non_kyc_customer_code_starting),
+      non_kyc_current_customer_code: String(data.non_kyc_current_customer_code),
+      company_code_starting: String(data.company_code_starting),
+      current_company_code: String(data.current_company_code),
+      non_kyc_company_code_starting: String(data.non_kyc_company_code_starting),
+      non_kyc_current_company_code: String(data.non_kyc_current_company_code),
     };
 
     try {
@@ -543,7 +588,6 @@ const NumberSystems = () => {
     }
   };
 
-  // ... (handleDeleteClick, onConfirmSingleDelete, handleDeleteSelected - no changes in logic)
   const handleDeleteClick = useCallback((item: NumberSystemItem) => {
     if (item.id === undefined || item.id === null) {
       toast.push(
@@ -627,7 +671,6 @@ const NumberSystems = () => {
     }
   }, [dispatch, selectedItems]);
 
-  // ... (Filter Handlers - no changes in logic)
   const openFilterDrawer = useCallback(() => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
@@ -648,7 +691,6 @@ const NumberSystems = () => {
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
   }, [filterFormMethods]);
 
-  // ... (useMemo for pageData, total, allFilteredAndSortedData - logic for filtering and sorting remains the same)
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: NumberSystemItem[] = Array.isArray(numberSystemsData)
       ? numberSystemsData
@@ -720,7 +762,6 @@ const NumberSystems = () => {
     };
   }, [numberSystemsData, tableData, filterCriteria]);
 
-  // ... (handleExportData, table interaction handlers - no changes in logic)
   const handleExportData = useCallback(() => {
     const success = exportNumberSystemsToCsv(
       "number_systems_export.csv",
@@ -786,7 +827,6 @@ const NumberSystems = () => {
     []
   );
 
-  // Column Definitions (Listing fields: ID, Name, Countries - Prefix is in API, can be added here too)
   const columns: ColumnDef<NumberSystemItem>[] = useMemo(
     () => [
       { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
@@ -799,7 +839,6 @@ const NumberSystems = () => {
           <span className="font-semibold">{props.row.original.name}</span>
         ),
       },
-      // { header: 'Prefix', accessorKey: 'prefix', enableSorting: true, size: 100 }, // Uncomment to display prefix
       {
         header: "Countries",
         accessorKey: "country_ids",
@@ -826,10 +865,6 @@ const NumberSystems = () => {
           const remainingCount = names.length - displayLimit;
 
           return (
-            // <Tooltip
-            //   title={names.join(", ")}
-            //   wrapperClassName="whitespace-nowrap max-w-[200px] overflow-hidden text-ellipsis"
-            // >
             <div className="flex flex-wrap gap-1">
               {displayedNames.map((name, index) => (
                 <Tag
@@ -845,7 +880,6 @@ const NumberSystems = () => {
                 </Tag>
               )}
             </div>
-            // </Tooltip>
           );
         },
         size: 250,
@@ -853,7 +887,7 @@ const NumberSystems = () => {
       {
         header: "Actions",
         id: "action",
-        size: 200,
+        size: 120, // Adjusted size for two icons
         meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
@@ -866,11 +900,8 @@ const NumberSystems = () => {
     [CountriesData, openEditDrawer, handleDeleteClick]
   );
 
-  // --- Render Form for Drawer (Restored Full Fields) ---
   const renderDrawerForm = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-      {" "}
-      {/* Adjusted gap */}
       <FormItem
         label="System Name"
         className="md:col-span-2"
@@ -899,20 +930,20 @@ const NumberSystems = () => {
           )}
         />
       </FormItem>
+
+      {/* KYC Member Section */}
       <div className="md:col-span-2 border-t pt-3 mt-1">
-        {" "}
-        {/* Adjusted padding/margin */}
         <h6 className="text-sm font-medium mb-2">
           Numbering System For KYC Member
         </h6>
       </div>
       <FormItem
         label="Member ID Starting No."
-        invalid={!!formMethods.formState.errors.kycStartNumber}
-        errorMessage={formMethods.formState.errors.kycStartNumber?.message}
+        invalid={!!formMethods.formState.errors.customer_code_starting}
+        errorMessage={formMethods.formState.errors.customer_code_starting?.message}
       >
         <Controller
-          name="kycStartNumber"
+          name="customer_code_starting"
           control={formMethods.control}
           render={({ field }) => (
             <Input {...field} type="number" placeholder="e.g., 10001" />
@@ -921,31 +952,31 @@ const NumberSystems = () => {
       </FormItem>
       <FormItem
         label="Member ID Current No."
-        invalid={!!formMethods.formState.errors.kycCurrentNumber}
-        errorMessage={formMethods.formState.errors.kycCurrentNumber?.message}
+        invalid={!!formMethods.formState.errors.current_customer_code}
+        errorMessage={formMethods.formState.errors.current_customer_code?.message}
       >
         <Controller
-          name="kycCurrentNumber"
+          name="current_customer_code"
           control={formMethods.control}
           render={({ field }) => (
             <Input {...field} type="number" placeholder="e.g., 10500" />
           )}
         />
       </FormItem>
+
+      {/* Temporary Member Section */}
       <div className="md:col-span-2 border-t pt-3 mt-1">
-        {" "}
-        {/* Adjusted padding/margin */}
         <h6 className="text-sm font-medium mb-2">
           Numbering System For Temporary Member
         </h6>
       </div>
       <FormItem
         label="Member ID Starting No."
-        invalid={!!formMethods.formState.errors.tempStartNumber}
-        errorMessage={formMethods.formState.errors.tempStartNumber?.message}
+        invalid={!!formMethods.formState.errors.non_kyc_customer_code_starting}
+        errorMessage={formMethods.formState.errors.non_kyc_customer_code_starting?.message}
       >
         <Controller
-          name="tempStartNumber"
+          name="non_kyc_customer_code_starting"
           control={formMethods.control}
           render={({ field }) => (
             <Input {...field} type="number" placeholder="e.g., 5001" />
@@ -954,17 +985,93 @@ const NumberSystems = () => {
       </FormItem>
       <FormItem
         label="Member ID Current No."
-        invalid={!!formMethods.formState.errors.tempCurrentNumber}
-        errorMessage={formMethods.formState.errors.tempCurrentNumber?.message}
+        invalid={!!formMethods.formState.errors.non_kyc_current_customer_code}
+        errorMessage={formMethods.formState.errors.non_kyc_current_customer_code?.message}
       >
         <Controller
-          name="tempCurrentNumber"
+          name="non_kyc_current_customer_code"
           control={formMethods.control}
           render={({ field }) => (
             <Input {...field} type="number" placeholder="e.g., 5250" />
           )}
         />
       </FormItem>
+
+      {/* Verified Company Section */}
+      <div className="md:col-span-2 border-t pt-3 mt-1">
+        <h6 className="text-sm font-medium mb-2">
+          Numbering System For Verified Company
+        </h6>
+      </div>
+      <FormItem
+        label="Company ID Starting No."
+        invalid={!!formMethods.formState.errors.company_code_starting}
+        errorMessage={
+          formMethods.formState.errors.company_code_starting?.message
+        }
+      >
+        <Controller
+          name="company_code_starting"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input {...field} type="number" placeholder="e.g., 70001" />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Company ID Current No."
+        invalid={!!formMethods.formState.errors.current_company_code}
+        errorMessage={
+          formMethods.formState.errors.current_company_code?.message
+        }
+      >
+        <Controller
+          name="current_company_code"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input {...field} type="number" placeholder="e.g., 70100" />
+          )}
+        />
+      </FormItem>
+
+      {/* Temporary Company Section */}
+      <div className="md:col-span-2 border-t pt-3 mt-1">
+        <h6 className="text-sm font-medium mb-2">
+          Numbering System For Temporary Company
+        </h6>
+      </div>
+      <FormItem
+        label="Company ID Starting No."
+        invalid={!!formMethods.formState.errors.non_kyc_company_code_starting}
+        errorMessage={
+          formMethods.formState.errors.non_kyc_company_code_starting?.message
+        }
+      >
+        <Controller
+          name="non_kyc_company_code_starting"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input {...field} type="number" placeholder="e.g., 80001" />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Company ID Current No."
+        invalid={!!formMethods.formState.errors.non_kyc_current_company_code}
+        errorMessage={
+          formMethods.formState.errors.non_kyc_current_company_code?.message
+        }
+      >
+        <Controller
+          name="non_kyc_current_company_code"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input {...field} type="number" placeholder="e.g., 80050" />
+          )}
+        />
+      </FormItem>
+
+      {/* Applicable Countries Section */}
       <FormItem
         label="Applicable Countries"
         className="md:col-span-2"
@@ -1051,7 +1158,7 @@ const NumberSystems = () => {
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        width={700} // Increased width for more fields
+        width={700}
         footer={
           <div className="text-right w-full">
             <Button
@@ -1087,13 +1194,10 @@ const NumberSystems = () => {
           onSubmit={formMethods.handleSubmit(onSubmitHandler)}
           className="flex flex-col gap-2"
         >
-          {" "}
-          {/* Reduced overall gap */}
           {renderDrawerForm()}
         </Form>
       </Drawer>
 
-      {/* Filter Drawer */}
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
@@ -1145,7 +1249,6 @@ const NumberSystems = () => {
         </Form>
       </Drawer>
 
-      {/* ConfirmDialog */}
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
@@ -1162,7 +1265,6 @@ const NumberSystems = () => {
           setSingleDeleteConfirmOpen(false);
           setItemToDelete(null);
         }}
-        // confirmButtonColor="red-600"
         onConfirm={onConfirmSingleDelete}
         loading={isDeleting}
       >
@@ -1177,7 +1279,7 @@ const NumberSystems = () => {
 
 export default NumberSystems;
 
-// Helper
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}
+// Helper (if needed elsewhere, otherwise can be removed if not used)
+// function classNames(...classes: (string | boolean | undefined)[]) {
+//   return classes.filter(Boolean).join(" ");
+// }

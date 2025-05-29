@@ -19,7 +19,7 @@ import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
 import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
-import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Ensure this path is correct
+// import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Ensure this path is correct, seems unused in this file for Input prefix
 
 // Icons
 import {
@@ -34,7 +34,7 @@ import {
   TbMapPin,
   TbUsers,
   TbFileText,
-  TbSwitchHorizontal,
+  TbSwitchHorizontal, // Keep if change status is re-enabled
   TbBuildingSkyscraper,
 } from "react-icons/tb";
 
@@ -55,32 +55,34 @@ import {
   editJobPostAction,
   deleteJobPostAction,
   deleteAllJobPostsAction,
-  getJobDepartmentsAction, // Action to fetch job departments
-} from "@/reduxtool/master/middleware"; // Adjust path as necessary
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust as necessary
+  getJobDepartmentsAction,
+} from "@/reduxtool/master/middleware";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Define Types ---
 export type JobDepartmentListItem = {
-  id: string | number;
+  id: string | number; // API might send number, but Select usually works well with string values
   name: string;
+  // Add any other properties your API returns for departments
 };
 export type JobDepartmentOption = { value: string; label: string };
 
-export type JobPostStatusApi = "Active" | "Disabled" | string;
+export type JobPostStatusApi = "Active" | "Disabled" | string; // string for other potential statuses
 export type JobPostStatusForm = "Active" | "Disabled";
 
 export type JobPostItem = {
   id: string | number;
-  job_title?: string; // Assuming this field exists in your API response
+  job_title?: string;
   status: JobPostStatusApi;
-  job_department_id: string;
+  job_department_id: string | number; // API might send number
   description: string;
   location: string;
   created_by?: string;
-  vacancies: string | number; // API might send string, form uses number
+  vacancies: string | number;
   experience: string;
   created_at?: string;
   updated_at?: string;
+  // Add any other fields from your API response
 };
 
 // --- Constants for Form Selects ---
@@ -111,16 +113,15 @@ const jobPostFormSchema = z.object({
   job_department_id: z.string().min(1, "Please select a department."),
   description: z
     .string()
-    .min(1, "Description is required.") // Or make it optional if it truly is
-    // .min(10, 'Description must be at least 10 characters.') // Keep if this is a business rule
+    .min(1, "Description is required.")
     .max(5000, "Description too long (max 5000 chars).")
-    .optional() // If description can be empty or not sent
-    .or(z.literal("")), // Allow empty string if optional
+    .optional()
+    .or(z.literal("")),
   location: z.string().min(1, "Location is required.").max(100),
   experience: z.string().min(1, "Experience level is required.").max(50),
-  vacancies: z.coerce
-    .number()
-    .int()
+  vacancies: z.coerce // coerce will attempt to convert string to number
+    .number({ invalid_type_error: "Vacancies must be a number." })
+    .int("Vacancies must be a whole number.")
     .min(0, "Vacancies must be a non-negative number."),
   status: z.enum(jobPostStatusFormValues, {
     errorMap: () => ({ message: "Please select a status." }),
@@ -144,7 +145,7 @@ const CSV_HEADERS_JOB = [
   "ID",
   "Job Title",
   "Status",
-  "Department ID",
+  "Department ID", // Consider changing to "Department Name" if you map it before export
   "Description",
   "Location",
   "Experience",
@@ -162,69 +163,89 @@ const CSV_KEYS_JOB: (keyof JobPostItem)[] = [
   "vacancies",
   "created_at",
 ];
-function exportJobPostsToCsv(filename: string, rows: JobPostItem[]) {
-  if (!rows || !rows.length) {
+
+function exportJobPostsToCsv(filename: string, rows: JobPostItem[], departmentOptions: JobDepartmentOption[]) {
+    if (!rows || !rows.length) {
+        toast.push(
+            <Notification title="No Data" type="info">
+                Nothing to export.
+            </Notification>
+        );
+        return false;
+    }
+
+    const preparedRows = rows.map(row => ({
+        ...row,
+        job_department_name: departmentOptions.find(d => String(d.value) === String(row.job_department_id))?.label || row.job_department_id,
+    }));
+
+    const csvKeysWithDeptName: (keyof JobPostItem | 'job_department_name')[] = [
+        "id", "job_title", "status", "job_department_name", "description", 
+        "location", "experience", "vacancies", "created_at"
+    ];
+    const csvHeadersWithDeptName = [
+        "ID", "Job Title", "Status", "Department Name", "Description", 
+        "Location", "Experience", "Vacancies", "Created At"
+    ];
+
+
+    const separator = ",";
+    const csvContent =
+        csvHeadersWithDeptName.join(separator) +
+        "\n" +
+        preparedRows
+            .map((row: any) =>
+                csvKeysWithDeptName.map((k) => {
+                    let cell: any = row[k];
+                    if (cell === null || cell === undefined) cell = "";
+                    else cell = String(cell).replace(/"/g, '""');
+                    if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+                    return cell;
+                }).join(separator)
+            )
+            .join("\n");
+
+    const blob = new Blob(["\ufeff" + csvContent], {
+        type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return true;
+    }
     toast.push(
-      <Notification title="No Data" type="info">
-        Nothing to export.
-      </Notification>
+        <Notification title="Export Failed" type="danger">
+            Browser does not support this feature.
+        </Notification>
     );
     return false;
-  }
-  const separator = ",";
-  const csvContent =
-    CSV_HEADERS_JOB.join(separator) +
-    "\n" +
-    rows
-      .map((row: any) =>
-        CSV_KEYS_JOB.map((k) => {
-          let cell: any = row[k];
-          if (cell === null || cell === undefined) cell = "";
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-          return cell;
-        }).join(separator)
-      )
-      .join("\n");
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const link = document.createElement("a");
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    return true;
-  }
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
-  return false;
 }
+
 
 // --- ActionColumn Component ---
 const ActionColumn = ({
+  item, // Pass the full item
   onEdit,
   onDelete,
-  onChangeStatus,
+  onChangeStatus, // Keep if you re-enable the button
 }: {
-  onEdit: () => void;
-  onDelete: () => void;
-  onChangeStatus: () => void;
+  item: JobPostItem;
+  onEdit: (item: JobPostItem) => void;
+  onDelete: (item: JobPostItem) => void;
+  onChangeStatus: (item: JobPostItem) => void;
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center">
-      {" "}
+    <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit Job Post">
         <div
           className={classNames(
@@ -233,11 +254,11 @@ const ActionColumn = ({
             "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
           )}
           role="button"
-          onClick={onEdit}
+          onClick={() => onEdit(item)}
         >
           <TbPencil />
         </div>
-      </Tooltip>{" "}
+      </Tooltip>
       {/* <Tooltip title="Change Status">
         <div
           className={classNames(
@@ -246,11 +267,11 @@ const ActionColumn = ({
             "text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
           )}
           role="button"
-          onClick={onChangeStatus}
+          onClick={() => onChangeStatus(item)}
         >
           <TbSwitchHorizontal />
         </div>
-      </Tooltip>{" "} */}
+      </Tooltip> */}
       <Tooltip title="Delete Job Post">
         <div
           className={classNames(
@@ -259,11 +280,11 @@ const ActionColumn = ({
             "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
           )}
           role="button"
-          onClick={onDelete}
+          onClick={() => onDelete(item)}
         >
           <TbTrash />
         </div>
-      </Tooltip>{" "}
+      </Tooltip>
     </div>
   );
 };
@@ -278,7 +299,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Quick Search..."
+      placeholder="Quick Search (Title, Desc, Location, Exp, ID)..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -298,31 +319,29 @@ const ItemTableTools = ({
   onExport,
 }: ItemTableToolsProps) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-    {" "}
     <div className="flex-grow">
       <ItemSearch onInputChange={onSearchChange} />
-    </div>{" "}
+    </div>
     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-      {" "}
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
         className="w-full sm:w-auto"
       >
         Filter
-      </Button>{" "}
+      </Button>
       <Button
         icon={<TbCloudUpload />}
         onClick={onExport}
         className="w-full sm:w-auto"
       >
         Export
-      </Button>{" "}
-    </div>{" "}
+      </Button>
+    </div>
   </div>
 );
 
-// --- JobPostsTable Component (Corrected) ---
+// --- JobPostsTable Component ---
 type JobPostsTableProps = {
   columns: ColumnDef<JobPostItem>[];
   data: JobPostItem[];
@@ -365,7 +384,7 @@ const JobPostsTable = ({
   />
 );
 
-// --- JobPostsSelectedFooter Component (Corrected) ---
+// --- JobPostsSelectedFooter Component ---
 type JobPostsSelectedFooterProps = {
   selectedItems: JobPostItem[];
   onDeleteSelected: () => void;
@@ -399,7 +418,6 @@ const JobPostsSelectedFooter = ({
             <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
               <span className="heading-text">{selectedItems.length}</span>
               <span>
-                {" "}
                 Job Post{selectedItems.length > 1 ? "s" : ""} selected
               </span>
             </span>
@@ -425,10 +443,11 @@ const JobPostsSelectedFooter = ({
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+        loading={isDeleting}
       >
         <p>
           Are you sure you want to delete the selected job post
-          {selectedItems.length > 1 ? "s" : ""}?
+          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
         </p>
       </ConfirmDialog>
     </>
@@ -438,24 +457,33 @@ const JobPostsSelectedFooter = ({
 // --- Main Component: JobPostsListing ---
 const JobPostsListing = () => {
   const dispatch = useAppDispatch();
-    const navigate = useNavigate();
-  
+  const navigate = useNavigate();
+
   const {
     jobPostsData = [],
-    jobDepartmentsData = [],
+    jobDepartmentsData = [], // This will hold the raw department data from Redux
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
-  const [departmentOptions, setDepartmentOptions] = useState<
-    JobDepartmentOption[]
-  >([]);
+  // Memoize department options to prevent unnecessary re-renders
+  const departmentOptions = useMemo(() => {
+    if (Array.isArray(jobDepartmentsData) && jobDepartmentsData.length > 0) {
+      console.log(jobDepartmentsData);
+      return jobDepartmentsData.map((dept: JobDepartmentListItem) => ({
+        value: String(dept.id), // Ensure value is string for Select component
+        label: dept.name,
+      }));
+    }
+    return [];
+  }, [jobDepartmentsData]);
+
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<JobPostItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isChangingStatus, setIsChangingStatus] = useState(false);
+  const [isChangingStatus, setIsChangingStatus] = useState(false); // Keep if status change is re-enabled
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<JobPostItem | null>(null);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
@@ -469,34 +497,19 @@ const JobPostsListing = () => {
 
   useEffect(() => {
     dispatch(getJobPostsAction());
-    dispatch(getJobDepartmentsAction());
+    dispatch(getJobDepartmentsAction()); // Fetch departments on component mount
   }, [dispatch]);
 
-  useEffect(() => {
-    if (Array.isArray(jobDepartmentsData) && jobDepartmentsData.length > 0) {
-      const options = jobDepartmentsData.map((dept: JobDepartmentListItem) => ({
-        value: String(dept.id),
-        label: dept.name,
-      }));
-      setDepartmentOptions((prevOptions) => {
-        if (JSON.stringify(prevOptions) !== JSON.stringify(options))
-          return options;
-        return prevOptions;
-      });
-    } else if (departmentOptions.length > 0) {
-      setDepartmentOptions([]);
-    }
-  }, [jobDepartmentsData, departmentOptions.length]);
-
-  const defaultFormValues: JobPostFormData = {
+  const defaultFormValues: JobPostFormData = useMemo(() => ({
     job_title: "",
-    job_department_id: departmentOptions[0]?.value || "",
+    job_department_id: departmentOptions[0]?.value || "", // Use memoized options
     description: "",
     location: "",
     experience: "",
     vacancies: 1,
     status: "Active",
-  };
+  }), [departmentOptions]); // Recompute defaultFormValues if departmentOptions change
+
 
   const formMethods = useForm<JobPostFormData>({
     resolver: zodResolver(jobPostFormSchema),
@@ -504,16 +517,24 @@ const JobPostsListing = () => {
     mode: "onChange",
   });
 
+  // Reset form with potentially new default values if departmentOptions load after form init
+  useEffect(() => {
+    if(!isAddDrawerOpen && !isEditDrawerOpen) { // Only reset if no drawer is open
+        formMethods.reset(defaultFormValues);
+    }
+  }, [defaultFormValues, formMethods, isAddDrawerOpen, isEditDrawerOpen]);
+
+
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
-    defaultValues: filterCriteria,
+    defaultValues: filterCriteria, // This will be updated by onApplyFiltersSubmit
   });
 
   const openAddDrawer = useCallback(() => {
-    formMethods.reset(defaultFormValues);
+    formMethods.reset(defaultFormValues); // Reset with current default values
     setEditingItem(null);
     setIsAddDrawerOpen(true);
-  }, [formMethods, defaultFormValues]); // defaultFormValues depends on departmentOptions, so it's better to pass it if it changes
+  }, [formMethods, defaultFormValues]);
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
   const openEditDrawer = useCallback(
@@ -521,15 +542,15 @@ const JobPostsListing = () => {
       setEditingItem(item);
       formMethods.reset({
         job_title: item.job_title || "",
-        job_department_id: String(item.job_department_id),
-        description: item.description,
-        location: item.location,
-        experience: item.experience,
+        job_department_id: String(item.job_department_id), // Ensure string
+        description: item.description || "",
+        location: item.location || "",
+        experience: item.experience || "",
         vacancies:
           typeof item.vacancies === "string"
             ? parseInt(item.vacancies, 10) || 0
             : Number(item.vacancies) || 0,
-        status: item.status as JobPostStatusForm,
+        status: (item.status as JobPostStatusForm) || "Active", // Default to Active if undefined
       });
       setIsEditDrawerOpen(true);
     },
@@ -542,20 +563,18 @@ const JobPostsListing = () => {
 
   const onSubmitHandler = async (data: JobPostFormData) => {
     setIsSubmitting(true);
-    const loggedInUserId = "1"; // Placeholder: Get actual logged-in user ID
-    console.log("data", data);
+    // const loggedInUserId = "1"; // Placeholder: Get actual logged-in user ID
+    // For now, let's assume 'created_by' is handled by backend or not required for add/edit
 
     const apiPayload = {
-      // Map form field names to API expected field names
-      title: data.job_title, // Assuming API expects 'title' for job_title
-      job_department_id: parseInt(data.job_department_id),
+      job_title: data.job_title, // API seems to use job_title directly
+      job_department_id: parseInt(data.job_department_id, 10), // Ensure it's a number
       description: data.description,
-
       location: data.location,
       experience: data.experience,
-      vacancies: String(data.vacancies), // API example showed "tet", ensure backend handles string or number
+      vacancies: String(data.vacancies), // API might expect string, adjust if number
       status: data.status,
-      created_by: loggedInUserId,
+      // created_by: loggedInUserId, // Add if your API requires/handles this
     };
 
     try {
@@ -578,7 +597,7 @@ const JobPostsListing = () => {
         );
         closeAddDrawer();
       }
-      dispatch(getJobPostsAction());
+      dispatch(getJobPostsAction()); // Refresh list
     } catch (error: any) {
       toast.push(
         <Notification
@@ -600,16 +619,15 @@ const JobPostsListing = () => {
       setIsChangingStatus(true);
       const newStatus = item.status === "Active" ? "Disabled" : "Active";
       const payload = {
-        // Construct full payload as editJobPostAction likely expects it
         id: item.id,
         status: newStatus,
-        title: item.job_title || "",
-        job_department_id: item.job_department_id,
-        description: item.description,
-        location: item.location,
-        experience: item.experience,
+        job_title: item.job_title || "", // Ensure all required fields are present
+        job_department_id: typeof item.job_department_id === 'string' ? parseInt(item.job_department_id, 10) : item.job_department_id,
+        description: item.description || "",
+        location: item.location || "",
+        experience: item.experience || "",
         vacancies: String(item.vacancies),
-        created_by: item.created_by, // Preserve existing created_by
+        // created_by: item.created_by, // If API expects this
       };
       try {
         await dispatch(editJobPostAction(payload)).unwrap();
@@ -620,7 +638,7 @@ const JobPostsListing = () => {
             duration={2000}
           >{`Job Post status changed to ${newStatus}.`}</Notification>
         );
-        dispatch(getJobPostsAction());
+        dispatch(getJobPostsAction()); // Refresh list
       } catch (error: any) {
         toast.push(
           <Notification
@@ -628,7 +646,7 @@ const JobPostsListing = () => {
             type="danger"
             duration={3000}
           >
-            {error.message}
+            {error.message || "Failed to change status."}
           </Notification>
         );
         console.error("Change Status Error:", error);
@@ -660,11 +678,11 @@ const JobPostsListing = () => {
         }" deleted.`}</Notification>
       );
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
-      dispatch(getJobPostsAction());
+      dispatch(getJobPostsAction()); // Refresh list
     } catch (error: any) {
       toast.push(
         <Notification title="Delete Failed" type="danger" duration={3000}>
-          {error.message}
+          {error.message || "Failed to delete job post."}
         </Notification>
       );
       console.error("Delete Error:", error);
@@ -673,6 +691,7 @@ const JobPostsListing = () => {
       setItemToDelete(null);
     }
   }, [dispatch, itemToDelete]);
+
   const handleDeleteSelected = useCallback(async () => {
     if (selectedItems.length === 0) return;
     setIsDeleting(true);
@@ -694,11 +713,11 @@ const JobPostsListing = () => {
         >{`${validItems.length} job post(s) deleted.`}</Notification>
       );
       setSelectedItems([]);
-      dispatch(getJobPostsAction());
+      dispatch(getJobPostsAction()); // Refresh list
     } catch (error: any) {
       toast.push(
         <Notification title="Deletion Failed" type="danger" duration={3000}>
-          {error.message}
+          {error.message || "Failed to delete selected job posts."}
         </Notification>
       );
       console.error("Bulk Delete Error:", error);
@@ -712,23 +731,26 @@ const JobPostsListing = () => {
     setIsFilterDrawerOpen(true);
   }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+
   const onApplyFiltersSubmit = useCallback(
     (data: FilterFormData) => {
       setFilterCriteria({
         filterStatus: data.filterStatus || [],
         filterDepartment: data.filterDepartment || [],
       });
-      setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+      setTableData((prev) => ({ ...prev, pageIndex: 1 })); // Reset to first page
       closeFilterDrawer();
     },
     [closeFilterDrawer]
   );
+
   const onClearFilters = useCallback(() => {
     const defaultFilters = { filterStatus: [], filterDepartment: [] };
-    filterFormMethods.reset(defaultFilters);
-    setFilterCriteria(defaultFilters);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
-  }, [filterFormMethods]);
+    filterFormMethods.reset(defaultFilters); // Reset the form in the drawer
+    setFilterCriteria(defaultFilters);      // Reset the applied criteria
+    setTableData((prev) => ({ ...prev, pageIndex: 1 })); // Reset to first page
+    // closeFilterDrawer(); // Optionally close drawer after clearing
+  }, [filterFormMethods, closeFilterDrawer]); // Added closeFilterDrawer to dependencies if used
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: JobPostItem[] = Array.isArray(jobPostsData)
@@ -737,46 +759,44 @@ const JobPostsListing = () => {
     let processedData: JobPostItem[] = cloneDeep(sourceData);
 
     if (filterCriteria.filterStatus?.length) {
-      const v = filterCriteria.filterStatus.map((s) => s.value);
-      processedData = processedData.filter((item) => v.includes(item.status));
+      const statusValues = filterCriteria.filterStatus.map((s) => s.value);
+      processedData = processedData.filter((item) =>
+        statusValues.includes(item.status)
+      );
     }
     if (filterCriteria.filterDepartment?.length) {
-      const v = filterCriteria.filterDepartment.map((d) => d.value);
+      const deptValues = filterCriteria.filterDepartment.map((d) => d.value);
       processedData = processedData.filter((item) =>
-        v.includes(String(item.job_department_id))
+        deptValues.includes(String(item.job_department_id))
       );
     }
 
     if (tableData.query && tableData.query.trim() !== "") {
-      const q = tableData.query.toLowerCase().trim();
+      const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(
-        (j) =>
-          (j.job_title?.toLowerCase() ?? "").includes(q) ||
-          (j.description?.toLowerCase() ?? "").includes(q) ||
-          (j.location?.toLowerCase() ?? "").includes(q) ||
-          (j.experience?.toLowerCase() ?? "").includes(q) ||
-          String(j.id).toLowerCase().includes(q)
+        (item) =>
+          (item.job_title?.toLowerCase() ?? "").includes(query) ||
+          (item.description?.toLowerCase() ?? "").includes(query) ||
+          (item.location?.toLowerCase() ?? "").includes(query) ||
+          (item.experience?.toLowerCase() ?? "").includes(query) ||
+          String(item.id).toLowerCase().includes(query)
       );
     }
+
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedData.sort((a, b) => {
         const aVal = a[key as keyof JobPostItem];
         const bVal = b[key as keyof JobPostItem];
+
         if (key === "created_at" || key === "updated_at") {
           const dateA = aVal ? new Date(aVal as string).getTime() : 0;
           const dateB = bVal ? new Date(bVal as string).getTime() : 0;
           return order === "asc" ? dateA - dateB : dateB - dateA;
         }
         if (key === "vacancies") {
-          const numA =
-            typeof aVal === "string"
-              ? parseInt(aVal, 10) || 0
-              : Number(aVal) || 0;
-          const numB =
-            typeof bVal === "string"
-              ? parseInt(bVal, 10) || 0
-              : Number(bVal) || 0;
+          const numA = typeof aVal === 'string' ? parseInt(aVal, 10) || 0 : Number(aVal) || 0;
+          const numB = typeof bVal === 'string' ? parseInt(bVal, 10) || 0 : Number(bVal) || 0;
           return order === "asc" ? numA - numB : numB - numA;
         }
         const aStr = String(aVal ?? "").toLowerCase();
@@ -786,12 +806,14 @@ const JobPostsListing = () => {
           : bStr.localeCompare(aStr);
       });
     }
+
     const dataToExport = [...processedData];
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
     const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+
     return {
       pageData: dataForPage,
       total: currentTotal,
@@ -802,7 +824,8 @@ const JobPostsListing = () => {
   const handleExportData = useCallback(() => {
     const success = exportJobPostsToCsv(
       "job_posts_export.csv",
-      allFilteredAndSortedData
+      allFilteredAndSortedData,
+      departmentOptions // Pass departmentOptions for mapping
     );
     if (success)
       toast.push(
@@ -810,7 +833,8 @@ const JobPostsListing = () => {
           Data exported.
         </Notification>
       );
-  }, [allFilteredAndSortedData]);
+  }, [allFilteredAndSortedData, departmentOptions]); // Add departmentOptions dependency
+
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
   }, []);
@@ -844,16 +868,22 @@ const JobPostsListing = () => {
   }, []);
   const handleAllRowSelect = useCallback(
     (checked: boolean, currentRows: Row<JobPostItem>[]) => {
-      const cPOR = currentRows.map((r) => r.original);
+      const currentPageRowOriginals = currentRows.map((r) => r.original);
       if (checked) {
-        setSelectedItems((pS) => {
-          const pSIds = new Set(pS.map((i) => i.id));
-          const nRTA = cPOR.filter((r) => !pSIds.has(r.id));
-          return [...pS, ...nRTA];
+        setSelectedItems((prevSelected) => {
+          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
+          const newRowsToAdd = currentPageRowOriginals.filter(
+            (r) => !prevSelectedIds.has(r.id)
+          );
+          return [...prevSelected, ...newRowsToAdd];
         });
       } else {
-        const cPRIds = new Set(cPOR.map((r) => r.id));
-        setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id)));
+        const currentPageRowIds = new Set(
+          currentPageRowOriginals.map((r) => r.id)
+        );
+        setSelectedItems((prevSelected) =>
+          prevSelected.filter((item) => !currentPageRowIds.has(item.id))
+        );
       }
     },
     []
@@ -862,16 +892,25 @@ const JobPostsListing = () => {
   const columns: ColumnDef<JobPostItem>[] = useMemo(
     () => [
       {
+        header: "Job Title", // Moved Job Title to be more prominent
+        accessorKey: "job_title",
+        size: 250,
+        enableSorting: true,
+        cell: (props) => (
+            <span className="font-semibold">{props.getValue<string>()}</span>
+        )
+      },
+      {
         header: "Status",
         accessorKey: "status",
-        size: 140,
+        size: 120,
         enableSorting: true,
         cell: (props) => {
           const statusVal = props.getValue<JobPostStatusApi>();
           return (
             <Tag
               className={classNames(
-                "capitalize whitespace-nowrap",
+                "capitalize whitespace-nowrap min-w-[70px] text-center", // Added min-width and text-center
                 jobStatusColor[statusVal] || "bg-gray-100 text-gray-600"
               )}
             >
@@ -883,7 +922,7 @@ const JobPostsListing = () => {
       {
         header: "Department",
         accessorKey: "job_department_id",
-        size: 200,
+        size: 180,
         enableSorting: true,
         cell: (props) => {
           const deptId = String(props.getValue());
@@ -897,11 +936,13 @@ const JobPostsListing = () => {
         header: "Description",
         accessorKey: "description",
         enableSorting: false,
-        size: 200,
+        size: 200, // Adjusted size
         cell: (props) => (
-            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
-              {props.getValue<string>()}
-            </span>
+            <Tooltip title={props.getValue<string>()} placement="top-start">
+                <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">
+                    {props.getValue<string>()}
+                </span>
+            </Tooltip>
         ),
       },
       {
@@ -919,20 +960,21 @@ const JobPostsListing = () => {
       {
         header: "Vacancies",
         accessorKey: "vacancies",
-        size: 180,
+        size: 100, // Adjusted size
         enableSorting: true,
-        meta: { cellClass: "text-center" },
+        meta: { cellClass: "text-center", headerClass: "text-center" },
       },
       {
         header: "Actions",
         id: "actions",
-        meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 140,
+        meta: { headerClass: "text-center", cellClass: "text-center" },
+        size: 120, // Adjusted size
         cell: (props) => (
           <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
-            onChangeStatus={() => handleChangeStatus(props.row.original)}
+            item={props.row.original}
+            onEdit={openEditDrawer}
+            onDelete={handleDeleteClick}
+            onChangeStatus={handleChangeStatus} // Keep if you re-enable status change button
           />
         ),
       },
@@ -972,10 +1014,11 @@ const JobPostsListing = () => {
           control={currentFormMethods.control}
           render={({ field }) => (
             <Select
-              placeholder="Select Department"
+              placeholder={departmentOptions.length > 0 ? "Select Department" : "Loading Departments..."}
               options={departmentOptions}
               value={departmentOptions.find((o) => o.value === field.value)}
               onChange={(opt) => field.onChange(opt?.value)}
+              disabled={departmentOptions.length === 0 && masterLoadingStatus === 'loading'}
             />
           )}
         />
@@ -1057,7 +1100,7 @@ const JobPostsListing = () => {
             <Input
               {...field}
               rows={5}
-              prefix={<TbFileText />}
+              // prefix={<TbFileText />} // prefix on textArea might look odd, remove if so
               placeholder="Detailed job description, responsibilities, qualifications..."
               textArea
             />
@@ -1071,17 +1114,17 @@ const JobPostsListing = () => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Job Posts</h5>
             <div className="flex gap-2">
-              <Button onClick={() => navigate('/hr-employees/job-application')}>
-              View All
-              </Button>
+              {/* <Button onClick={() => navigate("/hr-employees/job-application")}>
+                View Applications
+              </Button> */}
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New
+                Add New
               </Button>
             </div>
-            </div>
+          </div>
           <ItemTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
@@ -1127,7 +1170,6 @@ const JobPostsListing = () => {
         width={700}
         footer={
           <div className="text-right w-full">
-            {" "}
             <Button
               size="sm"
               className="mr-2"
@@ -1136,29 +1178,28 @@ const JobPostsListing = () => {
               type="button"
             >
               Cancel
-            </Button>{" "}
+            </Button>
             <Button
               size="sm"
               variant="solid"
-              form="jobPostForm"
+              form="jobPostForm" // Ensure this matches the form's ID
               type="submit"
               loading={isSubmitting}
               disabled={!formMethods.formState.isValid || isSubmitting}
             >
-              {" "}
               {isSubmitting
                 ? editingItem
                   ? "Saving..."
                   : "Adding..."
                 : editingItem
                 ? "Save Changes"
-                : "Save"}
-            </Button>{" "}
+                : "Save Job Post"}
+            </Button>
           </div>
         }
       >
         <Form
-          id="jobPostForm"
+          id="jobPostForm" // This ID is targeted by the footer submit button
           onSubmit={formMethods.handleSubmit(onSubmitHandler)}
           className="flex flex-col gap-4"
         >
@@ -1172,35 +1213,31 @@ const JobPostsListing = () => {
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         footer={
-          <div className="text-right w-full">
-            <div>
-              {" "}
-              <Button
-                size="sm"
-                className="mr-2"
-                onClick={closeFilterDrawer}
-                type="button"
-              >
-                Clear
-              </Button>{" "}
-              <Button
-                size="sm"
-                variant="solid"
-                form="filterJobPostForm"
-                type="submit"
-              >
-                Apply
-              </Button>{" "}
-            </div>{" "}
+          <div className="text-right w-full flex justify-end gap-2">
+            <Button
+              size="sm"
+              onClick={onClearFilters} // Use onClearFilters
+              type="button"
+            >
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterJobPostForm" // Ensure this matches the form's ID
+              type="submit"
+            >
+              Apply
+            </Button>
           </div>
         }
       >
         <Form
-          id="filterJobPostForm"
+          id="filterJobPostForm" // This ID is targeted by the footer submit button
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Status">
+          <FormItem label="Filter by Status">
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}
@@ -1208,27 +1245,28 @@ const JobPostsListing = () => {
                 <Select
                   isMulti
                   placeholder="Any Status"
-                  options={JOB_POST_STATUS_OPTIONS_FORM.map((s) => ({
+                  options={JOB_POST_STATUS_OPTIONS_FORM.map((s) => ({ // Use _FORM options
                     value: s.value,
                     label: s.label,
                   }))}
-                  value={field.value || []}
+                  value={field.value || []} // field.value should be an array of option objects
                   onChange={(val) => field.onChange(val || [])}
                 />
               )}
             />
           </FormItem>
-          <FormItem label="Department">
+          <FormItem label="Filter by Department">
             <Controller
               name="filterDepartment"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any Department"
+                  placeholder={departmentOptions.length > 0 ? "Any Department" : "Loading Departments..."}
                   options={departmentOptions}
-                  value={field.value || []}
+                  value={field.value || []} // field.value should be an array of option objects
                   onChange={(val) => field.onChange(val || [])}
+                  disabled={departmentOptions.length === 0 && masterLoadingStatus === 'loading'}
                 />
               )}
             />
@@ -1257,7 +1295,8 @@ const JobPostsListing = () => {
       >
         <p>
           Are you sure you want to delete the job post "
-          <strong>{itemToDelete?.job_title || itemToDelete?.id}</strong>"?
+          <strong>{itemToDelete?.job_title || itemToDelete?.id}</strong>"? This
+          action cannot be undone.
         </p>
       </ConfirmDialog>
     </>
@@ -1266,6 +1305,7 @@ const JobPostsListing = () => {
 
 export default JobPostsListing;
 
+// Helper for classNames if not globally available
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }

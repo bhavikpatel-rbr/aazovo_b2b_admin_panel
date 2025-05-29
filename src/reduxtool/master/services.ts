@@ -1154,16 +1154,10 @@ export const addNumberSystemsAsync = async (unitData: any) => {
 }
 
 export const editNumberSystemsAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
-
   try {
     const response = await axiosInstance.post(`${config.apiURL}/setting/number_system/${unitData?.id}`, {
       _method: "PUT", name: unitData?.name, prefix: unitData?.prefix,
-      country_ids: unitData?.country_ids,
-      customer_code_starting: unitData?.customer_code_starting,
-      current_customer_code: unitData?.current_customer_code,
-      non_kyc_customer_code_starting: unitData?.non_kyc_customer_code_starting,
-      non_kyc_current_customer_code: unitData?.non_kyc_current_customer_code,
+      ...unitData,
     })
     return response
   } catch (err) {
@@ -1318,17 +1312,16 @@ export const addJobPostsAsync = async (unitData: any) => {
 }
 
 export const editJobPostsAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
-
   try {
     const response = await axiosInstance.post(`${config.apiURL}/other/job_post/${unitData?.id}`, {
       _method: "PUT", name: unitData?.name
       , status: unitData?.status
-      , title: unitData?.title
       , description: unitData?.description
       , location: unitData?.location
       , vacancies: unitData?.vacancies
       , experience: unitData?.experience
+      , job_title: unitData?.job_title
+      , job_department_id: unitData?.job_department_id
     })
     return response
   } catch (err) {
@@ -1368,6 +1361,7 @@ export const getBugReportAsync = async () => {
 export const addBugReportAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/other/bug_report`, unitData, {
+
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -1378,48 +1372,15 @@ export const addBugReportAsync = async (unitData: any) => {
   }
 }
 
-// export const editBugReportAsync = async (unitData: any) => {
-
-//   console.log("unitdata", unitData?.name);
-
-//   try {
-//     const response = await axiosInstance.post(`${config.apiURL}/other/bug_report/${unitData?.id}`, {
-//       _method: "PUT", name: unitData?.name
-//       , email: unitData?.email
-//       , mobile_no: unitData?.mobile_no
-//       , report: unitData?.report
-//       , status: unitData?.status
-//       , reported_by: unitData?.reported_by
-//       , created_by: unitData?.created_by
-//       , attachment: unitData?.attachment
-//     }, {
-//       headers: {
-//         'Content-Type': 'multipart/form-data'
-//       }
-//     })
-//     return response
-//   } catch (err) {
-//     return isAxiosError(err)
-//   }
-// }
-
 export const editBugReportAsync = async (brandId: number | string, formData: FormData) => {
-  console.log("editBrandListAsync - brandId:", brandId);
-  console.log("editBrandListAsync - formData to be sent:");
-  for (const pair of formData.entries()) {
-    console.log(pair[0] + ': ' + pair[1]);
-  }
-
   try {
-    // The formData already contains _method: 'PUT'
-    // Axios will automatically set 'Content-Type': 'multipart/form-data'
-    // when the second argument to post/put is a FormData instance.
+    formData.append('_method', 'PUT');
     const response = await axiosInstance.post(
       `${config.apiURL}/other/bug_report/${brandId}`, // Use brandId in the URL
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
         }
       }
     );
@@ -1965,22 +1926,11 @@ export const changeProductStatusAsync = async ({ id, status }: { id: string; sta
   }
 }
 
-export const getInquiriesAsync = async () => {
+export const importRowDataAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/inquiry`)
-    return response
+    const response = await axiosInstance.put(`${config.apiURL}/master/import`);
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
-
-export const deleteAllInquiriesAsync = async (unitData: any) => {
-  try {
-    console.log("unitData", unitData);
-
-    const response = await axiosInstance.post(`${config.apiURL}/inquiry/delete`, unitData)
-    return response
-  } catch (err) {
-    return isAxiosError(err)
-  }
-}
+};
