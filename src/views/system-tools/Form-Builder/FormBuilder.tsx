@@ -45,6 +45,7 @@ import {
   TbSwitchHorizontal,
   TbCopy,
   TbShare,
+  TbTrash,
   TbX,
 } from "react-icons/tb";
 
@@ -309,13 +310,19 @@ function exportFormsToCsv(filename: string, rows: FormBuilderItem[]) {
 
 // --- ActionColumn (can be the more comprehensive one) ---
 const ActionColumn = ({
+  item, // Pass the full item to get its ID
   onEdit,
   onViewDetail,
   onChangeStatus,
+  onClone, // Add onClone prop
+  onDelete, // Add onDelete prop
 }: {
-  onEdit: () => void;
-  onViewDetail: () => void;
-  onChangeStatus: () => void;
+  item: FormBuilderItem; // Add item prop
+  onEdit: (formId: string | number) => void; // Pass formId
+  onViewDetail: (item: FormBuilderItem) => void;
+  onChangeStatus: (item: FormBuilderItem) => void;
+  onClone: (item: FormBuilderItem) => void; // For clone button
+  onDelete: (item: FormBuilderItem) => void; // For delete button
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
@@ -323,7 +330,7 @@ const ActionColumn = ({
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
-          onClick={onEdit}
+          onClick={() => onEdit(item.id)} // Pass item.id
         >
           <TbPencil />
         </div>
@@ -332,7 +339,7 @@ const ActionColumn = ({
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onViewDetail}
+           onClick={() => onViewDetail(item)}
         >
           <TbEye />
         </div>
@@ -343,12 +350,13 @@ const ActionColumn = ({
             "text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
           )}
           role="button"
-          onClick={onChangeStatus}
+          onClick={() => onChangeStatus(item)}
         >
           <TbSwitchHorizontal />
         </div>
       </Tooltip>{" "}
-<Tooltip title="Clone Task"><div className={classNames('text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400')} role="button"><TbCopy /></div></Tooltip>
+      <Tooltip title="Clone Task"><div className={classNames('text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400')} role="button"><TbCopy /></div></Tooltip>
+      <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-800 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={() => onDelete(item)}><TbTrash /></div></Tooltip>
     </div>
   );
 };
@@ -473,23 +481,8 @@ const FormBuilder = () => {
     defaultValues: filterCriteria,
   });
 
-  // --- CRUD & Action Handlers ---
-  const openAddDrawer = () => {
-    formMethods.reset({
-      formName: "",
-      status: formStatusValues[0],
-      departmentName: departmentValues[0],
-      categoryName: categoryValues[0],
-      questions: [
-        {
-          questionSectionTitle: "",
-          questionText: "",
-          questionType: questionTypeValues[0],
-        },
-      ],
-    });
-    // replaceQuestions([{ questionSectionTitle: '', questionText: '', questionType: questionTypeValues[0] }]); // Ensure field array is reset correctly
-    setIsAddDrawerOpen(true);
+  const handleEdit = (formId: string | number) => {
+    navigate(`/system-tools/formbuilder-edit/${formId}`); // Navigate to edit page with formId
   };
   const closeAddDrawer = () => setIsAddDrawerOpen(false);
 
@@ -919,20 +912,16 @@ const FormBuilder = () => {
           props.getValue(),
       },
       {
-        header: "Actions",
-        id: "action",
-        size: 200,
-        meta: { HeaderClass: "text-center" },
+        header: "Actions", id: "action", size: 200, meta: { HeaderClass: "text-center" },
         cell: (props) => (
-          <div className="flex items-center justify-center gap-2">
-            <ActionColumn
-              onView={() => openViewDialog(props.row.original)}
-              onEdit={() => openEditDrawer(props.row.original)}
-              onDelete={() => handleDeleteClick(props.row.original)}
-              onChangeStatus={() => handleChangeStatus(props.row.original)}
-              onClone={() => handleCloneForm(props.row.original)}
-            />
-          </div>
+          <ActionColumn
+            item={props.row.original} // Pass the full item
+            onEdit={handleEdit} // Pass the handleEdit function
+            onViewDetail={openViewDialog}
+            onChangeStatus={handleChangeStatus}
+            onClone={handleCloneForm}
+            onDelete={handleDeleteClick} // Pass handleDeleteClick
+          />
         ),
       },
     ],

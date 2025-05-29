@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form"; // useFieldArray might not be needed if not managing array inputs
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -19,7 +19,6 @@ import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected spelling
 import Select from "@/components/ui/Select";
 import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
-// Textarea might not be needed if Input textArea prop is used
 
 // Icons
 import {
@@ -31,12 +30,12 @@ import {
   TbCloudUpload,
   TbMail,
   TbPhone,
-  TbDotsVertical,
-  TbShare,
   TbEye,
   TbUserCircle,
   TbFileDescription,
   TbPaperclip,
+  TbCalendarEvent,
+  TbInfoCircle,
   // TbTrash, // Already imported, no need to re-declare if ActionColumn handles it
 } from "react-icons/tb";
 
@@ -87,39 +86,67 @@ const bugReportStatusFormValues = BUG_REPORT_STATUS_OPTIONS_FORM.map( (s) => s.v
 const bugStatusColor: Record<BugReportStatusApi, string> = {
   Unread: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
   Read: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+  // Add more statuses if they exist on API but not in form
 };
 
 // --- Zod Schema for Add/Edit Bug Report Form ---
-// MODIFIED: Removed status and reported_by from user-editable form schema
 const bugReportFormSchema = z.object({
   name: z.string().min(1, "Name is required.").max(100, "Name too long"),
   email: z.string().email("Invalid email format.").min(1, "Email is required."),
   mobile_no: z.string().max(20, "Mobile number too long.").optional().or(z.literal("")),
   report: z.string().min(10, "Report description must be at least 10 characters.").max(5000, "Report too long"),
-  attachment: z.any().optional(), // Stays as any for FileList/File object
+  attachment: z.any().optional(),
 });
 type BugReportFormData = z.infer<typeof bugReportFormSchema>;
 
 
-// --- Zod Schema for Filter Form --- (remains the same)
+// --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterReportedBy: z.string().optional(),
+  filterReportedBy: z.string().optional(), // Assuming 'reported_by' is a field that can be filtered
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 
 // --- CSV Exporter, ActionColumn, Search, TableTools, SelectedFooter ---
-// (These can remain largely the same as in your provided code, ensure ActionColumn uses correct delete icon if needed)
-const CSV_HEADERS_BUG = ["ID", "Name", "Email", "Mobile No", "Report", "Attachment", "Status", "Reported By", "Created At"];
-const CSV_KEYS_BUG: (keyof BugReportItem)[] = ["id", "name", "email", "mobile_no", "report", "attachment", "status", "created_at"];
-function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) { /* ... same as before ... */ return true; }
+const CSV_HEADERS_BUG = ["ID", "Name", "Email", "Mobile No", "Report", "Attachment", "Status", "Created At", "Updated At"];
+const CSV_KEYS_BUG: (keyof BugReportItem)[] = ["id", "name", "email", "mobile_no", "report", "attachment", "status", "created_at", "updated_at"];
+function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
+    if (!rows || rows.length === 0) {
+        toast.push(<Notification title="No Data" type="warning">There is no data to export.</Notification>);
+        return false;
+    }
+    const csvContent = [
+        CSV_HEADERS_BUG.join(','),
+        ...rows.map(row => CSV_KEYS_BUG.map(key => {
+            let val = row[key];
+            if (val === null || val === undefined) val = "";
+            return `"${String(val).replace(/"/g, '""')}"`; // Escape quotes
+        }).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported to {filename}</Notification>);
+        return true;
+    }
+    toast.push(<Notification title="Export Failed" type="danger">Your browser does not support this feature.</Notification>);
+    return false;
+}
 
 const ActionColumn = ({ onEdit, onViewDetail, onChangeStatus }: { onEdit: () => void; onViewDetail: () => void; onChangeStatus: () => void; }) => {
-  return ( <div className="flex items-center justify-center gap-1"> <Tooltip title="Edit (Admin)"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="View"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip> {/* ... other actions like Share, More ... */} </div> );
+  return ( <div className="flex items-center justify-start gap-2"> {/* Changed to justify-start and increased gap for better visibility */} <Tooltip title="Edit (Admin)"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip> <Tooltip title="View Details"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip> {/* Example: Status change icon (conditional) */} {/* <Tooltip title="Toggle Status"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onChangeStatus}><TbInfoCircle /></button></Tooltip> */} </div> );
 };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search by name, email, report..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 ItemSearch.displayName = "ItemSearch";
 type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
 const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
@@ -138,10 +165,12 @@ const BugReportListing = () => {
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BugReportItem | null>(null);
+  const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false); // For View Details
+  const [viewingItem, setViewingItem] = useState<BugReportItem | null>(null); // For View Details
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isChangingStatus, setIsChangingStatus] = useState(false); // For admin changing status
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<BugReportItem | null>(null);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
@@ -150,10 +179,14 @@ const BugReportListing = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    dispatch(getBugReportsAction());
-  }, [dispatch]);
+    dispatch(getBugReportsAction({ params: { query: tableData.query } })); // Pass query for initial load if desired
+  }, [dispatch]); // Removed tableData.query from deps to avoid re-fetch on every query change if handled differently
 
-  // Default values for the ADD form (user-facing)
+  const itemPath = (filename: any) => {
+    const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
+    return filename ? `${baseUrl}/storage/attachments/bug_reports/${filename}` : "#";
+  };
+
   const defaultAddFormValues: BugReportFormData = {
     name: "",
     email: "",
@@ -181,22 +214,16 @@ const BugReportListing = () => {
   }, [formMethods, defaultAddFormValues]);
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
-  const openEditDrawer = useCallback( // This form might be admin-only or have more fields
+  const openEditDrawer = useCallback(
     (item: BugReportItem) => {
       setEditingItem(item);
       setSelectedFile(null);
-      // For edit, we populate all fields including those not in the simplified user add form
       formMethods.reset({
         name: item.name,
         email: item.email,
         mobile_no: item.mobile_no || "",
         report: item.report,
         attachment: undefined, // User must re-select if changing
-        // These are part of BugReportItem and might be editable by an admin
-        // If the `bugReportFormSchema` doesn't include them, RHF won't validate/submit them
-        // For this example, we assume an admin might edit status via this form.
-        // status: item.status as BugReportStatusForm, 
-        // reported_by: item.reported_by || "",
       });
       setIsEditDrawerOpen(true);
     },
@@ -204,129 +231,164 @@ const BugReportListing = () => {
   );
   const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
+  const openViewDrawer = useCallback((item: BugReportItem) => {
+    setViewingItem(item);
+    setIsViewDrawerOpen(true);
+  }, []);
+  const closeViewDrawer = useCallback(() => {
+    setViewingItem(null);
+    setIsViewDrawerOpen(false);
+  }, []);
+
   const onSubmitHandler = async (data: BugReportFormData) => {
     setIsSubmitting(true);
-    const loggedInUser = { id: "USER123", name: "Current User" }; // Placeholder
-
     const formDataPayload = new FormData();
     formDataPayload.append("name", data.name);
     formDataPayload.append("email", data.email);
     if (data.mobile_no) formDataPayload.append("mobile_no", data.mobile_no);
     formDataPayload.append("report", data.report);
-    formDataPayload.append("_method", "PUT");
     if (selectedFile) {
       formDataPayload.append("attachment", selectedFile);
     }
 
     if (editingItem) {
-      // When editing, merge with existing non-form data if API expects full object
-      formDataPayload.append("status", editingItem.status); // Send existing status
-    
-     
-      // formDataPayload.append('_method', 'PUT'); // If backend needs this for FormData
+      formDataPayload.append("status", editingItem.status); // Preserve existing status
+      formDataPayload.append("_method", "PUT"); // For Laravel to recognize PUT with FormData
       try {
         await dispatch(editBugReportAction({ id: editingItem.id, formData: formDataPayload })).unwrap();
         toast.push(<Notification title="Bug Report Updated" type="success" />);
         closeEditDrawer();
+        dispatch(getBugReportsAction({ params: { query: tableData.query } }));
       } catch (error: any) {
         toast.push(<Notification title="Update Failed" type="danger">{(error as Error).message || "Operation failed."}</Notification>);
       }
     } else {
-      // For new reports, set default status and reported_by (if applicable)
-      formDataPayload.append("status", "Unread"); // Default status
-     
-     
-
+      formDataPayload.append("status", "Unread"); // Default status for new reports
       try {
         await dispatch(addBugReportAction(formDataPayload)).unwrap();
         toast.push(<Notification title="Bug Report Submitted" type="success">Thank you for your report!</Notification>);
         closeAddDrawer();
+        dispatch(getBugReportsAction({ params: { query: tableData.query } }));
       } catch (error: any) {
         toast.push(<Notification title="Submission Failed" type="danger">{(error as Error).message || "Operation failed."}</Notification>);
       }
     }
-    dispatch(getBugReportsAction());
     setIsSubmitting(false);
   };
 
-  // Admin action: Change status (e.g., from a button in the table actions or a dedicated UI)
   const handleChangeStatus = useCallback( async (item: BugReportItem, newStatus: BugReportStatusForm) => {
       setIsChangingStatus(true);
       const formData = new FormData();
-      // Send all fields that your edit API endpoint might require, or use a dedicated status update endpoint
-      formData.append("name", item.name);
+      formData.append("name", item.name); // APIs often expect all fields or use PATCH
       formData.append("email", item.email);
       if (item.mobile_no) formData.append("mobile_no", item.mobile_no);
       formData.append("report", item.report);
-      formData.append("status", newStatus); // The new status
-     
-      
-      // If attachment is not changing, some APIs might not need it, or need filename
-      // if (item.attachment) formData.append('existing_attachment_path', item.attachment);
+      formData.append("status", newStatus);
+      // No attachment change here, assuming separate endpoint or logic for file updates
+      formData.append("_method", "PUT");
 
       try {
         await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
         toast.push(<Notification title="Status Changed" type="success">{`Report status changed to ${newStatus}.`}</Notification>);
-        dispatch(getBugReportsAction());
+        dispatch(getBugReportsAction({ params: { query: tableData.query } }));
       } catch (error: any) {
         toast.push(<Notification title="Status Change Failed" type="danger">{(error as Error).message}</Notification>);
       } finally {
         setIsChangingStatus(false);
       }
-    }, [dispatch]
+    }, [dispatch, tableData.query]
   );
 
-  // ... (handleDeleteClick, onConfirmSingleDelete, handleDeleteSelected remain the same)
   const handleDeleteClick = useCallback((item: BugReportItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Report Deleted" type="success">{`Report by "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getBugReportsAction()); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
-  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id)); try { await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} report(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getBugReportsAction()); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
+  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Report Deleted" type="success">{`Report by "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getBugReportsAction({ params: { query: tableData.query } })); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete, tableData.query]);
+  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id)); try { await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} report(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getBugReportsAction({ params: { query: tableData.query } })); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems, tableData.query]);
 
-  // ... (Filter Handlers remain the same)
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterReportedBy: data.filterReportedBy || "", }); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer, filterFormMethods]); // Added filterFormMethods
-  const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterReportedBy: "" }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData((prev) => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterReportedBy: data.filterReportedBy || "", }); setTableData((prev) => ({ ...prev, pageIndex: 1, query: prev.query })); // Maintain existing search query
+    dispatch(getBugReportsAction({ params: { ...tableData, pageIndex: 1, filterStatus: data.filterStatus?.map(s=>s.value), filterReportedBy: data.filterReportedBy } }));
+    closeFilterDrawer(); }, [closeFilterDrawer, dispatch, tableData]);
+  const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterReportedBy: "" }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData((prev) => ({ ...prev, pageIndex: 1, query: prev.query }));
+    dispatch(getBugReportsAction({ params: { ...tableData, pageIndex: 1, filterStatus: [], filterReportedBy: "" } }));
+}, [filterFormMethods, dispatch, tableData]);
 
-  // ... (useMemo for pageData, columns, etc. - ensure columns uses handleChangeStatus for an admin action)
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: BugReportItem[] = Array.isArray(bugReportsData) ? bugReportsData : [];
+    // Filtering and sorting are now primarily handled by the backend via getBugReportsAction
+    // This client-side processing can be simplified or removed if backend handles all
     let processedData: BugReportItem[] = cloneDeep(sourceData);
-    if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map((s) => s.value); processedData = processedData.filter((item) => v.includes(item.status)); }
-   
+
+    // Client-side search (can be redundant if backend search is effective)
+    if (tableData.query) {
+      const queryLower = tableData.query.toLowerCase();
+      processedData = processedData.filter(item =>
+        item.name.toLowerCase().includes(queryLower) ||
+        item.email.toLowerCase().includes(queryLower) ||
+        item.report.toLowerCase().includes(queryLower) ||
+        (item.mobile_no && item.mobile_no.toLowerCase().includes(queryLower))
+      );
+    }
+    
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { processedData.sort((a, b) => { const aVal = a[key as keyof BugReportItem]; const bVal = b[key as keyof BugReportItem]; if (key === "created_at" || key === "updated_at") { const dateA = aVal ? new Date(aVal as string).getTime() : 0; const dateB = bVal ? new Date(bVal as string).getTime() : 0; return order === "asc" ? dateA - dateB : dateB - dateA; } const aStr = String(aVal ?? "").toLowerCase(); const bStr = String(bVal ?? "").toLowerCase(); return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr); }); }
-    const dataToExport = [...processedData]; const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize; const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+    
+    const dataToExport = [...processedData]; 
+    const currentTotal = processedData.length; // This might be total from API if pagination is server-side
+    // If using server-side pagination, `bugReportsData` would already be the paged data.
+    // For simplicity, this example assumes client-side paging after fetch or full data fetch.
+    const pageIndex = tableData.pageIndex as number; 
+    const pageSize = tableData.pageSize as number; 
+    const startIndex = (pageIndex - 1) * pageSize; 
+    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+    
+    // If your API returns paginated data (e.g., `data`, `total`), use that directly.
+    // For example: return { pageData: bugReportsData.data, total: bugReportsData.total, allFilteredAndSortedData: dataToExport }
+
     return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
-  }, [bugReportsData, tableData, filterCriteria]);
+  }, [bugReportsData, tableData]);
+
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => { 
+    const newTableData = { ...tableData, ...data };
+    setTableData(newTableData);
+    // Refetch data when table query parameters change (sort, pagination, global search)
+    // Filters are handled by onApplyFiltersSubmit
+    if (data.sort || data.pageIndex || data.pageSize || (data.query !== undefined && data.query !== tableData.query)) {
+        dispatch(getBugReportsAction({ params: { ...newTableData, filterStatus: filterCriteria.filterStatus?.map(s=>s.value), filterReportedBy: filterCriteria.filterReportedBy } }));
+    }
+  }, [tableData, dispatch, filterCriteria]);
 
   const handleExportData = useCallback(() => { exportBugReportsToCsv("bug_reports_export.csv", allFilteredAndSortedData); }, [allFilteredAndSortedData]);
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
   const handlePaginationChange = useCallback( (page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData] );
   const handleSelectChange = useCallback( (value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData] );
   const handleSort = useCallback( (sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData] );
-  const handleSearchChange = useCallback( (query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData] );
+  const handleSearchChange = useCallback( (query: string) => {
+    // Debounced search, update tableData and trigger fetch
+    handleSetTableData({ query: query, pageIndex: 1 });
+  }, [handleSetTableData] );
   const handleRowSelect = useCallback( (checked: boolean, row: BugReportItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, [] );
   const handleAllRowSelect = useCallback( (checked: boolean, currentRows: Row<BugReportItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, [] );
 
   const columns: ColumnDef<BugReportItem>[] = useMemo( () => [
-      // { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => { const statusVal = props.getValue<BugReportStatusApi>(); return (<Tag className={classNames("capitalize whitespace-nowrap", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600")}>{statusVal}</Tag>); }, },
+      { header: "Status", accessorKey: "status", size: 120, enableSorting: true, 
+        cell: (props) => { 
+            const statusVal = props.getValue<BugReportStatusApi>(); 
+            return (<Tag className={classNames("capitalize whitespace-nowrap min-w-[60px] text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>); 
+        }, 
+      },
       { header: "Name", accessorKey: "name", size: 180, enableSorting: true, cell: (props) => (<span className="font-semibold">{props.getValue<string>()}</span>), },
       { header: "Email", accessorKey: "email", size: 200, enableSorting: true },
       { header: "Mobile No", accessorKey: "mobile_no", size: 130, cell: (props) => props.getValue() || "-", },
-      
-      { header: "Date", accessorKey: "created_at", size: 120, cell: (props) => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : "-", },
-      { header: "Actions", id: "actions", meta: { headerClass: "text-center", cellClass: "text-center" }, size: 140, 
+      { header: "Reported On", accessorKey: "created_at", size: 150, enableSorting: true, cell: (props) => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : "-", },
+      { header: "Actions", id: "actions", meta: { headerClass: "text-center", cellClass: "text-center" }, size: 120, 
         cell: (props) => ( <ActionColumn 
             onEdit={() => openEditDrawer(props.row.original)} 
-            onViewDetail={() => { /* Implement view detail dialog if needed */ }}
-            onChangeStatus={() => handleChangeStatus(props.row.original, props.row.original.status === "Read" ? "Unread" : "Read")} // Example status toggle
-            // Pass onDelete to ActionColumn if it's defined there
+            onViewDetail={() => openViewDrawer(props.row.original)}
+            onChangeStatus={() => handleChangeStatus(props.row.original, props.row.original.status === "Read" ? "Unread" : "Read")}
         /> ),
       },
-    ], [openEditDrawer, handleChangeStatus,] // Removed handleDeleteClick if ActionColumn doesn't use it directly
+    ], [openEditDrawer, openViewDrawer, handleChangeStatus] 
   );
 
-  // --- MODIFIED renderDrawerForm ---
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
       <FormItem
@@ -336,7 +398,7 @@ const BugReportListing = () => {
         errorMessage={currentFormMethods.formState.errors.name?.message}
       >
         <Controller name="name" control={currentFormMethods.control}
-          render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Your Name" />)}
+          render={({ field }) => (<Input {...field} prefix={<TbUserCircle className="text-lg" />} placeholder="Your Name" />)}
         />
       </FormItem>
       <FormItem
@@ -346,23 +408,20 @@ const BugReportListing = () => {
         errorMessage={currentFormMethods.formState.errors.email?.message}
       >
         <Controller name="email" control={currentFormMethods.control}
-          render={({ field }) => (<Input {...field} type="email" prefix={<TbMail />} placeholder="your.email@example.com" />)}
+          render={({ field }) => (<Input {...field} type="email" prefix={<TbMail className="text-lg"/>} placeholder="your.email@example.com" />)}
         />
       </FormItem>
       <FormItem
         label="Mobile No. (Optional)"
-        className="md:col-span-1" // Adjusted to fit if status/reported_by are removed
+        className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.mobile_no}
         errorMessage={currentFormMethods.formState.errors.mobile_no?.message}
       >
         <Controller name="mobile_no" control={currentFormMethods.control}
-          render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone />} placeholder="+XX-XXXXXXXXXX" />)}
+          render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone className="text-lg"/>} placeholder="+XX-XXXXXXXXXX" />)}
         />
       </FormItem>
       
-      {/* Status and Reported By are REMOVED from the user-facing Add/Edit form */}
-      {/* If an admin needs to edit these, you might have a separate "Admin Edit Form" or conditional rendering */}
-
       <FormItem
         label="Report / Description"
         className="md:col-span-2"
@@ -370,7 +429,7 @@ const BugReportListing = () => {
         errorMessage={currentFormMethods.formState.errors.report?.message}
       >
         <Controller name="report" control={currentFormMethods.control}
-          render={({ field }) => (<Input textArea {...field} rows={6} prefix={<TbFileDescription />} placeholder="Please describe the bug in detail..." />)}
+          render={({ field }) => (<Input textArea {...field} rows={6} prefix={<TbFileDescription className="text-lg mt-2.5"/>} placeholder="Please describe the bug in detail..." />)}
         />
       </FormItem>
       <FormItem
@@ -387,24 +446,101 @@ const BugReportListing = () => {
                 onChange(file); 
                 setSelectedFile(file || null);
               }}
-              prefix={<TbPaperclip />}
+              prefix={<TbPaperclip className="text-lg" />}
             />
           )}
         />
         {editingItem?.attachment && !selectedFile && (
-            <div className="mt-2 text-sm text-gray-500">
-              Current: <a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{editingItem.attachment}</a>
+            <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Current: <a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{editingItem.attachment}</a>
             </div>
           )}
       </FormItem>
     </div>
   );
-  // --- END OF MODIFIED renderDrawerForm ---
 
-  const itemPath = (filename: any) => {
-    const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000"; // Example
-    return `${baseUrl}/storage/attachments/bug_reports/${filename}`;
-  };
+  const renderViewDetails = (item: BugReportItem) => (
+    <div className="p-1 space-y-5"> {/* Increased spacing */}
+        <div className="flex items-start">
+            <TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+            <div>
+                <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Name</h6>
+                <p className="text-gray-800 dark:text-gray-100 text-base">{item.name}</p>
+            </div>
+        </div>
+        <div className="flex items-start">
+            <TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+            <div>
+                <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</h6>
+                <p className="text-gray-800 dark:text-gray-100 text-base">{item.email}</p>
+            </div>
+        </div>
+        {item.mobile_no && (
+            <div className="flex items-start">
+                <TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+                <div>
+                    <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mobile No.</h6>
+                    <p className="text-gray-800 dark:text-gray-100 text-base">{item.mobile_no}</p>
+                </div>
+            </div>
+        )}
+        <div className="flex items-start">
+            <TbInfoCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+            <div>
+                <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</h6>
+                <Tag className={classNames("capitalize text-sm", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>
+                    {item.status}
+                </Tag>
+            </div>
+        </div>
+        <div className="flex items-start">
+            <TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+            <div>
+                <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Report Description</h6>
+                <p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">{item.report}</p>
+            </div>
+        </div>
+        {item.attachment && (
+            <div className="flex items-start">
+                <TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+                <div>
+                    <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6>
+                    <a
+                        href={itemPath(item.attachment)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-600 hover:underline break-all text-base"
+                    >
+                        {item.attachment}
+                    </a>
+                </div>
+            </div>
+        )}
+        {item.created_at && (
+            <div className="flex items-start">
+                <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+                <div>
+                    <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6>
+                    <p className="text-gray-800 dark:text-gray-100 text-base">
+                        {new Date(item.created_at).toLocaleString()}
+                    </p>
+                </div>
+            </div>
+        )}
+        {item.updated_at && item.updated_at !== item.created_at && (
+             <div className="flex items-start">
+                <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+                <div>
+                    <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Last Updated</h6>
+                    <p className="text-gray-800 dark:text-gray-100 text-base">
+                        {new Date(item.updated_at).toLocaleString()}
+                    </p>
+                </div>
+            </div>
+        )}
+    </div>
+);
+
 
   return (
     <>
@@ -417,15 +553,14 @@ const BugReportListing = () => {
           <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
             <DataTable
-              columns={columns} data={pageData}
+              columns={columns} data={pageData} // Use pageData for display
               loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting || isChangingStatus}
-              pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
+              pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} // Use total from memoized data
               selectable
               checkboxChecked={(row: BugReportItem) => selectedItems.some((selected) => selected.id === row.id)}
               onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
               onSort={handleSort} onCheckBoxChange={handleRowSelect}
               onIndeterminateCheckBoxChange={handleAllRowSelect}
-              // noData={!loading && pageData.length === 0}
             />
           </div>
         </AdaptiveCard>
@@ -433,8 +568,9 @@ const BugReportListing = () => {
 
       <BugReportsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
+      {/* Add/Edit Drawer */}
       <Drawer
-        title={editingItem ? "Edit Bug Report (Admin)" : "Report New Bug"} // Title reflects user context
+        title={editingItem ? "Edit Bug Report (Admin)" : "Report New Bug"}
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
@@ -446,12 +582,31 @@ const BugReportListing = () => {
         </Form>
       </Drawer>
 
+      {/* View Details Drawer */}
+      <Drawer
+        title="Bug Report Details"
+        isOpen={isViewDrawerOpen}
+        onClose={closeViewDrawer}
+        onRequestClose={closeViewDrawer}
+        width={600} // Slightly smaller or same as edit
+        footer={
+            <div className="text-right w-full">
+                <Button size="sm" variant="solid" onClick={closeViewDrawer}>
+                    Close
+                </Button>
+            </div>
+        }
+      >
+        {viewingItem && renderViewDetails(viewingItem)}
+      </Drawer>
+
+      {/* Filter Drawer */}
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
         footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterBugReportForm" type="submit">Apply</Button> </div> }
       >
         <Form id="filterBugReportForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Status"> <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={BUG_REPORT_STATUS_OPTIONS_FORM.map((s) => ({ value: s.value, label: s.label }))} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} /> </FormItem>
-          <FormItem label="Reported By (Internal)"> <Controller name="filterReportedBy" control={filterFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter username or ID to filter" /> )} /> </FormItem>
+          {/* <FormItem label="Reported By (Internal)"> <Controller name="filterReportedBy" control={filterFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter username or ID to filter" /> )} /> </FormItem> */}
         </Form>
       </Drawer>
 
@@ -463,7 +618,3 @@ const BugReportListing = () => {
 };
 
 export default BugReportListing;
-
-// function classNames(...classes: (string | boolean | undefined)[]) { // Already defined at top
-//     return classes.filter(Boolean).join(' ');
-// }
