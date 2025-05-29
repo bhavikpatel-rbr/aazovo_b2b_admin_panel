@@ -16,6 +16,7 @@ import type { Routes } from '@/@types/routes'
 import uiComponentsRoute from './uiComponentsRoute'
 import userEngagementRoute from './userEngagementRoute'
 import webSettingsRoutes from './webSettingsRoute'
+import accountDocumentRoutes from './accountDocumentRoutes'
 
 export const publicRoutes: Routes = [...authRoute]
 
@@ -36,4 +37,5 @@ export const protectedRoutes: Routes = [
     ...userEngagementRoute,
     ...uiComponentsRoute,
     ...emailMessagesRoute,
+    ...accountDocumentRoutes,
 ]

@@ -1,6 +1,7 @@
 import {
     NAV_ITEM_TYPE_TITLE,
     NAV_ITEM_TYPE_ITEM,
+    NAV_ITEM_TYPE_LOGOUT,
 } from '@/constants/navigation.constant';
 import { ADMIN, USER } from '@/constants/roles.constant';
 import type { NavigationTree } from '@/@types/navigation';

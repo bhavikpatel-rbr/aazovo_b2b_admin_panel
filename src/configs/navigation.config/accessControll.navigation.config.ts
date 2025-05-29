@@ -37,22 +37,22 @@ const accessControlNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            {
-                key: 'accessControl.permission',
-                path: `${ACCESS_CONTROL_PREFIX_PATH}/permission`,
-                title: 'Permission',
-                translateKey: 'nav.accessControl.permission',
-                icon: 'permission',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN],
-                meta: {
-                    description: {
-                        translateKey: 'nav.accessControl.permissionDesc',
-                        label: 'Manage permissions',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'accessControl.permission',
+            //     path: `${ACCESS_CONTROL_PREFIX_PATH}/permission`,
+            //     title: 'Permission',
+            //     translateKey: 'nav.accessControl.permission',
+            //     icon: 'permission',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.accessControl.permissionDesc',
+            //             label: 'Manage permissions',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
         ],
     },
 ];

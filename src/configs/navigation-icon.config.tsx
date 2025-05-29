@@ -93,7 +93,7 @@ import {
     PiBriefcaseDuotone,
     PiTrophy,
 } from 'react-icons/pi'
-import { TbUserPentagon } from "react-icons/tb";
+import { TbFileCertificate, TbUserPentagon } from "react-icons/tb";
 import type { JSX } from 'react'
 
 export type NavigationIcons = Record<string, JSX.Element>
@@ -204,7 +204,8 @@ const navigationIcon: NavigationIcons = {
     utilsDoc: <PiToolboxDuotone />,
     changeLog: <PiCodeDuotone />,
     company : <PiBriefcaseDuotone/>,
-    leads : <PiTrophy/>
+    leads : <PiTrophy/>,
+    accountDocument : <TbFileCertificate/>,
 }
 
 export default navigationIcon

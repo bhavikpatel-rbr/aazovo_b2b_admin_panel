@@ -51,6 +51,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import { useNavigate } from "react-router-dom";
 
 // --- Define Item Type ---
 export type RoleItem = {
@@ -144,12 +145,14 @@ const ActionColumn = ({
   onChangeStatus: () => void;
   onViewDetail: () => void;
 }) => {
+  const navigate = useNavigate()
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Permissions">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
+          onClick={()=>navigate("/access-control/permission")}
         >
           <TbShieldLock  />
         </div>

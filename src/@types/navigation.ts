@@ -19,7 +19,7 @@ export interface NavigationTree {
     title: string
     translateKey: string
     icon: string
-    type: 'title' | 'collapse' | 'item'
+    type: 'title' | 'collapse' | 'item' | 'logout' 
     authority: string[]
     subMenu: NavigationTree[]
     description?: string
