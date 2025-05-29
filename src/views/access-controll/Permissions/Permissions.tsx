@@ -221,6 +221,7 @@ const PermissionsListing = () => {
         header: "view", 
         accessorKey: "view",
         meta: { HeaderClass: "text-center" },
+        size: 100,
         cell: (props) => {
           console.log("view", props.getValue())
           return <div className="flex items-center justify-center gap-2">
@@ -232,6 +233,7 @@ const PermissionsListing = () => {
         header: "Add",
         accessorKey: "add",
         meta: { HeaderClass: "text-center" },
+        size: 100,
         cell: (props) => {
           return <div className="flex items-center justify-center gap-2">
             <Checkbox checked={props.getValue()} />
@@ -242,6 +244,7 @@ const PermissionsListing = () => {
         header: "Edit",
         accessorKey: "edit",
         meta: { HeaderClass: "text-center" },
+        size: 100,
         cell: (props) => {
           return <div className="flex items-center justify-center gap-2">
             <Checkbox checked={props.getValue()} />
@@ -252,6 +255,7 @@ const PermissionsListing = () => {
         header: "Delete",
         accessorKey: "delete",
         meta: { HeaderClass: "text-center" },
+        size: 100,
         cell: (props) => {
           return <div className="flex items-center justify-center gap-2">
             <Checkbox checked={props.getValue()} />
@@ -262,6 +266,7 @@ const PermissionsListing = () => {
         header: "Export",
         accessorKey: "export",
         meta: { HeaderClass: "text-center" },
+        size: 100,
         cell: (props) => {
           return <div className="flex items-center justify-center gap-2">
             <Checkbox checked={props.getValue()} />
