@@ -14,11 +14,13 @@ import type { NavigationTree } from '@/@types/navigation'
 import emailMessagesNavigationConfig from './emailMessagesRoutes.navigation.config'
 import uiComponentNavigationConfig from './ui-components.navigation.config'
 import webSettingsNavigationConfig from './webSettings.navigation.config'
+import accountDocumentNavigationConfig from './accountDocument.navigation.config'
 const navigationConfig: NavigationTree[] = [
     ...dashboardsNavigationConfig,
     ...businessEntitiesNavigationConfig,
     ...productManagementNavigationConfig,
     ...salesLeadsNavigationConfig,
+    ...accountDocumentNavigationConfig,
     ...userengagementNavigationConfig,
     ...taskNavigationConfig,
     ...emailMessagesNavigationConfig,

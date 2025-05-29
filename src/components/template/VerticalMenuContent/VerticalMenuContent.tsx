@@ -8,6 +8,7 @@ import {
     NAV_ITEM_TYPE_TITLE,
     NAV_ITEM_TYPE_COLLAPSE,
     NAV_ITEM_TYPE_ITEM,
+    NAV_ITEM_TYPE_LOGOUT,
 } from '@/constants/navigation.constant'
 import useMenuActive from '@/utils/hooks/useMenuActive'
 import useTranslation from '@/utils/hooks/useTranslation'
