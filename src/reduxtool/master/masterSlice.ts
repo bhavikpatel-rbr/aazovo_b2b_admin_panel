@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addContinentAction, addCountryAction, addCurrencyAction, getLeadAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getBugReportsAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getExportMappingsAction, getJobDepartmentsAction, getJobPostsAction, getNumberSystemsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getSlidersAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction, getHomeCategoryAction, getRowDataAction, getAutoEmailsAction, getUsersAction, getEmailCampaignsAction, getMailTemplatesAction, getAutoEmailTemplatesAction, getEmailTemplatesAction, getRequestFeedbacksAction, getSellerListingsAction, getBuyerListingsAction, getAutoMatchDataAction, getAllProductAction, getMembersAction } from "./middleware"
+import { addContinentAction, addCountryAction, addCurrencyAction, getLeadAction, addDocumentTypeAction, addPaymentTermAction, addPriceListAction, addUnitAction, deletAllUnitAction, deleteAllPriceListAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deletePaymentTermAction, deletePriceListAction, deletUnitAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editPaymentTermAction, editPriceListAction, editUnitAction, getBlogsAction, getBrandAction, getBugReportsAction, getCategoriesAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getExportMappingsAction, getJobDepartmentsAction, getJobPostsAction, getNumberSystemsAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getSlidersAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getWallItemsAction, getHomeCategoryAction, getRowDataAction, getAutoEmailsAction, getUsersAction, getEmailCampaignsAction, getMailTemplatesAction, getAutoEmailTemplatesAction, getEmailTemplatesAction, getRequestFeedbacksAction, getSellerListingsAction, getBuyerListingsAction, getAutoMatchDataAction, getAllProductAction, getMembersAction, getInquiriesAction } from "./middleware"
 import { deletPaymentTermAsync } from "./services"
 
 const INITIAL_STATE: any = {
@@ -46,6 +46,7 @@ const INITIAL_STATE: any = {
   apiExportMappings: "",
   BlogsData: "",
   BrandData: "",
+  inquiryList: [],
 
 }
 
@@ -303,6 +304,12 @@ const masterSlice = createSlice({
       {
         ...state,
         memberData: payload
+      }))
+    builder.addCase(getInquiriesAction.fulfilled, (state, { payload }) => (
+
+      {
+        ...state,
+        inquiryList: payload
       }))
 
 
