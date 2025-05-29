@@ -161,7 +161,7 @@ const Question = ({ question, section_id, control, removeQuestion, createQuestio
           <Button type='button' icon={<TbCopy />} onClick={()=>createQuestion(questionType)}></Button>
         </Tooltip>
         <Tooltip title="Delete Question">
-          <Button type='button' icon={<TbTrash />} onClick={()=>removeQuestion()} ></Button>
+          <Button type='button' icon={<TbTrash />} onClick={()=>removeQuestion(question.id)} ></Button>
         </Tooltip>
         
       </div>
@@ -183,7 +183,7 @@ const Section = ({ section, control, removeSection }: SectionProps) => {
   };
   const removeQuestion = (id: number) => {
     if (questions.length > 1) {
-      setQuestions(prev => prev.filter(section => section.id !== prev.length));
+      setQuestions(prev => prev.filter(section => section.id !== id));
     }
   };
 
