@@ -1926,6 +1926,25 @@ export const changeProductStatusAsync = async ({ id, status }: { id: string; sta
   }
 }
 
+export const getInquiriesAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/inquiry`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllInquiriesAsync = async (unitData: any) => {
+  try {
+    console.log("unitData", unitData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/inquiry/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 export const importRowDataAsync = async () => {
   try {
     const response = await axiosInstance.put(`${config.apiURL}/master/import`);
