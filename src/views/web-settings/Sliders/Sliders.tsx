@@ -39,7 +39,8 @@ import {
   TbCloudUpload,
   TbCloudDownload,
   TbPhoto,
-  TbReload, // Generic image icon for sliders
+  TbReload,
+  TbUser, // Generic image icon for sliders
 } from "react-icons/tb";
 
 // Types
@@ -62,6 +63,7 @@ import {
 } from "@/reduxtool/master/middleware"; // Ensure these actions are in master middleware
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Ensure this selector exposes slidersData
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
 // --- Type Definitions ---
 type ApiSliderItem = {
@@ -1435,9 +1437,26 @@ const Sliders = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Sliders</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New
-            </Button>
+            <div>
+              <Link to='/task/task-list/create'>
+                  <Button
+                    className="mr-2"
+                    icon={<TbUser />}
+                    clickFeedback={false}
+                    customColorClass={({ active, unclickable }) =>
+                        classNames(
+                            'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
+                            active ? 'bg-gray-200' : 'bg-gray-100',
+                            unclickable && 'opacity-50 cursor-not-allowed',
+                            !active && !unclickable && 'hover:bg-gray-200',
+                        )
+                    }
+                  >Assigned to Task</Button>
+                </Link>
+                <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+                  Add New
+                </Button>
+              </div>
           </div>
           <SlidersTableTools
             onSearchChange={handleSearchChange}

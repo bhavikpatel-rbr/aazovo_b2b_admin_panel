@@ -97,11 +97,11 @@ const numberSystemFormSchema = z
     customer_code_starting: z.coerce
       .number()
       .int()
-      .min(0, "KYC Start Number must be non-negative."),
+      .min(0, "Start Number must be non-negative."),
     current_customer_code: z.coerce
       .number()
       .int()
-      .min(0, "KYC Current Number must be non-negative."),
+      .min(0, "Current Number must be non-negative."),
     // Temporary Member Numbering
     non_kyc_customer_code_starting: z.coerce
       .number()
@@ -137,14 +137,14 @@ const numberSystemFormSchema = z
     if (data.current_customer_code < data.customer_code_starting) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "KYC Current Number cannot be less than KYC Start Number.",
+        message: "Current Number cannot be less than Start Number.",
         path: ["current_customer_code"],
       });
     }
     if (data.non_kyc_current_customer_code < data.non_kyc_customer_code_starting) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Temp Current Number cannot be less than Temp Start Number.",
+        message: "Temp Current Number cannot be less than Start Number.",
         path: ["non_kyc_current_customer_code"],
       });
     }
@@ -152,7 +152,7 @@ const numberSystemFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          "Verified Company Current Number cannot be less than Verified Company Start Number.",
+          "Company Current Number cannot be less than Company Start Number.",
         path: ["current_company_code"],
       });
     }
@@ -160,7 +160,7 @@ const numberSystemFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          "Temporary Company Current Number cannot be less than Temporary Company Start Number.",
+          "Company Current Number cannot be less than Company Start Number.",
         path: ["non_kyc_current_company_code"],
       });
     }
@@ -181,10 +181,10 @@ const CSV_HEADERS_NS = [
   "Name",
   "Prefix",
   "Country IDs",
-  "KYC Start",
-  "KYC Current",
-  "Temp Start",
-  "Temp Current",
+  "Member Start",
+  "Members Current",
+  "Members Temp Start",
+  "Members Temp Current",
   "Verified Company Start",
   "Verified Company Current",
   "Temporary Company Start",
@@ -401,7 +401,7 @@ const NumberSystemsSelectedFooter = ({
         onConfirm={handleConfirmDelete}
       >
         <p>
-          Are you sure you want to delete the selected number system
+          Are you sure you want to delete the selected numbering system
           {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
         </p>
       </ConfirmDialog>
@@ -550,7 +550,7 @@ const NumberSystems = () => {
         ).unwrap();
         toast.push(
           <Notification
-            title="Number System Updated"
+            title="Numbering System Updated"
             type="success"
             duration={2000}
           >
@@ -562,11 +562,11 @@ const NumberSystems = () => {
         await dispatch(addNumberSystemAction(apiPayload)).unwrap();
         toast.push(
           <Notification
-            title="Number System Added"
+            title="Numbering System Added"
             type="success"
             duration={2000}
           >
-            New system added.
+            New numbering system added.
           </Notification>
         );
         closeAddDrawer();
@@ -612,7 +612,7 @@ const NumberSystems = () => {
       ).unwrap();
       toast.push(
         <Notification
-          title="Number System Deleted"
+          title="Numbering System Deleted"
           type="success"
           duration={2000}
         >{`System "${itemToDelete.name}" deleted.`}</Notification>
@@ -912,7 +912,7 @@ const NumberSystems = () => {
           name="name"
           control={formMethods.control}
           render={({ field }) => (
-            <Input {...field} placeholder="e.g., European KYC System" />
+            <Input {...field} placeholder="e.g., European System" />
           )}
         />
       </FormItem>
@@ -934,7 +934,7 @@ const NumberSystems = () => {
       {/* KYC Member Section */}
       <div className="md:col-span-2 border-t pt-3 mt-1">
         <h6 className="text-sm font-medium mb-2">
-          Numbering System For KYC Member
+          Numbering System For Member As Per (Old Admin)
         </h6>
       </div>
       <FormItem
@@ -967,7 +967,7 @@ const NumberSystems = () => {
       {/* Temporary Member Section */}
       <div className="md:col-span-2 border-t pt-3 mt-1">
         <h6 className="text-sm font-medium mb-2">
-          Numbering System For Temporary Member
+          Numbering System For Temporary Member As Per (Old Admin)
         </h6>
       </div>
       <FormItem
@@ -1000,7 +1000,7 @@ const NumberSystems = () => {
       {/* Verified Company Section */}
       <div className="md:col-span-2 border-t pt-3 mt-1">
         <h6 className="text-sm font-medium mb-2">
-          Numbering System For Verified Company
+          Numbering System For Verified Company As Per (New Admin)
         </h6>
       </div>
       <FormItem
@@ -1037,7 +1037,7 @@ const NumberSystems = () => {
       {/* Temporary Company Section */}
       <div className="md:col-span-2 border-t pt-3 mt-1">
         <h6 className="text-sm font-medium mb-2">
-          Numbering System For Temporary Company
+          Numbering System For Temporary Company As Per (New Admin)
         </h6>
       </div>
       <FormItem

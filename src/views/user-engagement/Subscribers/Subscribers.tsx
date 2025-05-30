@@ -29,7 +29,7 @@ import Button from '@/components/ui/Button';
 import Notification from '@/components/ui/Notification';
 import toast from '@/components/ui/toast';
 import DebouceInput from '@/components/shared/DebouceInput';
-import { Drawer, Form, FormItem, Input, DatePicker } from '@/components/ui'; // Removed Select and Tag as status/source are removed
+import { Drawer, Form, FormItem, Input, DatePicker, Tooltip } from '@/components/ui'; // Removed Select and Tag as status/source are removed
 
 // Icons
 import {
@@ -37,6 +37,7 @@ import {
     TbFilter,
     TbCloudUpload,
     TbMail,
+    TbReload,
 } from 'react-icons/tb';
 
 // Types
@@ -158,17 +159,22 @@ const SubscriberTableTools = ({
     onSearchChange,
     onFilter,
     onExport,
+    onClearFilters
 }: {
     onSearchChange: (query: string) => void;
     onFilter: () => void;
     onExport: () => void;
+    onClearFilters: () => void;
 }) => {
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
             <div className="flex-grow">
                 <SubscriberSearch onInputChange={onSearchChange} />
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Tooltip title="Clear Filters">
+                    <Button icon={<TbReload />} onClick={onClearFilters}></Button>
+                </Tooltip>
                 <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
                     Filter
                 </Button>
@@ -191,8 +197,8 @@ const SubscribersListing = () => {
         error: masterError = null,
     } = useSelector(masterSelector);
 
-    console.log("rawApiSubscribers",rawApiSubscribers);
-    
+    console.log("rawApiSubscribers", rawApiSubscribers);
+
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
         filterFormSchema.parse({})
@@ -300,7 +306,7 @@ const SubscribersListing = () => {
                     if (isNaN(bVal.getTime())) return order === 'asc' ? -1 : 1;
                     return order === 'asc' ? aVal.getTime() - bVal.getTime() : bVal.getTime() - aVal.getTime();
                 }
-                if(typeof aVal === 'number' && typeof bVal === 'number'){
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
                     return order === 'asc' ? aVal - bVal : bVal - aVal;
                 }
                 const strA = String(aVal ?? '').toLowerCase();
@@ -364,6 +370,7 @@ const SubscribersListing = () => {
                         </h5>
                     </div>
                     <SubscriberTableTools
+                        onClearFilters={onClearFilters}
                         onSearchChange={handleSearchChange}
                         onFilter={openFilterDrawer}
                         onExport={handleExportData}
@@ -389,26 +396,23 @@ const SubscribersListing = () => {
             </Container>
 
             <Drawer
-                title="Filter Subscribers"
+                title="Filters"
                 isOpen={isFilterDrawerOpen}
                 onClose={closeFilterDrawer}
                 onRequestClose={closeFilterDrawer}
                 footer={
-                    <div className="flex justify-between w-full">
+                    <div className="text-right w-full">
                         <Button size="sm" onClick={onClearFilters} type="button">
-                            Clear All
+                            Clear
                         </Button>
-                        <div>
-                            <Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Cancel</Button>
-                            <Button
-                                size="sm"
-                                variant="solid"
-                                form="filterSubscriberForm"
-                                type="submit"
-                            >
-                                Apply Filters
-                            </Button>
-                        </div>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            form="filterSubscriberForm"
+                            type="submit"
+                        >
+                            Apply
+                        </Button>
                     </div>
                 }
             >

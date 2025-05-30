@@ -31,6 +31,7 @@ import {
   TbPlus,
   TbCloudUpload,
   TbReload,
+  TbUser,
 } from "react-icons/tb";
 
 // Types
@@ -51,6 +52,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { Link } from "react-router-dom";
 
 // --- Define Product Master Type (what getAllProductAction fetches) ---
 export type ProductMasterItem = {
@@ -300,7 +302,26 @@ console.log("productsMasterData",productsMasterData);
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"> <h5 className="mb-2 sm:mb-0">Price List Management</h5> <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Item</Button> </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"> <h5 className="mb-2 sm:mb-0">Price List</h5> 
+            <div>
+              <Link to='/task/task-list/create'>
+              <Button
+                className="mr-2"
+                icon={<TbUser />}
+                clickFeedback={false}
+                customColorClass={({ active, unclickable }) =>
+                    classNames(
+                        'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
+                        active ? 'bg-gray-200' : 'bg-gray-100',
+                        unclickable && 'opacity-50 cursor-not-allowed',
+                        !active && !unclickable && 'hover:bg-gray-200',
+                    )
+                }
+              >Assigned to Task</Button>
+              </Link>
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button> 
+            </div>
+          </div>
           <PriceListTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters} />
           <div className="mt-4"> <PriceListTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /> </div>
         </AdaptiveCard>

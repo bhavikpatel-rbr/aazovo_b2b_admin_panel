@@ -43,6 +43,9 @@ import {
   TbBuildingArch,
   TbWorld,
   TbFileSpreadsheet,
+  TbCancel,
+  TbReload,
+  TbUserShare,
 } from "react-icons/tb";
 
 // Types
@@ -69,6 +72,7 @@ import {
   importRowDataAction, // Ensure this action is created in your middleware
 } from '@/reduxtool/master/middleware';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
+import { Link } from "react-router-dom";
 
 
 // --- Define Types for API data and Form Selects ---
@@ -161,7 +165,13 @@ function exportRowDataToCsv(filename: string, rows: RowDataItem[], countryOption
 }
 
 const ItemActionColumn = ({ onEdit, onViewDetail, onDelete, onBlacklist }: { onEdit: () => void; onViewDetail: () => void; onDelete: () => void; onBlacklist: () => void; }) => {
-  return ( <div className="flex items-center justify-center gap-1"> <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="View"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip> <Tooltip title="Blacklist"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-800 dark:text-gray-400 dark:hover:text-orange-400`} role="button" onClick={onBlacklist}><TbTrash /></div></Tooltip> <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-800 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> );
+  return ( 
+  <div className="flex items-center justify-center gap-1"> 
+    <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> 
+    <Tooltip title="View"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip> 
+    <Tooltip title="Convert to Member"> <Link to="/business-entities/member-create" className={`text-xl cursor-pointer select-none text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400`} role="button"><TbUserShare /></Link></Tooltip> 
+    <Tooltip title="Blacklist"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`} role="button" onClick={onBlacklist}><TbCancel size={16}/></div></Tooltip> 
+    <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> );
 };
 ItemActionColumn.displayName = "ItemActionColumn";
 
@@ -174,11 +184,15 @@ type ItemTableToolsProps = {
   onFilter: () => void;
   onExport: () => void;
   onImport: () => void; // Added for import button
+  onClearFilters: () => void;
 };
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onImport }: ItemTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters }: ItemTableToolsProps) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow"> <ItemSearch onInputChange={onSearchChange} /> </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
+      </Tooltip>
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
       <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
       <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
@@ -458,6 +472,7 @@ const RowDataListing = () => {
           </div>
           <div className="mb-4">
             <ItemTableTools
+              onClearFilters={onClearFilters}
               onSearchChange={handleSearchInputChange}
               onFilter={openFilterDrawer}
               onExport={handleExportData}

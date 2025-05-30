@@ -42,6 +42,7 @@ import {
   TbVariable,
   TbTrash,
   TbFileDescription,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -168,10 +169,22 @@ function exportToCsv(filename: string, rows: EmailTemplateItem[]) {
 
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; /* onViewDetail: () => void; */ }) => { return ( <div className="flex items-center justify-center gap-2"> <Tooltip title="Edit"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-500" role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="Delete"><div className="text-xl cursor-pointer text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500" role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> ); };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search by Name, Template ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 ItemSearch.displayName = "ItemSearch";
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
-const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => ( 
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> 
+    <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> 
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"> 
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
+      </Tooltip>
+      <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> 
+      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> 
+    </div> 
+  </div> 
+);
+
 type EmailTemplatesTableProps = { columns: ColumnDef<EmailTemplateItem>[]; data: EmailTemplateItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: EmailTemplateItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: EmailTemplateItem) => void; onAllRowSelect: (checked: boolean, rows: Row<EmailTemplateItem>[]) => void; };
 const EmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: EmailTemplatesTableProps) => ( <DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} /> );
 type EmailTemplatesSelectedFooterProps = { selectedItems: EmailTemplateItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
@@ -477,7 +490,7 @@ const EmailTemplatesListing = () => {
             <h5 className="mb-2 sm:mb-0">Email Templates</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Template</Button>
           </div>
-          <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters}/>
           <div className="mt-4">
             <EmailTemplatesTable columns={columns} data={pageData} loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>

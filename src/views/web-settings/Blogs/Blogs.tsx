@@ -35,7 +35,8 @@ import {
   TbX,
   TbCopy, // Added for Clone
   TbCloudDownload,
-  TbReload, // Added for Import
+  TbReload,
+  TbUser, // Added for Import
 } from "react-icons/tb";
 
 // Types
@@ -58,6 +59,7 @@ import {
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import dayjs from "dayjs";
+import { Link } from "react-router-dom";
 
 // --- Define Blog Type (Matches API Listing Response) ---
 export type BlogItem = {
@@ -328,13 +330,15 @@ const BlogsTableTools = ({
           {" "}
           Filter{" "}
         </Button>
-        <Button
+        
+        {/* <Button
           icon={<TbCloudDownload />}
           onClick={onImport}
           className="w-full sm:w-auto"
         >
           Import
-        </Button>{" "}
+        </Button>{" "} */}
+
         {/* Added Import */}
         <Button
           icon={<TbCloudUpload />}
@@ -1159,9 +1163,26 @@ const Blogs = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Blogs</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New
-            </Button>
+            <div>
+            <Link to='/task/task-list/create'>
+                <Button
+                  className="mr-2"
+                  icon={<TbUser />}
+                  clickFeedback={false}
+                  customColorClass={({ active, unclickable }) =>
+                      classNames(
+                          'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
+                          active ? 'bg-gray-200' : 'bg-gray-100',
+                          unclickable && 'opacity-50 cursor-not-allowed',
+                          !active && !unclickable && 'hover:bg-gray-200',
+                      )
+                  }
+                >Assigned to Task</Button>
+              </Link>
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+                Add New
+              </Button>
+            </div>
           </div>
           <BlogsTableTools
             onSearchChange={handleSearchChange}
