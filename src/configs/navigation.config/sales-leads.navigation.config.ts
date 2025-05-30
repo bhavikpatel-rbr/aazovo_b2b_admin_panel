@@ -83,22 +83,22 @@ const salesLeadsNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            {
-                key: 'salesLeads.accountDocuments',
-                path: `${SALES_LEADS_PREFIX_PATH}/account-documents`,
-                title: 'Account Document',
-                translateKey: 'nav.salesLeads.accountDocuments',
-                icon: 'lead',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.salesLeads.accountDocuments',
-                        label: 'Manage Account Document',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'salesLeads.accountDocuments',
+            //     path: `${SALES_LEADS_PREFIX_PATH}/account-documents`,
+            //     title: 'Account Document',
+            //     translateKey: 'nav.salesLeads.accountDocuments',
+            //     icon: 'lead',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN, USER],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.salesLeads.accountDocuments',
+            //             label: 'Manage Account Document',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
         ],
     },
 ];
