@@ -33,7 +33,8 @@ import { Drawer, Dropdown } from "@/components/ui";
 // Icons
 import {
   TbPencil, TbTrash, TbEye, TbCalendarEvent, TbPlus, TbChecks,
-  TbSearch, TbFilter, TbUserCircle, TbBriefcase, TbLink, TbClipboardCopy
+  TbSearch, TbFilter, TbUserCircle, TbBriefcase, TbLink, TbClipboardCopy,
+  TbReload
 } from "react-icons/tb";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
@@ -94,9 +95,12 @@ const ActionColumn = ({ onView, onEdit, onDelete, onScheduleInterview, onAddJobL
 const ApplicationTable = (props: any) => <DataTable {...props} />;
 const ApplicationSearch = React.forwardRef<HTMLInputElement, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
 ApplicationSearch.displayName = "ApplicationSearch";
-const ApplicationTableTools = ({ onSearchChange, onFilterOpen }: { onSearchChange: (query: string) => void; onFilterOpen: () => void; }) => (
-  <div className="flex flex-col md:flex-row items-center gap-3 w-full">
+const ApplicationTableTools = ({ onSearchChange, onFilterOpen, onClearFilters }: { onSearchChange: (query: string) => void; onFilterOpen: () => void; onClearFilters: () => void; }) => (
+  <div className="flex flex-col md:flex-row items-center gap-1 w-full">
     <div className="flex-grow w-full md:w-auto"><ApplicationSearch onInputChange={onSearchChange} placeholder="Search applications..." suffix={<TbSearch/>}/></div>
+    <Tooltip title="Clear Filters">
+      <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
+    </Tooltip>
     <Button icon={<TbFilter />} onClick={onFilterOpen} className="w-full md:w-auto">Filter</Button>
   </div>
 );
@@ -237,7 +241,7 @@ const JobApplicationListing = () => {
             <Button variant="solid" icon={<TbPlus />} onClick={() => navigate('/hr-employees/job-applications/add')} className="w-full sm:w-auto">Add New Application</Button>
           </div>
         </div>
-        <div className="mb-4"><ApplicationTableTools onSearchChange={handleSearchChange} onFilterOpen={openFilterDrawer} /></div>
+        <div className="mb-4"><ApplicationTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilterOpen={openFilterDrawer} /></div>
         <div className="flex-grow overflow-auto"><ApplicationTable columns={columns} data={pageData} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedApplications={selectedApplications} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
       </AdaptiveCard>
       <ApplicationSelected selectedApplications={selectedApplications} onDeleteSelected={handleDeleteSelected} />

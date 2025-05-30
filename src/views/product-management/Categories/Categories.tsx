@@ -53,7 +53,8 @@ import {
   TbCalendarEvent,
   TbBoxOff,
   TbCloudDownload, 
-  TbPhoto, // Generic photo icon
+  TbPhoto,
+  TbReload, // Generic photo icon
 } from "react-icons/tb";
 
 // Types for Categories
@@ -316,16 +317,20 @@ const CategorySearch = React.forwardRef<
 CategorySearch.displayName = "CategorySearch";
 
 const CategoryTableTools = ({
-  onSearchChange, onFilter, onExport, onImport,
+  onSearchChange, onFilter, onExport, onImport, onClearFilters
 }: {
   onSearchChange: (query: string) => void; onFilter: () => void;
   onExport: () => void; onImport: () => void;
+  onClearFilters: () => void;
 }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <CategorySearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
+      </Tooltip>
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
       <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
       <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
@@ -784,6 +789,7 @@ const Categories = () => {
             <Button variant="solid" icon={<TbPlus />} onClick={openAddCategoryDrawer}>Add New</Button>
           </div>
           <CategoryTableTools
+            onClearFilters={onClearFilters}
             onSearchChange={handleSearchChange} onFilter={openFilterDrawer}
             onExport={handleExportData} onImport={handleImportData}
           />

@@ -31,8 +31,9 @@ import {
   TbSearch,
   TbFilter,
   TbPlus,
-  TbCloudUpload,
-  TbBuildingCommunity, // Icon for Departments
+  TbCloudUpload,    
+  TbBuildingCommunity,
+  TbReload, // Icon for Departments
 } from "react-icons/tb";
 
 // Types
@@ -188,16 +189,21 @@ const DepartmentsTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters,
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: () => void;
 }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <DepartmentsSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
+      </Tooltip>
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -774,6 +780,7 @@ const Departments = () => {
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleExportData}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <DepartmentsTable

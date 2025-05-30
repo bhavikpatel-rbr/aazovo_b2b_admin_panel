@@ -36,6 +36,7 @@ import {
   TbFileText,
   TbSwitchHorizontal, // Keep if change status is re-enabled
   TbBuildingSkyscraper,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -299,7 +300,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Quick Search (Title, Desc, Location, Exp, ID)..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -312,17 +313,20 @@ type ItemTableToolsProps = {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: ()=> void;
 };
 const ItemTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters,
 }: ItemTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <ItemSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Button icon={<TbReload />} onClick={onClearFilters} ></Button>
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -1129,6 +1133,7 @@ const JobPostsListing = () => {
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleExportData}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <JobPostsTable

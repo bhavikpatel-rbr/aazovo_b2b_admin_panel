@@ -36,6 +36,7 @@ import {
   TbPaperclip,
   TbCalendarEvent,
   TbInfoCircle,
+  TbReload,
   // TbTrash, // Already imported, no need to re-declare if ActionColumn handles it
 } from "react-icons/tb";
 
@@ -146,10 +147,19 @@ const ActionColumn = ({ onEdit, onViewDetail, onChangeStatus }: { onEdit: () => 
   return ( <div className="flex items-center justify-start gap-2"> {/* Changed to justify-start and increased gap for better visibility */} <Tooltip title="Edit (Admin)"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip> <Tooltip title="View Details"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip> {/* Example: Status change icon (conditional) */} {/* <Tooltip title="Toggle Status"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onChangeStatus}><TbInfoCircle /></button></Tooltip> */} </div> );
 };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search by name, email, report..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 ItemSearch.displayName = "ItemSearch";
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
-const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: ()=> void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => ( 
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> 
+    <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> 
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"> 
+      <Button icon={<TbReload />} onClick={onClearFilters} className=""></Button> 
+      <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> 
+      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> 
+    </div> 
+  </div> );
+
 type BugReportsSelectedFooterProps = { selectedItems: BugReportItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
 const BugReportsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: BugReportsSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; const handleDeleteClick = () => setDeleteConfirmOpen(true); const handleCancelDelete = () => setDeleteConfirmOpen(false); const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmOpen(false); }; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold flex items-center gap-1 text-sm sm:text-base"> <span className="heading-text">{selectedItems.length}</span> <span>Report{selectedItems.length > 1 ? "s" : ""} selected</span> </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? "s" : ""}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete}> <p>Are you sure you want to delete the selected report{selectedItems.length > 1 ? "s" : ""}? </p> </ConfirmDialog> </> ); };
 
@@ -550,7 +560,7 @@ const BugReportListing = () => {
             <h5 className="mb-2 sm:mb-0">Bug Reports</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Report</Button>
           </div>
-          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters}/>
           <div className="mt-4">
             <DataTable
               columns={columns} data={pageData} // Use pageData for display
