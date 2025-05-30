@@ -93,7 +93,7 @@ import {
     PiBriefcaseDuotone,
     PiTrophy,
 } from 'react-icons/pi'
-import { TbFileCertificate, TbUserPentagon } from "react-icons/tb";
+import { TbActivityHeartbeat, TbBadge, TbBadgeTm, TbBadgeTmFilled, TbBell, TbBox, TbBug, TbBulb, TbCategory2, TbCloudUpload, TbContract, TbDashboard, TbFileCertificate, TbFileCv, TbGift, TbHeartHandshake, TbLibraryPhoto, TbListDetails, TbMailFast, TbMailStar, TbMessageCircleStar, TbReceipt2, TbShieldLock, TbSlideshow, TbStars, TbUserPentagon, TbUserQuestion, TbUsersGroup } from "react-icons/tb";
 import type { JSX } from 'react'
 
 export type NavigationIcons = Record<string, JSX.Element>
@@ -206,6 +206,30 @@ const navigationIcon: NavigationIcons = {
     company : <PiBriefcaseDuotone/>,
     leads : <PiTrophy/>,
     accountDocument : <TbFileCertificate/>,
+    iconDashboard:<TbDashboard/>,
+    heartHandshake:<TbHeartHandshake/>,
+    userquestion:<TbUserQuestion/>,
+    badgetm:<TbBadgeTmFilled/>,
+    categories:<TbCategory2/>,
+    productbox:<TbBox/>,
+    offersdemands:<TbGift/>,
+    oprtunity:<TbBulb/>,
+    walllist:<TbListDetails/>,
+    feedstar:<TbStars/>,
+    tasks:<TbContract/>,
+    emailCamp:<TbMailStar/>,
+    emplyeesgroup:<TbUsersGroup/>,
+    jobapp:<TbFileCv/>,
+    roles:<TbShieldLock/>,
+    bugs:<TbBug/>,
+    notification:<TbBell/>,
+    activetylog:<TbActivityHeartbeat/>,
+    catimages:<TbLibraryPhoto/>,
+    slideimages:<TbSlideshow/>,
+    blogs:<TbMessageCircleStar/>,
+    priceslist:<TbReceipt2/>,
+    exportmap:<TbCloudUpload/>
+
 }
 
 export default navigationIcon
