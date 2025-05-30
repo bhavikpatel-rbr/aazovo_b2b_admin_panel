@@ -31,6 +31,7 @@ import {
     getProductsAction,
     getCompanyProfileAction, // VERIFY: Assumes this fetches a LIST of companies
     getProductSpecificationsAction,
+    getAllProductAction,
 } from '@/reduxtool/master/middleware'; // VERIFY PATH
 import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
 
@@ -163,12 +164,12 @@ const WallItemAdd = () => {
   // --- Selectors for Redux state ---
   // VERIFY: Ensure `masterSelector` provides these specific keys and that their data structure is an array.
   // e.g., productsMasterData: [{id: 1, name: "Product A", sku_code: "P001"}, ...]
-  // e.g., allCompanyProfileData: [{id: 1, company_name: "Company X"}, ...]
-  // e.g., productSpecificationsData: [{id: 1, name: "Spec Y"}, ...]
+  // e.g., rawProfileArrayFromState: [{id: 1, company_name: "Company X"}, ...]
+  // e.g., ProductSpecificationsData: [{id: 1, name: "Spec Y"}, ...]
   const {
     productsMasterData = [],
-    allCompanyProfileData = [], // VERIFY name if getCompanyProfileAction fetches a list
-    productSpecificationsData = [],
+    rawProfileArrayFromState = [], // VERIFY name if getCompanyProfileAction fetches a list
+    ProductSpecificationsData = [],
     status: masterDataAccessStatus = 'idle', // General status from masterSlice
   } = useSelector(masterSelector);
 
@@ -211,7 +212,7 @@ const WallItemAdd = () => {
       try {
         // VERIFY: Pass necessary params if actions require them (e.g., for pagination)
         await Promise.all([
-          dispatch(getProductsAction()),
+          dispatch(getAllProductAction()),
           dispatch(getCompanyProfileAction()), // Ensure this fetches a LIST
           dispatch(getProductSpecificationsAction()),
         ]);
@@ -235,23 +236,24 @@ const WallItemAdd = () => {
       id: product.id,
     }));
   }, [productsMasterData]);
+  
 
   const companyOptions: CompanyOptionType[] = useMemo(() => {
-    if (!Array.isArray(allCompanyProfileData)) return [];
-    return allCompanyProfileData.map((company: any) => ({
+    if (!Array.isArray(rawProfileArrayFromState)) return [];
+    return rawProfileArrayFromState.map((company: any) => ({
       value: company.company_name || company.name, // Adjust if company name field is different
       label: company.company_name || company.name,
       id: company.id,
     }));
-  }, [allCompanyProfileData]);
+  }, [rawProfileArrayFromState]);
 
   const productSpecOptionsForSelect: ProductSpecOptionType[] = useMemo(() => {
-    if (!Array.isArray(productSpecificationsData)) return [];
-    return productSpecificationsData.map((spec: any) => ({
+    if (!Array.isArray(ProductSpecificationsData)) return [];
+    return ProductSpecificationsData.map((spec: any) => ({
       value: spec.id,
       label: spec.name,
     }));
-  }, [productSpecificationsData]);
+  }, [ProductSpecificationsData]);
 
   const onFormSubmit = useCallback(
     async (formData: WallItemFormData) => {

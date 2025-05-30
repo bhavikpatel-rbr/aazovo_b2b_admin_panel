@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,45 +7,78 @@ import dayjs from "dayjs";
 
 // UI Components
 import Card from "@/components/ui/Card";
-import { Input } from "@/components/ui"; // Assuming Input is exported directly
+import { Input, Select as UiSelect } from "@/components/ui"; // Assuming Select is UiSelect
 import { Form, FormItem } from "@/components/ui/Form";
-import { DatePicker } from "@/components/ui"; // Assuming DatePicker is exported directly
+import { DatePicker } from "@/components/ui";
 import { Button } from "@/components/ui";
 import { BiChevronRight } from "react-icons/bi";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
+import Spinner from "@/components/ui/Spinner"; // For loading state
+
+// Redux
+import { useAppDispatch } from '@/reduxtool/store'; // VERIFY PATH
+import { shallowEqual } from 'react-redux';
+import { useSelector } from 'react-redux';
+
+import {
+    getAllProductAction,
+    getCategoriesAction,
+    getSubcategoriesByCategoryIdAction,
+    getBrandAction,
+    // Placeholder for actual seller opportunity creation action
+    // createSellerOpportunityAction, 
+} from '@/reduxtool/master/middleware'; // VERIFY PATH & ACTION NAMES
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
+
+// --- Define Option Types for Selects ---
+type SelectOption = { value: string; label: string; id?: number | string };
+type ApiLookupItem = { id: string | number; name: string; [key: string]: any };
+
 
 // --- Zod Schema for Create Seller Form ---
 const sellerFormSchema = z.object({
   opportunityId: z.string().optional().nullable(),
   buyListingId: z.string().optional().nullable(),
   sellListingId: z.string().optional().nullable(),
-  productName: z.string().min(1, "Product Name is required."),
-  productCategory: z.string().optional().nullable(),
-  productSubcategory: z.string().optional().nullable(),
-  brand: z.string().optional().nullable(),
-  priceMatchType: z.string().optional().nullable(), // e.g., "Exact", "Range", "Not Matched"
-  quantityMatch: z.string().optional().nullable(), // e.g., "Sufficient", "Partial", "Not Matched"
-  locationMatch: z.string().optional().nullable(), // e.g., "Local", "National", "Not Matched"
+  
+  productId: z.string().min(1, "Product is required."),
+  productCategoryId: z.string().min(1, "Product Category is required.").optional().nullable(),
+  productSubcategoryId: z.string().optional().nullable(),
+  brandId: z.string().min(1, "Brand is required.").optional().nullable(),
+  
+  priceMatchType: z.string().optional().nullable(),
+  quantityMatch: z.string().optional().nullable(),
+  locationMatch: z.string().optional().nullable(),
   matchScore: z
     .number({ invalid_type_error: "Match score must be a number." })
     .min(0, "Match score cannot be less than 0.")
     .max(100, "Match score cannot be greater than 100.")
     .nullable()
     .optional(),
-  opportunityStatus: z.string().optional().nullable(), // e.g., "New", "Shortlisted", "Converted", "Rejected"
+  opportunityStatus: z.string().optional().nullable(),
   createdDate: z.date().nullable().optional(),
   lastUpdated: z.date().nullable().optional(),
   assignedTo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  status: z.string().min(1, "Status is required."), // e.g., "pending", "active", "on_hold", "closed"
+  status: z.string().min(1, "Status is required."),
 });
 
 type SellerFormData = z.infer<typeof sellerFormSchema>;
 
 const CreateSellerForm = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initialDataFetched, setInitialDataFetched] = useState(false);
+
+  const {
+    productsMasterData = [],
+    CategoriesData = [],
+    subCategoriesForSelectedCategoryData = [],
+    BrandData = [],
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector, shallowEqual);
 
   const formMethods = useForm<SellerFormData>({
     resolver: zodResolver(sellerFormSchema),
@@ -53,86 +86,144 @@ const CreateSellerForm = () => {
       opportunityId: "",
       buyListingId: "",
       sellListingId: "",
-      productName: "",
-      productCategory: "",
-      productSubcategory: "",
-      brand: "",
+      productId: "",
+      productCategoryId: null,
+      productSubcategoryId: null,
+      brandId: null,
       priceMatchType: "",
       quantityMatch: "",
       locationMatch: "",
       matchScore: null,
       opportunityStatus: "",
-      createdDate: new Date(), // Default to today
-      lastUpdated: new Date(), // Default to today
+      createdDate: new Date(),
+      lastUpdated: new Date(),
       assignedTo: "",
       notes: "",
-      status: "", // e.g. 'pending' could be a good default
+      status: "pending", 
     },
+    mode: 'onChange',
   });
+
+  const { control, handleSubmit, watch, setValue, formState, reset } = formMethods;
+  const { errors, isDirty, isValid } = formState;
+
+  useEffect(() => {
+    const fetchInitialOptions = async () => {
+      try {
+        await Promise.all([
+          dispatch(getAllProductAction({})),
+          dispatch(getCategoriesAction()),
+          dispatch(getBrandAction()),
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch initial dropdown data for seller form:", error);
+        toast.push(<Notification title="Data Load Error" type="danger">Could not load initial selection options.</Notification>);
+      } finally {
+        setInitialDataFetched(true);
+      }
+    };
+    fetchInitialOptions();
+  }, [dispatch]);
+
+  const productOptions: SelectOption[] = useMemo(() => {
+    if (!Array.isArray(productsMasterData)) return [];
+    return productsMasterData.map((p: ApiLookupItem) => ({ value: String(p.id), label: p.name, id: p.id }));
+  }, [productsMasterData]);
+
+  const categoryOptions: SelectOption[] = useMemo(() => {
+    if (!Array.isArray(CategoriesData)) return [];
+    return CategoriesData.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name, id: c.id }));
+  }, [CategoriesData]);
+
+  const brandOptions: SelectOption[] = useMemo(() => {
+    if (!Array.isArray(BrandData)) return [];
+    return BrandData.map((b: ApiLookupItem) => ({ value: String(b.id), label: b.name, id: b.id }));
+  }, [BrandData]);
+
+  const subcategoryOptionsForForm: SelectOption[] = useMemo(() => {
+    if (!Array.isArray(subCategoriesForSelectedCategoryData)) return [];
+    return subCategoriesForSelectedCategoryData.map((sc: ApiLookupItem) => ({ value: String(sc.id), label: sc.name, id: sc.id }));
+  }, [subCategoriesForSelectedCategoryData]);
+
+  const watchedProductCategoryId = watch("productCategoryId");
+  useEffect(() => {
+    if (watchedProductCategoryId) {
+      dispatch(getSubcategoriesByCategoryIdAction(watchedProductCategoryId));
+      setValue("productSubcategoryId", null, { shouldValidate: true, shouldDirty: true });
+    } else {
+      setValue("productSubcategoryId", null, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [watchedProductCategoryId, dispatch, setValue]);
 
   const onFormSubmit = useCallback(
     async (data: SellerFormData) => {
       setIsSubmitting(true);
 
-      const loggedPayload: any = { ...data }; // Start with all form data
+      const selectedProduct = productOptions.find(p => p.value === data.productId);
+      const selectedCategory = categoryOptions.find(c => c.value === data.productCategoryId);
+      const selectedSubcategory = subcategoryOptionsForForm.find(sc => sc.value === data.productSubcategoryId);
+      const selectedBrand = brandOptions.find(b => b.value === data.brandId);
 
-      // Map and transform fields to a target-like structure
-      loggedPayload.opportunity_id = data.opportunityId;
-      loggedPayload.buy_listing_id = data.buyListingId;
-      loggedPayload.sell_listing_id = data.sellListingId;
-      // productName is already data.productName
-      loggedPayload.product_category = data.productCategory;
-      loggedPayload.product_subcategory = data.productSubcategory;
-      // brand is already data.brand
-      loggedPayload.price_match_type = data.priceMatchType;
-      loggedPayload.quantity_match_listing = data.quantityMatch; // Name from target JSON
-      loggedPayload.location_match = data.locationMatch;
-      loggedPayload.match_score = data.matchScore;
-      loggedPayload.opportunity_status = data.opportunityStatus;
-      loggedPayload.notes = data.notes;
-      loggedPayload.status = data.status; // Overall status
-      loggedPayload.assigned_to = data.assignedTo;
-
-      loggedPayload.created_at = data.createdDate
-        ? dayjs(data.createdDate).toISOString()
-        : null;
-      loggedPayload.updated_at = data.lastUpdated
-        ? dayjs(data.lastUpdated).toISOString()
-        : null;
+      const loggedPayload: any = { 
+        ...data,
+        opportunity_id: data.opportunityId,
+        buy_listing_id: data.buyListingId,
+        sell_listing_id: data.sellListingId,
         
-      // Add other fields from previous target JSON if they make sense, with defaults
-      loggedPayload.id = null; // Typically backend generated
-      loggedPayload.spb_role = null;
-      loggedPayload.matches_found_count = null;
-      // ... any other relevant fields
+        product_id: data.productId,
+        product_name_selected: selectedProduct?.label,
+        
+        category_id: data.productCategoryId,
+        category_name_selected: selectedCategory?.label,
 
-      // Remove original keys if they were mapped to different key names to avoid redundancy, if desired.
-      // For "log all data... if fields not match log them as it is", we ensure unmapped fields from `data` are present.
-      // delete loggedPayload.opportunityId; // Example if you want to remove the original after mapping
-      // For now, keep original keys from formData alongside mapped ones if names differ.
+        subcategory_id: data.productSubcategoryId,
+        subcategory_name_selected: selectedSubcategory?.label,
+        
+        brand_id: data.brandId,
+        brand_name_selected: selectedBrand?.label,
+
+        price_match_type: data.priceMatchType,
+        quantity_match_listing: data.quantityMatch,
+        location_match: data.locationMatch,
+        match_score: data.matchScore,
+        opportunity_status: data.opportunityStatus,
+        notes: data.notes,
+        status: data.status,
+        assigned_to: data.assignedTo,
+        created_at: data.createdDate ? dayjs(data.createdDate).toISOString() : null,
+        updated_at: data.lastUpdated ? dayjs(data.lastUpdated).toISOString() : null,
+        // id: null, // Backend generated
+        // spb_role: null, // Add defaults if needed
+        // matches_found_count: null,
+      };
+      delete loggedPayload.product_name_selected;
+      delete loggedPayload.category_name_selected;
+      delete loggedPayload.subcategory_name_selected;
+      delete loggedPayload.brand_name_selected;
 
       console.log("--- CreateSellerForm Submission Log ---");
       console.log("1. Original formData (from react-hook-form):", data);
       console.log("2. Constructed Payload (for API/logging):", loggedPayload);
       console.log("--- End CreateSellerForm Submission Log ---");
 
-      await new Promise((res) => setTimeout(res, 1000)); // Simulate API call
-
-      toast.push(
-        <Notification title="Success" type="success">
-          Seller information saved. (Simulated)
-        </Notification>
-      );
-      setIsSubmitting(false);
-      // navigate("/sales-leads/opportunities"); // Or wherever you want to redirect
+      try {
+        // await dispatch(createSellerOpportunityAction(loggedPayload)).unwrap(); // Replace with actual action
+        await new Promise((res) => setTimeout(res, 1000)); // Simulate API call
+        toast.push(<Notification title="Success" type="success">Seller opportunity saved. (Simulated)</Notification>);
+        reset();
+        // navigate("/sales-leads/opportunities"); 
+      } catch (apiError: any) {
+         toast.push(<Notification title="Error" type="danger">{apiError?.message || "Failed to save seller opportunity."}</Notification>);
+      } finally {
+        setIsSubmitting(false);
+      }
     },
-    [] // No dependencies like navigate needed if not redirecting in this step
+    [dispatch, reset, navigate, productOptions, categoryOptions, subcategoryOptionsForForm, brandOptions]
   );
 
   const handleCancel = () => {
-    // Reset form if needed, or navigate
-    formMethods.reset();
-    navigate("/sales-leads/opportunities"); // Example navigation
+    reset();
+    navigate("/sales-leads/opportunities");
     toast.push(<Notification title="Cancelled" type="info">Form cancelled.</Notification>);
   };
 
@@ -144,12 +235,18 @@ const CreateSellerForm = () => {
         lastUpdated: currentValues.lastUpdated ? dayjs(currentValues.lastUpdated).toISOString() : null,
     };
     console.log("Saving as draft (Create Seller):", draftData);
-    toast.push(
-        <Notification title="Draft Saved" type="info">
-            Seller info saved as draft. (Simulated)
-        </Notification>
-    );
+    toast.push(<Notification title="Draft Saved" type="info">Seller info saved as draft. (Simulated)</Notification>);
   };
+
+  const isLoadingOptions = !initialDataFetched || masterLoadingStatus === 'loading';
+
+  if (isLoadingOptions && !initialDataFetched) {
+    return (
+        <div className="flex justify-center items-center h-screen">
+            <Spinner size={40} /> <span className="ml-2">Loading options...</span>
+        </div>
+    );
+  }
 
   return (
     <>
@@ -158,276 +255,142 @@ const CreateSellerForm = () => {
           <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Opportunities</h6>
         </NavLink>
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
-        <h6 className="font-semibold text-primary">Add New Seller</h6>
+        <h6 className="font-semibold text-primary">Add New Seller Opportunity</h6>
       </div>
       <Card>
-        <h4 className="mb-6">Create Seller</h4>
+        <h4 className="mb-6">Create Seller Opportunity</h4>
         <Form
           id="createSellerForm"
-          onSubmit={formMethods.handleSubmit(onFormSubmit)}
-          className="flex flex-col" // Removed gap-y-4, grid handles spacing
+          onSubmit={handleSubmit(onFormSubmit)}
         >
           <div className="grid md:grid-cols-3 gap-4">
-            <FormItem
-              label="Opportunity ID"
-              invalid={!!formMethods.formState.errors.opportunityId}
-              errorMessage={formMethods.formState.errors.opportunityId?.message}
-            >
-              <Controller
-                name="opportunityId"
-                control={formMethods.control}
-                render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Opportunity ID (Optional)" />}
-              />
+            <FormItem label="Opportunity ID" invalid={!!errors.opportunityId} errorMessage={errors.opportunityId?.message} >
+              <Controller name="opportunityId" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Opportunity ID (Optional)" />} />
+            </FormItem>
+            <FormItem label="Buy Listing ID" invalid={!!errors.buyListingId} errorMessage={errors.buyListingId?.message} >
+              <Controller name="buyListingId" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Buy Listing ID (Optional)" />} />
+            </FormItem>
+            <FormItem label="Sell Listing ID" invalid={!!errors.sellListingId} errorMessage={errors.sellListingId?.message} >
+              <Controller name="sellListingId" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Sell Listing ID (Optional)" />} />
             </FormItem>
 
-            <FormItem
-              label="Buy Listing ID"
-              invalid={!!formMethods.formState.errors.buyListingId}
-              errorMessage={formMethods.formState.errors.buyListingId?.message}
-            >
-              <Controller
-                name="buyListingId"
-                control={formMethods.control}
-                render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Buy Listing ID (Optional)" />}
-              />
+            <FormItem label="Product*" invalid={!!errors.productId} errorMessage={errors.productId?.message} >
+              <Controller name="productId" control={control} render={({ field }) => (
+                  <UiSelect {...field} placeholder="Select Product" options={productOptions}
+                    isLoading={masterLoadingStatus === 'loading' && productOptions.length === 0}
+                    value={productOptions.find(opt => opt.value === field.value) || null}
+                    onChange={(option) => field.onChange(option ? option.value : "")}
+                    isClearable />
+                )} />
+            </FormItem>
+            <FormItem label="Product Category*" invalid={!!errors.productCategoryId} errorMessage={errors.productCategoryId?.message} >
+              <Controller name="productCategoryId" control={control} render={({ field }) => (
+                  <UiSelect {...field} placeholder="Select Category" options={categoryOptions}
+                    isLoading={masterLoadingStatus === 'loading' && categoryOptions.length === 0}
+                    value={categoryOptions.find(opt => opt.value === field.value) || null}
+                    onChange={(option) => field.onChange(option ? option.value : "")}
+                    isClearable />
+                )} />
+            </FormItem>
+            <FormItem label="Product Subcategory" invalid={!!errors.productSubcategoryId} errorMessage={errors.productSubcategoryId?.message} >
+              <Controller name="productSubcategoryId" control={control} render={({ field }) => (
+                  <UiSelect {...field} placeholder="Select Subcategory" options={subcategoryOptionsForForm}
+                    isLoading={masterLoadingStatus === 'loading' && watchedProductCategoryId !== null && subcategoryOptionsForForm.length === 0}
+                    isDisabled={!watchedProductCategoryId || (masterLoadingStatus !== 'loading' && subcategoryOptionsForForm.length === 0 && !!watchedProductCategoryId)}
+                    value={subcategoryOptionsForForm.find(opt => opt.value === field.value) || null}
+                    onChange={(option) => field.onChange(option ? option.value : null)}
+                    isClearable />
+                )} />
+            </FormItem>
+            <FormItem label="Brand*" invalid={!!errors.brandId} errorMessage={errors.brandId?.message} >
+              <Controller name="brandId" control={control} render={({ field }) => (
+                  <UiSelect {...field} placeholder="Select Brand" options={brandOptions}
+                    isLoading={masterLoadingStatus === 'loading' && brandOptions.length === 0}
+                    value={brandOptions.find(opt => opt.value === field.value) || null}
+                    onChange={(option) => field.onChange(option ? option.value : "")}
+                    isClearable />
+                )} />
             </FormItem>
 
-            <FormItem
-              label="Sell Listing ID"
-              invalid={!!formMethods.formState.errors.sellListingId}
-              errorMessage={formMethods.formState.errors.sellListingId?.message}
-            >
-              <Controller
-                name="sellListingId"
-                control={formMethods.control}
-                render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Sell Listing ID (Optional)" />}
-              />
+            <FormItem label="Price Match Type" invalid={!!errors.priceMatchType} errorMessage={errors.priceMatchType?.message} >
+              <Controller name="priceMatchType" control={control} render={({ field }) => (<Input {...field} value={field.value ?? ''} placeholder="Exact / Range (Optional)" /> )} />
             </FormItem>
-
-            <FormItem
-              label="Product Name"
-              invalid={!!formMethods.formState.errors.productName}
-              errorMessage={formMethods.formState.errors.productName?.message}
-            >
-              <Controller
-                name="productName"
-                control={formMethods.control}
-                render={({ field }) => <Input {...field} placeholder="Product Name" />}
-              />
+            <FormItem label="Quantity Match" invalid={!!errors.quantityMatch} errorMessage={errors.quantityMatch?.message} >
+              <Controller name="quantityMatch" control={control} render={({ field }) => (<Input {...field} value={field.value ?? ''} placeholder="Sufficient / Partial (Optional)" /> )} />
             </FormItem>
-
-            <FormItem
-              label="Product Category"
-              invalid={!!formMethods.formState.errors.productCategory}
-              errorMessage={formMethods.formState.errors.productCategory?.message}
-            >
-              <Controller
-                name="productCategory"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} value={field.value ?? ''} placeholder="Product Category (Optional)" />
-                )}
-              />
+            <FormItem label="Location Match" invalid={!!errors.locationMatch} errorMessage={errors.locationMatch?.message} >
+              <Controller name="locationMatch" control={control} render={({ field }) => (<Input {...field} value={field.value ?? ''} placeholder="Local / National (Optional)" /> )} />
             </FormItem>
-
-            <FormItem
-              label="Product Subcategory"
-              invalid={!!formMethods.formState.errors.productSubcategory}
-              errorMessage={formMethods.formState.errors.productSubcategory?.message}
-            >
-              <Controller
-                name="productSubcategory"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} value={field.value ?? ''} placeholder="Product Subcategory (Optional)" />
-                )}
-              />
+            <FormItem label="Match Score (%)" invalid={!!errors.matchScore} errorMessage={errors.matchScore?.message} >
+              <Controller name="matchScore" control={control} render={({ field }) => (<Input {...field} value={field.value ?? ''} type="number" placeholder="0-100 (Optional)" onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))} /> )} />
             </FormItem>
-
-            <FormItem
-              label="Brand"
-              invalid={!!formMethods.formState.errors.brand}
-              errorMessage={formMethods.formState.errors.brand?.message}
-            >
-              <Controller
-                name="brand"
-                control={formMethods.control}
-                render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Brand (Optional)" />}
-              />
-            </FormItem>
-
-            <FormItem
-              label="Price Match Type"
-              invalid={!!formMethods.formState.errors.priceMatchType}
-              errorMessage={formMethods.formState.errors.priceMatchType?.message}
-            >
-              <Controller
-                name="priceMatchType"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} value={field.value ?? ''} placeholder="Exact / Range / Not Matched (Optional)" />
-                )}
-              />
-            </FormItem>
-
-            <FormItem
-              label="Quantity Match"
-              invalid={!!formMethods.formState.errors.quantityMatch}
-              errorMessage={formMethods.formState.errors.quantityMatch?.message}
-            >
-              <Controller
-                name="quantityMatch"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} value={field.value ?? ''} placeholder="Sufficient / Partial / Not Matched (Optional)" />
-                )}
-              />
-            </FormItem>
-
-            <FormItem
-              label="Location Match"
-              invalid={!!formMethods.formState.errors.locationMatch}
-              errorMessage={formMethods.formState.errors.locationMatch?.message}
-            >
-              <Controller
-                name="locationMatch"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input {...field} value={field.value ?? ''} placeholder="Local / National / Not Matched (Optional)" />
-                )}
-              />
-            </FormItem>
-
-            <FormItem
-              label="Match Score (%)"
-              invalid={!!formMethods.formState.errors.matchScore}
-              errorMessage={formMethods.formState.errors.matchScore?.message}
-            >
-              <Controller
-                name="matchScore"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    value={field.value ?? ''}
-                    type="number"
-                    placeholder="0-100 (Optional)"
-                    onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
-                  />
-                )}
-              />
-            </FormItem>
-
-            <FormItem
-              label="Opportunity Status"
-              invalid={!!formMethods.formState.errors.opportunityStatus}
-              errorMessage={formMethods.formState.errors.opportunityStatus?.message}
-            >
+            <FormItem label="Opportunity Status" invalid={!!errors.opportunityStatus} errorMessage={errors.opportunityStatus?.message}>
               <Controller
                 name="opportunityStatus"
-                control={formMethods.control}
+                control={control}
                 render={({ field }) => (
-                  <Input {...field} value={field.value ?? ''} placeholder="New / Shortlisted / Converted / Rejected (Optional)" />
-                )}
-              />
-            </FormItem>
-
-            <FormItem
-              label="Created Date"
-              invalid={!!formMethods.formState.errors.createdDate}
-              errorMessage={formMethods.formState.errors.createdDate?.message}
-            >
-              <Controller
-                name="createdDate"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <DatePicker
+                  <UiSelect
                     {...field}
-                    value={field.value} // RHF handles Date object
-                    inputFormat="YYYY-MM-DD" // Display format, RHF value remains Date
-                    placeholder="Select Created Date (Optional)"
-                    onChange={(date) => field.onChange(date)}
+                    placeholder="Select Opportunity Status"
+                    options={[
+                      { value: "New", label: "New" },
+                      { value: "Shortlisted", label: "Shortlisted" },
+                    ]}
+                    value={
+                      [{ value: "New", label: "New" }, { value: "Shortlisted", label: "Shortlisted" }]
+                        .find(opt => opt.value === field.value) || null
+                    }
+                    onChange={option => field.onChange(option ? option.value : "")}
+                    isClearable
                   />
                 )}
               />
             </FormItem>
-
-            <FormItem
-              label="Last Updated"
-              invalid={!!formMethods.formState.errors.lastUpdated}
-              errorMessage={formMethods.formState.errors.lastUpdated?.message}
-            >
-              <Controller
-                name="lastUpdated"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    value={field.value}
-                    inputFormat="YYYY-MM-DD"
-                    placeholder="Select Last Updated Date (Optional)"
-                    onChange={(date) => field.onChange(date)}
-                  />
-                )}
-              />
+            <FormItem label="Created Date" invalid={!!errors.createdDate} errorMessage={errors.createdDate?.message} >
+              <Controller name="createdDate" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} inputFormat="YYYY-MM-DD" placeholder="Select Date (Optional)" onChange={(date) => field.onChange(date)} /> )} />
             </FormItem>
-
-            <FormItem
-              label="Assigned To"
-              invalid={!!formMethods.formState.errors.assignedTo}
-              errorMessage={formMethods.formState.errors.assignedTo?.message}
-            >
-              <Controller
-                name="assignedTo"
-                control={formMethods.control}
-                render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Assigned To (Optional)" />}
-              />
+            <FormItem label="Last Updated" invalid={!!errors.lastUpdated} errorMessage={errors.lastUpdated?.message} >
+              <Controller name="lastUpdated" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} inputFormat="YYYY-MM-DD" placeholder="Select Date (Optional)" onChange={(date) => field.onChange(date)} /> )} />
             </FormItem>
-
-            <FormItem
-              label="Notes"
-              className="md:col-span-2" // Example: make Notes wider
-              invalid={!!formMethods.formState.errors.notes}
-              errorMessage={formMethods.formState.errors.notes?.message}
-            >
-              <Controller
-                name="notes"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <Input textArea {...field} value={field.value ?? ''} placeholder="Additional Notes (Optional)" rows={3} />
-                )}
-              />
+            <FormItem label="Assigned To" invalid={!!errors.assignedTo} errorMessage={errors.assignedTo?.message} >
+              <Controller name="assignedTo" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Assignee Name (Optional)" />} />
             </FormItem>
-
-            <FormItem
-              label="Status"
-              invalid={!!formMethods.formState.errors.status}
-              errorMessage={formMethods.formState.errors.status?.message}
-            >
+            <FormItem label="Notes" className="md:col-span-2" invalid={!!errors.notes} errorMessage={errors.notes?.message} >
+              <Controller name="notes" control={control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ''} placeholder="Additional Notes (Optional)" rows={3} /> )} />
+            </FormItem>
+            <FormItem label="Status*" invalid={!!errors.status} errorMessage={errors.status?.message} >
               <Controller
-                name="status"
-                control={formMethods.control}
-                render={({ field }) => <Input {...field} placeholder="pending / active / on_hold / closed" />}
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                {...field}
+                placeholder="Select Status"
+                options={[
+                  { value: "pending", label: "Pending" },
+                  { value: "active", label: "Active" },
+                  { value: "closed", label: "Closed" },
+                ]}
+                value={
+                  [
+                  { value: "pending", label: "Pending" },
+                  { value: "active", label: "Active" },
+                  { value: "closed", label: "Closed" },
+                  ].find(opt => opt.value === field.value) || null
+                }
+                onChange={option => field.onChange(option ? option.value : "")}
+                isClearable
+                />
+              )}
               />
             </FormItem>
           </div>
         </Form>
       </Card>
-      {/* Footer with Save and Cancel buttons */}
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
-        <Button type="button" onClick={handleCancel} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button type="button" onClick={handleSaveAsDraft} variant="twoTone" disabled={isSubmitting}>
-          Draft
-        </Button>
-        <Button
-          type="submit"
-          form="createSellerForm"
-          variant="solid"
-          loading={isSubmitting}
-          disabled={isSubmitting || !formMethods.formState.isDirty || !formMethods.formState.isValid}
-        >
+        <Button type="button" onClick={handleCancel} disabled={isSubmitting || isLoadingOptions}> Cancel </Button>
+        <Button type="button" onClick={handleSaveAsDraft} variant="twoTone" disabled={isSubmitting || isLoadingOptions}> Draft </Button>
+        <Button type="submit" form="createSellerForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoadingOptions || !isDirty || !isValid} >
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </Card>
