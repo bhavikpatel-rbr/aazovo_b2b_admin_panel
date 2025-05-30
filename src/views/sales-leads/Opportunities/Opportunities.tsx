@@ -130,7 +130,7 @@ const matchTypeColors: Record<string, string> = {
 
 const allOpportunitiesData: OpportunityItem[] = [
   {
-    id: "OPP001", opportunity_id: "SPB-001", product_name: "Eco-Friendly Water Bottles - 1L Capacity, Stainless Steel, Various Colors",
+    id: "2", opportunity_id: "SPB-001", product_name: "Eco-Friendly Water Bottles - 1L Capacity, Stainless Steel, Various Colors",
     status: "active", opportunity_status: "New", match_score: 75, created_date: "2024-03-01T10:00:00Z",
     buy_listing_id: "BUY-ECO-01", sell_listing_id: "SELL-ECO-02", spb_role: "Seller",
     product_category: "Lifestyle", product_subcategory: "Drinkware", brand: "EcoLife",
@@ -141,7 +141,7 @@ const allOpportunitiesData: OpportunityItem[] = [
     last_updated: "2024-03-02T11:00:00Z", assigned_to: "Team Eco", notes: "Seller has bulk stock. Prefers long-term partnership.", listing_url: "https://example.com/ecobottle"
   },
   {
-    id: "OPP002", opportunity_id: "SPB-002", product_name: "Handcrafted Leather Wallets - Bi-fold & Tri-fold",
+    id: "2", opportunity_id: "SPB-002", product_name: "Handcrafted Leather Wallets - Bi-fold & Tri-fold",
     status: "pending", opportunity_status: "Shortlisted", match_score: 92, created_date: "2024-03-05T14:30:00Z",
     buy_listing_id: "BUY-LTHR-03", sell_listing_id: "SELL-LTHR-04", spb_role: "Buyer",
     product_category: "Accessories", product_subcategory: "Wallets", brand: "Artisan Craft Co.",
@@ -152,7 +152,7 @@ const allOpportunitiesData: OpportunityItem[] = [
     last_updated: "2024-03-06T09:15:00Z", assigned_to: "Team Luxe", notes: "Buyer interested in long-term supply. Requires sample.", listing_url: "https://example.com/leatherwallet"
   },
   {
-    id: "OPP003", opportunity_id: "SPB-003", product_name: "Smart Home Security System - Pro Kit with 4 Cameras",
+    id: "2", opportunity_id: "SPB-003", product_name: "Smart Home Security System - Pro Kit with 4 Cameras",
     status: "on_hold", opportunity_status: "Converted", match_score: 88, created_date: "2024-02-20T16:00:00Z",
     buy_listing_id: "BUY-SEC-05", sell_listing_id: "SELL-SEC-06", spb_role: "Seller",
     product_category: "Electronics", product_subcategory: "Home Security", brand: "SecureHome Plus",
@@ -163,7 +163,7 @@ const allOpportunitiesData: OpportunityItem[] = [
     last_updated: "2024-03-01T10:00:00Z", assigned_to: "Team Secure", notes: "Deal closed, awaiting full payment and shipment coordination.", listing_url: "https://example.com/securitysystempro"
   },
   {
-    id: "OPP004", opportunity_id: "OPP-S-004", product_name: "Refurbished iPhone 13 Pro - 256GB",
+    id: "2", opportunity_id: "OPP-S-004", product_name: "Refurbished iPhone 13 Pro - 256GB",
     status: "active", opportunity_status: "New", match_score: 85, created_date: "2024-03-10T12:00:00Z",
     sell_listing_id: "SELL-IPHONE-07", spb_role: "Seller",
     product_category: "Electronics", product_subcategory: "Mobile Phones", brand: "Apple",
@@ -174,7 +174,7 @@ const allOpportunitiesData: OpportunityItem[] = [
     last_updated: "2024-03-11T10:00:00Z", assigned_to: "Team Mobile", notes: "Good condition, competitive price.", listing_url: "https://example.com/iphone13pro"
   },
   {
-    id: "OPP005", opportunity_id: "OPP-B-005", product_name: "Bulk Order - Organic Coffee Beans",
+    id: "2", opportunity_id: "OPP-B-005", product_name: "Bulk Order - Organic Coffee Beans",
     status: "pending", opportunity_status: "Shortlisted", match_score: 70, created_date: "2024-03-12T09:30:00Z",
     buy_listing_id: "BUY-COFFEE-08", spb_role: "Buyer",
     product_category: "Groceries", product_subcategory: "Coffee", brand: "Any (Organic)",
@@ -571,7 +571,6 @@ DataTableComponent.displayName = 'DataTableComponent';
 
 
 // --- Helper Components ---
-// --- Helper Components ---
 const FormattedDate: React.FC<{ dateString?: string; label?: string }> = ({ dateString, label }) => {
   if (!dateString) return <span className="text-xs text-gray-500 dark:text-gray-400">{label ? `${label}: N/A` : "N/A"}</span>;
   try {
@@ -621,7 +620,7 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const openDrawer = () => setIsDrawerOpen(true)
   const closeDrawer = () => setIsDrawerOpen(false)
-  const { control } = useForm()
+  const { control } = useForm() // Assuming filter form state is managed elsewhere or not fully implemented here
 
   return (
     <>
@@ -639,21 +638,24 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               size="sm"
               variant="solid"
               form="filterOpportunityForm"
-              type="submit"
+              type="submit" // This will submit the form inside the drawer
+              onClick={closeDrawer} // Close drawer on apply for now
             >
               Apply
             </Button>
           </div>
         }
       >
+        {/* Filter form content is extensive, shown as is, ensure form state is handled */}
         <Form id="filterOpportunityForm">
           <div className="md:grid grid-cols-2 gap-2">
             <FormItem label="Member Type">
               <Controller
                 name="member-type"
                 control={control}
-                render={() => (
+                render={({ field }) => ( // Pass field for RHF integration
                   <Select
+                    {...field} // Spread field props
                     placeholder="Select Type"
                     className="text-nowrap text-ellipsis"
                     isMulti
@@ -669,24 +671,28 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="continent"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Continent"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
                       { label: "Asia", value: "Asia" },
+                      // Add other continents
                     ]}
                   />
                 )}
               />
             </FormItem>
+             {/* Add more FormItem and Controller for other filters */}
             <FormItem label="Country">
               <Controller
                 name="country"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Country"
                     className="text-nowrap text-ellipsis"
                     isMulti
@@ -702,8 +708,9 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="state"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select State"
                     className="text-nowrap text-ellipsis"
                     isMulti
@@ -719,8 +726,9 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="city"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select City"
                     className="text-nowrap text-ellipsis"
                     isMulti
@@ -736,8 +744,9 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="pincode"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Input
+                    {...field}
                     type="text"
                     placeholder="Enter Pincode"
                     className="text-nowrap text-ellipsis"
@@ -749,8 +758,9 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="favourite-brand"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Favourite Brand"
                     className="text-nowrap text-ellipsis"
                     isMulti
@@ -765,8 +775,9 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="kyc-verified"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select KYC"
                     className="text-nowrap text-ellipsis"
                     isMulti
@@ -782,8 +793,9 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="product-spec"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Product Spec"
                     className="text-nowrap text-ellipsis"
                     isMulti
@@ -798,13 +810,17 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="status"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Status"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
                       { label: "Pending", value: "Pending" },
+                      { label: "Active", value: "Active" },
+                      { label: "On Hold", value: "On Hold" },
+                      { label: "Closed", value: "Closed" },
                     ]}
                   />
                 )}
@@ -814,14 +830,17 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="category"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Category"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
                       { label: "Food", value: "Food" },
                       { label: "Electronics", value: "Electronics" },
+                      { label: "Lifestyle", value: "Lifestyle"},
+                      { label: "Accessories", value: "Accessories"}
                     ]}
                   />
                 )}
@@ -831,14 +850,17 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="subcategory"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Sub Category"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
                       { label: "Mobile", value: "Mobile" },
                       { label: "TV", value: "TV" },
+                      { label: "Drinkware", value: "Drinkware"},
+                      { label: "Wallets", value: "Wallets"},
                     ]}
                   />
                 )}
@@ -848,13 +870,16 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="brand"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Brand"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
                       { label: "Apple", value: "Apple" },
+                      { label: "EcoLife", value: "EcoLife" },
+                      { label: "Artisan Craft Co.", value: "Artisan Craft Co." },
                     ]}
                   />
                 )}
@@ -864,15 +889,16 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="product"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Product"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
                       { label: "Iphone 15", value: "Iphone 15" },
-                      { label: "Iphone 14", value: "Iphone 14" },
-                      { label: "Samsung S25", value: "Samsung S25" },
+                      { label: "Eco-Friendly Water Bottles", value: "Eco-Friendly Water Bottles" },
+                      { label: "Handcrafted Leather Wallets", value: "Handcrafted Leather Wallets" },
                     ]}
                   />
                 )}
@@ -882,14 +908,17 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="product-status"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Product Status"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
                       { label: "Active", value: "Active" },
                       { label: "Inactive", value: "Inactive" },
+                      { label: "In Stock", value: "In Stock"},
+                      { label: "Low Stock", value: "Low Stock"},
                     ]}
                   />
                 )}
@@ -897,63 +926,71 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
             </FormItem>
             <FormItem label="Seller">
               <Controller
-                name="seller"
+                name="seller" // Represents seller company/member for filtering
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Seller"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={[
-                      { label: "Sell", value: "Sell" },
-                    ]}
+                    options={allOpportunitiesData
+                        .filter(op => op.spb_role === "Seller" || op.want_to === "Sell")
+                        .map(op => ({label: op.company_name, value: op.company_id || op.company_name}))
+                        .filter((v,i,a)=>a.findIndex(t=>(t.value === v.value))===i) // Unique sellers
+                    }
                   />
                 )}
               />
             </FormItem>
             <FormItem label="Buyer">
               <Controller
-                name="buyer"
+                name="buyer" // Represents buyer company/member for filtering
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
+                    {...field}
                     placeholder="Select Buyer"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={[
-                      { label: "Buy", value: "Buy" },
-                    ]}
+                    options={allOpportunitiesData
+                        .filter(op => op.spb_role === "Buyer" || op.want_to === "Buy")
+                        .map(op => ({label: op.company_name, value: op.company_id || op.company_name}))
+                        .filter((v,i,a)=>a.findIndex(t=>(t.value === v.value))===i) // Unique buyers
+                    }
                   />
                 )}
               />
             </FormItem>
-            <FormItem label="Matched">
+            <FormItem label="Matched Found Count">
               <Controller
                 name="matches"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Input
+                    {...field}
                     type="number"
-                    placeholder="Enter Matches"
+                    placeholder="Enter Matches Found"
                     className="text-nowrap text-ellipsis"
                   />
                 )}
               />
             </FormItem>
-            <FormItem label="Score">
+            <FormItem label="Match Score">
               <Controller
                 name="score"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <Select
-                    placeholder="Select Score"
+                    {...field}
+                    placeholder="Select Score Range"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
-                      { label: "0% - 24%", value: "0% - 24%" },
-                      { label: "25% - 49%", value: "25% - 49%" },
-                      { label: "50% - 74%", value: "50% - 74%" },
-                      { label: "75% - 100%", value: "75% - 100%" },
+                      { label: "0% - 24%", value: "0-24" },
+                      { label: "25% - 49%", value: "25-49" },
+                      { label: "50% - 74%", value: "50-74" },
+                      { label: "75% - 100%", value: "75-100" },
                     ]}
                   />
                 )}
@@ -963,15 +1000,15 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
               <Controller
                 name="created-date"
                 control={control}
-                render={() => (
+                render={({ field }) => (
                   <DatePicker.DatePickerRange
+                    {...field} // Pass field for RHF integration for DatePickerRange
                     placeholder="Pick Date Range"
                     className="text-nowrap text-ellipsis"
                   />
                 )}
               />
             </FormItem>
-
           </div>
         </Form>
       </Drawer>
@@ -990,14 +1027,37 @@ const OpportunityTableTools = ({ onSearchChange }: { onSearchChange: (query: str
 const OpportunityActionTools = ({ activeTab }: { activeTab: string; }) => {
   const navigate = useNavigate();
   const handleAddItem = () => {
-    navigate('/sales-leads/opportunity/create');
-    toast.push(<Notification title="Navigation" type="info">Redirecting to create new opportunity...</Notification>);
+    let path = '/sales-leads/opportunities/'; // Default prefix
+    if (activeTab === TABS.SELLER) {
+      path += 'seller/create';
+    } else if (activeTab === TABS.BUYER) {
+      path += 'buyer/create';
+    } else if (activeTab === TABS.AUTO_MATCH) {
+      // For auto-match, maybe a generic create or a modal? For now, let's point to a generic create or disable.
+      // path += 'match/create'; // Or show a different button/modal for auto-match
+      toast.push(<Notification title="Info" type="info">"Add New" is not specific for Auto Match. Select Buyer/Seller tab.</Notification>);
+      return; // Or navigate to a generic create page if applicable
+    } else { // TABS.ALL or other
+      // For 'All' tab, decide if it should default to Seller, Buyer, or a generic create form
+      // For simplicity, let's default to a generic seller create or prompt user
+      path += 'seller/create'; // Example: default to seller create
+      toast.push(<Notification title="Info" type="info">Defaulting to Add New Seller. Select a specific tab for Buyer.</Notification>);
+    }
+    navigate(path);
+    // toast.push(<Notification title="Navigation" type="info">Redirecting...</Notification>);
   };
+
+  // Conditionally render the "Add New" button or disable it for "Auto Match"
+  const showAddButton = activeTab !== TABS.AUTO_MATCH; 
+
   return (
     <div className="flex flex-col md:flex-row gap-3">
-      {/* <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={handleAddItem}>
-        Add New
-      </Button> */}
+      {showAddButton && (
+        <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={handleAddItem}>
+          Add New
+        </Button>
+      )}
+      {/* You can add other action tools here if needed */}
     </div>
   );
 };
@@ -1040,7 +1100,29 @@ const OpportunitySelectedFooter = ({ selectedItems, onDeleteSelected, activeTab 
   );
 };
 
-const MainRowActionColumn = ({ onEdit, item }: { onEdit: () => void; item: OpportunityItem }) => {
+const MainRowActionColumn = ({ onEdit, item, currentTab }: { onEdit: () => void; item: OpportunityItem, currentTab: string }) => {
+  const navigate = useNavigate();
+  const handleDelete = () => {
+    // Implement single item delete logic, perhaps by calling a parent handler
+    toast.push(<Notification title="Delete" type="info">Simulating delete for {item.opportunity_id}</Notification>);
+    // Example: props.onDeleteItem(item.id);
+  };
+  
+  const handleViewDetails = () => {
+     let path = `/sales-leads/opportunities/`;
+     if (item.spb_role === "Seller" || (currentTab === TABS.SELLER && !item.spb_role) ) {
+        path += `seller/detail/${item.id}`; // Assuming generic detail page for now
+     } else if (item.spb_role === "Buyer" || (currentTab === TABS.BUYER && !item.spb_role)) {
+        path += `buyer/detail/${item.id}`;
+     } else if (currentTab === TABS.AUTO_MATCH) {
+        // For auto-match, it could be a combined detail view or link to both listings
+        path += `match/detail/${item.id}`; // Example
+     } else { // TABS.ALL or other
+        path += `detail/${item.id}`; // Fallback generic detail
+     }
+     navigate(path);
+  }
+
   return (
     <div className="flex items-center justify-end gap-1">
       <div className="flex items-center justify-center gap-1">
@@ -1056,7 +1138,7 @@ const MainRowActionColumn = ({ onEdit, item }: { onEdit: () => void; item: Oppor
           <div
             className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
             role="button"
-            onClick={onEdit}
+            onClick={onEdit} // onEdit is passed from parent, already handles navigation
           >
             <TbPencil />
           </div>
@@ -1065,7 +1147,7 @@ const MainRowActionColumn = ({ onEdit, item }: { onEdit: () => void; item: Oppor
           <div
             className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
             role="button"
-            onClick={() => toast.push(<Notification title="View" type="info">View details for {item.opportunity_id}</Notification>)}
+            onClick={handleViewDetails}
           >
             <TbEye />
           </div>
@@ -1103,7 +1185,7 @@ const MainRowActionColumn = ({ onEdit, item }: { onEdit: () => void; item: Oppor
             <Dropdown.Item className="py-2" style={{ height: "auto" }}>
               <div className="flex gap-2 items-center text-xs"><TbLock size={20} /> Lock Match</div>
             </Dropdown.Item>
-            <Dropdown.Item className="py-2" style={{ height: "auto" }}>
+            <Dropdown.Item className="py-2" style={{ height: "auto" }} onClick={handleDelete}>
               <div className="flex gap-2 items-center text-xs"><TbTrash size={20} /> Delete</div>
             </Dropdown.Item>
           </Dropdown>
@@ -1118,7 +1200,27 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
   const navigate = useNavigate();
   const handleExpandedAction = (action: string, id: string) => {
     toast.push(<Notification type="info" title={`${action} for ${id} (from expanded view)`} />);
-    if (action === "Edit") navigate(`/sales-leads/opportunity/edit/${id}?tab=${currentTab}`);
+    if (action === "Edit") {
+       let path = '/sales-leads/opportunities/';
+        if (item.spb_role === "Seller" || (currentTab === TABS.SELLER && !item.spb_role)) {
+            path += `seller/edit/${id}`;
+        } else if (item.spb_role === "Buyer" || (currentTab === TABS.BUYER && !item.spb_role)) {
+            path += `buyer/edit/${id}`;
+        } else if (currentTab === TABS.AUTO_MATCH) {
+            // For auto-match, decide if edit should go to seller, buyer, or a combined edit
+            // This might need more specific logic based on your requirements
+            path += `seller/edit/${id}`; // Example: default to seller edit
+            toast.push(<Notification title="Info" type="info">Editing Seller aspect of match.</Notification>)
+        } else { // TABS.ALL or other (determine type from item if possible)
+            if(item.spb_role === "Seller" || item.want_to === "Sell") path += `seller/edit/${id}`;
+            else if(item.spb_role === "Buyer" || item.want_to === "Buy") path += `buyer/edit/${id}`;
+            else path += `detail/${id}`; // Fallback if type can't be determined
+        }
+        if (path.includes("/edit/")) navigate(path);
+        else toast.push(<Notification title="Info" type="warning">Cannot determine edit type for this item from current view.</Notification>)
+
+    }
+    // Handle other actions like Delete, Clone, etc.
   };
   const opportunityType = item.spb_role ? `${item.spb_role} in SPB` : (item.want_to || "General");
   return (
@@ -1128,7 +1230,7 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
           <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
             <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Opportunity Snapshot</h6>
             <InfoLine icon={<TbIdBadge2 size={14} />} label="Opp. ID" text={item.opportunity_id} className="font-medium text-sm" />
-            <InfoLine icon={<TbBox size={14} />} label="Product" text={item.product_name?.slice(0, 15) + (item.product_name && item.product_name.length > 1 ? "…" : "")} className="font-medium text-sm" />
+            <InfoLine icon={<TbBox size={14} />} label="Product" text={item.product_name?.slice(0, 25) + (item.product_name && item.product_name.length > 25 ? "…" : "")} className="font-medium text-sm" title={item.product_name}/>
             <InfoLine icon={<TbTag size={14} />} label="Category" text={`${(item.product_category || 'N/A').toString().slice(0, 15) + ((item.product_category && item.product_category.length > 15) ? "…" : "")}${item.product_subcategory ? ` > ${item.product_subcategory.slice(0, 15) + (item.product_subcategory.length > 15 ? "…" : "")}` : ''}`} />
             <InfoLine icon={<TbTag size={14} />} label="Brand" text={item.brand ? item.brand.slice(0, 15) + (item.brand.length > 15 ? "…" : "") : 'N/A'} />
             {item.product_specs && <InfoLine icon={<TbInfoCircle size={14} />} label="Specs" text={item.product_specs} />}
@@ -1158,8 +1260,7 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
           <div className="space-y-1.5">
             <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Match & Lifecycle</h6>
             <InfoLine icon={<TbRadar2 size={14} />} label="Other Matched Found" text={'5, 6'} />
-            {/* <InfoLine icon={<TbTargetArrow size={14}/>} label="Match Score" text={`${item.match_score}%`} /> */}
-            <InfoLine icon={<TbTargetArrow size={14} />} label="Match Score" text={`92%, 91%`} />
+            <InfoLine icon={<TbTargetArrow size={14} />} label="Match Score" text={`${item.match_score}%`} />
             <div className="flex items-center gap-2">
               <InfoLine icon={<TbProgressCheck size={14} />} label="Opp. Status" />
               <Tag className={`${opportunityStatusTagColor[item.opportunity_status]} capitalize`}>{item.opportunity_status}</Tag>
@@ -1178,9 +1279,10 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
                   </div>
                 </Tooltip>
                 <Tooltip title="View">
-                  <div
+                   <div
                     className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
                     role="button"
+                    // onClick={() => handleExpandedAction('View', item.id)} // You might want a detail view for expanded items too
                   >
                     <TbEye />
                   </div>
@@ -1189,7 +1291,7 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
                   <div
                     className="text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
                     role="button"
-                    onClick={() => handleExpandedAction('Clone', item.id)}
+                    // onClick={() => handleExpandedAction('Offer', item.id)}
                   >
                     <TbSend2 />
                   </div>
@@ -1240,100 +1342,10 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
           </div>
         </div>
       </Card>
-      <Card bordered className="m-1 my-2 rounded-lg">
-        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
-            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Opportunity Snapshot</h6>
-            <InfoLine icon={<TbIdBadge2 size={14} />} label="Opp. ID" text="DEMO-98765" className="font-medium text-sm" />
-            <InfoLine icon={<TbBox size={14} />} label="Product" text="Demo Product Name…" className="font-medium text-sm" />
-            <InfoLine icon={<TbTag size={14} />} label="Category" text="DemoCat > DemoSubcat" />
-            <InfoLine icon={<TbTag size={14} />} label="Brand" text="DemoBrand" />
-            <InfoLine icon={<TbInfoCircle size={14} />} label="Specs" text="Demo Specs, Example, Test" />
-            <InfoLine icon={<TbChecklist size={14} />} label="Quantity" text="1234" />
-            <InfoLine icon={<TbProgressCheck size={14} />} label="Product Status" text="Demo Status" />
-            <InfoLine icon={<TbExchange size={14} />} label="Intent/Role" text="DemoRole" />
-          </div>
-          <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
-            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Company & Member</h6>
-            <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm mb-2">
-              <div className="flex items-center">
-                <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">DEMO-COMP |</span>
-                <InfoLine icon={<TbBuilding size={14} />} text="Demo Company Inc." className="font-semibold" />
-              </div>
-            </div>
-            <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm">
-              <div className="flex items-center">
-                <span className="font-semibold text-gray-500 dark:text-gray-400 text-[11px] mr-1">DEMO-MEM |</span>
-                <InfoLine icon={<TbUser size={14} />} text="Demo Member" className="font-semibold" />
-              </div>
-              <InfoLine text="DEMO-TYPE" className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium" />
-              <InfoLine icon={<TbMail size={14} />} text={<a href="mailto:demo@demo.com" className="text-blue-500 hover:underline">demo@demo.com</a>} />
-              <InfoLine icon={<TbPhone size={14} />} text="111-2222" />
-            </div>
-            <InfoLine icon={<TbLinkIcon size={14} />} label="Listing" text={<a href="https://demo-listing.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate block max-w-[180px]" title="https://demo-listing.com">https://demo-listing.com</a>} />
-          </div>
-          <div className="space-y-1.5">
-            <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Match & Lifecycle</h6>
-            <InfoLine icon={<TbRadar2 size={14} />} label="Other Matched Found" text="77, 88" />
-            <InfoLine icon={<TbTargetArrow size={14} />} label="Match Score" text="98%, 97%" />
-            <div className="flex items-center gap-2">
-              <InfoLine icon={<TbProgressCheck size={14} />} label="Opp. Status" />
-              <Tag className="bg-green-200 text-green-700 capitalize">DemoStatus</Tag>
-            </div>
-            <FormattedDate label="Created" dateString="2024-02-15T00:00:00Z" />
-            <div className="pt-2 mt-2 border-t dark:border-gray-600">
-              <h6 className="text-sm font-semibold mb-1">Actions</h6>
-              <div className="flex items-center gap-2">
-                <Tooltip title="Edit">
-                  <div
-                    className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-                    role="button"
-                    onClick={() => handleExpandedAction('Edit', 'DEMO-98765')}
-                  >
-                    <TbPencil />
-                  </div>
-                </Tooltip>
-                <Tooltip title="Clone">
-                  <div
-                    className="text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
-                    role="button"
-                    onClick={() => handleExpandedAction('Clone', 'DEMO-98765')}
-                  >
-                    <TbCopy />
-                  </div>
-                </Tooltip>
-                <Tooltip title="Change Status">
-                  <div
-                    className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                    role="button"
-                    onClick={() => handleExpandedAction('Change Status', 'DEMO-98765')}
-                  >
-                    <TbSwitchHorizontal />
-                  </div>
-                </Tooltip>
-                <Tooltip title="Delete">
-                  <div
-                    className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                    role="button"
-                    onClick={() => handleExpandedAction('Delete', 'DEMO-98765')}
-                  >
-                    <TbTrash />
-                  </div>
-                </Tooltip>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
+      {/* Remove the second static demo Card from here as it was for demonstration */}
     </>
   );
 };
-
-
-// --- Sub-Components for Opportunities Page ---
-// OpportunitySearch, OpportunityTableTools, OpportunityActionTools, OpportunitySelectedFooter, MainRowActionColumn, ExpandedOpportunityDetails
-// (implementations as provided in previous responses)
-
 
 // --- Main Opportunities Component ---
 const Opportunities = () => {
@@ -1432,11 +1444,37 @@ const Opportunities = () => {
   const handleSearchChange = useCallback((query: string) => handleSetCurrentTableData({ query: query, pageIndex: 1 }), [handleSetCurrentTableData]);
   const handleRowSelect = useCallback((checked: boolean, row: OpportunityItem) => { setSelectedItems(prev => ({ ...prev, [currentTab]: checked ? [...(prev[currentTab] || []), row] : (prev[currentTab] || []).filter((i) => i.id !== row.id) })); }, [currentTab]);
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<OpportunityItem>[]) => { setSelectedItems(prev => ({ ...prev, [currentTab]: checked ? rows.map((r) => r.original) : [] })); }, [currentTab]);
-  const handleEdit = useCallback((item: OpportunityItem) => { navigate(`/sales-leads/opportunity/edit/${item.id}?type=${currentTab === TABS.AUTO_MATCH ? 'match' : item.want_to?.toLowerCase() || 'general'}`); }, [navigate, currentTab]);
+  
+  const handleEdit = useCallback((item: OpportunityItem) => {
+    let path = '/sales-leads/opportunities/'; // Base path
+    if (item.spb_role === "Seller" || (currentTab === TABS.SELLER && !item.spb_role)) {
+        path += `seller/edit/${item.id}`;
+    } else if (item.spb_role === "Buyer" || (currentTab === TABS.BUYER && !item.spb_role)) {
+        path += `buyer/edit/${item.id}`;
+    } else if (currentTab === TABS.AUTO_MATCH) {
+        // For auto-match, you need to decide which part to edit or if it's a combined edit.
+        // Example: Default to editing the seller part of the match or provide a choice.
+        // For now, let's assume it edits the seller aspect, or you might want a specific "match/edit/:id" route.
+        path += `seller/edit/${item.id}`; // Or buyer/edit or match/edit
+        toast.push(<Notification title="Info" type="info">Editing Seller aspect of this match.</Notification>);
+    } else { // TABS.ALL or other scenarios
+        // Try to infer from item's properties, or provide a generic edit/detail page
+        if(item.spb_role === "Seller" || item.want_to === "Sell") path += `seller/edit/${item.id}`;
+        else if(item.spb_role === "Buyer" || item.want_to === "Buy") path += `buyer/edit/${item.id}`;
+        else {
+            // If type cannot be determined, maybe navigate to a generic detail page or show an error
+            toast.push(<Notification title="Warning" type="warning">Cannot determine specific edit type for this item from 'All' tab. Please select Buyer/Seller tab or implement specific logic.</Notification>);
+            path += `detail/${item.id}`; // Fallback to a detail view if edit type is ambiguous
+            // return; // Or simply don't navigate if no clear edit path
+        }
+    }
+    if (path.includes("/edit/")) navigate(path);
+    else if (path.includes("/detail/")) navigate(path); // Allow navigation to detail if edit fails
+
+  }, [navigate, currentTab]);
+  
   const handleDeleteSelected = useCallback(() => { const selectedIds = new Set(currentSelectedItems.map((i) => i.id)); setOpportunities((prevAll) => prevAll.filter((i) => !selectedIds.has(i.id))); setSelectedItems(prev => ({ ...prev, [currentTab]: [] })); toast.push(<Notification title="Records Deleted" type="success">{`${selectedIds.size} record(s) deleted.`}</Notification>); }, [currentSelectedItems, currentTab, setOpportunities]);
   const handleTabChange = (tabKey: string) => { if (tabKey === currentTab) return; setCurrentTab(tabKey); };
-
-  // toggleRowExpansion is now handled by DataTableComponent's onExpandedChange via setExpanded
 
   const getColumnsForStandardView = useCallback((): ColumnDef<OpportunityItem>[] => [
     {
@@ -1451,12 +1489,12 @@ const Opportunities = () => {
               {item.product_name?.substring(0, 2).toUpperCase()}
             </Avatar>
             <div className="flex flex-col">
-              <Link to={`/sales-leads/opportunity/detail/${item.id}`} className="font-semibold text-sm text-primary-600 hover:underline dark:text-primary-400 mb-0.5">
+              <Link to={`/sales-leads/opportunities/${item.spb_role?.toLowerCase() || 'detail'}/${item.id}`} className="font-semibold text-sm text-primary-600 hover:underline dark:text-primary-400 mb-0.5">
                 {item.opportunity_id}
               </Link>
               <Tooltip title={item.product_name}>
                 <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[240px]">
-                  {item.product_name?.slice(0, 15) + (item.product_name && item.product_name.length > 1 ? "…" : "")}
+                  {item.product_name?.slice(0, 25) + (item.product_name && item.product_name.length > 25 ? "…" : "")}
                 </span>
               </Tooltip>
               <Tag className={`${recordStatusTagColor[item.status]} capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}>{item.status}</Tag>
@@ -1544,9 +1582,10 @@ const Opportunities = () => {
       cell: (props) => <MainRowActionColumn
         onEdit={() => handleEdit(props.row.original)}
         item={props.row.original}
+        currentTab={currentTab}
       />
     },
-  ], [handleEdit]);
+  ], [handleEdit, currentTab]);
 
   const getColumnsForExpandableView = useCallback((): ColumnDef<OpportunityItem>[] => [
     {
@@ -1577,13 +1616,13 @@ const Opportunities = () => {
               {item.product_name?.substring(0, 2).toUpperCase()}
             </Avatar>
             <div className="flex flex-col">
-              <Link to={`/sales-leads/opportunity/detail/${item.id}`} className="font-semibold text-sm text-primary-600 hover:underline dark:text-primary-400 mb-0.5">
+              <Link to={`/sales-leads/opportunities/match/detail/${item.id}`} className="font-semibold text-sm text-primary-600 hover:underline dark:text-primary-400 mb-0.5">
                 {item.opportunity_id}
               </Link>
               <Tooltip title={item.product_name}>
                 <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[240px]">
-                  {item.product_name?.slice(0, 15)}
-                  {item.product_name && item.product_name.length > 1 ? "…" : ""}
+                  {item.product_name?.slice(0, 25)}
+                  {item.product_name && item.product_name.length > 25 ? "…" : ""}
                 </span>
               </Tooltip>
               <Tag className={`${recordStatusTagColor[item.status]} capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}>{item.status}</Tag>
@@ -1676,9 +1715,10 @@ const Opportunities = () => {
       cell: (props) => <MainRowActionColumn
         onEdit={() => handleEdit(props.row.original)}
         item={props.row.original}
+        currentTab={currentTab}
       />
     },
-  ], [expanded, handleEdit]); // Use `expanded` from DataTable state for expander icon
+  ], [expanded, handleEdit, currentTab]); // Use `expanded` from DataTable state for expander icon
 
   const columns = useMemo(() => {
     if (currentTab === TABS.AUTO_MATCH) {
@@ -1731,7 +1771,6 @@ const Opportunities = () => {
             onCheckBoxChange={handleRowSelect}
             onIndeterminateCheckBoxChange={handleAllRowSelect}
             checkboxChecked={(row: OpportunityItem) => currentSelectedItems.some((selected: OpportunityItem) => selected.id === row.id)}
-            // DataTable1 internal state will manage expansion for AUTO_MATCH tab
             state={currentTab === TABS.AUTO_MATCH ? { expanded } : undefined}
             onExpandedChange={currentTab === TABS.AUTO_MATCH ? setExpanded : undefined}
             getRowCanExpand={currentTab === TABS.AUTO_MATCH ? () => true : undefined}
