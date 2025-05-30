@@ -41,6 +41,7 @@ TbTrash,
   // TbCloudDownload, // Assuming not used based on previous comment
   TbBuildingStore,
   TbBox,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -326,17 +327,22 @@ const BrandTableTools = ({
   onFilter,
   onExport,
   onImport,
+  onClearFilters,
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
   onImport: () => void;
+  onClearFilters: () => void;
 }) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
     <div className="flex-grow">
       <BrandSearch onInputChange={onSearchChange} />
     </div>
     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
+      </Tooltip>
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
         Filter
       </Button>
@@ -915,6 +921,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
           <BrandTableTools
+            onClearFilters={onClearFilters}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleExportData}
@@ -1008,15 +1015,33 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button>
             <Button size="sm" variant="solid" form="editBrandForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }
       >
         <Form id="editBrandForm" onSubmit={editFormMethods.handleSubmit(onEditBrandSubmit)} className="flex flex-col gap-4">
           {editingBrand?.icon_full_path && !editFormPreviewUrl && (
-            <FormItem label="Current Icon"><Avatar size={80} src={editingBrand.icon_full_path} shape="circle" icon={<TbBuildingStore />} /></FormItem>
+            <FormItem label="Current Icon" ><div className="border border-gray-200 rounded-sm bg-gray-200 h-22 flex items-center justify-center w-22"><Avatar size={80} src={editingBrand.icon_full_path} icon={<TbBuildingStore />} shape="square" /></div></FormItem>
           )}
+          <div className="flex items-center gap-2">
+              {editFormPreviewUrl && <div className="border border-gray-200 rounded-sm bg-gray-200 p-1 flex items-center justify-center "><Avatar src={editFormPreviewUrl} size={80} shape="square" className=""/></div>}
+              <FormItem label="New Icon (Optional)" invalid={!!editFormMethods.formState.errors.icon} errorMessage={editFormMethods.formState.errors.icon?.message as string}>
+                  <Controller name="icon" control={editFormMethods.control}
+                    render={({ field: { onChange, onBlur, name, ref } }) => (
+                      <Input type="file" name={name} ref={ref} onBlur={onBlur}
+                      onChange={(e) => {
+                        const file = e.target.files ? e.target.files[0] : null; onChange(file);
+                        if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl);
+                        setEditFormPreviewUrl(file ? URL.createObjectURL(file) : null);
+                      }}
+                      accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
+                      />
+                    )}
+                    />
+                <p className="text-xs text-gray-500 mt-1">Leave blank to keep current icon. Selecting a new file will replace it.</p>
+              </FormItem>
+          </div>
           <FormItem label="Brand Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message} isRequired>
             <Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} />} />
           </FormItem>
@@ -1026,22 +1051,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
           <FormItem label="Mobile No." invalid={!!editFormMethods.formState.errors.mobile_no} errorMessage={editFormMethods.formState.errors.mobile_no?.message}>
             <Controller name="mobile_no" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} />
           </FormItem>
-          <FormItem label="New Icon (Optional)" invalid={!!editFormMethods.formState.errors.icon} errorMessage={editFormMethods.formState.errors.icon?.message as string}>
-            <Controller name="icon" control={editFormMethods.control}
-              render={({ field: { onChange, onBlur, name, ref } }) => (
-                <Input type="file" name={name} ref={ref} onBlur={onBlur}
-                  onChange={(e) => {
-                    const file = e.target.files ? e.target.files[0] : null; onChange(file);
-                    if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl);
-                    setEditFormPreviewUrl(file ? URL.createObjectURL(file) : null);
-                  }}
-                  accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
-                />
-              )}
-            />
-            {editFormPreviewUrl && <div className="mt-2"><Avatar src={editFormPreviewUrl} size={80} shape="circle" /><p className="text-xs text-gray-500 mt-1">Preview of new icon.</p></div>}
-            <p className="text-xs text-gray-500 mt-1">Leave blank to keep current icon. Selecting a new file will replace it.</p>
-          </FormItem>
+          
           <FormItem label="Show in Header?" invalid={!!editFormMethods.formState.errors.show_header} errorMessage={editFormMethods.formState.errors.show_header?.message} isRequired>
             <Controller name="show_header" control={editFormMethods.control}
               render={({ field }) => (

@@ -44,7 +44,8 @@ import {
   TbToggleRight,
   TbForms,
   TbMail, // For email list
-  TbFileImport, // For file import
+  TbFileImport,
+  TbReload, // For file import
 } from "react-icons/tb";
 
 // Types
@@ -204,10 +205,10 @@ function exportCampaignsToCsv(filename: string, rows: EmailCampaignItem[]) {
 // --- ActionColumn, Search, TableTools, SelectedFooter (UI remains same) ---
 const ActionColumn = ({ onViewDetails, onEdit, onDelete }: { onViewDetails: () => void; onEdit: () => void; onDelete: () => void; }) => { return ( <div className="flex items-center justify-center gap-2"> <Tooltip title="Edit Campaign"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" role="button" onClick={onEdit}><TbPencil/></div></Tooltip> <Tooltip title="View Details"><div className="text-xl cursor-pointer text-gray-500 hover:text-blue-600" role="button" onClick={onViewDetails}><TbEye/></div></Tooltip> <Tooltip title="Delete Campaign"><div className="text-xl cursor-pointer text-gray-500 hover:text-red-600" role="button" onClick={onDelete}><TbTrash/></div></Tooltip> </div> ); };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search by Template Name, ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 ItemSearch.displayName = "ItemSearch";
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
-const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"><Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button></Tooltip> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
 type EmailCampaignsTableProps = { columns: ColumnDef<EmailCampaignItem>[]; data: EmailCampaignItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; /* selectedItems and row selection removed as not in UI */ };
 const EmailCampaignsTable = ({ columns, data, loading, pagingData, onPaginationChange, onSelectChange, onSort }: EmailCampaignsTableProps) => ( <DataTable columns={columns} data={data} loading={loading} pagingData={pagingData} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} noData={!loading && data.length === 0} />);
 // No selected footer if table is not selectable
