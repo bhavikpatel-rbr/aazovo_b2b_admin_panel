@@ -413,7 +413,7 @@ const AutoEmailListing = () => {
           </div>
           <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
-            <AutoEmailsTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting || isChangingStatus} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
+            <AutoEmailsTable columns={columns} data={pageData} loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting || isChangingStatus} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>

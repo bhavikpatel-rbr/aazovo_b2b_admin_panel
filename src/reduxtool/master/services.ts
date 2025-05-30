@@ -1523,7 +1523,8 @@ export const editRowDataAsync = async (unitData: any) => {
 
 export const deletRowDataAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/row_data/${unitData}`)
+    console.log(unitData.id)
+    const response = await axiosInstance.delete(`${config.apiURL}/row_data/${unitData.id}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2006,6 +2007,16 @@ export const deleteAllJobApplicationAsync = async (applicationData: any) => {
 export const getRolesAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/roles/role`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const getSubcategoriesByIdAsync = async (categoryId: string) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/category/${categoryId}`)
     return response
   } catch (err) {
     return isAxiosError(err)

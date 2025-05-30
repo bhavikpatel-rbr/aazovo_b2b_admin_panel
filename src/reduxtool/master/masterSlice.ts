@@ -318,19 +318,11 @@ const masterSlice = createSlice({
         ...state,
         subCategoriesForSelectedCategoryData: payload
       }))
-
-    builder
-      .addCase(getRolesAction.pending, (state) => {
-        state.status = 'loading';
-      })
-      .addCase(getRolesAction.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.Roles = action.payload; // <--- THIS IS THE CRITICAL LINE
-      })
-      .addCase(getRolesAction.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload ? action.payload : action.error.message;
-      });
+      builder.addCase(getRolesAction.fulfilled, (state, { payload }) => (
+      {
+        ...state,
+        Roles: payload
+      }))
 
 
 

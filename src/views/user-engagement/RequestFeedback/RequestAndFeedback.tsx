@@ -244,7 +244,7 @@ const RequestAndFeedbackListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"> <h5 className="mb-2 sm:mb-0">Requests & Feedbacks</h5> <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button> </div>
           <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
-          <div className="mt-4"> <RequestFeedbacksTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /> </div>
+          <div className="mt-4"> <RequestFeedbacksTable columns={columns} data={pageData} loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /> </div>
         </AdaptiveCard>
       </Container>
       <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
