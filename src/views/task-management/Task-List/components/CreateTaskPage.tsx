@@ -34,7 +34,7 @@ const LINK_TO_OPTIONS = [
 
 type LinkToOption = typeof LINK_TO_OPTIONS[number];
 
-const taskStatusLabels = ["Low", "Medium", "High", "Urgent"] as const; // Example, align with your actual labels
+const taskStatusLabels = ["New", "On Hold", "In Progress", "Pending", "Completed", "Cancelled"] as const; // Example, align with your actual labels
 type TaskStatusLabel = typeof taskStatusLabels[number];
 
 // Zod Schema for Create Task Form
@@ -61,7 +61,7 @@ const DUMMY_BOARD_MEMBERS: User[] = [
   { id: 'user3', name: 'Carol Davis', img: '/img/avatars/thumb-3.jpg' },
   { id: 'user4', name: 'David Brown', img: '/img/avatars/thumb-4.jpg' },
 ];
-const DUMMY_LABEL_LIST: TaskStatusLabel[] = ["Low", "Medium", "High", "Urgent"]; // Should match your definitions
+const DUMMY_LABEL_LIST: TaskStatusLabel[] = ["New", "On Hold", "In Progress", "Pending", "Completed", "Cancelled"]; // Should match your definitions
 const DUMMY_PRIORITY_OPTIONS = [ {label: "Low", value: "Low"}, {label: "Medium", value: "Medium"}, {label: "High", value: "High"}, {label: "Urgent", value: "Urgent"} ];
 const DUMMY_CATEGORY_OPTIONS = [ {label: "General", value: "General"}, {label: "Development", value: "Development"}, {label: "Marketing", value: "Marketing"}, {label: "Sales", value: "Sales"} ];
 const DUMMY_LINK_SELECT_OPTIONS: Record<LinkToOption, {label: string, value: string}[]> = {
@@ -222,12 +222,27 @@ const CreateTaskPage = () => {
         </div>
       <AdaptiveCard>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="flex justify-between items-center mb-6">
+          {/* <div className="flex justify-between items-center mb-6">
             <h4 className="text-lg font-semibold">Create New Task</h4>
-          </div>
+          </div> */}
 
-            <div className="flex flex-col gap-6 p-1">
+            <div className="flex flex-col gap-3 p-1">
                 {/* Link to Section */}
+                <div className="flex items-center">
+                    <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
+                      Task Title / Name: <span className="text-red-500">*</span>
+                    </label>
+                    <div className="w-full">
+                      <Controller
+                      name="activity_type"
+                      control={control}
+                      render={({ field }) => (
+                        <Input {...field} placeholder="Enter taks name or title..." />
+                      )}
+                      />
+                      {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
+                    </div>
+                </div>
                 <div>
                 <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 block">
                   Link to: <span className="text-red-500">*</span>
@@ -314,7 +329,7 @@ const CreateTaskPage = () => {
               {/* Status Labels Section */}
               <div className="flex items-start">
                 <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 mt-1">
-                    Status Labels: <span className="text-red-500">*</span>
+                    Status: <span className="text-red-500">*</span>
                 </label>
                 <div className="w-full">
                     <div className="flex items-center gap-1 flex-wrap">
@@ -368,7 +383,7 @@ const CreateTaskPage = () => {
               {/* Category Section */}
               <div className="flex items-center">
                 <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                  Category: <span className="text-red-500">*</span>
+                  Department: <span className="text-red-500">*</span>
                 </label>
                 <div className="w-full">
                   <Controller
@@ -409,33 +424,17 @@ const CreateTaskPage = () => {
               </div>
 
                 {/* Activity Type Section */}
-                <div className="flex items-center">
-                <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                  Activity Type: <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full">
-                  <Controller
-                  name="activity_type"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} placeholder="Enter activity type..." />
-                  )}
-                  />
-                  {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
-                </div>
-                </div>
-
               {/* Note (Task Title/Main Description) Section */}
               <div className="flex flex-col"> {/* Changed to flex-col for better label placement */}
                 <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                  Task Note / Title: <span className="text-red-500">*</span>
+                  Task Note / Remark: <span className="text-red-500">*</span>
                 </label>
                 <div className="w-full">
                     <Controller
                         name="note"
                         control={control}
                         render={({ field }) => (
-                            <Input {...field} textArea rows={3} placeholder="Enter the main task details or title..."/>
+                            <Input {...field} textArea rows={3} placeholder="Enter the main task details or remark..."/>
                         )}
                     />
                     {errors.note && <p className="text-red-500 text-xs mt-1">{errors.note.message}</p>}
@@ -460,13 +459,28 @@ const CreateTaskPage = () => {
 
 
             {/* Tabs for Activity and Attachments */}
-            <Tabs className="mt-6" defaultValue="activity">
+            <Tabs className="mt-3" defaultValue="activity">
               <Tabs.TabList>
-                <Tabs value="activity">Activity Notes</Tabs>
-                <Tabs value="attachments">Attachments</Tabs>
+                <Tabs value="activity" className='text-base'><b>Activity Notes</b></Tabs>
+                <Tabs value="attachments"></Tabs>
               </Tabs.TabList>
               <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-b-md">
                 <Tabs.TabContent value="activity">
+                  <div className="flex items-center mb-5">
+                      <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
+                        Activity Type: <span className="text-red-500">*</span>
+                      </label>
+                      <div className="w-full">
+                        <Controller
+                        name="activity_type"
+                        control={control}
+                        render={({ field }) => (
+                          <Input {...field} placeholder="Enter activity type..." />
+                        )}
+                        />
+                        {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
+                      </div>
+                  </div>
                   <div className="w-full">
                     {comments.length > 0 && (
                       <div className="mb-4 max-h-60 overflow-y-auto">

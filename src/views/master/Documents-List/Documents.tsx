@@ -268,8 +268,26 @@ const Documents = () => {
   const columns: ColumnDef<DocumentItem>[] = useMemo( () => [
       { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
       { header: "Document Name", accessorKey: "name", enableSorting: true },
-      { header: "Document Type", accessorKey: "document_type_name", enableSorting: true, // Sort by derived name
+      { header: "Document Type", accessorKey: "document_type_name", enableSorting: true, meta:{HeaderClass:'text-primary'},// Sort by derived name
         cell: (props) => props.row.original.document_type_name || "N/A",
+      },
+      {
+        header: "Update at",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        meta:{HeaderClass:'text-red-500'},
+        size: 130,
+        cell: (props) =>
+          <div>
+            <span className="text-xs p-0">Tushar Joshi <br/><b>System Admin</b></span><br/>
+            <span className="text-xs p-0">{
+              
+              `${new Date(props.getValue<string>()).getDate()} ${new Date(props.getValue<string>()).toLocaleString("en-US", { month: "long" })} 
+              ${new Date(props.getValue<string>()).getFullYear()},
+              ${new Date(props.getValue<string>()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+            }
+            </span>
+          </div>
       },
       { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center"}, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
     ], [documentTypeOptionsForSelect, openEditDrawer, handleDeleteClick] // Added options as dep
@@ -311,6 +329,19 @@ const Documents = () => {
             <Controller name="document_type" control={formMethods.control} render={({ field }) => ( <Select placeholder="Select Document Type" options={documentTypeOptionsForSelect} value={documentTypeOptionsForSelect.find(option => option.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : "")} /> )}/>
           </FormItem>
         </Form>
+        <div className="absolute bottom-[14%] w-[92%]">
+          <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+            <div className="">
+              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br/>
+              <p className="text-sm font-semibold">Tushar Joshi</p>
+              <p>System Admin</p>
+            </div>
+            <div className=""><br/>
+              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br/>
+              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+            </div>
+          </div>
+        </div>
       </Drawer>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawerCb} onRequestClose={closeFilterDrawerCb} width={400}
         footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button> <Button size="sm" variant="solid" form="filterDocumentForm" type="submit">Apply</Button> </div> } >

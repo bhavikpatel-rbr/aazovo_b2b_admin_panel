@@ -28,6 +28,7 @@ import {
   TbCloudUpload,
   TbPhoto,
   TbReload,
+  TbUser,
 } from "react-icons/tb";
 
 // Redux
@@ -66,6 +67,7 @@ import type {
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
 // --- Zod Schema for Add/Edit Form ---
 const trendingCarouselFormSchema = z.object({
@@ -866,16 +868,33 @@ const TrendingCarousel = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Trending Carousel</h5>
-            <Button
-              variant="solid"
-              icon={<TbPlus />}
-              onClick={openAddDrawer}
-              disabled={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
-              }
-            >
-              Add New
-            </Button>
+            <div>
+              <Link to='/task/task-list/create'>
+                  <Button
+                    className="mr-2"
+                    icon={<TbUser />}
+                    clickFeedback={false}
+                    customColorClass={({ active, unclickable }) =>
+                        classNames(
+                            'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
+                            active ? 'bg-gray-200' : 'bg-gray-100',
+                            unclickable && 'opacity-50 cursor-not-allowed',
+                            !active && !unclickable && 'hover:bg-gray-200',
+                        )
+                    }
+                  >Assigned to Task</Button>
+                </Link>
+              <Button
+                variant="solid"
+                icon={<TbPlus />}
+                onClick={openAddDrawer}
+                disabled={
+                  masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                }
+              >
+                Add New
+              </Button>
+            </div>
           </div>
 
           <ItemTableTools
