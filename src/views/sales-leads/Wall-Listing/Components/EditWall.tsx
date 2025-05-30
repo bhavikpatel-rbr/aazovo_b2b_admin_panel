@@ -34,7 +34,6 @@ export type ApiFetchedWallItem = {
   id: number;
   product_name: string;
   company_name: string;
-  // contact_person_name removed for consistency with Add form
   quantity: number;
   price: number | null;
   intent: WallIntent;
@@ -58,8 +57,9 @@ export type ApiFetchedWallItem = {
   product_url_from_api: string | null;
   warranty_info_from_api: string | null;
   return_policy_from_api: string | null;
-  product_id_from_api?: number | null; // Optional, if linked
-  customer_id_from_api?: number | null; // Optional, if linked
+  product_id_from_api?: number | null;
+  customer_id_from_api?: number | null;
+  // Add created_at if your API provides it, e.g., created_at_from_api: string | null;
 };
 
 // Zod Schema for Edit Wall Item Form (Identical to Add Form's schema)
@@ -99,35 +99,54 @@ const wallItemFormSchema = z.object({
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
 // --- Form Options (Should be identical to Add form, ideally imported) ---
-const intentOptions: { value: WallIntent; label: string }[] = [];
-const productStatusOptions: { value: string; label: string }[] = [];
-const dummyCartoonTypes: { id: number; name: string }[] = [];
-const dummyProductSpecsForSelect: { id: number; name: string }[] = [];
-const dummyPaymentTerms: { id: number; name: string }[] = [];
-const deviceConditionRadioOptions: { value: string; label: string }[] = [];
-const visibilityOptions: { value: string; label: string }[] = [];
-const priorityOptions: { value: string; label: string }[] = [];
-const assignedTeamOptions: { value: number; label: string }[] = [];
-const listingTypeOptions: { value: string; label: string }[] = [];
-const dispatchModeOptions: { value: string; label: string }[] = [];
-const adminStatusOptions: { value: string; label: string }[] = [];
+// In a real app, these would likely be imported from a shared constants file
+const intentOptions: { value: WallIntent; label: string }[] = [
+  { value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" }
+];
+const productStatusOptions: { value: string; label: string }[] = [
+    // Values here should match what form expects/stores. Labels are for display.
+    // The mapping from `product_status_from_api` (e.g., "in_stock") to these values is done in `useEffect`.
+    { value: "In Stock", label: "In Stock" }, 
+    { value: "Low Stock", label: "Low Stock" }, 
+    { value: "Out of Stock", label: "Out of Stock" },
+    { value: "Active", label: "Active" }, // Added for more generic product status
+    { value: "In-Active", label: "In-Active" }, // Added for more generic product status
+];
+const dummyCartoonTypes: { id: number; name: string }[] = [
+  { id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }, { id: 3, name: "Pallet" }
+];
+const dummyProductSpecsForSelect: { id: number; name: string }[] = [
+  { id: 1, name: "iPhone 15 Pro Max - 256GB - Natural Titanium - US Spec" }, 
+  { id: 2, name: "Samsung S24 Ultra - 512GB - Phantom Black - EU Spec" }, 
+  { id: 3, name: "Google Pixel 8 Pro - 128GB - Obsidian - UK Spec" }
+];
+const dummyPaymentTerms: { id: number; name: string }[] = [
+  { id: 1, name: "Net 30 Days" }, { id: 2, name: "Net 60 Days" }, { id: 3, name: "Due on Receipt" }, { id: 4, name: "Prepaid" }
+];
+const deviceConditionRadioOptions: { value: string; label: string }[] = [
+  { value: "New", label: "New" }, { value: "Old", label: "Old" }
+];
+const visibilityOptions: { value: string; label: string }[] = [
+  { value: 'public', label: 'Public' }, { value: 'internal', label: 'Internal' }
+];
+const priorityOptions: { value: string; label: string }[] = [
+  { value: 'High', label: 'High' }, { value: 'Medium', label: 'Medium' }, { value: 'Low', label: 'Low' }
+];
+const assignedTeamOptions: { value: number; label: string }[] = [
+  { value: 1, label: 'Sales Team Alpha' }, { value: 2, label: 'Sales Team Beta' }, { value: 3, label: 'Support Team' }
+];
+const listingTypeOptions: { value: string; label: string }[] = [
+  { value: 'Featured', label: 'Featured' }, { value: 'Regular', label: 'Regular' }
+];
+const dispatchModeOptions: { value: string; label: string }[] = [
+  { value: 'Courier', label: 'Courier' }, { value: 'Pickup', label: 'Pickup' }, { value: 'Transport', label: 'Transport (Freight)' }, { value: 'Digital', label: 'Digital Delivery' }
+];
+const adminStatusOptions: { value: string; label: string }[] = [ // Maps to target `status`
+  { value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }, { value: 'Active', label: 'Active' }
+];
 
-// Populate options (copied from Add form for brevity)
-intentOptions.push({ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" });
-productStatusOptions.push({ value: "In Stock", label: "In Stock" }, { value: "Low Stock", label: "Low Stock" }, { value: "Out of Stock", label: "Out of Stock" });
-dummyCartoonTypes.push({ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }, { id: 3, name: "Pallet" });
-dummyProductSpecsForSelect.push({ id: 1, name: "iPhone 15 Pro Max - 256GB - Natural Titanium - US Spec" }, { id: 2, name: "Samsung S24 Ultra - 512GB - Phantom Black - EU Spec" }, { id: 3, name: "Google Pixel 8 Pro - 128GB - Obsidian - UK Spec" });
-dummyPaymentTerms.push({ id: 1, name: "Net 30 Days" }, { id: 2, name: "Net 60 Days" }, { id: 3, name: "Due on Receipt" }, { id: 4, name: "Prepaid" });
-deviceConditionRadioOptions.push({ value: "New", label: "New" }, { value: "Old", label: "Old" });
-visibilityOptions.push({ value: 'public', label: 'Public' }, { value: 'internal', label: 'Internal' });
-priorityOptions.push({ value: 'High', label: 'High' }, { value: 'Medium', label: 'Medium' }, { value: 'Low', label: 'Low' });
-assignedTeamOptions.push({ value: 1, label: 'Sales Team Alpha' }, { value: 2, label: 'Sales Team Beta' }, { value: 3, label: 'Support Team' });
-listingTypeOptions.push({ value: 'Featured', label: 'Featured' }, { value: 'Regular', label: 'Regular' });
-dispatchModeOptions.push({ value: 'Courier', label: 'Courier' }, { value: 'Pickup', label: 'Pickup' }, { value: 'Transport', label: 'Transport (Freight)' }, { value: 'Digital', label: 'Digital Delivery' });
-adminStatusOptions.push({ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' });
 
-
-// Dummy data source - Updated to include new fields
+// Dummy data source
 const initialDummyApiItems: ApiFetchedWallItem[] = [
   {
     id: 1,
@@ -136,15 +155,15 @@ const initialDummyApiItems: ApiFetchedWallItem[] = [
     quantity: 30,
     price: 159.99,
     intent: "Buy",
-    product_status_from_api: "low_stock",
+    product_status_from_api: "low_stock", // e.g. "low_stock" or "Low Stock"
     cartoon_type_id: 2,
     internal_remarks: "Edited remarks: Check stock levels for Drill.",
     active_hours: "8 AM - 7 PM Weekdays",
-    product_spec_id: 2, // Samsung S24 Ultra Spec
+    product_spec_id: 2,
     color: "Red",
     dispatch_status: "Awaiting shipment",
     dispatch_mode_from_api: "Courier",
-    payment_term_id: 2, // Net 60
+    payment_term_id: 2,
     eta_from_api: "2024-10-20",
     device_condition_from_api: "Old",
     location: "Main Warehouse, Section B",
@@ -152,43 +171,14 @@ const initialDummyApiItems: ApiFetchedWallItem[] = [
     visibility: "internal",
     priority_from_api: "High",
     admin_status_from_api: "Approved",
-    assigned_team_id_from_api: 1, // Sales Team Alpha
+    assigned_team_id_from_api: 1,
     product_url_from_api: "https://example.com/drill-xt5000",
     warranty_info_from_api: "2-year limited warranty by manufacturer.",
     return_policy_from_api: "30-day returns, buyer pays shipping.",
     product_id_from_api: 101,
     customer_id_from_api: 201,
   },
-  {
-    id: 2,
-    product_name: "Industrial Sander G2 (Existing)",
-    company_name: "BuildRight Supplies (Existing)",
-    quantity: 8,
-    price: 95.50,
-    intent: "Sell",
-    product_status_from_api: "in_stock",
-    cartoon_type_id: 1,
-    internal_remarks: "Bulk order discount applied.",
-    active_hours: "24/7 Online Support",
-    product_spec_id: 1, // iPhone 15 Pro Max spec
-    color: "Yellow",
-    dispatch_status: "Ready for Dispatch",
-    dispatch_mode_from_api: "Pickup",
-    payment_term_id: 3, // Due on Receipt
-    eta_from_api: "2024-09-15",
-    device_condition_from_api: "New",
-    location: "Retail Store A",
-    listing_type_from_api: "Regular",
-    visibility: "public",
-    priority_from_api: "Medium",
-    admin_status_from_api: "Pending",
-    assigned_team_id_from_api: 2, // Sales Team Beta
-    product_url_from_api: "https://example.com/sander-g2",
-    warranty_info_from_api: "6-month standard warranty.",
-    return_policy_from_api: "No returns on discounted items.",
-    product_id_from_api: 102,
-    customer_id_from_api: 202,
-  },
+  // ... other items
 ];
 
 const WallItemEdit = () => {
@@ -196,11 +186,11 @@ const WallItemEdit = () => {
   const { id: itemIdFromParams } = useParams<{ id: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [itemToEditApiData, setItemToEditApiData] = useState<ApiFetchedWallItem | null>(null);
 
   const formMethods = useForm<WallItemFormData>({
     resolver: zodResolver(wallItemFormSchema),
+    // Default values will be set by reset in useEffect
   });
 
   useEffect(() => {
@@ -212,10 +202,20 @@ const WallItemEdit = () => {
     setIsLoading(true);
     const itemId = parseInt(itemIdFromParams, 10);
     
+    // Simulate API fetch
     const fetchedApiItem = initialDummyApiItems.find(item => item.id === itemId);
 
     if (fetchedApiItem) {
-      setItemToEditApiData(fetchedApiItem);
+      setItemToEditApiData(fetchedApiItem); // Store fetched data
+
+      // Map API data to form data structure
+      // For productStatus, find the option whose label loosely matches product_status_from_api
+      const matchedProductStatusOption = productStatusOptions.find(opt => 
+        opt.label.toLowerCase().replace(/[^a-z0-9]/gi, '') === 
+        fetchedApiItem.product_status_from_api.toLowerCase().replace(/[^a-z0-9]/gi, '') ||
+        opt.value.toLowerCase().replace(/[^a-z0-9]/gi, '') ===
+        fetchedApiItem.product_status_from_api.toLowerCase().replace(/[^a-z0-9]/gi, '')
+      );
 
       const formValues: WallItemFormData = {
         product_name: fetchedApiItem.product_name,
@@ -223,9 +223,7 @@ const WallItemEdit = () => {
         qty: fetchedApiItem.quantity,
         price: fetchedApiItem.price,
         intent: fetchedApiItem.intent,
-        productStatus: productStatusOptions.find(opt => 
-            opt.label.toLowerCase().includes(fetchedApiItem.product_status_from_api.toLowerCase().replace("_", " "))
-        )?.value || '', 
+        productStatus: matchedProductStatusOption?.value || productStatusOptions[0]?.value || '', // Fallback
         productSpecId: fetchedApiItem.product_spec_id,
         deviceCondition: fetchedApiItem.device_condition_from_api,
         color: fetchedApiItem.color,
@@ -257,23 +255,107 @@ const WallItemEdit = () => {
   }, [itemIdFromParams, navigate, formMethods]);
 
   const onFormSubmit = useCallback(
-    async (data: WallItemFormData) => {
-      if (!itemIdFromParams) return;
+    async (formData: WallItemFormData) => {
+      if (!itemIdFromParams) {
+        toast.push(<Notification title="Error" type="danger">Item ID is missing.</Notification>);
+        return;
+      }
       setIsSubmitting(true);
-      const submissionData = {
-        ...data,
-        id: parseInt(itemIdFromParams, 10),
-        eta: data.eta ? dayjs(data.eta).format("YYYY-MM-DD") : null,
-      };
-      console.log("Form data to submit (Edit):", submissionData);
 
-      await new Promise(res => setTimeout(res, 1000));
+      const productSpecDetails = formData.productSpecId
+        ? dummyProductSpecsForSelect.find(spec => spec.id === formData.productSpecId)
+        : null;
+      
+      const cartoonTypeDetails = formData.cartoonTypeId
+        ? dummyCartoonTypes.find(ct => ct.id === formData.cartoonTypeId)
+        : null;
+
+      const loggedPayload: any = { ...formData }; // Start with all form data
+
+      // Map and transform fields to match target JSON structure
+      loggedPayload.id = parseInt(itemIdFromParams, 10);
+      loggedPayload.product_id = formData.productId ? String(formData.productId) : null;
+      loggedPayload.customer_id = formData.customerId ? String(formData.customerId) : null;
+      loggedPayload.product_spec_id = formData.productSpecId ? String(formData.productSpecId) : null;
+      loggedPayload.assigned_to = formData.assignedTeamId ? String(formData.assignedTeamId) : null;
+      
+      loggedPayload.want_to = formData.intent;
+      loggedPayload.qty = String(formData.qty);
+      loggedPayload.price = (formData.price !== null && formData.price !== undefined) ? String(formData.price) : "0";
+      
+      loggedPayload.status = formData.adminStatus; // Listing status (e.g. "Approved")
+      loggedPayload.product_status = formData.productStatus; // Product's own stock status (e.g. "In Stock")
+      loggedPayload.product_status_listing = null; // Or map if applicable
+      loggedPayload.dispatch_status = formData.dispatchStatus;
+
+      loggedPayload.color = formData.color;
+      loggedPayload.device_condition = formData.deviceCondition;
+      loggedPayload.product_specs = productSpecDetails ? productSpecDetails.name : null;
+
+      loggedPayload.cartoon_type = cartoonTypeDetails ? cartoonTypeDetails.name : (formData.cartoonTypeId ? String(formData.cartoonTypeId) : null);
+      loggedPayload.delivery_at = formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null;
+      loggedPayload.location = formData.location;
+      loggedPayload.shipping_options = formData.dispatchMode;
+
+      loggedPayload.payment_term = formData.paymentTermId ? String(formData.paymentTermId) : "0";
+      loggedPayload.visibility = formData.visibility;
+      loggedPayload.priority = formData.priority;
+      loggedPayload.active_hrs = formData.activeHours;
+      loggedPayload.listing_url = formData.productUrl;
+      
+      loggedPayload.warranty = formData.warrantyInfo;
+      // formData.returnPolicy is already in loggedPayload from the spread
+
+      loggedPayload.internal_remarks = formData.internalRemarks;
+      loggedPayload.notes = formData.internalRemarks; // Or map specifically if different
+
+      // Default/Placeholder fields from target structure for an edit
+      loggedPayload.opportunity_id = loggedPayload.opportunity_id ?? null;
+      // ... (add other null-coalesced fields from target structure as in WallItemAdd if needed)
+      loggedPayload.created_from = "FormUI-Edit"; 
+      loggedPayload.source = itemToEditApiData?.source || "in"; // Preserve original source if available, else default
+      loggedPayload.delivery_details = loggedPayload.delivery_details ?? null;
+      loggedPayload.created_by = itemToEditApiData?.created_by || "1"; // Preserve original creator if available
+      loggedPayload.expired_date = loggedPayload.expired_date ?? null;
+      
+      // For 'created_at', ideally, this would be the original creation timestamp.
+      // Since dummy API doesn't provide it, we'll set it to null or a placeholder.
+      // If itemToEditApiData had a 'created_at_from_api', you'd use that.
+      loggedPayload.created_at = itemToEditApiData?.created_at_from_api || null; // Assuming 'created_at_from_api' might exist on ApiFetchedWallItem
+      loggedPayload.updated_at = new Date().toISOString(); 
+      
+      loggedPayload.is_wall_manual = itemToEditApiData?.is_wall_manual || "0"; // Preserve original
+      // ... (other preserved fields or defaults)
+
+      // Nested Structures
+      loggedPayload.product = {
+          id: formData.productId,
+          name: formData.product_name,
+          description: null, 
+          status: formData.productStatus, 
+          // ... other product fields, possibly from itemToEditApiData.product if it existed
+      };
+      loggedPayload.product_spec = productSpecDetails ? { id: productSpecDetails.id, name: productSpecDetails.name } : null;
+      loggedPayload.customer = {
+          id: formData.customerId,
+          name: formData.company_name,
+          // ... other customer fields, possibly from itemToEditApiData.customer
+      };
+      loggedPayload.company = null; // Or populate if data exists
+
+      console.log("--- WallItemEdit Form Submission Log ---");
+      console.log("1. Original formData (from react-hook-form):", formData);
+      console.log("2. Item to Edit (API data used for form population):", itemToEditApiData);
+      console.log("3. Constructed Payload (for API/logging - matches target structure, includes all form data):", loggedPayload);
+      console.log("--- End WallItemEdit Form Submission Log ---");
+      
+      await new Promise(res => setTimeout(res, 1000)); // Simulate API call
 
       toast.push(<Notification title="Success" type="success">Wall item updated. (Simulated)</Notification>);
       setIsSubmitting(false);
       navigate("/sales-leads/wall-listing");
     },
-    [navigate, itemIdFromParams]
+    [navigate, itemIdFromParams, itemToEditApiData] // Added itemToEditApiData to dependencies
   );
 
   const handleCancel = () => {
@@ -281,9 +363,11 @@ const WallItemEdit = () => {
   };
   
   const handleSaveAsDraft = () => {
+    if (!itemIdFromParams) return;
     const currentValues = formMethods.getValues();
     const draftData = {
         ...currentValues,
+        id: parseInt(itemIdFromParams, 10),
         eta: currentValues.eta ? dayjs(currentValues.eta).format("YYYY-MM-DD") : null,
     };
     console.log("Saving as draft (Edit):", draftData);
@@ -307,7 +391,7 @@ const WallItemEdit = () => {
           <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Wall Listing</h6>
         </NavLink>
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
-        <h6 className="font-semibold text-primary">Edit Wall Item</h6>
+        <h6 className="font-semibold text-primary">Edit Wall Item (ID: {itemIdFromParams})</h6>
       </div>
       <Card>
         <Form
@@ -328,20 +412,17 @@ const WallItemEdit = () => {
                     render={({ field }) => (
                         <UiSelect
                             options={dummyProductSpecsForSelect.map(spec => ({
-                                value: spec.name,
+                                value: spec.name, // Product name string as value
                                 label: spec.name,
                             }))}
-                            {...field}
-                            value={
+                            value={ // RHF value is a string, find the matching option object
                                 dummyProductSpecsForSelect
-                                    .map(spec => ({
-                                        value: spec.name,
-                                        label: spec.name,
-                                    }))
+                                    .map(spec => ({ value: spec.name, label: spec.name,}))
                                     .find(opt => opt.value === field.value) || null
                             }
-                            onChange={option => field.onChange(option ? option.value : "")}
+                            onChange={option => field.onChange(option ? option.value : "")} // Send string value to RHF
                             placeholder="Select Product Name"
+                            isClearable
                         />
                     )}
                 />
@@ -354,23 +435,25 @@ const WallItemEdit = () => {
                 <Controller
                     name="company_name"
                     control={formMethods.control}
-                    render={({ field }) => (
-                        <UiSelect
-                            options={[
-                                { value: "ToolMaster Inc. (Existing)", label: "ToolMaster Inc. (Existing)" },
-                                { value: "BuildRight Supplies (Existing)", label: "BuildRight Supplies (Existing)" },
-                            ]}
-                            {...field}
-                            value={
-                                [
-                                    { value: "ToolMaster Inc. (Existing)", label: "ToolMaster Inc. (Existing)" },
-                                    { value: "BuildRight Supplies (Existing)", label: "BuildRight Supplies (Existing)" },
-                                ].find(opt => opt.value === field.value) || null
-                            }
-                            onChange={option => field.onChange(option ? option.value : "")}
-                            placeholder="Select Company Name"
-                        />
-                    )}
+                    render={({ field }) => {
+                        // Options should ideally come from a dynamic source or include existing + dummy
+                        const companyOptions = [
+                            { value: "ToolMaster Inc. (Existing)", label: "ToolMaster Inc. (Existing)" },
+                            { value: "BuildRight Supplies (Existing)", label: "BuildRight Supplies (Existing)" },
+                            // Add other fetched company names or provide a way to add new ones
+                            { value: "Acme Corp", label: "Acme Corp" },
+                            { value: "Globex Inc", label: "Globex Inc" },
+                        ];
+                        return (
+                            <UiSelect
+                                options={companyOptions}
+                                value={companyOptions.find(opt => opt.value === field.value) || null }
+                                onChange={option => field.onChange(option ? option.value : "")}
+                                placeholder="Select Company Name"
+                                isClearable
+                            />
+                        );
+                    }}
                 />
             </FormItem>
             <FormItem
@@ -394,24 +477,42 @@ const WallItemEdit = () => {
               invalid={!!formMethods.formState.errors.intent}
               errorMessage={formMethods.formState.errors.intent?.message}
             >
-              <Controller name="intent" control={formMethods.control} render={({ field }) => ( <UiSelect options={intentOptions} {...field} placeholder="Select Intent" /> )} />
+              <Controller name="intent" control={formMethods.control} render={({ field }) => ( 
+                <UiSelect 
+                    options={intentOptions} 
+                    value={intentOptions.find(opt => opt.value === field.value)}
+                    onChange={opt => field.onChange(opt ? opt.value : null)}
+                    placeholder="Select Intent" 
+                /> 
+              )}/>
             </FormItem>
             <FormItem
               label="Product Status (Stock)"
               invalid={!!formMethods.formState.errors.productStatus}
               errorMessage={formMethods.formState.errors.productStatus?.message}
             >
-              <Controller name="productStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={productStatusOptions} {...field} placeholder="Select Product Stock Status" /> )} />
+              <Controller name="productStatus" control={formMethods.control} render={({ field }) => ( 
+                <UiSelect 
+                    options={productStatusOptions} 
+                    value={productStatusOptions.find(opt => opt.value === field.value)}
+                    onChange={opt => field.onChange(opt ? opt.value : null)}
+                    placeholder="Select Product Stock Status" 
+                /> 
+              )}/>
             </FormItem>
 
-            {/* Row 3 */}
+            {/* Row 3 - Product Spec, Device Condition, Color */}
             <FormItem
               label="Product Specification"
               invalid={!!formMethods.formState.errors.productSpecId}
               errorMessage={formMethods.formState.errors.productSpecId?.message}
             >
               <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name }))} {...field} value={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name })).find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Product Specification (Optional)" />
+                  <UiSelect options={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name }))} 
+                  value={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name })).find(opt => opt.value === field.value) || null} 
+                  onChange={(option) => field.onChange(option ? option.value : null)} 
+                  placeholder="Select Product Specification (Optional)" 
+                  isClearable/>
                 )} />
             </FormItem>
             <FormItem
@@ -431,14 +532,18 @@ const WallItemEdit = () => {
               <Controller name="color" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="Enter Color (Optional)" /> )} />
             </FormItem>
             
-            {/* Row 4 */}
+            {/* Row 4 - Cartoon Type, Dispatch Status, Dispatch Mode */}
             <FormItem
               label="Cartoon Type"
               invalid={!!formMethods.formState.errors.cartoonTypeId}
               errorMessage={formMethods.formState.errors.cartoonTypeId?.message}
             >
               <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name, }))} {...field} value={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name })).find((opt) => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Cartoon Type (Optional)" />
+                  <UiSelect options={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name, }))} 
+                  value={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name })).find((opt) => opt.value === field.value) || null} 
+                  onChange={(option) => field.onChange(option ? option.value : null)} 
+                  placeholder="Select Cartoon Type (Optional)" 
+                  isClearable/>
                 )} />
             </FormItem>
             <FormItem
@@ -453,17 +558,28 @@ const WallItemEdit = () => {
               invalid={!!formMethods.formState.errors.dispatchMode}
               errorMessage={formMethods.formState.errors.dispatchMode?.message}
             >
-              <Controller name="dispatchMode" control={formMethods.control} render={({ field }) => ( <UiSelect options={dispatchModeOptions} {...field} placeholder="Select Dispatch Mode (Optional)" /> )} />
+              <Controller name="dispatchMode" control={formMethods.control} render={({ field }) => ( 
+                <UiSelect 
+                    options={dispatchModeOptions} 
+                    value={dispatchModeOptions.find(opt => opt.value === field.value)}
+                    onChange={opt => field.onChange(opt ? opt.value : null)}
+                    placeholder="Select Dispatch Mode (Optional)" 
+                    isClearable/> 
+              )}/>
             </FormItem>
 
-            {/* Row 5 */}
+            {/* Row 5 - Payment Term, ETA, Location */}
             <FormItem
               label="Payment Term"
               invalid={!!formMethods.formState.errors.paymentTermId}
               errorMessage={formMethods.formState.errors.paymentTermId?.message}
             >
               <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name }))} {...field} value={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name })).find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Payment Term (Optional)" />
+                  <UiSelect options={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name }))} 
+                  value={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name })).find(opt => opt.value === field.value) || null} 
+                  onChange={(option) => field.onChange(option ? option.value : null)} 
+                  placeholder="Select Payment Term (Optional)" 
+                  isClearable/>
                 )} />
             </FormItem>
             <FormItem
@@ -471,7 +587,7 @@ const WallItemEdit = () => {
               invalid={!!formMethods.formState.errors.eta}
               errorMessage={formMethods.formState.errors.eta?.message}
             >
-              <Controller name="eta" control={formMethods.control} render={({ field }) => ( <DatePicker {...field} value={field.value} placeholder="Select ETA (Optional)" inputFormat="YYYY-MM-DD" /> )} />
+              <Controller name="eta" control={formMethods.control} render={({ field }) => ( <DatePicker {...field} value={field.value} onChange={(date) => field.onChange(date)} placeholder="Select ETA (Optional)" inputFormat="YYYY-MM-DD" /> )} />
             </FormItem>
             <FormItem
               label="Location"
@@ -481,36 +597,61 @@ const WallItemEdit = () => {
               <Controller name="location" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="Enter Location (Optional)" /> )} />
             </FormItem>
 
-            {/* Row 6: Listing Configuration */}
+            {/* Row 6: Listing Type, Visibility, Priority */}
             <FormItem
               label="Listing Type"
               invalid={!!formMethods.formState.errors.listingType}
               errorMessage={formMethods.formState.errors.listingType?.message}
             >
-              <Controller name="listingType" control={formMethods.control} render={({ field }) => ( <UiSelect options={listingTypeOptions} {...field} placeholder="Select Listing Type" /> )} />
+              <Controller name="listingType" control={formMethods.control} render={({ field }) => ( 
+                <UiSelect 
+                    options={listingTypeOptions} 
+                    value={listingTypeOptions.find(opt => opt.value === field.value)}
+                    onChange={opt => field.onChange(opt ? opt.value : null)}
+                    placeholder="Select Listing Type" /> 
+              )}/>
             </FormItem>
             <FormItem
               label="Visibility"
               invalid={!!formMethods.formState.errors.visibility}
               errorMessage={formMethods.formState.errors.visibility?.message}
             >
-              <Controller name="visibility" control={formMethods.control} render={({ field }) => ( <UiSelect options={visibilityOptions} {...field} placeholder="Select Visibility" /> )} />
+              <Controller name="visibility" control={formMethods.control} render={({ field }) => ( 
+                <UiSelect 
+                    options={visibilityOptions} 
+                    value={visibilityOptions.find(opt => opt.value === field.value)}
+                    onChange={opt => field.onChange(opt ? opt.value : null)}
+                    placeholder="Select Visibility" /> 
+              )}/>
             </FormItem>
              <FormItem
               label="Priority"
               invalid={!!formMethods.formState.errors.priority}
               errorMessage={formMethods.formState.errors.priority?.message}
             >
-              <Controller name="priority" control={formMethods.control} render={({ field }) => ( <UiSelect options={priorityOptions} {...field} placeholder="Select Priority" /> )} />
+              <Controller name="priority" control={formMethods.control} render={({ field }) => ( 
+                <UiSelect 
+                    options={priorityOptions} 
+                    value={priorityOptions.find(opt => opt.value === field.value)}
+                    onChange={opt => field.onChange(opt ? opt.value : null)}
+                    placeholder="Select Priority (Optional)" 
+                    isClearable/> 
+              )}/>
             </FormItem>
 
-            {/* Row 7: Admin & Active Hours */}
+            {/* Row 7: Admin Status, Assigned Team, Active Hours */}
             <FormItem
               label="Admin Status"
               invalid={!!formMethods.formState.errors.adminStatus}
               errorMessage={formMethods.formState.errors.adminStatus?.message}
             >
-              <Controller name="adminStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={adminStatusOptions} {...field} placeholder="Select Admin Status" /> )} />
+              <Controller name="adminStatus" control={formMethods.control} render={({ field }) => ( 
+                <UiSelect 
+                    options={adminStatusOptions} 
+                    value={adminStatusOptions.find(opt => opt.value === field.value)}
+                    onChange={opt => field.onChange(opt ? opt.value : null)}
+                    placeholder="Select Admin Status" /> 
+              )}/>
             </FormItem>
             <FormItem
               label="Assigned Team"
@@ -518,7 +659,11 @@ const WallItemEdit = () => {
               errorMessage={formMethods.formState.errors.assignedTeamId?.message}
             >
               <Controller name="assignedTeamId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={assignedTeamOptions.map(team => ({ value: team.value, label: team.label }))} {...field} value={assignedTeamOptions.map(team => ({value: team.value, label: team.label})).find(opt => opt.value === field.value) || null} onChange={opt => field.onChange(opt ? opt.value : null)} placeholder="Select Assigned Team (Optional)" />
+                  <UiSelect options={assignedTeamOptions.map(team => ({ value: team.value, label: team.label }))} 
+                  value={assignedTeamOptions.map(team => ({value: team.value, label: team.label})).find(opt => opt.value === field.value) || null} 
+                  onChange={opt => field.onChange(opt ? opt.value : null)} 
+                  placeholder="Select Assigned Team (Optional)" 
+                  isClearable/>
                 )} />
             </FormItem>
              <FormItem
@@ -526,7 +671,7 @@ const WallItemEdit = () => {
               invalid={!!formMethods.formState.errors.activeHours}
               errorMessage={formMethods.formState.errors.activeHours?.message}
             >
-              <Controller name="activeHours" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM, 24/7" /> )} />
+              <Controller name="activeHours" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM, 24/7 (Optional)" /> )} />
             </FormItem>
             
             {/* Row 8: URL and Policies */}
@@ -573,7 +718,7 @@ const WallItemEdit = () => {
       
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
         <Button type="button" onClick={handleCancel} disabled={isSubmitting} > Cancel </Button>
-        <Button type="button" onClick={handleSaveAsDraft} disabled={isSubmitting} > Draft </Button>
+        <Button type="button" onClick={handleSaveAsDraft} disabled={isSubmitting} variant="twoTone"> Draft </Button>
         <Button type="submit" form="wallItemEditForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !formMethods.formState.isDirty || !formMethods.formState.isValid} >
           {isSubmitting ? "Saving..." : "Save Changes"}
         </Button>

@@ -1285,6 +1285,7 @@ export const getProductsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getProductAsync()
       if (response?.data?.status === true) {
+        console.log(response?.data?.data);
         return response?.data?.data
       }
       dispatch(

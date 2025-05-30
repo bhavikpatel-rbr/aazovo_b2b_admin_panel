@@ -1,6 +1,6 @@
 // src/views/your-path/business-entities/WallItemAdd.tsx
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +22,18 @@ import {
   DatePicker,
   Radio,
 } from "@/components/ui";
+
+// Redux
+import { useAppDispatch } from '@/reduxtool/store'; // VERIFY PATH
+import { useSelector } from 'react-redux'
+
+import {
+    getProductsAction,
+    getCompanyProfileAction, // VERIFY: Assumes this fetches a LIST of companies
+    getProductSpecificationsAction,
+} from '@/reduxtool/master/middleware'; // VERIFY PATH
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
+
 
 // Types
 export type WallIntent = "Buy" | "Sell" | "Exchange";
@@ -72,12 +84,18 @@ const wallItemFormSchema = z.object({
   internalRemarks: z.string().nullable().optional(),
 
   // Optional relationship IDs (if needed for backend)
-  productId: z.number().nullable().optional(), // Usually linked when product_name is selected/created
-  customerId: z.number().nullable().optional(), // Usually linked when company_name/contact_person_name is selected/created
+  productId: z.number().nullable().optional(), // Linked when product_name is selected
+  customerId: z.number().nullable().optional(), // Linked when company_name is selected
 });
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
-// --- Form Options ---
+// Define option types for clarity
+type ProductOptionType = { value: string; label: string; id: number };
+type CompanyOptionType = { value: string; label: string; id: number };
+type ProductSpecOptionType = { value: number; label: string };
+
+
+// --- Form Options (Retain non-API driven options) ---
 const intentOptions: { value: WallIntent; label: string }[] = [
   { value: "Buy", label: "Buy" },
   { value: "Sell", label: "Sell" },
@@ -86,18 +104,15 @@ const intentOptions: { value: WallIntent; label: string }[] = [
 const productStatusOptions = [
   { value: "Active", label: "Active" },
   { value: "In-Active", label: "In-Active" },
+  { value: "In Stock", label: "In Stock"},
+  { value: "Out of Stock", label: "Out of Stock"},
 ];
-const dummyCartoonTypes = [
+const dummyCartoonTypes = [ // Keep if not from API, otherwise fetch similarly
   { id: 1, name: "Master Carton" },
   { id: 2, name: "Inner Carton" },
   { id: 3, name: "Pallet" },
 ];
-const dummyProductSpecsForSelect = [ // Example: In a real app, these would come from an API
-  { id: 1, name: "iPhone 15 Pro Max - 256GB - Natural Titanium - US Spec" },
-  { id: 2, name: "Samsung S24 Ultra - 512GB - Phantom Black - EU Spec" },
-  { id: 3, name: "Google Pixel 8 Pro - 128GB - Obsidian - UK Spec" },
-];
-const dummyPaymentTerms = [
+const dummyPaymentTerms = [ // Keep if not from API, otherwise fetch similarly
   { id: 1, name: "Net 30 Days" },
   { id: 2, name: "Net 60 Days" },
   { id: 3, name: "Due on Receipt" },
@@ -116,7 +131,7 @@ const priorityOptions = [
     { value: 'Medium', label: 'Medium' },
     { value: 'Low', label: 'Low' },
 ];
-const assignedTeamOptions = [ // Example teams
+const assignedTeamOptions = [ // Example teams - Fetch from API if dynamic
     { value: 1, label: 'Sales Team Alpha' },
     { value: 2, label: 'Sales Team Beta' },
     { value: 3, label: 'Support Team' },
@@ -135,12 +150,27 @@ const adminStatusOptions = [
     { value: 'Pending', label: 'Pending' },
     { value: 'Approved', label: 'Approved' },
     { value: 'Rejected', label: 'Rejected' },
+    { value: 'Active', label: 'Active' },
 ];
 
 
 const WallItemAdd = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingDropdownData, setIsLoadingDropdownData] = useState(true);
+
+  // --- Selectors for Redux state ---
+  // VERIFY: Ensure `masterSelector` provides these specific keys and that their data structure is an array.
+  // e.g., productsMasterData: [{id: 1, name: "Product A", sku_code: "P001"}, ...]
+  // e.g., allCompanyProfileData: [{id: 1, company_name: "Company X"}, ...]
+  // e.g., productSpecificationsData: [{id: 1, name: "Spec Y"}, ...]
+  const {
+    productsMasterData = [],
+    allCompanyProfileData = [], // VERIFY name if getCompanyProfileAction fetches a list
+    productSpecificationsData = [],
+    status: masterDataAccessStatus = 'idle', // General status from masterSlice
+  } = useSelector(masterSelector);
 
   const formMethods = useForm<WallItemFormData>({
     resolver: zodResolver(wallItemFormSchema),
@@ -161,29 +191,176 @@ const WallItemAdd = () => {
       eta: null,
       deviceCondition: null,
       location: "",
-      listingType: listingTypeOptions[1]?.value, // Default to Regular
-      visibility: visibilityOptions[0]?.value, // Default to Public
-      priority: priorityOptions[1]?.value, // Default to Medium
-      adminStatus: adminStatusOptions[0]?.value, // Default to Pending
+      listingType: listingTypeOptions[1]?.value,
+      visibility: visibilityOptions[0]?.value,
+      priority: priorityOptions[1]?.value,
+      adminStatus: adminStatusOptions[0]?.value,
       assignedTeamId: null,
       productUrl: "",
       warrantyInfo: "",
       returnPolicy: "",
-      productId: null,
-      customerId: null,
+      productId: null, // Will be set by UiSelect's onChange for product_name
+      customerId: null, // Will be set by UiSelect's onChange for company_name
     },
   });
 
-  const onFormSubmit = useCallback(
-    async (data: WallItemFormData) => {
-      setIsSubmitting(true);
-      const submissionData = {
-        ...data,
-        eta: data.eta ? dayjs(data.eta).format("YYYY-MM-DD") : null,
-      };
-      console.log("Form data to submit (Add):", submissionData);
+  // --- Fetch data for dropdowns ---
+  useEffect(() => {
+    const fetchDataForDropdowns = async () => {
+      setIsLoadingDropdownData(true);
+      try {
+        // VERIFY: Pass necessary params if actions require them (e.g., for pagination)
+        await Promise.all([
+          dispatch(getProductsAction()),
+          dispatch(getCompanyProfileAction()), // Ensure this fetches a LIST
+          dispatch(getProductSpecificationsAction()),
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch dropdown data:", error);
+        toast.push(<Notification title="Data Load Error" type="danger">Could not load selection options.</Notification>);
+      } finally {
+        setIsLoadingDropdownData(false);
+      }
+    };
+    fetchDataForDropdowns();
+  }, [dispatch]);
 
-      await new Promise((res) => setTimeout(res, 1000));
+  // --- Prepare options for Select components ---
+  const productOptions: ProductOptionType[] = useMemo(() => {
+    console.log(productsMasterData);
+    if (!Array.isArray(productsMasterData)) return [];
+    return productsMasterData.map((product: any) => ({
+      value: product.name,
+      label: `${product.name}${product.name ? ` (${product.name})` : ''}`.trim(),
+      id: product.id,
+    }));
+  }, [productsMasterData]);
+
+  const companyOptions: CompanyOptionType[] = useMemo(() => {
+    if (!Array.isArray(allCompanyProfileData)) return [];
+    return allCompanyProfileData.map((company: any) => ({
+      value: company.company_name || company.name, // Adjust if company name field is different
+      label: company.company_name || company.name,
+      id: company.id,
+    }));
+  }, [allCompanyProfileData]);
+
+  const productSpecOptionsForSelect: ProductSpecOptionType[] = useMemo(() => {
+    if (!Array.isArray(productSpecificationsData)) return [];
+    return productSpecificationsData.map((spec: any) => ({
+      value: spec.id,
+      label: spec.name,
+    }));
+  }, [productSpecificationsData]);
+
+  const onFormSubmit = useCallback(
+    async (formData: WallItemFormData) => {
+      setIsSubmitting(true);
+
+      const productSpecDetails = formData.productSpecId
+        ? productSpecOptionsForSelect.find(spec => spec.value === formData.productSpecId)
+        : null;
+      
+      const cartoonTypeDetails = formData.cartoonTypeId
+        ? dummyCartoonTypes.find(ct => ct.id === formData.cartoonTypeId)
+        : null;
+
+      const loggedPayload: any = { ...formData };
+
+      loggedPayload.id = null;
+      loggedPayload.product_id = formData.productId ? String(formData.productId) : null;
+      loggedPayload.customer_id = formData.customerId ? String(formData.customerId) : null;
+      loggedPayload.product_spec_id = formData.productSpecId ? String(formData.productSpecId) : null;
+      loggedPayload.assigned_to = formData.assignedTeamId ? String(formData.assignedTeamId) : null;
+      
+      loggedPayload.want_to = formData.intent;
+      loggedPayload.qty = String(formData.qty);
+      loggedPayload.price = (formData.price !== null && formData.price !== undefined) ? String(formData.price) : "0";
+      
+      loggedPayload.status = formData.adminStatus;
+      loggedPayload.product_status = formData.productStatus;
+      loggedPayload.product_status_listing = null;
+      loggedPayload.dispatch_status = formData.dispatchStatus;
+
+      loggedPayload.color = formData.color;
+      loggedPayload.device_condition = formData.deviceCondition;
+      loggedPayload.product_specs = productSpecDetails ? productSpecDetails.label : null;
+
+      loggedPayload.cartoon_type = cartoonTypeDetails ? cartoonTypeDetails.name : (formData.cartoonTypeId ? String(formData.cartoonTypeId) : null);
+      loggedPayload.delivery_at = formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null;
+      loggedPayload.location = formData.location;
+      loggedPayload.shipping_options = formData.dispatchMode;
+
+      loggedPayload.payment_term = formData.paymentTermId ? String(formData.paymentTermId) : "0";
+      loggedPayload.visibility = formData.visibility;
+      loggedPayload.priority = formData.priority;
+      loggedPayload.active_hrs = formData.activeHours;
+      loggedPayload.listing_url = formData.productUrl;
+      
+      loggedPayload.warranty = formData.warrantyInfo;
+
+      loggedPayload.internal_remarks = formData.internalRemarks;
+      loggedPayload.notes = formData.internalRemarks;
+
+      loggedPayload.opportunity_id = loggedPayload.opportunity_id ?? null;
+      loggedPayload.opportunity_status = loggedPayload.opportunity_status ?? null;
+      loggedPayload.match_score = loggedPayload.match_score ?? null;
+      loggedPayload.buy_listing_id = loggedPayload.buy_listing_id ?? null;
+      loggedPayload.sell_listing_id = loggedPayload.sell_listing_id ?? null;
+      loggedPayload.spb_role = loggedPayload.spb_role ?? null;
+      loggedPayload.product_category = loggedPayload.product_category ?? null;
+      loggedPayload.product_subcategory = loggedPayload.product_subcategory ?? null;
+      loggedPayload.brand = loggedPayload.brand ?? null;
+      loggedPayload.price_match_type = loggedPayload.price_match_type ?? null;
+      loggedPayload.quantity_match_listing = String(formData.qty);
+      loggedPayload.location_match = loggedPayload.location_match ?? null;
+      loggedPayload.matches_found_count = loggedPayload.matches_found_count ?? null;
+      loggedPayload.last_updated = loggedPayload.last_updated ?? null;
+      loggedPayload.payment_method = loggedPayload.payment_method ?? null;
+      loggedPayload.interaction_type = loggedPayload.interaction_type ?? null;
+      loggedPayload.created_from = "FormUI-Add";
+      loggedPayload.source = "in";
+      loggedPayload.delivery_details = loggedPayload.delivery_details ?? null;
+      loggedPayload.created_by = "1";
+      loggedPayload.expired_date = loggedPayload.expired_date ?? null;
+      loggedPayload.created_at = new Date().toISOString();
+      loggedPayload.updated_at = new Date().toISOString();
+      loggedPayload.device_type = loggedPayload.device_type ?? null;
+      loggedPayload.master_cartoon = loggedPayload.master_cartoon ?? null;
+      loggedPayload.eta_details = loggedPayload.eta_details ?? null;
+      loggedPayload.is_wall_manual = "0";
+      loggedPayload.wall_link_token = loggedPayload.wall_link_token ?? null;
+      loggedPayload.wall_link_datetime = loggedPayload.wall_link_datetime ?? null;
+      loggedPayload.inquiries = "0";
+      loggedPayload.share = "0";
+      loggedPayload.bookmark = "0";
+      loggedPayload.company_id = loggedPayload.company_id ?? null; // This might be formData.customerId if applicable for company context
+      loggedPayload.member_type = loggedPayload.member_type ?? null;
+      loggedPayload.brands_id = loggedPayload.brands_id ?? null;
+      loggedPayload.leads_count = 0;
+
+      loggedPayload.product = {
+          id: formData.productId,
+          name: formData.product_name, // Now correctly sourced from form
+          description: null, 
+          status: formData.productStatus, 
+          minimum_order_quantity: null, category_id: null, sub_category_id: null, brand_id: null, icon_full_path: null, product_images_array: [],
+          sub_category: null, brand: null, category: null 
+      };
+      loggedPayload.product_spec = productSpecDetails ? { id: productSpecDetails.value, name: productSpecDetails.label } : null;
+      loggedPayload.customer = {
+          id: formData.customerId,
+          name: formData.company_name, // Now correctly sourced from form
+          full_profile_pic: null, brand_name: null, category: null, subcategory: null
+      };
+      loggedPayload.company = null;
+
+      console.log("--- WallItemAdd Form Submission Log ---");
+      console.log("1. Original formData (from react-hook-form):", formData);
+      console.log("2. Constructed Payload (for API/logging - matches target structure, includes all form data):", loggedPayload);
+      console.log("--- End WallItemAdd Form Submission Log ---");
+
+      await new Promise((res) => setTimeout(res, 1000)); // Simulate API call
 
       toast.push(
         <Notification title="Success" type="success">
@@ -193,27 +370,14 @@ const WallItemAdd = () => {
       setIsSubmitting(false);
       navigate("/sales-leads/wall-listing");
     },
-    [navigate]
+    [navigate, productSpecOptionsForSelect] // Added dependency
   );
 
   const handleCancel = () => {
     navigate("/sales-leads/wall-listing");
   };
   
-  const handleSaveAsDraft = () => {
-    const currentValues = formMethods.getValues();
-    const draftData = {
-        ...currentValues,
-        eta: currentValues.eta ? dayjs(currentValues.eta).format("YYYY-MM-DD") : null,
-    };
-    console.log("Saving as draft:", draftData);
-    toast.push(
-        <Notification title="Draft Saved" type="info">
-            Item saved as draft. (Simulated)
-        </Notification>
-    );
-  };
-
+  const isLoadingOptions = isLoadingDropdownData || masterDataAccessStatus === 'loading';
 
   return (
     <>
@@ -242,17 +406,18 @@ const WallItemAdd = () => {
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            options={dummyProductSpecsForSelect.map(spec => ({
-                                value: spec.name,
-                                label: spec.name,
-                            }))}
-                            {...field}
-                            value={
-                                dummyProductSpecsForSelect
-                                    .map(spec => ({ value: spec.name, label: spec.name }))
-                                    .find(opt => opt.value === field.value) || null
-                            }
-                            onChange={option => field.onChange(option ? option.value : "")}
+                            // isLoading={isLoadingOptions}
+                            options={productOptions}
+                            value={productOptions.find(opt => opt.value === field.value) || null}
+                            onChange={option => {
+                                if (option) {
+                                    field.onChange(option.value);
+                                    formMethods.setValue('productId', option.id, { shouldValidate: true, shouldDirty: true });
+                                } else {
+                                    field.onChange("");
+                                    formMethods.setValue('productId', null, { shouldValidate: true, shouldDirty: true });
+                                }
+                            }}
                             placeholder="Select Product Name"
                             isClearable
                         />
@@ -269,22 +434,18 @@ const WallItemAdd = () => {
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            options={[
-                                { value: "Acme Corp", label: "Acme Corp" },
-                                { value: "Globex Inc", label: "Globex Inc" },
-                                { value: "Stark Industries", label: "Stark Industries" },
-                                { value: "Wayne Enterprises", label: "Wayne Enterprises" },
-                            ]}
-                            {...field}
-                            value={
-                                [
-                                    { value: "Acme Corp", label: "Acme Corp" },
-                                    { value: "Globex Inc", label: "Globex Inc" },
-                                    { value: "Stark Industries", label: "Stark Industries" },
-                                    { value: "Wayne Enterprises", label: "Wayne Enterprises" },
-                                ].find(opt => opt.value === field.value) || null
-                            }
-                            onChange={option => field.onChange(option ? option.value : "")}
+                            isLoading={isLoadingOptions}
+                            options={companyOptions}
+                            value={companyOptions.find(opt => opt.value === field.value) || null}
+                            onChange={option => {
+                                if (option) {
+                                    field.onChange(option.value);
+                                    formMethods.setValue('customerId', option.id, { shouldValidate: true, shouldDirty: true });
+                                } else {
+                                    field.onChange("");
+                                    formMethods.setValue('customerId', null, { shouldValidate: true, shouldDirty: true });
+                                }
+                            }}
                             placeholder="Select Company Name"
                             isClearable
                         />
@@ -312,14 +473,20 @@ const WallItemAdd = () => {
               invalid={!!formMethods.formState.errors.intent}
               errorMessage={formMethods.formState.errors.intent?.message}
             >
-              <Controller name="intent" control={formMethods.control} render={({ field }) => ( <UiSelect options={intentOptions} {...field} placeholder="Select Intent" /> )} />
+              <Controller name="intent" control={formMethods.control} render={({ field }) => ( <UiSelect options={intentOptions} {...field} 
+                value={intentOptions.find(opt => opt.value === field.value)}
+                onChange={opt => field.onChange(opt ? opt.value : null)}
+                placeholder="Select Intent" /> )} />
             </FormItem>
             <FormItem
               label="Product Status"
               invalid={!!formMethods.formState.errors.productStatus}
               errorMessage={formMethods.formState.errors.productStatus?.message}
             >
-              <Controller name="productStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={productStatusOptions} {...field} placeholder="Select Product Status" /> )} />
+              <Controller name="productStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={productStatusOptions} {...field} 
+                value={productStatusOptions.find(opt => opt.value === field.value)}
+                onChange={opt => field.onChange(opt ? opt.value : null)}
+                placeholder="Select Product Status" /> )} />
             </FormItem>
 
             {/* Row 3 */}
@@ -329,7 +496,14 @@ const WallItemAdd = () => {
               errorMessage={formMethods.formState.errors.productSpecId?.message}
             >
               <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name }))} {...field} value={dummyProductSpecsForSelect.map(spec => ({ value: spec.id, label: spec.name })).find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Product Spec" />
+                  <UiSelect
+                    isLoading={isLoadingOptions}
+                    options={productSpecOptionsForSelect}
+                    value={productSpecOptionsForSelect.find(opt => opt.value === field.value) || null}
+                    onChange={(option) => field.onChange(option ? option.value : null)}
+                    placeholder="Select Product Spec (Optional)"
+                    isClearable
+                  />
                 )} />
             </FormItem>
             <FormItem
@@ -356,7 +530,12 @@ const WallItemAdd = () => {
               errorMessage={formMethods.formState.errors.cartoonTypeId?.message}
             >
               <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name, }))} {...field} value={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name })).find((opt) => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Cartoon Type (Optional)" />
+                  <UiSelect options={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name, }))} {...field} 
+                  value={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name })).find((opt) => opt.value === field.value) || null} 
+                  onChange={(option) => field.onChange(option ? option.value : null)} 
+                  placeholder="Select Cartoon Type (Optional)" 
+                  isClearable
+                  />
                 )} />
             </FormItem>
             <FormItem
@@ -371,7 +550,12 @@ const WallItemAdd = () => {
               invalid={!!formMethods.formState.errors.dispatchMode}
               errorMessage={formMethods.formState.errors.dispatchMode?.message}
             >
-              <Controller name="dispatchMode" control={formMethods.control} render={({ field }) => ( <UiSelect options={dispatchModeOptions} {...field} placeholder="Select Dispatch Mode (Optional)" /> )} />
+              <Controller name="dispatchMode" control={formMethods.control} render={({ field }) => ( <UiSelect options={dispatchModeOptions} {...field} 
+                value={dispatchModeOptions.find(opt => opt.value === field.value)}
+                onChange={opt => field.onChange(opt ? opt.value : null)}
+                placeholder="Select Dispatch Mode (Optional)" 
+                isClearable
+                /> )} />
             </FormItem>
 
             {/* Row 5 */}
@@ -381,7 +565,12 @@ const WallItemAdd = () => {
               errorMessage={formMethods.formState.errors.paymentTermId?.message}
             >
               <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name }))} {...field} value={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name })).find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Payment Term (Optional)" />
+                  <UiSelect options={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name }))} {...field} 
+                  value={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name })).find(opt => opt.value === field.value) || null} 
+                  onChange={(option) => field.onChange(option ? option.value : null)} 
+                  placeholder="Select Payment Term (Optional)" 
+                  isClearable
+                  />
                 )} />
             </FormItem>
             <FormItem
@@ -389,7 +578,7 @@ const WallItemAdd = () => {
               invalid={!!formMethods.formState.errors.eta}
               errorMessage={formMethods.formState.errors.eta?.message}
             >
-              <Controller name="eta" control={formMethods.control} render={({ field }) => ( <DatePicker {...field} value={field.value} placeholder="Select ETA (Optional)" inputFormat="YYYY-MM-DD" /> )} />
+              <Controller name="eta" control={formMethods.control} render={({ field }) => ( <DatePicker {...field} value={field.value} onChange={(date) => field.onChange(date)} placeholder="Select ETA (Optional)" inputFormat="YYYY-MM-DD" /> )} />
             </FormItem>
             <FormItem
               label="Location"
@@ -405,21 +594,32 @@ const WallItemAdd = () => {
               invalid={!!formMethods.formState.errors.listingType}
               errorMessage={formMethods.formState.errors.listingType?.message}
             >
-              <Controller name="listingType" control={formMethods.control} render={({ field }) => ( <UiSelect options={listingTypeOptions} {...field} placeholder="Select Listing Type" /> )} />
+              <Controller name="listingType" control={formMethods.control} render={({ field }) => ( <UiSelect options={listingTypeOptions} {...field} 
+                value={listingTypeOptions.find(opt => opt.value === field.value)}
+                onChange={opt => field.onChange(opt ? opt.value : null)}
+                placeholder="Select Listing Type" /> )} />
             </FormItem>
             <FormItem
               label="Visibility"
               invalid={!!formMethods.formState.errors.visibility}
               errorMessage={formMethods.formState.errors.visibility?.message}
             >
-              <Controller name="visibility" control={formMethods.control} render={({ field }) => ( <UiSelect options={visibilityOptions} {...field} placeholder="Select Visibility" /> )} />
+              <Controller name="visibility" control={formMethods.control} render={({ field }) => ( <UiSelect options={visibilityOptions} {...field} 
+                value={visibilityOptions.find(opt => opt.value === field.value)}
+                onChange={opt => field.onChange(opt ? opt.value : null)}
+                placeholder="Select Visibility" /> )} />
             </FormItem>
              <FormItem
               label="Priority"
               invalid={!!formMethods.formState.errors.priority}
               errorMessage={formMethods.formState.errors.priority?.message}
             >
-              <Controller name="priority" control={formMethods.control} render={({ field }) => ( <UiSelect options={priorityOptions} {...field} placeholder="Select Priority" /> )} />
+              <Controller name="priority" control={formMethods.control} render={({ field }) => ( <UiSelect options={priorityOptions} {...field} 
+                value={priorityOptions.find(opt => opt.value === field.value)}
+                onChange={opt => field.onChange(opt ? opt.value : null)}
+                placeholder="Select Priority (Optional)" 
+                isClearable
+                /> )} />
             </FormItem>
 
             {/* Row 7: Admin & Active Hours */}
@@ -428,7 +628,10 @@ const WallItemAdd = () => {
               invalid={!!formMethods.formState.errors.adminStatus}
               errorMessage={formMethods.formState.errors.adminStatus?.message}
             >
-              <Controller name="adminStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={adminStatusOptions} {...field} placeholder="Select Admin Status" /> )} />
+              <Controller name="adminStatus" control={formMethods.control} render={({ field }) => ( <UiSelect options={adminStatusOptions} {...field} 
+                value={adminStatusOptions.find(opt => opt.value === field.value)}
+                onChange={opt => field.onChange(opt ? opt.value : null)}
+                placeholder="Select Admin Status" /> )} />
             </FormItem>
             <FormItem
               label="Assigned Team"
@@ -436,7 +639,12 @@ const WallItemAdd = () => {
               errorMessage={formMethods.formState.errors.assignedTeamId?.message}
             >
               <Controller name="assignedTeamId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={assignedTeamOptions.map(team => ({ value: team.value, label: team.label }))} {...field} value={assignedTeamOptions.map(team => ({value: team.value, label: team.label})).find(opt => opt.value === field.value) || null} onChange={opt => field.onChange(opt ? opt.value : null)} placeholder="Select Assigned Team (Optional)" />
+                  <UiSelect options={assignedTeamOptions.map(team => ({ value: team.value, label: team.label }))} {...field} 
+                  value={assignedTeamOptions.map(team => ({value: team.value, label: team.label})).find(opt => opt.value === field.value) || null} 
+                  onChange={opt => field.onChange(opt ? opt.value : null)} 
+                  placeholder="Select Assigned Team (Optional)" 
+                  isClearable
+                  />
                 )} />
             </FormItem>
              <FormItem
@@ -444,7 +652,7 @@ const WallItemAdd = () => {
               invalid={!!formMethods.formState.errors.activeHours}
               errorMessage={formMethods.formState.errors.activeHours?.message}
             >
-              <Controller name="activeHours" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM, 24/7" /> )} />
+              <Controller name="activeHours" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM, 24/7 (Optional)" /> )} />
             </FormItem>
             
             {/* Row 8: URL and Policies */}
@@ -458,7 +666,7 @@ const WallItemAdd = () => {
             </FormItem>
             <FormItem
               label="Warranty Info"
-              className="md:col-span-2" // Span 2 for textarea
+              className="md:col-span-2" 
               invalid={!!formMethods.formState.errors.warrantyInfo}
               errorMessage={formMethods.formState.errors.warrantyInfo?.message}
             >
@@ -467,13 +675,12 @@ const WallItemAdd = () => {
             
             <FormItem
               label="Return Policy"
-              className="md:col-span-3" // Span 3 for full width
+              className="md:col-span-3" 
               invalid={!!formMethods.formState.errors.returnPolicy}
               errorMessage={formMethods.formState.errors.returnPolicy?.message}
             >
               <Controller name="returnPolicy" control={formMethods.control} render={({ field }) => ( <Input textArea {...field} value={field.value || ""} rows={3} placeholder="Enter return policy (Optional)" /> )} />
             </FormItem>
-
 
             <FormItem
               label="Internal Remarks"

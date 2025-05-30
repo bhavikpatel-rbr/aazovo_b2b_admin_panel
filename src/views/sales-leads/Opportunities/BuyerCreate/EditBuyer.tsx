@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from "react";
-import { useNavigate, NavLink } from "react-router-dom";
+import React, { useState, useCallback, useEffect } from "react";
+import { useNavigate, NavLink, useParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,16 +7,18 @@ import dayjs from "dayjs";
 
 // UI Components
 import Card from "@/components/ui/Card";
-import { Input } from "@/components/ui"; // Assuming Input is exported directly
+import { Input } from "@/components/ui";
 import { Form, FormItem } from "@/components/ui/Form";
-import { DatePicker } from "@/components/ui"; // Assuming DatePicker is exported directly
+import { DatePicker } from "@/components/ui";
 import { Button } from "@/components/ui";
 import { BiChevronRight } from "react-icons/bi";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
+import Spinner from "@/components/ui/Spinner";
+import Container from "@/components/shared/Container";
 
-// --- Zod Schema for Create Seller Form ---
-const sellerFormSchema = z.object({
+// --- Zod Schema for Buyer Form (Same as Create/Seller) ---
+const buyerFormSchema = z.object({
   opportunityId: z.string().optional().nullable(),
   buyListingId: z.string().optional().nullable(),
   sellListingId: z.string().optional().nullable(),
@@ -24,132 +26,234 @@ const sellerFormSchema = z.object({
   productCategory: z.string().optional().nullable(),
   productSubcategory: z.string().optional().nullable(),
   brand: z.string().optional().nullable(),
-  priceMatchType: z.string().optional().nullable(), // e.g., "Exact", "Range", "Not Matched"
-  quantityMatch: z.string().optional().nullable(), // e.g., "Sufficient", "Partial", "Not Matched"
-  locationMatch: z.string().optional().nullable(), // e.g., "Local", "National", "Not Matched"
+  priceMatchType: z.string().optional().nullable(),
+  quantityMatch: z.string().optional().nullable(),
+  locationMatch: z.string().optional().nullable(),
   matchScore: z
     .number({ invalid_type_error: "Match score must be a number." })
     .min(0, "Match score cannot be less than 0.")
     .max(100, "Match score cannot be greater than 100.")
     .nullable()
     .optional(),
-  opportunityStatus: z.string().optional().nullable(), // e.g., "New", "Shortlisted", "Converted", "Rejected"
+  opportunityStatus: z.string().optional().nullable(),
   createdDate: z.date().nullable().optional(),
   lastUpdated: z.date().nullable().optional(),
   assignedTo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  status: z.string().min(1, "Status is required."), // e.g., "pending", "active", "on_hold", "closed"
+  status: z.string().min(1, "Status is required."),
 });
 
-type SellerFormData = z.infer<typeof sellerFormSchema>;
+type BuyerFormData = z.infer<typeof buyerFormSchema>;
 
-const CreateSellerForm = () => {
+// Type for API fetched buyer data
+export type ApiFetchedBuyerItem = {
+  id: number;
+  opportunity_id: string | null;
+  buy_listing_id: string | null;
+  sell_listing_id: string | null;
+  product_name: string;
+  product_category: string | null;
+  product_subcategory: string | null;
+  brand: string | null;
+  price_match_type: string | null;
+  quantity_match_listing: string | null;
+  location_match: string | null;
+  match_score: number | null;
+  opportunity_status: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  assigned_to: string | null;
+  notes: string | null;
+  status: string;
+};
+
+// Dummy data source for buyer opportunities
+const initialDummyApiBuyerItems: ApiFetchedBuyerItem[] = [
+  {
+    id: 1,
+    opportunity_id: "OPP-B001",
+    buy_listing_id: "BUY-LST-B101",
+    sell_listing_id: null,
+    product_name: "Bulk Order - Office Chairs",
+    product_category: "Furniture",
+    product_subcategory: "Office Furniture",
+    brand: "ComfySeat",
+    price_match_type: "Not Matched",
+    quantity_match_listing: "Sufficient",
+    location_match: "National",
+    match_score: 60,
+    opportunity_status: "Converted",
+    created_at: "2023-03-10T11:00:00Z",
+    updated_at: "2023-03-15T16:30:00Z",
+    assigned_to: "Alice Brown",
+    notes: "Order placed. Awaiting shipment details.",
+    status: "closed",
+  },
+  {
+    id: 2,
+    opportunity_id: "OPP-B002",
+    buy_listing_id: "BUY-LST-B102",
+    sell_listing_id: "SELL-LST-S305",
+    product_name: "High-End Graphics Card",
+    product_category: "Electronics",
+    product_subcategory: "Computer Components",
+    brand: "GigaPower",
+    price_match_type: "Exact",
+    quantity_match_listing: "Sufficient",
+    location_match: "Local",
+    match_score: 92,
+    opportunity_status: "Shortlisted",
+    created_at: "2023-04-01T13:00:00Z",
+    updated_at: "2023-04-03T10:00:00Z",
+    assigned_to: "Bob Green",
+    notes: "Needs to confirm budget.",
+    status: "active",
+  },
+];
+
+const EditBuyerForm = () => {
   const navigate = useNavigate();
+  const { id: itemIdFromParams } = useParams<{ id: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [itemToEditApiData, setItemToEditApiData] = useState<ApiFetchedBuyerItem | null>(null);
 
-  const formMethods = useForm<SellerFormData>({
-    resolver: zodResolver(sellerFormSchema),
-    defaultValues: {
-      opportunityId: "",
-      buyListingId: "",
-      sellListingId: "",
-      productName: "",
-      productCategory: "",
-      productSubcategory: "",
-      brand: "",
-      priceMatchType: "",
-      quantityMatch: "",
-      locationMatch: "",
-      matchScore: null,
-      opportunityStatus: "",
-      createdDate: new Date(), // Default to today
-      lastUpdated: new Date(), // Default to today
-      assignedTo: "",
-      notes: "",
-      status: "", // e.g. 'pending' could be a good default
-    },
+  const formMethods = useForm<BuyerFormData>({
+    resolver: zodResolver(buyerFormSchema),
   });
 
+  useEffect(() => {
+    if (!itemIdFromParams) {
+      toast.push(<Notification title="Error" type="danger">Invalid item ID.</Notification>);
+      navigate("/sales-leads/opportunities"); // Or your buyer list path
+      return;
+    }
+    setIsLoading(true);
+    const itemId = parseInt(itemIdFromParams, 10);
+
+    setTimeout(() => {
+      const fetchedApiItem = initialDummyApiBuyerItems.find(item => item.id === itemId);
+
+      if (fetchedApiItem) {
+        setItemToEditApiData(fetchedApiItem);
+        formMethods.reset({
+          opportunityId: fetchedApiItem.opportunity_id,
+          buyListingId: fetchedApiItem.buy_listing_id,
+          sellListingId: fetchedApiItem.sell_listing_id,
+          productName: fetchedApiItem.product_name,
+          productCategory: fetchedApiItem.product_category,
+          productSubcategory: fetchedApiItem.product_subcategory,
+          brand: fetchedApiItem.brand,
+          priceMatchType: fetchedApiItem.price_match_type,
+          quantityMatch: fetchedApiItem.quantity_match_listing,
+          locationMatch: fetchedApiItem.location_match,
+          matchScore: fetchedApiItem.match_score,
+          opportunityStatus: fetchedApiItem.opportunity_status,
+          createdDate: fetchedApiItem.created_at ? dayjs(fetchedApiItem.created_at).toDate() : null,
+          lastUpdated: fetchedApiItem.updated_at ? dayjs(fetchedApiItem.updated_at).toDate() : null,
+          assignedTo: fetchedApiItem.assigned_to,
+          notes: fetchedApiItem.notes,
+          status: fetchedApiItem.status,
+        });
+      } else {
+        toast.push(<Notification title="Error" type="danger">Buyer opportunity not found.</Notification>);
+        navigate("/sales-leads/opportunities"); // Or your buyer list path
+      }
+      setIsLoading(false);
+    }, 500);
+  }, [itemIdFromParams, navigate, formMethods]);
+
   const onFormSubmit = useCallback(
-    async (data: SellerFormData) => {
+    async (data: BuyerFormData) => {
+      if (!itemIdFromParams || !itemToEditApiData) {
+         toast.push(<Notification title="Error" type="danger">Cannot submit. Item data missing.</Notification>);
+        return;
+      }
       setIsSubmitting(true);
 
-      const loggedPayload: any = { ...data }; // Start with all form data
-
-      // Map and transform fields to a target-like structure
+      const loggedPayload: any = { 
+        ...data, 
+        id: parseInt(itemIdFromParams, 10),
+      };
+      
       loggedPayload.opportunity_id = data.opportunityId;
       loggedPayload.buy_listing_id = data.buyListingId;
       loggedPayload.sell_listing_id = data.sellListingId;
-      // productName is already data.productName
-      loggedPayload.product_category = data.productCategory;
-      loggedPayload.product_subcategory = data.productSubcategory;
-      // brand is already data.brand
       loggedPayload.price_match_type = data.priceMatchType;
-      loggedPayload.quantity_match_listing = data.quantityMatch; // Name from target JSON
+      loggedPayload.quantity_match_listing = data.quantityMatch;
       loggedPayload.location_match = data.locationMatch;
       loggedPayload.match_score = data.matchScore;
       loggedPayload.opportunity_status = data.opportunityStatus;
-      loggedPayload.notes = data.notes;
-      loggedPayload.status = data.status; // Overall status
       loggedPayload.assigned_to = data.assignedTo;
+      
+      loggedPayload.created_at = itemToEditApiData.created_at; 
+      loggedPayload.updated_at = data.lastUpdated 
+        ? dayjs(data.lastUpdated).toISOString() 
+        : new Date().toISOString();
 
-      loggedPayload.created_at = data.createdDate
-        ? dayjs(data.createdDate).toISOString()
-        : null;
-      loggedPayload.updated_at = data.lastUpdated
-        ? dayjs(data.lastUpdated).toISOString()
-        : null;
-        
-      // Add other fields from previous target JSON if they make sense, with defaults
-      loggedPayload.id = null; // Typically backend generated
-      loggedPayload.spb_role = null;
-      loggedPayload.matches_found_count = null;
-      // ... any other relevant fields
+      delete loggedPayload.createdDate;
+      delete loggedPayload.lastUpdated;
 
-      // Remove original keys if they were mapped to different key names to avoid redundancy, if desired.
-      // For "log all data... if fields not match log them as it is", we ensure unmapped fields from `data` are present.
-      // delete loggedPayload.opportunityId; // Example if you want to remove the original after mapping
-      // For now, keep original keys from formData alongside mapped ones if names differ.
-
-      console.log("--- CreateSellerForm Submission Log ---");
+      console.log("--- EditBuyerForm Submission Log ---");
       console.log("1. Original formData (from react-hook-form):", data);
-      console.log("2. Constructed Payload (for API/logging):", loggedPayload);
-      console.log("--- End CreateSellerForm Submission Log ---");
+      console.log("2. Item being edited (original API data):", itemToEditApiData);
+      console.log("3. Constructed Payload (for API/logging):", loggedPayload);
+      console.log("--- End EditBuyerForm Submission Log ---");
 
-      await new Promise((res) => setTimeout(res, 1000)); // Simulate API call
+      await new Promise((res) => setTimeout(res, 1000));
 
       toast.push(
         <Notification title="Success" type="success">
-          Seller information saved. (Simulated)
+          Buyer information updated. (Simulated)
         </Notification>
       );
       setIsSubmitting(false);
-      // navigate("/sales-leads/opportunities"); // Or wherever you want to redirect
+      // navigate("/sales-leads/opportunities");
     },
-    [] // No dependencies like navigate needed if not redirecting in this step
+    [itemIdFromParams, itemToEditApiData]
   );
 
   const handleCancel = () => {
-    // Reset form if needed, or navigate
-    formMethods.reset();
-    navigate("/sales-leads/opportunities"); // Example navigation
-    toast.push(<Notification title="Cancelled" type="info">Form cancelled.</Notification>);
+    navigate("/sales-leads/opportunities"); // Or your buyer list path
   };
-
+  
   const handleSaveAsDraft = () => {
+    if (!itemIdFromParams) return;
     const currentValues = formMethods.getValues();
     const draftData = {
         ...currentValues,
+        id: parseInt(itemIdFromParams, 10),
         createdDate: currentValues.createdDate ? dayjs(currentValues.createdDate).toISOString() : null,
         lastUpdated: currentValues.lastUpdated ? dayjs(currentValues.lastUpdated).toISOString() : null,
     };
-    console.log("Saving as draft (Create Seller):", draftData);
+    console.log("Saving as draft (Edit Buyer):", draftData);
     toast.push(
         <Notification title="Draft Saved" type="info">
-            Seller info saved as draft. (Simulated)
+            Buyer info saved as draft. (Simulated)
         </Notification>
     );
   };
+
+
+  if (isLoading) {
+    return (
+      <Container>
+        <div className="flex justify-center items-center h-60">
+          <Spinner size={40} />
+          <p className="ml-2">Loading buyer details...</p>
+        </div>
+      </Container>
+    );
+  }
+  
+   if (!itemToEditApiData && !isLoading) {
+    return (
+        <Container>
+            <p>Buyer opportunity not found.</p>
+            <Button onClick={() => navigate("/sales-leads/opportunities")}>Go Back</Button>
+        </Container>
+    )
+  }
 
   return (
     <>
@@ -158,16 +262,16 @@ const CreateSellerForm = () => {
           <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Opportunities</h6>
         </NavLink>
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
-        <h6 className="font-semibold text-primary">Add New Seller</h6>
+        <h6 className="font-semibold text-primary">Edit Buyer (ID: {itemIdFromParams})</h6>
       </div>
       <Card>
-        <h4 className="mb-6">Create Seller</h4>
+        <h4 className="mb-6">Edit Buyer Information</h4>
         <Form
-          id="createSellerForm"
+          id="editBuyerForm"
           onSubmit={formMethods.handleSubmit(onFormSubmit)}
-          className="flex flex-col" // Removed gap-y-4, grid handles spacing
         >
           <div className="grid md:grid-cols-3 gap-4">
+            {/* FormItems are identical to EditSellerForm, just ensure form id and handler match */}
             <FormItem
               label="Opportunity ID"
               invalid={!!formMethods.formState.errors.opportunityId}
@@ -343,10 +447,11 @@ const CreateSellerForm = () => {
                 render={({ field }) => (
                   <DatePicker
                     {...field}
-                    value={field.value} // RHF handles Date object
-                    inputFormat="YYYY-MM-DD" // Display format, RHF value remains Date
+                    value={field.value} 
+                    inputFormat="YYYY-MM-DD"
                     placeholder="Select Created Date (Optional)"
                     onChange={(date) => field.onChange(date)}
+                    disabled
                   />
                 )}
               />
@@ -386,7 +491,7 @@ const CreateSellerForm = () => {
 
             <FormItem
               label="Notes"
-              className="md:col-span-2" // Example: make Notes wider
+              className="md:col-span-2"
               invalid={!!formMethods.formState.errors.notes}
               errorMessage={formMethods.formState.errors.notes?.message}
             >
@@ -413,26 +518,25 @@ const CreateSellerForm = () => {
           </div>
         </Form>
       </Card>
-      {/* Footer with Save and Cancel buttons */}
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
         <Button type="button" onClick={handleCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="button" onClick={handleSaveAsDraft} variant="twoTone" disabled={isSubmitting}>
+         <Button type="button" onClick={handleSaveAsDraft} variant="twoTone" disabled={isSubmitting}>
           Draft
         </Button>
         <Button
           type="submit"
-          form="createSellerForm"
+          form="editBuyerForm"
           variant="solid"
           loading={isSubmitting}
           disabled={isSubmitting || !formMethods.formState.isDirty || !formMethods.formState.isValid}
         >
-          {isSubmitting ? "Saving..." : "Save"}
+          {isSubmitting ? "Saving..." : "Save Changes"}
         </Button>
       </Card>
     </>
   );
 };
 
-export default CreateSellerForm;
+export default EditBuyerForm;
