@@ -25,7 +25,7 @@ const systemToolsRoutes: Routes = [
     {
         key: 'systemTools.formBuilder',
         path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-create`,
-        component: lazy(() => import('@/views/system-tools/Form-Builder/components/FormBuilderFormPage'),
+        component: lazy(() => import('@/views/system-tools/Form-Builder/FormBuilderForm')
         ),
         authority: [ADMIN],
         meta: {

@@ -1,6 +1,6 @@
 // src/views/companies/CompanyFormPage.tsx (or your chosen path)
-import React, { useEffect, useState, ReactNode } from 'react';
-import { useForm, Controller, Control, FieldErrors, UseFormReturn } from 'react-hook-form';
+import React, { useEffect, useState, ReactNode, useMemo } from 'react'; // Added useMemo
+import { useForm, Controller, Control, FieldErrors, UseFormReturn, useWatch } from 'react-hook-form';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import isEmpty from 'lodash/isEmpty';
 import classNames from 'classnames';
@@ -17,16 +17,42 @@ import Button from '@/components/ui/Button';
 import Notification from '@/components/ui/Notification';
 import toast from '@/components/ui/toast';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
-import NumericInput from '@/components/shared/NumericInput'; // Added
+import NumericInput from '@/components/shared/NumericInput';
 import { BiChevronRight } from 'react-icons/bi';
 import { TbCancel, TbCirclePlus, TbCopy, TbFileTypeTxt, TbLayoutList, TbLetterCase, TbMovie, TbPhoto, TbPlus, TbTrash } from 'react-icons/tb';
 import { DatePicker, Radio, Switcher, Tooltip } from '@/components/ui';
+import { useAppDispatch } from "@/reduxtool/store";
+import { getCategoriesAction, getDepartmentsAction } from '@/reduxtool/master/middleware';
+import { masterSelector } from '@/reduxtool/master/masterSlice';
+import { useSelector } from 'react-redux';
+
+// Define a generic option type for Select, if not already available from your UI library
+type SelectOption = {
+  label: string;
+  value: string; // Ensure value is string as Select components often expect this
+};
+
+// Assuming your Redux state items have these structures
+// Adjust if necessary
+interface DepartmentItem {
+  id: number | string;
+  name: string;
+  // other properties...
+}
+
+interface CategoryItem {
+  id: number | string;
+  name: string; // Or just 'name' - adjust as per your data
+  // other properties...
+}
+
 
 type SectionProps = {
   section: { id: number };
   control: Control<any>;
   removeSection: (id: number) => void;
 };
+
 type QuestionProps = {
   question: { id: number, queType: string | null };
   section_id: number;
@@ -51,180 +77,189 @@ const Question = ({ question, section_id, control, removeQuestion, createQuestio
     'Rating',
   ];
 
-  const [questionType, setQuestionType] = useState<string | null>(question.queType || null);
+  const questionTextName = `section_${section_id}_question_${question.id}_text`;
+  const questionTypeName = `section_${section_id}_question_${question.id}_type`;
+  const questionRequiredName = `section_${section_id}_question_${question.id}_required`;
 
-  const onQuestionTypeChange = (value: { label: string; value: string }) => {
-    setQuestionType(value.value);
-  };
+  const currentRHFQuestionType = useWatch({
+    control,
+    name: questionTypeName,
+    defaultValue: question.queType || null,
+  });
+
   return (
     <Card className="mt-2" bodyClass="p-4 flex flex-col gap-4">
       <div className="md:grid grid-cols-2 gap-2">
         <Controller
           control={control}
-          name={`section_${section_id}_question`}
+          name={questionTextName}
+          defaultValue=""
           render={({ field }) => (
             <Input {...field} type="text" placeholder="Write Question" />
           )}
         />
         <div className='flex gap-2'>
-          <Select
-            className='w-full'
-            placeholder="Select Answer Type"
-            onChange={onQuestionTypeChange}
-            options={questionTypes.map(type => ({ label: type, value: type }))}
+          <Controller
+            control={control}
+            name={questionTypeName}
+            defaultValue={question.queType || null}
+            render={({ field: { onChange, value, name, ref } }) => (
+              <Select
+                ref={ref}
+                name={name}
+                className='w-full'
+                placeholder="Select Answer Type"
+                value={value ? questionTypes.map(type => ({ label: type, value: type })).find(opt => opt.value === value) : null}
+                onChange={(selectedOption: SelectOption | null) => {
+                  onChange(selectedOption ? selectedOption.value : null);
+                }}
+                options={questionTypes.map(type => ({ label: type, value: type }))}
+              />
+            )}
           />
-          {questionType === 'Radio' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
-          {questionType === 'Checkbox' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
-          {questionType === 'Single-Choice Dropdown' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
-          {questionType === 'Multi-Choice Dropdown' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
+          {currentRHFQuestionType === 'Radio' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
+          {currentRHFQuestionType === 'Checkbox' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
+          {currentRHFQuestionType === 'Single-Choice Dropdown' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
+          {currentRHFQuestionType === 'Multi-Choice Dropdown' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
         </div>
       </div>
-      {questionType === 'Text' && <Input type="text" placeholder="Text" disabled />}
-      {questionType === 'Number' && <Input type="number" placeholder="Number" disabled />}
-      {questionType === 'Radio' && (
+
+      {currentRHFQuestionType === 'Text' && <Input type="text" placeholder="Text" disabled />}
+      {currentRHFQuestionType === 'Number' && <Input type="number" placeholder="Number" disabled />}
+      {currentRHFQuestionType === 'Radio' && (
         <div className='md:grid grid-cols-2 gap-4'>
           <span className='flex gap-2'>
-            <Radio checked /><Input placeholder="Option 1" />
+            <Radio checked={false} readOnly /><Input placeholder="Option 1" disabled />
           </span>
           <span className='flex gap-2'>
-            <Radio checked /><Input placeholder="Option 2" />
+            <Radio checked={false} readOnly /><Input placeholder="Option 2" disabled />
           </span>
           <span className='flex gap-2 col-span-2'>
-            <Radio checked /><Input placeholder="Option 3" />
+            <Radio checked={false} readOnly /><Input placeholder="Option 3" disabled />
             <Button type='button' className='h-10 w-10' icon={<TbTrash />}></Button>
           </span>
         </div>
       )}
-      {questionType === 'Checkbox' && (
+      {currentRHFQuestionType === 'Checkbox' && (
         <div className='md:grid grid-cols-2 gap-4'>
           <span className='flex gap-2'>
-            <Checkbox checked /><Input placeholder="Option 1" />
+            <Checkbox checked={false} readOnly /><Input placeholder="Option 1" disabled />
           </span>
           <span className='flex gap-2'>
-            <Checkbox checked /><Input placeholder="Option 2" />
+            <Checkbox checked={false} readOnly /><Input placeholder="Option 2" disabled />
           </span>
           <span className='flex gap-2 col-span-2'>
-            <Checkbox checked /><Input placeholder="Option 3" />
+            <Checkbox checked={false} readOnly /><Input placeholder="Option 3" disabled />
             <Button type='button' className='h-10 w-10' icon={<TbTrash />}></Button>
           </span>
         </div>
       )}
-      {questionType === 'Textarea' && <Input type="number" placeholder="Textarea" textArea disabled />}
-      {questionType === 'File Upload' && <Input type="file" disabled />}
-      {questionType === 'Date' && <DatePicker disabled />}
-      {questionType === 'DateRange' && <DatePicker.DatePickerRange disabled />}
-      {questionType === 'Time' && <Input type='time' disabled />}
-      {
-        questionType === 'Single-Choice Dropdown' &&
+      {currentRHFQuestionType === 'Textarea' && <Input type="text" placeholder="Textarea" textArea disabled />}
+      {currentRHFQuestionType === 'File Upload' && <Input type="file" disabled />}
+      {currentRHFQuestionType === 'Date' && <DatePicker disabled />}
+      {currentRHFQuestionType === 'DateRange' && <DatePicker.DatePickerRange disabled />}
+      {currentRHFQuestionType === 'Time' && <Input type='time' disabled />}
+      {currentRHFQuestionType === 'Single-Choice Dropdown' &&
         <div className='md:grid grid-cols-2 gap-4'>
           <Select className='col-span-2'
             placeholder="Single Choice Dropdown"
             options={[{ label: "Option-1", value: "Option-1" }, { label: "Option-2", value: "Option-2" }]}
+            disabled
           />
           <span className='flex gap-2'>
-            <Input placeholder="Option 1" />
+            <Input placeholder="Option 1" disabled />
           </span>
           <span className='flex gap-2'>
-            <Input placeholder="Option 2" />
+            <Input placeholder="Option 2" disabled />
           </span>
           <span className='flex gap-2 col-span-2'>
-            <Input placeholder="Option 3" />
+            <Input placeholder="Option 3" disabled />
             <Button type='button' className='h-10 w-10' icon={<TbTrash />}></Button>
           </span>
         </div>
       }
-      {
-        questionType === 'Multi-Choice Dropdown' &&
+      {currentRHFQuestionType === 'Multi-Choice Dropdown' &&
         <div className='md:grid grid-cols-2 gap-4'>
           <Select isMulti className='col-span-2'
-            placeholder="Single Choice Dropdown"
+            placeholder="Multi Choice Dropdown"
             options={[{ label: "Option-1", value: "Option-1" }, { label: "Option-2", value: "Option-2" }]}
+            disabled
           />
           <span className='flex gap-2'>
-            <Input placeholder="Option 1" />
+            <Input placeholder="Option 1" disabled />
           </span>
           <span className='flex gap-2'>
-            <Input placeholder="Option 2" />
+            <Input placeholder="Option 2" disabled />
           </span>
           <span className='flex gap-2 col-span-2'>
-            <Input placeholder="Option 3" />
+            <Input placeholder="Option 3" disabled />
             <Button type='button' className='h-10 w-10' icon={<TbTrash />}></Button>
           </span>
         </div>
       }
       <div className='flex gap-2 justify-end items-center'>
-        <div className='flex gap-2'>
+        <div className='flex gap-2 items-center'>
           <span>Required</span>
-          <Switcher className='w-4' />
+          <Controller
+            control={control}
+            name={questionRequiredName}
+            defaultValue={false}
+            render={({ field: { onChange, value, ref } }) => (
+              <Switcher
+                ref={ref}
+                checked={!!value}
+                onChange={(checked) => onChange(checked)}
+                className='w-4'
+              />
+            )}
+          />
         </div>
         <Tooltip title="Clone Question">
-          <Button type='button' icon={<TbCopy />} onClick={()=>createQuestion(questionType)}></Button>
+          <Button type='button' icon={<TbCopy />} onClick={() => createQuestion(currentRHFQuestionType || null)}></Button>
         </Tooltip>
         <Tooltip title="Delete Question">
-          <Button type='button' icon={<TbTrash />} onClick={()=>removeQuestion(question.id)} ></Button>
+          <Button type='button' icon={<TbTrash />} onClick={() => removeQuestion(question.id)} ></Button>
         </Tooltip>
-        
       </div>
     </Card>
   )
 }
 
 const Section = ({ section, control, removeSection }: SectionProps) => {
+  const [questions, setQuestions] = useState<Array<{ id: number; queType: string | null }>>([{ id: 1, queType: null }]);
 
-  const [questions, setQuestions] = useState<Array<{ id: number; queType: string | null }>>([{ id: 1, queType: null }])
-
-  const createQuestion = (queType: string) => {
-    console.log("que type", queType)
-    if(queType){
-      setQuestions(prev => [...prev, { id: prev.length + 1, queType: queType }]);
-    }else{
-      setQuestions(prev => [...prev, { id: prev.length + 1, queType: null}]);
-    }
+  const createQuestion = (queType?: string | null) => {
+    const newId = questions.length > 0 ? Math.max(...questions.map(q => q.id)) + 1 : 1;
+    const typeForNewQuestion = queType === undefined ? null : queType;
+    setQuestions(prev => [...prev, { id: newId, queType: typeForNewQuestion }]);
   };
+
   const removeQuestion = (id: number) => {
     if (questions.length > 1) {
-      setQuestions(prev => prev.filter(section => section.id !== id));
+      setQuestions(prev => prev.filter(q => q.id !== id));
+    } else {
+      toast.push(<Notification title="Cannot Delete" type="warning">At least one question must remain in a section.</Notification>, { placement: 'top-center' });
     }
   };
-
-  const questionTypes = [
-    'Text',
-    'Number',
-    'Textarea',
-    'Radio',
-    'Checkbox',
-    'File Upload',
-    'Date',
-    'Time',
-    'DateRange',
-    'Single-Choice Dropdown',
-    'Multi-Choice Dropdown',
-    'Rating',
-  ];
-
-  const [questionType, setQuestionType] = useState<string | null>(null);
-
-  const onQuestionTypeChange = (value: { label: string; value: string }) => {
-    setQuestionType(value.value);
-  };
+   
 
   return (
     <Card key={section.id} className="mt-2" bodyClass="p-4">
-      <div className="text-right flex justify-between">
+      <div className="text-right flex justify-between items-center">
         <h6>Section - {section.id}</h6>
         <div className="flex gap-2">
-          <Button type="button" icon={<TbCirclePlus />} onClick={()=> createQuestion()}>Add Question</Button>
-          {section.id !== 1 && (
+          <Button type="button" icon={<TbCirclePlus />} onClick={() => createQuestion()}>Add Question</Button>
+          {section.id !== 1 && ( 
             <Button type="button" icon={<TbTrash />} onClick={() => removeSection(section.id)} />
           )}
         </div>
       </div>
 
-      {/* Section Title */}
       <Card className="mt-2" bodyClass="p-4 flex flex-col gap-4">
         <Controller
           control={control}
           name={`section_title_${section.id}`}
+          defaultValue=""
           render={({ field }) => (
             <Input {...field} type="text" placeholder="Enter Section Title" />
           )}
@@ -232,145 +267,105 @@ const Section = ({ section, control, removeSection }: SectionProps) => {
         <Controller
           control={control}
           name={`section_description_${section.id}`}
+          defaultValue=""
           render={({ field }) => (
             <Input {...field} type="text" placeholder="Description (Optional)" />
           )}
         />
       </Card>
 
-      {/* Question */}
-      {
-        questions.map(que => (
-          <Question 
-            question={que} 
-            control={control} 
-            createQuestion={createQuestion} 
-            removeQuestion={removeQuestion} 
-            section_id={section.id} 
-            key={que.id}
-          />
-        ))
-      }
-      {/* <Card className="mt-2" bodyClass="p-4 flex flex-col gap-4">
-        <div className="md:grid grid-cols-2 gap-2">
-          <Controller
-            control={control}
-            name={`section_${section.id}_question`}
-            render={({ field }) => (
-              <Input {...field} type="text" placeholder="Write Question" />
-            )}
-          />
-          <div className='flex gap-2'>
-            <Select
-              className='w-full'
-              placeholder="Select Answer Type"
-              onChange={onQuestionTypeChange}
-              options={questionTypes.map(type => ({ label: type, value: type }))}
-            />
-            {questionType === 'Radio' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
-            {questionType === 'Checkbox' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
-            {questionType === 'Single-Choice Dropdown' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
-            {questionType === 'Multi-Choice Dropdown' && <Button className='h-10' type='button' icon={<TbPlus />}>Add More</Button>}
-          </div>
-        </div>
-        {questionType === 'Text' && <Input type="text" placeholder="Text" disabled />}
-        {questionType === 'Number' && <Input type="number" placeholder="Number" disabled />}
-        {questionType === 'Radio' && (
-          <div className='md:grid grid-cols-2 gap-4'>
-            <span className='flex gap-2'>
-              <Radio checked /><Input placeholder="Option 1" />
-            </span>
-            <span className='flex gap-2'>
-              <Radio checked /><Input placeholder="Option 2" />
-            </span>
-            <span className='flex gap-2 col-span-2'>
-              <Radio checked /><Input placeholder="Option 3" />
-              <Button type='button' className='h-10 w-10' icon={<TbTrash />}></Button>
-            </span>
-          </div>
-        )}
-        {questionType === 'Checkbox' && (
-          <div className='md:grid grid-cols-2 gap-4'>
-            <span className='flex gap-2'>
-              <Checkbox checked /><Input placeholder="Option 1" />
-            </span>
-            <span className='flex gap-2'>
-              <Checkbox checked /><Input placeholder="Option 2" />
-            </span>
-            <span className='flex gap-2 col-span-2'>
-              <Checkbox checked /><Input placeholder="Option 3" />
-              <Button type='button' className='h-10 w-10' icon={<TbTrash />}></Button>
-            </span>
-          </div>
-        )}
-        {questionType === 'Textarea' && <Input type="number" placeholder="Textarea" textArea disabled />}
-        {questionType === 'File Upload' && <Input type="file" disabled />}
-        {questionType === 'Date' && <DatePicker disabled />}
-        {questionType === 'DateRange' && <DatePicker.DatePickerRange disabled />}
-        {questionType === 'Time' && <Input type='time' disabled />}
-        {
-          questionType === 'Single-Choice Dropdown' &&
-          <div className='md:grid grid-cols-2 gap-4'>
-            <Select className='col-span-2'
-              placeholder="Single Choice Dropdown"
-              options={[{ label: "Option-1", value: "Option-1" }, { label: "Option-2", value: "Option-2" }]}
-            />
-            <span className='flex gap-2'>
-              <Input placeholder="Option 1" />
-            </span>
-            <span className='flex gap-2'>
-              <Input placeholder="Option 2" />
-            </span>
-            <span className='flex gap-2 col-span-2'>
-              <Input placeholder="Option 3" />
-              <Button type='button' className='h-10 w-10' icon={<TbTrash />}></Button>
-            </span>
-          </div>
-        }
-        {
-          questionType === 'Multi-Choice Dropdown' &&
-          <div className='md:grid grid-cols-2 gap-4'>
-            <Select isMulti className='col-span-2'
-              placeholder="Single Choice Dropdown"
-              options={[{ label: "Option-1", value: "Option-1" }, { label: "Option-2", value: "Option-2" }]}
-            />
-            <span className='flex gap-2'>
-              <Input placeholder="Option 1" />
-            </span>
-            <span className='flex gap-2'>
-              <Input placeholder="Option 2" />
-            </span>
-            <span className='flex gap-2 col-span-2'>
-              <Input placeholder="Option 3" />
-              <Button type='button' className='h-10 w-10' icon={<TbTrash />}></Button>
-            </span>
-          </div>
-        }
-        <div className='flex gap-2 justify-end'>
-          <Tooltip title="Clone Question">
-            <Button type='button' icon={<TbCopy />}></Button>
-          </Tooltip>
-          <Tooltip title="Delete Question">
-            <Button type='button' icon={<TbTrash />}></Button>
-          </Tooltip>
-        </div>
-      </Card> */}
+      {questions.map(que => (
+        <Question
+          key={que.id}
+          question={que}
+          control={control}
+          createQuestion={createQuestion}
+          removeQuestion={removeQuestion}
+          section_id={section.id}
+        />
+      ))}
     </Card>
   );
 };
 
 const FormBuilderForm = () => {
-  const form = useForm();
+  const form = useForm({
+    defaultValues: {
+        form_name: '',
+        status: null,
+        department_name: null, // Will store department ID
+        category: null,        // Will store category ID
+        form_title: '',
+        form_description: '',
+    }
+  });
   const [sections, setSections] = useState([{ id: 1 }]);
 
+  const {
+      CategoriesData = [],
+      departmentsData = [],
+      status: masterLoadingStatus = "idle",
+    } = useSelector(masterSelector);
+
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+     
+        dispatch(getDepartmentsAction());
+      
+     
+        dispatch(getCategoriesAction());
+    
+    }, []); // Add dependencies
+
+  // Memoize options to prevent re-creation on every render
+  const departmentOptions = useMemo(() => {
+    return (departmentsData as DepartmentItem[])?.map(dep => ({
+      label: dep.name,
+      value: String(dep.id) // Ensure value is a string
+    }));
+  }, [departmentsData]);
+
+  const categoryOptions = useMemo(() => {
+    return (CategoriesData as CategoryItem[]).map(cat => ({
+      label: cat.name, // Adjust if property name is different e.g. cat.name
+      value: String(cat.id)   // Ensure value is a string
+    }));
+  }, [CategoriesData]);
+
+
   const createSection = () => {
-    setSections(prev => [...prev, { id: prev.length + 1 }]);
+    const newId = sections.length > 0 ? Math.max(...sections.map(s => s.id)) + 1 : 1;
+    setSections(prev => [...prev, { id: newId }]);
   };
 
   const removeSection = (id: number) => {
     if (sections.length > 1) {
-      setSections(prev => prev.filter(section => section.id !== prev.length));
+      setSections(prev => prev.filter(section => section.id !== id));
+    } else {
+        toast.push(<Notification title="Cannot Delete" type="warning">At least one section must remain.</Notification>, { placement: 'top-center' });
     }
+  };
+
+  const onFormSubmit = (data: any) => {
+    // The 'department_name' and 'category' fields in 'data' will now hold the IDs.
+    console.log("Form Data (with IDs):", data);
+    toast.push(
+        <Notification title="Form Submitted Successfully" type="success" duration={3000}>
+            Form data has been logged to the console.
+        </Notification>, 
+        { placement: 'top-center' }
+    );
+  };
+
+  const onFormError = (errors: FieldErrors) => {
+    console.error("Form Errors:", errors);
+    toast.push(
+        <Notification title="Form Error" type="danger" duration={3000}>
+            Please correct the errors in the form.
+        </Notification>,
+        { placement: 'top-center' }
+    );
   };
 
   return (
@@ -384,13 +379,19 @@ const FormBuilderForm = () => {
       </div>
       <Card>
         <h5 className="mb-6">Form Information</h5>
-        <Form>
+        <Form onSubmit={form.handleSubmit(onFormSubmit, onFormError)}>
           <div className="md:grid grid-cols-3 gap-3">
             <FormItem label="Form Name" className="col-span-2">
               <Controller
                 control={form.control}
                 name="form_name"
-                render={({ field }) => <Input {...field} type="text" placeholder='Enter Form Name'/>}
+                rules={{ required: 'Form name is required' }}
+                render={({ field, fieldState: { error } }) => (
+                  <>
+                    <Input {...field} type="text" placeholder='Enter Form Name' />
+                    {error && <span className="text-red-500 text-xs">{error.message}</span>}
+                  </>
+                )}
               />
             </FormItem>
             <FormItem label="Status">
@@ -400,6 +401,8 @@ const FormBuilderForm = () => {
                 render={({ field }) => (
                   <Select
                     {...field}
+                    value={field.value ? [{ label: 'Active', value: 'Active' },{ label: 'Inactive', value: 'Inactive' }].find(opt => opt.value === field.value) : null}
+                    onChange={(option: SelectOption | null) => field.onChange(option ? option.value : null)}
                     options={[
                       { label: 'Active', value: 'Active' },
                       { label: 'Inactive', value: 'Inactive' },
@@ -415,36 +418,38 @@ const FormBuilderForm = () => {
             <FormItem label="Department Name">
               <Controller
                 control={form.control}
-                name="department_name"
-                render={({ field }) => <Select 
-                {...field} 
-                placeholder="Select Department"
-                options={[
-                  {label: "IT", value: "IT"},
-                  {label: "Account", value: "Account"},
-                ]}
-                />}
+                name="department_name" // This field will store the department ID
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    value={field.value ? departmentOptions.find(opt => opt.value === field.value) : null}
+                    onChange={(option: SelectOption | null) => field.onChange(option ? option.value : null)}
+                    options={departmentOptions}
+                    placeholder="Select Department"
+                    isLoading={masterLoadingStatus === 'loading' && departmentOptions.length === 0}
+                  />
+                )}
               />
             </FormItem>
             <FormItem label="Category Name">
               <Controller
                 control={form.control}
-                name="category"
+                name="category" // This field will store the category ID
                 render={({ field }) => (
                   <Select
                     {...field}
-                    options={[
-                      { label: 'Electronics', value: 'Electronics' },
-                      { label: 'Engineering', value: 'Engineering' },
-                    ]}
+                    value={field.value ? categoryOptions.find(opt => opt.value === field.value) : null}
+                    onChange={(option: SelectOption | null) => field.onChange(option ? option.value : null)}
+                    options={categoryOptions}
                     placeholder="Select Category"
+                    isLoading={masterLoadingStatus === 'loading' && categoryOptions.length === 0}
                   />
                 )}
               />
             </FormItem>
           </div>
 
-          <Card>
+          <Card className='my-4'>
             <FormItem label="Form Title">
               <Controller
                 control={form.control}
@@ -456,7 +461,6 @@ const FormBuilderForm = () => {
               <Controller
                 control={form.control}
                 name="form_description"
-                
                 render={({ field }) => <Input {...field} type="text" textArea placeholder="Write Description"/>}
               />
             </FormItem>
@@ -478,8 +482,8 @@ const FormBuilderForm = () => {
             </Button>
           </div>
           <div className='text-right mt-2'>
-            <Button type='button' className='mr-2 w-24'>Cancel</Button>
-            <Button type='button' variant='solid' className='w-24'>Save</Button>
+            <Button type='button' className='mr-2 w-24' onClick={() => form.reset()}>Cancel</Button>
+            <Button type='submit' variant='solid' className='w-24'>Save</Button>
           </div>
         </Form>
       </Card>
