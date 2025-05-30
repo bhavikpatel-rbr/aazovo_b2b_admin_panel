@@ -38,8 +38,13 @@ const PostLoginLayout = ({ layoutType, children }: PostLoginLayoutProps) => {
     return (
         <Suspense
             fallback={
-                <div className="flex flex-auto flex-col h-[100vh]">
-                    <Loading loading={true} />
+                <div className="flex items-center justify-center w-[100vw] h-[100vh]">
+                    <div className='relative h-[500px] w-[500px] flex items-center justify-center'>
+                        <div className=' absolute border-9 border-primary border-b-0 border-r-0 animate-spin rounded-full h-[360px] w-[360px]'></div>
+                        <div className='flex object-center'>
+                            <img src="/img/logo/Aazovo-02.png" alt="" className='w-[220px] dark:filter-[invert(1)]' />
+                        </div>
+                    </div>
                 </div>
             }
         >
