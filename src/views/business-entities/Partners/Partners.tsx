@@ -1,71 +1,78 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { CSVLink } from "react-csv";
 import cloneDeep from "lodash/cloneDeep"; // Added for partner table logic
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { CSVLink } from "react-csv";
+import { Controller, useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
-import Avatar from "@/components/ui/Avatar";
-import Tag from "@/components/ui/Tag";
-import Tooltip from "@/components/ui/Tooltip";
 import DataTable from "@/components/shared/DataTable";
+import DebouceInput from "@/components/shared/DebouceInput"; // For Partner Search
+import RichTextEditor from "@/components/shared/RichTextEditor";
+import StickyFooter from "@/components/shared/StickyFooter";
 import {
+  Button,
   Drawer,
+  Dropdown,
   Form as UiForm,
   FormItem as UiFormItem,
-  Input as UiInput,
-  Select as UiSelect,
-  Button,
-  Dropdown,
+  Select as UiSelect
 } from "@/components/ui";
-import StickyFooter from "@/components/shared/StickyFooter";
+import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
+import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
-import RichTextEditor from "@/components/shared/RichTextEditor";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import DebouceInput from "@/components/shared/DebouceInput"; // For Partner Search
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
-import {
-  TbPencil,
-  TbEye,
-  TbUserCircle,
-  TbShare,
-  TbCloudUpload,
-  TbDotsVertical,
-  TbCloudDownload,
-  TbFilter,
-  TbPlus,
-  TbChecks,
-  TbSearch, // For Partner Search
-  TbExternalLink,
-  TbCertificate,
-  TbBriefcase,
-  TbMapPin,
-  TbFileDescription,
-  TbClockHour4,
-  TbCreditCard,
-} from "react-icons/tb";
 import {
   MdCheckCircle,
   MdErrorOutline,
   MdHourglassEmpty,
   MdLink,
 } from "react-icons/md";
+import {
+  TbBriefcase,
+  TbCertificate,
+  TbChecks,
+  TbClockHour4,
+  TbCloudDownload,
+  TbCloudUpload,
+  TbCreditCard,
+  TbDotsVertical, // For Partner Search
+  TbExternalLink,
+  TbEye,
+  TbFileDescription,
+  TbFilter,
+  TbMapPin,
+  TbPencil,
+  TbPlus,
+  TbSearch,
+  TbShare,
+  TbUserCircle,
+} from "react-icons/tb";
 
 
 // Types
+import type { TableQueries } from "@/@types/common";
 import type {
-  OnSortParam,
   ColumnDef,
+  OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import {
+  deleteAllpartnerAction,
+  getpartnerAction // Ensure these actions exist or are created
+} from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
+import { useAppDispatch } from "@/reduxtool/store";
+import { useSelector } from "react-redux";
+
 
 // --- PartnerListItem Type (Data Structure) ---
 export type PartnerListItem = {
@@ -157,9 +164,9 @@ const partnerKycStatusOptions = [
 ];
 // Example: derive from data if possible, or use mocks
 const partnerCountryOptions = [
-    { value: "USA", label: "USA" },
-    { value: "UK", label: "UK" },
-    { value: "India", label: "India" },
+  { value: "USA", label: "USA" },
+  { value: "UK", label: "UK" },
+  { value: "India", label: "India" },
 ];
 // --- END MOCK PARTNER FILTER OPTIONS ---
 
@@ -267,15 +274,31 @@ const usePartnerList = (): PartnerListStore => {
 };
 
 const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [partnerList, setPartnerList] = useState<PartnerListItem[]>(initialPartnerData);
+
+
+  const { partnerData = [] } = useSelector(masterSelector);
+  const dispatch = useAppDispatch();
+  const [partnerList, setPartnerList] = useState<PartnerListItem[]>(partnerData);
   const [selectedPartners, setSelectedPartners] = useState<PartnerListItem[]>([]);
-  const [partnerListTotal, setPartnerListTotal] = useState(initialPartnerData.length);
+  const [partnerListTotal, setPartnerListTotal] = useState(partnerData.length);
+  console.log(partnerList, partnerData)
+  useEffect(() => {
+    setPartnerList(partnerData)
+    setPartnerListTotal(partnerData.length)
+  }, [partnerData])
+
+  useEffect(() => {
+    dispatch(getpartnerAction()); // Fetch continents for select dropdown
+  }, [dispatch]);
+
+
+
 
   return (
     <PartnerListContext.Provider value={{
-        partnerList, setPartnerList,
-        selectedPartners, setSelectedPartners,
-        partnerListTotal, setPartnerListTotal
+      partnerList, setPartnerList,
+      selectedPartners, setSelectedPartners,
+      partnerListTotal, setPartnerListTotal
     }}>
       {children}
     </PartnerListContext.Provider>
@@ -336,7 +359,7 @@ const PartnerActionColumn = ({
   // For actions inside dropdown:
   onCloneItem: (id: string) => void;
   onChangeItemStatus: (id: string, currentStatus: PartnerListItem["status"]) => void;
-  onDeleteItem: (id:string) => void;
+  onDeleteItem: (id: string) => void;
 }) => {
   // const navigate = useNavigate(); // If navigation is needed from actions
 
@@ -371,8 +394,8 @@ const PartnerActionColumn = ({
       </Tooltip>
       <Tooltip title="More">
         <Dropdown renderTitle={<TbDotsVertical />} style={{ fontSize: "10px" }}>
-            {/* Example actions from original partner code */}
-            {/* <Dropdown.Item className="text-xs py-2" style={{height:"auto"}} onClick={() => onCloneItem(rowData.id)}>
+          {/* Example actions from original partner code */}
+          {/* <Dropdown.Item className="text-xs py-2" style={{height:"auto"}} onClick={() => onCloneItem(rowData.id)}>
                 Clone Partner
             </Dropdown.Item>
             <Dropdown.Item className="text-xs py-2" style={{height:"auto"}} onClick={() => onChangeItemStatus(rowData.id, rowData.status)}>
@@ -382,12 +405,12 @@ const PartnerActionColumn = ({
                 Delete Partner
             </Dropdown.Item>
             <Dropdown.Separator /> */}
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Request For</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add in Active</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Schedule</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Task</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Documents</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Alert</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Request For</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add in Active</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Schedule</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Task</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Documents</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Alert</Dropdown.Item>
         </Dropdown>
       </Tooltip>
     </div>
@@ -485,13 +508,13 @@ const PartnerListTable = () => {
       );
     }
     if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) {
-        const selectedCountries = filterCriteria.filterCountry.map(opt => opt.value.toLowerCase());
-        filteredData = filteredData.filter(partner => {
-            // Assuming country is the last part of "City, Country" or parsable
-            const locationParts = partner.partner_location.split(/,\s*|\s*\/\s*/);
-            const country = locationParts.pop()?.toLowerCase();
-            return country && selectedCountries.includes(country);
-        });
+      const selectedCountries = filterCriteria.filterCountry.map(opt => opt.value.toLowerCase());
+      filteredData = filteredData.filter(partner => {
+        // Assuming country is the last part of "City, Country" or parsable
+        const locationParts = partner.partner_location.split(/,\s*|\s*\/\s*/);
+        const country = locationParts.pop()?.toLowerCase();
+        return country && selectedCountries.includes(country);
+      });
     }
 
 
@@ -527,7 +550,7 @@ const PartnerListTable = () => {
   }, [partnerList, tableData, filterCriteria]);
 
   const handleEditPartner = (id: string) => { console.log("Edit Partner:", id); /* navigate(`/app/partners/edit/${id}`) */ };
-  const handleViewPartnerDetails = (id: string) => { console.log("View Partner Details:", id); /* navigate(`/app/partners/details/${id}`) */};
+  const handleViewPartnerDetails = (id: string) => { console.log("View Partner Details:", id); /* navigate(`/app/partners/details/${id}`) */ };
   const handleSharePartner = (id: string) => { console.log("Share Partner:", id); };
 
   // More actions (from dropdown)
@@ -560,7 +583,7 @@ const PartnerListTable = () => {
   const handleDeletePartnerItem = (id: string) => {
     // This could open a confirmation dialog first
     setPartnerList((current) => current.filter((p) => p.id !== id));
-    setPartnerListTotal(prev => prev -1);
+    setPartnerListTotal(prev => prev - 1);
     setSelectedPartners(prev => prev.filter(p => p.id !== id)); // Also remove from selection if present
     toast.push(<Notification type="success" title="Partner Deleted">Partner removed from the list.</Notification>, { placement: "top-center" });
   };
@@ -617,30 +640,30 @@ const PartnerListTable = () => {
               {business_category?.length > 0 && (
                 <div className="flex items-start">
                   <span className="font-semibold mr-1.5">Category: </span>
-                    <Tooltip placement="top" title={business_category.join(" | ")}>
-                      <span className="text-gray-600 dark:text-gray-400 line-clamp-2">
-                        {business_category.join(", ")}
-                      </span>
-                    </Tooltip>
+                  <Tooltip placement="top" title={business_category.join(" | ")}>
+                    <span className="text-gray-600 dark:text-gray-400 line-clamp-2">
+                      {business_category.join(", ")}
+                    </span>
+                  </Tooltip>
                 </div>
               )}
               {partner_service_offerings?.length > 0 && (
-                 <div className="flex items-start">
+                <div className="flex items-start">
                   <span className="font-semibold mr-1.5">Services: </span>
-                    <Tooltip placement="top" title={partner_service_offerings.join(" | ")}>
-                      <span className="text-gray-600 dark:text-gray-400 line-clamp-2">
-                        {partner_service_offerings.join(", ")}
-                      </span>
-                    </Tooltip>
+                  <Tooltip placement="top" title={partner_service_offerings.join(" | ")}>
+                    <span className="text-gray-600 dark:text-gray-400 line-clamp-2">
+                      {partner_service_offerings.join(", ")}
+                    </span>
+                  </Tooltip>
                 </div>
               )}
               <div className="flex items-start">
                 <span className="font-semibold mr-1.5">Interested In: </span>
-                  <Tooltip placement="top" title={partner_interested_in}>
-                    <span className="text-gray-600 dark:text-gray-400">
-                      {partner_interested_in}
-                    </span>
-                  </Tooltip>
+                <Tooltip placement="top" title={partner_interested_in}>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    {partner_interested_in}
+                  </span>
+                </Tooltip>
               </div>
             </div>
           );
@@ -653,9 +676,9 @@ const PartnerListTable = () => {
         size: 220,
         cell: ({ row }) => {
           const { partner_status_orig, partner_kyc_status, partner_profile_completion, partner_trust_score, partner_activity_score, partner_join_date } = row.original;
-          let kycIcon = <MdHourglassEmpty className="text-orange-500 inline mr-0.5" size={12}/>;
-          if (partner_kyc_status === "Verified") kycIcon = <MdCheckCircle className="text-green-500 inline mr-0.5" size={12}/>;
-          else if (["Not Submitted", "Rejected"].includes(partner_kyc_status)) kycIcon = <MdErrorOutline className="text-red-500 inline mr-0.5" size={12}/>;
+          let kycIcon = <MdHourglassEmpty className="text-orange-500 inline mr-0.5" size={12} />;
+          if (partner_kyc_status === "Verified") kycIcon = <MdCheckCircle className="text-green-500 inline mr-0.5" size={12} />;
+          else if (["Not Submitted", "Rejected"].includes(partner_kyc_status)) kycIcon = <MdErrorOutline className="text-red-500 inline mr-0.5" size={12} />;
 
           return (
             <div className="flex flex-col gap-1 text-xs">
@@ -686,7 +709,7 @@ const PartnerListTable = () => {
                 </Tooltip>
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5">
-                Joined: {new Date(partner_join_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric"}).replace(/ /g, "/")}
+                Joined: {new Date(partner_join_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ /g, "/")}
               </div>
             </div>
           );
@@ -711,7 +734,7 @@ const PartnerListTable = () => {
             <div className="flex flex-col gap-1 text-xs">
               {partner_location && <div className="flex items-center"><TbMapPin className="text-gray-500 mr-1.5 flex-shrink-0" /> {partner_location}</div>}
               {partner_website && <a href={partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><TbExternalLink className="mr-1.5 flex-shrink-0" /> Website</a>}
-              {partner_profile_link && <a href={partner_profile_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><MdLink className="mr-1.5 flex-shrink-0" size={14}/> Profile</a>}
+              {partner_profile_link && <a href={partner_profile_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><MdLink className="mr-1.5 flex-shrink-0" size={14} /> Profile</a>}
               {partner_certifications && partner_certifications.length > 0 && (
                 <Tooltip placement="top" title={partner_certifications.join(" | ")}>
                   <div className="text-gray-600 dark:text-gray-400 truncate flex items-center">
@@ -751,46 +774,46 @@ const PartnerListTable = () => {
     setTableData((prev) => ({ ...prev, ...data }));
   }, []);
 
-  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }),[handleSetTableData]);
-  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }),[handleSetTableData]);
-  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),[handleSetTableData]);
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
 
   const handleRowSelect = useCallback((checked: boolean, row: PartnerListItem) => {
-      setSelectedPartners((prevSelected) => {
-        if (checked) {
-          return [...prevSelected, row];
-        } else {
-          return prevSelected.filter((item) => item.id !== row.id);
-        }
-      });
-    }, [setSelectedPartners]);
+    setSelectedPartners((prevSelected) => {
+      if (checked) {
+        return [...prevSelected, row];
+      } else {
+        return prevSelected.filter((item) => item.id !== row.id);
+      }
+    });
+  }, [setSelectedPartners]);
 
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<PartnerListItem>[]) => {
-      if (checked) {
-        const allOriginalRows = rows.map(r => r.original);
-        setSelectedPartners(allOriginalRows);
-      } else {
-        setSelectedPartners([]);
-      }
-    }, [setSelectedPartners]);
+    if (checked) {
+      const allOriginalRows = rows.map(r => r.original);
+      setSelectedPartners(allOriginalRows);
+    } else {
+      setSelectedPartners([]);
+    }
+  }, [setSelectedPartners]);
 
   const handleImport = () => { console.log("Import clicked"); /* Implement import logic */ };
 
   const csvData = useMemo(() => {
     if (partnerList.length === 0) return [];
-    const headers = Object.keys(initialPartnerData[0] || {}).map(key => ({
-        label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        key: key
-    }));
+    // const headers = Object.keys(initialPartnerData[0] || {}).map(key => ({
+    //     label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    //     key: key
+    // }));
 
     return partnerList.map(partner => {
-        const newPartner: any = {...partner};
-        Object.keys(newPartner).forEach(key => {
-            if (Array.isArray(newPartner[key as keyof PartnerListItem])) {
-                newPartner[key] = (newPartner[key as keyof PartnerListItem] as string[]).join('; '); // Use semicolon for multi-value fields
-            }
-        });
-        return newPartner;
+      const newPartner: any = { ...partner };
+      Object.keys(newPartner).forEach(key => {
+        if (Array.isArray(newPartner[key as keyof PartnerListItem])) {
+          newPartner[key] = (newPartner[key as keyof PartnerListItem] as string[]).join('; '); // Use semicolon for multi-value fields
+        }
+      });
+      return newPartner;
     });
   }, [partnerList]);
 
@@ -815,15 +838,15 @@ const PartnerListTable = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <PartnerListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} />
         <div className="flex gap-2">
-            <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
-            <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
-            {partnerList.length > 0 ? (
-                <CSVLink data={csvData} filename="partners_export.csv">
-                    <Button icon={<TbCloudUpload />}>Export</Button>
-                </CSVLink>
-            ) : (
-                <Button icon={<TbCloudUpload />} disabled>Export</Button>
-            )}
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
+          <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
+          {partnerList.length > 0 ? (
+            <CSVLink data={csvData} filename="partners_export.csv">
+              <Button icon={<TbCloudUpload />}>Export</Button>
+            </CSVLink>
+          ) : (
+            <Button icon={<TbCloudUpload />} disabled>Export</Button>
+          )}
         </div>
       </div>
       <DataTable
@@ -920,16 +943,41 @@ const PartnerListSelected = () => {
 
   const handleDelete = () => setDeleteConfirmationOpen(true);
   const handleCancelDelete = () => setDeleteConfirmationOpen(false);
+  const dispatch = useAppDispatch();
 
-  const handleConfirmDelete = () => {
-    const newPartnerList = partnerList.filter(
-      (partner) => !selectedPartners.some((selected) => selected.id === partner.id)
-    );
-    setPartnerList(newPartnerList);
-    setPartnerListTotal(newPartnerList.length);
-    setSelectedPartners([]);
+  const handleConfirmDelete = async () => {
+    if (
+      !selectedPartners
+    ) {
+      toast.push(
+        <Notification title="Error" type="danger">
+          Cannot delete: Parter ID is missing.
+        </Notification>
+      );
+      setSelectedPartners([]);
+      setDeleteConfirmationOpen(false);
+      return;
+    }
     setDeleteConfirmationOpen(false);
-    toast.push(<Notification type="success" title="Partners Deleted">Selected partners have been removed.</Notification>, { placement: "top-center" });
+    try {
+      const ids = selectedPartners.map((data) => data.id);
+      await dispatch(deleteAllpartnerAction({ ids: ids.toString() })).unwrap();
+      toast.push(
+        <Notification title="Country Deleted" type="success" duration={2000}>
+          parters "{selectedPartners.name}" deleted.
+        </Notification>
+      );
+      dispatch(getpartnerAction());
+    } catch (error: any) {
+      toast.push(
+        <Notification title="Failed to Delete" type="danger" duration={3000}>
+          {error.message || `Could not delete parters.`}
+        </Notification>
+      );
+      console.error("Delete parters Error:", error);
+    } finally {
+      setSelectedPartners([]);
+    }
   };
 
   // Example bulk message action
@@ -956,31 +1004,31 @@ const PartnerListSelected = () => {
         stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
       >
         <div className="container mx-auto">
-            <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <span>
-                <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2">
                 <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
                 <span className="font-semibold flex items-center gap-1">
-                    <span className="heading-text">{selectedPartners.length} Partners</span>
-                    <span>selected</span>
+                  <span className="heading-text">{selectedPartners.length} Partners</span>
+                  <span>selected</span>
                 </span>
-                </span>
+              </span>
             </span>
             <div className="flex items-center">
-                <Button
-                    size="sm"
-                    className="ltr:mr-3 rtl:ml-3"
-                    type="button"
-                    customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
-                    onClick={handleDelete}
-                >
-                    Delete
-                </Button>
-                <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>
-                    Message {/* Or other bulk action */}
-                </Button>
+              <Button
+                size="sm"
+                className="ltr:mr-3 rtl:ml-3"
+                type="button"
+                customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
+                onClick={handleDelete}
+              >
+                Delete
+              </Button>
+              <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>
+                Message {/* Or other bulk action */}
+              </Button>
             </div>
-            </div>
+          </div>
         </div>
       </StickyFooter>
       <ConfirmDialog

@@ -215,7 +215,7 @@ const useInquiryList = (): InquiryListStore => {
 const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dispatch = useAppDispatch();
   const {
-    rawInquiryData, 
+    inquiryList1, 
     departmentsData, 
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
@@ -238,10 +238,12 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 console.log("masterLoadingStatus",masterLoadingStatus);
 
     if (masterLoadingStatus === 'idle') {
-      console.log("rawInquiryData",rawInquiryData);
+      console.log("inquiryList1",inquiryList1);
       
-      // Ensure rawInquiryData is an array before processing
-      const inquiryDataFromApi = Array.isArray(rawInquiryData) ? rawInquiryData : [];
+      // Ensure inquiryList1 is an array before processing
+      const inquiryDataFromApi = Array.isArray(inquiryList1) ? inquiryList1 : [];
+      console.log(inquiryDataFromApi, "inquiryDataFromApi");
+      
       setInquiryList(processApiDataToInquiryItems(inquiryDataFromApi as ApiInquiryItem[]));
 
       // Ensure departmentsData is an array
@@ -254,7 +256,7 @@ console.log("masterLoadingStatus",masterLoadingStatus);
       // Optionally, show a toast notification for the error
       // toast.push(<Notification type="danger" title="Error">Failed to load data.</Notification>);
     }
-  }, [rawInquiryData, departmentsData, masterLoadingStatus]);
+  }, [inquiryList1, departmentsData, masterLoadingStatus]);
 
   // console.log("inquiryList (processed from Redux):", inquiryList); // For debugging purposes
 

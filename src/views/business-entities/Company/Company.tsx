@@ -1,60 +1,66 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { CSVLink } from "react-csv";
-import cloneDeep from "lodash/cloneDeep";
+import { Controller, useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
-import Avatar from "@/components/ui/Avatar";
-import Tag from "@/components/ui/Tag";
-import Tooltip from "@/components/ui/Tooltip";
 import DataTable from "@/components/shared/DataTable";
-import {
-  Drawer,
-  Form as UiForm,
-  FormItem as UiFormItem,
-  Input as UiInput, // Not directly used in filter but can be for other forms
-  Select as UiSelect,
-  Button,
-  Dropdown,
-  DatePicker,
-} from "@/components/ui";
+import DebouceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
+import {
+  Button,
+  DatePicker,
+  Drawer,
+  Dropdown,
+  Form as UiForm,
+  FormItem as UiFormItem, // Not directly used in filter but can be for other forms
+  Select as UiSelect
+} from "@/components/ui";
+import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
+import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
-import RichTextEditor from "@/components/shared/RichTextEditor";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import DebouceInput from "@/components/shared/DebouceInput";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
+import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
-  TbPencil,
-  TbEye,
-  TbUserCircle, // For Avatar fallback
-  TbShare,
+  TbChecks,
+  TbCloudDownload,
   TbCloudUpload,
   TbDotsVertical,
-  TbCloudDownload,
+  TbEye,
   TbFilter,
+  TbPencil,
   TbPlus,
-  TbChecks,
-  TbSearch,
+  TbSearch, // For Avatar fallback
+  TbShare,
+  TbUserCircle, // For Avatar fallback
 } from "react-icons/tb";
-import { MdCheckCircle, MdCancel } from "react-icons/md";
 
 
 // Types
+import type { TableQueries } from "@/@types/common";
 import type {
-  OnSortParam,
   ColumnDef,
+  OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import {
+  deleteAllcompanyAction,
+  getCompanyAction
+} from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
+import { useAppDispatch } from "@/reduxtool/store";
+import { useSelector } from "react-redux";
+
 
 // --- CompanyItem Type (Data Structure) ---
 export type CompanyItem = {
@@ -135,105 +141,6 @@ const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
 };
 // --- End Status Colors ---
 
-// --- Initial Dummy Company Data ---
-const initialDummyCompanies: CompanyItem[] = [
-  {
-    id: "C001",
-    name: "TechNova Solutions Ltd.",
-    company_code: "TNL001",
-    type: "Private Limited", // Company Type
-    business_type: "Manufacture", // Business Type
-    interested_in: "Partnership",
-    category: ["Electronics", "Software Development", "Automation Solutions"],
-    brands: ["TechNova", "NovaGear", "NovaSoft"],
-    country: "India",
-    continent: "Asia",
-    state: "Gujarat",
-    city: "Ahmedabad",
-    status: "Active",
-    progress: 85,
-    gst_number: "27AAACT2727Q1Z5",
-    pan_number: "AAACT2727Q",
-    company_photo: "https://i.pravatar.cc/80?u=technova",
-    total_members: 120,
-    member_participation: 85,
-    success_score: 92,
-    trust_score: 88,
-    health_score: 90,
-    wallCountDisplay: "13 | 12 | 25",
-    kyc_verified: "Yes",
-    enable_billing: "Yes",
-    created_date: "2022-08-15T10:00:00Z",
-    company_owner: "Rohan Mehta",
-    company_contact_number: "+91 98765 43210",
-    company_email: "contact@technova.com",
-    company_website: "https://technova.com",
-  },
-  {
-    id: "C002",
-    name: "GreenField Innovations LLP",
-    company_code: "GFI002",
-    type: "LLP",
-    business_type: "Service",
-    interested_in: "Investment",
-    category: ["Sustainability Consulting", "Renewable Energy"],
-    brands: ["GreenField", "EcoBuild"],
-    country: "USA",
-    continent: "North America",
-    state: "California",
-    city: "San Francisco",
-    status: "Pending",
-    progress: 60,
-    gst_number: "N/A", // Example if international
-    pan_number: "N/A",
-    company_photo: "https://i.pravatar.cc/80?u=greenfield",
-    total_members: 45,
-    member_participation: 70,
-    success_score: 78,
-    trust_score: 82,
-    health_score: 75,
-    wallCountDisplay: "10 | 8 | 18",
-    kyc_verified: "No",
-    enable_billing: "No",
-    created_date: "2023-01-20T14:30:00Z",
-    company_owner: "Jane Doe",
-    company_contact_number: "+1 415 555 0199",
-    company_email: "info@greenfield.io",
-    company_website: "https://greenfield.io",
-  },
-  {
-    id: "C003",
-    name: "Alpha Suppliers Inc.",
-    company_code: "ASI003",
-    type: "Public Limited",
-    business_type: "Supplier",
-    interested_in: "Sell",
-    category: ["Industrial Goods", "Raw Materials"],
-    brands: ["AlphaSupply", "BulkMart"],
-    country: "Germany",
-    continent: "Europe",
-    state: "Berlin", // State/Region
-    city: "Berlin",
-    status: "Inactive",
-    progress: 92,
-    company_photo: "https://i.pravatar.cc/80?u=alphasupply",
-    total_members: 250,
-    member_participation: 90,
-    success_score: 85,
-    trust_score: 90,
-    health_score: 88,
-    wallCountDisplay: "20 | 15 | 35",
-    kyc_verified: "Yes",
-    enable_billing: "Yes",
-    created_date: "2021-05-10T09:00:00Z",
-    company_owner: "Klaus Schmidt",
-    company_contact_number: "+49 30 5550230",
-    company_email: "sales@alphasupply.de",
-    company_website: "https://alphasupply.de",
-  },
-];
-// --- End Dummy Data ---
-
 // --- Company List Store ---
 interface CompanyListStore {
   companyList: CompanyItem[];
@@ -253,17 +160,28 @@ const useCompanyList = (): CompanyListStore => {
   }
   return context;
 };
-
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [companyList, setCompanyList] = useState<CompanyItem[]>(initialDummyCompanies);
+
+  const { CompanyData = [] } = useSelector(masterSelector);
+  const dispatch = useAppDispatch();
+  const [companyList, setCompanyList] = useState<CompanyItem[]>(CompanyData);
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
-  const [companyListTotal, setCompanyListTotal] = useState(initialDummyCompanies.length);
+  const [companyListTotal, setCompanyListTotal] = useState(CompanyData.length);
+
+  useEffect(() => {
+    setCompanyList(CompanyData)
+    setCompanyListTotal(CompanyData.length)
+  }, [CompanyData])
+
+  useEffect(() => {
+    dispatch(getCompanyAction()); // Fetch continents for select dropdown
+  }, [dispatch]);
 
   return (
     <CompanyListContext.Provider value={{
-        companyList, setCompanyList,
-        selectedCompanies, setSelectedCompanies,
-        companyListTotal, setCompanyListTotal
+      companyList, setCompanyList,
+      selectedCompanies, setSelectedCompanies,
+      companyListTotal, setCompanyListTotal
     }}>
       {children}
     </CompanyListContext.Provider>
@@ -351,17 +269,17 @@ const CompanyActionColumn = ({
         </div>
       </Tooltip>
       <Tooltip title="More">
-        <Dropdown renderTitle={<TbDotsVertical />} style={{fontSize: "10px"}}>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}} onClick={() => onChangeItemStatus(rowData.id, rowData.status)}>
-                Toggle Status
-            </Dropdown.Item>
-            <Dropdown.Separator/>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Request For</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add in Active</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Schedule</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Task</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Documents</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Alert</Dropdown.Item>
+        <Dropdown renderTitle={<TbDotsVertical />} style={{ fontSize: "10px" }}>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }} onClick={() => onChangeItemStatus(rowData.id, rowData.status)}>
+            Toggle Status
+          </Dropdown.Item>
+          {/* <Dropdown.Separator /> */}
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Request For</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add in Active</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Schedule</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Task</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Documents</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Alert</Dropdown.Item>
         </Dropdown>
       </Tooltip>
     </div>
@@ -380,7 +298,6 @@ const CompanyListTable = () => {
     setSelectedCompanies,
     setCompanyListTotal,
   } = useCompanyList();
-
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -435,72 +352,72 @@ const CompanyListTable = () => {
         })
       );
     }
-    
+
     // Apply advanced filters
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
-        const selected = filterCriteria.filterStatus.map(opt => opt.value.toLowerCase());
-        filteredData = filteredData.filter(item => selected.includes(item.status.toLowerCase()));
+      const selected = filterCriteria.filterStatus.map(opt => opt.value?.toLowerCase());
+      filteredData = filteredData.filter(item => selected.includes(item?.status?.toLowerCase()));
     }
     if (filterCriteria.filterBusinessType && filterCriteria.filterBusinessType.length > 0) {
-        const selected = filterCriteria.filterBusinessType.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.business_type));
+      const selected = filterCriteria.filterBusinessType.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.business_type));
     }
     if (filterCriteria.filterCompanyType && filterCriteria.filterCompanyType.length > 0) {
-        const selected = filterCriteria.filterCompanyType.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.type));
+      const selected = filterCriteria.filterCompanyType.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.type));
     }
     if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) {
-        const selected = filterCriteria.filterContinent.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.continent));
+      const selected = filterCriteria.filterContinent.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.continent));
     }
     if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) {
-        const selected = filterCriteria.filterCountry.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.country));
+      const selected = filterCriteria.filterCountry.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.country));
     }
     if (filterCriteria.filterState && filterCriteria.filterState.length > 0) {
-        const selected = filterCriteria.filterState.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.state));
+      const selected = filterCriteria.filterState.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.state));
     }
     if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) {
-        const selected = filterCriteria.filterCity.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.city));
+      const selected = filterCriteria.filterCity.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.city));
     }
     if (filterCriteria.filterInterestedIn && filterCriteria.filterInterestedIn.length > 0) {
-        const selected = filterCriteria.filterInterestedIn.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.interested_in));
+      const selected = filterCriteria.filterInterestedIn.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.interested_in));
     }
     if (filterCriteria.filterBrand && filterCriteria.filterBrand.length > 0) {
-        const selectedBrands = filterCriteria.filterBrand.map(opt => opt.value);
-        filteredData = filteredData.filter(item => item.brands.some(brand => selectedBrands.includes(brand)));
+      const selectedBrands = filterCriteria.filterBrand.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selectedBrands.includes(item.brands));
     }
     if (filterCriteria.filterCategory && filterCriteria.filterCategory.length > 0) {
-        const selectedCategories = filterCriteria.filterCategory.map(opt => opt.value);
-        filteredData = filteredData.filter(item => item.category.some(cat => selectedCategories.includes(cat)));
+      const selectedCategories = filterCriteria.filterCategory.map(opt => opt.value);
+      filteredData = filteredData.filter(item => item.category.some(cat => selectedCategories.includes(cat)));
     }
     if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) {
-        const selected = filterCriteria.filterKycVerified.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.kyc_verified));
+      const selected = filterCriteria.filterKycVerified.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.kyc_verified));
     }
     if (filterCriteria.filterEnableBilling && filterCriteria.filterEnableBilling.length > 0) {
-        const selected = filterCriteria.filterEnableBilling.map(opt => opt.value);
-        filteredData = filteredData.filter(item => selected.includes(item.enable_billing));
+      const selected = filterCriteria.filterEnableBilling.map(opt => opt.value);
+      filteredData = filteredData.filter(item => selected.includes(item.enable_billing));
     }
 
     const checkDateRange = (dateStr: string, range: (Date | null)[] | undefined) => {
-        if (!dateStr || !range || (!range[0] && !range[1])) return true;
-        try {
-            const itemDate = new Date(dateStr).setHours(0,0,0,0);
-            const from = range[0] ? new Date(range[0]).setHours(0,0,0,0) : null;
-            const to = range[1] ? new Date(range[1]).setHours(0,0,0,0) : null;
-            if (from && to) return itemDate >= from && itemDate <= to;
-            if (from) return itemDate >= from;
-            if (to) return itemDate <= to;
-            return true;
-        } catch (e) { return true; }
+      if (!dateStr || !range || (!range[0] && !range[1])) return true;
+      try {
+        const itemDate = new Date(dateStr).setHours(0, 0, 0, 0);
+        const from = range[0] ? new Date(range[0]).setHours(0, 0, 0, 0) : null;
+        const to = range[1] ? new Date(range[1]).setHours(0, 0, 0, 0) : null;
+        if (from && to) return itemDate >= from && itemDate <= to;
+        if (from) return itemDate >= from;
+        if (to) return itemDate <= to;
+        return true;
+      } catch (e) { return true; }
     };
 
     if (filterCriteria.filterCreatedDate && (filterCriteria.filterCreatedDate[0] || filterCriteria.filterCreatedDate[1])) {
-        filteredData = filteredData.filter(item => checkDateRange(item.created_date, filterCriteria.filterCreatedDate));
+      filteredData = filteredData.filter(item => checkDateRange(item.created_date, filterCriteria.filterCreatedDate));
     }
 
 
@@ -510,14 +427,14 @@ const CompanyListTable = () => {
         const aValue = a[key as keyof CompanyItem] ?? "";
         const bValue = b[key as keyof CompanyItem] ?? "";
         if (['progress', 'total_members', 'member_participation', 'success_score', 'trust_score', 'health_score'].includes(key)) {
-            const numA = Number(aValue);
-            const numB = Number(bValue);
-            if (!isNaN(numA) && !isNaN(numB)) return order === 'asc' ? numA - numB : numB - numA;
+          const numA = Number(aValue);
+          const numB = Number(bValue);
+          if (!isNaN(numA) && !isNaN(numB)) return order === 'asc' ? numA - numB : numB - numA;
         }
         if (key === 'created_date') {
-            const dateA = new Date(aValue as string).getTime();
-            const dateB = new Date(bValue as string).getTime();
-            return order === 'asc' ? dateA - dateB : dateB - dateA;
+          const dateA = new Date(aValue as string).getTime();
+          const dateB = new Date(bValue as string).getTime();
+          return order === 'asc' ? dateA - dateB : dateB - dateA;
         }
         if (typeof aValue === "string" && typeof bValue === "string") {
           return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
@@ -546,7 +463,7 @@ const CompanyListTable = () => {
     else if (lowerCurrentStatus === "inactive") newStatus = "Active";
     else if (lowerCurrentStatus === "pending") newStatus = "Active"; // Example: Pending -> Active
     else if (lowerCurrentStatus === "verified") newStatus = "Active"; // Example: Verified -> Active
-    
+
     setCompanyList((currentList) =>
       currentList.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
@@ -618,10 +535,11 @@ const CompanyListTable = () => {
         size: 180,
         cell: ({ row }) => {
           const { brands, category, interested_in } = row.original;
+          console.log(brands, 'bb')
           return (
             <div className="flex flex-col gap-1 text-xs">
-              <span><span className="font-semibold">Brands:</span> {brands?.join(", ") || "N/A"}</span>
-              <span><span className="font-semibold">Category:</span> {category?.join(", ") || "N/A"}</span>
+              <span><span className="font-semibold">Brands:</span> {brands || "N/A"}</span>
+              <span><span className="font-semibold">Category:</span> {category || "N/A"}</span>
               <span><span className="font-semibold">Interested In:</span> {interested_in}</span>
             </div>
           );
@@ -643,7 +561,7 @@ const CompanyListTable = () => {
                 <Tooltip title={`KYC: ${kyc_verified}`}>
                   {kyc_verified === "Yes" ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}
                 </Tooltip>
-                 <Tooltip title={`Billing: ${enable_billing}`}>
+                <Tooltip title={`Billing: ${enable_billing}`}>
                   {enable_billing === "Yes" ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}
                 </Tooltip>
               </div>
@@ -684,38 +602,38 @@ const CompanyListTable = () => {
     setTableData((prev) => ({ ...prev, ...data }));
   }, []);
 
-  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }),[handleSetTableData]);
-  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }),[handleSetTableData]);
-  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),[handleSetTableData]);
-  
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+
   const handleRowSelect = useCallback((checked: boolean, row: CompanyItem) => {
-      setSelectedCompanies((prevSelected) => {
-        if (checked) return [...prevSelected, row];
-        return prevSelected.filter((item) => item.id !== row.id);
-      });
-    }, [setSelectedCompanies]);
+    setSelectedCompanies((prevSelected) => {
+      if (checked) return [...prevSelected, row];
+      return prevSelected.filter((item) => item.id !== row.id);
+    });
+  }, [setSelectedCompanies]);
 
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<CompanyItem>[]) => {
-      if (checked) setSelectedCompanies(rows.map(r => r.original));
-      else setSelectedCompanies([]);
-    }, [setSelectedCompanies]);
+    if (checked) setSelectedCompanies(rows.map(r => r.original));
+    else setSelectedCompanies([]);
+  }, [setSelectedCompanies]);
 
   const handleImport = () => { console.log("Import Companies Clicked"); /* Implement import */ };
 
   const csvData = useMemo(() => {
     if (companyList.length === 0) return [];
-    const headers = Object.keys(initialDummyCompanies[0] || {}).map(key => ({
-        label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        key: key
-    }));
+    // const headers = Object.keys(initialDummyCompanies[0] || {}).map(key => ({
+    //   label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    //   key: key
+    // }));
     return companyList.map(item => {
-        const newItem: any = {...item};
-        Object.keys(newItem).forEach(key => {
-            if (Array.isArray(newItem[key as keyof CompanyItem])) {
-                newItem[key] = (newItem[key as keyof CompanyItem] as any[]).join('; ');
-            }
-        });
-        return newItem;
+      const newItem: any = { ...item };
+      Object.keys(newItem).forEach(key => {
+        if (Array.isArray(newItem[key as keyof CompanyItem])) {
+          newItem[key] = (newItem[key as keyof CompanyItem] as any[]).join('; ');
+        }
+      });
+      return newItem;
     });
   }, [companyList]);
 
@@ -739,15 +657,15 @@ const CompanyListTable = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <CompanyListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} />
         <div className="flex gap-2">
-            <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
-            <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
-            {companyList.length > 0 ? (
-                <CSVLink data={csvData} filename="companies_export.csv">
-                    <Button icon={<TbCloudUpload />}>Export</Button>
-                </CSVLink>
-            ) : (
-                <Button icon={<TbCloudUpload />} disabled>Export</Button>
-            )}
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
+          <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
+          {companyList.length > 0 ? (
+            <CSVLink data={csvData} filename="companies_export.csv">
+              <Button icon={<TbCloudUpload />}>Export</Button>
+            </CSVLink>
+          ) : (
+            <Button icon={<TbCloudUpload />} disabled>Export</Button>
+          )}
         </div>
       </div>
       <DataTable
@@ -756,6 +674,9 @@ const CompanyListTable = () => {
         data={pageData}
         noData={!isLoading && companyList.length === 0}
         loading={isLoading}
+        // loading={
+        //         masterLoadingStatus === "loading" || isSubmitting || isDeleting
+        //       }
         pagingData={{
           total: total,
           pageIndex: tableData.pageIndex as number,
@@ -795,7 +716,7 @@ const CompanyListTable = () => {
             <UiFormItem label="Category"><Controller name="filterCategory" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Category" options={categoryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></UiFormItem>
             <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={kycOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></UiFormItem>
             <UiFormItem label="Enable Billing"><Controller name="filterEnableBilling" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={billingOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></UiFormItem>
-            <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => <DatePickerRange placeholder="Select Date Range" value={field.value as [Date|null, Date|null]} onChange={field.onChange} />} /></UiFormItem>
+            <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => <DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} /></UiFormItem>
           </div>
         </UiForm>
       </Drawer>
@@ -813,23 +734,66 @@ const CompanyListSelected = () => {
     setCompanyList,
     setCompanyListTotal
   } = useCompanyList();
+  const dispatch = useAppDispatch();
+
 
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [sendMessageDialogOpen, setSendMessageDialogOpen] = useState(false);
   const [sendMessageLoading, setSendMessageLoading] = useState(false);
+  const [CompanyToDelete, setCompanyToDelete] = useState(
+    null
+  );
+  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
+
 
   const handleDelete = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-
-  const handleConfirmDelete = () => {
-    const newCompanyList = companyList.filter(
-      (item) => !selectedCompanies.some((selected) => selected.id === item.id)
-    );
-    setCompanyList(newCompanyList);
-    setCompanyListTotal(newCompanyList.length);
-    setSelectedCompanies([]);
+  const handleCancelDelete = () => {
+    setCompanyToDelete(null)
     setDeleteConfirmationOpen(false);
-    toast.push(<Notification type="success" title="Companies Deleted">Selected companies have been removed.</Notification>, { placement: "top-center" });
+  }
+
+  const handleConfirmDelete = async () => {
+    if (
+      !selectedCompanies
+    ) {
+      toast.push(
+        <Notification title="Error" type="danger">
+          Cannot delete: Company ID is missing.
+        </Notification>
+      );
+      setIsDeleting(false);
+      setSelectedCompanies([]);
+      setSingleDeleteConfirmOpen(false);
+      return;
+    }
+    setIsDeleting(true);
+    setSingleDeleteConfirmOpen(false);
+    try {
+      const ids = selectedCompanies.map((data) => data.id);
+      await dispatch(deleteAllcompanyAction({ ids: ids.toString() })).unwrap();
+      toast.push(
+        <Notification title="Country Deleted" type="success" duration={2000}>
+          Company "{selectedCompanies.name}" deleted.
+        </Notification>
+      );
+      setSelectedItems((prev) =>
+        prev.filter((item) => item.id !== selectedCompanies!.id)
+      );
+      dispatch(getCompanyAction());
+    } catch (error: any) {
+      toast.push(
+        <Notification title="Failed to Delete" type="danger" duration={3000}>
+          {error.message || `Could not delete company.`}
+        </Notification>
+      );
+      console.error("Delete Company Error:", error);
+    } finally {
+      setIsDeleting(false);
+      setSelectedCompanies([]);
+    }
   };
 
   const handleSend = () => {
@@ -855,31 +819,31 @@ const CompanyListSelected = () => {
         stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
       >
         <div className="container mx-auto">
-            <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <span>
-                <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2">
                 <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
                 <span className="font-semibold flex items-center gap-1">
-                    <span className="heading-text">{selectedCompanies.length} Companies</span>
-                    <span>selected</span>
+                  <span className="heading-text">{selectedCompanies.length} Companies</span>
+                  <span>selected</span>
                 </span>
-                </span>
+              </span>
             </span>
             <div className="flex items-center">
-                <Button
-                    size="sm"
-                    className="ltr:mr-3 rtl:ml-3"
-                    type="button"
-                    customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
-                    onClick={handleDelete}
-                >
-                    Delete
-                </Button>
-                <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>
-                    Message
-                </Button>
+              <Button
+                size="sm"
+                className="ltr:mr-3 rtl:ml-3"
+                type="button"
+                customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
+                onClick={handleDelete}
+              >
+                Delete
+              </Button>
+              <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>
+                Message
+              </Button>
             </div>
-            </div>
+          </div>
         </div>
       </StickyFooter>
       <ConfirmDialog
