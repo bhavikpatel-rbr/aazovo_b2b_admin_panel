@@ -1,11 +1,9 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 
-import { addBlogsAsync, addBrandAsync, addBugReportAsync, deletBlogsAsync, getLeadAsync, deleteAllBlogsAsync, addLeadAsync, editLeadAsync, deleteLeadAsync, deleteAllLeadAsync, addcategoryAsync, deletProductListAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addJobDepartmentAsync, addJobPostsAsync, addNumberSystemsAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentTypeAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllNumberSystemsAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteDomainsAsync, deletePriceListAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductSepecificationAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editJobDepartmentAsync, editJobPostsAsync, editNumberSystemsAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getcategoryAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getExportMappingsAsync, getJobDepartmentAsync, getJobPostsAsync, getNumberSystemsAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getSlidersAsync, getSubscribersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getwallListingAsync, getHomeCategoryAsync, addHomeCategoryAsync, editHomeCategoryAsync, deletHomeCategoryAsync, deleteAllHomeCategoryAsync, getRowDataAsync, addRowDataAsync, editRowDataAsync, deletRowDataAsync, deleteAllRowDataAsync, getAutoEmailAsync, addAutoEmailAsync, editAutoEmailAsync, deleteAutoEmailAsync, deleteAllAutoEmailAsync, getUsersAsync, getEmailCampaignsAsync, addEmailCampaignsAsync, editEmailCampaignsAsync, deleteEmailCampaignsAsync, deleteAllEmailCampaignsAsync, getMailTemplatesAsync, getAutoEmailTemplatesAsync, addAutoEmailTemplatesAsync, editAutoEmailTemplatesAsync, deleteAutoEmailTemplatesAsync, deleteAllAutoEmailTemplatesAsync, getEmailTemplatesAsync, addEmailTemplatesAsync, editEmailTemplatesAsync, deleteEmailTemplatesAsync, deleteAllEmailTemplatesAsync, getRequestFeedbacksAsync, addRequestFeedbacksAsync, editRequestFeedbacksAsync, deleteRequestFeedbacksAsync, deleteAllRequestFeedbacksAsync, getSellerListingsAsync, getBuyerListingsAsync, getAutoMatchDataAsync, getAllproductAsync, deleteAllDocumentListAsync, editCompanyProfileListAsync, editGlobalSettingAsync, getGlobalSettingAsync, getMembersAsync, getSubcategoriesByCategoryIdAsync, changeProductStatusAsync, importRowDataAsync, getInquiriesAsync, deleteAllInquiriesAsync, getJobApplicationAsync, addJobApplicationAsync, editJobApplicationAsync, deleteJobApplicationAsync, deleteAllJobApplicationAsync, getRolesAsync, getSubcategoriesByIdAsync } from "./services"
 import { AxiosResponse } from "axios"
-import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
-import { log } from "console"
-import { json } from "d3-fetch"
+import { defaultMessageObj } from "../lem/types"
+import { addAutoEmailAsync, addAutoEmailTemplatesAsync, addBlogsAsync, addBrandAsync, addBugReportAsync, addcategoryAsync, addcompanyAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addEmailCampaignsAsync, addEmailTemplatesAsync, addHomeCategoryAsync, addJobApplicationAsync, addJobDepartmentAsync, addJobPostsAsync, addLeadAsync, addMemberAsync, addNumberSystemsAsync, addpartnerAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addRequestFeedbacksAsync, addRowDataAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, changeProductStatusAsync, deletBlogsAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcompanyAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllAutoEmailAsync, deleteAllAutoEmailTemplatesAsync, deleteAllBlogsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcompanyAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentListAsync, deleteAllDocumentTypeAsync, deleteAllEmailCampaignsAsync, deleteAllEmailTemplatesAsync, deleteAllHomeCategoryAsync, deleteAllInquiriesAsync, deleteAllJobApplicationAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllLeadAsync, deleteAllMemberAsync, deleteAllNumberSystemsAsync, deleteAllpartnerAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllRequestFeedbacksAsync, deleteAllRowDataAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteAutoEmailAsync, deleteAutoEmailTemplatesAsync, deleteDomainsAsync, deleteEmailCampaignsAsync, deleteEmailTemplatesAsync, deleteJobApplicationAsync, deleteLeadAsync, deleteMemberAsync, deletepartnerAsync, deletePriceListAsync, deleteRequestFeedbacksAsync, deletHomeCategoryAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductListAsync, deletProductSepecificationAsync, deletRowDataAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editAutoEmailAsync, editAutoEmailTemplatesAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editcompanyAsync, editCompanyProfileListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editEmailCampaignsAsync, editEmailTemplatesAsync, editGlobalSettingAsync, editHomeCategoryAsync, editJobApplicationAsync, editJobDepartmentAsync, editJobPostsAsync, editLeadAsync, editMemberAsync, editNumberSystemsAsync, editpartnerAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editRequestFeedbacksAsync, editRowDataAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getAllproductAsync, getAutoEmailAsync, getAutoEmailTemplatesAsync, getAutoMatchDataAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getBuyerListingsAsync, getcategoryAsync, getcompanyAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getEmailCampaignsAsync, getEmailTemplatesAsync, getExportMappingsAsync, getGlobalSettingAsync, getHomeCategoryAsync, getInquiriesAsync, getJobApplicationAsync, getJobDepartmentAsync, getJobPostsAsync, getLeadAsync, getMailTemplatesAsync, getMemberAsync, getMembersAsync, getNumberSystemsAsync, getpartnerAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getRequestFeedbacksAsync, getRolesAsync, getRowDataAsync, getSellerListingsAsync, getSlidersAsync, getSubcategoriesByCategoryIdAsync, getSubcategoriesByIdAsync, getSubscribersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getUsersAsync, getwallListingAsync, importRowDataAsync } from "./services"
 
 
 export const getLeadAction = createAsyncThunk(
@@ -4902,38 +4900,6 @@ export const getMembersAction = createAsyncThunk(
   }
 );
 
-export const addMemberAction = createAsyncThunk<any, any>(
-  "auth/addMember",
-  async (data, { rejectWithValue, dispatch }) => {
-    try {
-      console.log("data", data);
-
-      const response: AxiosResponse<any> = await addRequestFeedbacksAsync(data)
-      if (response?.data?.status === true) {
-
-        dispatch(getSlidersAction())
-
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          }))
-        return response?.data?.data
-      }
-      dispatch(
-        showMessage({
-          ...defaultMessageObj,
-          type: "error",
-          messageText: response?.data?.message || "failed",
-        }))
-      return rejectWithValue(response)
-    } catch (error: unknown) {
-      return rejectWithValue(error as Error)
-    }
-  }
-)
-
 
 // export const editMemberAction = createAsyncThunk<
 //   any, // Return type of the fulfilled action
@@ -5310,6 +5276,423 @@ export const getSubcategoriesByIdAction = createAsyncThunk(
           ...defaultMessageObj,
           type: "error",
           messageText: response?.data?.message || "Failed to load subcategories",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+
+
+
+
+{/*
+  * Company Module
+*/}
+export const getCompanyAction = createAsyncThunk("auth/company",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getcompanyAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+export const addcompanyAction = createAsyncThunk<any, any>("auth/addcompany",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addcompanyAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getCompnayAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+export const editcompanyAction = createAsyncThunk<any, any>("auth/editcompany",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      console.log("data", data);
+
+      const response: AxiosResponse<any> = await editcompanyAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getCompnayAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+export const deletecompanyAction = createAsyncThunk<any, any>("auth/deletcompany",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletcompanyAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getCompnayAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+export const deleteAllcompanyAction = createAsyncThunk<any, any>(
+  "auth/deleteAllcompany",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<{ status: boolean; data: any; message?: string }> = await deleteAllcompanyAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getCompanyAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+{/*
+  * Member Module
+*/}
+
+export const getMemberAction = createAsyncThunk("auth/Member",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getMemberAsync()
+      
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addMemberAction = createAsyncThunk<any, any>("auth/addMember",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addMemberAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getMemberAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      console.log("data", data);
+
+      const response: AxiosResponse<any> = await editMemberAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getMemberAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteMemberAction = createAsyncThunk<any, any>("auth/deletMember",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteMemberAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getMemberAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllMemberAction = createAsyncThunk<any, any>(
+  "auth/deleteAllMember",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<{ status: boolean; data: any; message?: string }> = await deleteAllMemberAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getMemberAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+
+
+
+export const getpartnerAction = createAsyncThunk("auth/partner",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getpartnerAsync()
+      
+      if (response?.data?.status === true) {
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addpartnerAction = createAsyncThunk<any, any>("auth/addpartner",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addpartnerAsync(data)
+      if (response?.data?.status === true) {
+
+        dispatch(getpartnerAction())
+
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editpartnerAction = createAsyncThunk<any, any>("auth/editpartner",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      console.log("data", data);
+
+      const response: AxiosResponse<any> = await editpartnerAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getpartnerAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deletepartnerAction = createAsyncThunk<any, any>("auth/deletpartner",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deletepartnerAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getpartnerAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllpartnerAction = createAsyncThunk<any, any>(
+  "auth/deleteAllpartner",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<{ status: boolean; data: any; message?: string }> = await deleteAllpartnerAsync(data)
+      if (response?.data?.status === true) {
+        console.log(response?.data);
+        dispatch(getpartnerAction())
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
         }))
       return rejectWithValue(response)
     } catch (error: unknown) {
