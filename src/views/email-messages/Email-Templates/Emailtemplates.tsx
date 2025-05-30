@@ -201,7 +201,7 @@ const EmailTemplatesListing = () => {
     // This might hold ALL subcategories if you have an action for that (for filter drawer)
     aetSubCategories = [], // Used for filter drawer, assumes it has all subcategories
     BrandData = [],
-    Roles = [],
+    Roles = [], // Ensure 'Roles' is the correct key from masterSlice
     departmentsData = [],
     designationsData = [],
     status: masterLoadingStatus = "idle",
@@ -225,7 +225,11 @@ const EmailTemplatesListing = () => {
   const categoryOptions = useMemo(() => Array.isArray(CategoriesData) ? CategoriesData.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) : [], [CategoriesData]);
   const allSubCategoryOptionsForFilter = useMemo(() => Array.isArray(aetSubCategories) ? aetSubCategories.map((sc: ApiLookupItem) => ({ value: String(sc.id), label: sc.name })) : [], [aetSubCategories]);
   const brandOptions = useMemo(() => Array.isArray(BrandData) ? BrandData.map((b: ApiLookupItem) => ({ value: String(b.id), label: b.name })) : [], [BrandData]);
-  const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: ApiLookupItem) => ({ value: String(r.id), label: r.name })) : [], [Roles]);
+    const roleOptions = useMemo(() => 
+    Array.isArray(Roles) 
+      ? Roles.map((r: ApiLookupItem) => ({ value: String(r.id), label: r.name })) 
+      : [], 
+  [Roles]);
   const departmentOptions = useMemo(() => Array.isArray(departmentsData) ? departmentsData.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [departmentsData]);
   const designationOptions = useMemo(() => Array.isArray(designationsData) ? designationsData.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [designationsData]);
 
@@ -242,9 +246,8 @@ const EmailTemplatesListing = () => {
     dispatch(getBrandAction());
     dispatch(getDepartmentsAction());
     dispatch(getDesignationsAction());
-    // console.log(Roles);
   }, [dispatch]);
-
+  
   const formMethods = useForm<EmailTemplateFormData>({
     resolver: zodResolver(emailTemplateFormSchema),
     mode: "onChange",
@@ -257,8 +260,10 @@ const EmailTemplatesListing = () => {
   useEffect(() => {
     if (selectedCategoryIdForForm && (isAddDrawerOpen || isEditDrawerOpen)) {
         dispatch(getSubcategoriesByCategoryIdAction(selectedCategoryIdForForm));
+        // Reset sub_category_id when category changes, directly in the form's context
+        setValue("sub_category_id", null, { shouldValidate: true, shouldDirty: true });
     }
-  }, [selectedCategoryIdForForm, dispatch, isAddDrawerOpen, isEditDrawerOpen]);
+  }, [selectedCategoryIdForForm, dispatch, isAddDrawerOpen, isEditDrawerOpen, setValue]);
   
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
@@ -268,18 +273,21 @@ const EmailTemplatesListing = () => {
   const openAddDrawer = useCallback(() => {
     reset({
       name: "", template_id: "",
-      category_id: categoryOptions[0]?.value || "", // Default to first category or empty
+      category_id: categoryOptions[0]?.value || "", 
       sub_category_id: null, brand_id: null, role_id: null, department_id: null, designation_id: null,
       title: "", variables: [],
     });
     variablesFieldArray.replace([]);
     setEditingTemplate(null); 
-    // If a default category is set, trigger subcategory fetch
     if (categoryOptions[0]?.value) {
         dispatch(getSubcategoriesByCategoryIdAction(categoryOptions[0].value));
+        setValue("sub_category_id", null, { shouldValidate: true, shouldDirty: true }); // Ensure subcategory is reset
+    } else {
+        // If no default category, ensure subCategoryOptionsForForm is cleared if dependent on it
+        // This is usually handled by subCategoriesForSelectedCategoryData becoming empty
     }
     setIsAddDrawerOpen(true);
-  }, [reset, categoryOptions, variablesFieldArray, dispatch]);
+  }, [reset, categoryOptions, variablesFieldArray, dispatch, setValue]);
 
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
@@ -287,7 +295,6 @@ const EmailTemplatesListing = () => {
     setEditingTemplate(template);
     const initialCategoryId = String(template.category_id);
     
-    // Fetch subcategories for the template's category when opening for edit
     if (initialCategoryId) {
         await dispatch(getSubcategoriesByCategoryIdAction(initialCategoryId)).unwrap();
     }
@@ -298,7 +305,7 @@ const EmailTemplatesListing = () => {
       category_id: initialCategoryId,
       sub_category_id: template.sub_category_id ? String(template.sub_category_id) : null,
       brand_id: template.brand_id ? String(template.brand_id) : null,
-      role_id: template.role_id ? String(template.role_id) : null,
+      role_id: template.role_id ? String(template.role_id) : null, // This should correctly set the role_id string for the form
       department_id: template.department_id ? String(template.department_id) : null,
       designation_id: template.designation_id ? String(template.designation_id) : null,
       title: template.title || `Edit - ${template.name}`, 
@@ -306,27 +313,26 @@ const EmailTemplatesListing = () => {
     });
     variablesFieldArray.replace(template.variables || []);
     setIsEditDrawerOpen(true);
+    console.log(template.sub_category_id);
   }, [reset, variablesFieldArray, dispatch]);
 
   const closeEditDrawer = useCallback(() => { setEditingTemplate(null); setIsEditDrawerOpen(false); }, []);
 
   const onSubmitHandler = async (data: EmailTemplateFormData) => {
     setIsSubmitting(true);
-    const apiPayload = {
+    const apiPayload: any = { // Use 'any' temporarily or a more specific type for the payload
       ...data,
-      category_id: data.category_id ? parseInt(data.category_id) : null,
-      sub_category_id: data.sub_category_id ? parseInt(data.sub_category_id) : null,
-      brand_id: data.brand_id ? parseInt(data.brand_id) : null,
-      role_id: data.role_id ? parseInt(data.role_id) : null,
-      department_id: data.department_id ? parseInt(data.department_id) : null,
-      designation_id: data.designation_id ? parseInt(data.designation_id) : null,
+      category_id: data.category_id ? parseInt(data.category_id) : undefined, // Use undefined for optional fields if API expects them to be absent
+      sub_category_id: data.sub_category_id ? parseInt(data.sub_category_id) : undefined,
+      brand_id: data.brand_id ? parseInt(data.brand_id) : undefined,
+      role_id: data.role_id ? parseInt(data.role_id) : undefined,
+      department_id: data.department_id ? parseInt(data.department_id) : undefined,
+      designation_id: data.designation_id ? parseInt(data.designation_id) : undefined,
       variables: data.variables?.map(v => ({ name: v.name, type: v.type })) || []
     };
-    for (const key in apiPayload) {
-        if (apiPayload[key as keyof typeof apiPayload] === null) {
-            delete apiPayload[key as keyof typeof apiPayload];
-        }
-    }
+    // Remove undefined keys before sending to API if necessary
+    Object.keys(apiPayload).forEach(key => apiPayload[key] === undefined && delete apiPayload[key]);
+
 
     try {
       if (editingTemplate) {
@@ -351,7 +357,7 @@ const EmailTemplatesListing = () => {
   
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]); // Removed filterFormMethods dependency
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]); 
   const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -420,32 +426,30 @@ const EmailTemplatesListing = () => {
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods, currentVariablesArray: typeof variablesFieldArray) => {
     const { control: currentControl, formState: { errors: currentErrors }, setValue: currentSetValue, watch: currentWatch } = currentFormMethods;
-    const watchedCategoryId = currentWatch("category_id");
+    const watchedCategoryIdInForm = currentWatch("category_id"); // Renamed to avoid conflict with selectedCategoryIdForForm from outer scope
 
-    // This effect now directly uses the currentFormMethods's setValue.
-    useEffect(() => {
-        if (watchedCategoryId) {
-            currentSetValue("sub_category_id", null, { shouldValidate: true, shouldDirty: true }); // Reset subcategory when category changes
-        }
-    }, [watchedCategoryId, currentSetValue]);
-
+    // Effect to reset sub_category_id in the form when category_id changes
+    // This was moved to the outer scope's useEffect that watches selectedCategoryIdForForm (which is formMethods.watch("category_id"))
+    // to avoid nested useEffect if renderDrawerForm is called frequently.
+    // However, for clarity and direct context, placing it here with currentSetValue is also valid if renderDrawerForm is stable.
+    // The current setup using the outer scope `setValue` linked to `formMethods.watch("category_id")` is fine.
 
     return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem label="Name" className="md:col-span-1" invalid={!!currentErrors.name} errorMessage={currentErrors.name?.message}>
+      <FormItem label="Name*" invalid={!!currentErrors.name} errorMessage={currentErrors.name?.message}>
         <Controller name="name" control={currentControl} render={({ field }) => (<Input {...field} prefix={<TbMailBolt />} placeholder="Internal Template Name" />)} />
       </FormItem>
-      <FormItem label="Template ID (Unique)" className="md:col-span-1" invalid={!!currentErrors.template_id} errorMessage={currentErrors.template_id?.message}>
+      <FormItem label="Template ID (Unique)*" invalid={!!currentErrors.template_id} errorMessage={currentErrors.template_id?.message}>
         <Controller name="template_id" control={currentControl} render={({ field }) => (<Input {...field} prefix={<TbKey />} placeholder="e.g., WELCOME_EMAIL_V1" />)} />
       </FormItem>
-      <FormItem label="Title (Email Subject/Header)" className="md:col-span-2" invalid={!!currentErrors.title} errorMessage={currentErrors.title?.message}>
+      <FormItem label="Title (Email Subject/Header)*" className="md:col-span-2" invalid={!!currentErrors.title} errorMessage={currentErrors.title?.message}>
           <Controller name="title" control={currentControl} render={({ field }) => (<Input {...field} prefix={<TbFileDescription />} placeholder="Actual Email Title/Subject" />)}/>
       </FormItem>
-      <FormItem label="Category" invalid={!!currentErrors.category_id} errorMessage={currentErrors.category_id?.message}>
+      <FormItem label="Category*" invalid={!!currentErrors.category_id} errorMessage={currentErrors.category_id?.message}>
         <Controller name="category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find(o => o.value === field.value)} onChange={(opt) => { field.onChange(opt?.value);}} prefix={<TbCategory2/>} />)} />
       </FormItem>
       <FormItem label="SubCategory (Optional)" invalid={!!currentErrors.sub_category_id} errorMessage={currentErrors.sub_category_id?.message}>
-        <Controller name="sub_category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select SubCategory" options={subCategoryOptionsForForm} value={subCategoryOptionsForForm.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbApps/>} isDisabled={!watchedCategoryId || subCategoryOptionsForForm.length === 0} loading={masterLoadingStatus === "loading" /* && specific subcategory loading status */} />)} />
+        <Controller name="sub_category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select SubCategory" options={subCategoryOptionsForForm} value={subCategoryOptionsForForm.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbApps/>} isDisabled={!watchedCategoryIdInForm || subCategoryOptionsForForm.length === 0} loading={masterLoadingStatus === "idle" /* && specific subcategory loading status */} />)} />
       </FormItem>
       <FormItem label="Brand (Optional)" invalid={!!currentErrors.brand_id} errorMessage={currentErrors.brand_id?.message}>
         <Controller name="brand_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Brand" options={brandOptions} value={brandOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBuildingArch/>} />)} />
@@ -464,10 +468,10 @@ const EmailTemplatesListing = () => {
         <label className="form-label mb-2 block font-semibold">Template Variables</label>
         {currentVariablesArray.fields.map((item, index) => (
           <div key={item.id} className="flex items-start gap-2 mb-3 p-3 border rounded-md dark:border-gray-700">
-            <FormItem label={`Name ${index + 1}`} className="flex-grow" invalid={!!currentErrors.variables?.[index]?.name} errorMessage={currentErrors.variables?.[index]?.name?.message}>
+            <FormItem label={`Name ${index + 1}*`} className="flex-grow" invalid={!!currentErrors.variables?.[index]?.name} errorMessage={currentErrors.variables?.[index]?.name?.message}>
               <Controller name={`variables.${index}.name`} control={currentControl} render={({ field }) => (<Input {...field} placeholder="e.g., userName" />)}/>
             </FormItem>
-            <FormItem label={`Type ${index + 1}`} className="flex-grow" invalid={!!currentErrors.variables?.[index]?.type} errorMessage={currentErrors.variables?.[index]?.type?.message}>
+            <FormItem label={`Type ${index + 1}*`} className="flex-grow" invalid={!!currentErrors.variables?.[index]?.type} errorMessage={currentErrors.variables?.[index]?.type?.message}>
               <Controller name={`variables.${index}.type`} control={currentControl} render={({ field }) => (<Select {...field} options={variableTypeOptions} placeholder="Select Type" value={variableTypeOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option?.value)} />)}/>
             </FormItem>
             <Button shape="circle" size="sm" icon={<TbX />} className="mt-7" onClick={() => currentVariablesArray.remove(index)} type="button"/>
@@ -488,7 +492,7 @@ const EmailTemplatesListing = () => {
           </div>
           <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters}/>
           <div className="mt-4">
-            <EmailTemplatesTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
+            <EmailTemplatesTable columns={columns} data={pageData} loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -497,6 +501,7 @@ const EmailTemplatesListing = () => {
       <Drawer title={editingTemplate ? "Edit Email Template" : "Add New Email Template"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingTemplate ? closeEditDrawer : closeAddDrawer} onRequestClose={editingTemplate ? closeEditDrawer : closeAddDrawer} width={700}
         footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingTemplate ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form={editingTemplate ? "editEmailTemplateForm" : "addEmailTemplateForm"} type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div> } >
         <Form id={editingTemplate ? "editEmailTemplateForm" : "addEmailTemplateForm"} onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
+          {/* Added asterisks for required fields in the drawer form for visual cue */}
           {renderDrawerForm(formMethods, variablesFieldArray)}
         </Form>
       </Drawer>

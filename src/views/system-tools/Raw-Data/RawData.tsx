@@ -483,7 +483,7 @@ const RowDataListing = () => {
             <DataTable
               columns={columns}
               data={pageData}
-              loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting || isBlacklisting || isImporting} // Add isImporting to loading
+              loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting || isBlacklisting || isImporting} // Add isImporting to loading
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectable
               checkboxChecked={(row: RowDataItem) => selectedItems.some((selected) => selected.id === row.id)}
@@ -492,7 +492,7 @@ const RowDataListing = () => {
               onSort={handleSort}
               onCheckBoxChange={handleRowSelect}
               onIndeterminateCheckBoxChange={handleAllRowSelect}
-              noData={!isImporting && masterLoadingStatus !== "loading" && pageData.length === 0}
+              noData={!isImporting && masterLoadingStatus !== "idle" && pageData.length === 0}
             />
           </div>
         </AdaptiveCard>

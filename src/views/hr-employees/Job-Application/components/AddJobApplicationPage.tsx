@@ -74,7 +74,7 @@ const citiesByStateData: Record<string, Array<{ value: string; label: string }>>
 // --- Sub-Components for Sections ---
 
 // Section 1: Personal Details
-const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue }: { control: any, errors: any, workExperienceType: string | undefined, setValue: UseFormSetValue<ApplicationFormData> }) => {
+const PersonalDetailsSection = ({ control, errors, setValue }: { control: any, errors: any, setValue: UseFormSetValue<ApplicationFormData> }) => {
     const dob = useWatch({ control, name: 'dateOfBirth' });
     const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
 
@@ -121,9 +121,9 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
                 <FormItem label="Department*" error={errors.department?.message}><Controller name="department" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Engineering" />} /></FormItem>
                 <FormItem label="Applicant Name*" error={errors.name?.message}><Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Full name" />} /></FormItem>
                 <FormItem label="Email*" error={errors.email?.message}><Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="email@example.com" />} /></FormItem>
-                <FormItem label="Mobile No" error={errors.mobileNo?.message}><Controller name="mobileNo" control={control} render={({ field }) => <Input {...field} placeholder="+1-XXX-XXX-XXXX" />} /></FormItem>
+                <FormItem label="Mobile No*" error={errors.mobileNo?.message}><Controller name="mobileNo" control={control} render={({ field }) => <Input {...field} placeholder="+1-XXX-XXX-XXXX" />} /></FormItem>
                 <FormItem label="Gender" error={errors.gender?.message}><Controller name="gender" control={control} render={({ field }) => <UiSelect placeholder="Select Gender" options={genderOptions} value={genderOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
-                <FormItem label="Date Of Birth" error={errors.dateOfBirth?.message as string}><Controller name="dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select DOB" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} />} /></FormItem>
+                <FormItem label="Date Of Birth*" error={errors.dateOfBirth?.message as string}><Controller name="dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select DOB" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} />} /></FormItem>
                 <FormItem label="Age" error={errors.age?.message as string}>
                     <Controller name="age" control={control} render={({ field }) => (
                         <Input type="number" placeholder="Enter Age" {...field} value={field.value ?? (calculatedAge !== null ? calculatedAge : '')} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} />
@@ -133,7 +133,7 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
                 <FormItem label="Marital Status" error={errors.maritalStatus?.message}><Controller name="maritalStatus" control={control} render={({ field }) => <UiSelect placeholder="Select Marital Status" options={maritalStatusOptions} value={maritalStatusOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
                 <FormItem label="Blood Group" error={errors.bloodGroup?.message}><Controller name="bloodGroup" control={control} render={({ field }) => <UiSelect placeholder="Select Blood Group" options={bloodGroupOptions} value={bloodGroupOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
                 
-                <FormItem label="Country" error={errors.country?.message}>
+                <FormItem label="Country*" error={errors.country?.message}>
                     <Controller name="country" control={control} render={({ field }) => 
                         <UiSelect 
                             placeholder="Select Country" 
@@ -144,7 +144,7 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
                         />}
                     />
                 </FormItem>
-                <FormItem label="State" error={errors.state?.message}>
+                <FormItem label="State*" error={errors.state?.message}>
                     <Controller name="state" control={control} render={({ field }) => 
                         <UiSelect 
                             placeholder="Select State" 
@@ -156,7 +156,7 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
                         />}
                     />
                 </FormItem>
-                <FormItem label="City" error={errors.city?.message}>
+                <FormItem label="City*" error={errors.city?.message}>
                     <Controller name="city" control={control} render={({ field }) => 
                         <UiSelect 
                             placeholder="Select City" 
@@ -169,7 +169,7 @@ const PersonalDetailsSection = ({ control, errors, workExperienceType, setValue 
                     />
                 </FormItem>
 
-                <FormItem label="Local Address" error={errors.localAddress?.message} className="md:col-span-3">
+                <FormItem label="Local Address*" error={errors.localAddress?.message} className="md:col-span-3">
                     <Controller name="localAddress" control={control} render={({ field }) => <Input textArea rows={2} placeholder="Enter Local Address" {...field} />} />
                 </FormItem>
                 <FormItem label="Permanent Address" error={errors.permanentAddress?.message} className="md:col-span-3">
@@ -349,6 +349,8 @@ const AddJobApplicationPage = () => {
         },
         mode: 'onChange', 
     });
+    
+    const workExperienceType = watch('workExperienceType'); // Watch workExperienceType for conditional rendering/logic
 
       // This is the active submit handler linked to the form
       const onSubmitHandler = async (formData: ApplicationFormData) => {
@@ -373,7 +375,7 @@ const AddJobApplicationPage = () => {
         blood_group: formData.bloodGroup,
         local_address: formData.localAddress,
         permanent_address: formData.permanentAddress,
-        work_experience: formData.
+        work_experience: formData.workExperienceType
          === "experienced" ? 1 : 0,
         total_experience: "", // Optional: Add if collected
         expected_salary: "",  // Optional: Add if collected
@@ -384,16 +386,16 @@ const AddJobApplicationPage = () => {
         // Rename and map array values
         education_details: formData.educationalDetails?.map(ed => ({
             ...ed,
-            educationFromDate: dayjs(ed.educationFromDate).format("YYYY-MM-DD"),
-            educationToDate: dayjs(ed.educationToDate).format("YYYY-MM-DD"),
+            educationFromDate: ed.educationFromDate ? dayjs(ed.educationFromDate).format("YYYY-MM-DD") : null,
+            educationToDate: ed.educationToDate ? dayjs(ed.educationToDate).format("YYYY-MM-DD") : null,
         })) ?? [],
 
-        employee_details: formData.
+        employee_details: formData.workExperienceType
          === "experienced"
             ? formData.employmentDetails?.map(emp => ({
                 ...emp,
-                periodServiceFrom: dayjs(emp.periodServiceFrom).format("YYYY-MM-DD"),
-                periodServiceTo: dayjs(emp.periodServiceTo).format("YYYY-MM-DD"),
+                periodServiceFrom: emp.periodServiceFrom ? dayjs(emp.periodServiceFrom).format("YYYY-MM-DD") : null,
+                periodServiceTo: emp.periodServiceTo ? dayjs(emp.periodServiceTo).format("YYYY-MM-DD") : null,
             }))
             : [],
 
@@ -414,18 +416,33 @@ const AddJobApplicationPage = () => {
         final_int_remarks: "",
 
         status: formData.status, // Should be one of: new, screening, etc.
-        remarks: formData.notes ?? "",
+        remarks: formData.notes ?? formData.coverLetter ?? "", // Consolidate notes/coverLetter if schema has one field for remarks
         job_link_token: formData.jobApplicationLink ?? "",
         job_link_datetime: "", // Optional: Add if collected
 
         job_title: formData.jobTitle,
         job_id: formData.jobId,
-        application_date: dayjs(formData.applicationDate).format("YYYY-MM-DD"),
+        application_date: formData.applicationDate ? dayjs(formData.applicationDate).format("YYYY-MM-DD") : null,
         resume_url: formData.resumeUrl ?? "",
-        application_link: formData.jobApplicationLink ?? "",
-        note: formData.coverLetter ?? "",
+        application_link: formData.jobApplicationLink ?? "", // This might be redundant with job_link_token
+        note: formData.coverLetter ?? "", // If 'remarks' above handles cover letter, this might be redundant or for a different purpose
         };
 
+        // A small adjustment to ensure dates are formatted only if they exist
+        if (payload.education_details) {
+            payload.education_details = payload.education_details.map(ed => ({
+                ...ed,
+                educationFromDate: ed.educationFromDate, // Already formatted or null
+                educationToDate: ed.educationToDate,     // Already formatted or null
+            }));
+        }
+        if (payload.employee_details) {
+            payload.employee_details = payload.employee_details.map(emp => ({
+                ...emp,
+                periodServiceFrom: emp.periodServiceFrom, // Already formatted or null
+                periodServiceTo: emp.periodServiceTo,     // Already formatted or null
+            }));
+        }
         
         console.log("Submitting New Application Payload:", payload); // Verify payload content
 
@@ -433,69 +450,62 @@ const AddJobApplicationPage = () => {
             await dispatch(addJobApplicationAction(payload)).unwrap();
             toast.push(
               <Notification
-                title="Job Application Added" // Corrected title
+                title="Job Application Added" 
                 type="success"
                 duration={2000}
               >
-                New job application added successfully. {/* Corrected message */}
+                New job application added successfully. 
               </Notification>
             );
-          dispatch(getJobApplicationsAction()); // Refresh the list
-          reset(); // Reset form fields
-          navigate('/hiring/job-applications'); // Navigate to the list page
+          dispatch(getJobApplicationsAction()); 
+          reset(); 
+          navigate('/hr-employees/job-application'); 
         } catch (error: any) {
           toast.push(
             <Notification
-              title="Add Application Failed" // Corrected title
+              title="Add Application Failed" 
               type="danger"
               duration={3000}
             >
-              {/* Attempt to get a more specific error message */}
               {error?.data?.message || error?.message || "Operation failed."}
             </Notification>
           );
-          console.error("Job Application Submit Error:", error); // Corrected console log
+          console.error("Job Application Submit Error:", error); 
         } finally {
           setIsSubmitting(false);
         }
       };
 
       useEffect(() => {
-        // Optionally fetch initial data if needed, though for an "add" page,
-        // getJobApplicationsAction might be more relevant after a successful add.
-        // If you need some data for dropdowns that isn't static, fetch it here.
-        // dispatch(getJobApplicationsAction()); // This was here, might be for updating list in background
+        // Removed dispatch(getJobApplicationsAction()); from here as it's more relevant after successful add or on list page.
       }, [dispatch]);
 
 
-    // The old `onSubmit` function is removed as its logic is merged into `onSubmitHandler`
-
     const handleCancel = () => {
         if (isDirty) setCancelConfirmOpen(true);
-        else navigate('/hiring/job-applications');
+        else navigate('/hr-employees/job-application');
     };
 
     return (
         <Container className="h-full">
             <FormContainer>
-                {/* The form now correctly uses onSubmitHandler */}
                 <form onSubmit={handleSubmit(onSubmitHandler)}>
                     <div className='flex gap-1 items-center mb-3'>
-                        <NavLink to="/hiring/job-applications">
+                        <NavLink to="/hr-employees/job-application">
                             <h6 className='font-semibold hover:text-primary-600 dark:hover:text-primary-400'>Job Applications</h6>
                         </NavLink>
                         <BiChevronRight size={18} className="text-gray-500" />
                         <h6 className='font-semibold text-primary-600 dark:text-primary-400'>Add New Application</h6>
                     </div>
 
-                    <PersonalDetailsSection control={control} errors={errors} 
-                    ={
-                        
-                    } setValue={setValue} />
+                    {/* Pass setValue to PersonalDetailsSection correctly */}
+                    <PersonalDetailsSection control={control} errors={errors} setValue={setValue} />
                     <FamilyDetailsSection control={control} errors={errors} />
                     <EmergencyContactSection control={control} errors={errors} />
                     <EducationalDetailsSection control={control} errors={errors} />
+                    {/* Pass workExperienceType to EmploymentDetailsSection correctly */}
                     <EmploymentDetailsSection control={control} errors={errors} workExperienceType={workExperienceType} />
+
 
                     <div className="mt-8 flex justify-end gap-2">
                         <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
@@ -510,7 +520,7 @@ const AddJobApplicationPage = () => {
                 type="warning" 
                 title="Discard Changes?" 
                 onClose={() => setCancelConfirmOpen(false)} 
-                onConfirm={() => { setCancelConfirmOpen(false); navigate('/hiring/job-applications'); }}
+                onConfirm={() => { setCancelConfirmOpen(false); navigate('/hr-employees/job-application'); }}
                 onCancel={() => setCancelConfirmOpen(false)}
             >
                 <p>You have unsaved changes. Are you sure you want to discard them and leave this page?</p>

@@ -1,558 +1,565 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { useForm, Controller, useFieldArray, Control } from 'react-hook-form';
-// Remove zodResolver and z from here if not using for the main page form
-// Zod could be used for individual field validation if desired, but the overall structure is complex
-import { useNavigate, useParams, NavLink } from 'react-router-dom';
-import cloneDeep from 'lodash/cloneDeep';
-import classNames from 'classnames';
+// src/views/companies/CompanyFormPage.tsx (or your chosen path)
+import React, { useEffect, useState, useCallback } from 'react';
+import { useForm, Controller, Control, useFieldArray } from 'react-hook-form'; // Added useFieldArray
+import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs for new items
 
-// UI Components ( reusing from FormBuilder.tsx)
-import AdaptiveCard from '@/components/shared/AdaptiveCard';
+// UI Components
+import { Form, FormItem } from '@/components/ui/Form';
+import Card from '@/components/ui/Card';
 import Container from '@/components/shared/Container';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Checkbox from '@/components/ui/Checkbox';
 import Button from '@/components/ui/Button';
 import Notification from '@/components/ui/Notification';
 import toast from '@/components/ui/toast';
-import StickyFooter from '@/components/shared/StickyFooter';
-import Select from '@/components/ui/Select';
-import { Drawer, Form, FormItem, Input, Card, Switcher, Tooltip } from '@/components/ui';
+// import ConfirmDialog from '@/components/shared/ConfirmDialog'; // If needed for delete
+// import NumericInput from '@/components/shared/NumericInput';
+import { BiChevronRight } from 'react-icons/bi';
+import { TbCirclePlus, TbCopy, TbTrash, TbLayoutList } from 'react-icons/tb';
+import { DatePicker, Radio, Switcher, Tooltip } from '@/components/ui';
 
-// Icons
-import {
-    TbPencil, TbPlus, TbTrash, TbLoader, TbLayoutList, BiChevronRight, TbX
-} from 'react-icons/tb'; // Assuming BiChevronRight is available or use similar
+// --- Define Types (Mirroring the conceptual structure) ---
+type FormOptionType = {
+  id?: string; // Use string for UUIDs
+  optionText: string; // Field for inputting option text
+  // value: string; // Value might be same as label or derived
+};
 
-// Constants from FormBuilder.tsx (ensure paths are correct or redefine/import)
-const FORM_STATUS_OPTIONS = [
-    { value: "draft", label: "Draft" },
-    { value: "published", label: "Published" },
-    { value: "archived", label: "Archived" },
+type FormQuestionType = {
+  id?: string; // Use string for UUIDs
+  dbId?: number | string; // To store original DB ID if editing
+  questionText: string;
+  questionType: string | null;
+  required: boolean;
+  options: FormOptionType[];
+};
+
+type FormSectionType = {
+  id?: string; // Use string for UUIDs
+  dbId?: number | string; // To store original DB ID if editing
+  sectionTitle: string;
+  sectionDescription?: string;
+  questions: FormQuestionType[];
+};
+
+type FormBuilderDataType = {
+  formName: string;
+  status: string;
+  departmentName: string;
+  category: string;
+  formTitle: string;
+  formDescription?: string;
+  sections: FormSectionType[];
+};
+
+const questionTypes = [
+  'Text', 'Number', 'Textarea', 'Radio', 'Checkbox', 'File Upload',
+  'Date', 'Time', 'DateRange', 'Single-Choice Dropdown', 'Multi-Choice Dropdown', 'Rating',
 ];
-const DEPARTMENT_OPTIONS = [ /* ...from FormBuilder.tsx... */ ];
-const CATEGORY_OPTIONS = [ /* ...from FormBuilder.tsx... */ ];
-const QUESTION_TYPE_OPTIONS = [ /* ...from FormBuilder.tsx... */ ];
-
-// Types defined above: FormPageQuestionOption, FormPageQuestion, FormPageSection, FormBuilderPageFormData, BackendFormItem
-// (Paste the type definitions here from the thought block if not in a shared file)
-// For brevity in the final code, I'll assume they are defined above or imported.
-
-// --- Helper: Generate unique IDs for field arrays ---
-const generateId = (prefix = 'id_') => `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-// --- Data Transformation Utilities ---
-
-// Parses "YES,NO" or similar string into FormPageQuestionOption[]
-const parseQuestionOptionString = (optionString: string | null): FormPageQuestionOption[] => {
-    if (!optionString || typeof optionString !== 'string') return [];
-    return optionString.split(',').map(opt => ({
-        id: generateId('opt_'),
-        value: opt.trim(),
-        label: opt.trim(),
-    }));
-};
-
-// Serializes FormPageQuestionOption[] to "value1,value2" string
-const serializeQuestionOptionsArray = (options: FormPageQuestionOption[]): string | null => {
-    if (!options || options.length === 0) return null;
-    return options.map(opt => opt.value).join(',');
-};
-
-// Parses the backend 'section' JSON string
-const parseBackendSections = (sectionJsonString: string): FormPageSection[] => {
-    if (!sectionJsonString) return [];
-    try {
-        // Attempt to fix single quotes and make it valid JSON
-        const validJsonString = sectionJsonString
-            .replace(/\\?"'{/g, '{') // Fix opening single quotes for objects
-            .replace(/}'\\?"/g, '}') // Fix closing single quotes for objects
-            .replace(/\\?"':\\?"/g, '":"') // Fix single quotes around keys/values
-            .replace(/\\?",\\?"/g, '","') // Fix single quotes in commas
-            .replace(/\\?"'\[/g, '[')
-            .replace(/\]'\\?"/g, ']')
-            .replace(/null'\\?"/g, 'null') // handle null
-            .replace(/:(\w+)}/g, ':"$1"}') // ensure values in objects are quoted if not
-            .replace(/:(\w+),/g, ':"$1",')
-            // A more robust solution might involve a dedicated parser if regex becomes too complex
-            // For the given example:
-            // "[{\"'title'\":\"DEBIT NOTE\",\"'questions'\":{\"0\":...}}]"
-            // First, replace all ' with " ONLY if they are part of the structure, not data
-            // This is very tricky with regex. A simpler approach IF the outer structure is always [{...}, {...}]
-            // and inner keys/values are problematic:
-            let somewhatCleanedString = sectionJsonString;
-            try {
-                 // This is a common pattern for Python dicts stringified.
-                 somewhatCleanedString = sectionJsonString.replace(/'/g, '"');
-            } catch (e) { /* ignore, try direct parse */ }
-
-
-        const backendSections = JSON.parse(somewhatCleanedString);
-
-        return backendSections.map((bs: any) => {
-            const questionsObject = bs.questions || bs["'questions'"]; // Handle both key formats
-            const frontendQuestions: FormPageQuestion[] = [];
-            if (typeof questionsObject === 'object' && questionsObject !== null) {
-                Object.values(questionsObject).forEach((bq: any) => {
-                    frontendQuestions.push({
-                        id: generateId('q_'),
-                        questionText: bq.question || bq["'question'"],
-                        questionType: bq.question_type || bq["'question_type'"],
-                        options: parseQuestionOptionString(bq.question_option || bq["'question_option'"]),
-                        isRequired: bq.is_required || false, // Assuming is_required field
-                    });
-                });
-            }
-
-            return {
-                id: generateId('s_'),
-                sectionTitle: bs.title || bs["'title'"],
-                sectionDescription: bs.description || bs["'description'"] || '',
-                questions: frontendQuestions,
-            };
-        });
-    } catch (error) {
-        console.error("Error parsing backend sections:", error, "Original string:", sectionJsonString);
-        toast.push(<Notification title="Error" type="danger">Could not parse form structure from backend.</Notification>);
-        return [{ // Return a default structure on error to prevent crashes
-            id: generateId('s_'),
-            sectionTitle: 'Default Section (Parsing Error)',
-            questions: [{
-                id: generateId('q_'),
-                questionText: '',
-                questionType: QUESTION_TYPE_OPTIONS[0].value,
-                options: [],
-                isRequired: false
-            }]
-        }];
-    }
-};
-
-// Serializes frontend sections array to backend JSON string
-const serializeSectionsToBackend = (sections: FormPageSection[]): string => {
-    const backendSections = sections.map(fs => {
-        const backendQuestions: { [key: string]: any } = {};
-        fs.questions.forEach((fq, index) => {
-            backendQuestions[String(index)] = { // Using numeric string keys as in backend example
-                "'question'": fq.questionText,
-                "'question_type'": fq.questionType,
-                "'question_option'": serializeQuestionOptionsArray(fq.options),
-                "'is_required'": fq.isRequired, // Assuming
-            };
-        });
-        return {
-            "'title'": fs.sectionTitle,
-            "'description'": fs.sectionDescription || '',
-            "'questions'": backendQuestions,
-        };
-    });
-    return JSON.stringify(backendSections);
-};
-
-
-// --- Question Options Component ---
-type QuestionOptionsEditorProps = {
-    control: Control<FormBuilderPageFormData>;
-    sectionIndex: number;
-    questionIndex: number;
-};
-const QuestionOptionsEditor: React.FC<QuestionOptionsEditorProps> = ({ control, sectionIndex, questionIndex }) => {
-    const { fields, append, remove } = useFieldArray({
-        control,
-        name: `sections.${sectionIndex}.questions.${questionIndex}.options`
-    });
-
-    return (
-        <div className="pl-4 mt-2 space-y-2 border-l-2 border-gray-200 dark:border-gray-600">
-            {fields.map((optionField, optionIndex) => (
-                <Card key={optionField.id} bodyClass="p-2 bg-gray-50 dark:bg-gray-700/60">
-                    <div className="flex items-center gap-2">
-                        <Controller
-                            name={`sections.${sectionIndex}.questions.${questionIndex}.options.${optionIndex}.label`}
-                            control={control}
-                            defaultValue={optionField.label}
-                            render={({ field }) => <Input {...field} size="sm" placeholder="Option Label" className="flex-grow" />}
-                        />
-                        <Controller
-                            name={`sections.${sectionIndex}.questions.${questionIndex}.options.${optionIndex}.value`}
-                            control={control}
-                            defaultValue={optionField.value}
-                            render={({ field }) => <Input {...field} size="sm" placeholder="Option Value" className="flex-grow" />}
-                        />
-                        <Tooltip title="Remove Option">
-                            <Button shape="circle" size="sm" icon={<TbX />} onClick={() => remove(optionIndex)} variant="twoTone" color="red-600" />
-                        </Tooltip>
-                    </div>
-                </Card>
-            ))}
-            <Button
-                type="button"
-                variant="dashed"
-                size="sm"
-                icon={<TbPlus />}
-                onClick={() => append({ id: generateId('opt_'), label: '', value: '' })}
-            >
-                Add Option
-            </Button>
-        </div>
-    );
-};
-
 
 // --- Question Component ---
-type QuestionItemProps = {
-    sectionIndex: number;
-    questionIndex: number;
-    control: Control<FormBuilderPageFormData>;
-    removeQuestion: (questionIndex: number) => void;
-    watch: any; // RHF's watch function
+type QuestionProps = {
+  sectionIndex: number;
+  questionIndex: number;
+  control: Control<FormBuilderDataType>;
+  removeQuestion: (sectionIndex: number, questionIndex: number) => void;
+  // cloneQuestion: (sectionIndex: number, questionIndex: number) => void; // For cloning
+  question: FormQuestionType; // Current question data from field array
 };
-const QuestionItem: React.FC<QuestionItemProps> = ({ sectionIndex, questionIndex, control, removeQuestion, watch }) => {
-    const questionPath = `sections.${sectionIndex}.questions.${questionIndex}` as const;
-    const currentQuestionType = watch(`${questionPath}.questionType`);
-    const showOptionsEditor = ['checkbox', 'radio', 'select'].includes(currentQuestionType);
 
-    return (
-        <Card className="mt-3 bg-gray-100 dark:bg-gray-700/30" bodyClass="p-4">
-            <div className="flex justify-between items-start mb-2">
-                <h6 className="font-semibold">Question {questionIndex + 1}</h6>
-                <Tooltip title="Remove Question">
-                    <Button shape="circle" size="sm" icon={<TbTrash />} onClick={() => removeQuestion(questionIndex)} variant="twoTone" color="red-600" />
-                </Tooltip>
-            </div>
+const Question = ({ sectionIndex, questionIndex, control, removeQuestion, question }: QuestionProps) => {
+  const { fields: optionFields, append: appendOption, remove: removeOption } = useFieldArray({
+    control,
+    name: `sections.${sectionIndex}.questions.${questionIndex}.options`
+  });
 
-            <FormItem
-                label="Question Text"
-                // Add error handling if needed: invalid={!!errors.sections?.[sectionIndex]?.questions?.[questionIndex]?.questionText}
-            >
-                <Controller
-                    name={`${questionPath}.questionText`}
-                    control={control}
-                    rules={{ required: "Question text is required" }}
-                    render={({ field }) => <Input {...field} textArea rows={2} placeholder="Enter your question" />}
-                />
-            </FormItem>
+  // Get the current question type from react-hook-form's state
+  // We need to watch this field to dynamically render UI
+  const currentQuestionType = control.getValues(`sections.${sectionIndex}.questions.${questionIndex}.questionType`);
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                <FormItem label="Question Type">
-                    <Controller
-                        name={`${questionPath}.questionType`}
-                        control={control}
-                        rules={{ required: "Question type is required" }}
-                        render={({ field }) => (
-                            <Select
-                                placeholder="Select type"
-                                options={QUESTION_TYPE_OPTIONS}
-                                value={QUESTION_TYPE_OPTIONS.find(o => o.value === field.value)}
-                                onChange={(opt) => field.onChange(opt?.value)}
-                            />
-                        )}
-                    />
-                </FormItem>
-                <FormItem label="Required Field" className="flex items-center mt-auto mb-[9px]">
-                     <Controller
-                        name={`${questionPath}.isRequired`}
-                        control={control}
-                        render={({ field }) => (
-                            <Switcher checked={field.value} onChange={field.onChange} />
-                        )}
-                    />
-                </FormItem>
-            </div>
+  const handleAddOption = () => {
+    appendOption({ id: uuidv4(), optionText: '' });
+  };
 
-            {showOptionsEditor && (
-                <div className="mt-3">
-                    <h6 className="text-sm font-medium mb-1">Options:</h6>
-                    <QuestionOptionsEditor control={control} sectionIndex={sectionIndex} questionIndex={questionIndex} />
-                </div>
+  return (
+    <Card className="mt-2" bodyClass="p-4 flex flex-col gap-4">
+      <div className="md:grid grid-cols-2 gap-2">
+        <Controller
+          control={control}
+          name={`sections.${sectionIndex}.questions.${questionIndex}.questionText`}
+          defaultValue=""
+          render={({ field }) => (
+            <Input {...field} type="text" placeholder="Write Question" />
+          )}
+        />
+        <div className='flex gap-2'>
+          <Controller
+            control={control}
+            name={`sections.${sectionIndex}.questions.${questionIndex}.questionType`}
+            defaultValue={null}
+            render={({ field }) => (
+              <Select
+                className='w-full'
+                placeholder="Select Answer Type"
+                value={questionTypes.map(type => ({ label: type, value: type })).find(opt => opt.value === field.value) || null}
+                onChange={(val) => field.onChange(val?.value || null)}
+                options={questionTypes.map(type => ({ label: type, value: type }))}
+              />
             )}
-        </Card>
-    );
+          />
+          {(currentQuestionType === 'Radio' || currentQuestionType === 'Checkbox' || currentQuestionType === 'Single-Choice Dropdown' || currentQuestionType === 'Multi-Choice Dropdown') && (
+            <Button className='h-10' type='button' icon={<TbCirclePlus />} onClick={handleAddOption}>Add Option</Button>
+          )}
+        </div>
+      </div>
+
+      {/* --- Dynamically Rendered Input based on questionType --- */}
+      {currentQuestionType === 'Text' && <Input type="text" placeholder="Preview: Text Input" disabled />}
+      {currentQuestionType === 'Number' && <Input type="number" placeholder="Preview: Number Input" disabled />}
+      {currentQuestionType === 'Textarea' && <Input placeholder="Preview: Textarea" textArea disabled />}
+      {currentQuestionType === 'File Upload' && <Input type="file" disabled />}
+      {currentQuestionType === 'Date' && <DatePicker placeholder="Preview: Date" disabled />}
+      {currentQuestionType === 'DateRange' && <DatePicker.RangePicker placeholder={["Start Date", "End Date"]} disabled />}
+      {currentQuestionType === 'Time' && <Input type='time' disabled />}
+
+      {(currentQuestionType === 'Radio' || currentQuestionType === 'Checkbox' || currentQuestionType === 'Single-Choice Dropdown' || currentQuestionType === 'Multi-Choice Dropdown') && (
+        <div className='flex flex-col gap-2 pl-4 mt-2 border-l-2'>
+          {optionFields.map((option, optIndex) => (
+            <div key={option.id} className="flex items-center gap-2">
+              {currentQuestionType === 'Radio' && <Radio disabled />}
+              {currentQuestionType === 'Checkbox' && <Checkbox disabled />}
+              <Controller
+                control={control}
+                name={`sections.${sectionIndex}.questions.${questionIndex}.options.${optIndex}.optionText`}
+                defaultValue=""
+                render={({ field }) => (
+                  <Input {...field} placeholder={`Option ${optIndex + 1}`} className="flex-grow" />
+                )}
+              />
+              {optionFields.length > 1 && (
+                <Button type='button' size="sm" variant="plain" icon={<TbTrash />} onClick={() => removeOption(optIndex)} />
+              )}
+            </div>
+          ))}
+           {/* Preview for dropdowns */}
+           {currentQuestionType === 'Single-Choice Dropdown' && optionFields.length > 0 && (
+                <Select
+                    placeholder="Preview: Single-Choice"
+                    options={optionFields.map(opt => ({ label: control.getValues(`sections.${sectionIndex}.questions.${questionIndex}.options.${optionFields.indexOf(opt)}.optionText`), value: control.getValues(`sections.${sectionIndex}.questions.${questionIndex}.options.${optionFields.indexOf(opt)}.optionText`) }))}
+                    disabled
+                />
+            )}
+            {currentQuestionType === 'Multi-Choice Dropdown' && optionFields.length > 0 && (
+                <Select
+                    isMulti
+                    placeholder="Preview: Multi-Choice"
+                    options={optionFields.map(opt => ({ label: control.getValues(`sections.${sectionIndex}.questions.${questionIndex}.options.${optionFields.indexOf(opt)}.optionText`), value: control.getValues(`sections.${sectionIndex}.questions.${questionIndex}.options.${optionFields.indexOf(opt)}.optionText`) }))}
+                    disabled
+                />
+            )}
+        </div>
+      )}
+
+      {/* --- Question Actions --- */}
+      <div className='flex gap-2 justify-end items-center mt-2'>
+        <div className='flex gap-1 items-center'>
+          <Controller
+            control={control}
+            name={`sections.${sectionIndex}.questions.${questionIndex}.required`}
+            defaultValue={false}
+            render={({ field }) => (
+              <Switcher checked={field.value} onChange={(checked) => field.onChange(checked)} />
+            )}
+          />
+          <span>Required</span>
+        </div>
+        {/* <Tooltip title="Clone Question">
+          <Button type='button' icon={<TbCopy />} onClick={() => cloneQuestion(sectionIndex, questionIndex)}></Button>
+        </Tooltip> */}
+        <Tooltip title="Delete Question">
+          <Button type='button' icon={<TbTrash />} onClick={() => removeQuestion(sectionIndex, questionIndex)} ></Button>
+        </Tooltip>
+      </div>
+    </Card>
+  );
 };
+
 
 // --- Section Component ---
-type SectionItemProps = {
-    sectionIndex: number;
-    control: Control<FormBuilderPageFormData>;
-    removeSection: (sectionIndex: number) => void;
-    watch: any; // RHF's watch function
-};
-const SectionItem: React.FC<SectionItemProps> = ({ sectionIndex, control, removeSection, watch }) => {
-    const { fields, append, remove } = useFieldArray({
-        control,
-        name: `sections.${sectionIndex}.questions`
-    });
-
-    const addQuestionToSection = () => {
-        append({
-            id: generateId('q_'),
-            questionText: '',
-            questionType: QUESTION_TYPE_OPTIONS[0].value, // Default to first type
-            options: [],
-            isRequired: false,
-        });
-    };
-
-    return (
-        <Card className="mb-6 border border-gray-300 dark:border-gray-600" bodyClass="p-5">
-            <div className="flex justify-between items-center mb-3">
-                <h5 className="text-lg font-semibold">Section {sectionIndex + 1}</h5>
-                <Tooltip title="Remove Section">
-                    <Button shape="circle" icon={<TbTrash />} onClick={() => removeSection(sectionIndex)} variant="twoTone" color="red-600" />
-                </Tooltip>
-            </div>
-
-            <FormItem label="Section Title">
-                <Controller
-                    name={`sections.${sectionIndex}.sectionTitle`}
-                    control={control}
-                    rules={{ required: "Section title is required" }}
-                    render={({ field }) => <Input {...field} placeholder="Enter section title" />}
-                />
-            </FormItem>
-            <FormItem label="Section Description (Optional)" className="mt-3">
-                <Controller
-                    name={`sections.${sectionIndex}.sectionDescription`}
-                    control={control}
-                    render={({ field }) => <Input {...field} textArea rows={2} placeholder="Enter section description" />}
-                />
-            </FormItem>
-
-            <div className="mt-4">
-                {fields.map((questionField, qIndex) => (
-                    <QuestionItem
-                        key={questionField.id}
-                        sectionIndex={sectionIndex}
-                        questionIndex={qIndex}
-                        control={control}
-                        removeQuestion={() => remove(qIndex)}
-                        watch={watch}
-                    />
-                ))}
-            </div>
-
-            <Button
-                type="button"
-                variant="outline"
-                icon={<TbPlus />}
-                onClick={addQuestionToSection}
-                className="mt-4"
-            >
-                Add Question to Section
-            </Button>
-        </Card>
-    );
+type SectionProps = {
+  sectionIndex: number;
+  control: Control<FormBuilderDataType>;
+  removeSection: (index: number) => void;
 };
 
+const Section = ({ sectionIndex, control, removeSection }: SectionProps) => {
+  const { fields: questionFields, append: appendQuestion, remove: removeQuestionFn } = useFieldArray({
+    control,
+    name: `sections.${sectionIndex}.questions`
+  });
 
-// --- Main Form Page Component ---
-const FormBuilderFormPage = () => {
-    const navigate = useNavigate();
-    const { formId } = useParams<{ formId?: string }>();
-    const isEditMode = !!formId;
-
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Simulated backend data store
-    const [simulatedDb, setSimulatedDb] = useState<BackendFormItem[]>([
-        {
-            id: 6,
-            form_name: "CRM DNW STOCK 1.0.1",
-            section: "[{\"'title'\":\"DEBIT NOTE\",\"'questions'\":{\"0\":{\"'question'\":\"COMPANY NAME\",\"'question_type'\":\"radio\",\"'question_option'\":\"YES,NO\"},\"1\":{\"'question'\":\"VOUCHER NUMBER\",\"'question_type'\":\"text\",\"'question_option'\":\"YES,NO\"},\"2\":{\"'question'\":\"VOUCHER DATE\",\"'question_type'\":\"radio\",\"'question_option'\":\"YES,NO\"},\"4\":{\"'question'\":\"DOCUMENT NUMBER\",\"'question_type'\":\"text\",\"'question_option'\":\"YES,NO\"},\"3\":{\"'question'\":\"DOCUMENT DATE\",\"'question_type'\":\"radio\",\"'question_option'\":\"YES,NO\"},\"5\":{\"'question'\":\"ORIGINAL INVOICE NO.\",\"'question_type'\":\"text\",\"'question_option'\":\"YES,NO\"},\"6\":{\"'question'\":\"ORIGINAL INVOICE DATE\",\"'question_type'\":\"radio\",\"'question_option'\":\"YES,NO\"},\"7\":{\"'question'\":\"PRODUCT NAME\",\"'question_type'\":\"radio\",\"'question_option'\":\"YES,NO\"},\"8\":{\"'question'\":\"DAMAGE QUANTITY\",\"'question_type'\":\"radio\",\"'question_option'\":\"YES,NO\"},\"9\":{\"'question'\":\"PRICE\",\"'question_type'\":\"radio\",\"'question_option'\":\"YES,NO\"},\"10\":{\"'question'\":\"CN WITH STAMP AND SIGN\",\"'question_type'\":\"file\",\"'question_option'\":null},\"11\":{\"'question'\":\"NO\",\"'question_type'\":\"text\",\"'question_option'\":null},\"12\":{\"'question'\":\"REMARK\",\"'question_type'\":\"text\",\"'question_option'\":null}}},{\"'title'\":\"RETURN\",\"'questions'\":[{\"'question'\":\"STOCK RETURN\",\"'question_type'\":\"radio\",\"'question_option'\":\"YES,NO\"}]}]",
-            status: "Disabled", // Maps to 'archived' or 'draft'
-            department_ids: "eng,hr", // Assuming slugs "eng,hr" for example, actual "4,5" needs mapping for labels
-            category_ids: "survey",  // Assuming slug "survey", actual "1" needs mapping for labels
-        }
-    ]);
-
-
-    const defaultSection: FormPageSection = {
-        id: generateId('s_'),
-        sectionTitle: 'Section 1',
-        sectionDescription: '',
-        questions: [{
-            id: generateId('q_'),
-            questionText: '',
-            questionType: QUESTION_TYPE_OPTIONS[0].value,
-            options: [],
-            isRequired: false,
-        }]
-    };
-
-    const rhfMethods = useForm<FormBuilderPageFormData>({
-        defaultValues: {
-            formName: '',
-            status: FORM_STATUS_OPTIONS[0].value, // Default to 'draft'
-            departmentValues: [],
-            categoryValues: [],
-            sections: [defaultSection],
-        }
+  const handleAddQuestion = () => {
+    appendQuestion({
+      id: uuidv4(),
+      questionText: '',
+      questionType: null, // Default to null or a specific type
+      required: false,
+      options: [],
     });
-    const { control, handleSubmit, reset, watch, formState: { errors, isDirty } } = rhfMethods;
+  };
 
-    const { fields: sectionFields, append: appendSection, remove: removeSection, replace: replaceSections } = useFieldArray({
-        control,
-        name: "sections"
-    });
-
-    // --- Fetch data for Edit Mode ---
-    useEffect(() => {
-        if (isEditMode && formId) {
-            setIsLoading(true);
-            // Simulate API call
-            setTimeout(() => {
-                const numericFormId = parseInt(formId, 10);
-                const formDataFromDb = simulatedDb.find(f => f.id === numericFormId);
-
-                if (formDataFromDb) {
-                    // Map backend status to frontend status
-                    let frontendStatus = FORM_STATUS_OPTIONS[0].value; // Default to draft
-                    if (formDataFromDb.status === "Active") frontendStatus = "published";
-                    else if (formDataFromDb.status === "Disabled") frontendStatus = "archived";
-
-                    reset({
-                        id: formDataFromDb.id,
-                        formName: formDataFromDb.form_name,
-                        status: frontendStatus,
-                        // Assuming department_ids and category_ids are comma-separated slugs for now
-                        departmentValues: formDataFromDb.department_ids ? formDataFromDb.department_ids.split(',') : [],
-                        categoryValues: formDataFromDb.category_ids ? formDataFromDb.category_ids.split(',') : [],
-                        sections: parseBackendSections(formDataFromDb.section),
-                    });
-                } else {
-                    toast.push(<Notification title="Error" type="danger">Form not found.</Notification>);
-                    navigate('/system-tools/form-builder'); // Adjust to your listing page route
-                }
-                setIsLoading(false);
-            }, 1000);
-        }
-    }, [isEditMode, formId, reset, navigate, simulatedDb]);
-
-
-    const onFormSubmit = async (data: FormBuilderPageFormData) => {
-        setIsSubmitting(true);
-        console.log("Submitting Frontend Data:", data);
-
-        // Map frontend status to backend status
-        let backendStatus = "Disabled"; // Default
-        if (data.status === "published") backendStatus = "Active";
-        else if (data.status === "draft") backendStatus = "Pending"; // Or map as needed
-        else if (data.status === "archived") backendStatus = "Disabled";
-
-
-        const payloadToBackend = {
-            id: data.id,
-            form_name: data.formName,
-            status: backendStatus,
-            // Join array of slugs into comma-separated string
-            department_ids: data.departmentValues.join(','),
-            category_ids: data.categoryValues.join(','),
-            section: serializeSectionsToBackend(data.sections),
-        };
-        console.log("Payload to Backend:", payloadToBackend);
-
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        if (isEditMode && data.id) {
-            // Update in simulated DB
-            setSimulatedDb(prevDb => prevDb.map(item => item.id === data.id ? { ...item, ...payloadToBackend, id: data.id! } : item));
-            toast.push(<Notification title="Success" type="success">Form updated successfully!</Notification>);
-        } else {
-            // Add to simulated DB
-            const newId = Math.max(0, ...simulatedDb.map(f => f.id)) + 1;
-            setSimulatedDb(prevDb => [{ ...payloadToBackend, id: newId }, ...prevDb]);
-            toast.push(<Notification title="Success" type="success">Form created successfully!</Notification>);
-        }
-        setIsSubmitting(false);
-        navigate('/system-tools/form-builder'); // Adjust to your listing page route
-    };
-
-    const addNewSection = () => {
-        appendSection(cloneDeep(defaultSection)); // Use cloneDeep for a new object instance
-    };
-
-    if (isLoading && isEditMode) {
-        return (
-            <Container className="h-full flex items-center justify-center">
-                <TbLoader className="animate-spin text-4xl text-primary-500" />
-            </Container>
-        );
+  const handleRemoveQuestion = (qIndex: number) => {
+    if (questionFields.length > 0) { // Prevent removing if it's the last one (optional rule)
+        removeQuestionFn(qIndex);
+    } else {
+        toast.push(<Notification type="info" title="Cannot remove the last question directly. You can remove the section."/>)
     }
+  };
 
-    return (
-        <Container className="h-full">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">
-                    {isEditMode ? 'Edit Form' : 'Create New Form'}
-                </h3>
-                <Button onClick={() => navigate('/system-tools/form-builder')} variant="default">
-                    Back to List
-                </Button>
+  // const handleCloneQuestion = (sectionIdx: number, questionIdx: number) => {
+  //   const questionToClone = control.getValues(`sections.${sectionIdx}.questions.${questionIdx}`);
+  //   appendQuestion({ ...questionToClone, id: uuidv4(), options: questionToClone.options.map(opt => ({...opt, id: uuidv4()})) });
+  // };
+
+
+  return (
+    <Card key={control.getValues(`sections.${sectionIndex}.id`)} className="mt-4 border p-1" bodyClass="p-4">
+      <div className="text-right flex justify-between items-center mb-2">
+        <h6 className="text-lg font-semibold">Section - {sectionIndex + 1}</h6>
+        <div className="flex gap-2">
+          <Button type="button" variant="solid" color="blue" icon={<TbCirclePlus />} onClick={handleAddQuestion}>Add Question</Button>
+          {control.getValues('sections').length > 1 && ( // Allow removing if not the only section
+             <Tooltip title="Remove Section">
+                <Button type="button" variant='soft' color="red" icon={<TbTrash />} onClick={() => removeSection(sectionIndex)} />
+             </Tooltip>
+          )}
+        </div>
+      </div>
+
+      {/* Section Title & Description */}
+      <Card className="mt-2 bg-gray-50 dark:bg-gray-700/30" bodyClass="p-4 flex flex-col gap-4">
+        <Controller
+          control={control}
+          name={`sections.${sectionIndex}.sectionTitle`}
+          defaultValue=""
+          render={({ field }) => (
+            <Input {...field} type="text" placeholder="Enter Section Title" />
+          )}
+        />
+        <Controller
+          control={control}
+          name={`sections.${sectionIndex}.sectionDescription`}
+          defaultValue=""
+          render={({ field }) => (
+            <Input {...field} textArea rows={2} placeholder="Description (Optional)" />
+          )}
+        />
+      </Card>
+
+      {/* --- Questions --- */}
+      <div className="mt-3 space-y-3">
+        {questionFields.map((question, qIndex) => (
+          <Question
+            key={question.id} // react-hook-form's field.id
+            sectionIndex={sectionIndex}
+            questionIndex={qIndex}
+            control={control}
+            removeQuestion={handleRemoveQuestion}
+            // cloneQuestion={handleCloneQuestion}
+            question={question as FormQuestionType} // Cast needed because RHF field type is wider
+          />
+        ))}
+        {questionFields.length === 0 && (
+            <div className="text-center py-4 text-gray-500">
+                No questions in this section. Click "Add Question" to start.
             </div>
-
-            <Form onSubmit={handleSubmit(onFormSubmit)}>
-                <AdaptiveCard>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <FormItem label="Form Name" invalid={!!errors.formName} errorMessage={errors.formName?.message as string}>
-                            <Controller name="formName" control={control} rules={{ required: "Form name is required" }}
-                                render={({ field }) => <Input {...field} placeholder="Enter form name" />} />
-                        </FormItem>
-                        <FormItem label="Status" invalid={!!errors.status} errorMessage={errors.status?.message as string}>
-                            <Controller name="status" control={control} rules={{ required: "Status is required" }}
-                                render={({ field }) => (
-                                    <Select placeholder="Select status" options={FORM_STATUS_OPTIONS}
-                                        value={FORM_STATUS_OPTIONS.find(o => o.value === field.value)}
-                                        onChange={(opt) => field.onChange(opt?.value)} />
-                                )} />
-                        </FormItem>
-                        <FormItem label="Departments" invalid={!!errors.departmentValues} errorMessage={errors.departmentValues?.message as string}>
-                            <Controller name="departmentValues" control={control}
-                                render={({ field }) => (
-                                    <Select isMulti placeholder="Select department(s)" options={DEPARTMENT_OPTIONS}
-                                        value={DEPARTMENT_OPTIONS.filter(o => field.value?.includes(o.value))}
-                                        onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />
-                                )} />
-                        </FormItem>
-                        <FormItem label="Categories" invalid={!!errors.categoryValues} errorMessage={errors.categoryValues?.message as string}>
-                            <Controller name="categoryValues" control={control}
-                                render={({ field }) => (
-                                    <Select isMulti placeholder="Select category(ies)" options={CATEGORY_OPTIONS}
-                                        value={CATEGORY_OPTIONS.filter(o => field.value?.includes(o.value))}
-                                        onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />
-                                )} />
-                        </FormItem>
-                    </div>
-
-                    <h4 className="text-lg font-semibold mb-4 mt-8 pt-4 border-t dark:border-gray-600">
-                        Form Sections & Questions
-                    </h4>
-                    {sectionFields.map((sectionField, index) => (
-                        <SectionItem
-                            key={sectionField.id}
-                            sectionIndex={index}
-                            control={control}
-                            removeSection={() => sectionFields.length > 1 ? removeSection(index) : toast.push(<Notification type="warning" title="Cannot remove the last section." />)}
-                            watch={watch}
-                        />
-                    ))}
-                    <Button type="button" variant="solid" icon={<TbLayoutList />} onClick={addNewSection} className="mt-4">
-                        Add New Section
-                    </Button>
-                </AdaptiveCard>
-
-                <StickyFooter
-                    className="flex items-center justify-end py-4 px-8 gap-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
-                    stickyClass="-mx-8"
-                >
-                    <Button type="button" onClick={() => navigate('/system-tools/form-builder')}>
-                        Cancel
-                    </Button>
-                    <Button type="submit" variant="solid" loading={isSubmitting} disabled={isSubmitting || (isEditMode && !isDirty)}>
-                        {isSubmitting ? 'Saving...' : (isEditMode ? 'Update Form' : 'Create Form')}
-                    </Button>
-                </StickyFooter>
-            </Form>
-        </Container>
-    );
+        )}
+      </div>
+    </Card>
+  );
 };
 
-export default FormBuilderFormPage;
+
+// --- Main Form Builder Component ---
+const FormBuilderForm = () => {
+  const navigate = useNavigate();
+  const { formId } = useParams<{ formId: string }>(); // Get formId from URL
+  const isEditMode = !!formId;
+
+  const formMethods = useForm<FormBuilderDataType>({
+    defaultValues: {
+      formName: '',
+      status: 'Active', // Default status
+      departmentName: '',
+      category: '',
+      formTitle: '',
+      formDescription: '',
+      sections: [{ id: uuidv4(), sectionTitle: '', sectionDescription: '', questions: [] }], // Start with one empty section
+    }
+  });
+
+  const { control, handleSubmit, reset, watch, getValues } = formMethods;
+
+  const { fields: sectionFields, append: appendSection, remove: removeSectionFn } = useFieldArray({
+    control,
+    name: "sections"
+  });
+
+  const [isLoading, setIsLoading] = useState(false); // For API calls
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+
+  // --- Fetch data for edit mode ---
+  useEffect(() => {
+    if (isEditMode && formId) {
+      setIsLoading(true);
+      // --- SIMULATE API CALL ---
+      console.log(`Fetching form data for ID: ${formId}`);
+      setTimeout(() => {
+        // Replace with your actual API call
+        const mockFormDataFromServer: FormBuilderDataType = { // This should match your expected API response
+          formName: `Edited Form ${formId}`,
+          status: 'Active',
+          departmentName: 'IT',
+          category: 'Electronics',
+          formTitle: `My Awesome Editable Form ${formId}`,
+          formDescription: 'This is a description for the editable form.',
+          sections: [
+            {
+              id: uuidv4(), // Or use dbId if you prefer
+              dbId: 'sec_db_1',
+              sectionTitle: 'Personal Information (Edited)',
+              sectionDescription: 'Please provide your personal details.',
+              questions: [
+                { id: uuidv4(), dbId: 'q_db_1', questionText: 'Your Full Name?', questionType: 'Text', required: true, options: [] },
+                { id: uuidv4(), dbId: 'q_db_2', questionText: 'Your Email?', questionType: 'Text', required: true, options: [] },
+                {
+                  id: uuidv4(), dbId: 'q_db_3', questionText: 'Gender (Edited)', questionType: 'Radio', required: false,
+                  options: [
+                    { id: uuidv4(), optionText: 'Male' },
+                    { id: uuidv4(), optionText: 'Female' },
+                  ]
+                },
+              ]
+            },
+            {
+              id: uuidv4(),
+              dbId: 'sec_db_2',
+              sectionTitle: 'Preferences (Edited)',
+              questions: [
+                { id: uuidv4(), dbId: 'q_db_4', questionText: 'Favorite Color?', questionType: 'Single-Choice Dropdown', required: false, options: [ {id: uuidv4(), optionText: "Red"}, {id: uuidv4(), optionText: "Blue"} ] },
+              ]
+            }
+          ]
+        };
+        // Transform fetched data if necessary to match useFieldArray structure (e.g., ensure `id` for RHF)
+        const transformedData = {
+            ...mockFormDataFromServer,
+            sections: mockFormDataFromServer.sections.map(s => ({
+                ...s,
+                id: s.id || uuidv4(), // RHF needs an id for field array items
+                questions: s.questions.map(q => ({
+                    ...q,
+                    id: q.id || uuidv4(),
+                    options: q.options?.map(o => ({...o, id: o.id || uuidv4()})) || []
+                }))
+            }))
+        };
+
+        reset(transformedData); // Populate the form with fetched data
+        setIsLoading(false);
+        toast.push(<Notification title="Form Data Loaded" type="info" duration={2000} />);
+      }, 1500);
+    }
+  }, [formId, isEditMode, reset]);
+
+  const handleAddSection = () => {
+    appendSection({
+      id: uuidv4(),
+      sectionTitle: '',
+      sectionDescription: '',
+      questions: [], // Start new sections with no questions or one default question
+    });
+  };
+  
+  const handleRemoveSection = (index: number) => {
+    if (sectionFields.length > 1) {
+        removeSectionFn(index);
+    } else {
+        toast.push(<Notification type="info" title="Cannot remove the last section."/>)
+    }
+  };
+
+  const onSubmit = async (data: FormBuilderDataType) => {
+    setIsSubmitting(true);
+    console.log('Form Data Submitted:', JSON.stringify(data, null, 2));
+
+    // --- API Call Logic ---
+    try {
+      if (isEditMode) {
+        // await apiUpdateForm(formId, data); // Your API call
+        toast.push(<Notification title="Form Updated Successfully!" type="success" />);
+        console.log("Simulating update API call for form ID:", formId, data);
+      } else {
+        // await apiCreateForm(data); // Your API call
+        toast.push(<Notification title="Form Created Successfully!" type="success" />);
+        console.log("Simulating create API call:", data);
+      }
+      setTimeout(() => navigate('/system-tools/form-builder'), 1000); // Navigate back after success
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast.push(<Notification title="Submission Failed" type="danger">{(error as Error).message || 'An error occurred.'}</Notification>);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading && isEditMode) {
+    return <Container><Card><h5>Loading form data...</h5></Card></Container>;
+  }
+
+  return (
+    <Container className="h-full pb-16"> {/* Added padding-bottom */}
+      <div className="flex gap-1 items-end mb-3">
+        <NavLink to="/system-tools/form-builder">
+          <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Form Builder</h6>
+        </NavLink>
+        <BiChevronRight size={22} />
+        <h6 className="font-semibold text-primary-600 dark:text-primary-400">{isEditMode ? 'Edit Form' : 'Add New Form'}</h6>
+      </div>
+      <Card>
+        <h5 className="mb-6">Form Information</h5>
+        <Form onSubmit={handleSubmit(onSubmit)}>
+          {/* --- Main Form Fields --- */}
+          <div className="md:grid grid-cols-3 gap-4">
+            <FormItem label="Form Name" className="col-span-3 md:col-span-2">
+              <Controller
+                control={control}
+                name="formName"
+                rules={{ required: 'Form Name is required' }}
+                render={({ field, fieldState }) => (
+                    <>
+                        <Input {...field} type="text" placeholder='Enter Form Name' />
+                        {fieldState.error && <div className="text-red-500 text-xs mt-1">{fieldState.error.message}</div>}
+                    </>
+                )}
+              />
+            </FormItem>
+            <FormItem label="Status">
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <Select
+                    value={[{ label: 'Active', value: 'Active' },{ label: 'Inactive', value: 'Inactive' }].find(opt => opt.value === field.value)}
+                    onChange={(val) => field.onChange(val?.value)}
+                    options={[
+                      { label: 'Active', value: 'Active' },
+                      { label: 'Inactive', value: 'Inactive' },
+                    ]}
+                    placeholder="Select Status"
+                  />
+                )}
+              />
+            </FormItem>
+          </div>
+
+          <div className="md:grid grid-cols-2 gap-4 mt-4">
+            <FormItem label="Department Name">
+              <Controller
+                control={control}
+                name="departmentName"
+                render={({ field }) => <Select
+                  value={[{label: "IT", value: "IT"},{label: "Account", value: "Account"}].find(opt => opt.value === field.value)}
+                  onChange={(val) => field.onChange(val?.value)}
+                  placeholder="Select Department"
+                  options={[
+                    { label: "IT", value: "IT" },
+                    { label: "Account", value: "Account" },
+                  ]}
+                />}
+              />
+            </FormItem>
+            <FormItem label="Category Name">
+              <Controller
+                control={control}
+                name="category"
+                render={({ field }) => (
+                  <Select
+                    value={[{ label: 'Electronics', value: 'Electronics' },{ label: 'Engineering', value: 'Engineering' }].find(opt => opt.value === field.value)}
+                    onChange={(val) => field.onChange(val?.value)}
+                    options={[
+                      { label: 'Electronics', value: 'Electronics' },
+                      { label: 'Engineering', value: 'Engineering' },
+                    ]}
+                    placeholder="Select Category"
+                  />
+                )}
+              />
+            </FormItem>
+          </div>
+
+          {/* --- Form Title & Description Card --- */}
+          <Card className="my-6 bg-gray-50 dark:bg-gray-700/30" bodyClass="p-4">
+            <FormItem label="Form Title">
+              <Controller
+                control={control}
+                name="formTitle"
+                rules={{ required: 'Form Title is required' }}
+                render={({ field, fieldState }) => (
+                    <>
+                        <Input {...field} type="text" placeholder='Enter Form Title' />
+                        {fieldState.error && <div className="text-red-500 text-xs mt-1">{fieldState.error.message}</div>}
+                    </>
+                )}
+              />
+            </FormItem>
+            <FormItem label="Form Description" className="mt-4">
+              <Controller
+                control={control}
+                name="formDescription"
+                render={({ field }) => <Input {...field} textArea rows={3} placeholder="Write a brief description for the form (optional)" />}
+              />
+            </FormItem>
+          </Card>
+
+          {/* --- Dynamic Sections --- */}
+          <h5 className="mb-3 mt-8 text-lg font-semibold">Form Sections</h5>
+          <div id="dynamicFormSection" className="space-y-6">
+            {sectionFields.map((section, index) => (
+              <Section
+                key={section.id} // react-hook-form's field.id
+                sectionIndex={index}
+                control={control}
+                removeSection={handleRemoveSection}
+              />
+            ))}
+            {sectionFields.length === 0 && (
+                <div className="text-center py-6 text-gray-500 border-2 border-dashed rounded-md">
+                    <p>No sections defined for this form.</p>
+                    <p>Click "Add Section" to begin building your form structure.</p>
+                </div>
+            )}
+          </div>
+          <div className="border-t dark:border-gray-600 mt-6 pt-6 text-right">
+            <Button className='w-auto px-6 h-[40px] text-sm' variant='outline' type="button" icon={<TbLayoutList />} onClick={handleAddSection}>
+              Add Section
+            </Button>
+          </div>
+
+          {/* --- Form Actions --- */}
+          <div className='text-right mt-8 sticky bottom-0 bg-white dark:bg-gray-800 py-4 px-0 -mx-4 md:-mx-6 shadow- ऊपर'> {/* Make buttons sticky */}
+            <Button type='button' className='mr-3 w-28' onClick={() => navigate('/system-tools/form-builder')}>Cancel</Button>
+            <Button type='submit' variant='solid' className='w-32' loading={isSubmitting} disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : (isEditMode ? 'Update Form' : 'Save Form')}
+            </Button>
+          </div>
+        </Form>
+      </Card>
+    </Container>
+  );
+};
+
+export default FormBuilderForm;

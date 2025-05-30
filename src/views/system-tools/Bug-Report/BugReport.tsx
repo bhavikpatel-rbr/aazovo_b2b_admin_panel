@@ -47,6 +47,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import type { SelectOption } from "@/@types/select"; // Assuming SelectOption type is available globally or define it
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
@@ -78,11 +79,17 @@ export type BugReportItem = {
   updated_at?: string;
 };
 
+// Use a more generic SelectOption if available from @/@types/select
+// Otherwise, define it locally if specific to this component's form
+// For example:
+// export type LocalSelectOption = { value: string; label: string };
+
+
 const BUG_REPORT_STATUS_OPTIONS_FORM: { value: BugReportStatusForm; label: string; }[] = [
   { value: "Unread", label: "Unread" },
   { value: "Read", label: "Read" },
 ];
-const bugReportStatusFormValues = BUG_REPORT_STATUS_OPTIONS_FORM.map( (s) => s.value ) as [BugReportStatusForm, ...BugReportStatusForm[]];
+// const bugReportStatusFormValues = BUG_REPORT_STATUS_OPTIONS_FORM.map( (s) => s.value ) as [BugReportStatusForm, ...BugReportStatusForm[]]; // Not used directly in schema
 
 const bugStatusColor: Record<BugReportStatusApi, string> = {
   Unread: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
@@ -103,8 +110,9 @@ type BugReportFormData = z.infer<typeof bugReportFormSchema>;
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
+  // Using SelectOption type for filterStatus values for consistency if using a shared Select component
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterReportedBy: z.string().optional(), // Assuming 'reported_by' is a field that can be filtered
+  filterReportedBy: z.string().optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -144,7 +152,21 @@ function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
 }
 
 const ActionColumn = ({ onEdit, onViewDetail, onChangeStatus }: { onEdit: () => void; onViewDetail: () => void; onChangeStatus: () => void; }) => {
-  return ( <div className="flex items-center justify-start gap-2"> {/* Changed to justify-start and increased gap for better visibility */} <Tooltip title="Edit (Admin)"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip> <Tooltip title="View Details"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip> {/* Example: Status change icon (conditional) */} {/* <Tooltip title="Toggle Status"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onChangeStatus}><TbInfoCircle /></button></Tooltip> */} </div> );
+  return ( <div className="flex items-center justify-start gap-2"> <Tooltip title="Edit (Admin)"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip> <Tooltip title="View Details"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip> {/* Example of status change directly from action column, if needed:
+     <Tooltip title={rowStatus === "Read" ? "Mark as Unread" : "Mark as Read"}>
+        <button
+            className={`text-xl cursor-pointer select-none p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                rowStatus === "Read" 
+                ? "text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400" 
+                : "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+            }`}
+            role="button"
+            onClick={onChangeStatus}
+        >
+            {rowStatus === "Read" ? <TbMailOpened /> : <TbMail />} // Assuming TbMailOpened exists or use another icon
+        </button>
+    </Tooltip>
+     */} </div> );
 };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
@@ -168,29 +190,45 @@ const BugReportsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting 
 const BugReportListing = () => {
   const dispatch = useAppDispatch();
   const {
-    bugReportsData = [],
+    bugReportsData = [], // Assuming this is an array of ALL bug reports, or pre-filtered by backend based on broad criteria
     status: masterLoadingStatus = "idle",
+    // If backend pagination is used, total count should come from selector:
+    // bugReportsTotal = 0,
   } = useSelector(masterSelector, shallowEqual);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BugReportItem | null>(null);
-  const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false); // For View Details
-  const [viewingItem, setViewingItem] = useState<BugReportItem | null>(null); // For View Details
+  const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
+  const [viewingItem, setViewingItem] = useState<BugReportItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<BugReportItem | null>(null);
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
+
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
+    filterStatus: [],
+    filterReportedBy: "",
+  });
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<BugReportItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    dispatch(getBugReportsAction({ params: { query: tableData.query } })); // Pass query for initial load if desired
-  }, [dispatch]); // Removed tableData.query from deps to avoid re-fetch on every query change if handled differently
+    // Initial data fetch.
+    // This might fetch all reports or reports based on some initial broad query.
+    // It includes current tableData and filterCriteria in case they are initialized differently (e.g. from URL params or localStorage)
+    const initialParams = {
+        ...tableData, // pageIndex, pageSize, sort, query
+        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+        filterReportedBy: filterCriteria.filterReportedBy,
+    };
+    dispatch(getBugReportsAction({ params: initialParams }));
+  }, [dispatch]); // Runs once on mount if tableData and filterCriteria refs are stable initially.
+                 // Consider if tableData/filterCriteria initial state can change and require re-fetch.
+                 // A common pattern is dispatch; (empty array) for one-time fetch.
 
   const itemPath = (filename: any) => {
     const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
@@ -213,7 +251,7 @@ const BugReportListing = () => {
 
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
-    defaultValues: filterCriteria,
+    defaultValues: filterCriteria, // Initialize with current filterCriteria state
   });
 
   const openAddDrawer = useCallback(() => {
@@ -221,7 +259,7 @@ const BugReportListing = () => {
     setSelectedFile(null);
     setEditingItem(null);
     setIsAddDrawerOpen(true);
-  }, [formMethods, defaultAddFormValues]);
+  }, [formMethods, defaultAddFormValues]); // defaultAddFormValues is stable
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
   const openEditDrawer = useCallback(
@@ -261,14 +299,20 @@ const BugReportListing = () => {
       formDataPayload.append("attachment", selectedFile);
     }
 
+    const paramsForRefetch = { // Params to refetch data after CUD operation
+        ...tableData,
+        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+        filterReportedBy: filterCriteria.filterReportedBy,
+    };
+
     if (editingItem) {
       formDataPayload.append("status", editingItem.status); // Preserve existing status
-      formDataPayload.append("_method", "PUT"); // For Laravel to recognize PUT with FormData
+      formDataPayload.append("_method", "PUT");
       try {
         await dispatch(editBugReportAction({ id: editingItem.id, formData: formDataPayload })).unwrap();
         toast.push(<Notification title="Bug Report Updated" type="success" />);
         closeEditDrawer();
-        dispatch(getBugReportsAction({ params: { query: tableData.query } }));
+        dispatch(getBugReportsAction({ params: paramsForRefetch }));
       } catch (error: any) {
         toast.push(<Notification title="Update Failed" type="danger">{(error as Error).message || "Operation failed."}</Notification>);
       }
@@ -278,7 +322,7 @@ const BugReportListing = () => {
         await dispatch(addBugReportAction(formDataPayload)).unwrap();
         toast.push(<Notification title="Bug Report Submitted" type="success">Thank you for your report!</Notification>);
         closeAddDrawer();
-        dispatch(getBugReportsAction({ params: { query: tableData.query } }));
+        dispatch(getBugReportsAction({ params: paramsForRefetch }));
       } catch (error: any) {
         toast.push(<Notification title="Submission Failed" type="danger">{(error as Error).message || "Operation failed."}</Notification>);
       }
@@ -289,48 +333,112 @@ const BugReportListing = () => {
   const handleChangeStatus = useCallback( async (item: BugReportItem, newStatus: BugReportStatusForm) => {
       setIsChangingStatus(true);
       const formData = new FormData();
-      formData.append("name", item.name); // APIs often expect all fields or use PATCH
+      formData.append("name", item.name);
       formData.append("email", item.email);
       if (item.mobile_no) formData.append("mobile_no", item.mobile_no);
       formData.append("report", item.report);
       formData.append("status", newStatus);
-      // No attachment change here, assuming separate endpoint or logic for file updates
       formData.append("_method", "PUT");
+
+      const paramsForRefetch = {
+        ...tableData,
+        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+        filterReportedBy: filterCriteria.filterReportedBy,
+      };
 
       try {
         await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
         toast.push(<Notification title="Status Changed" type="success">{`Report status changed to ${newStatus}.`}</Notification>);
-        dispatch(getBugReportsAction({ params: { query: tableData.query } }));
+        dispatch(getBugReportsAction({ params: paramsForRefetch }));
       } catch (error: any) {
         toast.push(<Notification title="Status Change Failed" type="danger">{(error as Error).message}</Notification>);
       } finally {
         setIsChangingStatus(false);
       }
-    }, [dispatch, tableData.query]
+    }, [dispatch, tableData, filterCriteria] // Added filterCriteria
   );
 
   const handleDeleteClick = useCallback((item: BugReportItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Report Deleted" type="success">{`Report by "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getBugReportsAction({ params: { query: tableData.query } })); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete, tableData.query]);
-  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id)); try { await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} report(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getBugReportsAction({ params: { query: tableData.query } })); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems, tableData.query]);
+  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false);
+    const paramsForRefetch = {
+        ...tableData,
+        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+        filterReportedBy: filterCriteria.filterReportedBy,
+    };
+    try { await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Report Deleted" type="success">{`Report by "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getBugReportsAction({ params: paramsForRefetch })); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete, tableData, filterCriteria]); // Added filterCriteria
+  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id));
+    const paramsForRefetch = {
+        ...tableData,
+        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+        filterReportedBy: filterCriteria.filterReportedBy,
+    };
+    try { await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} report(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getBugReportsAction({ params: paramsForRefetch })); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems, tableData, filterCriteria]); // Added filterCriteria
 
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterReportedBy: data.filterReportedBy || "", }); setTableData((prev) => ({ ...prev, pageIndex: 1, query: prev.query })); // Maintain existing search query
-    dispatch(getBugReportsAction({ params: { ...tableData, pageIndex: 1, filterStatus: data.filterStatus?.map(s=>s.value), filterReportedBy: data.filterReportedBy } }));
-    closeFilterDrawer(); }, [closeFilterDrawer, dispatch, tableData]);
-  const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterReportedBy: "" }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData((prev) => ({ ...prev, pageIndex: 1, query: prev.query }));
-    dispatch(getBugReportsAction({ params: { ...tableData, pageIndex: 1, filterStatus: [], filterReportedBy: "" } }));
-}, [filterFormMethods, dispatch, tableData]);
 
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
+    const newFilterCriteria = {
+        filterStatus: data.filterStatus || [],
+        filterReportedBy: data.filterReportedBy || "",
+    };
+    setFilterCriteria(newFilterCriteria);
+    const newPageIndex = 1;
+    setTableData((prev) => ({ ...prev, pageIndex: newPageIndex, query: prev.query })); // Maintain existing search query, reset page
+
+    // Dispatch action to fetch data with new filters
+    // The backend is expected to filter. Client-side filtering in useMemo will further refine or match this.
+    dispatch(getBugReportsAction({
+        params: {
+            ...tableData, // Contains current sort, pageSize, query
+            pageIndex: newPageIndex,
+            filterStatus: newFilterCriteria.filterStatus?.map(s => s.value),
+            filterReportedBy: newFilterCriteria.filterReportedBy,
+        }
+    }));
+    closeFilterDrawer();
+  }, [closeFilterDrawer, dispatch, tableData]);
+
+  const onClearFilters = useCallback(() => {
+    const defaultFilters: FilterFormData = { filterStatus: [], filterReportedBy: "" };
+    filterFormMethods.reset(defaultFilters);
+    setFilterCriteria(defaultFilters);
+    const newPageIndex = 1;
+    setTableData((prev) => ({ ...prev, pageIndex: newPageIndex, query: prev.query })); // Maintain existing search query, reset page
+
+    // Dispatch action to fetch data with cleared filters
+    dispatch(getBugReportsAction({
+        params: {
+            ...tableData, // Contains current sort, pageSize, query
+            pageIndex: newPageIndex,
+            filterStatus: [],
+            filterReportedBy: "",
+        }
+    }));
+  }, [filterFormMethods, dispatch, tableData]);
+
+  // MODIFIED useMemo to include client-side filtering
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: BugReportItem[] = Array.isArray(bugReportsData) ? bugReportsData : [];
-    // Filtering and sorting are now primarily handled by the backend via getBugReportsAction
-    // This client-side processing can be simplified or removed if backend handles all
     let processedData: BugReportItem[] = cloneDeep(sourceData);
 
-    // Client-side search (can be redundant if backend search is effective)
-    if (tableData.query) {
-      const queryLower = tableData.query.toLowerCase();
+    // Apply filters from filterCriteria (client-side)
+    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
+      const statusValues = filterCriteria.filterStatus.map(s => s.value);
+      processedData = processedData.filter(item => statusValues.includes(item.status));
+    }
+    if (filterCriteria.filterReportedBy && filterCriteria.filterReportedBy.trim() !== "") {
+      const reportedByQuery = filterCriteria.filterReportedBy.toLowerCase().trim();
+      // Assuming 'filterReportedBy' searches name and email. Adjust if it's a specific field.
+      processedData = processedData.filter(item =>
+        item.name.toLowerCase().includes(reportedByQuery) ||
+        item.email.toLowerCase().includes(reportedByQuery)
+      );
+    }
+
+    // Client-side global search (tableData.query)
+    if (tableData.query && tableData.query.trim() !== "") {
+      const queryLower = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(item =>
         item.name.toLowerCase().includes(queryLower) ||
         item.email.toLowerCase().includes(queryLower) ||
@@ -339,31 +447,49 @@ const BugReportListing = () => {
       );
     }
     
+    // Client-side sorting
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key) { processedData.sort((a, b) => { const aVal = a[key as keyof BugReportItem]; const bVal = b[key as keyof BugReportItem]; if (key === "created_at" || key === "updated_at") { const dateA = aVal ? new Date(aVal as string).getTime() : 0; const dateB = bVal ? new Date(bVal as string).getTime() : 0; return order === "asc" ? dateA - dateB : dateB - dateA; } const aStr = String(aVal ?? "").toLowerCase(); const bStr = String(bVal ?? "").toLowerCase(); return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr); }); }
+    if (order && key) {
+        processedData.sort((a, b) => {
+            const aVal = a[key as keyof BugReportItem];
+            const bVal = b[key as keyof BugReportItem];
+            if (key === "created_at" || key === "updated_at") {
+                const dateA = aVal ? new Date(aVal as string).getTime() : 0;
+                const dateB = bVal ? new Date(bVal as string).getTime() : 0;
+                return order === "asc" ? dateA - dateB : dateB - dateA;
+            }
+            const aStr = String(aVal ?? "").toLowerCase();
+            const bStr = String(bVal ?? "").toLowerCase();
+            return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+        });
+    }
     
-    const dataToExport = [...processedData]; 
-    const currentTotal = processedData.length; // This might be total from API if pagination is server-side
-    // If using server-side pagination, `bugReportsData` would already be the paged data.
-    // For simplicity, this example assumes client-side paging after fetch or full data fetch.
+    const dataToExport = [...processedData]; // All data after filtering and sorting for export
+    const currentTotal = processedData.length; // Total items after filtering for pagination purposes
+
+    // Client-side pagination
     const pageIndex = tableData.pageIndex as number; 
     const pageSize = tableData.pageSize as number; 
     const startIndex = (pageIndex - 1) * pageSize; 
     const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     
-    // If your API returns paginated data (e.g., `data`, `total`), use that directly.
-    // For example: return { pageData: bugReportsData.data, total: bugReportsData.total, allFilteredAndSortedData: dataToExport }
-
     return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
-  }, [bugReportsData, tableData]);
+  }, [bugReportsData, tableData, filterCriteria]); // Added filterCriteria to dependencies
 
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => { 
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     const newTableData = { ...tableData, ...data };
     setTableData(newTableData);
+
     // Refetch data when table query parameters change (sort, pagination, global search)
-    // Filters are handled by onApplyFiltersSubmit
+    // Filters are handled by onApplyFiltersSubmit/onClearFilters which also dispatch
     if (data.sort || data.pageIndex || data.pageSize || (data.query !== undefined && data.query !== tableData.query)) {
-        dispatch(getBugReportsAction({ params: { ...newTableData, filterStatus: filterCriteria.filterStatus?.map(s=>s.value), filterReportedBy: filterCriteria.filterReportedBy } }));
+        dispatch(getBugReportsAction({
+            params: {
+                ...newTableData, // Use the calculated new state for dispatch
+                filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+                filterReportedBy: filterCriteria.filterReportedBy,
+            }
+        }));
     }
   }, [tableData, dispatch, filterCriteria]);
 
@@ -372,7 +498,6 @@ const BugReportListing = () => {
   const handleSelectChange = useCallback( (value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData] );
   const handleSort = useCallback( (sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData] );
   const handleSearchChange = useCallback( (query: string) => {
-    // Debounced search, update tableData and trigger fetch
     handleSetTableData({ query: query, pageIndex: 1 });
   }, [handleSetTableData] );
   const handleRowSelect = useCallback( (checked: boolean, row: BugReportItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, [] );
@@ -393,7 +518,7 @@ const BugReportListing = () => {
         cell: (props) => ( <ActionColumn 
             onEdit={() => openEditDrawer(props.row.original)} 
             onViewDetail={() => openViewDrawer(props.row.original)}
-            onChangeStatus={() => handleChangeStatus(props.row.original, props.row.original.status === "Read" ? "Unread" : "Read")}
+            onChangeStatus={() => handleChangeStatus(props.row.original, props.row.original.status === "Read" ? "Unread" : "Read")} // Example direct status change
         /> ),
       },
     ], [openEditDrawer, openViewDrawer, handleChangeStatus] 
@@ -563,9 +688,9 @@ const BugReportListing = () => {
           <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters}/>
           <div className="mt-4">
             <DataTable
-              columns={columns} data={pageData} // Use pageData for display
-              loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting || isChangingStatus}
-              pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} // Use total from memoized data
+              columns={columns} data={pageData} 
+              loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting || isChangingStatus}
+              pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectable
               checkboxChecked={(row: BugReportItem) => selectedItems.some((selected) => selected.id === row.id)}
               onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
@@ -598,7 +723,7 @@ const BugReportListing = () => {
         isOpen={isViewDrawerOpen}
         onClose={closeViewDrawer}
         onRequestClose={closeViewDrawer}
-        width={600} // Slightly smaller or same as edit
+        width={600} 
         footer={
             <div className="text-right w-full">
                 <Button size="sm" variant="solid" onClick={closeViewDrawer}>
@@ -615,8 +740,30 @@ const BugReportListing = () => {
         footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterBugReportForm" type="submit">Apply</Button> </div> }
       >
         <Form id="filterBugReportForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Status"> <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={BUG_REPORT_STATUS_OPTIONS_FORM.map((s) => ({ value: s.value, label: s.label }))} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} /> </FormItem>
-          {/* <FormItem label="Reported By (Internal)"> <Controller name="filterReportedBy" control={filterFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter username or ID to filter" /> )} /> </FormItem> */}
+          <FormItem label="Status">
+            <Controller
+                name="filterStatus"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                    <Select
+                        isMulti
+                        placeholder="Any Status"
+                        options={BUG_REPORT_STATUS_OPTIONS_FORM.map((s) => ({ value: s.value, label: s.label }))}
+                        value={field.value || []} // Ensure value is an array
+                        onChange={(val) => field.onChange(val || [])} // Ensure onChange receives an array
+                    />
+                )}
+            />
+          </FormItem>
+          <FormItem label="Reported By (Name/Email)">
+            <Controller
+                name="filterReportedBy"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                    <Input {...field} placeholder="Enter name or email to filter" />
+                )}
+            />
+          </FormItem>
         </Form>
       </Drawer>
 
