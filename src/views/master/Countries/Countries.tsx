@@ -274,7 +274,7 @@ const CountryTableTools = ({
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
-  onClearFilters : ()=> void;
+  onClearFilters: () => void;
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -282,7 +282,7 @@ const CountryTableTools = ({
         <CountrySearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
+        <Button title="Clear Filters" icon={<TbReload />} onClick={() => onClearFilters()}></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -395,9 +395,8 @@ const CountrySelectedFooter = ({
       <ConfirmDialog
         isOpen={deleteConfirmationOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Countr${
-          selectedItems.length > 1 ? "ies" : "y"
-        }`}
+        title={`Delete ${selectedItems.length} Countr${selectedItems.length > 1 ? "ies" : "y"
+          }`}
         onClose={handleCancelDelete}
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
@@ -1197,18 +1196,18 @@ const Countries = () => {
           </FormItem>
         </Form>
         <div className="relative w-full">
-            <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-              <div className="">
-                <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                <p className="text-sm font-semibold">Tushar Joshi</p>
-                <p>System Admin</p>
-              </div>
-              <div className="w-[210px]">
-                <br />
-                <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
-                <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
-              </div>
+          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+            <div className="">
+              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+              <p className="text-sm font-semibold">Tushar Joshi</p>
+              <p>System Admin</p>
             </div>
+            <div className="w-[210px]">
+              <br />
+              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+            </div>
+          </div>
         </div>
       </Drawer>
 

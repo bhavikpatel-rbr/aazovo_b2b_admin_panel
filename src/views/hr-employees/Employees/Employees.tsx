@@ -49,7 +49,8 @@ import {
   TbCalendar,
   TbUsers,
   TbTrash,
-  TbKey, // Additional icons for form
+  TbKey,
+  TbReload, // Additional icons for form
 } from "react-icons/tb";
 import DatePicker from "@/components/ui/DatePicker"; // Added DatePicker for date selection
 import { Select } from "@/components/ui/Select"; // Added Select for dropdowns
@@ -518,16 +519,21 @@ const EmployeeTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: () => void;
 }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <EmployeeSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload/>} onClick={()=>onClearFilters()}/>
+      </Tooltip>
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -1133,6 +1139,7 @@ const EmployeesListing = () => {
           </div>
           <div className="mb-4">
             <EmployeeTableTools
+              onClearFilters={onClearFilters}
               onSearchChange={handleSearchChange}
               onFilter={openFilterDrawer}
               onExport={handleExportData}
