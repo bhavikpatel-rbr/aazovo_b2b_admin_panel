@@ -1120,7 +1120,7 @@ const Countries = () => {
               loading={isSubmitting}
               disabled={!editFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }
@@ -1196,6 +1196,20 @@ const Countries = () => {
             />
           </FormItem>
         </Form>
+        <div className="relative w-full">
+            <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+              <div className="">
+                <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                <p className="text-sm font-semibold">Tushar Joshi</p>
+                <p>System Admin</p>
+              </div>
+              <div className="w-[210px]">
+                <br />
+                <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+              </div>
+            </div>
+        </div>
       </Drawer>
 
       <Drawer

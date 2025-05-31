@@ -36,6 +36,7 @@ import {
   TbUserCircle,
   TbShare,
   TbDotsVertical,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -258,15 +259,6 @@ const ActionColumn = ({
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
-          role="button"
-          onClick={onEdit}
-        >
-          <TbPencil />
-        </div>
-      </Tooltip>
       <Tooltip title="View">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
@@ -276,22 +268,7 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
-          role="button"
-        >
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400`}
-          role="button"
-        >
-          <TbDotsVertical />
-        </div>
-      </Tooltip>
+
     </div>
   );
 };
@@ -320,16 +297,21 @@ const ChangeLogsTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: () => void;
 }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <ChangeLogsSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload />} onClick={() => onClearFilters()} />
+      </Tooltip>
       <Button
         icon={<TbFilter />}
         className="w-full sm:w-auto"
@@ -534,7 +516,7 @@ const ChangeLogListing = () => {
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     setIsFilterDrawerOpen(false);
   }, []);
-  
+
   const onClearFilters = useCallback(() => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
@@ -603,8 +585,8 @@ const ChangeLogListing = () => {
       const startDate = filterCriteria.filterDateRange[0]?.getTime();
       const endDate = filterCriteria.filterDateRange[1]
         ? new Date(
-            filterCriteria.filterDateRange[1].getTime() + 86399999
-          ).getTime()
+          filterCriteria.filterDateRange[1].getTime() + 86399999
+        ).getTime()
         : null;
       processedData = processedData.filter((log) => {
         const logTime = new Date(log.timestamp).getTime();
@@ -777,7 +759,7 @@ const ChangeLogListing = () => {
         cell: (props) => (
           <ActionColumn
             onView={() => openViewDialog(props.row.original)}
-            // onEdit={() => openEditDrawer(props.row.original)} // Optional: only if admin edit is allowed
+          // onEdit={() => openEditDrawer(props.row.original)} // Optional: only if admin edit is allowed
           />
         ),
       },
@@ -898,7 +880,7 @@ const ChangeLogListing = () => {
           name="details"
           control={currentFormMethods.control}
           render={({ field }) => (
-            <Input textArea 
+            <Input textArea
               {...field}
               rows={4}
               placeholder='e.g., {"oldValue": "X", "newValue": "Y"}'
@@ -920,7 +902,7 @@ const ChangeLogListing = () => {
             {/* Add New button is typically not present for logs. Kept for structural similarity if needed. */}
             {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add Log Entry (Admin)</Button> */}
           </div>
-          <ChangeLogsTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData}/>
+          <ChangeLogsTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           {/* <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
                     <ActiveFiltersDisplay
                         filterData={filterCriteria}
@@ -1045,8 +1027,8 @@ const ChangeLogListing = () => {
                   ? "Saving..."
                   : "Adding..."
                 : editingItem
-                ? "Save Changes"
-                : "Save"}
+                  ? "Save Changes"
+                  : "Save"}
             </Button>
           </div>
         }
@@ -1139,7 +1121,7 @@ const ChangeLogListing = () => {
               render={({ field }) => (
                 <Select {...field} isMulti placeholder="Select username"
                   options={[
-                    {label: "Rahul", value: "Rahul"},
+                    { label: "Rahul", value: "Rahul" },
                   ]}
                 />
               )}
@@ -1152,9 +1134,9 @@ const ChangeLogListing = () => {
               render={({ field }) => (
                 <Select {...field} isMulti placeholder="Select Status"
                   options={[
-                    {label: "Success", value: "Success"},
-                    {label: "Blocked", value: "Blocked"},
-                    {label: "Failed", value: "Failed"},
+                    { label: "Success", value: "Success" },
+                    { label: "Blocked", value: "Blocked" },
+                    { label: "Failed", value: "Failed" },
                   ]}
                 />
               )}

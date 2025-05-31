@@ -320,7 +320,7 @@ const Documents = () => {
         </Form>
       </Drawer>
       <Drawer title="Edit Document" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={600}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editDocumentForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save Changes"}</Button> </div> } >
+        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editDocumentForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div> } >
         <Form id="editDocumentForm" onSubmit={formMethods.handleSubmit(onEditDocumentSubmit)} className="flex flex-col gap-4">
           <FormItem label="Document Name" invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}>
             <Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Document Name" /> )} />
