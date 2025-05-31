@@ -121,38 +121,38 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 const CSV_HEADERS_BUG = ["ID", "Name", "Email", "Mobile No", "Report", "Attachment", "Status", "Created At", "Updated At"];
 const CSV_KEYS_BUG: (keyof BugReportItem)[] = ["id", "name", "email", "mobile_no", "report", "attachment", "status", "created_at", "updated_at"];
 function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
-    if (!rows || rows.length === 0) {
-        toast.push(<Notification title="No Data" type="warning">There is no data to export.</Notification>);
-        return false;
-    }
-    const csvContent = [
-        CSV_HEADERS_BUG.join(','),
-        ...rows.map(row => CSV_KEYS_BUG.map(key => {
-            let val = row[key];
-            if (val === null || val === undefined) val = "";
-            return `"${String(val).replace(/"/g, '""')}"`; // Escape quotes
-        }).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported to {filename}</Notification>);
-        return true;
-    }
-    toast.push(<Notification title="Export Failed" type="danger">Your browser does not support this feature.</Notification>);
+  if (!rows || rows.length === 0) {
+    toast.push(<Notification title="No Data" type="warning">There is no data to export.</Notification>);
     return false;
+  }
+  const csvContent = [
+    CSV_HEADERS_BUG.join(','),
+    ...rows.map(row => CSV_KEYS_BUG.map(key => {
+      let val = row[key];
+      if (val === null || val === undefined) val = "";
+      return `"${String(val).replace(/"/g, '""')}"`; // Escape quotes
+    }).join(','))
+  ].join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.push(<Notification title="Export Successful" type="success" duration={2000}>Data exported to {filename}</Notification>);
+    return true;
+  }
+  toast.push(<Notification title="Export Failed" type="danger">Your browser does not support this feature.</Notification>);
+  return false;
 }
 
 const ActionColumn = ({ onEdit, onViewDetail, onChangeStatus }: { onEdit: () => void; onViewDetail: () => void; onChangeStatus: () => void; }) => {
-  return ( <div className="flex items-center justify-start gap-2"> <Tooltip title="Edit (Admin)"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip> <Tooltip title="View Details"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip> {/* Example of status change directly from action column, if needed:
+  return (<div className="flex items-center justify-start"> <Tooltip title="Edit (Admin)"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip> <Tooltip title="View Details"> <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip> {/* Example of status change directly from action column, if needed:
      <Tooltip title={rowStatus === "Read" ? "Mark as Unread" : "Mark as Read"}>
         <button
             className={`text-xl cursor-pointer select-none p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
@@ -166,24 +166,24 @@ const ActionColumn = ({ onEdit, onViewDetail, onChangeStatus }: { onEdit: () => 
             {rowStatus === "Read" ? <TbMailOpened /> : <TbMail />} // Assuming TbMailOpened exists or use another icon
         </button>
     </Tooltip>
-     */} </div> );
+     */} </div>);
 };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = "ItemSearch";
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: ()=> void; };
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => ( 
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> 
-    <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> 
-    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"> 
-      <Button icon={<TbReload />} onClick={onClearFilters} className=""></Button> 
-      <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> 
-      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> 
-    </div> 
-  </div> );
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+    <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div>
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Button icon={<TbReload />} onClick={onClearFilters} className=""></Button>
+      <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+    </div>
+  </div>);
 
 type BugReportsSelectedFooterProps = { selectedItems: BugReportItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
-const BugReportsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: BugReportsSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; const handleDeleteClick = () => setDeleteConfirmOpen(true); const handleCancelDelete = () => setDeleteConfirmOpen(false); const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmOpen(false); }; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold flex items-center gap-1 text-sm sm:text-base"> <span className="heading-text">{selectedItems.length}</span> <span>Report{selectedItems.length > 1 ? "s" : ""} selected</span> </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? "s" : ""}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete}> <p>Are you sure you want to delete the selected report{selectedItems.length > 1 ? "s" : ""}? </p> </ConfirmDialog> </> ); };
+const BugReportsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: BugReportsSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; const handleDeleteClick = () => setDeleteConfirmOpen(true); const handleCancelDelete = () => setDeleteConfirmOpen(false); const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmOpen(false); }; return (<> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold flex items-center gap-1 text-sm sm:text-base"> <span className="heading-text">{selectedItems.length}</span> <span>Report{selectedItems.length > 1 ? "s" : ""} selected</span> </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? "s" : ""}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete}> <p>Are you sure you want to delete the selected report{selectedItems.length > 1 ? "s" : ""}? </p> </ConfirmDialog> </>); };
 
 
 // --- Main Component: BugReportListing ---
@@ -221,14 +221,14 @@ const BugReportListing = () => {
     // This might fetch all reports or reports based on some initial broad query.
     // It includes current tableData and filterCriteria in case they are initialized differently (e.g. from URL params or localStorage)
     const initialParams = {
-        ...tableData, // pageIndex, pageSize, sort, query
-        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
-        filterReportedBy: filterCriteria.filterReportedBy,
+      ...tableData, // pageIndex, pageSize, sort, query
+      filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+      filterReportedBy: filterCriteria.filterReportedBy,
     };
     dispatch(getBugReportsAction({ params: initialParams }));
   }, [dispatch]); // Runs once on mount if tableData and filterCriteria refs are stable initially.
-                 // Consider if tableData/filterCriteria initial state can change and require re-fetch.
-                 // A common pattern is dispatch; (empty array) for one-time fetch.
+  // Consider if tableData/filterCriteria initial state can change and require re-fetch.
+  // A common pattern is dispatch; (empty array) for one-time fetch.
 
   const itemPath = (filename: any) => {
     const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
@@ -300,9 +300,9 @@ const BugReportListing = () => {
     }
 
     const paramsForRefetch = { // Params to refetch data after CUD operation
-        ...tableData,
-        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
-        filterReportedBy: filterCriteria.filterReportedBy,
+      ...tableData,
+      filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+      filterReportedBy: filterCriteria.filterReportedBy,
     };
 
     if (editingItem) {
@@ -330,57 +330,61 @@ const BugReportListing = () => {
     setIsSubmitting(false);
   };
 
-  const handleChangeStatus = useCallback( async (item: BugReportItem, newStatus: BugReportStatusForm) => {
-      setIsChangingStatus(true);
-      const formData = new FormData();
-      formData.append("name", item.name);
-      formData.append("email", item.email);
-      if (item.mobile_no) formData.append("mobile_no", item.mobile_no);
-      formData.append("report", item.report);
-      formData.append("status", newStatus);
-      formData.append("_method", "PUT");
+  const handleChangeStatus = useCallback(async (item: BugReportItem, newStatus: BugReportStatusForm) => {
+    setIsChangingStatus(true);
+    const formData = new FormData();
+    formData.append("name", item.name);
+    formData.append("email", item.email);
+    if (item.mobile_no) formData.append("mobile_no", item.mobile_no);
+    formData.append("report", item.report);
+    formData.append("status", newStatus);
+    formData.append("_method", "PUT");
 
-      const paramsForRefetch = {
-        ...tableData,
-        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
-        filterReportedBy: filterCriteria.filterReportedBy,
-      };
+    const paramsForRefetch = {
+      ...tableData,
+      filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+      filterReportedBy: filterCriteria.filterReportedBy,
+    };
 
-      try {
-        await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
-        toast.push(<Notification title="Status Changed" type="success">{`Report status changed to ${newStatus}.`}</Notification>);
-        dispatch(getBugReportsAction({ params: paramsForRefetch }));
-      } catch (error: any) {
-        toast.push(<Notification title="Status Change Failed" type="danger">{(error as Error).message}</Notification>);
-      } finally {
-        setIsChangingStatus(false);
-      }
-    }, [dispatch, tableData, filterCriteria] // Added filterCriteria
+    try {
+      await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
+      toast.push(<Notification title="Status Changed" type="success">{`Report status changed to ${newStatus}.`}</Notification>);
+      dispatch(getBugReportsAction({ params: paramsForRefetch }));
+    } catch (error: any) {
+      toast.push(<Notification title="Status Change Failed" type="danger">{(error as Error).message}</Notification>);
+    } finally {
+      setIsChangingStatus(false);
+    }
+  }, [dispatch, tableData, filterCriteria] // Added filterCriteria
   );
 
   const handleDeleteClick = useCallback((item: BugReportItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false);
+  const onConfirmSingleDelete = useCallback(async () => {
+    if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false);
     const paramsForRefetch = {
-        ...tableData,
-        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
-        filterReportedBy: filterCriteria.filterReportedBy,
+      ...tableData,
+      filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+      filterReportedBy: filterCriteria.filterReportedBy,
     };
-    try { await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Report Deleted" type="success">{`Report by "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getBugReportsAction({ params: paramsForRefetch })); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete, tableData, filterCriteria]); // Added filterCriteria
-  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id));
+    try { await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Report Deleted" type="success">{`Report by "${itemToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getBugReportsAction({ params: paramsForRefetch })); } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); }
+  }, [dispatch, itemToDelete, tableData, filterCriteria]); // Added filterCriteria
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id));
     const paramsForRefetch = {
-        ...tableData,
-        filterStatus: filterCriteria.filterStatus?.map(s => s.value),
-        filterReportedBy: filterCriteria.filterReportedBy,
+      ...tableData,
+      filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+      filterReportedBy: filterCriteria.filterReportedBy,
     };
-    try { await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} report(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getBugReportsAction({ params: paramsForRefetch })); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems, tableData, filterCriteria]); // Added filterCriteria
+    try { await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} report(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getBugReportsAction({ params: paramsForRefetch })); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger">{(error as Error).message}</Notification>); } finally { setIsDeleting(false); }
+  }, [dispatch, selectedItems, tableData, filterCriteria]); // Added filterCriteria
 
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
     const newFilterCriteria = {
-        filterStatus: data.filterStatus || [],
-        filterReportedBy: data.filterReportedBy || "",
+      filterStatus: data.filterStatus || [],
+      filterReportedBy: data.filterReportedBy || "",
     };
     setFilterCriteria(newFilterCriteria);
     const newPageIndex = 1;
@@ -389,12 +393,12 @@ const BugReportListing = () => {
     // Dispatch action to fetch data with new filters
     // The backend is expected to filter. Client-side filtering in useMemo will further refine or match this.
     dispatch(getBugReportsAction({
-        params: {
-            ...tableData, // Contains current sort, pageSize, query
-            pageIndex: newPageIndex,
-            filterStatus: newFilterCriteria.filterStatus?.map(s => s.value),
-            filterReportedBy: newFilterCriteria.filterReportedBy,
-        }
+      params: {
+        ...tableData, // Contains current sort, pageSize, query
+        pageIndex: newPageIndex,
+        filterStatus: newFilterCriteria.filterStatus?.map(s => s.value),
+        filterReportedBy: newFilterCriteria.filterReportedBy,
+      }
     }));
     closeFilterDrawer();
   }, [closeFilterDrawer, dispatch, tableData]);
@@ -408,12 +412,12 @@ const BugReportListing = () => {
 
     // Dispatch action to fetch data with cleared filters
     dispatch(getBugReportsAction({
-        params: {
-            ...tableData, // Contains current sort, pageSize, query
-            pageIndex: newPageIndex,
-            filterStatus: [],
-            filterReportedBy: "",
-        }
+      params: {
+        ...tableData, // Contains current sort, pageSize, query
+        pageIndex: newPageIndex,
+        filterStatus: [],
+        filterReportedBy: "",
+      }
     }));
   }, [filterFormMethods, dispatch, tableData]);
 
@@ -446,33 +450,33 @@ const BugReportListing = () => {
         (item.mobile_no && item.mobile_no.toLowerCase().includes(queryLower))
       );
     }
-    
+
     // Client-side sorting
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
-        processedData.sort((a, b) => {
-            const aVal = a[key as keyof BugReportItem];
-            const bVal = b[key as keyof BugReportItem];
-            if (key === "created_at" || key === "updated_at") {
-                const dateA = aVal ? new Date(aVal as string).getTime() : 0;
-                const dateB = bVal ? new Date(bVal as string).getTime() : 0;
-                return order === "asc" ? dateA - dateB : dateB - dateA;
-            }
-            const aStr = String(aVal ?? "").toLowerCase();
-            const bStr = String(bVal ?? "").toLowerCase();
-            return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
-        });
+      processedData.sort((a, b) => {
+        const aVal = a[key as keyof BugReportItem];
+        const bVal = b[key as keyof BugReportItem];
+        if (key === "created_at" || key === "updated_at") {
+          const dateA = aVal ? new Date(aVal as string).getTime() : 0;
+          const dateB = bVal ? new Date(bVal as string).getTime() : 0;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        }
+        const aStr = String(aVal ?? "").toLowerCase();
+        const bStr = String(bVal ?? "").toLowerCase();
+        return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+      });
     }
-    
+
     const dataToExport = [...processedData]; // All data after filtering and sorting for export
     const currentTotal = processedData.length; // Total items after filtering for pagination purposes
 
     // Client-side pagination
-    const pageIndex = tableData.pageIndex as number; 
-    const pageSize = tableData.pageSize as number; 
-    const startIndex = (pageIndex - 1) * pageSize; 
+    const pageIndex = tableData.pageIndex as number;
+    const pageSize = tableData.pageSize as number;
+    const startIndex = (pageIndex - 1) * pageSize;
     const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-    
+
     return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
   }, [bugReportsData, tableData, filterCriteria]); // Added filterCriteria to dependencies
 
@@ -483,45 +487,47 @@ const BugReportListing = () => {
     // Refetch data when table query parameters change (sort, pagination, global search)
     // Filters are handled by onApplyFiltersSubmit/onClearFilters which also dispatch
     if (data.sort || data.pageIndex || data.pageSize || (data.query !== undefined && data.query !== tableData.query)) {
-        dispatch(getBugReportsAction({
-            params: {
-                ...newTableData, // Use the calculated new state for dispatch
-                filterStatus: filterCriteria.filterStatus?.map(s => s.value),
-                filterReportedBy: filterCriteria.filterReportedBy,
-            }
-        }));
+      dispatch(getBugReportsAction({
+        params: {
+          ...newTableData, // Use the calculated new state for dispatch
+          filterStatus: filterCriteria.filterStatus?.map(s => s.value),
+          filterReportedBy: filterCriteria.filterReportedBy,
+        }
+      }));
     }
   }, [tableData, dispatch, filterCriteria]);
 
   const handleExportData = useCallback(() => { exportBugReportsToCsv("bug_reports_export.csv", allFilteredAndSortedData); }, [allFilteredAndSortedData]);
-  const handlePaginationChange = useCallback( (page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData] );
-  const handleSelectChange = useCallback( (value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData] );
-  const handleSort = useCallback( (sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData] );
-  const handleSearchChange = useCallback( (query: string) => {
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => { handleSetTableData({ sort: sort, pageIndex: 1 }); }, [handleSetTableData]);
+  const handleSearchChange = useCallback((query: string) => {
     handleSetTableData({ query: query, pageIndex: 1 });
-  }, [handleSetTableData] );
-  const handleRowSelect = useCallback( (checked: boolean, row: BugReportItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, [] );
-  const handleAllRowSelect = useCallback( (checked: boolean, currentRows: Row<BugReportItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, [] );
+  }, [handleSetTableData]);
+  const handleRowSelect = useCallback((checked: boolean, row: BugReportItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<BugReportItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-  const columns: ColumnDef<BugReportItem>[] = useMemo( () => [
-      { header: "Status", accessorKey: "status", size: 120, enableSorting: true, 
-        cell: (props) => { 
-            const statusVal = props.getValue<BugReportStatusApi>(); 
-            return (<Tag className={classNames("capitalize whitespace-nowrap min-w-[60px] text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>); 
-        }, 
+  const columns: ColumnDef<BugReportItem>[] = useMemo(() => [
+    {
+      header: "Status", accessorKey: "status", size: 120, enableSorting: true,
+      cell: (props) => {
+        const statusVal = props.getValue<BugReportStatusApi>();
+        return (<Tag className={classNames("capitalize whitespace-nowrap min-w-[60px] text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>);
       },
-      { header: "Name", accessorKey: "name", size: 180, enableSorting: true, cell: (props) => (<span className="font-semibold">{props.getValue<string>()}</span>), },
-      { header: "Email", accessorKey: "email", size: 200, enableSorting: true },
-      { header: "Mobile No", accessorKey: "mobile_no", size: 130, cell: (props) => props.getValue() || "-", },
-      { header: "Reported On", accessorKey: "created_at", size: 150, enableSorting: true, cell: (props) => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : "-", },
-      { header: "Actions", id: "actions", meta: { headerClass: "text-center", cellClass: "text-center" }, size: 120, 
-        cell: (props) => ( <ActionColumn 
-            onEdit={() => openEditDrawer(props.row.original)} 
-            onViewDetail={() => openViewDrawer(props.row.original)}
-            onChangeStatus={() => handleChangeStatus(props.row.original, props.row.original.status === "Read" ? "Unread" : "Read")} // Example direct status change
-        /> ),
-      },
-    ], [openEditDrawer, openViewDrawer, handleChangeStatus] 
+    },
+    { header: "Name", accessorKey: "name", size: 180, enableSorting: true, cell: (props) => (<span className="font-semibold">{props.getValue<string>()}</span>), },
+    { header: "Email", accessorKey: "email", size: 200, enableSorting: true },
+    { header: "Mobile No", accessorKey: "mobile_no", size: 130, cell: (props) => props.getValue() || "-", },
+    { header: "Reported On", accessorKey: "created_at", size: 150, enableSorting: true, cell: (props) => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : "-", },
+    {
+      header: "Actions", id: "actions", meta: { headerClass: "text-center", cellClass: "text-center" }, size: 120,
+      cell: (props) => (<ActionColumn
+        onEdit={() => openEditDrawer(props.row.original)}
+        onViewDetail={() => openViewDrawer(props.row.original)}
+        onChangeStatus={() => handleChangeStatus(props.row.original, props.row.original.status === "Read" ? "Unread" : "Read")} // Example direct status change
+      />),
+    },
+  ], [openEditDrawer, openViewDrawer, handleChangeStatus]
   );
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
@@ -543,7 +549,7 @@ const BugReportListing = () => {
         errorMessage={currentFormMethods.formState.errors.email?.message}
       >
         <Controller name="email" control={currentFormMethods.control}
-          render={({ field }) => (<Input {...field} type="email" prefix={<TbMail className="text-lg"/>} placeholder="your.email@example.com" />)}
+          render={({ field }) => (<Input {...field} type="email" prefix={<TbMail className="text-lg" />} placeholder="your.email@example.com" />)}
         />
       </FormItem>
       <FormItem
@@ -553,10 +559,10 @@ const BugReportListing = () => {
         errorMessage={currentFormMethods.formState.errors.mobile_no?.message}
       >
         <Controller name="mobile_no" control={currentFormMethods.control}
-          render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone className="text-lg"/>} placeholder="+XX-XXXXXXXXXX" />)}
+          render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone className="text-lg" />} placeholder="+XX-XXXXXXXXXX" />)}
         />
       </FormItem>
-      
+
       <FormItem
         label="Report / Description"
         className="md:col-span-2"
@@ -564,7 +570,7 @@ const BugReportListing = () => {
         errorMessage={currentFormMethods.formState.errors.report?.message}
       >
         <Controller name="report" control={currentFormMethods.control}
-          render={({ field }) => (<Input textArea {...field} rows={6} prefix={<TbFileDescription className="text-lg mt-2.5"/>} placeholder="Please describe the bug in detail..." />)}
+          render={({ field }) => (<Input textArea {...field} rows={6} prefix={<TbFileDescription className="text-lg mt-2.5" />} placeholder="Please describe the bug in detail..." />)}
         />
       </FormItem>
       <FormItem
@@ -578,7 +584,7 @@ const BugReportListing = () => {
             <Input type="file" name={name} ref={ref} onBlur={onBlur}
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                onChange(file); 
+                onChange(file);
                 setSelectedFile(file || null);
               }}
               prefix={<TbPaperclip className="text-lg" />}
@@ -586,95 +592,95 @@ const BugReportListing = () => {
           )}
         />
         {editingItem?.attachment && !selectedFile && (
-            <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Current: <a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{editingItem.attachment}</a>
-            </div>
-          )}
+          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Current: <a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{editingItem.attachment}</a>
+          </div>
+        )}
       </FormItem>
     </div>
   );
 
   const renderViewDetails = (item: BugReportItem) => (
     <div className="p-1 space-y-5"> {/* Increased spacing */}
-        <div className="flex items-start">
-            <TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
-            <div>
-                <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Name</h6>
-                <p className="text-gray-800 dark:text-gray-100 text-base">{item.name}</p>
-            </div>
+      <div className="flex items-start">
+        <TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+        <div>
+          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Name</h6>
+          <p className="text-gray-800 dark:text-gray-100 text-base">{item.name}</p>
         </div>
-        <div className="flex items-start">
-            <TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
-            <div>
-                <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</h6>
-                <p className="text-gray-800 dark:text-gray-100 text-base">{item.email}</p>
-            </div>
+      </div>
+      <div className="flex items-start">
+        <TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+        <div>
+          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</h6>
+          <p className="text-gray-800 dark:text-gray-100 text-base">{item.email}</p>
         </div>
-        {item.mobile_no && (
-            <div className="flex items-start">
-                <TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
-                <div>
-                    <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mobile No.</h6>
-                    <p className="text-gray-800 dark:text-gray-100 text-base">{item.mobile_no}</p>
-                </div>
-            </div>
-        )}
+      </div>
+      {item.mobile_no && (
         <div className="flex items-start">
-            <TbInfoCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
-            <div>
-                <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</h6>
-                <Tag className={classNames("capitalize text-sm", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>
-                    {item.status}
-                </Tag>
-            </div>
+          <TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+          <div>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mobile No.</h6>
+            <p className="text-gray-800 dark:text-gray-100 text-base">{item.mobile_no}</p>
+          </div>
         </div>
+      )}
+      <div className="flex items-start">
+        <TbInfoCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+        <div>
+          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</h6>
+          <Tag className={classNames("capitalize text-sm", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>
+            {item.status}
+          </Tag>
+        </div>
+      </div>
+      <div className="flex items-start">
+        <TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+        <div>
+          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Report Description</h6>
+          <p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">{item.report}</p>
+        </div>
+      </div>
+      {item.attachment && (
         <div className="flex items-start">
-            <TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
-            <div>
-                <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Report Description</h6>
-                <p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">{item.report}</p>
-            </div>
+          <TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+          <div>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6>
+            <a
+              href={itemPath(item.attachment)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 hover:underline break-all text-base"
+            >
+              {item.attachment}
+            </a>
+          </div>
         </div>
-        {item.attachment && (
-            <div className="flex items-start">
-                <TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
-                <div>
-                    <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6>
-                    <a
-                        href={itemPath(item.attachment)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-600 hover:underline break-all text-base"
-                    >
-                        {item.attachment}
-                    </a>
-                </div>
-            </div>
-        )}
-        {item.created_at && (
-            <div className="flex items-start">
-                <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
-                <div>
-                    <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6>
-                    <p className="text-gray-800 dark:text-gray-100 text-base">
-                        {new Date(item.created_at).toLocaleString()}
-                    </p>
-                </div>
-            </div>
-        )}
-        {item.updated_at && item.updated_at !== item.created_at && (
-             <div className="flex items-start">
-                <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
-                <div>
-                    <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Last Updated</h6>
-                    <p className="text-gray-800 dark:text-gray-100 text-base">
-                        {new Date(item.updated_at).toLocaleString()}
-                    </p>
-                </div>
-            </div>
-        )}
+      )}
+      {item.created_at && (
+        <div className="flex items-start">
+          <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+          <div>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6>
+            <p className="text-gray-800 dark:text-gray-100 text-base">
+              {new Date(item.created_at).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      )}
+      {item.updated_at && item.updated_at !== item.created_at && (
+        <div className="flex items-start">
+          <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
+          <div>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Last Updated</h6>
+            <p className="text-gray-800 dark:text-gray-100 text-base">
+              {new Date(item.updated_at).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
-);
+  );
 
 
   return (
@@ -685,10 +691,10 @@ const BugReportListing = () => {
             <h5 className="mb-2 sm:mb-0">Bug Reports</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Report</Button>
           </div>
-          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters}/>
+          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters} />
           <div className="mt-4">
             <DataTable
-              columns={columns} data={pageData} 
+              columns={columns} data={pageData}
               loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting || isChangingStatus}
               pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectable
@@ -705,16 +711,34 @@ const BugReportListing = () => {
 
       {/* Add/Edit Drawer */}
       <Drawer
-        title={editingItem ? "Edit Bug Report (Admin)" : "Report New Bug"}
+        title={editingItem ? "Edit Bug Report" : "Report New Bug"}
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
         width={700}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="bugReportForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? (editingItem ? "Saving..." : "Submitting...") : (editingItem ? "Save Changes" : "Submit Report")}</Button> </div> }
+        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="bugReportForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? (editingItem ? "Saving..." : "Submitting...") : (editingItem ? "Save" : "Submit Report")}</Button> </div>}
       >
         <Form id="bugReportForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
           {renderDrawerForm(formMethods)}
         </Form>
+        {
+          editingItem && (
+            <div className="relative w-full">
+              <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                <div className="">
+                  <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                  <p className="text-sm font-semibold">Tushar Joshi</p>
+                  <p>System Admin</p>
+                </div>
+                <div className="w-[210px]">
+                  <br />
+                  <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                  <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+                </div>
+              </div>
+            </div>
+          )
+        }
       </Drawer>
 
       {/* View Details Drawer */}
@@ -723,13 +747,13 @@ const BugReportListing = () => {
         isOpen={isViewDrawerOpen}
         onClose={closeViewDrawer}
         onRequestClose={closeViewDrawer}
-        width={600} 
+        width={600}
         footer={
-            <div className="text-right w-full">
-                <Button size="sm" variant="solid" onClick={closeViewDrawer}>
-                    Close
-                </Button>
-            </div>
+          <div className="text-right w-full">
+            <Button size="sm" variant="solid" onClick={closeViewDrawer}>
+              Close
+            </Button>
+          </div>
         }
       >
         {viewingItem && renderViewDetails(viewingItem)}
@@ -737,31 +761,31 @@ const BugReportListing = () => {
 
       {/* Filter Drawer */}
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterBugReportForm" type="submit">Apply</Button> </div> }
+        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterBugReportForm" type="submit">Apply</Button> </div>}
       >
         <Form id="filterBugReportForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Status">
             <Controller
-                name="filterStatus"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                    <Select
-                        isMulti
-                        placeholder="Any Status"
-                        options={BUG_REPORT_STATUS_OPTIONS_FORM.map((s) => ({ value: s.value, label: s.label }))}
-                        value={field.value || []} // Ensure value is an array
-                        onChange={(val) => field.onChange(val || [])} // Ensure onChange receives an array
-                    />
-                )}
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Any Status"
+                  options={BUG_REPORT_STATUS_OPTIONS_FORM.map((s) => ({ value: s.value, label: s.label }))}
+                  value={field.value || []} // Ensure value is an array
+                  onChange={(val) => field.onChange(val || [])} // Ensure onChange receives an array
+                />
+              )}
             />
           </FormItem>
           <FormItem label="Reported By (Name/Email)">
             <Controller
-                name="filterReportedBy"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                    <Input {...field} placeholder="Enter name or email to filter" />
-                )}
+              name="filterReportedBy"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Enter name or email to filter" />
+              )}
             />
           </FormItem>
         </Form>

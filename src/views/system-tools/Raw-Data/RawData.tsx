@@ -165,18 +165,18 @@ function exportRowDataToCsv(filename: string, rows: RowDataItem[], countryOption
 }
 
 const ItemActionColumn = ({ onEdit, onViewDetail, onDelete, onBlacklist }: { onEdit: () => void; onViewDetail: () => void; onDelete: () => void; onBlacklist: () => void; }) => {
-  return ( 
-  <div className="flex items-center justify-center gap-1"> 
-    <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> 
-    <Tooltip title="View"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip> 
-    <Tooltip title="Convert to Member"> <Link to="/business-entities/member-create" className={`text-xl cursor-pointer select-none text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400`} role="button"><TbUserShare /></Link></Tooltip> 
-    <Tooltip title="Blacklist"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`} role="button" onClick={onBlacklist}><TbCancel size={16}/></div></Tooltip> 
-    <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div> );
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+      <Tooltip title="View"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
+      <Tooltip title="Convert to Member"> <Link to="/business-entities/member-create" className={`text-xl cursor-pointer select-none text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400`} role="button"><TbUserShare /></Link></Tooltip>
+      <Tooltip title="Blacklist"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`} role="button" onClick={onBlacklist}><TbCancel size={16} /></div></Tooltip>
+      <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div>);
 };
 ItemActionColumn.displayName = "ItemActionColumn";
 
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = "ItemSearch";
 
 type ItemTableToolsProps = {
@@ -259,13 +259,13 @@ const RowDataListing = () => {
 
   const openAddDrawer = useCallback(() => {
     formMethods.reset({
-        country_id: countryOptions[0]?.value || "",
-        category_id: categoryOptions[0]?.value || "",
-        brand_id: brandOptions[0]?.value || "",
-        mobile_no: "", email: "", name: "", company_name: "",
-        quality: QUALITY_LEVELS_UI[0]?.value || "",
-        city: "", status: STATUS_OPTIONS_UI.find(s => s.value === "Row")?.value || STATUS_OPTIONS_UI[0]?.value || "",
-        remarks: "",
+      country_id: countryOptions[0]?.value || "",
+      category_id: categoryOptions[0]?.value || "",
+      brand_id: brandOptions[0]?.value || "",
+      mobile_no: "", email: "", name: "", company_name: "",
+      quality: QUALITY_LEVELS_UI[0]?.value || "",
+      city: "", status: STATUS_OPTIONS_UI.find(s => s.value === "Row")?.value || STATUS_OPTIONS_UI[0]?.value || "",
+      remarks: "",
     });
     setEditingItem(null); setIsAddDrawerOpen(true);
   }, [formMethods, countryOptions, categoryOptions, brandOptions]);
@@ -302,11 +302,11 @@ const RowDataListing = () => {
     try {
       if (editingItem) {
         await dispatch(editRowDataAction({ id: editingItem.id, ...apiPayload })).unwrap();
-        toast.push(<Notification title="Row Data Updated" type="success" duration={2000}/>);
+        toast.push(<Notification title="Row Data Updated" type="success" duration={2000} />);
         closeEditDrawer();
       } else {
         await dispatch(addRowDataAction(apiPayload)).unwrap();
-        toast.push(<Notification title="Row Data Added" type="success" duration={2000}/>);
+        toast.push(<Notification title="Row Data Added" type="success" duration={2000} />);
         closeAddDrawer();
       }
       dispatch(getRowDataAction()); // Refresh data
@@ -324,7 +324,8 @@ const RowDataListing = () => {
       toast.push(<Notification title="Row Data Deleted" type="success" duration={2000}>{`Entry "${itemToDelete.name || itemToDelete.mobile_no}" deleted.`}</Notification>);
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
       dispatch(getRowDataAction()); // Refresh data
-    } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>);
+    } catch (e: any) {
+      toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>);
     } finally { setIsDeleting(false); setItemToDelete(null); }
   };
   const handleDeleteSelected = async () => {
@@ -335,7 +336,8 @@ const RowDataListing = () => {
       await dispatch(deleteAllRowDataAction({ ids: idsToDelete.join(',') })).unwrap();
       toast.push(<Notification title="Row Data Deleted" type="success" duration={2000}>{selectedItems.length} entr(ies) deleted.</Notification>);
       setSelectedItems([]); dispatch(getRowDataAction()); // Refresh data
-    } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>);
+    } catch (e: any) {
+      toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>);
     } finally { setIsDeleting(false); }
   };
 
@@ -349,10 +351,11 @@ const RowDataListing = () => {
       await dispatch(editRowDataAction(payload)).unwrap();
       toast.push(<Notification title="Row Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>);
       dispatch(getRowDataAction()); // Refresh data
-    } catch (e: any) { toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>);
+    } catch (e: any) {
+      toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>);
     } finally { setIsBlacklisting(false); setItemToBlacklist(null); }
   };
-  
+
   const openFilterDrawer = () => { filterForm.reset(filterCriteria); setIsFilterDrawerOpen(true); };
   const onApplyFiltersSubmit = (data: typeof filterCriteria) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); setIsFilterDrawerOpen(false); };
   const onClearFilters = () => { filterForm.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); };
@@ -367,7 +370,7 @@ const RowDataListing = () => {
     if (filterCriteria.filterStatus?.length) processedData = processedData.filter(item => filterCriteria.filterStatus!.some(fs => fs.value === item.status));
     if (filterCriteria.filterQuality?.length) processedData = processedData.filter(item => filterCriteria.filterQuality!.some(fq => fq.value === item.quality));
 
-    if (tableData.query && tableData.query.trim() !== "") { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => (String(item.id).toLowerCase().includes(query) || item.mobile_no.toLowerCase().includes(query) || (item.email && item.email.toLowerCase().includes(query)) || (item.name && item.name.toLowerCase().includes(query)) || (item.company_name && item.company_name.toLowerCase().includes(query)) || (item.city && item.city.toLowerCase().includes(query)) || (item.remarks && item.remarks.toLowerCase().includes(query)) || (item.countryNameDisplay && item.countryNameDisplay.toLowerCase().includes(query)) || (item.categoryNameDisplay && item.categoryNameDisplay.toLowerCase().includes(query)) || (item.brandNameDisplay && item.brandNameDisplay.toLowerCase().includes(query)) )); }
+    if (tableData.query && tableData.query.trim() !== "") { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => (String(item.id).toLowerCase().includes(query) || item.mobile_no.toLowerCase().includes(query) || (item.email && item.email.toLowerCase().includes(query)) || (item.name && item.name.toLowerCase().includes(query)) || (item.company_name && item.company_name.toLowerCase().includes(query)) || (item.city && item.city.toLowerCase().includes(query)) || (item.remarks && item.remarks.toLowerCase().includes(query)) || (item.countryNameDisplay && item.countryNameDisplay.toLowerCase().includes(query)) || (item.categoryNameDisplay && item.categoryNameDisplay.toLowerCase().includes(query)) || (item.brandNameDisplay && item.brandNameDisplay.toLowerCase().includes(query)))); }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { processedData.sort((a, b) => { let aVal: any, bVal: any; if (key === 'country_id') { aVal = a.countryNameDisplay; bVal = b.countryNameDisplay; } else if (key === 'category_id') { aVal = a.categoryNameDisplay; bVal = b.categoryNameDisplay; } else if (key === 'brand_id') { aVal = a.brandNameDisplay; bVal = b.brandNameDisplay; } else { aVal = a[key as keyof RowDataItem]; bVal = b[key as keyof RowDataItem]; } if (key === "created_at" || key === "updated_at") { return order === "asc" ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime(); } const aStr = String(aVal ?? "").toLowerCase(); const bStr = String(bVal ?? "").toLowerCase(); return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr); }); }
     const dataToExport = [...processedData];
@@ -377,14 +380,14 @@ const RowDataListing = () => {
     const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
   }, [rowData, tableData, filterCriteria, countryOptions, categoryOptions, brandOptions]);
-  
+
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const handleExportData = () => { exportRowDataToCsv("row_data_export.csv", allFilteredAndSortedData, countryOptions, categoryOptions, brandOptions); };
   const handlePaginationChange = useCallback((page: number) => setTableData(prev => ({ ...prev, pageIndex: page })), []);
   const handleSelectPageSizeChange = useCallback((value: number) => { setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 })); setSelectedItems([]); }, []);
   const handleSort = useCallback((sort: OnSortParam) => { setTableData(prev => ({ ...prev, sort: sort, pageIndex: 1 })); }, []);
   const handleSearchInputChange = useCallback((query: string) => { setTableData(prev => ({ ...prev, query: query, pageIndex: 1 })); }, []);
-  const handleRowSelect = useCallback((checked: boolean, row: RowDataItem) => {setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); });}, []);
+  const handleRowSelect = useCallback((checked: boolean, row: RowDataItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<RowDataItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
   const columns: ColumnDef<RowDataItem>[] = useMemo(() => [
@@ -393,8 +396,8 @@ const RowDataListing = () => {
     { header: 'Brand', accessorKey: 'brand_id', size: 120, cell: props => props.row.original.brand?.name || String(props.getValue()) },
     { header: 'Mobile No', accessorKey: 'mobile_no', size: 130 },
     { header: 'Name', accessorKey: 'name', size: 150 },
-    { header: 'Quality', accessorKey: 'quality', size: 100, cell: props => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find(q => q.value === qVal); return <Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100", qVal === "B" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100", qVal === "C" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100")}>{qOpt?.label || qVal}</Tag>; }},
-    { header: 'Status', accessorKey: 'status', size: 110, cell: props => { const sVal = props.getValue<string>(); const sOpt = STATUS_OPTIONS_UI.find(s => s.value === sVal); return <Tag className={classNames("capitalize", statusColors[sVal])}>{sOpt?.label || sVal}</Tag>; }},
+    { header: 'Quality', accessorKey: 'quality', size: 100, cell: props => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find(q => q.value === qVal); return <Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100", qVal === "B" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100", qVal === "C" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100")}>{qOpt?.label || qVal}</Tag>; } },
+    { header: 'Status', accessorKey: 'status', size: 110, cell: props => { const sVal = props.getValue<string>(); const sOpt = STATUS_OPTIONS_UI.find(s => s.value === sVal); return <Tag className={classNames("capitalize", statusColors[sVal])}>{sOpt?.label || sVal}</Tag>; } },
     { header: 'Remarks', accessorKey: 'remarks', size: 150, cell: props => <div className="truncate w-36" title={props.getValue() as string | undefined}>{props.getValue() as string || '-'}</div> },
     { header: 'Created At', accessorKey: 'created_at', size: 120, cell: props => props.getValue() ? new Date(props.getValue() as string).toLocaleDateString() : '-' },
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: props => <ItemActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} /> },
@@ -415,7 +418,7 @@ const RowDataListing = () => {
       <FormItem label="Remarks (Optional)" className="md:col-span-2 lg:col-span-3" invalid={!!currentFormMethods.formState.errors.remarks} errorMessage={currentFormMethods.formState.errors.remarks?.message}><Controller name="remarks" control={currentFormMethods.control} render={({ field }) => <Input textArea {...field} rows={3} placeholder="Add any relevant notes or comments..." />} /></FormItem>
     </div>
   );
-  
+
 
   // --- Import Modal Handlers & Submit ---
   const openImportModal = () => setIsImportModalOpen(true);
@@ -432,7 +435,7 @@ const RowDataListing = () => {
         if (e.target) e.target.value = ""; // Reset file input
       }
     } else {
-        setSelectedFile(null);
+      setSelectedFile(null);
     }
   };
 
@@ -500,18 +503,36 @@ const RowDataListing = () => {
 
       {selectedItems.length > 0 && (
         <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
-            <div className="flex items-center justify-between w-full px-4 sm:px-8">
+          <div className="flex items-center justify-between w-full px-4 sm:px-8">
             <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold flex items-center gap-1 text-sm sm:text-base"> <span className="heading-text">{selectedItems.length}</span> <span>Item{selectedItems.length > 1 ? "s" : ""} selected</span> </span> </span>
             <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteSelected} loading={isDeleting}>Delete Selected</Button>
-            </div>
+          </div>
         </StickyFooter>
       )}
 
       <Drawer title={editingItem ? "Edit Row Data" : "Add New Row Data"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={940}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="rowDataForm" type="submit" loading={isSubmitting} disabled={isSubmitting || (editingItem ? !formMethods.formState.isDirty : false) || !formMethods.formState.isValid }>{isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save Changes" : "Save")}</Button> </div> } >
+        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="rowDataForm" type="submit" loading={isSubmitting} disabled={isSubmitting || (editingItem ? !formMethods.formState.isDirty : false) || !formMethods.formState.isValid}>{isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save" : "Save")}</Button> </div>} >
         <Form id="rowDataForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
           {renderDrawerForm(formMethods)}
         </Form>
+        {
+          editingItem && (
+            <div className="relative w-full">
+              <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                <div className="">
+                  <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                  <p className="text-sm font-semibold">Tushar Joshi</p>
+                  <p>System Admin</p>
+                </div>
+                <div className="w-[210px]">
+                  <br />
+                  <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                  <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+                </div>
+              </div>
+            </div>
+          )
+        }
       </Drawer>
 
       <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={700}>
@@ -519,16 +540,16 @@ const RowDataListing = () => {
         {viewingItem && (
           <div className="space-y-3 text-sm">
             {(Object.keys(viewingItem) as Array<keyof RowDataItem>).filter(key => key !== 'country' && key !== 'category' && key !== 'brand').map((key) => {
-                let label = key.replace(/_id$/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                let value: any = viewingItem[key as keyof RowDataItem];
-                if (key === 'country_id') value = viewingItem.country?.name || String(value);
-                else if (key === 'category_id') value = viewingItem.category?.name || String(value);
-                else if (key === 'brand_id') value = viewingItem.brand?.name || String(value);
-                else if (key === 'quality') value = QUALITY_LEVELS_UI.find(q => q.value === value)?.label || String(value);
-                else if (key === 'status') value = STATUS_OPTIONS_UI.find(s => s.value === value)?.label || String(value);
-                else if ((key === 'created_at' || key === 'updated_at') && value) value = new Date(value).toLocaleString();
-                value = (value === null || value === undefined || value === "") ? <span className="text-gray-400">-</span> : String(value);
-                return (<div key={key} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0"><span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span><span className="w-2/3 text-gray-900 dark:text-gray-100">{value}</span></div>);
+              let label = key.replace(/_id$/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+              let value: any = viewingItem[key as keyof RowDataItem];
+              if (key === 'country_id') value = viewingItem.country?.name || String(value);
+              else if (key === 'category_id') value = viewingItem.category?.name || String(value);
+              else if (key === 'brand_id') value = viewingItem.brand?.name || String(value);
+              else if (key === 'quality') value = QUALITY_LEVELS_UI.find(q => q.value === value)?.label || String(value);
+              else if (key === 'status') value = STATUS_OPTIONS_UI.find(s => s.value === value)?.label || String(value);
+              else if ((key === 'created_at' || key === 'updated_at') && value) value = new Date(value).toLocaleString();
+              value = (value === null || value === undefined || value === "") ? <span className="text-gray-400">-</span> : String(value);
+              return (<div key={key} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0"><span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span><span className="w-2/3 text-gray-900 dark:text-gray-100">{value}</span></div>);
             })}
           </div>
         )}
@@ -536,13 +557,13 @@ const RowDataListing = () => {
       </Dialog>
 
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-        footer={ <div className="text-right w-full flex justify-end gap-2"> <Button size="sm" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterRowDataForm" type="submit">Apply</Button> </div> } >
+        footer={<div className="text-right w-full flex justify-end gap-2"> <Button size="sm" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterRowDataForm" type="submit">Apply</Button> </div>} >
         <Form id="filterRowDataForm" onSubmit={filterForm.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Country"><Controller name="filterCountry" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Any Country" options={countryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="Category"><Controller name="filterCategory" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Any Category" options={categoryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="Brand"><Controller name="filterBrand" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Any Brand" options={brandOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="Status"><Controller name="filterStatus" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={STATUS_OPTIONS_UI} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="Quality"><Controller name="filterQuality" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Any Quality" options={QUALITY_LEVELS_UI} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Country"><Controller name="filterCountry" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Select Country" options={countryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Category"><Controller name="filterCategory" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Select Category" options={categoryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Brand"><Controller name="filterBrand" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Select Brand" options={brandOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Select Status" options={STATUS_OPTIONS_UI} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Quality"><Controller name="filterQuality" control={filterForm.control} render={({ field }) => (<Select isMulti placeholder="Select Quality" options={QUALITY_LEVELS_UI} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
         </Form>
       </Drawer>
 
@@ -563,55 +584,55 @@ const RowDataListing = () => {
         contentClass="overflow-visible" // Allow file input to be fully visible if it has custom styling
       >
         <div className="py-4">
-            <p className="mb-1 text-sm text-gray-600 dark:text-gray-300">
-                Select a CSV or Excel file to import raw data.
-            </p>
-            <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-                Required headers (example): <code>country_id, category_id, brand_id, mobile_no, name, email, status, quality, etc.</code>
-            </p>
+          <p className="mb-1 text-sm text-gray-600 dark:text-gray-300">
+            Select a CSV or Excel file to import raw data.
+          </p>
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+            Required headers (example): <code>country_id, category_id, brand_id, mobile_no, name, email, status, quality, etc.</code>
+          </p>
 
-            <FormItem label="Upload File" className="mb-4">
-                <Input
-                    type="file"
-                    name="file" // Add name for potential form handling if needed, not strictly required for direct state update
-                    accept=".csv, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" // Accept CSV and Excel types
-                    onChange={handleFileChange}
-                    prefix={<TbFileSpreadsheet className="text-xl text-gray-400" />}
-                />
-                 {selectedFile && (
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Selected: <span className="font-semibold">{selectedFile.name}</span> ({(selectedFile.size / 1024).toFixed(2)} KB)
-                    </div>
-                )}
-            </FormItem>
+          <FormItem label="Upload File" className="mb-4">
+            <Input
+              type="file"
+              name="file" // Add name for potential form handling if needed, not strictly required for direct state update
+              accept=".csv, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" // Accept CSV and Excel types
+              onChange={handleFileChange}
+              prefix={<TbFileSpreadsheet className="text-xl text-gray-400" />}
+            />
+            {selectedFile && (
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Selected: <span className="font-semibold">{selectedFile.name}</span> ({(selectedFile.size / 1024).toFixed(2)} KB)
+              </div>
+            )}
+          </FormItem>
 
-            <div className="mt-3">
-                <a
-                    href="/sample-import-template.csv" // Link to your sample CSV
-                    download="sample-row-data-import-template.csv"
-                    className="text-sm text-blue-600 hover:underline dark:text-blue-400 flex items-center gap-1"
-                >
-                    <TbCloudDownload /> Download Sample CSV Template
-                </a>
-            </div>
-            <div className="text-right w-full">
-                        <Button
-                variant="plain"
-                onClick={closeImportModal}
-                disabled={isImporting}
+          <div className="mt-3">
+            <a
+              href="/sample-import-template.csv" // Link to your sample CSV
+              download="sample-row-data-import-template.csv"
+              className="text-sm text-blue-600 hover:underline dark:text-blue-400 flex items-center gap-1"
             >
-                Cancel
+              <TbCloudDownload /> Download Sample CSV Template
+            </a>
+          </div>
+          <div className="text-right w-full">
+            <Button
+              variant="plain"
+              onClick={closeImportModal}
+              disabled={isImporting}
+            >
+              Cancel
             </Button>
             <Button
-                variant="solid"
-                onClick={handleImportSubmit}
-                loading={isImporting}
-                disabled={!selectedFile || isImporting}
-                icon={isImporting ? null : <TbCloudUpload />}
+              variant="solid"
+              onClick={handleImportSubmit}
+              loading={isImporting}
+              disabled={!selectedFile || isImporting}
+              icon={isImporting ? null : <TbCloudUpload />}
             >
-                {isImporting ? 'Importing...' : 'Upload & Import'}
+              {isImporting ? 'Importing...' : 'Upload & Import'}
             </Button>
-            </div>
+          </div>
         </div>
       </Dialog>
     </>

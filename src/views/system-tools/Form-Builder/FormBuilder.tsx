@@ -47,6 +47,7 @@ import {
   TbShare,
   TbTrash,
   TbX,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -352,10 +353,10 @@ const ActionColumn = ({
           role="button"
           onClick={() => onChangeStatus(item)}
         >
-          <TbSwitchHorizontal />
+          <TbSwitchHorizontal size={18}/>
         </div>
       </Tooltip>{" "}
-      <Tooltip title="Clone Task"><div className={classNames('text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400')} role="button"><TbCopy /></div></Tooltip>
+      <Tooltip title="Clone Task"><div className={classNames('text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400')} role="button"><TbCopy size={18} /></div></Tooltip>
       <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-800 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={() => onDelete(item)}><TbTrash /></div></Tooltip>
     </div>
   );
@@ -384,17 +385,22 @@ type FormBuilderTableToolsProps = {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: () => void;
 };
 const FormBuilderTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters
 }: FormBuilderTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <FormBuilderSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload/>} onClick={()=>onClearFilters()}/>
+      </Tooltip>
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -1170,6 +1176,7 @@ const FormBuilder = () => {
             </Button>
           </div>
           <FormBuilderTableTools
+            onClearFilters={onClearFilters}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={function (): void {
@@ -1323,14 +1330,14 @@ const FormBuilder = () => {
       </Dialog>
 
       <Drawer
-        title="Filter Forms"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={() => setIsFilterDrawerOpen(false)}
         onRequestClose={() => setIsFilterDrawerOpen(false)}
         footer={
           <div className="text-right w-full gap-3">
             <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">
-              Clear Filters
+              Clear
             </Button>
               <Button
                 size="sm"
@@ -1338,7 +1345,7 @@ const FormBuilder = () => {
                 form="filterFormBuilderForm"
                 type="submit"
               >
-                Apply Filters
+                Apply
               </Button>
           </div>
         }
@@ -1348,14 +1355,14 @@ const FormBuilder = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Filter by Status">
+          <FormItem label="Status">
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Select status(es)..."
+                  placeholder="Select Status"
                   options={FORM_STATUS_OPTIONS}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -1363,14 +1370,14 @@ const FormBuilder = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Department">
+          <FormItem label="Department">
             <Controller
               name="filterDepartment"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Select department(s)..."
+                  placeholder="Select Department"
                   options={DEPARTMENT_OPTIONS}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
@@ -1378,14 +1385,14 @@ const FormBuilder = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Filter by Category">
+          <FormItem label="Category">
             <Controller
               name="filterCategory"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Select category(es)..."
+                  placeholder="Select Category"
                   options={CATEGORY_OPTIONS}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}

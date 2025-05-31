@@ -1104,7 +1104,7 @@ const countryNameFilterOptions = useMemo(() => {
 
       {/* Add Drawer */}
       <Drawer
-        title="Add Product Specification"
+        title="Add Product Spec"
         isOpen={isAddDrawerOpen}
         onClose={closeAddDrawer}
         onRequestClose={closeAddDrawer}
@@ -1168,7 +1168,7 @@ const countryNameFilterOptions = useMemo(() => {
             )}
           </FormItem>
           <FormItem
-            label="Specification Name"
+            label="Spec Name"
             invalid={!!addFormMethods.formState.errors.name}
             errorMessage={addFormMethods.formState.errors.name?.message}
             isRequired
@@ -1177,7 +1177,7 @@ const countryNameFilterOptions = useMemo(() => {
               name="name"
               control={addFormMethods.control}
               render={({ field }) => (
-                <Input {...field} placeholder="Enter specification name" />
+                <Input {...field} placeholder="Enter spec name" />
               )}
             />
           </FormItem>
@@ -1231,7 +1231,7 @@ const countryNameFilterOptions = useMemo(() => {
 
       {/* Edit Drawer */}
       <Drawer
-        title="Edit Product Specification"
+        title="Edit Product Spec"
         isOpen={isEditDrawerOpen}
         onClose={closeEditDrawer}
         onRequestClose={closeEditDrawer}
@@ -1260,7 +1260,7 @@ const countryNameFilterOptions = useMemo(() => {
                 (!editFormMethods.formState.isDirty && !editFormMethods.getValues('flag_icon'))
               }
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }
@@ -1313,7 +1313,7 @@ const countryNameFilterOptions = useMemo(() => {
             </p>
           </FormItem>
           <FormItem
-            label="Specification Name"
+            label="Spec Name"
             invalid={!!editFormMethods.formState.errors.name}
             errorMessage={editFormMethods.formState.errors.name?.message}
             isRequired
@@ -1322,7 +1322,7 @@ const countryNameFilterOptions = useMemo(() => {
               name="name"
               control={editFormMethods.control}
               render={({ field }) => (
-                <Input {...field} placeholder="Enter specification name" />
+                <Input {...field} placeholder="Enter spec name" />
               )}
             />
           </FormItem>
@@ -1372,6 +1372,20 @@ const countryNameFilterOptions = useMemo(() => {
             />
           </FormItem>
         </Form>
+        <div className="relative w-full">
+            <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+              <div className="">
+                <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                <p className="text-sm font-semibold">Tushar Joshi</p>
+                <p>System Admin</p>
+              </div>
+              <div className="w-[210px]">
+                <br />
+                <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+              </div>
+            </div>
+          </div>
       </Drawer>
 
       {/* Filter Drawer */}
@@ -1408,14 +1422,14 @@ const countryNameFilterOptions = useMemo(() => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-y-6"
         >
-          <FormItem label="Specification Name">
+          <FormItem label="Spec Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Select specification names..."
+                  placeholder="Select spec names..."
                   options={specNameFilterOptions}
                   value={field.value || []}
                   onChange={(selectedVal) => field.onChange(selectedVal || [])}
@@ -1444,7 +1458,7 @@ const countryNameFilterOptions = useMemo(() => {
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
-        title="Delete Specification"
+        title="Delete Spec"
         onClose={() => {
           setSingleDeleteConfirmOpen(false);
           setItemToDelete(null);
@@ -1461,7 +1475,7 @@ const countryNameFilterOptions = useMemo(() => {
         loading={isDeleting}
       >
         <p>
-          Are you sure you want to delete the specification "
+          Are you sure you want to delete the spec "
           <strong>{itemToDelete?.name}</strong>"? This action cannot be undone.
         </p>
       </ConfirmDialog>
