@@ -1179,7 +1179,7 @@ const Sliders = () => {
   );
 
   const tableLoading =
-    masterLoadingStatus === "loading" || isSubmitting || isProcessing;
+    masterLoadingStatus === "idle" || isSubmitting || isProcessing;
 
   const renderFormFields = (
     formMethods: typeof addFormMethods | typeof editFormMethods,

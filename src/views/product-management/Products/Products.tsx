@@ -432,7 +432,7 @@ const Products = () => {
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<ProductItem, any>) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDetailModal(props.row.original)} onDelete={() => handleDeleteProductClick(props.row.original)} onChangeStatus={() => handleChangeStatusClick(props.row.original)} />) },
   ], [openImageViewer, openEditDrawer, openViewDetailModal, handleDeleteProductClick, handleChangeStatusClick]); // Dependencies should be stable
 
-  const tableIsLoading = masterLoadingStatus === 'loading' || isSubmitting || isProcessingDelete || isProcessingStatusChange;
+  const tableIsLoading = masterLoadingStatus === "idle" || isSubmitting || isProcessingDelete || isProcessingStatusChange;
 
   return (
     <>

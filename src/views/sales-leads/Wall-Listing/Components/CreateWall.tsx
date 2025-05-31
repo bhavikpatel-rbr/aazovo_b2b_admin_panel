@@ -379,7 +379,7 @@ const WallItemAdd = () => {
     navigate("/sales-leads/wall-listing");
   };
   
-  const isLoadingOptions = isLoadingDropdownData || masterDataAccessStatus === 'loading';
+  const isLoadingOptions = isLoadingDropdownData || masterDataAccessStatus === "idle";
 
   return (
     <>

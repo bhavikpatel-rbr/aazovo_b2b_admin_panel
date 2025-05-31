@@ -889,7 +889,7 @@ const TrendingCarousel = () => {
                 icon={<TbPlus />}
                 onClick={openAddDrawer}
                 disabled={
-                  masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                  masterLoadingStatus === "idle" || isSubmitting || isDeleting
                 }
               >
                 Add New
@@ -908,7 +908,7 @@ const TrendingCarousel = () => {
               columns={columns}
               data={pageData} // Data for the current page
               loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                masterLoadingStatus === "idle" || isSubmitting || isDeleting
               }
               pagingData={{
                 total: total, // Total number of items after filtering
@@ -932,7 +932,7 @@ const TrendingCarousel = () => {
       <TrendingCarouselSelectedFooter
         selectedItems={selectedItems}
         onDeleteSelected={handleDeleteSelected}
-        disabled={isDeleting || masterLoadingStatus === "loading"}
+        disabled={isDeleting || masterLoadingStatus === "idle"}
       />
 
       {/* Add Drawer */}

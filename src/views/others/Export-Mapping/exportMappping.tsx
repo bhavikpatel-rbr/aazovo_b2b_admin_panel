@@ -662,7 +662,7 @@ const ExportMapping = () => {
       setExportMappings(transformedData);
       setIsProcessingData(false);
     } else if (
-      masterLoadingStatus === "loading" ||
+      masterLoadingStatus === "idle" ||
       masterLoadingStatus === "idle"
     ) {
       setIsProcessingData(true);
@@ -989,7 +989,7 @@ const ExportMapping = () => {
     []
   );
 
-  const tableLoading = isProcessingData || masterLoadingStatus === "loading";
+  const tableLoading = isProcessingData || masterLoadingStatus === "idle";
 
   return (
     <Container className="h-auto">
@@ -1034,7 +1034,7 @@ const ExportMapping = () => {
       <ExportMappingSelected
         selectedMappings={selectedMappings}
         onDeleteSelected={handleDeleteSelected}
-        disabled={isProcessingData || masterLoadingStatus === "loading"}
+        disabled={isProcessingData || masterLoadingStatus === "idle"}
       />
     </Container>
   );

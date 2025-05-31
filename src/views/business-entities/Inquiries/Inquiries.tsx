@@ -234,7 +234,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   // This useEffect handles updates from Redux store
   useEffect(() => {
-    setIsLoading(masterLoadingStatus === 'loading');
+    setIsLoading(masterLoadingStatus === "idle");
 console.log("masterLoadingStatus",masterLoadingStatus);
 
     if (masterLoadingStatus === 'idle') {

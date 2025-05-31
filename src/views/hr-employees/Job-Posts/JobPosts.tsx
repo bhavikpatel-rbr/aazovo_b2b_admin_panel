@@ -1022,7 +1022,7 @@ const JobPostsListing = () => {
               options={departmentOptions}
               value={departmentOptions.find((o) => o.value === field.value)}
               onChange={(opt) => field.onChange(opt?.value)}
-              disabled={departmentOptions.length === 0 && masterLoadingStatus === 'loading'}
+              disabled={departmentOptions.length === 0 && masterLoadingStatus === "idle"}
             />
           )}
         />
@@ -1140,7 +1140,7 @@ const JobPostsListing = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "loading" ||
+                masterLoadingStatus === "idle" ||
                 isSubmitting ||
                 isDeleting ||
                 isChangingStatus
@@ -1271,7 +1271,7 @@ const JobPostsListing = () => {
                   options={departmentOptions}
                   value={field.value || []} // field.value should be an array of option objects
                   onChange={(val) => field.onChange(val || [])}
-                  disabled={departmentOptions.length === 0 && masterLoadingStatus === 'loading'}
+                  disabled={departmentOptions.length === 0 && masterLoadingStatus === "idle"}
                 />
               )}
             />

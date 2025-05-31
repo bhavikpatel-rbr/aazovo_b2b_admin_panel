@@ -38,9 +38,9 @@ const demos = [
         component: <Disabled />,
     },
     {
-        mdName: 'Loading',
+        mdName: "idle",
         mdPath: mdPath,
-        title: 'Loading',
+        title: "idle",
         desc: `We can set <code>isLoading</code> prop to true and make Switcher status to pending.`,
         component: <Loading />,
     },

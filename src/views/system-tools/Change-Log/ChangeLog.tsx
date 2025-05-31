@@ -393,7 +393,7 @@ const ChangeLogListing = () => {
     initialDummyChangeLogs
   );
   const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "loading"
+    "idle" | "idle"
   >("idle");
 
   // Note: Add/Edit for logs is atypical. These are included to match "Units" structure if strictly needed.
@@ -468,7 +468,7 @@ const ChangeLogListing = () => {
     async (data: ChangeLogFormData) => {
       // This function would only be used if manual Add/Edit of logs is enabled.
       setIsSubmitting(true);
-      setMasterLoadingStatus("loading");
+      setMasterLoadingStatus("idle");
       await new Promise((resolve) => setTimeout(resolve, 500));
       try {
         const payload = {
@@ -931,7 +931,7 @@ const ChangeLogListing = () => {
             <ChangeLogsTable
               columns={columns}
               data={pageData}
-              loading={masterLoadingStatus === "loading"}
+              loading={masterLoadingStatus === "idle"}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,

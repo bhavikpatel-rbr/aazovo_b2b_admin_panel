@@ -643,7 +643,7 @@ const EmployeesListing = () => {
     initialDummyEmployees
   );
   const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "loading"
+    "idle" | "idle"
   >("idle"); // Mimicking Redux status
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -713,7 +713,7 @@ const EmployeesListing = () => {
   };
   const onAddEmployeeSubmit = async (data: EmployeeFormData) => {
     setIsSubmitting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API
     const newEmployee: EmployeeItem = {
       id: `EMP${Date.now()}`,
@@ -745,7 +745,7 @@ const EmployeesListing = () => {
   const onEditEmployeeSubmit = async (data: EmployeeFormData) => {
     if (!editingEmployee) return;
     setIsSubmitting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API
     const updatedEmployee: EmployeeItem = {
       ...editingEmployee,
@@ -775,7 +775,7 @@ const EmployeesListing = () => {
     // Adapted from your original handleDelete
     if (!itemToDelete) return;
     setIsDeleting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     setSingleDeleteConfirmOpen(false);
     await new Promise((resolve) => setTimeout(resolve, 500));
     setEmployees((current) => current.filter((e) => e.id !== itemToDelete.id));
@@ -804,7 +804,7 @@ const EmployeesListing = () => {
       return;
     }
     setIsDeleting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const selectedIds = new Set(selectedEmployees.map((e) => e.id));
     setEmployees((current) => current.filter((e) => !selectedIds.has(e.id)));
@@ -1143,7 +1143,7 @@ const EmployeesListing = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                masterLoadingStatus === "idle" || isSubmitting || isDeleting
               }
               pagingData={{
                 total,

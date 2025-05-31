@@ -295,7 +295,7 @@ const {
             closeAddDrawer();
             dispatch(getTrendingImagesAction());
         } catch (error: any) {
-            toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{error?.message || 'Could not add item.'}</Notification>);
+            toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{error?.data?.message || 'Could not add item.'}</Notification>);
             console.error('Save Error:', error);
         } finally {
             setIsSubmitting(false);
@@ -330,7 +330,7 @@ const {
             closeEditDrawer();
             dispatch(getTrendingImagesAction());
         } catch (error: any) {
-            toast.push(<Notification title="Failed to Update" type="danger" duration={3000}>{error?.message || 'Could not update item.'}</Notification>);
+            toast.push(<Notification title="Failed to Update" type="danger" duration={3000}>{error?.data?.message || 'Could not update item.'}</Notification>);
             console.error('Edit Item Error:', error);
         } finally {
             setIsSubmitting(false);
@@ -532,7 +532,7 @@ const {
                     <div className="mt-4">
                         <DataTable
                             columns={columns} data={pageData}
-                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
+                            loading={masterLoadingStatus === 'idle' || isSubmitting || isDeleting}
                             pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             selectable checkboxChecked={(row) => selectedItems.some(selected => selected.id === row.id)}
                             onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}

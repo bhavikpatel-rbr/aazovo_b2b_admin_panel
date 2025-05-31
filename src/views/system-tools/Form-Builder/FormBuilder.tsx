@@ -418,7 +418,7 @@ const FormBuilder = () => {
   const [formsData, setFormsData] =
     useState<FormBuilderItem[]>(initialDummyForms);
   const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "loading"
+    "idle" | "idle"
   >("idle");
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -515,7 +515,7 @@ const FormBuilder = () => {
 
   const onSubmit = async (data: FormBuilderFormData, addAnother?: boolean) => {
     setIsSubmitting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     await new Promise((resolve) => setTimeout(resolve, 500));
     try {
       if (editingItem) {
@@ -575,7 +575,7 @@ const FormBuilder = () => {
   const onConfirmSingleDelete = async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     setSingleDeleteConfirmOpen(false);
     await new Promise((resolve) => setTimeout(resolve, 500));
     try {
@@ -611,7 +611,7 @@ const FormBuilder = () => {
       return;
     }
     setIsDeleting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     await new Promise((resolve) => setTimeout(resolve, 1000));
     try {
       const idsToDelete = selectedItems.map((item) => item.id);
@@ -1181,7 +1181,7 @@ const FormBuilder = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "loading" ||
+                masterLoadingStatus === "idle" ||
                 isSubmitting ||
                 isDeleting ||
                 isCloning ||
