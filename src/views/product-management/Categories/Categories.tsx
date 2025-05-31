@@ -778,7 +778,7 @@ const Categories = () => {
   ], [openImageViewer, openEditCategoryDrawer, openViewDetailModal, handleDeleteCategoryClick]);
 
 
-  const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isProcessing;
+  const tableLoading = masterLoadingStatus === "idle" || isSubmitting || isProcessing;
 
   return (
     <>

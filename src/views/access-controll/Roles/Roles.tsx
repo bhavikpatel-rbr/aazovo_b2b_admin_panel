@@ -367,7 +367,7 @@ const RolesListing = () => {
 
   const [roles, setRoles] = useState<RoleItem[]>(initialDummyRoles);
   const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "loading"
+    "idle" | "idle"
   >("idle");
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -417,7 +417,7 @@ const RolesListing = () => {
   };
   const onAddRoleSubmit = async (data: RoleFormData) => {
     setIsSubmitting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     await new Promise((resolve) => setTimeout(resolve, 500));
     // Ensure roleName (which is used as ID here) is unique
     if (roles.some((r) => r.roleName === data.roleName)) {
@@ -463,7 +463,7 @@ const RolesListing = () => {
   const onEditRoleSubmit = async (data: RoleFormData) => {
     if (!editingRole) return;
     setIsSubmitting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     await new Promise((resolve) => setTimeout(resolve, 500));
     // If roleName (ID) is editable and changed, check for uniqueness again (excluding current role)
     if (
@@ -504,7 +504,7 @@ const RolesListing = () => {
   const onConfirmSingleDelete = async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     setSingleDeleteConfirmOpen(false);
     await new Promise((resolve) => setTimeout(resolve, 500));
     setRoles((prev) => prev.filter((r) => r.id !== itemToDelete!.id));
@@ -532,7 +532,7 @@ const RolesListing = () => {
       return;
     }
     setIsDeleting(true);
-    setMasterLoadingStatus("loading");
+    setMasterLoadingStatus("idle");
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const idsToDelete = selectedItems.map((item) => item.id);
     setRoles((prev) => prev.filter((r) => !idsToDelete.includes(r.id)));
@@ -780,7 +780,7 @@ const RolesListing = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                masterLoadingStatus === "idle" || isSubmitting || isDeleting
               }
               pagingData={{
                 total,

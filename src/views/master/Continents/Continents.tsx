@@ -802,7 +802,7 @@ const Continents = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                masterLoadingStatus === "idle" || isSubmitting || isDeleting
               }
               pagingData={{
                 total: total,

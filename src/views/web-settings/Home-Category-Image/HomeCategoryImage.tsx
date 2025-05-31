@@ -280,12 +280,25 @@ const HomeCategoriesListing = () => {
   }, [cleanupPreviewsAndReset]);
 
   const onSubmitHandler = async (data: HomeCategoryFormData) => {
-    console.log("--- onSubmitHandler ---");
-    console.log("Data from RHF:", JSON.parse(JSON.stringify(data))); // Deep copy for logging
-    
+  const formDataToSubmit = new FormData();
+  const keepImagesFilenames: string[] = [];
+
+  data.images?.forEach((imgEntry, index) => {
+    if (imgEntry.file instanceof File) {
+      formDataToSubmit.append(`images[${index}]`, imgEntry.file, imgEntry.file.name);
+      console.log(`Appending NEW FILE: images[${index}] = ${imgEntry.file.name}`);
+    } else if (imgEntry.url) { // Existing image user wants to keep
+      // Extract filename from url
+      // Example: url = "http://your-domain.com/home_category_images/filename.jpg"
+      const urlParts = imgEntry.url.split('/');
+      const filename = urlParts[urlParts.length - 1];
+      keepImagesFilenames.push(filename);
+      console.log(`Marking EXISTING image to KEEP (filename): ${filename}`);
+    }
+  });
+
     setIsSubmitting(true);
-    const formDataToSubmit = new FormData();
-    
+
 
     formDataToSubmit.append('category_id', data.category_id);
     formDataToSubmit.append('view_more', data.view_more || ""); // Send empty string if null/undefined
@@ -305,8 +318,7 @@ const HomeCategoriesListing = () => {
 
     if (editingItem) {
       formDataToSubmit.append('_method', 'PUT');
-      keepImageIds.forEach(id => formDataToSubmit.append('keep_image_ids[]', String(id)));
-      console.log("Editing Mode - keep_image_ids[]:", keepImageIds);
+      keepImagesFilenames.forEach(filename => formDataToSubmit.append('keep_images[]', filename));
     }
 
     for (let pair of formDataToSubmit.entries()) {
@@ -567,30 +579,30 @@ const HomeCategoriesListing = () => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Home Category Image</h5>
-            <div>
-              <Link to='/task/task-list/create'>
-                <Button
-                  className="mr-2"
-                  icon={<TbUser />}
-                  clickFeedback={false}
-                  customColorClass={({ active, unclickable }) =>
-                    classNames(
-                      'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
-                      active ? 'bg-gray-200' : 'bg-gray-100',
-                      unclickable && 'opacity-50 cursor-not-allowed',
-                      !active && !unclickable && 'hover:bg-gray-200',
-                    )
-                  }
-                >Assigned to Task</Button>
-              </Link>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === 'loading' || isSubmitting}>Add New</Button>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <h5 className="mb-2 sm:mb-0">Home Page Categories</h5>
+                <div>
+                    <Link to='/task/task-list/create'>
+                        <Button
+                        className="mr-2"
+                        icon={<TbUser />}
+                        clickFeedback={false}
+                        customColorClass={({ active, unclickable }) =>
+                            classNames(
+                                'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
+                                active ? 'bg-gray-200' : 'bg-gray-100',
+                                unclickable && 'opacity-50 cursor-not-allowed',
+                                !active && !unclickable && 'hover:bg-gray-200',
+                            )
+                        }
+                        >Assigned to Task</Button>
+                    </Link>
+                <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === 'idle' || isSubmitting}>Add New</Button>
+               </div>         
             </div>
-          </div>
           <HomeCategoryTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
-            <HomeCategoryTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
+            <HomeCategoryTable columns={columns} data={pageData} loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>

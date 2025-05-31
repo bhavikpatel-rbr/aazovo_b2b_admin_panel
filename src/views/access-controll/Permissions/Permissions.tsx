@@ -145,7 +145,7 @@ const PermissionsListing = () => {
     initialDummyPermissions
   );
   const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "loading"
+    "idle" | "idle"
   >("idle");
 
   const navigate = useNavigate()
@@ -293,7 +293,7 @@ const PermissionsListing = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                masterLoadingStatus === "idle" || isSubmitting || isDeleting
               }
               noData={!masterLoadingStatus && pageData.length === 0}
             />

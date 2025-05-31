@@ -5316,7 +5316,7 @@ export const addcompanyAction = createAsyncThunk<any, any>("auth/addcompany",
       const response: AxiosResponse<any> = await addcompanyAsync(data)
       if (response?.data?.status === true) {
 
-        dispatch(getCompnayAction())
+        dispatch(getCompanyAction())
 
         dispatch(
           showMessage({

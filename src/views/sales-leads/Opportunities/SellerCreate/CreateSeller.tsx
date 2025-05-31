@@ -238,7 +238,7 @@ const CreateSellerForm = () => {
     toast.push(<Notification title="Draft Saved" type="info">Seller info saved as draft. (Simulated)</Notification>);
   };
 
-  const isLoadingOptions = !initialDataFetched || masterLoadingStatus === 'loading';
+  const isLoadingOptions = !initialDataFetched || masterLoadingStatus === "idle";
 
   if (isLoadingOptions && !initialDataFetched) {
     return (
@@ -277,7 +277,7 @@ const CreateSellerForm = () => {
             <FormItem label="Product*" invalid={!!errors.productId} errorMessage={errors.productId?.message} >
               <Controller name="productId" control={control} render={({ field }) => (
                   <UiSelect {...field} placeholder="Select Product" options={productOptions}
-                    isLoading={masterLoadingStatus === 'loading' && productOptions.length === 0}
+                    isLoading={masterLoadingStatus === "idle" && productOptions.length === 0}
                     value={productOptions.find(opt => opt.value === field.value) || null}
                     onChange={(option) => field.onChange(option ? option.value : "")}
                     isClearable />
@@ -286,7 +286,7 @@ const CreateSellerForm = () => {
             <FormItem label="Product Category*" invalid={!!errors.productCategoryId} errorMessage={errors.productCategoryId?.message} >
               <Controller name="productCategoryId" control={control} render={({ field }) => (
                   <UiSelect {...field} placeholder="Select Category" options={categoryOptions}
-                    isLoading={masterLoadingStatus === 'loading' && categoryOptions.length === 0}
+                    isLoading={masterLoadingStatus === "idle" && categoryOptions.length === 0}
                     value={categoryOptions.find(opt => opt.value === field.value) || null}
                     onChange={(option) => field.onChange(option ? option.value : "")}
                     isClearable />
@@ -295,8 +295,8 @@ const CreateSellerForm = () => {
             <FormItem label="Product Subcategory" invalid={!!errors.productSubcategoryId} errorMessage={errors.productSubcategoryId?.message} >
               <Controller name="productSubcategoryId" control={control} render={({ field }) => (
                   <UiSelect {...field} placeholder="Select Subcategory" options={subcategoryOptionsForForm}
-                    isLoading={masterLoadingStatus === 'loading' && watchedProductCategoryId !== null && subcategoryOptionsForForm.length === 0}
-                    isDisabled={!watchedProductCategoryId || (masterLoadingStatus !== 'loading' && subcategoryOptionsForForm.length === 0 && !!watchedProductCategoryId)}
+                    isLoading={masterLoadingStatus === "idle" && watchedProductCategoryId !== null && subcategoryOptionsForForm.length === 0}
+                    isDisabled={!watchedProductCategoryId || (masterLoadingStatus !== "idle" && subcategoryOptionsForForm.length === 0 && !!watchedProductCategoryId)}
                     value={subcategoryOptionsForForm.find(opt => opt.value === field.value) || null}
                     onChange={(option) => field.onChange(option ? option.value : null)}
                     isClearable />
@@ -305,7 +305,7 @@ const CreateSellerForm = () => {
             <FormItem label="Brand*" invalid={!!errors.brandId} errorMessage={errors.brandId?.message} >
               <Controller name="brandId" control={control} render={({ field }) => (
                   <UiSelect {...field} placeholder="Select Brand" options={brandOptions}
-                    isLoading={masterLoadingStatus === 'loading' && brandOptions.length === 0}
+                    isLoading={masterLoadingStatus === "idle" && brandOptions.length === 0}
                     value={brandOptions.find(opt => opt.value === field.value) || null}
                     onChange={(option) => field.onChange(option ? option.value : "")}
                     isClearable />

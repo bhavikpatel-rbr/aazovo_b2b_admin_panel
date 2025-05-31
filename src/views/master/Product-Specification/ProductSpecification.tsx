@@ -1058,7 +1058,7 @@ const countryNameFilterOptions = useMemo(() => {
               icon={<TbPlus />}
               onClick={openAddDrawer}
               disabled={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                masterLoadingStatus === "idle" || isSubmitting || isDeleting
               }
             >
               Add New
@@ -1075,7 +1075,7 @@ const countryNameFilterOptions = useMemo(() => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                masterLoadingStatus === "idle" || isSubmitting || isDeleting
               }
               pagingData={{
                 total: total,
@@ -1099,7 +1099,7 @@ const countryNameFilterOptions = useMemo(() => {
       <ItemSelectedFooter
         selectedItems={selectedItems}
         onDeleteSelected={handleDeleteSelected}
-        disabled={isDeleting || masterLoadingStatus === "loading"}
+        disabled={isDeleting || masterLoadingStatus === "idle"}
       />
 
       {/* Add Drawer */}
@@ -1200,7 +1200,7 @@ const countryNameFilterOptions = useMemo(() => {
                   }
                   onChange={(opt) => field.onChange(opt?.value)}
                   isLoading={
-                    masterLoadingStatus === "loading" &&
+                    masterLoadingStatus === "idle" &&
                     countryOptions.length === 0
                   }
                 />

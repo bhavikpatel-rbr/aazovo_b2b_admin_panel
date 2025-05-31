@@ -453,12 +453,12 @@ const MessageTemplates = () => {
     MessageTemplateItem[]
   >(initialDummyMessageTemplates);
   const [loadingStatus, setLoadingStatus] = useState<
-    "idle" | "loading" | "succeeded" | "failed"
+    "idle" | "idle" | "succeeded" | "failed"
   >("idle");
 
   const dispatchSimulated = useCallback(
     async (action: { type: string; payload?: any }) => {
-      setLoadingStatus("loading");
+      setLoadingStatus("idle");
       await new Promise((resolve) => setTimeout(resolve, 300));
       try {
         switch (action.type) {
@@ -1075,7 +1075,7 @@ const MessageTemplates = () => {
               columns={columns}
               data={pageData}
               loading={
-                loadingStatus === "loading" || isSubmitting || isDeleting
+                loadingStatus === "idle" || isSubmitting || isDeleting
               }
               pagingData={{
                 total: total,

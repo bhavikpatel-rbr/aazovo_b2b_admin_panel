@@ -53,7 +53,7 @@ const demoApi = [
                 desc: 'The data array that you want to display on the table',
             },
             {
-                propName: 'loading',
+                propName: "idle",
                 type: `<code>boolean</code>`,
                 default: `<code>false</code>`,
                 desc: 'Wheter to display loading indicator on the table',
