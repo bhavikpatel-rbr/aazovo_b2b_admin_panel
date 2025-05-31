@@ -25,6 +25,8 @@ const CreateInquiry = () => {
       ...data,
       inquiry_attachments: attachments.map((file) => file.name),
     });
+
+    
     reset();
     setAttachments([]);
   };

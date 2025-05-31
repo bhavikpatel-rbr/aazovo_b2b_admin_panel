@@ -1,5 +1,4 @@
 import axiosInstance, { isAxiosError } from "../../services/api/api"
-import { setUser } from "../../services/api/token"
 import { config } from "../../utils/config"
 
 export const getLeadAsync = async () => {
@@ -2017,6 +2016,159 @@ export const getRolesAsync = async () => {
 export const getSubcategoriesByIdAsync = async (categoryId: string) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/master/category/${categoryId}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+{/*
+  * Company Module
+  */}
+
+export const getcompanyAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/company_profile_setting`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addcompanyAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/company_profile_setting`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editcompanyAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/company_profile_setting/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletcompanyAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/setting/company_profile_setting/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllcompanyAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/company_profile_setting/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+{/*
+  * Member Module
+*/}
+
+export const getMemberAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/customer`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addMemberAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/customer`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editMemberAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/customer/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteMemberAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/customer/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllMemberAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/customer/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+
+
+
+
+
+
+
+export const getpartnerAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/partner`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addpartnerAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/partner`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editpartnerAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/partner/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deletepartnerAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/partner/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllpartnerAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/partner/delete`, unitData)
     return response
   } catch (err) {
     return isAxiosError(err)

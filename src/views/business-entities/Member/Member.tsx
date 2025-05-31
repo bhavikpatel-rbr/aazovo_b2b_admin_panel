@@ -49,6 +49,14 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import { useAppDispatch } from "@/reduxtool/store";
+import {
+  deleteAllMemberAction,
+  getMemberAction
+} from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
+import { useSelector } from "react-redux";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+
 
 // --- FormItem Type (Member Data Structure) ---
 export type FormItem = {
@@ -163,80 +171,6 @@ const kycStatusOptions = [
 ];
 // --- END MOCK FILTER OPTIONS ---
 
-// --- Initial Dummy Data ---
-const initialDummyForms: FormItem[] = [
-  {
-    id: "567324",
-    member_name: "John Doe",
-    member_contact_number: "+1234567890",
-    member_email_id: "john.doe@example.com",
-    member_photo: "https://randomuser.me/api/portraits/men/1.jpg",
-    member_photo_upload: "Uploaded at 2025-05-17T10:00:00Z",
-    member_role: "Director",
-    member_status: "active",
-    member_join_date: "2023-01-01",
-    profile_completion: 85.5,
-    success_score: 75,
-    trust_score: 80,
-    activity_score: 90,
-    associated_brands: ["Brand A", "Brand B"],
-    business_category: ["Automotive", "Electronics"],
-    interested_in: "Both",
-    company_id: "COMP12345",
-    company_name: "Acme Corporation",
-    membership_stats: "INS - PREMIUM",
-    member_location: "USA / New York / NY / North America",
-    kyc_status: "Verified",
-  },
-  {
-    id: "567325",
-    member_name: "Jane Smith",
-    member_contact_number: "+1987654321",
-    member_email_id: "jane.smith@example.com",
-    member_photo: "https://randomuser.me/api/portraits/women/2.jpg",
-    member_photo_upload: "Uploaded at 2025-05-16T11:00:00Z",
-    member_role: "Manager",
-    member_status: "inactive",
-    member_join_date: "2022-06-15",
-    profile_completion: 72.0,
-    success_score: 60,
-    trust_score: 70,
-    activity_score: 65,
-    associated_brands: ["Brand C"],
-    business_category: ["Healthcare"],
-    interested_in: "Sell",
-    company_id: "COMP67890",
-    company_name: "Beta Enterprises",
-    membership_stats: "INS - BASIC",
-    member_location: "UK / London / Europe",
-    kyc_status: "Pending",
-  },
-  {
-    id: "567326",
-    member_name: "Alice Johnson",
-    member_contact_number: "+1123456789",
-    member_email_id: "alice.johnson@example.com",
-    member_photo: "https://randomuser.me/api/portraits/women/3.jpg",
-    member_photo_upload: "Uploaded at 2025-05-15T09:30:00Z",
-    member_role: "Engineer",
-    member_status: "active",
-    member_join_date: "2021-09-10",
-    profile_completion: 92.0,
-    success_score: 88,
-    trust_score: 95,
-    activity_score: 98,
-    associated_brands: ["Brand D", "Brand E"],
-    business_category: ["IT Services", "FinTech"],
-    interested_in: "Buy",
-    company_id: "COMP24680",
-    company_name: "Gamma Innovations",
-    membership_stats: "INS - PRO",
-    member_location: "India / Bengaluru / KA / Asia",
-    kyc_status: "Verified",
-  },
-];
-// --- End Dummy Data ---
-
 // --- Simplified Member List Store (Replaces useCustomerList for this context) ---
 interface MemberListStore {
   memberList: FormItem[];
@@ -259,15 +193,38 @@ const useMemberList = (): MemberListStore => {
 };
 
 const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [memberList, setMemberList] = useState<FormItem[]>(initialDummyForms);
+  // debugger
+
+
+
+  const { MemberData = [] } = useSelector(masterSelector);
+  const dispatch = useAppDispatch();
+  const [memberList, setMemberList] = useState<FormItem[]>(MemberData?.data ?? []);
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
-  const [memberListTotal, setMemberListTotal] = useState(initialDummyForms.length);
+  const [memberListTotal, setMemberListTotal] = useState(MemberData?.data?.length ?? 0);
+
+  useEffect(() => {
+    setMemberList(MemberData?.data)
+    setMemberListTotal(MemberData?.data?.length)
+  }, [MemberData])
+
+  useEffect(() => {
+    dispatch(getMemberAction()); // Fetch continents for select dropdown
+  }, [dispatch]);
+
+
+
+
+
+
+
+
 
   return (
-    <MemberListContext.Provider value={{ 
-        memberList, setMemberList, 
-        selectedMembers, setSelectedMembers,
-        memberListTotal, setMemberListTotal 
+    <MemberListContext.Provider value={{
+      memberList, setMemberList,
+      selectedMembers, setSelectedMembers,
+      memberListTotal, setMemberListTotal
     }}>
       {children}
     </MemberListContext.Provider>
@@ -285,8 +242,8 @@ const FormListSearch: React.FC<FormListSearchProps> = ({ onInputChange }) => {
     <UiInput
       placeholder="Quick Search..."
       onChange={onInputChange}
-      // className="max-w-xs"
-      // Add any other props like prefix icon if needed
+    // className="max-w-xs"
+    // Add any other props like prefix icon if needed
     />
   );
 };
@@ -361,16 +318,16 @@ const ActionColumn = ({
           role="button"
           onClick={onMore} // This onClick might be redundant if Dropdown handles its own open
         >
-          <Dropdown renderTitle={<TbDotsVertical />}  style={{fontSize : "10px"}}>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Assign to company</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Assign to RM/GM</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Feedback or Internal Note</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Request For</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add in Active</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Schedule</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>Add Task</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Documents</Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}}>View Alert</Dropdown.Item>
+          <Dropdown renderTitle={<TbDotsVertical />} style={{ fontSize: "10px" }}>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Assign to company</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Assign to RM/GM</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Feedback or Internal Note</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Request For</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add in Active</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Schedule</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Task</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Documents</Dropdown.Item>
+            <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Alert</Dropdown.Item>
           </Dropdown>
         </div>
       </Tooltip>
@@ -383,10 +340,10 @@ const ActionColumn = ({
 // --- FormListTable Component ---
 const FormListTable = () => {
   const navigate = useNavigate();
-  const { 
+  const {
     memberList: forms, // Renaming for consistency with original 'forms' variable
     setMemberList,
-    selectedMembers, 
+    selectedMembers,
     setSelectedMembers,
     memberListTotal, // This is the total before client-side filtering if data isn't from server
     setMemberListTotal
@@ -434,15 +391,13 @@ const FormListTable = () => {
 
   const { pageData, total } = useMemo(() => {
     let filteredData = [...forms];
-
     if (tableData.query) {
-      const query = tableData.query.toLowerCase();
+      const query = tableData.query?.toLowerCase();
       filteredData = filteredData.filter(
         (form) =>
-          form.id.toLowerCase().includes(query) ||
-          form.member_name.toLowerCase().includes(query) ||
-          form.member_email_id.toLowerCase().includes(query) ||
-          form.company_name.toLowerCase().includes(query)
+          form?.member_name?.toLowerCase()?.includes(query) ||
+          form?.member_email_id?.toLowerCase()?.includes(query) ||
+          form?.company_name?.toLowerCase()?.includes(query)
       );
     }
 
@@ -463,28 +418,28 @@ const FormListTable = () => {
       );
     }
     if (filterCriteria.filterState && filterCriteria.filterState.length > 0) {
-        const selectedStates = filterCriteria.filterState.map(opt => opt.value.toLowerCase());
-        filteredData = filteredData.filter(form =>
-            selectedStates.some(state => {
-                const locationParts = form.member_location?.toLowerCase().split(' / ');
-                // Assuming state is the 3rd part if continent is present, or 2nd if not.
-                // This needs robust parsing based on your member_location format.
-                // Example: "USA / New York / NY / North America" -> state is NY
-                // Example: "India / Bengaluru / KA" -> state is KA
-                return locationParts && locationParts.length >=3 && locationParts[2] === state;
-            })
-        );
+      const selectedStates = filterCriteria.filterState.map(opt => opt.value.toLowerCase());
+      filteredData = filteredData.filter(form =>
+        selectedStates.some(state => {
+          const locationParts = form.member_location?.toLowerCase().split(' / ');
+          // Assuming state is the 3rd part if continent is present, or 2nd if not.
+          // This needs robust parsing based on your member_location format.
+          // Example: "USA / New York / NY / North America" -> state is NY
+          // Example: "India / Bengaluru / KA" -> state is KA
+          return locationParts && locationParts.length >= 3 && locationParts[2] === state;
+        })
+      );
     }
     if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) {
-        const selectedCities = filterCriteria.filterCity.map(opt => opt.value.toLowerCase());
-        filteredData = filteredData.filter(form =>
-            selectedCities.some(city => {
-                const locationParts = form.member_location?.toLowerCase().split(' / ');
-                 // Example: "USA / New York / NY / North America" -> city is New York
-                // Example: "India / Bengaluru / KA" -> city is Bengaluru
-                return locationParts && locationParts.length >=2 && locationParts[1] === city;
-            })
-        );
+      const selectedCities = filterCriteria.filterCity.map(opt => opt.value.toLowerCase());
+      filteredData = filteredData.filter(form =>
+        selectedCities.some(city => {
+          const locationParts = form.member_location?.toLowerCase().split(' / ');
+          // Example: "USA / New York / NY / North America" -> city is New York
+          // Example: "India / Bengaluru / KA" -> city is Bengaluru
+          return locationParts && locationParts.length >= 2 && locationParts[1] === city;
+        })
+      );
     }
     if (filterCriteria.filterInterestedFor && filterCriteria.filterInterestedFor.length > 0) {
       const selectedInterests = filterCriteria.filterInterestedFor.map((opt) => opt.value);
@@ -603,7 +558,7 @@ const FormListTable = () => {
             <div>
               <Tag className="text-[10px] mb-1 bg-orange-100 text-orange-400">{props.row.original.membership_stats}</Tag>
             </div>
-            <span><b>RM: </b>Ajay Patel</span> {/* Placeholder */}
+            <span><b>RM: </b>{props.row.original.member_name}</span> {/* Placeholder */}
             <span><b>Grade: </b>A</span> {/* Placeholder */}
             <Tooltip title={`Profile: ${props.row.original.profile_completion}%`}>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
@@ -624,11 +579,11 @@ const FormListTable = () => {
           <div className="flex flex-col gap-1">
             <span className="text-xs">
               <b className="text-xs">Brands: </b>
-              <span className="text-[11px]">{props.row.original.associated_brands.join(", ")}</span>
+              <span className="text-[11px]">{props.row.original.associated_brands}</span>
             </span>
             <span className="text-xs">
               <b className="text-xs">Category: </b>
-              <span className="text-[11px]">{props.row.original.business_category.join(", ")}</span>
+              <span className="text-[11px]">{props.row.original.business_category}</span>
             </span>
             <span className="text-xs">
               <span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span>
@@ -676,47 +631,47 @@ const FormListTable = () => {
     // }
   }, [/* setSelectedMembers, selectedMembers.length */]); // Dependencies if clearing selection
 
-  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }),[handleSetTableData]);
-  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }),[handleSetTableData]);
-  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),[handleSetTableData]);
-  
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+
   const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
-      setSelectedMembers((prevSelected) => {
-        if (checked) {
-          return [...prevSelected, row];
-        } else {
-          return prevSelected.filter((item) => item.id !== row.id);
-        }
-      });
-    }, [setSelectedMembers]);
+    setSelectedMembers((prevSelected) => {
+      if (checked) {
+        return [...prevSelected, row];
+      } else {
+        return prevSelected.filter((item) => item.id !== row.id);
+      }
+    });
+  }, [setSelectedMembers]);
 
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<FormItem>[]) => {
-      if (checked) {
-        // Select all items currently visible on the page / in 'pageData'
-        // Or, if you want to select ALL items from 'forms' that match current filters:
-        // For simplicity, let's select from `pageData` as DataTable typically shows.
-        const allOriginalRows = rows.map(r => r.original);
-        setSelectedMembers(allOriginalRows);
-      } else {
-        setSelectedMembers([]);
-      }
-    }, [setSelectedMembers /* pageData */]); // pageData if selecting only visible
+    if (checked) {
+      // Select all items currently visible on the page / in 'pageData'
+      // Or, if you want to select ALL items from 'forms' that match current filters:
+      // For simplicity, let's select from `pageData` as DataTable typically shows.
+      const allOriginalRows = rows.map(r => r.original);
+      setSelectedMembers(allOriginalRows);
+    } else {
+      setSelectedMembers([]);
+    }
+  }, [setSelectedMembers /* pageData */]); // pageData if selecting only visible
 
   const handleImport = () => { console.log("Import clicked"); /* Implement import */ };
 
   const csvData = useMemo(() => {
     if (forms.length === 0) return [];
     // Basic CSV export, customize headers and data as needed
-    const headers = Object.keys(forms[0]).map(key => ({ label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), key: key}));
+    const headers = Object.keys(forms[0]).map(key => ({ label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), key: key }));
     return forms.map(form => {
-        const newForm: any = {...form};
-        // Convert arrays to strings for CSV
-        Object.keys(newForm).forEach(key => {
-            if (Array.isArray(newForm[key as keyof FormItem])) {
-                newForm[key] = (newForm[key as keyof FormItem] as string[]).join(', ');
-            }
-        });
-        return newForm;
+      const newForm: any = { ...form };
+      // Convert arrays to strings for CSV
+      Object.keys(newForm).forEach(key => {
+        if (Array.isArray(newForm[key as keyof FormItem])) {
+          newForm[key] = (newForm[key as keyof FormItem] as string[]).join(', ');
+        }
+      });
+      return newForm;
     });
 
   }, [forms]);
@@ -735,15 +690,15 @@ const FormListTable = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <FormListSearch onInputChange={(e) => handleSetTableData({ query: e.target.value, pageIndex: 1 })} />
         <div className="flex gap-2">
-            <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
-            <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
-            {forms.length > 0 ? (
-                <CSVLink data={csvData} filename="members_export.csv">
-                    <Button icon={<TbCloudUpload />}>Export</Button>
-                </CSVLink>
-            ) : (
-                <Button icon={<TbCloudUpload />} disabled>Export</Button>
-            )}
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
+          <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
+          {forms.length > 0 ? (
+            <CSVLink data={csvData} filename="members_export.csv">
+              <Button icon={<TbCloudUpload />}>Export</Button>
+            </CSVLink>
+          ) : (
+            <Button icon={<TbCloudUpload />} disabled>Export</Button>
+          )}
         </div>
       </div>
       <DataTable
@@ -853,10 +808,10 @@ const FormListTable = () => {
 
 // --- FormListSelected Component ---
 const FormListSelected = () => {
-  const { 
-    selectedMembers, 
-    setSelectedMembers, 
-    memberList, 
+  const {
+    selectedMembers,
+    setSelectedMembers,
+    memberList,
     setMemberList,
     memberListTotal,
     setMemberListTotal
@@ -868,16 +823,41 @@ const FormListSelected = () => {
 
   const handleDelete = () => setDeleteConfirmationOpen(true);
   const handleCancelDelete = () => setDeleteConfirmationOpen(false);
+  const dispatch = useAppDispatch();
 
-  const handleConfirmDelete = () => {
-    const newMemberList = memberList.filter(
-      (member) => !selectedMembers.some((selected) => selected.id === member.id)
-    );
-    setMemberList(newMemberList);
-    setMemberListTotal(newMemberList.length); // Update total based on client-side list
-    setSelectedMembers([]); // Clear selection
+  const handleConfirmDelete = async () => {
+    if (
+      !selectedMembers
+    ) {
+      toast.push(
+        <Notification title="Error" type="danger">
+          Cannot delete: Member ID is missing.
+        </Notification>
+      );
+      setSelectedMembers([]);
+      setDeleteConfirmationOpen(false);
+      return;
+    }
     setDeleteConfirmationOpen(false);
-    toast.push(<Notification type="success" title="Members Deleted">Selected members have been removed.</Notification>, { placement: "top-center" });
+    try {
+      const ids = selectedMembers.map((data) => data.id);
+      await dispatch(deleteAllMemberAction({ ids: ids.toString() })).unwrap();
+      toast.push(
+        <Notification title="Country Deleted" type="success" duration={2000}>
+          Member "{selectedMembers.name}" deleted.
+        </Notification>
+      );
+      dispatch(getMemberAction());
+    } catch (error: any) {
+      toast.push(
+        <Notification title="Failed to Delete" type="danger" duration={3000}>
+          {error.message || `Could not delete parters.`}
+        </Notification>
+      );
+      console.error("Delete parters Error:", error);
+    } finally {
+      setSelectedMembers([]);
+    }
   };
 
   const handleSend = () => {
@@ -901,35 +881,35 @@ const FormListSelected = () => {
       <StickyFooter
         className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
         stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-        // defaultClass="container mx-auto px-8 rounded-xl border border-gray-200 dark:border-gray-600 mt-4" // defaultClass seems to be for non-sticky state, might not be needed here
+      // defaultClass="container mx-auto px-8 rounded-xl border border-gray-200 dark:border-gray-600 mt-4" // defaultClass seems to be for non-sticky state, might not be needed here
       >
         <div className="container mx-auto"> {/* Ensure content is centered */}
-            <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <span>
-                <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2">
                 <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
                 <span className="font-semibold flex items-center gap-1">
-                    <span className="heading-text">{selectedMembers.length} Members</span>
-                    <span>selected</span>
+                  <span className="heading-text">{selectedMembers.length} Members</span>
+                  <span>selected</span>
                 </span>
-                </span>
+              </span>
             </span>
             <div className="flex items-center">
-                <Button
+              <Button
                 size="sm"
                 className="ltr:mr-3 rtl:ml-3"
                 type="button"
                 // Custom color directly in Tailwind classes for error state
                 customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
                 onClick={handleDelete}
-                >
+              >
                 Delete
-                </Button>
-                <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>
+              </Button>
+              <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>
                 Message
-                </Button>
+              </Button>
             </div>
-            </div>
+          </div>
         </div>
       </StickyFooter>
       <ConfirmDialog

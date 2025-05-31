@@ -22,6 +22,8 @@ import NumericInput from '@/components/shared/NumericInput'; // Added
 // Icons
 import { BiChevronRight } from 'react-icons/bi';
 import { TbTrash, TbPlus } from 'react-icons/tb';
+import { addcompanyAction, editcompanyAction } from '@/reduxtool/master/middleware';
+import { useAppDispatch } from '@/reduxtool/store';
 
 // Utils & Services
 // import config from '@/configs/app.config'; // If needed for API URLs etc.
@@ -135,8 +137,8 @@ export interface CompanyFormSchema {
 
 
 export interface FormSectionBaseProps {
-  control: Control<CompanyFormSchema>;
-  errors: FieldErrors<CompanyFormSchema>;
+    control: Control<CompanyFormSchema>;
+    errors: FieldErrors<CompanyFormSchema>;
 }
 
 // --- API Company Item Type (Raw from API for GET /company/{id}) ---
@@ -228,8 +230,8 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem): Partial<Compan
         // Accessibility
         KYC_FIELD: apiData.kyc_verified === "Yes",
         BILLING_FIELD: apiData.enable_billing === "Yes",
-        DOMAIN_MANAGEMENT_FIELD: apiData.domain ? {label: apiData.domain, value: apiData.domain } : undefined,
-        status: apiData.status ? {label: apiData.status, value: apiData.status} : undefined,
+        DOMAIN_MANAGEMENT_FIELD: apiData.domain ? { label: apiData.domain, value: apiData.domain } : undefined,
+        status: apiData.status ? { label: apiData.status, value: apiData.status } : undefined,
         // ... map other fields
     };
 };
@@ -290,7 +292,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
             } else if (payload[key] instanceof File) {
                 formDataApi.append(key, payload[key]);
             } else if (payload[key] !== undefined && payload[key] !== null) {
-                 // For arrays like members, stringify them or append each item
+                // For arrays like members, stringify them or append each item
                 if (Array.isArray(payload[key])) {
                     payload[key].forEach((item: any, index: number) => {
                         if (typeof item === 'object' && item !== null) {
@@ -333,34 +335,34 @@ const companyNavigationList = [
 ];
 
 type NavigatorComponentProps = {
-  activeSection: string;
-  onNavigate: (sectionKey: string) => void;
+    activeSection: string;
+    onNavigate: (sectionKey: string) => void;
 };
 
 const NavigatorComponent = (props: NavigatorComponentProps) => {
-  const { activeSection, onNavigate } = props;
-  return (
-    <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
-      {companyNavigationList.map((nav) => (
-        <button
-          type="button"
-          key={nav.link}
-          className={classNames(
-            "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max",
-            "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
-            {
-                'bg-indigo-50 dark:bg-indigo-700/60 text-[#00baf2] dark:text-indigo-200 font-semibold':  activeSection === nav.link,
-                'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200':activeSection !== nav.link,
-            }
-          )}
-          onClick={() => onNavigate(nav.link)}
-          title={nav.label}
-        >
-          <span className="font-medium text-[10px] xxs:text-xs sm:text-sm truncate">{nav.label}</span>
-        </button>
-      ))}
-    </div>
-  );
+    const { activeSection, onNavigate } = props;
+    return (
+        <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
+            {companyNavigationList.map((nav) => (
+                <button
+                    type="button"
+                    key={nav.link}
+                    className={classNames(
+                        "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max",
+                        "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
+                        {
+                            'bg-indigo-50 dark:bg-indigo-700/60 text-[#00baf2] dark:text-indigo-200 font-semibold': activeSection === nav.link,
+                            'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200': activeSection !== nav.link,
+                        }
+                    )}
+                    onClick={() => onNavigate(nav.link)}
+                    title={nav.label}
+                >
+                    <span className="font-medium text-[10px] xxs:text-xs sm:text-sm truncate">{nav.label}</span>
+                </button>
+            ))}
+        </div>
+    );
 };
 
 // --- CompanyDetails Section ---
@@ -377,135 +379,135 @@ const CompanyDetailsSection = ({ control, errors }: FormSectionBaseProps) => {
 
 
     return (
-    <Card id="companyDetails">
-        <h4 className="mb-4">Primary Information</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            <FormItem label="Company Name" invalid={!!errors.company_name} errorMessage={errors.company_name?.message as string}>
-                <Controller name="company_name" control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} />
-            </FormItem>
-            <FormItem label="Primary Contact Number" invalid={!!errors.company_primary_contact_number} errorMessage={errors.company_primary_contact_number?.message as string}>
-                <div className="flex items-center gap-2">
-                    <Controller name="primary_contact_country_code" control={control} render={({ field }) => <Input placeholder="+91" className="w-20" {...field} />} />
-                    <Controller name="company_primary_contact_number" control={control} render={({ field }) => <Input placeholder="Primary Contact" {...field} />} />
+        <Card id="companyDetails">
+            <h4 className="mb-4">Primary Information</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <FormItem label="Company Name" invalid={!!errors.company_name} errorMessage={errors.company_name?.message as string}>
+                    <Controller name="company_name" control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} />
+                </FormItem>
+                <FormItem label="Primary Contact Number" invalid={!!errors.company_primary_contact_number} errorMessage={errors.company_primary_contact_number?.message as string}>
+                    <div className="flex items-center gap-2">
+                        <Controller name="primary_contact_country_code" control={control} render={({ field }) => <Input placeholder="+91" className="w-20" {...field} />} />
+                        <Controller name="company_primary_contact_number" control={control} render={({ field }) => <Input placeholder="Primary Contact" {...field} />} />
+                    </div>
+                </FormItem>
+                <FormItem label="Primary E-mail ID" invalid={!!errors.company_primary_email_id} errorMessage={errors.company_primary_email_id?.message as string}>
+                    <Controller name="company_primary_email_id" control={control} render={({ field }) => <Input type="email" placeholder="Primary Email" {...field} />} />
+                </FormItem>
+                <FormItem label="Alternate Contact Number">
+                    <div className="flex items-center gap-2">
+                        <Controller name="alternate_contact_country_code" control={control} render={({ field }) => <Input placeholder="+91" className="w-20" {...field} />} />
+                        <Controller name="alternate_contact_number" control={control} render={({ field }) => <Input placeholder="Alternate Contact" {...field} />} />
+                    </div>
+                </FormItem>
+                <FormItem label="Alternate E-mail ID" invalid={!!errors.alternate_email_id} errorMessage={errors.alternate_email_id?.message as string}>
+                    <Controller name="alternate_email_id" control={control} render={({ field }) => <Input type="email" placeholder="Alternate Email" {...field} />} />
+                </FormItem>
+                <FormItem label="Ownership Type" invalid={!!errors.ownership_type} errorMessage={errors.ownership_type?.message as string}>
+                    <Controller name="ownership_type" control={control} render={({ field }) => <Select placeholder="Select Ownership" options={ownershipTypeOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="Owner/Director Name" invalid={!!errors.owner_director_proprietor_name} errorMessage={errors.owner_director_proprietor_name?.message as string} className="md:col-span-3">
+                    <Controller name="owner_director_proprietor_name" control={control} render={({ field }) => <Input placeholder="Owner/Director Name" {...field} />} />
+                </FormItem>
+                <FormItem label="Company Address" invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-3">
+                    <Controller name="company_address" control={control} render={({ field }) => <Input textArea placeholder="Company Address" {...field} />} />
+                </FormItem>
+                <FormItem label="Continent" invalid={!!errors.continent_name} errorMessage={errors.continent_name?.message as string}>
+                    <Controller name="continent_name" control={control} render={({ field }) => <Select placeholder="Select Continent" options={continentOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="Country" invalid={!!errors.country} errorMessage={errors.country?.message as string}>
+                    <Controller name="country" control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="State" invalid={!!errors.state} errorMessage={errors.state?.message as string}>
+                    <Controller name="state" control={control} render={({ field }) => <Select placeholder="Select State" options={stateOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="City" invalid={!!errors.city} errorMessage={errors.city?.message as string} className="md:col-span-2">
+                    <Controller name="city" control={control} render={({ field }) => <Select placeholder="Select City" options={cityOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="ZIP / Postal Code" invalid={!!errors.zip_postal_code} errorMessage={errors.zip_postal_code?.message as string}>
+                    <Controller name="zip_postal_code" control={control} render={({ field }) => <Input placeholder="ZIP Code" {...field} />} />
+                </FormItem>
+            </div>
+
+            <hr className="my-6" />
+            <h4 className="mb-4">Trade Information</h4>
+            <div className="grid md:grid-cols-2 gap-3">
+                <FormItem label="GST Number" invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => <Input placeholder="GST Number" {...field} />} /></FormItem>
+                <FormItem label="PAN Number" invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}><Controller name="pan_number" control={control} render={({ field }) => <Input placeholder="PAN Number" {...field} />} /></FormItem>
+                <FormItem label="TRN Number" invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}><Controller name="trn_number" control={control} render={({ field }) => <Input placeholder="TRN Number" {...field} />} /></FormItem>
+                <FormItem label="TAN Number" invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}><Controller name="tan_number" control={control} render={({ field }) => <Input placeholder="TAN Number" {...field} />} /></FormItem>
+            </div>
+
+            <hr className="my-6" />
+            <h4 className="mb-4">Company Information</h4>
+            <div className="grid md:grid-cols-3 gap-3">
+                <FormItem label="Establishment Year" invalid={!!errors.company_establishment_year} errorMessage={errors.company_establishment_year?.message as string}>
+                    <Controller name="company_establishment_year" control={control} render={({ field }) => <Input placeholder="YYYY" maxLength={4} {...field} />} />
+                </FormItem>
+                <FormItem label="No. of Employees" invalid={!!errors.no_of_employees} errorMessage={errors.no_of_employees?.message as string}>
+                    <Controller name="no_of_employees" control={control} render={({ field }) => <NumericInput placeholder="e.g., 100" {...field} onChange={value => field.onChange(value)} />} />
+                </FormItem>
+                <FormItem label="Company Website" invalid={!!errors.company_website} errorMessage={errors.company_website?.message as string}>
+                    <Controller name="company_website" control={control} render={({ field }) => <Input type="url" placeholder="https://example.com" {...field} />} />
+                </FormItem>
+                <FormItem label="Company Logo/Brochure" invalid={!!errors.company_logo_brochure} errorMessage={errors.company_logo_brochure?.message as string}>
+                    <Controller name="company_logo_brochure" control={control}
+                        render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} onChange={e => onChange(e.target.files?.[0])} />}
+                    />
+                </FormItem>
+                <FormItem label="Primary Business Type" invalid={!!errors.primary_business_type} errorMessage={errors.primary_business_type?.message as string}>
+                    <Controller name="primary_business_type" control={control} render={({ field }) => <Select placeholder="Select Business Type" options={primaryBusinessTypeOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="Primary Business Category" invalid={!!errors.primary_business_category} errorMessage={errors.primary_business_category?.message as string}>
+                    <Controller name="primary_business_category" control={control} render={({ field }) => <Select placeholder="Select Category" options={primaryBusinessCategoryOptions} {...field} />} />
+                </FormItem>
+            </div>
+
+            <hr className="my-6" />
+            <h4 className="mb-4">Certificates</h4>
+            <div className="grid md:grid-cols-7 gap-3 items-end"> {/* Use items-end to align button */}
+                <FormItem label="Certificate Name" className="col-span-3" invalid={!!errors.certificate_name} errorMessage={errors.certificate_name?.message as string}>
+                    <Controller name="certificate_name" control={control} render={({ field }) => <Input placeholder="e.g., ISO 9001" {...field} />} />
+                </FormItem>
+                <FormItem label="Upload Certificate" className="col-span-3" invalid={!!errors.upload_certificate} errorMessage={errors.upload_certificate?.message as string}>
+                    <Controller name="upload_certificate" control={control}
+                        render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} onChange={e => onChange(e.target.files?.[0])} />}
+                    />
+                </FormItem>
+                <div className="flex justify-center items-center col-span-1"> {/* Adjusted for alignment */}
+                    <Button type="button" icon={<TbPlus />} shape="circle" size="sm" /> {/* Add More button */}
                 </div>
-            </FormItem>
-            <FormItem label="Primary E-mail ID" invalid={!!errors.company_primary_email_id} errorMessage={errors.company_primary_email_id?.message as string}>
-                <Controller name="company_primary_email_id" control={control} render={({ field }) => <Input type="email" placeholder="Primary Email" {...field} />} />
-            </FormItem>
-             <FormItem label="Alternate Contact Number">
-                <div className="flex items-center gap-2">
-                    <Controller name="alternate_contact_country_code" control={control} render={({ field }) => <Input placeholder="+91" className="w-20" {...field} />} />
-                    <Controller name="alternate_contact_number" control={control} render={({ field }) => <Input placeholder="Alternate Contact" {...field} />} />
-                </div>
-            </FormItem>
-            <FormItem label="Alternate E-mail ID" invalid={!!errors.alternate_email_id} errorMessage={errors.alternate_email_id?.message as string}>
-                <Controller name="alternate_email_id" control={control} render={({ field }) => <Input type="email" placeholder="Alternate Email" {...field} />} />
-            </FormItem>
-            <FormItem label="Ownership Type" invalid={!!errors.ownership_type} errorMessage={errors.ownership_type?.message as string}>
-                <Controller name="ownership_type" control={control} render={({ field }) => <Select placeholder="Select Ownership" options={ownershipTypeOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="Owner/Director Name" invalid={!!errors.owner_director_proprietor_name} errorMessage={errors.owner_director_proprietor_name?.message as string} className="md:col-span-3">
-                <Controller name="owner_director_proprietor_name" control={control} render={({ field }) => <Input placeholder="Owner/Director Name" {...field} />} />
-            </FormItem>
-            <FormItem label="Company Address" invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-3">
-                <Controller name="company_address" control={control} render={({ field }) => <Input textArea placeholder="Company Address" {...field} />} />
-            </FormItem>
-            <FormItem label="Continent" invalid={!!errors.continent_name} errorMessage={errors.continent_name?.message as string}>
-                <Controller name="continent_name" control={control} render={({ field }) => <Select placeholder="Select Continent" options={continentOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="Country" invalid={!!errors.country} errorMessage={errors.country?.message as string}>
-                <Controller name="country" control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="State" invalid={!!errors.state} errorMessage={errors.state?.message as string}>
-                <Controller name="state" control={control} render={({ field }) => <Select placeholder="Select State" options={stateOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="City" invalid={!!errors.city} errorMessage={errors.city?.message as string} className="md:col-span-2">
-                <Controller name="city" control={control} render={({ field }) => <Select placeholder="Select City" options={cityOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="ZIP / Postal Code" invalid={!!errors.zip_postal_code} errorMessage={errors.zip_postal_code?.message as string}>
-                <Controller name="zip_postal_code" control={control} render={({ field }) => <Input placeholder="ZIP Code" {...field} />} />
-            </FormItem>
-        </div>
+            </div>
 
-        <hr className="my-6" />
-        <h4 className="mb-4">Trade Information</h4>
-        <div className="grid md:grid-cols-2 gap-3">
-            <FormItem label="GST Number" invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => <Input placeholder="GST Number" {...field} />} /></FormItem>
-            <FormItem label="PAN Number" invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}><Controller name="pan_number" control={control} render={({ field }) => <Input placeholder="PAN Number" {...field} />} /></FormItem>
-            <FormItem label="TRN Number" invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}><Controller name="trn_number" control={control} render={({ field }) => <Input placeholder="TRN Number" {...field} />} /></FormItem>
-            <FormItem label="TAN Number" invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}><Controller name="tan_number" control={control} render={({ field }) => <Input placeholder="TAN Number" {...field} />} /></FormItem>
-        </div>
-
-        <hr className="my-6" />
-        <h4 className="mb-4">Company Information</h4>
-        <div className="grid md:grid-cols-3 gap-3">
-            <FormItem label="Establishment Year" invalid={!!errors.company_establishment_year} errorMessage={errors.company_establishment_year?.message as string}>
-                <Controller name="company_establishment_year" control={control} render={({ field }) => <Input placeholder="YYYY" maxLength={4} {...field} />} />
-            </FormItem>
-            <FormItem label="No. of Employees" invalid={!!errors.no_of_employees} errorMessage={errors.no_of_employees?.message as string}>
-                 <Controller name="no_of_employees" control={control} render={({ field }) => <NumericInput placeholder="e.g., 100" {...field} onChange={value => field.onChange(value)} />} />
-            </FormItem>
-            <FormItem label="Company Website" invalid={!!errors.company_website} errorMessage={errors.company_website?.message as string}>
-                <Controller name="company_website" control={control} render={({ field }) => <Input type="url" placeholder="https://example.com" {...field} />} />
-            </FormItem>
-             <FormItem label="Company Logo/Brochure" invalid={!!errors.company_logo_brochure} errorMessage={errors.company_logo_brochure?.message as string}>
-                <Controller name="company_logo_brochure" control={control}
-                    render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} onChange={e => onChange(e.target.files?.[0])} />}
-                />
-            </FormItem>
-            <FormItem label="Primary Business Type" invalid={!!errors.primary_business_type} errorMessage={errors.primary_business_type?.message as string}>
-                <Controller name="primary_business_type" control={control} render={({ field }) => <Select placeholder="Select Business Type" options={primaryBusinessTypeOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="Primary Business Category" invalid={!!errors.primary_business_category} errorMessage={errors.primary_business_category?.message as string}>
-                <Controller name="primary_business_category" control={control} render={({ field }) => <Select placeholder="Select Category" options={primaryBusinessCategoryOptions} {...field} />} />
-            </FormItem>
-        </div>
-
-        <hr className="my-6" />
-        <h4 className="mb-4">Certificates</h4>
-        <div className="grid md:grid-cols-7 gap-3 items-end"> {/* Use items-end to align button */}
-            <FormItem label="Certificate Name" className="col-span-3" invalid={!!errors.certificate_name} errorMessage={errors.certificate_name?.message as string}>
-                <Controller name="certificate_name" control={control} render={({ field }) => <Input placeholder="e.g., ISO 9001" {...field} />} />
-            </FormItem>
-            <FormItem label="Upload Certificate" className="col-span-3" invalid={!!errors.upload_certificate} errorMessage={errors.upload_certificate?.message as string}>
-                <Controller name="upload_certificate" control={control}
-                    render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} onChange={e => onChange(e.target.files?.[0])} />}
-                />
-            </FormItem>
-            <div className="flex justify-center items-center col-span-1"> {/* Adjusted for alignment */}
+            <hr className="my-6" />
+            <h4 className="mb-4">Office Information</h4>
+            <div className="grid md:grid-cols-2 gap-3">
+                <FormItem label="Office Type" invalid={!!errors.head_office} errorMessage={errors.head_office?.message as string}>
+                    <Controller name="head_office" control={control} render={({ field }) => <Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="Office Name" invalid={!!errors.branches} errorMessage={errors.branches?.message as string}>
+                    <Controller name="branches" control={control} render={({ field }) => <Input placeholder="e.g. XYZ Pvt. Ltd." {...field} />} />
+                </FormItem>
+                <FormItem label="Address" className="md:col-span-2" invalid={!!errors.branch_address} errorMessage={errors.branch_address?.message as string}>
+                    <Controller name="branch_address" control={control} render={({ field }) => <Input textArea placeholder="Full Address" {...field} />} />
+                </FormItem>
+                <FormItem label="Location Country" invalid={!!errors.location_country} errorMessage={errors.location_country?.message as string}>
+                    <Controller name="location_country" control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="State" invalid={!!errors.branch_state} errorMessage={errors.branch_state?.message as string}>
+                    <Controller name="branch_state" control={control} render={({ field }) => <Select placeholder="Select State" options={stateOptions} {...field} />} />
+                </FormItem>
+                <FormItem label="ZIP Code" invalid={!!errors.branch_zip_code} errorMessage={errors.branch_zip_code?.message as string}>
+                    <Controller name="branch_zip_code" control={control} render={({ field }) => <Input placeholder="ZIP Code" {...field} />} />
+                </FormItem>
+                <FormItem label="GST/REG Number" invalid={!!errors.branch_gst_reg_number} errorMessage={errors.branch_gst_reg_number?.message as string}>
+                    <Controller name="branch_gst_reg_number" control={control} render={({ field }) => <Input placeholder="GST or Registration Number" {...field} />} />
+                </FormItem>
+            </div>
+            <div className="flex justify-end mt-4">
                 <Button type="button" icon={<TbPlus />} shape="circle" size="sm" /> {/* Add More button */}
             </div>
-        </div>
-
-        <hr className="my-6" />
-        <h4 className="mb-4">Office Information</h4>
-        <div className="grid md:grid-cols-2 gap-3">
-            <FormItem label="Office Type" invalid={!!errors.head_office} errorMessage={errors.head_office?.message as string}>
-                <Controller name="head_office" control={control} render={({ field }) => <Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="Office Name" invalid={!!errors.branches} errorMessage={errors.branches?.message as string}>
-                <Controller name="branches" control={control} render={({ field }) => <Input placeholder="e.g. XYZ Pvt. Ltd." {...field} />} />
-            </FormItem>
-            <FormItem label="Address" className="md:col-span-2" invalid={!!errors.branch_address} errorMessage={errors.branch_address?.message as string}>
-                <Controller name="branch_address" control={control} render={({ field }) => <Input textArea placeholder="Full Address" {...field} />} />
-            </FormItem>
-            <FormItem label="Location Country" invalid={!!errors.location_country} errorMessage={errors.location_country?.message as string}>
-                <Controller name="location_country" control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="State" invalid={!!errors.branch_state} errorMessage={errors.branch_state?.message as string}>
-                <Controller name="branch_state" control={control} render={({ field }) => <Select placeholder="Select State" options={stateOptions} {...field} />} />
-            </FormItem>
-            <FormItem label="ZIP Code" invalid={!!errors.branch_zip_code} errorMessage={errors.branch_zip_code?.message as string}>
-                <Controller name="branch_zip_code" control={control} render={({ field }) => <Input placeholder="ZIP Code" {...field} />} />
-            </FormItem>
-            <FormItem label="GST/REG Number" invalid={!!errors.branch_gst_reg_number} errorMessage={errors.branch_gst_reg_number?.message as string}>
-                <Controller name="branch_gst_reg_number" control={control} render={({ field }) => <Input placeholder="GST or Registration Number" {...field} />} />
-            </FormItem>
-        </div>
-        <div className="flex justify-end mt-4">
-             <Button type="button" icon={<TbPlus />} shape="circle" size="sm" /> {/* Add More button */}
-        </div>
-    </Card>
+        </Card>
     );
 };
 
@@ -564,7 +566,7 @@ const KYCDetailSection = ({ control, errors }: FormSectionBaseProps) => {
                                             textArea
                                             placeholder={`Remark for ${doc.label}`}
                                             {...field}
-                                            // disabled={!control._formValues[checkboxField]} // Requires watching the value
+                                        // disabled={!control._formValues[checkboxField]} // Requires watching the value
                                         />
                                     )}
                                 />
@@ -614,7 +616,7 @@ const BankDetailsSection = ({ control, errors }: FormSectionBaseProps) => {
                 </FormItem>
             </div>
             <div className="flex justify-end mt-4">
-                 <Button type="button" icon={<TbPlus />} shape="circle" size="sm" />
+                <Button type="button" icon={<TbPlus />} shape="circle" size="sm" />
             </div>
         </Card>
     );
@@ -644,7 +646,7 @@ const AccessibilitySection = ({ control, errors }: FormSectionBaseProps) => {
                         />
                     </FormItem>
                     <div className="flex lg:justify-center items-center lg:col-span-1 self-end pb-2"> {/* Align button with input bottom */}
-                         <Button type="button" icon={<TbPlus />} shape="circle" size="sm" />
+                        <Button type="button" icon={<TbPlus />} shape="circle" size="sm" />
                     </div>
                 </div>
                 <FormItem label="Domain Management" className="md:col-span-2 lg:col-span-7" invalid={!!errors.DOMAIN_MANAGEMENT_FIELD} errorMessage={errors.DOMAIN_MANAGEMENT_FIELD?.message as string}>
@@ -690,98 +692,98 @@ const MemberManagementSection = ({ control, errors }: FormSectionBaseProps) => {
 
 // --- CompanyFormComponent (Main form structure) ---
 type CompanyFormComponentProps = {
-  onFormSubmit: (values: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => void;
-  defaultValues?: Partial<CompanyFormSchema>;
-  isEditMode?: boolean;
-  onDiscard?: () => void;
-  isSubmitting?: boolean;
+    onFormSubmit: (values: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => void;
+    defaultValues?: Partial<CompanyFormSchema>;
+    isEditMode?: boolean;
+    onDiscard?: () => void;
+    isSubmitting?: boolean;
 };
 
 const CompanyFormComponent = (props: CompanyFormComponentProps) => {
-  const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
-  const [activeSection, setActiveSection] = useState<string>("companyDetails");
+    const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
+    const [activeSection, setActiveSection] = useState<string>("companyDetails");
 
-  const formMethods = useForm<CompanyFormSchema>({ defaultValues: defaultValues || {} });
-  const { handleSubmit, reset, formState: { errors }, control } = formMethods;
+    const formMethods = useForm<CompanyFormSchema>({ defaultValues: defaultValues || {} });
+    const { handleSubmit, reset, formState: { errors }, control } = formMethods;
 
-  useEffect(() => {
-    if (!isEmpty(defaultValues)) {
-      reset(defaultValues);
-    } else if (!isEditMode) {
-      reset({});
-    }
-  }, [defaultValues, isEditMode, reset]);
+    useEffect(() => {
+        if (!isEmpty(defaultValues)) {
+            reset(defaultValues);
+        } else if (!isEditMode) {
+            reset({});
+        }
+    }, [defaultValues, isEditMode, reset]);
 
-  const internalFormSubmit = (values: CompanyFormSchema) => {
-    onFormSubmit?.(values, formMethods);
-  };
+    const internalFormSubmit = (values: CompanyFormSchema) => {
+        onFormSubmit?.(values, formMethods);
+    };
 
-  const navigationKeys = companyNavigationList.map(item => item.link);
-  const handleNext = () => {
-    const currentIndex = navigationKeys.indexOf(activeSection);
-    if (currentIndex < navigationKeys.length - 1) setActiveSection(navigationKeys[currentIndex + 1]);
-  };
-  const handlePrevious = () => {
-    const currentIndex = navigationKeys.indexOf(activeSection);
-    if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
-  };
+    const navigationKeys = companyNavigationList.map(item => item.link);
+    const handleNext = () => {
+        const currentIndex = navigationKeys.indexOf(activeSection);
+        if (currentIndex < navigationKeys.length - 1) setActiveSection(navigationKeys[currentIndex + 1]);
+    };
+    const handlePrevious = () => {
+        const currentIndex = navigationKeys.indexOf(activeSection);
+        if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
+    };
 
-  const renderActiveSection = () => {
-    switch (activeSection) {
-      case "companyDetails": return <CompanyDetailsSection errors={errors} control={control} />;
-      case "kycDocuments": return <KYCDetailSection errors={errors} control={control} />;
-      case "bankDetails": return <BankDetailsSection errors={errors} control={control} />;
-      case "accessibility": return <AccessibilitySection errors={errors} control={control} />;
-      case "memberManagement": return <MemberManagementSection errors={errors} control={control} />;
-      default: return <CompanyDetailsSection errors={errors} control={control} />;
-    }
-  };
+    const renderActiveSection = () => {
+        switch (activeSection) {
+            case "companyDetails": return <CompanyDetailsSection errors={errors} control={control} />;
+            case "kycDocuments": return <KYCDetailSection errors={errors} control={control} />;
+            case "bankDetails": return <BankDetailsSection errors={errors} control={control} />;
+            case "accessibility": return <AccessibilitySection errors={errors} control={control} />;
+            case "memberManagement": return <MemberManagementSection errors={errors} control={control} />;
+            default: return <CompanyDetailsSection errors={errors} control={control} />;
+        }
+    };
 
-  return (
-    <>
-      <div className="flex gap-1 items-end mb-3">
-        <NavLink to="/business-entities/company">
-          <h6 className="font-semibold hover:text-primary-600">Company</h6>
-        </NavLink>
-        <BiChevronRight size={22} />
-        <h6 className="font-semibold text-primary">
-          {isEditMode ? "Edit Company" : "Add New Company"}
-        </h6>
-      </div>
-      <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
-        <NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} />
-      </Card>
-      <div className="flex flex-col gap-4 pb-20">
-        {renderActiveSection()}
-      </div>
-      <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex justify-between items-center p-4">
-          <div>
-            {onDiscard && (
-              <Button type="button" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"} icon={<TbTrash />} onClick={onDiscard} disabled={isSubmitting}>
-                Discard
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0}>Previous</Button>
-            <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1}>Next</Button>
-            <Button type="button" onClick={() => console.log("Draft clicked")} disabled={isSubmitting}>Draft</Button>
-            <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit)} disabled={isSubmitting}>
-              {isEditMode ? "Update" : "Create"}
-            </Button>
-          </div>
-        </div>
-      </Card>
-    </>
-  );
+    return (
+        <>
+            <div className="flex gap-1 items-end mb-3">
+                <NavLink to="/business-entities/company">
+                    <h6 className="font-semibold hover:text-primary-600">Company</h6>
+                </NavLink>
+                <BiChevronRight size={22} />
+                <h6 className="font-semibold text-primary">
+                    {isEditMode ? "Edit Company" : "Add New Company"}
+                </h6>
+            </div>
+            <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
+                <NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} />
+            </Card>
+            <div className="flex flex-col gap-4 pb-20">
+                {renderActiveSection()}
+            </div>
+            <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center p-4">
+                    <div>
+                        {onDiscard && (
+                            <Button type="button" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"} icon={<TbTrash />} onClick={onDiscard} disabled={isSubmitting}>
+                                Discard
+                            </Button>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0}>Previous</Button>
+                        <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1}>Next</Button>
+                        <Button type="button" onClick={() => console.log("Draft clicked")} disabled={isSubmitting}>Draft</Button>
+                        <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit)} disabled={isSubmitting}>
+                            {isEditMode ? "Update" : "Create"}
+                        </Button>
+                    </div>
+                </div>
+            </Card>
+        </>
+    );
 };
 
 
 // --- CompanyFormPage (Combined Add/Edit Page) ---
 const CompanyCreate = () => {
     const navigate = useNavigate();
-    // const dispatch = useAppDispatch(); // Uncomment if using Redux
+    const dispatch = useAppDispatch(); // Uncomment if using Redux
     const { companyId } = useParams<{ companyId?: string }>();
     const isEditMode = Boolean(companyId);
 
@@ -831,12 +833,12 @@ const CompanyCreate = () => {
 
         try {
             if (isEditMode && companyId) {
-                // await dispatch(editCompanyAction({ ...payload, id: companyId })).unwrap(); // Example Redux
-                await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API
+                await dispatch(editcompanyAction({ ...payload, id: companyId })).unwrap(); // Example Redux
+                // await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API
                 toast.push(<Notification type="success" title="Company Updated">Details updated successfully.</Notification>);
             } else {
-                // await dispatch(addCompanyAction(payload)).unwrap(); // Example Redux
-                await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API
+                await dispatch(addcompanyAction(payload)).unwrap(); // Example Redux
+                // await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API
                 toast.push(<Notification type="success" title="Company Created">New company created successfully.</Notification>);
                 formMethods.reset({}); // Reset form for next creation
             }
@@ -861,12 +863,12 @@ const CompanyCreate = () => {
         return <Container className="h-full flex justify-center items-center"><p>Loading company details...</p></Container>;
     }
     if (isEditMode && !initialData) {
-         return <Container className="h-full flex justify-center items-center"><p>Company data could not be loaded.</p></Container>;
+        return <Container className="h-full flex justify-center items-center"><p>Company data could not be loaded.</p></Container>;
     }
 
     return (
         <Container className="h-full">
-            <Form onSubmit={() => {}} className="flex flex-col min-h-screen"> {/* Dummy onSubmit for Form, actual submit handled by button */}
+            <Form onSubmit={() => { }} className="flex flex-col min-h-screen"> {/* Dummy onSubmit for Form, actual submit handled by button */}
                 <div className="flex-grow">
                     <CompanyFormComponent
                         onFormSubmit={handleFormSubmit}
