@@ -1,21 +1,94 @@
-import { useForm, Controller, useFieldArray } from "react-hook-form";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { FormItem } from "@/components/ui/Form";
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card"; // Keep Card
-import { NavLink } from "react-router-dom";
-import { BiChevronRight } from "react-icons/bi";
 import DatePicker from "@/components/ui/DatePicker";
+import { FormItem } from "@/components/ui/Form";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { BiChevronRight } from "react-icons/bi";
 import { TbPlus } from "react-icons/tb";
+import { NavLink } from "react-router-dom";
+import { z } from "zod";
+
 const CreatePartner = () => {
+
+  const phoneRegex = new RegExp(
+    /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
+  );
+
   const {
     control,
     handleSubmit,
     formState: { errors },
   } = useForm();
+
+  const partnerFromSchema = z.object({
+    partner_name: z.string().trim().min(1, { message: "Partner name is Required !" }),
+    partner_contact_number: z.string().regex(phoneRegex, 'Invalid Number!'),
+    partner_email_id: z.string().min(1, { message: "This field has to be filled." }).email("This is not a valid email."),
+    partner_location: z.string().trim().min(1, { message: "Location is Required !" }),
+    partner_profile_completion: z.union([
+      z.string().refine(val => !isNaN(Number(val)), {
+        message: "Input must be a valid number",
+      }),
+      z.number(),
+    ])
+      .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
+      .refine((value) => value >= 1 && value <= 100, {
+        message: "Value must be between 1 and 100",
+      }),
+    partner_trust_score: z.union([
+      z.string().refine(val => !isNaN(Number(val)), {
+        message: "Input must be a valid number",
+      }),
+      z.number(),
+    ])
+      .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
+      .refine((value) => value >= 1 && value <= 100, {
+        message: "Value must be between 1 and 100",
+      }),
+    partner_activity_score: z.union([
+      z.string().refine(val => !isNaN(Number(val)), {
+        message: "Input must be a valid number",
+      }),
+      z.number(),
+    ])
+      .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
+      .refine((value) => value >= 1, {
+        message: "Value must be between 1 and 100",
+      }),
+    // partner_kyc_status: z.string().trim().min(1, { message: "KYC is Required !" }),
+    partner_business_type: z.string().trim().min(1, { message: "Business Type is Required !" }),
+  })
+
+  const addFormMethods = useForm({
+    resolver: zodResolver(partnerFromSchema),
+    defaultValues: {
+      partner_name: "",
+      partner_profile_completion: 0,
+      partner_location: "",
+      partner_email_id: '',
+      partner_contact_number: "",
+      continent_id: "",
+      name: "",
+      iso: "",
+      phonecode: "",
+      partner_trust_score: 0,
+      partner_activity_score: 0,
+      partner_kyc_status: '',
+      partner_business_type: '',
+      partner_interested_in: '',
+      partner_website: '',
+      partner_payment_terms: '',
+      partner_referenced_name: '',
+      partner_reference_id: '',
+      partner_lead_time: ''
+    },
+    mode: "onChange",
+  });
 
   const onSubmit = (data: any) => {
     console.log("Partner submitted", data);
@@ -46,17 +119,15 @@ const CreatePartner = () => {
             >
               {/* Partner Name */}
               <FormItem
+                id="partner_name"
                 label="Partner Name"
-                invalid={Boolean(errors.partner_name)}
-                errorMessage={
-                  typeof errors.partner_name?.message === "string"
-                    ? errors.partner_name.message
-                    : undefined
+                invalid={!!addFormMethods?.formState?.errors?.partner_name?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_name?.message
                 }
               >
                 <Controller
                   name="partner_name"
-                  control={control}
+                  control={addFormMethods?.control}
                   render={({ field }) => (
                     <Input
                       type="text"
@@ -69,17 +140,15 @@ const CreatePartner = () => {
 
               {/* Contact Number */}
               <FormItem
-                label="Contact Number"
-                invalid={Boolean(errors.partner_contact_number)}
-                errorMessage={
-                  typeof errors.partner_contact_number?.message === "string"
-                    ? errors.partner_contact_number.message
-                    : undefined
+                id="partner_name"
+                invalid={!!addFormMethods?.formState?.errors?.partner_contact_number?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_contact_number?.message
                 }
+                label="Contact Number"
               >
                 <Controller
                   name="partner_contact_number"
-                  control={control}
+                  control={addFormMethods?.control}
                   render={({ field }) => (
                     <Input
                       type="text"
@@ -92,17 +161,14 @@ const CreatePartner = () => {
 
               {/* Email */}
               <FormItem
+                id="partner_email_id"
+                invalid={!!addFormMethods?.formState?.errors?.partner_email_id?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_email_id?.message}
                 label="Email"
-                invalid={Boolean(errors.partner_email_id)}
-                errorMessage={
-                  typeof errors.partner_email_id?.message === "string"
-                    ? errors.partner_email_id.message
-                    : undefined
-                }
               >
                 <Controller
                   name="partner_email_id"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input type="email" placeholder="Enter email" {...field} />
                   )}
@@ -174,16 +240,13 @@ const CreatePartner = () => {
               {/* Partner Location */}
               <FormItem
                 label="Location"
-                invalid={Boolean(errors.partner_location)}
-                errorMessage={
-                  typeof errors.partner_location?.message === "string"
-                    ? errors.partner_location.message
-                    : undefined
-                }
+                id="partner_email_id"
+                invalid={!!addFormMethods?.formState?.errors?.partner_location?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_location?.message}
               >
                 <Controller
                   name="partner_location"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input type="text" placeholder="City, Country" {...field} />
                   )}
@@ -193,16 +256,13 @@ const CreatePartner = () => {
               {/* Profile Completion */}
               <FormItem
                 label="Profile Completion %"
-                invalid={Boolean(errors.partner_profile_completion)}
-                errorMessage={
-                  typeof errors.partner_profile_completion?.message === "string"
-                    ? errors.partner_profile_completion.message
-                    : undefined
-                }
+                id="partner_profile_completion"
+                invalid={!!addFormMethods?.formState?.errors?.partner_profile_completion?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_profile_completion?.message}
               >
                 <Controller
                   name="partner_profile_completion"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input
                       type="number"
@@ -217,16 +277,13 @@ const CreatePartner = () => {
               {/* Trust Score */}
               <FormItem
                 label="Trust Score"
-                invalid={Boolean(errors.partner_trust_score)}
-                errorMessage={
-                  typeof errors.partner_trust_score?.message === "string"
-                    ? errors.partner_trust_score.message
-                    : undefined
-                }
+                id="partner_profile_completion"
+                invalid={!!addFormMethods?.formState?.errors?.partner_trust_score?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_trust_score?.message}
               >
                 <Controller
                   name="partner_trust_score"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input
                       type="number"
@@ -240,16 +297,13 @@ const CreatePartner = () => {
               {/* Activity Score */}
               <FormItem
                 label="Activity Score"
-                invalid={Boolean(errors.partner_activity_score)}
-                errorMessage={
-                  typeof errors.partner_activity_score?.message === "string"
-                    ? errors.partner_activity_score.message
-                    : undefined
-                }
+                id="partner_profile_completion"
+                invalid={!!addFormMethods?.formState?.errors?.partner_activity_score?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_activity_score?.message}
               >
                 <Controller
                   name="partner_activity_score"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input
                       type="number"
@@ -263,16 +317,14 @@ const CreatePartner = () => {
               {/* KYC Status */}
               <FormItem
                 label="KYC Status"
-                invalid={Boolean(errors.partner_kyc_status)}
-                errorMessage={
-                  typeof errors.partner_kyc_status?.message === "string"
-                    ? errors.partner_kyc_status.message
-                    : undefined
-                }
+                id="partner_profile_completion"
+                invalid={!!addFormMethods?.formState?.errors?.partner_kyc_status?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_kyc_status?.message}
+
               >
                 <Controller
                   name="partner_kyc_status"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Select
                       placeholder="Select KYC status"
@@ -290,16 +342,13 @@ const CreatePartner = () => {
               {/* Business Type */}
               <FormItem
                 label="Business Type"
-                invalid={Boolean(errors.partner_business_type)}
-                errorMessage={
-                  typeof errors.partner_business_type?.message === "string"
-                    ? errors.partner_business_type.message
-                    : undefined
-                }
+                id="partner_business_type"
+                invalid={!!addFormMethods?.formState?.errors?.partner_business_type?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_business_type?.message}
               >
                 <Controller
                   name="partner_business_type"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input
                       type="text"
@@ -313,16 +362,13 @@ const CreatePartner = () => {
               {/* Interested In */}
               <FormItem
                 label="Interested In"
-                invalid={Boolean(errors.partner_interested_in)}
-                errorMessage={
-                  typeof errors.partner_interested_in?.message === "string"
-                    ? errors.partner_interested_in.message
-                    : undefined
-                }
+                id="partner_business_type"
+                invalid={!!addFormMethods?.formState?.errors?.partner_interested_in?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_interested_in?.message}
               >
                 <Controller
                   name="partner_interested_in"
-                  control={control}
+                  control={addFormMethods.control}
                   render={() => (
                     <Select
                       placeholder="Select interested in"
@@ -340,16 +386,13 @@ const CreatePartner = () => {
               {/* Website */}
               <FormItem
                 label="Website URL"
-                invalid={Boolean(errors.partner_website)}
-                errorMessage={
-                  typeof errors.partner_website?.message === "string"
-                    ? errors.partner_website.message
-                    : undefined
-                }
+                id="partner_website"
+                invalid={!!addFormMethods?.formState?.errors?.partner_website?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_website?.message}
               >
                 <Controller
                   name="partner_website"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input
                       type="url"
@@ -363,16 +406,13 @@ const CreatePartner = () => {
               {/* Payment Terms */}
               <FormItem
                 label="Payment Terms"
-                invalid={Boolean(errors.partner_payment_terms)}
-                errorMessage={
-                  typeof errors.partner_payment_terms?.message === "string"
-                    ? errors.partner_payment_terms.message
-                    : undefined
-                }
+                id="partner_payment_terms"
+                invalid={!!addFormMethods?.formState?.errors?.partner_payment_terms?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_payment_terms?.message}
               >
                 <Controller
                   name="partner_payment_terms"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input type="text" placeholder="e.g., Net 30" {...field} />
                   )}
@@ -383,16 +423,12 @@ const CreatePartner = () => {
               {/* Referenced Name Input */}
               <FormItem
                 label="Referenced Name"
-                invalid={Boolean(errors.partner_referenced_name)}
-                errorMessage={
-                  typeof errors.partner_referenced_name?.message === "string"
-                    ? errors.partner_referenced_name.message
-                    : undefined
-                }
+                invalid={!!addFormMethods?.formState?.errors?.partner_referenced_name?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_referenced_name?.message}
               >
                 <Controller
                   name="partner_referenced_name"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input
                       type="text"
@@ -406,16 +442,13 @@ const CreatePartner = () => {
               {/* Existing Reference Contact/ID Input */}
               <FormItem
                 label="Reference Contact/ID"
-                invalid={Boolean(errors.partner_reference_id)}
-                errorMessage={
-                  typeof errors.partner_reference_id?.message === "string"
-                    ? errors.partner_reference_id.message
-                    : undefined
-                }
+                id="partner_reference_id"
+                invalid={!!addFormMethods?.formState?.errors?.partner_reference_id?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_reference_id?.message}
               >
                 <Controller
                   name="partner_reference_id"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input
                       type="text"
@@ -429,16 +462,13 @@ const CreatePartner = () => {
               {/* Lead Time */}
               <FormItem
                 label="Lead Time (days)"
-                invalid={Boolean(errors.partner_lead_time)}
-                errorMessage={
-                  typeof errors.partner_lead_time?.message === "string"
-                    ? errors.partner_lead_time.message
-                    : undefined
-                }
+                id="partner_lead_time"
+                invalid={!!addFormMethods?.formState?.errors?.partner_lead_time?.message}
+                errorMessage={addFormMethods?.formState?.errors?.partner_lead_time?.message}
               >
                 <Controller
                   name="partner_lead_time"
-                  control={control}
+                  control={addFormMethods.control}
                   render={({ field }) => (
                     <Input
                       type="number"
@@ -460,7 +490,7 @@ const CreatePartner = () => {
                       <Button
                         type="button"
                         onClick={() => append({ name: "", file: null })}
-                        icon={<TbPlus/>}
+                        icon={<TbPlus />}
                       >
                         Add New
                       </Button>
@@ -480,7 +510,7 @@ const CreatePartner = () => {
                       <div className="mb-2">
                         <Controller
                           name={`partner_documents.${index}.name`}
-                          control={control}
+                          control={addFormMethods.control}
                           render={({ field }) => (
                             <Input placeholder="Document Name" {...field} />
                           )}
@@ -489,7 +519,7 @@ const CreatePartner = () => {
                       <div>
                         <Controller
                           name={`partner_documents.${index}.file`}
-                          control={control}
+                          control={addFormMethods.control}
                           render={({ field: { onChange, ...rest } }) => (
                             <Input
                               type="file"
