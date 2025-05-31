@@ -496,14 +496,14 @@ const Blogs = () => {
     itemBeingDeleted,
   } = useSelector(masterSelector) as {
     BlogsData?: BlogItem[];
-    loading?: boolean | string; // Can be boolean or string like 'idle', 'loading'
+    loading?: boolean | string; // Can be boolean or string like 'idle', "idle"
     error?: any;
     itemBeingDeleted?: number | null;
   };
 
   const tableLoading =
     masterLoading === true ||
-    masterLoading === "loading" ||
+    masterLoading === "idle" ||
     isSubmitting ||
     isProcessing;
 
@@ -1638,7 +1638,7 @@ const Blogs = () => {
         onConfirm={onConfirmSingleDelete}
         loading={
           isProcessing ||
-          (masterLoading === "loading" &&
+          (masterLoading === "idle" &&
             !!itemBeingDeleted &&
             blogToDelete?.id === itemBeingDeleted)
         }

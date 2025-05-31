@@ -2038,10 +2038,18 @@ export const getcompanyAsync = async () => {
 
 export const addcompanyAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/setting/company_profile_setting`, unitData)
-    return response
+    const response = await axiosInstance.post(
+      `${config.apiURL}/company`,
+      unitData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response;
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
 }
 

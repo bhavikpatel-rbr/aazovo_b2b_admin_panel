@@ -429,7 +429,7 @@ const WallItemEdit = () => {
     toast.push(<Notification title="Draft Saved" type="info">Changes saved as draft. (Simulated)</Notification>);
   };
 
-  const isLoadingCombined = isLoadingInitialData || isLoadingDropdownData || masterDataAccessStatus === 'loading';
+  const isLoadingCombined = isLoadingInitialData || isLoadingDropdownData || masterDataAccessStatus === "idle";
 
   if (isLoadingCombined) {
     return (
@@ -468,7 +468,7 @@ const WallItemEdit = () => {
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            isLoading={isLoadingDropdownData || masterDataAccessStatus === 'loading'}
+                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "idle"}
                             options={productOptions}
                             value={productOptions.find(opt => opt.value === field.value) || null }
                             onChange={option => {
@@ -496,7 +496,7 @@ const WallItemEdit = () => {
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            isLoading={isLoadingDropdownData || masterDataAccessStatus === 'loading'}
+                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "idle"}
                             options={companyOptions}
                             value={companyOptions.find(opt => opt.value === field.value) || null}
                             onChange={option => {
@@ -567,7 +567,7 @@ const WallItemEdit = () => {
             >
               <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
                   <UiSelect 
-                    isLoading={isLoadingDropdownData || masterDataAccessStatus === 'loading'}
+                    isLoading={isLoadingDropdownData || masterDataAccessStatus === "idle"}
                     options={productSpecOptionsForSelect} 
                     value={productSpecOptionsForSelect.find(opt => opt.value === field.value) || null} 
                     onChange={(option) => field.onChange(option ? option.value : null)} 

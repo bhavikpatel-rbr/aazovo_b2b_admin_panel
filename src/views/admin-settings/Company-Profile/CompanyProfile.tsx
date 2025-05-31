@@ -306,7 +306,7 @@ const CompanyProfile = () => {
           );
         }
       }
-    } else if (masterLoadingStatus === "loading") {
+    } else if (masterLoadingStatus === "idle") {
       setIsLoadingInitial(true);
       console.log("[CompanyProfile] Profile status is LOADING.");
     } else if (masterLoadingStatus === "failed") {
@@ -320,7 +320,7 @@ const CompanyProfile = () => {
     } else if (
       masterLoadingStatus !== "idle" &&
       !actualProfileData &&
-      masterLoadingStatus !== "loading"
+      masterLoadingStatus !== "idle"
     ) {
       setIsLoadingInitial(false);
       console.warn(
@@ -405,7 +405,7 @@ const CompanyProfile = () => {
     }
   };
 
-  if (isLoadingInitial && masterLoadingStatus === "loading") {
+  if (isLoadingInitial && masterLoadingStatus === "idle") {
     return (
       <Container className="h-full flex justify-center items-center">
         <TbLoader className="animate-spin text-4xl text-gray-500" />
@@ -433,7 +433,7 @@ const CompanyProfile = () => {
   if (
     !currentProfileUI &&
     !isLoadingInitial &&
-    masterLoadingStatus !== "loading"
+    masterLoadingStatus !== "idle"
   ) {
     // Catch other failure/empty states
     return (
@@ -793,7 +793,7 @@ const CompanyProfile = () => {
       !metaLogoPreviewUrl) ||
     !formMethods.formState.isValid ||
     isSubmitting ||
-    (masterLoadingStatus === "loading" && !isSubmitting);
+    (masterLoadingStatus === "idle" && !isSubmitting);
 
   // For debugging button state:
   // useEffect(() => {

@@ -70,9 +70,9 @@ const demos = [
         component: <ButtonWithIcon />,
     },
     {
-        mdName: 'Loading',
+        mdName: "idle",
         mdPath: mdPath,
-        title: 'Loading',
+        title: "idle",
         desc: `Set <code>loading</code> prop to true to shows a loading indicator, it will disabled the button as well.`,
         component: <Loading />,
     },
@@ -138,7 +138,7 @@ const demoApi = [
                 desc: 'Set button to active status',
             },
             {
-                propName: 'loading',
+                propName: "idle",
                 type: `<code>boolean</code>`,
                 default: `<code>false</code>`,
                 desc: 'Show a loading spinner & disable the button',

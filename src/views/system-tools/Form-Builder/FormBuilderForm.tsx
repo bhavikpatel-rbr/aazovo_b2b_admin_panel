@@ -426,7 +426,7 @@ const FormBuilderForm = () => {
                     onChange={(option: SelectOption | null) => field.onChange(option ? option.value : null)}
                     options={departmentOptions}
                     placeholder="Select Department"
-                    isLoading={masterLoadingStatus === 'loading' && departmentOptions.length === 0}
+                    isLoading={masterLoadingStatus === "idle" && departmentOptions.length === 0}
                   />
                 )}
               />
@@ -442,7 +442,7 @@ const FormBuilderForm = () => {
                     onChange={(option: SelectOption | null) => field.onChange(option ? option.value : null)}
                     options={categoryOptions}
                     placeholder="Select Category"
-                    isLoading={masterLoadingStatus === 'loading' && categoryOptions.length === 0}
+                    isLoading={masterLoadingStatus === "idle" && categoryOptions.length === 0}
                   />
                 )}
               />

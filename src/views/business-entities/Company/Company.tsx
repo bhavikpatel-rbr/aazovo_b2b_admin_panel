@@ -675,7 +675,7 @@ const CompanyListTable = () => {
         noData={!isLoading && companyList.length === 0}
         loading={isLoading}
         // loading={
-        //         masterLoadingStatus === "loading" || isSubmitting || isDeleting
+        //         masterLoadingStatus === "idle" || isSubmitting || isDeleting
         //       }
         pagingData={{
           total: total,

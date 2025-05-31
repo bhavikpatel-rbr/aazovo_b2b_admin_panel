@@ -8,7 +8,7 @@ import Custom from './Custom'
 const mdPath = 'LoadingDoc'
 
 const demoHeader = {
-    title: 'Loading',
+    title: "idle",
     desc: 'A component that provides state during loading.',
 }
 
@@ -38,7 +38,7 @@ const demos = [
 
 const demoApi = [
     {
-        component: 'Loading',
+        component: "idle",
         api: [
             {
                 propName: 'asElement',
@@ -53,7 +53,7 @@ const demoApi = [
                 desc: 'Custom loader',
             },
             {
-                propName: 'loading',
+                propName: "idle",
                 type: `<code>boolean</code>`,
                 default: `<code>false</code>`,
                 desc: 'Whether is loading state',

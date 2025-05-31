@@ -104,8 +104,8 @@ const documentationRoutes: DocumentationRoute[] = [
                 component: lazy(() => import('./components/ImageGalleryDoc')),
             },
             {
-                path: 'loading',
-                label: 'Loading',
+                path: "idle",
+                label: "idle",
                 component: lazy(() => import('./components/LoadingDoc')),
             },
             {

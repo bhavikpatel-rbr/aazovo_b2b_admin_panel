@@ -375,8 +375,7 @@ const AddJobApplicationPage = () => {
         blood_group: formData.bloodGroup,
         local_address: formData.localAddress,
         permanent_address: formData.permanentAddress,
-        work_experience: formData.workExperienceType
-         === "experienced" ? 1 : 0,
+        work_experience: formData.workExperienceType,
         total_experience: "", // Optional: Add if collected
         expected_salary: "",  // Optional: Add if collected
         notice_period: "",    // Optional: Add if collected

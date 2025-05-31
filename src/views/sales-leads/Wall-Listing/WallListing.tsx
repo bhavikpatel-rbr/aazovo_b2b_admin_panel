@@ -664,12 +664,12 @@ const WallListing = () => {
     initialDummyWallItems
   );
   const [loadingStatus, setLoadingStatus] = useState<
-    "idle" | "loading" | "succeeded" | "failed"
+    "idle" | "idle" | "succeeded" | "failed"
   >("idle");
 
   const dispatchSimulated = useCallback(
     async (action: { type: string; payload?: any }) => {
-      setLoadingStatus("loading");
+      setLoadingStatus("idle");
       await new Promise((res) => setTimeout(res, 300));
       try {
         let updatedApiRawData = [...apiRawData];
@@ -1532,7 +1532,7 @@ const WallListing = () => {
               columns={columns}
               data={pageData}
               loading={
-                loadingStatus === "loading" || isSubmitting || isDeleting
+                loadingStatus === "idle" || isSubmitting || isDeleting
               }
               pagingData={{
                 total,
