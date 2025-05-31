@@ -199,13 +199,13 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const { MemberData = [] } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  const [memberList, setMemberList] = useState<FormItem[]>(MemberData.data);
+  const [memberList, setMemberList] = useState<FormItem[]>(MemberData?.data ?? []);
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
-  const [memberListTotal, setMemberListTotal] = useState(MemberData.length);
+  const [memberListTotal, setMemberListTotal] = useState(MemberData?.data?.length ?? 0);
 
   useEffect(() => {
-    setMemberList(MemberData.data)
-    setMemberListTotal(MemberData.length)
+    setMemberList(MemberData?.data)
+    setMemberListTotal(MemberData?.data?.length)
   }, [MemberData])
 
   useEffect(() => {
