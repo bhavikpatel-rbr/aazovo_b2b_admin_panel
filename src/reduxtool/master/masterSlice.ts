@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addcompanyAction, addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addMemberAction, addpartnerAction, addPaymentTermAction, addUnitAction, deletAllUnitAction, deleteAllcompanyAction, deleteAllMemberAction, deleteAllpartnerAction, deletecompanyAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deleteMemberAction, deletepartnerAction, deletePaymentTermAction, deletUnitAction, editcompanyAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editMemberAction, editpartnerAction, editPaymentTermAction, editUnitAction, getAllProductAction, getAutoEmailsAction, getAutoEmailTemplatesAction, getAutoMatchDataAction, getBlogsAction, getBrandAction, getBugReportsAction, getBuyerListingsAction, getCategoriesAction, getCompanyAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getEmailCampaignsAction, getEmailTemplatesAction, getExportMappingsAction, getHomeCategoryAction, getInquiriesAction, getJobApplicationsAction, getJobDepartmentsAction, getJobPostsAction, getLeadAction, getMailTemplatesAction, getMemberAction, getMembersAction, getNumberSystemsAction, getpartnerAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getRequestFeedbacksAction, getRolesAction, getRowDataAction, getSellerListingsAction, getSlidersAction, getSubcategoriesByCategoryIdAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getUsersAction, getWallItemsAction, getWallListingAction } from "./middleware"
+import { addcompanyAction, addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addInquiriesAction, addMemberAction, addpartnerAction, addPaymentTermAction, addUnitAction, deletAllUnitAction, deleteAllcompanyAction, deleteAllMemberAction, deleteAllpartnerAction, deletecompanyAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deleteMemberAction, deletepartnerAction, deletePaymentTermAction, deletUnitAction, editcompanyAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editInquiriesAction, editMemberAction, editpartnerAction, editPaymentTermAction, editUnitAction, getAllProductAction, getAutoEmailsAction, getAutoEmailTemplatesAction, getAutoMatchDataAction, getBlogsAction, getBrandAction, getBugReportsAction, getBuyerListingsAction, getCategoriesAction, getCompanyAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getEmailCampaignsAction, getEmailTemplatesAction, getExportMappingsAction, getHomeCategoryAction, getInquiriesAction, getJobApplicationsAction, getJobDepartmentsAction, getJobPostsAction, getLeadAction, getMailTemplatesAction, getMemberAction, getMembersAction, getNumberSystemsAction, getpartnerAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getRequestFeedbacksAction, getRolesAction, getRowDataAction, getSellerListingsAction, getSlidersAction, getSubcategoriesByCategoryIdAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getUsersAction, getWallItemsAction, getWallListingAction } from "./middleware"
 
 const INITIAL_STATE: any = {
   unitData: "",
@@ -366,6 +366,12 @@ const masterSlice = createSlice({
       ...state,
     }))
 
+     builder.addCase(addInquiriesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
+    builder.addCase(editInquiriesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }))
 
     builder.addCase(getpartnerAction.fulfilled, (state, { payload }) => ({
       ...state,

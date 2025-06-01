@@ -170,88 +170,6 @@ const partnerCountryOptions = [
 ];
 // --- END MOCK PARTNER FILTER OPTIONS ---
 
-// --- Initial Partner Dummy Data ---
-const initialPartnerData: PartnerListItem[] = [
-  {
-    id: "P001",
-    status: "active",
-    partner_name: "Alpha Tech Solutions",
-    partner_contact_number: "+1-202-555-0143",
-    partner_email_id: "contact@alphatech.com",
-    partner_logo: "https://i.pravatar.cc/80?u=alpha",
-    partner_status_orig: "Active",
-    partner_join_date: "2023-01-15T10:00:00Z",
-    partner_location: "New York, USA",
-    partner_profile_completion: 95.5,
-    partner_trust_score: 88,
-    partner_activity_score: 75,
-    partner_kyc_status: "Verified",
-    business_category: ["IT Services", "Cloud Consulting", "Software Development", "AI Solutions"],
-    partner_interested_in: "Both",
-    partner_business_type: "B2B Enterprise Solutions",
-    partner_profile_link: "https://linkedin.com/company/alphatech",
-    partner_certifications: ["ISO 9001", "CMMI Level 3", "AWS Certified Partner"],
-    partner_service_offerings: ["Custom Software Development", "Cloud Migration", "AI Chatbots", "Data Analytics"],
-    partner_website: "https://alphatech.com",
-    partner_payment_terms: "Net 30 Days",
-    partner_reference_id: "REF-ALPHA-001",
-    partner_document_upload: "https://example.com/docs/alpha_agreement.pdf",
-    partner_lead_time: 7,
-  },
-  {
-    id: "P002",
-    status: "inactive",
-    partner_name: "Beta Logistics Group",
-    partner_contact_number: "+44-161-555-0199",
-    partner_email_id: "info@betalogs.co.uk",
-    partner_logo: "https://i.pravatar.cc/80?u=beta",
-    partner_status_orig: "Inactive",
-    partner_join_date: "2022-10-01T14:30:00Z",
-    partner_location: "Manchester, UK",
-    partner_profile_completion: 78.2,
-    partner_trust_score: 72,
-    partner_activity_score: 60,
-    partner_kyc_status: "Pending",
-    business_category: ["Logistics", "Supply Chain", "Warehousing"],
-    partner_interested_in: "Sell",
-    partner_business_type: "Freight & Storage Services",
-    partner_profile_link: "https://business.facebook.com/betalogs",
-    partner_certifications: ["ISO 27001", "Logistics UK Member"],
-    partner_service_offerings: ["International Freight", "Secure Warehousing", "Last-Mile Delivery"],
-    partner_website: "https://betalogs.co.uk",
-    partner_payment_terms: "50% Advance, 50% on Delivery",
-    partner_reference_id: "REF-BETA-002",
-    partner_document_upload: "https://example.com/docs/beta_license.pdf",
-    partner_lead_time: 10,
-  },
-  {
-    id: "P003",
-    status: "active",
-    partner_name: "Gamma Retailers Inc.",
-    partner_contact_number: "+91-9876543210",
-    partner_email_id: "sales@gammaretail.in",
-    partner_logo: "https://i.pravatar.cc/80?u=gamma",
-    partner_status_orig: "Pending",
-    partner_join_date: "2024-03-21T08:00:00Z",
-    partner_location: "Mumbai, India",
-    partner_profile_completion: 67.0,
-    partner_trust_score: 55,
-    partner_activity_score: 49,
-    partner_kyc_status: "Under Review",
-    business_category: ["Retail", "E-commerce", "FMCG Distribution"],
-    partner_interested_in: "Buy",
-    partner_business_type: "Multi-channel Retailer",
-    partner_profile_link: "https://example.com/partners/gamma",
-    partner_certifications: ["FSSAI Licensed", "GST Registered"],
-    partner_service_offerings: ["Online Grocery Sales", "Apparel Retail", "Electronics Store"],
-    partner_website: "https://gammaretail.in",
-    partner_payment_terms: "Net 15 Days",
-    partner_reference_id: "REF-GAMMA-003",
-    partner_document_upload: "https://example.com/docs/gamma_docs.pdf",
-    partner_lead_time: 5,
-  },
-];
-// --- End Partner Dummy Data ---
 
 // --- Partner List Store ---
 interface PartnerListStore {
@@ -549,8 +467,8 @@ const PartnerListTable = () => {
     return { pageData: dataForPage, total: dataTotal };
   }, [partnerList, tableData, filterCriteria]);
 
-  const handleEditPartner = (id: string) => { console.log("Edit Partner:", id); navigate(`/business-entities/create-partner`) };
-  const handleViewPartnerDetails = (id: string) => { console.log("View Partner Details:", id); navigate(`/business-entities/create-partner`) };
+  const handleEditPartner = (id: string) => { console.log("Edit Partner:", id); navigate(`/business-entities/create-partner`, {state:id}) };
+  const handleViewPartnerDetails = (id: string) => { console.log("View Partner Details:", id); navigate(`/business-entities/create-partner`, {state:id}) };
   const handleSharePartner = (id: string) => { console.log("Share Partner:", id); };
 
   // More actions (from dropdown)

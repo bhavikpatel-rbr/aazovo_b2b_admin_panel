@@ -1066,7 +1066,7 @@ const WallListing = () => {
         processedData = processedData.filter(
           (item) =>
             productIds.has(item.productId) ||
-            filterCriteria.filterProductIds.some((fpi) =>
+            filterCriteria?.filterProductIds?.some((fpi) =>
               item.product_name
                 .toLowerCase()
                 .includes(String(fpi.label).toLowerCase())
@@ -1145,7 +1145,6 @@ const WallListing = () => {
       const pageIndex = tableData.pageIndex as number;
       const pageSize = tableData.pageSize as number;
       const startIndex = (pageIndex - 1) * pageSize;
-      console.log(processedData, "processedData");
 
       return {
         pageData: processedData,

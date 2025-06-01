@@ -2,7 +2,7 @@
 // src/views/companies/CompanyFormPage.tsx (or your chosen path)
 import React, { useEffect, useState, ReactNode } from 'react';
 import { useForm, Controller, Control, FieldErrors, UseFormReturn, useFieldArray } from 'react-hook-form'; // Keep useFieldArray for sections that already imply arrays
-import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import isEmpty from 'lodash/isEmpty';
 import classNames from 'classnames';
 
@@ -22,8 +22,11 @@ import NumericInput from '@/components/shared/NumericInput';
 // Icons
 import { BiChevronRight } from 'react-icons/bi';
 import { TbTrash, TbPlus } from 'react-icons/tb';
-import { addcompanyAction, editcompanyAction } from '@/reduxtool/master/middleware';
+import { addcompanyAction, editcompanyAction, getContinentsAction, getCountriesAction, getInquiriesAction } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
+import axiosInstance from '@/services/api/api';
+import { useSelector } from 'react-redux';
+import { masterSelector } from '@/reduxtool/master/masterSlice';
 
 // --- Type Definitions ---
 
@@ -53,7 +56,7 @@ interface CompanyBankDetailItemFE {
     ifsc_code?: string;
     // In backend, this photo is primary_bank_verification_photo, same as top-level CompanyProfileSetting
     // For array items, backend expects: company_bank_details.$i.primary_bank_verification_photo
-    bank_verification_photo?: File | string; 
+    bank_verification_photo?: File | string;
     type?: string | { label: string; value: string }; // e.g., 'Primary', 'Secondary', 'Other'
 }
 
@@ -87,7 +90,7 @@ export interface CompanyFormSchema {
     company_logo_brochure?: File | string; // Will map to `logo` file for CompanyProfileSetting
     primary_business_type?: string | { label: string; value: string };
     primary_business_category?: string | { label: string; value: string };
-    
+
     // Certificate fields (singular in original UI, will be wrapped into company_certificate[0] for backend)
     certificate_name?: string;
     upload_certificate?: File | string;
@@ -142,7 +145,7 @@ export interface CompanyFormSchema {
     secondary_bank_name?: string | { label: string; value: string }; // Maps to secondary_bank_name
     secondary_ifsc_code?: string; // Maps to secondary_ifsc_code
     secondary_bank_verification_photo?: File | string; // Maps to secondary_bank_verification_photo (file)
-    
+
     // For "Add More" bank details, mapping to company_bank_details backend array
     additional_bank_details?: CompanyBankDetailItemFE[];
 
@@ -175,7 +178,7 @@ export interface CompanyFormSchema {
     expiry_date?: string; // Date
     company_type?: string | { label: string; value: string };
     // `company_logo_brochure` text field from $input is not covered if different from the file upload. Assuming file upload is primary.
-    
+
     // SMTP fields
     smtp_host?: string;
     smtp_port?: string;
@@ -213,7 +216,7 @@ interface ApiSingleCompanyItem {
     id: number;
     name?: string;
     // CompanyProfileSetting fields (backend names)
-    company_profile_settings_id?:any,
+    company_profile_settings_id?: any,
     status?: string;
     company_code?: string;
     company_primary_contact_number?: string;
@@ -279,7 +282,7 @@ interface ApiSingleCompanyItem {
     aadhar_card_url?: string; aadhar_card_verify?: boolean;
     pan_card_url?: string; pan_card_verify?: boolean;
     other_document_url?: string; other_document_verify?: boolean;
-    
+
     // Related model arrays (backend names)
     company_spot_verification?: CompanySpotVerificationItemFE[]; // Assuming API sends them structured
     company_members?: MemberItem[]; // Assuming API sends MemberItem like structure
@@ -328,8 +331,8 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem): Partial<Compan
         head_office: apiData.company_branches?.[0]?.office_type ? { label: apiData.company_branches?.[0]?.office_type, value: apiData.company_branches?.[0]?.office_type } : undefined, // Example mapping
         branches: apiData.company_branches?.[0]?.branch_name, // Example
         branch_address: apiData.company_branches?.[0]?.branch_address,
-        location_country: apiData.company_branches?.[0]?.location_country ? { label: apiData.company_branches?.[0]?.location_country, value: apiData.company_branches?.[0]?.location_country} : undefined,
-        branch_state: apiData.company_branches?.[0]?.branch_state ? {label: apiData.company_branches?.[0]?.branch_state, value: apiData.company_branches?.[0]?.branch_state} : undefined,
+        location_country: apiData.company_branches?.[0]?.location_country ? { label: apiData.company_branches?.[0]?.location_country, value: apiData.company_branches?.[0]?.location_country } : undefined,
+        branch_state: apiData.company_branches?.[0]?.branch_state ? { label: apiData.company_branches?.[0]?.branch_state, value: apiData.company_branches?.[0]?.branch_state } : undefined,
         branch_zip_code: apiData.company_branches?.[0]?.branch_zip_code,
         branch_gst_reg_number: apiData.company_branches?.[0]?.branch_gst_reg_number,
 
@@ -364,7 +367,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem): Partial<Compan
         secondary_bank_name: apiData.secondary_bank_name ? { label: apiData.secondary_bank_name, value: apiData.secondary_bank_name } : undefined,
         secondary_ifsc_code: apiData.secondary_ifsc_code,
         secondary_bank_verification_photo: apiData.secondary_bank_verification_photo_url,
-        additional_bank_details: apiData.company_bank_details?.map(b => ({ ...b, bank_name: b.bank_name ? {label: String(b.bank_name), value: String(b.bank_name)} : undefined, type: b.type ? {label: String(b.type), value: String(b.type)}: undefined, bank_verification_photo: (b as any).primary_bank_verification_photo_url || b.bank_verification_photo  })), // Map photo key if different in API
+        additional_bank_details: apiData.company_bank_details?.map(b => ({ ...b, bank_name: b.bank_name ? { label: String(b.bank_name), value: String(b.bank_name) } : undefined, type: b.type ? { label: String(b.type), value: String(b.type) } : undefined, bank_verification_photo: (b as any).primary_bank_verification_photo_url || b.bank_verification_photo })), // Map photo key if different in API
 
         // Accessibility
         KYC_FIELD: typeof apiData.kyc_verification === 'string' ? apiData.kyc_verification === "Yes" : apiData.kyc_verification,
@@ -373,7 +376,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem): Partial<Compan
         DOMAIN_MANAGEMENT_FIELD: apiData.domain_id ? { label: apiData.domain_id, value: apiData.domain_id } : undefined,
 
         // Member Management
-        members: apiData.company_members?.map(m => ({...m, member: m.member_id ? {label: `Member ${m.member_id}`, value: String(m.member_id)} : undefined, designation: m.designation ? {label: String(m.designation), value: String(m.designation)} : undefined, person_name: m.name, contact_number: m.mobile })),
+        members: apiData.company_members?.map(m => ({ ...m, member: m.member_id ? { label: `Member ${m.member_id}`, value: String(m.member_id) } : undefined, designation: m.designation ? { label: String(m.designation), value: String(m.designation) } : undefined, person_name: m.name, contact_number: m.mobile })),
 
         // Other CompanyProfileSetting fields
         status: apiData.status ? { label: apiData.status, value: apiData.status } : undefined,
@@ -390,8 +393,8 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem): Partial<Compan
         mobile: apiData.mobile,
         expiry_date: apiData.expiry_date,
         company_type: apiData.company_type ? { label: apiData.company_type, value: apiData.company_type } : undefined,
-        smtp_host: apiData.smtp_host, smtp_port: apiData.smtp_port, 
-        smtp_secure: apiData.smtp_secure ? {label: apiData.smtp_secure, value: apiData.smtp_secure} : undefined, 
+        smtp_host: apiData.smtp_host, smtp_port: apiData.smtp_port,
+        smtp_secure: apiData.smtp_secure ? { label: apiData.smtp_secure, value: apiData.smtp_secure } : undefined,
         smtp_username: apiData.smtp_username, smtp_name: apiData.smtp_name, smtp_email: apiData.smtp_email,
         facebook: apiData.facebook, instagram: apiData.instagram, linkedin: apiData.linkedin, youtube: apiData.youtube, twitter: apiData.twitter,
         logo_for_meta: apiData.logo_for_meta_url,
@@ -410,18 +413,18 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
     const apiPayload = new FormData();
 
     let dataToProcess: any = { ...formData }; // Use a mutable copy
-     if (isEditMode && originalData) {
+    if (isEditMode && originalData) {
         // For edit mode, it's often better to send only changed fields if using PATCH.
         // For PUT or if backend `$request->only` is used, sending all is fine.
         // This example sends all fields from the form, potentially overwriting originalData.
-        dataToProcess = { ...originalData, ...formData }; 
+        dataToProcess = { ...originalData, ...formData };
     }
 
 
     if (dataToProcess.id && isEditMode) {
         apiPayload.append('id', String(dataToProcess.id)); // For Laravel update, ID might be in URL.
     }
-     // If Laravel needs _method: 'PUT' for FormData updates
+    // If Laravel needs _method: 'PUT' for FormData updates
     // if (isEditMode) {
     //     apiPayload.append('_method', 'PUT');
     // }
@@ -431,7 +434,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
         if (formValue instanceof File) {
             apiPayload.append(backendKey, formValue);
         } else if (formValue instanceof FileList) {
-             for (let i = 0; i < formValue.length; i++) {
+            for (let i = 0; i < formValue.length; i++) {
                 apiPayload.append(`${backendKey}[${i}]`, formValue[i]); // e.g., billing_photos[0]
             }
         } else if (typeof formValue === 'object' && formValue !== null && 'value' in formValue) {
@@ -485,7 +488,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
     // frontend company_logo_brochure (File) maps to 'logo' file.
     appendField('primary_business_type', dataToProcess.primary_business_type);
     appendField('primary_business_category', dataToProcess.primary_business_category);
-    
+
     // SMTP
     appendField('smtp_host', dataToProcess.smtp_host);
     appendField('smtp_port', dataToProcess.smtp_port);
@@ -520,7 +523,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
             apiPayload.append(`billing_photos[${i}]`, dataToProcess.BILLING_PHOTOS_FIELD[i]);
         }
     }
-    
+
     // Bank verification photos for CompanyProfileSetting
     appendField('primary_bank_verification_photo', dataToProcess.primary_bank_verification_photo);
     appendField('secondary_bank_verification_photo', dataToProcess.secondary_bank_verification_photo);
@@ -557,7 +560,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
             }
         });
     }
-    
+
     // --- CompanyKycDocument fields ---
     // Backend uses keys like 'declaration_206AB', 'declaration_206AB_verify'
     const kycDocsConfig = [
@@ -594,7 +597,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
             if (member.contact_number) apiPayload.append(`company_members[mobile][${index}]`, member.contact_number); // Map contact_number -> mobile
         });
     }
-    
+
     // --- company_bank_details (Array for additional banks) ---
     // Backend: company_bank_details[field_name][index] and company_bank_details[index][primary_bank_verification_photo]
     if (dataToProcess.additional_bank_details && Array.isArray(dataToProcess.additional_bank_details)) {
@@ -625,7 +628,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
         // Let's assume `dataToProcess.head_office` (which is the 'Office Type' select) maps to `office_type`.
         // And we need a way to determine the `head_office` flag.
         // For simplicity, if office_type is "Head Office", we set head_office flag to 1. This is an assumption.
-        
+
         const officeType = (typeof dataToProcess.head_office === 'object' && dataToProcess.head_office?.value) ? dataToProcess.head_office.value : dataToProcess.head_office;
         const locationCountry = (typeof dataToProcess.location_country === 'object' && dataToProcess.location_country?.value) ? dataToProcess.location_country.value : dataToProcess.location_country;
         const branchState = (typeof dataToProcess.branch_state === 'object' && dataToProcess.branch_state?.value) ? dataToProcess.branch_state.value : dataToProcess.branch_state;
@@ -640,7 +643,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
         // If not, this field (`dataToProcess.branches`) might not be saved unless mapped.
         // For now, let's map it to 'branch_name' if you add it to your backend Branch model.
         // if (dataToProcess.branches) apiPayload.append(`company_branches[branch_name][0]`, dataToProcess.branches);
-        
+
         if (locationCountry !== undefined) apiPayload.append(`company_branches[location_country][0]`, String(locationCountry));
         if (branchState !== undefined) apiPayload.append(`company_branches[branch_state][0]`, String(branchState));
         if (dataToProcess.branch_zip_code) apiPayload.append(`company_branches[branch_zip_code][0]`, dataToProcess.branch_zip_code);
@@ -658,7 +661,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
             apiPayload.append(`company_certificate[0][upload_certificate]`, dataToProcess.upload_certificate);
         }
     }
-    
+
     return apiPayload;
 };
 
@@ -703,13 +706,20 @@ const NavigatorComponent = (props: NavigatorComponentProps) => {
     );
 };
 
+
 // --- CompanyDetails Section (Original Structure, fields mapped in payload) ---
 const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
+
+    const {
+        CountriesData,
+        ContinentsData,
+        status: masterLoadingStatus = "idle",
+    } = useSelector(masterSelector);
     // Mock options - replace with actual data fetching or constants
-    const countryOptions = [{ value: 'IN', label: 'India' }, { value: 'US', label: 'United States' }];
+    const countryOptions = CountriesData?.map((value: any) => { return { value: value.id, label: value.name } });
     const stateOptions = [{ value: 'MH', label: 'Maharashtra' }, { value: 'CA', label: 'California' }];
     const cityOptions = [{ value: 'Mumbai', label: 'Mumbai' }, { value: 'Los Angeles', label: 'Los Angeles' }];
-    const continentOptions = [{ value: 'AS', label: 'Asia' }, { value: 'NA', label: 'North America' }];
+    const continentOptions = ContinentsData.map((value: any) => { return { value: value.id, label: value.name } });
     const ownershipTypeOptions = [{ value: 'private_limited', label: 'Private Limited' }, { value: 'llp', label: 'LLP' }];
     const primaryBusinessTypeOptions = [{ value: 'manufacturer', label: 'Manufacturer' }, { value: 'service', label: 'Service' }];
     const primaryBusinessCategoryOptions = [{ value: 'electronics', label: 'Electronics' }, { value: 'software', label: 'Software' }];
@@ -728,7 +738,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                 <FormItem label="Company Name" invalid={!!errors.name} errorMessage={errors.name?.message as string}>
                     <Controller name="name" control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} />
                 </FormItem>
-                 {/* Example of adding a new field to UI from schema */}
+                {/* Example of adding a new field to UI from schema */}
                 <FormItem label="Company Code" invalid={!!errors.company_code} errorMessage={errors.company_code?.message as string}>
                     <Controller name="company_code" control={control} render={({ field }) => <Input placeholder="Company Code" {...field} />} />
                 </FormItem>
@@ -804,9 +814,9 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                 </FormItem>
                 <FormItem label="Company Logo/Brochure" invalid={!!errors.company_logo_brochure} errorMessage={errors.company_logo_brochure?.message as string}>
                     <Controller name="company_logo_brochure" control={control}
-                        render={({ field: { onChange, ref, value, ...restField } }) => <Input type="file" ref={ref} onChange={e => onChange(e.target.files?.[0])} {...restField}/>}
+                        render={({ field: { onChange, ref, value, ...restField } }) => <Input type="file" ref={ref} onChange={e => onChange(e.target.files?.[0])} {...restField} />}
                     />
-                     {typeof control._formValues.company_logo_brochure === 'string' && control._formValues.company_logo_brochure && <img src={control._formValues.company_logo_brochure} alt="logo preview" className="mt-2 h-16 w-auto" />}
+                    {typeof control._formValues.company_logo_brochure === 'string' && control._formValues.company_logo_brochure && <img src={control._formValues.company_logo_brochure} alt="logo preview" className="mt-2 h-16 w-auto" />}
                 </FormItem>
                 <FormItem label="Primary Business Type" invalid={!!errors.primary_business_type} errorMessage={errors.primary_business_type?.message as string}>
                     <Controller name="primary_business_type" control={control} render={({ field }) => <Select placeholder="Select Business Type" options={primaryBusinessTypeOptions} {...field} />} />
@@ -815,17 +825,17 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                     <Controller name="primary_business_category" control={control} render={({ field }) => <Select placeholder="Select Category" options={primaryBusinessCategoryOptions} {...field} />} />
                 </FormItem>
                 {/* Fields like brands, category, interested_in, support_email, mobile, expiry_date, company_type etc. can be added here if desired in this section */}
-                 <FormItem label="Company Type" invalid={!!errors.company_type} errorMessage={errors.company_type?.message as string}>
+                <FormItem label="Company Type" invalid={!!errors.company_type} errorMessage={errors.company_type?.message as string}>
                     <Controller name="company_type" control={control} render={({ field }) => <Select placeholder="Select Company Type" options={companyTypeOptions} {...field} />} />
                 </FormItem>
                 <FormItem label="Support Email" invalid={!!errors.support_email} errorMessage={errors.support_email?.message as string}>
                     <Controller name="support_email" control={control} render={({ field }) => <Input type="email" placeholder="support@example.com" {...field} />} />
                 </FormItem>
-                 <FormItem label="Logo for Meta Tags" invalid={!!errors.logo_for_meta} errorMessage={errors.logo_for_meta?.message as string}>
+                <FormItem label="Logo for Meta Tags" invalid={!!errors.logo_for_meta} errorMessage={errors.logo_for_meta?.message as string}>
                     <Controller name="logo_for_meta" control={control}
                         render={({ field: { onChange, ref, value, ...restField } }) => <Input type="file" ref={ref} onChange={e => onChange(e.target.files?.[0])} {...restField} />}
                     />
-                     {typeof control._formValues.logo_for_meta === 'string' && control._formValues.logo_for_meta && <img src={control._formValues.logo_for_meta} alt="meta logo preview" className="mt-2 h-16 w-auto" />}
+                    {typeof control._formValues.logo_for_meta === 'string' && control._formValues.logo_for_meta && <img src={control._formValues.logo_for_meta} alt="meta logo preview" className="mt-2 h-16 w-auto" />}
                 </FormItem>
 
             </div>
@@ -916,9 +926,9 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                                         <Input type="file" ref={ref} onChange={e => onChange(e.target.files?.[0])} {...restField} />
                                     )}
                                 />
-                                 {typeof control._formValues[doc.name] === 'string' && control._formValues[doc.name] && 
-                                <a href={control._formValues[doc.name] as string} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Uploaded</a>
-                            }
+                                {typeof control._formValues[doc.name] === 'string' && control._formValues[doc.name] &&
+                                    <a href={control._formValues[doc.name] as string} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Uploaded</a>
+                                }
                             </FormItem>
                             <FormItem className="mt-2" invalid={!!errors[doc.remarkName]} errorMessage={errors[doc.remarkName]?.message as string}>
                                 <Controller
@@ -945,7 +955,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
 // --- BankDetailsSection (Original Structure for Primary/Secondary, and useFieldArray for additional) ---
 const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
     const bankNameOptions = [{ value: 'hdfc', label: 'HDFC Bank' }, { value: 'sbi', label: 'State Bank of India' }];
-    const bankTypeOptions = [{ value: 'Primary', label: 'Primary' }, { value: 'Secondary', label: 'Secondary' }, {value: 'Other', label: 'Other'}]; // For additional banks type
+    const bankTypeOptions = [{ value: 'Primary', label: 'Primary' }, { value: 'Secondary', label: 'Secondary' }, { value: 'Other', label: 'Other' }]; // For additional banks type
 
     const { fields, append, remove } = useFieldArray({
         control: formMethods.control,
@@ -967,14 +977,14 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                 </FormItem>
                 <FormItem label="Primary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.primary_bank_verification_photo} errorMessage={errors.primary_bank_verification_photo?.message as string}>
                     <Controller name="primary_bank_verification_photo" control={control}
-                        render={({ field: { onChange, ref, value, ...restField } }) => <Input type="file" ref={ref} accept="image/*,application/pdf" onChange={e => onChange(e.target.files?.[0])} {...restField}/>}
+                        render={({ field: { onChange, ref, value, ...restField } }) => <Input type="file" ref={ref} accept="image/*,application/pdf" onChange={e => onChange(e.target.files?.[0])} {...restField} />}
                     />
-                     {typeof control._formValues.primary_bank_verification_photo === 'string' && control._formValues.primary_bank_verification_photo && <img src={control._formValues.primary_bank_verification_photo} alt="Primary bank photo" className="mt-2 h-16 w-auto" />}
+                    {typeof control._formValues.primary_bank_verification_photo === 'string' && control._formValues.primary_bank_verification_photo && <img src={control._formValues.primary_bank_verification_photo} alt="Primary bank photo" className="mt-2 h-16 w-auto" />}
                 </FormItem>
             </div>
-            <hr className="my-6"/>
+            <hr className="my-6" />
             <h4 className="mb-6">Bank Details (Secondary)</h4>
-             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <FormItem label="Secondary Account Number" invalid={!!errors.secondary_account_number} errorMessage={errors.secondary_account_number?.message as string}>
                     <Controller name="secondary_account_number" control={control} render={({ field }) => <Input placeholder="Secondary Account No." {...field} />} />
                 </FormItem>
@@ -988,14 +998,14 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                     <Controller name="secondary_bank_verification_photo" control={control}
                         render={({ field: { onChange, ref, value, ...restField } }) => <Input type="file" ref={ref} accept="image/*,application/pdf" onChange={e => onChange(e.target.files?.[0])} {...restField} />}
                     />
-                     {typeof control._formValues.secondary_bank_verification_photo === 'string' && control._formValues.secondary_bank_verification_photo && <img src={control._formValues.secondary_bank_verification_photo} alt="Secondary bank photo" className="mt-2 h-16 w-auto" />}
+                    {typeof control._formValues.secondary_bank_verification_photo === 'string' && control._formValues.secondary_bank_verification_photo && <img src={control._formValues.secondary_bank_verification_photo} alt="Secondary bank photo" className="mt-2 h-16 w-auto" />}
                 </FormItem>
             </div>
 
-            <hr className="my-6"/>
-             <div className="flex justify-between items-center mb-4">
+            <hr className="my-6" />
+            <div className="flex justify-between items-center mb-4">
                 <h4 className="mb-0">Additional Bank Details</h4>
-                 <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: '', bank_name: undefined, ifsc_code: '', bank_verification_photo: undefined, type: undefined })}>
+                <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: '', bank_name: undefined, ifsc_code: '', bank_verification_photo: undefined, type: undefined })}>
                     Add More Banks
                 </Button>
             </div>
@@ -1003,7 +1013,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
             {fields.map((item, index) => (
                 <Card key={item.id} className="mb-4 p-4 border">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start">
-                         <FormItem label={`Type`} invalid={!!errors.additional_bank_details?.[index]?.type} errorMessage={errors.additional_bank_details?.[index]?.type?.message as string}>
+                        <FormItem label={`Type`} invalid={!!errors.additional_bank_details?.[index]?.type} errorMessage={errors.additional_bank_details?.[index]?.type?.message as string}>
                             <Controller name={`additional_bank_details.${index}.type`} control={control} render={({ field }) => <Select placeholder="Select Type" options={bankTypeOptions} {...field} />} />
                         </FormItem>
                         <FormItem label={`Account Number`} invalid={!!errors.additional_bank_details?.[index]?.bank_account_number} errorMessage={errors.additional_bank_details?.[index]?.bank_account_number?.message as string}>
@@ -1016,12 +1026,12 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                             <Controller name={`additional_bank_details.${index}.ifsc_code`} control={control} render={({ field }) => <Input placeholder="IFSC" {...field} />} />
                         </FormItem>
                         <FormItem label={`Bank Verification Photo`} className="md:col-span-2" invalid={!!errors.additional_bank_details?.[index]?.bank_verification_photo} errorMessage={errors.additional_bank_details?.[index]?.bank_verification_photo?.message as string}>
-                             <Controller name={`additional_bank_details.${index}.bank_verification_photo`} control={control}
+                            <Controller name={`additional_bank_details.${index}.bank_verification_photo`} control={control}
                                 render={({ field: { onChange, ref, value, ...restField } }) => <Input type="file" ref={ref} accept="image/*,application/pdf" onChange={e => onChange(e.target.files?.[0])} {...restField} />}
                             />
-                             {/* Preview logic for array item photo */}
+                            {/* Preview logic for array item photo */}
                         </FormItem>
-                         <div className="md:col-span-3 flex justify-end">
+                        <div className="md:col-span-3 flex justify-end">
                             <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => remove(index)} danger />
                         </div>
                     </div>
@@ -1060,7 +1070,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
                 <FormItem label="Domain Management" className="md:col-span-2 lg:col-span-7" invalid={!!errors.DOMAIN_MANAGEMENT_FIELD} errorMessage={errors.DOMAIN_MANAGEMENT_FIELD?.message as string}>
                     <Controller name="DOMAIN_MANAGEMENT_FIELD" control={control} render={({ field }) => <Select placeholder="Select Domain" options={domainOptions} {...field} />} />
                 </FormItem>
-                 {/* Section for SMTP, Social Media Links etc. if you want them here */}
+                {/* Section for SMTP, Social Media Links etc. if you want them here */}
                 <Card className='mt-4 col-span-full'>
                     <h4 className="mb-4">SMTP Configuration</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -1101,7 +1111,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
                     <Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ member: undefined, designation: undefined, person_name: '', contact_number: '' })}>
                         Add Member
                     </Button>
-                     <Button type="button" size="sm" icon={<TbPlus />}>
+                    <Button type="button" size="sm" icon={<TbPlus />}>
                         <NavLink to="/business-entities/member-create">Create New Member</NavLink>
                     </Button>
                 </div>
@@ -1123,7 +1133,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
                             <Controller name={`members.${index}.contact_number`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} />
                         </FormItem>
                         <div className="md:col-span-4 flex justify-end">
-                             <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => remove(index)} danger />
+                            <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => remove(index)} danger />
                         </div>
                     </div>
                 </Card>
@@ -1145,7 +1155,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
     const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
-    const formMethods = useForm<CompanyFormSchema>({ 
+    const formMethods = useForm<CompanyFormSchema>({
         defaultValues: defaultValues || {},
     });
     const { handleSubmit, reset, formState: { errors }, control } = formMethods;
@@ -1159,7 +1169,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             company_spot_verification_data: [], // Default for spot verification
             ...initialValues, // Spread incoming defaults, overwriting if present
         };
-        
+
         if (!isEmpty(fullInitialValues) || !isEditMode) { // Reset if we have values or it's create mode
             reset(fullInitialValues);
         }
@@ -1238,19 +1248,22 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
 // --- CompanyFormPage (Combined Add/Edit Page) ---
 const CompanyCreate = () => {
     const navigate = useNavigate();
+
+    const location = useLocation();
     const dispatch = useAppDispatch();
-    const { companyId } = useParams<{ companyId?: string }>();
+    // const { companyId } = useParams<{ companyId?: string }>();
+    const companyId = location.state ? location.state : undefined;
     const isEditMode = Boolean(companyId);
 
     const [initialData, setInitialData] = useState<Partial<CompanyFormSchema> | null>(null);
     const [pageLoading, setPageLoading] = useState(isEditMode);
     const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     const getEmptyFormValues = (): Partial<CompanyFormSchema> => ({
         // Initialize all fields to default/empty to ensure controlled components
         // And ensure arrays are initialized for useFieldArray hooks
-        name: '', company_primary_contact_number: '', primary_contact_country_code: '',company_profile_settings_id:'',
+        name: '', company_primary_contact_number: '', primary_contact_country_code: '', company_profile_settings_id: '',
         alternate_contact_number: '', alternate_contact_country_code: '', company_primary_email_id: '',
         alternate_email_id: '', ownership_type: undefined, owner_director_proprietor_name: '',
         company_address: '', city: undefined, state: undefined, zip_postal_code: '', country: undefined,
@@ -1287,44 +1300,36 @@ const CompanyCreate = () => {
         company_spot_verification_data: [], // Initialize for potential data
     });
 
-
+    useEffect(() => {
+        dispatch(getCountriesAction());
+        dispatch(getContinentsAction());
+    }, [])
     useEffect(() => {
         const emptyForm = getEmptyFormValues();
         if (isEditMode && companyId) {
             const fetchCompanyData = async () => {
                 setPageLoading(true);
                 try {
-                    // --- Replace with your actual API call ---
-                    // const response = await getCompanyByIdService(companyId); 
-                    // const apiData = response.data; 
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-                    const mockApiData: ApiSingleCompanyItem = { // Replace with actual fetched data
-                        id: parseInt(companyId),
-                        name: "Mock Edit Company LLC",
-                        address: "123 Edit Lane", // Backend name 'address'
-                        gst: "GSTEDITMOCK", // Backend name 'gst'
-                        logo_url: "https://via.placeholder.com/150/FF0000/FFFFFF?Text=EditLogo",
-                        // ... other fields based on ApiSingleCompanyItem
-                        status: "Active",
-                        kyc_verification: true,
-                        billing_enabled: false,
-                        members: [{member_id: "user1", name: "Alice E.", designation: "Manager", mobile: "5551234"}],
-                        // ... populate more mock data to test transformation
-                    };
-                    // --- End Mock Data ---
-                    
-                    const transformed = transformApiToFormSchema(mockApiData);
-                    setInitialData({ ...emptyForm, ...transformed }); 
+
+                    const response = await axiosInstance.get(`/setting/company_profile_setting/${companyId}`);
+                    if (response.data && response.data.status === true && response.data.data) {
+                        const transformed = transformApiToFormSchema(response.data);
+                        setInitialData({ ...emptyForm, ...transformed });
+                    } else {
+                        toast.push(<Notification type="danger" title="Fetch Error">{response.data?.message || 'Failed to load company data.'}</Notification>);
+                        navigate('/business-entities/company');
+                    }
+
                 } catch (error: any) {
                     toast.push(<Notification type="danger" title="Fetch Error">{error.message || 'Error fetching company data.'}</Notification>);
-                    navigate('/business-entities/company'); 
+                    navigate('/business-entities/company');
                 } finally {
                     setPageLoading(false);
                 }
             };
             fetchCompanyData();
         } else {
-            setInitialData(emptyForm); 
+            setInitialData(emptyForm);
             setPageLoading(false);
         }
     }, [companyId, isEditMode, navigate]);
@@ -1332,7 +1337,7 @@ const CompanyCreate = () => {
     const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
         setIsSubmitting(true);
         const payload = preparePayloadForApi(formValues, isEditMode, initialData || {});
-        
+
         // For debugging the FormData payload:
         // if (payload instanceof FormData) {
         //     console.log("--- FormData Payload ---");
@@ -1348,17 +1353,17 @@ const CompanyCreate = () => {
                 // The 'id' is added to payload in preparePayloadForApi if needed by backend
                 // Or it's often part of the URL for PUT/PATCH requests.
                 // Ensure your editcompanyAction handles FormData correctly.
-                await dispatch(editcompanyAction({payload})).unwrap(); 
+                await dispatch(editcompanyAction({ payload })).unwrap();
                 toast.push(<Notification type="success" title="Company Updated">Details updated successfully.</Notification>);
             } else {
                 await dispatch(addcompanyAction(payload)).unwrap();
                 toast.push(<Notification type="success" title="Company Created">New company created successfully.</Notification>);
                 formMethods.reset(getEmptyFormValues()); // Reset to clean slate for new creation
             }
-            // navigate('/business-entities/company'); // Optional: navigate after successful save
+            navigate('/business-entities/company'); // Optional: navigate after successful save
         } catch (error: any) {
             const errorMessage = error?.response?.data?.message || error?.message || `Failed to ${isEditMode ? 'update' : 'create'} company.`;
-             if (error?.response?.data?.errors) {
+            if (error?.response?.data?.errors) {
                 const validationErrors = error.response.data.errors;
                 Object.keys(validationErrors).forEach((key) => {
                     // Attempt to map backend error key to frontend form field key if they differ
@@ -1367,7 +1372,7 @@ const CompanyCreate = () => {
                     if (key === 'address') formKey = 'company_address' as keyof CompanyFormSchema;
                     if (key === 'gst') formKey = 'gst_number' as keyof CompanyFormSchema;
                     // Add more mappings if backend validation keys differ from form schema keys
-                    
+
                     formMethods.setError(formKey, {
                         type: 'manual',
                         message: validationErrors[key][0],
@@ -1382,22 +1387,19 @@ const CompanyCreate = () => {
             setIsSubmitting(false);
         }
     };
-
     const openDiscardDialog = () => setDiscardConfirmationOpen(true);
     const closeDiscardDialog = () => setDiscardConfirmationOpen(false);
     const handleConfirmDiscard = () => {
         closeDiscardDialog();
         navigate('/business-entities/company');
     };
-
     if (pageLoading) {
         return <Container className="h-full flex justify-center items-center"><p>Loading company details...</p></Container>;
     }
     // Ensure initialData is not null before rendering form, especially after async fetch
     if (!initialData) {
-         return <Container className="h-full flex justify-center items-center"><p>Initializing form...</p></Container>;
+        return <Container className="h-full flex justify-center items-center"><p>Initializing form...</p></Container>;
     }
-
     return (
         <Container className="h-full">
             <Form onSubmit={(e) => e.preventDefault()} className="flex flex-col min-h-screen">

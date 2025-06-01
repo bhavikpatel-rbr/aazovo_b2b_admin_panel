@@ -52,7 +52,7 @@ import type { TableQueries } from "@/@types/common";
 // Redux imports
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-import { deleteAllInquiryAction, getDepartmentsAction, getInquiriesAction } from "@/reduxtool/master/middleware";
+import { deleteAllInquiryAction, getContinentsAction, getDepartmentsAction, getInquiriesAction } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 
@@ -215,8 +215,8 @@ const useInquiryList = (): InquiryListStore => {
 const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dispatch = useAppDispatch();
   const {
-    inquiryList1, 
-    departmentsData, 
+    inquiryList1,
+    departmentsData,
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
@@ -228,22 +228,21 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Dispatch actions to fetch initial data
-    dispatch(getInquiriesAction());
     dispatch(getDepartmentsAction());
   }, [dispatch]);
-  
+
   // This useEffect handles updates from Redux store
   useEffect(() => {
-    setIsLoading(masterLoadingStatus === "idle");
-console.log("masterLoadingStatus",masterLoadingStatus);
+    setIsLoading(false);
+    console.log("masterLoadingStatus", masterLoadingStatus);
 
     if (masterLoadingStatus === 'idle') {
-      console.log("inquiryList1",inquiryList1);
-      
+      console.log("inquiryList1", inquiryList1);
+
       // Ensure inquiryList1 is an array before processing
       const inquiryDataFromApi = Array.isArray(inquiryList1) ? inquiryList1 : [];
       console.log(inquiryDataFromApi, "inquiryDataFromApi");
-      
+
       setInquiryList(processApiDataToInquiryItems(inquiryDataFromApi as ApiInquiryItem[]));
 
       // Ensure departmentsData is an array
@@ -307,7 +306,7 @@ const InquiryActionColumn = ({
       <Tooltip title="More">
         <Dropdown renderTitle={<TbDotsVertical />} style={{ fontSize: "10px" }}>
           {onChangeItemStatus && <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }} onClick={handleChangeStatus}>Toggle Active/Inactive</Dropdown.Item>}
-          <Dropdown.Item className="text-xs py-2" style={{height:"auto"}} onClick={()=> console.log("Request For", rowData.id)}>Request For</Dropdown.Item>
+          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }} onClick={() => console.log("Request For", rowData.id)}>Request For</Dropdown.Item>
         </Dropdown>
       </Tooltip>
     </div>
@@ -336,10 +335,10 @@ const InquiryListTable = () => {
   const onApplyFiltersSubmit = (data: InquiryFilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
   const onClearFilters = () => {
     const defaultFilters: InquiryFilterFormData = {
-        filterRecordStatus: [], filterInquiryType: [], filterInquiryPriority: [],
-        filterInquiryCurrentStatus: [], filterAssignedTo: [], filterDepartment: [], filterFeedbackStatus: [],
-        filterInquiryDate: [null, null], filterResponseDate: [null, null],
-        filterResolutionDate: [null, null], filterFollowUpDate: [null, null],
+      filterRecordStatus: [], filterInquiryType: [], filterInquiryPriority: [],
+      filterInquiryCurrentStatus: [], filterAssignedTo: [], filterDepartment: [], filterFeedbackStatus: [],
+      filterInquiryDate: [null, null], filterResponseDate: [null, null],
+      filterResolutionDate: [null, null], filterFollowUpDate: [null, null],
     };
     filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1 });
   };
@@ -401,9 +400,9 @@ const InquiryListTable = () => {
     const checkDateRange = (dateStr: string, range: (Date | null)[] | undefined) => {
       if (!dateStr || dateStr === 'N/A' || !range || (!range[0] && !range[1])) return true;
       try {
-        const itemDate = new Date(dateStr).setHours(0,0,0,0);
-        const from = range[0] ? new Date(range[0]).setHours(0,0,0,0) : null;
-        const to = range[1] ? new Date(range[1]).setHours(0,0,0,0) : null;
+        const itemDate = new Date(dateStr).setHours(0, 0, 0, 0);
+        const from = range[0] ? new Date(range[0]).setHours(0, 0, 0, 0) : null;
+        const to = range[1] ? new Date(range[1]).setHours(0, 0, 0, 0) : null;
         if (from && to) return itemDate >= from && itemDate <= to;
         if (from) return itemDate >= from;
         if (to) return itemDate <= to; return true;
@@ -444,25 +443,34 @@ const InquiryListTable = () => {
   }, [inquiryList, tableData, filterCriteria]);
 
   const handleViewDetails = (id: string) => { console.log("View Inquiry Details:", id); toast.push(<Notification type="info" title="View">Viewing {id}</Notification>) };
-  const handleEditInquiry = (id: string) => { console.log("Edit Inquiry:", id); toast.push(<Notification type="info" title="Edit">Editing {id}</Notification>) };
+  const navigate = useNavigate();
+  const handleEditInquiry = (id: string) => {
+    navigate("/business-entities/create-inquiry", { state: id })
+    toast.push(<Notification type="info" title="Edit">Editing {id}</Notification>)
+  };
   const handleShareInquiry = (id: string) => { console.log("Share Inquiry:", id); toast.push(<Notification type="info" title="Share">Sharing {id}</Notification>) };
-  const handleChangeInquiryStatus = (id: string, currentStatus: InquiryItem["status"]) => { console.log("Change Status for:", id, "from", currentStatus); toast.push(<Notification type="info" title="Change Status">Toggled status for {id}</Notification>)};
+  const handleChangeInquiryStatus = (id: string, currentStatus: InquiryItem["status"]) => { console.log("Change Status for:", id, "from", currentStatus); toast.push(<Notification type="info" title="Change Status">Toggled status for {id}</Notification>) };
 
 
   const columns: ColumnDef<InquiryItem>[] = useMemo(() => [
-    { header: "Inquiry Overview", accessorKey: "inquiry_id", enableSorting: true, size: 280,
-      cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{d.inquiry_id}</span><span className="text-xs text-gray-700 dark:text-gray-300">{d.company_name}</span><Tooltip title={d.inquiry_subject}><span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{d.inquiry_subject}</span></Tooltip><div className="flex items-center gap-2 mt-1"><Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{d.inquiry_type}</Tag><Tag className={`${recordStatusColor[d.status]} capitalize text-[10px] px-1.5 py-0.5`}>{d.status}</Tag></div></div>);},
+    {
+      header: "Inquiry Overview", accessorKey: "inquiry_id", enableSorting: true, size: 280,
+      cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{d.inquiry_id}</span><span className="text-xs text-gray-700 dark:text-gray-300">{d.company_name}</span><Tooltip title={d.inquiry_subject}><span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{d.inquiry_subject}</span></Tooltip><div className="flex items-center gap-2 mt-1"><Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{d.inquiry_type}</Tag><Tag className={`${recordStatusColor[d.status]} capitalize text-[10px] px-1.5 py-0.5`}>{d.status}</Tag></div></div>); },
     },
-    { header: "Contact Person", accessorKey: "contact_person_name", enableSorting: true, size: 240,
-      cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-gray-800 dark:text-gray-100">{d.contact_person_name}</span><a href={`mailto:${d.contact_person_email}`} className="text-blue-600 hover:underline dark:text-blue-400">{d.contact_person_email}</a><span className="text-gray-600 dark:text-gray-300">{d.contact_person_phone}</span></div>);},
+    {
+      header: "Contact Person", accessorKey: "contact_person_name", enableSorting: true, size: 240,
+      cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-gray-800 dark:text-gray-100">{d.contact_person_name}</span><a href={`mailto:${d.contact_person_email}`} className="text-blue-600 hover:underline dark:text-blue-400">{d.contact_person_email}</a><span className="text-gray-600 dark:text-gray-300">{d.contact_person_phone}</span></div>); },
     },
-    { header: "Inquiry Details", accessorKey: "inquiry_priority", enableSorting: true, size: 280,
-      cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-1 text-xs"><div className="flex items-center gap-2"><Tag className={`${priorityColors[d.inquiry_priority] || priorityColors['N/A']} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_priority} Priority</Tag><Tag className={`${inquiryCurrentStatusColors[d.inquiry_status] || inquiryCurrentStatusColors['N/A']} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_status}</Tag></div><span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Assigned:</span> {d.assigned_to}</span>{d.department && <span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Dept:</span> {d.department}</span>}<Tooltip title={d.inquiry_description}><p className="text-gray-600 dark:text-gray-400 line-clamp-2">{d.inquiry_description}</p></Tooltip></div>);},
+    {
+      header: "Inquiry Details", accessorKey: "inquiry_priority", enableSorting: true, size: 280,
+      cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-1 text-xs"><div className="flex items-center gap-2"><Tag className={`${priorityColors[d.inquiry_priority] || priorityColors['N/A']} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_priority} Priority</Tag><Tag className={`${inquiryCurrentStatusColors[d.inquiry_status] || inquiryCurrentStatusColors['N/A']} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_status}</Tag></div><span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Assigned:</span> {d.assigned_to}</span>{d.department && <span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Dept:</span> {d.department}</span>}<Tooltip title={d.inquiry_description}><p className="text-gray-600 dark:text-gray-400 line-clamp-2">{d.inquiry_description}</p></Tooltip></div>); },
     },
-    { header: "Timeline", accessorKey: "inquiry_date", enableSorting: true, size: 180,
-      cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><FormattedDateDisplay dateString={d.inquiry_date} label="Inquired" /><FormattedDateDisplay dateString={d.response_date} label="Responded" /><FormattedDateDisplay dateString={d.resolution_date} label="Resolved" /><FormattedDateDisplay dateString={d.follow_up_date} label="Follow-up" /></div>);},
+    {
+      header: "Timeline", accessorKey: "inquiry_date", enableSorting: true, size: 180,
+      cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><FormattedDateDisplay dateString={d.inquiry_date} label="Inquired" /><FormattedDateDisplay dateString={d.response_date} label="Responded" /><FormattedDateDisplay dateString={d.resolution_date} label="Resolved" /><FormattedDateDisplay dateString={d.follow_up_date} label="Follow-up" /></div>); },
     },
-    { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" },
+    {
+      header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" },
       cell: (props) => (<InquiryActionColumn rowData={props.row.original} onViewDetail={handleViewDetails} onDeleteItem={handleDeleteItemClick} onEdit={handleEditInquiry} onShare={handleShareInquiry} onChangeItemStatus={handleChangeInquiryStatus} />),
     },
   ], []);
@@ -477,27 +485,27 @@ const InquiryListTable = () => {
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<InquiryItem>[]) => {
     const currentIds = new Set(rows.map(r => r.original.id));
     if (checked) {
-        setSelectedInquiries(prev => {
-            const newItems = rows.map(r => r.original).filter(item => !prev.find(pi => pi.id === item.id));
-            return [...prev, ...newItems];
-        });
+      setSelectedInquiries(prev => {
+        const newItems = rows.map(r => r.original).filter(item => !prev.find(pi => pi.id === item.id));
+        return [...prev, ...newItems];
+      });
     } else {
-        setSelectedInquiries(prev => prev.filter(item => !currentIds.has(item.id)));
+      setSelectedInquiries(prev => prev.filter(item => !currentIds.has(item.id)));
     }
   }, [setSelectedInquiries]);
-  
+
   const csvHeaders = useMemo(() => {
     if (allFilteredAndSortedData.length === 0) return [];
     return Object.keys(allFilteredAndSortedData[0]).map(key => ({
-        label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        key: key
+      label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      key: key
     }));
   }, [allFilteredAndSortedData]);
 
   const handleExport = () => {
     if (allFilteredAndSortedData.length === 0) {
-        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
-        return;
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
     }
     toast.push(<Notification title="Preparing Export" type="info">Your download will start shortly.</Notification>);
   };
@@ -527,7 +535,8 @@ const InquiryListTable = () => {
       </div>
       <DataTable
         selectable columns={columns} data={pageData}
-        noData={!isLoading && inquiryList.length === 0} loading={isLoading || isDeleting}
+        noData={!isLoading && inquiryList.length === 0}
+        loading={isLoading || isDeleting}
         pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
         checkboxChecked={(row) => selectedInquiries.some(selected => selected.id === row.id)}
         onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
@@ -588,7 +597,7 @@ const InquiryListSelected = () => {
       setIsBulkDeleting(false);
     }
   };
-  const handleSend = () => { /* Send message logic */ setSendMessageLoading(true); setTimeout(() => { setSendMessageLoading(false); setSendMessageDialogOpen(false); toast.push(<Notification type="success" title="Message Sent (Demo)">Message sent!</Notification>)}, 1000);};
+  const handleSend = () => { /* Send message logic */ setSendMessageLoading(true); setTimeout(() => { setSendMessageLoading(false); setSendMessageDialogOpen(false); toast.push(<Notification type="success" title="Message Sent (Demo)">Message sent!</Notification>) }, 1000); };
 
   if (selectedInquiries.length === 0) return null;
   return (
