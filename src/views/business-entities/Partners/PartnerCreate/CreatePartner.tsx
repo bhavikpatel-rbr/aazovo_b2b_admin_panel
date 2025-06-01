@@ -10,30 +10,96 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { BiChevronRight } from "react-icons/bi";
 import { TbPlus } from "react-icons/tb";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate, useNavigation } from "react-router-dom";
 import { z } from "zod";
 import {
   addpartnerAction,
+  editpartnerAction,
 } from "@/reduxtool/master/middleware"; // Or your members middleware path
 import { useAppDispatch } from "@/reduxtool/store";
-import { toast } from "react-toastify";
+import toast from '@/components/ui/toast';
 import { Notification } from "@/components/ui";
+import { useEffect, useState } from "react";
+import axiosInstance, { isAxiosError } from '@/services/api/api';
 
 const CreatePartner = () => {
   const phoneRegex = new RegExp(
     /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
   );
-   const location = useLocation();
+  const location = useLocation();
   const navigate = useNavigate();
+  const memberId = location.state ? location.state : undefined
+  const isEditMode = Boolean(location.state ? true : false);
+
   const dispatch = useAppDispatch(); // Initialize dispatch
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm();
-
+  const transformApiToFormSchema = (apiData) => {
+    // ... (same as your previous definition, ensure it's complete) ...
+    return {
+      "id": apiData.id,
+      "partner_name": apiData.partner_name,
+      "partner_contact_number": apiData.partner_contact_number,
+      "partner_email_id": apiData.partner_email_id,
+      "partner_logo": apiData.partner_logo,
+      "partner_status": apiData.partner_status,
+      "partner_join_date": apiData.partner_join_date,
+      "partner_location": apiData.partner_location,
+      "partner_profile_completion": apiData.partner_profile_completion,
+      "partner_trust_score": apiData.partner_trust_score,
+      "partner_activity_score": apiData.partner_activity_score,
+      "partner_kyc_status": apiData.partner_kyc_status,
+      "business_category": apiData.business_category,
+      "partner_interested_in": apiData.partner_interested_in,
+      "partner_business_type": apiData.partner_business_type,
+      "partner_profile_link": apiData.partner_profile_link,
+      "partner_certifications": apiData.partner_certifications,
+      "partner_service_offerings": apiData.partner_service_offerings,
+      "partner_website": apiData.partner_website,
+      "partner_payment_terms": apiData.partner_payment_terms,
+      "partner_reference_id": apiData.partner_reference_id,
+      "partner_document_upload": apiData.partner_document_upload,
+      "partner_lead_time": apiData.partner_lead_time,
+      "created_at": apiData.created_at,
+      "updated_at": apiData.updated_at,
+      "deleted_at": apiData.deleted_at,
+      "partner_reference_name": apiData.partner_reference_name,
+      "partner_doctument": apiData.partner_doctument,
+      "partner_logo_url": apiData.partner_logo_url,
+      "partner_document_array": apiData.partner_document_array
+    }
+  };
+  const [formdata, setformdata] = useState({
+    "id": '',
+    "partner_name": '',
+    "partner_contact_number": '',
+    "partner_email_id": '',
+    "partner_logo": '',
+    "partner_status": '',
+    "partner_join_date": '',
+    "partner_location": '',
+    "partner_profile_completion": '',
+    "partner_trust_score": '',
+    "partner_activity_score": '',
+    "partner_kyc_status": '',
+    "business_category": '',
+    "partner_interested_in": '',
+    "partner_business_type": '',
+    "partner_profile_link": '',
+    "partner_certifications": '',
+    "partner_service_offerings": '',
+    "partner_website": '',
+    "partner_payment_terms": '',
+    "partner_reference_id": '',
+    "partner_document_upload": '',
+    "partner_lead_time": '',
+    "created_at": '',
+    "updated_at": '',
+    "deleted_at": '',
+    "partner_reference_name": '',
+    "partner_doctument": '',
+    "partner_logo_url": '',
+    "partner_document_array": '',
+  })
   const partnerFromSchema = z.object({
     partner_name: z
       .string()
@@ -87,58 +153,84 @@ const CreatePartner = () => {
       .trim()
       .min(1, { message: "Business Type is Required !" }),
   });
-
   const addFormMethods = useForm({
     resolver: zodResolver(partnerFromSchema),
-    defaultValues: {
-      partner_name: "",
-      partner_profile_completion: 0,
-      partner_location: "",
-      partner_email_id: "",
-      partner_contact_number: "",
-      continent_id: "",
-      name: "",
-      iso: "",
-      phonecode: "",
-      partner_trust_score: 0,
-      partner_activity_score: 0,
-      partner_kyc_status: "",
-      partner_business_type: "",
-      partner_interested_in: "",
-      partner_website: "",
-      partner_payment_terms: "",
-      partner_referenced_name: "",
-      partner_reference_id: "",
-      partner_lead_time: "",
-    },
+    defaultValues: formdata,
     mode: "onChange",
   });
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = addFormMethods;
 
-   const  onSubmit = async (data: any) => {
-    console.log("Partner submitted", data);
+
+  useEffect(() => {
+    if (isEditMode && memberId) {
+      const fetchMemberData = async () => {
+        try {
+          const response = await axiosInstance.get(`/partner/${memberId}`);
+          if (response.data && response.data.status === true && response.data.data) {
+            const transformed = transformApiToFormSchema(response.data.data);
+            console.log(transformed, 'transformed')
+            reset(transformed)
+            setformdata(transformed)
+          } else {
+            toast.push(<Notification type="danger" title="Fetch Error">{response.data?.message || 'Failed to load partner data.'}</Notification>);
+            navigate('/business-entities/partner');
+          }
+        } catch (error: any) {
+          toast.push(<Notification type="danger" title="Fetch Error">{error.message || 'Error fetching partner.'}</Notification>);
+          navigate('/business-entities/partner');
+        } finally {
+
+        }
+      };
+      fetchMemberData();
+    } else {
+      reset({});
+    }
+  }, [memberId, isEditMode, navigate]);
+
+
+
+
+  const onSubmit = async (data: any) => {
+    console.log("Partner submitted",data,formdata, { ...formdata, ...data });
     try {
-      await dispatch(addpartnerAction(data)).unwrap();
+      if (isEditMode && memberId) {
+        await dispatch(editpartnerAction({ ...formdata, ...data })).unwrap();
+        toast.push(
+          <Notification type="success" title="Partner Created">
+            Partner updated successfully.
+          </Notification>
+        );
+        reset({}); // Reset form after successful creation to clear fields
+        navigate("/business-entities/partner"); // Or to the partner's detail page
+      } else {
+        await dispatch(addpartnerAction(data)).unwrap();
+        toast.push(
+          <Notification type="success" title="Partner Created">
+            New Partner created successfully.
+          </Notification>
+        );
+        reset({}); // Reset form after successful creation to clear fields;
+        navigate("/business-entities/partner", { replace: true }); // Or to the partner's detail page
+      }
+
+    } catch (error) {
+      const errorMessage =
+        error?.message ||
+        `Failed to ${isEditMode ? "update" : "create"} member.`;
       toast.push(
-        <Notification type="success" title="Partner Created">
-          New Partner created successfully.
+        <Notification
+          type="danger"
+          title={`${isEditMode ? "Update" : "Creation"} Failed`}
+        >
+          {errorMessage}
         </Notification>
       );
-      reset({}); // Reset form after successful creation to clear fields
-      // }
-      navigate("/business-entities/partner"); // Or to the partner's detail page
-    } catch (error) {
-      // error object from rejectWithValue should have a 'message' property
-      // const errorMessage =
-      //   error?.message ||
-      //   `Failed to ${isEditMode ? "update" : "create"} member.`;
-      // toast.push(
-      //   <Notification
-      //     type="danger"
-      //     title={`${isEditMode ? "Update" : "Creation"} Failed`}
-      //   >
-      //     {errorMessage}
-      //   </Notification>
-      // );
       console.error("Submit Member Error:", error);
     }
   };
@@ -667,19 +759,19 @@ const CreatePartner = () => {
                 </div>
               </FormItem>
               <Card bodyClass="flex justify-end gap-2" className="mt-4">
-        <Button type="button" className="px-4 py-2" onClick={()=>  navigate("/business-entities/partner")}>
-          Cancel
-        </Button>
-        <Button type="submit" className="px-4 py-2" variant="solid">
-          Save
-        </Button>
-      </Card>
+                <Button type="button" className="px-4 py-2" onClick={() => navigate("/business-entities/partner")}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="px-4 py-2" variant="solid">
+                  Save
+                </Button>
+              </Card>
             </form>
           </div>
         </AdaptiveCard>
       </Container>
       {/* Footer with Save and Cancel buttons */}
-      
+
     </>
   );
 };

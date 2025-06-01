@@ -1945,6 +1945,7 @@ export const deleteAllInquiriesAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+
 export const importRowDataAsync = async () => {
   try {
     const response = await axiosInstance.put(`${config.apiURL}/master/import`);
@@ -2055,7 +2056,7 @@ export const addcompanyAsync = async (unitData: any) => {
 
 export const editcompanyAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/setting/company_profile_setting/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+    const response = await axiosInstance.post(`${config.apiURL}/setting/company_profile_setting/${unitData?.id}`, { _method: "PUT", ...unitData })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2105,7 +2106,7 @@ export const addMemberAsync = async (unitData: any) => {
 
 export const editMemberAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/customer/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+    const response = await axiosInstance.post(`${config.apiURL}/customer/${unitData?.id}`, { _method: "PUT", ...unitData })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2158,7 +2159,7 @@ export const addpartnerAsync = async (unitData: any) => {
 
 export const editpartnerAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/partner/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, continent_id: unitData?.continent_id })
+    const response = await axiosInstance.post(`${config.apiURL}/partner/${unitData?.id}`, { _method: "PUT", ...unitData })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2177,6 +2178,44 @@ export const deletepartnerAsync = async (unitData: any) => {
 export const deleteAllpartnerAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/partner/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getpWallListingAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/wall/enquiry?page=1`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllWallAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/wall/enquiry/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+
+export const addInquiriesAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/inquiry`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editInquiriesAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/inquiry/${unitData?.id}`, { _method: "PUT", ...unitData })
     return response
   } catch (err) {
     return isAxiosError(err)

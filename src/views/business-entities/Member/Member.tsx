@@ -56,6 +56,7 @@ import {
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+import axiosInstance, { isAxiosError } from '@/services/api/api';
 
 
 // --- FormItem Type (Member Data Structure) ---
@@ -201,11 +202,11 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const dispatch = useAppDispatch();
   const [memberList, setMemberList] = useState<FormItem[]>(MemberData?.data ?? []);
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
-  const [memberListTotal, setMemberListTotal] = useState(MemberData?.data?.length ?? 0);
-
+  const [memberListTotal, setMemberListTotal] = useState(MemberData?.total ?? 0);
+console.log(MemberData, 'MemberData')
   useEffect(() => {
     setMemberList(MemberData?.data)
-    setMemberListTotal(MemberData?.data?.length)
+    setMemberListTotal(MemberData?.total)
   }, [MemberData])
 
   useEffect(() => {
@@ -479,18 +480,22 @@ const FormListTable = () => {
 
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
-    const dataTotal = filteredData.length;
+    // const dataTotal = filteredData.length;
+    const dataTotal = memberListTotal;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = filteredData.slice(startIndex, startIndex + pageSize);
+    const dataForPage = filteredData;
 
     return { pageData: dataForPage, total: dataTotal };
   }, [forms, tableData, filterCriteria]);
-  const handleEdit = (form: FormItem) => { navigate("/business-entities/member-create"); console.log("Edit:", form.id); };
-  const handleViewDetails = (form: FormItem) => { console.log("View Details:", form.id); navigate("/business-entities/member-create") };
+
+  const handleEdit = (form: FormItem) => { navigate("/business-entities/member-create", {state:form}); console.log("Edit:", form.id); };
+  const handleViewDetails = (form: FormItem) => { console.log("View Details:", form.id); navigate("/business-entities/member-create", {state:form}) };
   const handleChangeStatus = (form: FormItem) => { console.log("Change Status:", form.id); /* Implement status change */ };
   const handleShare = (form: FormItem) => { console.log("Share:", form.id); };
   const handleMore = (form: FormItem) => { console.log("More options for:", form.id); };
 
+  console.log(pageData, 'pageData');
+  
   const columns: ColumnDef<FormItem>[] = useMemo(
     () => [
       {
@@ -621,8 +626,13 @@ const FormListTable = () => {
     []
   );
 
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
+  const handleSetTableData = useCallback(async (data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
+    
+    const response = await axiosInstance.get(`/customer?page=${data.pageIndex}`);
+    console.log(response,response.data.data.data, 'response')
+    setMemberList(response.data.data.data)
+    setMemberListTotal(response.data.data.total)
     // If not a page change, and selection exists, you might want to clear selection
     // This depends on desired UX, for now, selection is managed by MemberListContext globally
     // if (selectedMembers.length > 0 && !data.pageIndex) {
