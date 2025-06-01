@@ -29,18 +29,18 @@ import {
 // Icons
 import {
   TbPencil,
-  TbCopy,
-  TbSwitchHorizontal,
+  // TbCopy, // Commented out
+  // TbSwitchHorizontal, // Commented out
   TbTrash,
   TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
-  TbCloudDownload,
+  // TbCloudDownload, // Commented out
   TbPhoto,
   TbReload,
-  TbUser, // Generic image icon for sliders
+  TbUser,
 } from "react-icons/tb";
 
 // Types
@@ -50,7 +50,6 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-// --- Redux Imports (Ensure these paths are correct and files exist) ---
 import { useAppDispatch } from "@/reduxtool/store";
 
 import {
@@ -59,16 +58,17 @@ import {
   editSliderAction,
   deleteSliderAction,
   deleteAllSlidersAction,
+  submitExportReasonAction, // Placeholder for actual action
   // changeSliderStatusAction // TODO: Implement if needed
-} from "@/reduxtool/master/middleware"; // Ensure these actions are in master middleware
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // Ensure this selector exposes slidersData
+} from "@/reduxtool/master/middleware";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 
 // --- Type Definitions ---
 type ApiSliderItem = {
   id: number | string;
-  title: string; // Title is still part of the data model, just not displayed as a column
+  title: string;
   subtitle?: string | null;
   button_text?: string | null;
   image: string | null;
@@ -76,17 +76,19 @@ type ApiSliderItem = {
   display_page: string;
   link?: string | null;
   source: "web" | "mobile" | "both";
-  status: "Active" | "Disabled";
+  status: "Active" | "Inactive"; // Changed "Disabled" to "Inactive"
   domain_ids?: string | null;
   slider_color?: string | null;
+  index_position?: number | null; // Added index_position
   created_at: string;
   updated_at: string;
+  updated_by_name?: string; // Added for audit info
+  updated_by_role?: string; // Added for audit info
 };
 
-export type SliderStatus = "active" | "disabled"; // Use 'disabled' to match API
 export type SliderItem = {
   id: number | string;
-  title: string; // Title is still part of the data model
+  title: string;
   subtitle: string | null;
   buttonText: string | null;
   image: string | null;
@@ -94,11 +96,14 @@ export type SliderItem = {
   displayPage: string;
   link: string | null;
   source: "web" | "mobile" | "both";
-  status: SliderStatus;
+  status: "Active" | "Inactive"; // Changed to match API
   domainIds: string | null;
   sliderColor: string | null;
+  indexPosition: number | null; // Added
   createdAt: string;
   updatedAt: string;
+  updatedByName?: string; // Added
+  updatedByRole?: string; // Added
 };
 
 // --- Zod Schema for Add/Edit Slider Form ---
@@ -149,7 +154,7 @@ const sliderFormSchema = z.object({
   source: z.enum(sourceValues, {
     errorMap: () => ({ message: "Please select a source." }),
   }),
-  status: z.enum(["Active", "Disabled"], {
+  status: z.enum(["Active", "Inactive"], { // Changed "Disabled" to "Inactive"
     errorMap: () => ({ message: "Please select a status." }),
   }),
   domain_ids: z.string().optional().nullable(),
@@ -162,12 +167,12 @@ const sliderFormSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal("")),
+  index_position: z.coerce.number().int("Must be an integer").min(0, "Cannot be negative").nullable().optional(), // Added
 });
 type SliderFormData = z.infer<typeof sliderFormSchema>;
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
-  // filterTitles: z.array(z.object({ value: z.string(), label: z.string() })).optional(), // Removed
   filterStatuses: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
@@ -180,81 +185,91 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
 // --- Constants & Configurations ---
 const SLIDER_IMAGE_BASE_URL =
   import.meta.env.VITE_API_URL_STORAGE ||
-  "https://your-api-domain.com/storage/";
+  "https://your-api-domain.com/storage/"; // Make sure this is correct
 
-const uiStatusOptions: { value: SliderStatus; label: string }[] = [
-  { value: "active", label: "Active" },
-  { value: "disabled", label: "Disabled" },
-];
-const apiStatusOptions: { value: "Active" | "Disabled"; label: string }[] = [
+const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [ // Changed "Disabled" to "Inactive"
   { value: "Active", label: "Active" },
-  { value: "Disabled", label: "Disabled" },
+  { value: "Inactive", label: "Inactive" },
 ];
-const statusColor: Record<SliderStatus, string> = {
-  active:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  disabled: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
+const statusColor: Record<SliderItem["status"], string> = { // Use SliderItem["status"]
+  Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
 };
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS_SLIDER = [
   "ID",
-  /*'Title',*/ "Subtitle",
+  "Title",
+  "Subtitle",
   "Button Text",
   "Image URL",
   "Display Page",
   "Link",
   "Source",
   "Status",
+  "Index Position", // Added
   "Domain IDs",
   "Slider Color",
   "Created At",
+  "Updated By", // Added
+  "Updated Role", // Added
   "Updated At",
-]; // Removed 'Title'
-type SliderCsvItem = Omit<SliderItem, "image" | "title"> & {
-  imageUrl: string | null;
-}; // Removed 'title'
+];
+type SliderCsvItem = Omit<SliderItem, "image"> & { imageUrl: string | null };
 
 function exportToCsvSlider(filename: string, rows: SliderItem[]) {
   if (!rows || !rows.length) {
-    toast.push(
-      <Notification title="No Data" type="info">
-        Nothing to export.
-      </Notification>
-    );
+    // Toast handled by caller
     return false;
   }
   const transformedRows: SliderCsvItem[] = rows.map((item) => ({
     id: item.id,
-    /*title: item.title,*/ subtitle: item.subtitle,
-    buttonText: item.buttonText, // Removed title
+    title: item.title,
+    subtitle: item.subtitle,
+    buttonText: item.buttonText,
     imageUrl: item.imageFullPath,
     displayPage: item.displayPage,
     link: item.link,
     source: item.source,
     status: item.status,
+    indexPosition: item.indexPosition, // Added
     domainIds: item.domainIds,
     sliderColor: item.sliderColor,
     createdAt: new Date(item.createdAt).toLocaleString(),
+    updatedByName: item.updatedByName || "N/A", // Added
+    updatedByRole: item.updatedByRole || "N/A", // Added
     updatedAt: new Date(item.updatedAt).toLocaleString(),
   }));
   const csvKeys: (keyof SliderCsvItem)[] = [
     "id",
-    /*'title',*/ "subtitle",
+    "title",
+    "subtitle",
     "buttonText",
     "imageUrl",
     "displayPage",
     "link",
     "source",
     "status",
+    "indexPosition", // Added
     "domainIds",
     "sliderColor",
     "createdAt",
+    "updatedByName", // Added
+    "updatedByRole", // Added
     "updatedAt",
-  ]; // Removed 'title'
+  ];
   const separator = ",";
   const csvContent =
     CSV_HEADERS_SLIDER.join(separator) +
@@ -266,17 +281,14 @@ function exportToCsvSlider(filename: string, rows: SliderItem[]) {
             let cellValue = row[k];
             if (cellValue === null || cellValue === undefined) cellValue = "";
             else cellValue = String(cellValue).replace(/"/g, '""');
-            if (String(cellValue).search(/("|,|\n)/g) >= 0)
-              cellValue = `"${cellValue}"`;
+            if (String(cellValue).search(/("|,|\n)/g) >= 0) cellValue = `"${cellValue}"`;
             return cellValue;
           })
           .join(separator)
       )
       .join("\n");
 
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -289,150 +301,43 @@ function exportToCsvSlider(filename: string, rows: SliderItem[]) {
     URL.revokeObjectURL(url);
     return true;
   }
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
   return false;
 }
 
 // --- ActionColumn Component ---
-const ActionColumn = ({
-  onEdit,
-  onClone,
-  onChangeStatus,
-  onDelete,
-}: {
-  onEdit: () => void;
-  onClone: () => void;
-  onChangeStatus: () => void;
-  onDelete: () => void;
-}) => {
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => {
+  const iconButtonClass = "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
     <div className="flex items-center justify-center">
-      {/* <Tooltip title="Clone Slider">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-          )}
-          role="button"
-          tabIndex={0}
-          onClick={onClone}
-        >
-          <TbCopy />
-        </div>
-      </Tooltip> */}
-      {/* <Tooltip title="Change Status">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-amber-600 dark:text-gray-400 dark:hover:text-amber-400"
-          )}
-          role="button"
-          tabIndex={0}
-          onClick={onChangeStatus}
-        >
-          <TbSwitchHorizontal />
-        </div>
-      </Tooltip> */}
-      <Tooltip title="Edit Slider">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          )}
-          role="button"
-          tabIndex={0}
-          onClick={onEdit}
-        >
-          <TbPencil />
-        </div>
+      <Tooltip title="Edit">
+        <div className={classNames(iconButtonClass, hoverBgClass, "text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" tabIndex={0} onClick={onEdit} onKeyDown={(e) => e.key === "Enter" && onEdit()}> <TbPencil /> </div>
       </Tooltip>
-      <Tooltip title="Delete Slider">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
-          role="button"
-          tabIndex={0}
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
+      <Tooltip title="Delete">
+        <div className={classNames(iconButtonClass, hoverBgClass, "text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400")} role="button" tabIndex={0} onClick={onDelete} onKeyDown={(e) => e.key === "Enter" && onDelete()}> <TbTrash /> </div>
       </Tooltip>
     </div>
   );
 };
 
 // --- SlidersSearch Component ---
-type SlidersSearchProps = {
-  onInputChange: (value: string) => void;
-  ref?: Ref<HTMLInputElement>;
-};
+type SlidersSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 const SlidersSearch = React.forwardRef<HTMLInputElement, SlidersSearchProps>(
   ({ onInputChange }, ref) => (
-    <DebouceInput
-      ref={ref}
-      className="w-full"
-      placeholder="Quick Search..."
-      suffix={<TbSearch className="text-lg" />}
-      onChange={(e) => onInputChange(e.target.value)}
-    />
+    <DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
   )
 );
 SlidersSearch.displayName = "SlidersSearch";
 
 // --- SlidersTableTools Component ---
-const SlidersTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-  onImport,
-  onClearFilters,
-}: {
-  onSearchChange: (query: string) => void;
-  onFilter: () => void;
-  onExport: () => void;
-  onImport: () => void;
-  onClearFilters : ()=> void;
-}) => (
+const SlidersTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters : ()=> void; }) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    <div className="flex-grow">
-      <SlidersSearch onInputChange={onSearchChange} />
-    </div>
+    <div className="flex-grow"><SlidersSearch onInputChange={onSearchChange} /></div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
-      <Button
-        icon={<TbFilter />}
-        onClick={onFilter}
-        className="w-full sm:w-auto"
-      >
-        Filter
-      </Button>
-      {/* <Button
-        icon={<TbCloudDownload />}
-        onClick={onImport}
-        className="w-full sm:w-auto"
-      >
-        Import
-      </Button> */}
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport}
-        className="w-full sm:w-auto"
-      >
-        Export
-      </Button>
+      <Button title="Clear Filters" icon={<TbReload/>} onClick={onClearFilters}></Button> {/* Changed onClick */}
+      <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
     </div>
   </div>
 );
@@ -450,93 +355,33 @@ type SlidersTableProps = {
   onRowSelect: (checked: boolean, row: SliderItem) => void;
   onAllRowSelect: (checked: boolean, rows: Row<SliderItem>[]) => void;
 };
-const SlidersTable = ({
-  columns,
-  data,
-  loading,
-  pagingData,
-  selectedItems,
-  onPaginationChange,
-  onSelectChange,
-  onSort,
-  onRowSelect,
-  onAllRowSelect,
-}: SlidersTableProps) => (
-  <DataTable
-    selectable
-    columns={columns}
-    data={data}
-    noData={!loading && data.length === 0}
-    loading={loading}
-    pagingData={pagingData}
-    checkboxChecked={(row) =>
-      selectedItems.some((selected) => selected.id === row.id)
-    }
-    onPaginationChange={onPaginationChange}
-    onSelectChange={onSelectChange}
-    onSort={onSort}
-    onCheckBoxChange={onRowSelect}
-    onIndeterminateCheckBoxChange={onAllRowSelect}
-  />
+const SlidersTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: SlidersTableProps) => (
+  <DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} />
 );
 
 // --- SlidersSelectedFooter Component ---
-type SlidersSelectedFooterProps = {
-  selectedItems: SliderItem[];
-  onDeleteSelected: () => void;
-};
-const SlidersSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-}: SlidersSelectedFooterProps) => {
+type SlidersSelectedFooterProps = { selectedItems: SliderItem[]; onDeleteSelected: () => void; isDeleting: boolean; }; // Added isDeleting
+const SlidersSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: SlidersSelectedFooterProps) => { // Added isDeleting
   const [deleteOpen, setDeleteOpen] = useState(false);
   if (selectedItems.length === 0) return null;
   return (
     <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
+      <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
         <div className="flex items-center justify-between w-full px-4 sm:px-8">
           <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
+            <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
             <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
               <span className="heading-text">{selectedItems.length}</span>
               <span>Slider{selectedItems.length > 1 ? "s" : ""} selected</span>
             </span>
           </span>
           <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={() => setDeleteOpen(true)}
-            >
-              Delete Selected
-            </Button>
+            <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteOpen(true)} loading={isDeleting}>Delete Selected</Button> {/* Added loading */}
           </div>
         </div>
       </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Slider${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
-        onClose={() => setDeleteOpen(false)}
-        onRequestClose={() => setDeleteOpen(false)}
-        onCancel={() => setDeleteOpen(false)}
-        onConfirm={() => {
-          onDeleteSelected();
-          setDeleteOpen(false);
-        }}
-      >
-        <p>
-          Are you sure you want to delete the selected slider
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>
+      <ConfirmDialog isOpen={deleteOpen} type="danger" title={`Delete ${selectedItems.length} Slider${selectedItems.length > 1 ? "s" : ""}`} onClose={() => setDeleteOpen(false)} onRequestClose={() => setDeleteOpen(false)} onCancel={() => setDeleteOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteOpen(false); }} loading={isDeleting}> {/* Added loading */}
+        <p>Are you sure you want to delete the selected slider{selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.</p>
       </ConfirmDialog>
     </>
   );
@@ -556,29 +401,23 @@ const Sliders = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // Changed from isProcessing
 
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [sliderToDelete, setSliderToDelete] = useState<SliderItem | null>(null);
 
-  const [statusChangeConfirmOpen, setStatusChangeConfirmOpen] = useState(false);
-  const [sliderForStatusChange, setSliderForStatusChange] =
-    useState<SliderItem | null>(null);
+  // --- Export Reason Modal State ---
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
 
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
-    // filterTitles: [], // Removed
     filterStatuses: [],
     filterDisplayPages: [],
     filterSources: [],
   });
 
-  const [addFormPreviewUrl, setAddFormPreviewUrl] = useState<string | null>(
-    null
-  );
-  const [editFormPreviewUrl, setEditFormPreviewUrl] = useState<string | null>(
-    null
-  );
+  const [addFormPreviewUrl, setAddFormPreviewUrl] = useState<string | null>(null);
+  const [editFormPreviewUrl, setEditFormPreviewUrl] = useState<string | null>(null);
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
 
@@ -604,22 +443,14 @@ const Sliders = () => {
     status: "Active",
     domain_ids: null,
     slider_color: "#FFFFFF",
+    index_position: null, // Added
   };
 
-  const addFormMethods = useForm<SliderFormData>({
-    resolver: zodResolver(sliderFormSchema),
-    defaultValues: defaultSliderFormValues,
-    mode: "onChange",
-  });
-  const editFormMethods = useForm<SliderFormData>({
-    resolver: zodResolver(sliderFormSchema),
-    defaultValues: defaultSliderFormValues,
-    mode: "onChange",
-  });
-  const filterFormMethods = useForm<FilterFormData>({
-    resolver: zodResolver(filterFormSchema),
-    defaultValues: filterCriteria,
-  });
+  const addFormMethods = useForm<SliderFormData>({ resolver: zodResolver(sliderFormSchema), defaultValues: defaultSliderFormValues, mode: "onChange" });
+  const editFormMethods = useForm<SliderFormData>({ resolver: zodResolver(sliderFormSchema), defaultValues: defaultSliderFormValues, mode: "onChange" });
+  const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
+
 
   const mappedSliders: SliderItem[] = useMemo(() => {
     if (!Array.isArray(rawSlidersData)) return [];
@@ -628,17 +459,10 @@ const Sliders = () => {
       if (apiItem.image_full_path) {
         fullPath = apiItem.image_full_path;
       } else if (apiItem.image) {
-        if (
-          apiItem.image.startsWith("http://") ||
-          apiItem.image.startsWith("https://")
-        ) {
+        if (apiItem.image.startsWith("http://") || apiItem.image.startsWith("https://")) {
           fullPath = apiItem.image;
         } else {
-          fullPath = `${SLIDER_IMAGE_BASE_URL}${
-            apiItem.image.startsWith("/")
-              ? apiItem.image.substring(1)
-              : apiItem.image
-          }`;
+          fullPath = `${SLIDER_IMAGE_BASE_URL}${apiItem.image.startsWith("/") ? apiItem.image.substring(1) : apiItem.image}`;
         }
       }
       return {
@@ -651,25 +475,20 @@ const Sliders = () => {
         displayPage: apiItem.display_page,
         link: apiItem.link || null,
         source: apiItem.source,
-        status: apiItem.status === "Active" ? "active" : "disabled",
+        status: apiItem.status, // No mapping needed, already "Active" | "Inactive"
         domainIds: apiItem.domain_ids || null,
         sliderColor: apiItem.slider_color || null,
+        indexPosition: apiItem.index_position === undefined ? null : apiItem.index_position, // Handle undefined
         createdAt: apiItem.created_at,
         updatedAt: apiItem.updated_at,
+        updatedByName: apiItem.updated_by_name, // Added
+        updatedByRole: apiItem.updated_by_role, // Added
       };
     });
   }, [rawSlidersData]);
 
-  const openAddDrawer = () => {
-    addFormMethods.reset(defaultSliderFormValues);
-    setAddFormPreviewUrl(null);
-    setIsAddDrawerOpen(true);
-  };
-  const closeAddDrawer = () => {
-    setIsAddDrawerOpen(false);
-    if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl);
-    setAddFormPreviewUrl(null);
-  };
+  const openAddDrawer = () => { addFormMethods.reset(defaultSliderFormValues); setAddFormPreviewUrl(null); setIsAddDrawerOpen(true); };
+  const closeAddDrawer = () => { setIsAddDrawerOpen(false); if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl); setAddFormPreviewUrl(null); };
 
   const onAddSliderSubmit = async (data: SliderFormData) => {
     setIsSubmitting(true);
@@ -678,6 +497,8 @@ const Sliders = () => {
       const value = data[key];
       if (key === "image") {
         if (value instanceof File) formData.append(key, value);
+      } else if (key === "index_position") {
+        if (value !== null && value !== undefined && !isNaN(Number(value))) formData.append(key, String(value)); // Send only if valid number
       } else if (value !== null && value !== undefined) {
         formData.append(key, String(value));
       }
@@ -685,23 +506,12 @@ const Sliders = () => {
 
     try {
       await dispatch(addSliderAction(formData)).unwrap();
-      toast.push(
-        <Notification title="Slider Added" type="success" duration={2000}>
-          Slider "{data.title}" added.
-        </Notification>
-      );
+      toast.push(<Notification title="Slider Added" type="success" duration={2000}>Slider "{data.title}" added.</Notification>);
       closeAddDrawer();
       dispatch(getSlidersAction());
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Could not add slider.";
-      toast.push(
-        <Notification title="Failed to Add" type="danger" duration={3000}>
-          {errorMessage}
-        </Notification>
-      );
+      const errorMessage = error.response?.data?.message || error.message || "Could not add slider.";
+      toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{errorMessage}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
@@ -717,19 +527,15 @@ const Sliders = () => {
       display_page: slider.displayPage,
       link: slider.link,
       source: slider.source,
-      status: slider.status === "active" ? "Active" : "Disabled",
+      status: slider.status, // Directly use "Active" | "Inactive"
       domain_ids: slider.domainIds,
       slider_color: slider.sliderColor,
+      index_position: slider.indexPosition === null ? undefined : slider.indexPosition, // Handle null for number input
     });
     setEditFormPreviewUrl(null);
     setIsEditDrawerOpen(true);
   };
-  const closeEditDrawer = () => {
-    setIsEditDrawerOpen(false);
-    setEditingSlider(null);
-    if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl);
-    setEditFormPreviewUrl(null);
-  };
+  const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingSlider(null); if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl); setEditFormPreviewUrl(null); };
 
   const onEditSliderSubmit = async (data: SliderFormData) => {
     if (!editingSlider?.id) return;
@@ -740,6 +546,8 @@ const Sliders = () => {
       const value = data[key];
       if (key === "image") {
         if (value instanceof File) formData.append(key, value);
+      } else if (key === "index_position") {
+        if (value !== null && value !== undefined && !isNaN(Number(value))) formData.append(key, String(value));
       } else {
         if (value === null) formData.append(key, "");
         else if (value !== undefined) formData.append(key, String(value));
@@ -747,14 +555,8 @@ const Sliders = () => {
     });
 
     try {
-      await dispatch(
-        editSliderAction({ id: editingSlider.id, formData })
-      ).unwrap();
-      toast.push(
-        <Notification title="Slider Updated" type="success" duration={2000}>
-          Slider "{data.title}" updated.
-        </Notification>
-      );
+      await dispatch(editSliderAction({ id: editingSlider.id, formData })).unwrap();
+      toast.push(<Notification title="Slider Updated" type="success" duration={2000}>Slider "{data.title}" updated.</Notification>);
       closeEditDrawer();
       dispatch(getSlidersAction());
     } catch (error: any) {
@@ -762,143 +564,52 @@ const Sliders = () => {
       let errorMessage = "Could not update slider.";
       if (responseData) {
         if (responseData.message) errorMessage = responseData.message;
-        if (responseData.errors)
-          errorMessage += ` Details: ${Object.values(responseData.errors)
-            .flat()
-            .join(" ")}`;
+        if (responseData.errors) errorMessage += ` Details: ${Object.values(responseData.errors).flat().join(" ")}`;
       } else if (error.message) errorMessage = error.message;
-      toast.push(
-        <Notification title="Failed to Update" type="danger" duration={4000}>
-          {errorMessage}
-        </Notification>
-      );
+      toast.push(<Notification title="Failed to Update" type="danger" duration={4000}>{errorMessage}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeleteClick = (slider: SliderItem) => {
-    setSliderToDelete(slider);
-    setSingleDeleteConfirmOpen(true);
-  };
+  const handleDeleteClick = (slider: SliderItem) => { setSliderToDelete(slider); setSingleDeleteConfirmOpen(true); };
   const onConfirmSingleDelete = async () => {
     if (!sliderToDelete?.id) return;
-    setIsProcessing(true);
+    setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      console.log("Deleting slider:", sliderToDelete.id);
       await dispatch(deleteSliderAction(sliderToDelete.id)).unwrap();
-
-      toast.push(
-        <Notification title="Slider Deleted" type="success" duration={2000}>
-          Slider "{sliderToDelete.title}" deleted.
-        </Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== sliderToDelete!.id)
-      );
+      toast.push(<Notification title="Slider Deleted" type="success" duration={2000}>Slider "{sliderToDelete.title}" deleted.</Notification>);
+      setSelectedItems((prev) => prev.filter((item) => item.id !== sliderToDelete!.id));
       dispatch(getSlidersAction());
     } catch (error: any) {
-      toast.push(
-        <Notification title={error} type="danger" duration={3000}>
-          {error.message || "Could not delete slider."}
-        </Notification>
-      );
+      toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message || "Could not delete slider."}</Notification>); // Changed title
     } finally {
-      setIsProcessing(false);
+      setIsDeleting(false);
       setSliderToDelete(null);
     }
   };
 
   const handleDeleteSelected = async () => {
     if (selectedItems.length === 0) return;
-    setIsProcessing(true);
+    setIsDeleting(true);
     const idsToDelete = selectedItems.map((item) => item.id);
     try {
-      await dispatch(
-        deleteAllSlidersAction({ ids: idsToDelete.join(",") })
-      ).unwrap();
-      toast.push(
-        <Notification title="Sliders Deleted" type="success" duration={2000}>
-          {selectedItems.length} slider(s) deleted.
-        </Notification>
-      );
+      await dispatch(deleteAllSlidersAction({ ids: idsToDelete.join(",") })).unwrap();
+      toast.push(<Notification title="Sliders Deleted" type="success" duration={2000}>{selectedItems.length} slider(s) deleted.</Notification>);
       setSelectedItems([]);
       dispatch(getSlidersAction());
     } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger" duration={3000}>
-          {error.message || "Failed to delete selected sliders."}
-        </Notification>
-      );
+      toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message || "Failed to delete selected sliders."}</Notification>);
     } finally {
-      setIsProcessing(false);
+      setIsDeleting(false);
     }
   };
 
-  const openChangeStatusDialog = (slider: SliderItem) => {
-    setSliderForStatusChange(slider);
-    setStatusChangeConfirmOpen(true);
-  };
-
-  const onConfirmChangeStatus = async () => {
-    if (!sliderForStatusChange) return;
-    setIsProcessing(true);
-    // const newApiStatus = sliderForStatusChange.status === 'active' ? 'Inactive' : 'Active';
-    try {
-      // TODO: Implement changeSliderStatusAction
-      // await dispatch(changeSliderStatusAction({ id: sliderForStatusChange.id, status: newApiStatus })).unwrap();
-      // toast.push(<Notification title="Status Updated" type="success">Status for "{sliderForStatusChange.title}" changed.</Notification>);
-      // dispatch(getSlidersAction());
-      toast.push(
-        <Notification title="Status Update (Mock)" type="info" duration={2000}>
-          Status update for "{sliderForStatusChange.title}" (functionality to be
-          implemented).
-        </Notification>
-      );
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Status Update Failed" type="danger">
-          {error.message || "Could not update status."}
-        </Notification>
-      );
-    } finally {
-      setStatusChangeConfirmOpen(false);
-      setIsProcessing(false);
-      setSliderForStatusChange(null);
-    }
-  };
-
-  const handleClone = (slider: SliderItem) => {
-    addFormMethods.reset({
-      title: `${slider.title} (Copy)`,
-      subtitle: slider.subtitle,
-      button_text: slider.buttonText,
-      image: null,
-      display_page: slider.displayPage,
-      link: slider.link,
-      source: slider.source,
-      status: slider.status === "active" ? "Active" : "Disabled",
-      domain_ids: slider.domainIds,
-      slider_color: slider.sliderColor,
-    });
-    setAddFormPreviewUrl(null);
-    setIsAddDrawerOpen(true);
-    toast.push(
-      <Notification title="Clone Slider" type="info">
-        Cloning "{slider.title}". Review, upload image, and save.
-      </Notification>
-    );
-  };
-
-  const openFilterDrawer = () => {
-    filterFormMethods.reset(filterCriteria);
-    setIsFilterDrawerOpen(true);
-  };
+  const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); };
   const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
   const onApplyFiltersSubmit = (data: FilterFormData) => {
     setFilterCriteria({
-      // filterTitles: data.filterTitles || [], // Removed
       filterStatuses: data.filterStatuses || [],
       filterDisplayPages: data.filterDisplayPages || [],
       filterSources: data.filterSources || [],
@@ -907,369 +618,158 @@ const Sliders = () => {
     closeFilterDrawer();
   };
   const onClearFilters = () => {
-    const defaultFilters = {
-      /*filterTitles: [],*/ filterStatuses: [],
-      filterDisplayPages: [],
-      filterSources: [],
-    }; // Removed
+    const defaultFilters = { filterStatuses: [], filterDisplayPages: [], filterSources: [] };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
+    setIsFilterDrawerOpen(false);
   };
 
-  const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: "", key: "" },
-    query: "",
-  });
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "asc", key: "indexPosition" }, query: "" }); // Default sort by index
   const [selectedItems, setSelectedItems] = useState<SliderItem[]>([]);
-
-  // const sliderTitleOptions = useMemo(() => // Removed as title filter dropdown is removed
-  //     Array.from(new Set(mappedSliders.map(s => s.title))).sort().map(title => ({ value: title, label: title })), [mappedSliders]);
-
-  // const sliderDisplayPageOptions = useMemo(() =>
-  //     Array.from(new Set(mappedSliders.map(s => s.displayPage)))
-  //         .map(pageValue => {
-  //             const option = displayPageOptionsConst.find(opt => opt.value === pageValue);
-  //             return { value: pageValue, label: option ? option.label : pageValue };
-  //         })
-  //         .sort((a,b) => a.label.localeCompare(b.label)),
-  // [mappedSliders]);
-
-  // const sliderSourceOptions = useMemo(() =>
-  //     Array.from(new Set(mappedSliders.map(s => s.source)))
-  //         .map(sourceValue => {
-  //             const option = sourceOptionsConst.find(opt => opt.value === sourceValue);
-  //             return { value: sourceValue, label: option ? option.label : sourceValue };
-  //         })
-  //         .sort((a,b) => a.label.localeCompare(b.label)),
-  // [mappedSliders]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: SliderItem[] = cloneDeep(mappedSliders);
-
-    // if (filterCriteria.filterTitles?.length) processedData = processedData.filter(item => filterCriteria.filterTitles!.some(f => f.value === item.title)); // Removed
-    if (filterCriteria.filterStatuses?.length)
-      processedData = processedData.filter((item) =>
-        filterCriteria.filterStatuses!.some((f) => f.value === item.status)
-      );
-    if (filterCriteria.filterDisplayPages?.length)
-      processedData = processedData.filter((item) =>
-        filterCriteria.filterDisplayPages!.some(
-          (f) => f.value === item.displayPage
-        )
-      );
-    if (filterCriteria.filterSources?.length)
-      processedData = processedData.filter((item) =>
-        filterCriteria.filterSources!.some((f) => f.value === item.source)
-      );
+    if (filterCriteria.filterStatuses?.length) processedData = processedData.filter((item) => filterCriteria.filterStatuses!.some((f) => f.value === item.status));
+    if (filterCriteria.filterDisplayPages?.length) processedData = processedData.filter((item) => filterCriteria.filterDisplayPages!.some((f) => f.value === item.displayPage));
+    if (filterCriteria.filterSources?.length) processedData = processedData.filter((item) => filterCriteria.filterSources!.some((f) => f.value === item.source));
 
     if (tableData.query) {
       const query = tableData.query.toLowerCase();
       processedData = processedData.filter(
         (item) =>
-          item.title?.toLowerCase().includes(query) || // Keep title in global search
+          item.title?.toLowerCase().includes(query) ||
           String(item.id).toLowerCase().includes(query) ||
           item.displayPage?.toLowerCase().includes(query) ||
-          item.source?.toLowerCase().includes(query)
+          item.source?.toLowerCase().includes(query) ||
+          (item.updatedByName?.toLowerCase() ?? "").includes(query) || // Search by updatedByName
+          String(item.indexPosition ?? "").includes(query) // Search by index
       );
     }
 
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key) {
+    if (order && key && ["id", "title", "displayPage", "source", "status", "indexPosition", "createdAt", "updatedAt", "updatedByName"].includes(key)) { // Added new sort keys
       processedData.sort((a, b) => {
-        let aValue = a[key as keyof SliderItem];
-        let bValue = b[key as keyof SliderItem];
+        let aValue: any, bValue: any;
         if (key === "createdAt" || key === "updatedAt") {
-          aValue = new Date(aValue as string).getTime();
-          bValue = new Date(bValue as string).getTime();
-        } else if (typeof aValue === "number" && typeof bValue === "number") {
-          /* default sort */
-        } else {
-          aValue = String(aValue ?? "").toLowerCase();
-          bValue = String(bValue ?? "").toLowerCase();
+            const dateA = a[key as 'createdAt' | 'updatedAt'] ? new Date(a[key as 'createdAt' | 'updatedAt']!).getTime() : 0;
+            const dateB = b[key as 'createdAt' | 'updatedAt'] ? new Date(b[key as 'createdAt' | 'updatedAt']!).getTime() : 0;
+            return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else if (key === "indexPosition") {
+            aValue = a.indexPosition === null ? Infinity : a.indexPosition; // Treat null as largest for sorting
+            bValue = b.indexPosition === null ? Infinity : b.indexPosition;
         }
-
-        if (aValue === null || aValue === undefined) aValue = "" as any;
-        if (bValue === null || bValue === undefined) bValue = "" as any;
-
-        if (typeof aValue === "string" && typeof bValue === "string")
-          return order === "asc"
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        if (typeof aValue === "number" && typeof bValue === "number")
-          return order === "asc" ? aValue - bValue : bValue - aValue;
-        return 0;
+         else {
+            aValue = a[key as keyof SliderItem] ?? "";
+            bValue = b[key as keyof SliderItem] ?? "";
+        }
+        
+        if (typeof aValue === "number" && typeof bValue === "number") {
+            return order === "asc" ? aValue - bValue : bValue - aValue;
+        }
+        return order === "asc"
+            ? String(aValue).localeCompare(String(bValue))
+            : String(bValue).localeCompare(String(aValue));
       });
     }
 
-    const dataToExport = [...processedData];
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-
-    return {
-      pageData: dataForPage,
-      total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
-    };
+    return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
   }, [mappedSliders, tableData, filterCriteria]);
 
-  const handleExportData = () => {
-    const success = exportToCsvSlider(
-      "sliders_export.csv",
-      allFilteredAndSortedData
-    );
-    if (success)
-      toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported.
-        </Notification>
-      );
-  };
-  const handleImportData = () => {
-    setImportDialogOpen(true);
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
   };
 
-  const handleSetTableData = useCallback(
-    (data: Partial<TableQueries>) =>
-      setTableData((prev) => ({ ...prev, ...data })),
-    []
-  );
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: SliderItem) =>
-      setSelectedItems((prev) =>
-        checked
-          ? prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row]
-          : prev.filter((item) => item.id !== row.id)
-      ),
-    []
-  );
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<SliderItem>[]) => {
-      const originals = currentRows.map((r) => r.original);
-      if (checked)
-        setSelectedItems((prev) => {
-          const prevIds = new Set(prev.map((item) => item.id));
-          return [...prev, ...originals.filter((r) => !prevIds.has(r.id))];
-        });
-      else {
-        const currentIds = new Set(originals.map((r) => r.id));
-        setSelectedItems((prev) =>
-          prev.filter((item) => !currentIds.has(item.id))
-        );
-      }
-    },
-    []
-  );
-
-  const openImageViewer = (imageUrl: string | null) => {
-    if (imageUrl) {
-      setImageToView(imageUrl);
-      setImageViewerOpen(true);
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Sliders";
+    try {
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      exportToCsvSlider("sliders_export.csv", allFilteredAndSortedData);
+      Optional: toast.push(<Notification title="Data Exported" type="success">Sliders data exported.</Notification>);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
+    } finally {
+      setIsSubmittingExportReason(false);
     }
   };
-  const closeImageViewer = () => {
-    setImageViewerOpen(false);
-    setImageToView(null);
-  };
+
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
+  const handleRowSelect = useCallback((checked: boolean, row: SliderItem) => setSelectedItems((prev) => checked ? (prev.some((item) => item.id === row.id) ? prev : [...prev, row]) : prev.filter((item) => item.id !== row.id)), []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<SliderItem>[]) => {
+    const originals = currentRows.map((r) => r.original);
+    if (checked) setSelectedItems((prev) => { const prevIds = new Set(prev.map((item) => item.id)); return [...prev, ...originals.filter((r) => !prevIds.has(r.id))]; });
+    else { const currentIds = new Set(originals.map((r) => r.id)); setSelectedItems((prev) => prev.filter((item) => !currentIds.has(item.id))); }
+  }, []);
+
+  const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
+  const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
   const columns: ColumnDef<SliderItem>[] = useMemo(
     () => [
-      {
-        header: "ID",
-        accessorKey: "id",
-        enableSorting: true,
-        size: 80,
-        meta: { tdClass: "text-center", thClass: "text-center" },
-      },
-      {
-        header: "Image",
-        accessorKey: "imageFullPath",
-        enableSorting: false,
-        size: 80,
+      { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
+      { header: "Image", accessorKey: "imageFullPath", enableSorting: false, size: 80,
         cell: (props) => {
           const { imageFullPath, title } = props.row.original;
-          return (
-            <Avatar
-              size={40}
-              shape="circle"
-              src={imageFullPath || undefined}
-              icon={<TbPhoto />}
-              className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-              onClick={() => imageFullPath && openImageViewer(imageFullPath)}
-            >
-              {!imageFullPath && title ? title.charAt(0).toUpperCase() : ""}
-            </Avatar>
-          );
+          return (<Avatar size={40} shape="circle" src={imageFullPath || undefined} icon={<TbPhoto />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => imageFullPath && openImageViewer(imageFullPath)}>{!imageFullPath && title ? title.charAt(0).toUpperCase() : ""}</Avatar>);
         },
       },
-      // { header: 'Title', accessorKey: 'title', enableSorting: true, size: 200 }, // Removed Title column
-      {
-        header: "Display Page",
-        accessorKey: "displayPage",
-        enableSorting: true,
-        cell: (props) =>
-          displayPageOptionsConst.find(
-            (p) => p.value === props.row.original.displayPage
-          )?.label || props.row.original.displayPage,
+      { header: "Index", accessorKey: "indexPosition", enableSorting: true, size: 70, cell: (props) => props.row.original.indexPosition ?? 'N/A' }, // Added Index column
+      { header: "Title", accessorKey: "title", enableSorting: true, size: 150 },
+      { header: "Display Page", accessorKey: "displayPage", enableSorting: true, size: 150, cell: (props) => displayPageOptionsConst.find((p) => p.value === props.row.original.displayPage)?.label || props.row.original.displayPage },
+      { header: "Source", accessorKey: "source", enableSorting: true, size: 100, cell: (props) => sourceOptionsConst.find((s) => s.value === props.row.original.source)?.label || props.row.original.source },
+      { header: "Status", accessorKey: "status", enableSorting: true, size: 100,
+        cell: (props) => (<Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold border-0`}>{props.row.original.status}</Tag>),
       },
-      {
-        header: "Source",
-        accessorKey: "source",
-        enableSorting: true,
-        cell: (props) =>
-          sourceOptionsConst.find((s) => s.value === props.row.original.source)
-            ?.label || props.row.original.source,
+      { header: "Updated Info", accessorKey: "updatedAt", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 170,
+        cell: (props) => {
+          const { updatedAt, updatedByName, updatedByRole } = props.row.original;
+          const formattedDate = updatedAt ? `${new Date(updatedAt).getDate()} ${new Date(updatedAt).toLocaleString("en-US", { month: "long" })} ${new Date(updatedAt).getFullYear()}, ${new Date(updatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
+          return (<div className="text-xs"><span>{updatedByName || "N/A"}{updatedByRole && (<><br /><b>{updatedByRole}</b></>)}</span><br /><span>{formattedDate}</span></div>);
+        },
       },
-      {
-        header: "Status",
-        accessorKey: "status",
-        enableSorting: true,
-        cell: (props) => (
-          <Tag
-            className={`${
-              statusColor[props.row.original.status]
-            } capitalize font-semibold border-0`}
-          >
-            {props.row.original.status}
-          </Tag>
-        ),
-      },
-      {
-        header: "Actions",
-        id: "action",
-        size: 160,
-        meta: { HeaderClass: "text-center" },
-        cell: (props) => (
-          <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onClone={() => handleClone(props.row.original)}
-            onChangeStatus={() => openChangeStatusDialog(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
-          />
-        ),
-      },
-    ],
-    [mappedSliders, openImageViewer]
+      { header: "Actions", id: "action", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />) },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    ], [openImageViewer] // Removed mappedSliders as it's part of the outer scope's useMemo
   );
 
-  const tableLoading =
-    masterLoadingStatus === "idle" || isSubmitting || isProcessing;
+  const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isDeleting;
 
-  const renderFormFields = (
-    formMethods: typeof addFormMethods | typeof editFormMethods,
-    isEditMode: boolean,
-    currentSlider?: SliderItem | null
-  ) => (
+  const renderFormFields = (formMethodsInstance: typeof addFormMethods | typeof editFormMethods, isEditMode: boolean, currentSlider?: SliderItem | null) => (
     <>
-      <FormItem
-        label="Title"
-        invalid={!!formMethods.formState.errors.title}
-        errorMessage={formMethods.formState.errors.title?.message}
-        isRequired
-      >
-        <Controller
-          name="title"
-          control={formMethods.control}
-          render={({ field }) => (
-            <Input {...field} placeholder="Enter Slider Title" />
-          )}
-        />
+      <FormItem label="Title" invalid={!!formMethodsInstance.formState.errors.title} errorMessage={formMethodsInstance.formState.errors.title?.message} isRequired>
+        <Controller name="title" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} placeholder="Enter Slider Title" />)} />
       </FormItem>
-      <FormItem
-        label="Subtitle (Optional)"
-        invalid={!!formMethods.formState.errors.subtitle}
-        errorMessage={formMethods.formState.errors.subtitle?.message}
-      >
-        <Controller
-          name="subtitle"
-          control={formMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value ?? ""}
-              placeholder="Enter Subtitle"
-            />
-          )}
-        />
+      <FormItem label="Subtitle (Optional)" invalid={!!formMethodsInstance.formState.errors.subtitle} errorMessage={formMethodsInstance.formState.errors.subtitle?.message}>
+        <Controller name="subtitle" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="Enter Subtitle" />)} />
       </FormItem>
-      <FormItem
-        label="Button Text (Optional)"
-        invalid={!!formMethods.formState.errors.button_text}
-        errorMessage={formMethods.formState.errors.button_text?.message}
-      >
-        <Controller
-          name="button_text"
-          control={formMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value ?? ""}
-              placeholder="e.g., Shop Now"
-            />
-          )}
-        />
+      <FormItem label="Button Text (Optional)" invalid={!!formMethodsInstance.formState.errors.button_text} errorMessage={formMethodsInstance.formState.errors.button_text?.message}>
+        <Controller name="button_text" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., Shop Now" />)} />
       </FormItem>
-
-      {isEditMode && currentSlider?.imageFullPath && !editFormPreviewUrl && (
-        <FormItem label="Current Image">
-          <Avatar
-            size={80}
-            src={currentSlider.imageFullPath}
-            shape="square"
-            icon={<TbPhoto />}
-          />
-        </FormItem>
-      )}
-      <FormItem
-        label={isEditMode ? "New Image (Optional)" : "Web Image"}
-        invalid={!!formMethods.formState.errors.image}
-        errorMessage={formMethods.formState.errors.image?.message as string}
-        isRequired={!isEditMode}
-      >
-        <Controller
-          name="image"
-          control={formMethods.control}
+      {isEditMode && currentSlider?.imageFullPath && !editFormPreviewUrl && (<FormItem label="Current Image"><Avatar size={80} src={currentSlider.imageFullPath} shape="square" icon={<TbPhoto />} /></FormItem>)}
+      <FormItem label={isEditMode ? "New Image (Optional)" : "Image"} invalid={!!formMethodsInstance.formState.errors.image} errorMessage={formMethodsInstance.formState.errors.image?.message as string} isRequired={!isEditMode}>
+        <Controller name="image" control={formMethodsInstance.control}
           render={({ field: { onChange, onBlur, name, ref } }) => (
-            <Input
-              type="file"
-              name={name}
-              ref={ref}
-              onBlur={onBlur}
+            <Input type="file" name={name} ref={ref} onBlur={onBlur}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const file = e.target.files?.[0] || null;
-                onChange(file);
-                const setPreviewUrl = isEditMode
-                  ? setEditFormPreviewUrl
-                  : setAddFormPreviewUrl;
-                const currentPreviewUrl = isEditMode
-                  ? editFormPreviewUrl
-                  : addFormPreviewUrl;
+                const file = e.target.files?.[0] || null; onChange(file);
+                const setPreviewUrl = isEditMode ? setEditFormPreviewUrl : setAddFormPreviewUrl;
+                const currentPreviewUrl = isEditMode ? editFormPreviewUrl : addFormPreviewUrl;
                 if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
                 setPreviewUrl(file ? URL.createObjectURL(file) : null);
               }}
@@ -1279,153 +779,34 @@ const Sliders = () => {
         />
         {(isEditMode ? editFormPreviewUrl : addFormPreviewUrl) && (
           <div className="mt-2">
-            <Avatar
-              src={isEditMode ? editFormPreviewUrl! : addFormPreviewUrl!}
-              size={80}
-              shape="square"
-            />
-            {isEditMode && (
-              <p className="text-xs text-gray-500 mt-1">
-                Preview of new image.
-              </p>
-            )}
+            <Avatar src={isEditMode ? editFormPreviewUrl! : addFormPreviewUrl!} size={80} shape="square" />
+            {isEditMode && (<p className="text-xs text-gray-500 mt-1">Preview of new image.</p>)}
           </div>
         )}
-        {isEditMode && (
-          <p className="text-xs text-gray-500 mt-1">
-            Leave blank to keep current image. Selecting a new file will replace
-            it.
-          </p>
-        )}
+        {isEditMode && (<p className="text-xs text-gray-500 mt-1">Leave blank to keep current image. Selecting a new file will replace it.</p>)}
       </FormItem>
-
-      <FormItem
-        label="Display Page"
-        invalid={!!formMethods.formState.errors.display_page}
-        errorMessage={formMethods.formState.errors.display_page?.message}
-        isRequired
-      >
-        <Controller
-          name="display_page"
-          control={formMethods.control}
-          render={({ field }) => (
-            <UiSelect
-              options={displayPageOptionsConst}
-              value={displayPageOptionsConst.find(
-                (opt) => opt.value === field.value
-              )}
-              onChange={(opt) => field.onChange(opt ? opt.value : undefined)}
-              placeholder="Select display page"
-            />
-          )}
-        />
+      <FormItem label="Index Position (Optional)" invalid={!!formMethodsInstance.formState.errors.index_position} errorMessage={formMethodsInstance.formState.errors.index_position?.message}>
+            <Controller name="index_position" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} type="number" placeholder="Enter position (e.g., 1)" value={field.value === null ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} />)} />
       </FormItem>
-      <FormItem
-        label="Link (Optional, include http/https)"
-        invalid={!!formMethods.formState.errors.link}
-        errorMessage={formMethods.formState.errors.link?.message}
-      >
-        <Controller
-          name="link"
-          control={formMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value ?? ""}
-              type="url"
-              placeholder="https://example.com/target-page"
-            />
-          )}
-        />
+      <FormItem label="Display Page" invalid={!!formMethodsInstance.formState.errors.display_page} errorMessage={formMethodsInstance.formState.errors.display_page?.message} isRequired>
+        <Controller name="display_page" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={displayPageOptionsConst} value={displayPageOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select display page" />)} />
       </FormItem>
-      <FormItem
-        label="Source"
-        invalid={!!formMethods.formState.errors.source}
-        errorMessage={formMethods.formState.errors.source?.message}
-        isRequired
-      >
-        <Controller
-          name="source"
-          control={formMethods.control}
-          render={({ field }) => (
-            <UiSelect
-              options={sourceOptionsConst}
-              value={sourceOptionsConst.find(
-                (opt) => opt.value === field.value
-              )}
-              onChange={(opt) => field.onChange(opt ? opt.value : undefined)}
-              placeholder="Select source"
-            />
-          )}
-        />
+      <FormItem label="Link (Optional, include http/https)" invalid={!!formMethodsInstance.formState.errors.link} errorMessage={formMethodsInstance.formState.errors.link?.message}>
+        <Controller name="link" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/target-page" />)} />
       </FormItem>
-      <FormItem
-        label="Status"
-        invalid={!!formMethods.formState.errors.status}
-        errorMessage={formMethods.formState.errors.status?.message}
-        isRequired
-      >
-        <Controller
-          name="status"
-          control={formMethods.control}
-          render={({ field }) => (
-            <UiSelect
-              options={apiStatusOptions}
-              value={apiStatusOptions.find((opt) => opt.value === field.value)}
-              onChange={(opt) => field.onChange(opt ? opt.value : undefined)}
-              placeholder="Select status"
-            />
-          )}
-        />
+      <FormItem label="Source" invalid={!!formMethodsInstance.formState.errors.source} errorMessage={formMethodsInstance.formState.errors.source?.message} isRequired>
+        <Controller name="source" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={sourceOptionsConst} value={sourceOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select source" />)} />
       </FormItem>
-      <FormItem
-        label="Domain IDs (Optional, comma-separated)"
-        invalid={!!formMethods.formState.errors.domain_ids}
-        errorMessage={formMethods.formState.errors.domain_ids?.message}
-      >
-        <Controller
-          name="domain_ids"
-          control={formMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value ?? ""}
-              placeholder="e.g., 1,2,3"
-            />
-          )}
-        />
+      <FormItem label="Status" invalid={!!formMethodsInstance.formState.errors.status} errorMessage={formMethodsInstance.formState.errors.status?.message} isRequired>
+        <Controller name="status" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select status" />)} />
       </FormItem>
-      <FormItem
-        label="Slider Color (Optional)"
-        invalid={!!formMethods.formState.errors.slider_color}
-        errorMessage={formMethods.formState.errors.slider_color?.message}
-      >
+      <FormItem label="Domain IDs (Optional, comma-separated)" invalid={!!formMethodsInstance.formState.errors.domain_ids} errorMessage={formMethodsInstance.formState.errors.domain_ids?.message}>
+        <Controller name="domain_ids" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., 1,2,3" />)} />
+      </FormItem>
+      <FormItem label="Slider Color (Optional)" invalid={!!formMethodsInstance.formState.errors.slider_color} errorMessage={formMethodsInstance.formState.errors.slider_color?.message}>
         <div className="flex items-center gap-2">
-          <Controller
-            name="slider_color"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? "#FFFFFF"}
-                type="color"
-                className="w-12 h-10 p-1"
-              />
-            )}
-          />
-          <Controller
-            name="slider_color"
-            control={formMethods.control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value ?? ""}
-                type="text"
-                placeholder="#RRGGBB or color name"
-                className="flex-grow"
-              />
-            )}
-          />
+          <Controller name="slider_color" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? "#FFFFFF"} type="color" className="w-12 h-10 p-1" />)} />
+          <Controller name="slider_color" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="text" placeholder="#RRGGBB or color name" className="flex-grow" />)} />
         </div>
       </FormItem>
     </>
@@ -1438,333 +819,121 @@ const Sliders = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Sliders</h5>
             <div>
-              <Link to='/task/task-list/create'>
-                  <Button
-                    className="mr-2"
-                    icon={<TbUser />}
-                    clickFeedback={false}
-                    customColorClass={({ active, unclickable }) =>
-                        classNames(
-                            'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
-                            active ? 'bg-gray-200' : 'bg-gray-100',
-                            unclickable && 'opacity-50 cursor-not-allowed',
-                            !active && !unclickable && 'hover:bg-gray-200',
-                        )
-                    }
-                  >Assigned to Task</Button>
-                </Link>
-                <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-                  Add New
-                </Button>
-              </div>
+              <Link to='/task/task-list/create'><Button className="mr-2" icon={<TbUser />} clickFeedback={false} customColorClass={({ active, unclickable }) => classNames('hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0', active ? 'bg-gray-200' : 'bg-gray-100', unclickable && 'opacity-50 cursor-not-allowed', !active && !unclickable && 'hover:bg-gray-200')}>Assigned to Task</Button></Link>
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
+            </div>
           </div>
-          <SlidersTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleExportData}
-            onImport={handleImportData}
-            onClearFilters={onClearFilters}
-          />
+          <SlidersTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} />
           <div className="mt-4 flex-grow overflow-y-auto">
-            <SlidersTable
-              columns={columns}
-              data={pageData}
-              loading={tableLoading}
-              pagingData={{
-                total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              selectedItems={selectedItems}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
-            />
+            <SlidersTable columns={columns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
-      <SlidersSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
+      <SlidersSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-      <Drawer
-        title="Add New Slider"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        width={600}
+      <Drawer title="Add New Slider" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={600}
         footer={
           <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="addSliderForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Save"}
-            </Button>
+            <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
+            <Button size="sm" variant="solid" form="addSliderForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button>
           </div>
         }
       >
-        <Form
-          id="addSliderForm"
-          onSubmit={addFormMethods.handleSubmit(onAddSliderSubmit)}
-          className="flex flex-col gap-4"
-        >
+        <Form id="addSliderForm" onSubmit={addFormMethods.handleSubmit(onAddSliderSubmit)} className="flex flex-col gap-4">
           {renderFormFields(addFormMethods, false)}
         </Form>
       </Drawer>
 
-      <Drawer
-        title="Edit Slider"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        width={600}
+      <Drawer title="Edit Slider" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={600}
         footer={
           <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="editSliderForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
+            <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button>
+            <Button size="sm" variant="solid" form="editSliderForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button>
           </div>
         }
       >
-        <Form
-          id="editSliderForm"
-          onSubmit={editFormMethods.handleSubmit(onEditSliderSubmit)}
-          className="flex flex-col gap-4"
-        >
+        <Form id="editSliderForm" onSubmit={editFormMethods.handleSubmit(onEditSliderSubmit)} className="flex flex-col gap-4 relative pb-28"> {/* Added relative pb-28 */}
           {renderFormFields(editFormMethods, true, editingSlider)}
+        
+          {editingSlider && (
+            <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2">
+                <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                    <div>
+                        <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b><br />
+                        <p className="text-sm font-semibold">{editingSlider.updatedByName || "N/A"}</p>
+                        <p>{editingSlider.updatedByRole || "N/A"}</p>
+                    </div>
+                    <div>
+                        <br />
+                        <span className="font-semibold">Created At:</span>{" "}
+                        <span>{editingSlider.createdAt ? new Date(editingSlider.createdAt).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                        <br />
+                        <span className="font-semibold">Updated At:</span>{" "}
+                        <span>{editingSlider.updatedAt ? new Date(editingSlider.updatedAt).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                    </div>
+                </div>
+            </div>
+          )}
         </Form>
       </Drawer>
 
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400} // Matched width
         footer={
           <div className="text-right w-full">
-            <div>
-              <Button
-                size="sm"
-                className="mr-2"
-                onClick={closeFilterDrawer}
-                type="button"
-              >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                variant="solid"
-                form="filterSliderForm"
-                type="submit"
-              >
-                Apply
-              </Button>
-            </div>
+            <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> {/* Applied onClearFilters */}
+            <Button size="sm" variant="solid" form="filterSliderForm" type="submit">Apply</Button>
           </div>
         }
       >
-        <Form
-          id="filterSliderForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4"
-        >
-          {/* <FormItem label="Filter by Title(s)"> // Removed
-                        <Controller name="filterTitles" control={filterFormMethods.control}
-                            render={({ field }) => <UiSelect isMulti placeholder="Select titles..." options={sliderTitleOptions}
-                                                        value={field.value || []} onChange={val => field.onChange(val || [])} />} />
-                    </FormItem> */}
+        <Form id="filterSliderForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Status">
-            <Controller
-              name="filterStatuses"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <UiSelect
-                  isMulti
-                  placeholder="Select status..."
-                  options={uiStatusOptions}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
+            <Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select status..." options={apiStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
           </FormItem>
-          {/* <FormItem label="Filter by Display Page(s)">
-                        <Controller name="filterDisplayPages" control={filterFormMethods.control}
-                            render={({ field }) => <UiSelect isMulti placeholder="Select display pages..." options={sliderDisplayPageOptions}
-                                                        value={field.value || []} onChange={val => field.onChange(val || [])} />} />
-                    </FormItem>
-                     <FormItem label="Filter by Source(s)">
-                        <Controller name="filterSources" control={filterFormMethods.control}
-                            render={({ field }) => <UiSelect isMulti placeholder="Select sources..." options={sliderSourceOptions}
-                                                        value={field.value || []} onChange={val => field.onChange(val || [])} />} />
-                    </FormItem> */}
+          <FormItem label="Display Page">
+            <Controller name="filterDisplayPages" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select display pages..." options={displayPageOptionsConst} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
+          </FormItem>
+          <FormItem label="Source">
+            <Controller name="filterSources" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select sources..." options={sourceOptionsConst} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
+          </FormItem>
         </Form>
       </Drawer>
 
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Slider"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setSliderToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setSliderToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setSliderToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        // loading={isProcessing}
-      >
-        <p>
-          Are you sure you want to delete the slider "
-          <strong>{sliderToDelete?.title}</strong>"? This action cannot be
-          undone.
-        </p>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Slider" onClose={() => { setSingleDeleteConfirmOpen(false); setSliderToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setSliderToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setSliderToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting}>
+        <p>Are you sure you want to delete the slider "<strong>{sliderToDelete?.title}</strong>"? This action cannot be undone.</p>
       </ConfirmDialog>
 
-      <ConfirmDialog
-        isOpen={statusChangeConfirmOpen}
-        type="warning"
-        title="Change Slider Status"
-        onClose={() => {
-          setStatusChangeConfirmOpen(false);
-          setSliderForStatusChange(null);
-        }}
-        onRequestClose={() => {
-          setStatusChangeConfirmOpen(false);
-          setSliderForStatusChange(null);
-        }}
-        onCancel={() => {
-          setStatusChangeConfirmOpen(false);
-          setSliderForStatusChange(null);
-        }}
-        onConfirm={onConfirmChangeStatus}
-        loading={isProcessing}
-      >
-        <p>
-          Are you sure you want to change the status for "
-          <strong>{sliderForStatusChange?.title}</strong>" to{" "}
-          <strong>
-            {sliderForStatusChange?.status === "active" ? "Inactive" : "Active"}
-          </strong>
-          ?
-        </p>
-      </ConfirmDialog>
-
-      {/* <Drawer
-        title="Import Sliders"
-        isOpen={importDialogOpen}
-        onClose={() => setImportDialogOpen(false)}
-        onRequestClose={() => setImportDialogOpen(false)}
-      >
-        <div className="p-4">
-          <p className="mb-4">
-            Upload a CSV file to import sliders. Ensure the CSV format matches
-            the export structure.
-          </p>
-          <Input
-            type="file"
-            accept=".csv"
-            className="mt-2"
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                toast.push(
-                  <Notification title="Import" type="info">
-                    File selected: {e.target.files[0].name}. Import processing
-                    to be implemented.
-                  </Notification>
-                );
-              }
-            }}
-          />
-          <div className="text-right mt-6">
-            <Button
-              size="sm"
-              variant="plain"
-              onClick={() => setImportDialogOpen(false)}
-              className="mr-2"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              onClick={() => {
-                toast.push(
-                  <Notification title="Import" type="info">
-                    Import submission to be implemented.
-                  </Notification>
-                );
-              }}
-            >
-              Start Import
-            </Button>
-          </div>
-        </div>
-      </Drawer> */}
-
-      <Dialog
-        isOpen={isImageViewerOpen}
-        onClose={closeImageViewer}
-        onRequestClose={closeImageViewer}
-        shouldCloseOnOverlayClick={true}
-        shouldCloseOnEsc={true}
-        width={600}
-      >
-        <div className="flex justify-center items-center p-4">
-          {imageToView ? (
-            <img
-              src={imageToView}
-              alt="Slider Image Full View"
-              style={{
-                maxWidth: "100%",
-                maxHeight: "80vh",
-                objectFit: "contain",
-              }}
-            />
-          ) : (
-            <p>No image to display.</p>
-          )}
-        </div>
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
+        <div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Slider Image Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}</div>
       </Dialog>
+
+      {/* --- Export Reason Modal --- */}
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
+      >
+        <Form
+          id="exportSlidersReasonForm" // Unique ID
+          onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
     </>
   );
 };

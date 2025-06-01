@@ -358,7 +358,7 @@ const RowDataListing = () => {
 
   const openFilterDrawer = () => { filterForm.reset(filterCriteria); setIsFilterDrawerOpen(true); };
   const onApplyFiltersSubmit = (data: typeof filterCriteria) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); setIsFilterDrawerOpen(false); };
-  const onClearFilters = () => { filterForm.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); };
+  const onClearFilters = () => { filterForm.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); setIsFilterDrawerOpen(false) };
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceDataWithDisplayNames: any[] = Array.isArray(rowData) ? rowData.map(item => ({ ...item, countryNameDisplay: item.country?.name || String(item.country_id), categoryNameDisplay: item.category?.name || String(item.category_id), brandNameDisplay: item.brand?.name || String(item.brand_id), })) : [];

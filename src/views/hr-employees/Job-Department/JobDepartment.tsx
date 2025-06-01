@@ -753,7 +753,7 @@ const JobDepartment = () => {
                 ? editingItem
                   ? "Saving..."
                   : "Adding..."
-                : "Save Changes"}
+                : "Save"}
             </Button>
           </div>
         }

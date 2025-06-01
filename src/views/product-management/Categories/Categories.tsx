@@ -861,7 +861,7 @@ const Categories = () => {
 
       {/* Edit Category Drawer */}
       <Drawer title="Edit Category" isOpen={isEditDrawerOpen} onClose={closeEditCategoryDrawer} onRequestClose={closeEditCategoryDrawer}
-        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editCategoryForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Saving..." : "Save Changes"} </Button> </div>}
+        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editCategoryForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Saving..." : "Save"} </Button> </div>}
       >
         <Form id="editCategoryForm" onSubmit={editFormMethods.handleSubmit(onEditCategorySubmit)} className="flex flex-col gap-4">
           <FormItem label="Category Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message} isRequired> <Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /> </FormItem>

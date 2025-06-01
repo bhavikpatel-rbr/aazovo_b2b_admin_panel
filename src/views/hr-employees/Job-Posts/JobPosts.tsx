@@ -1197,7 +1197,7 @@ const JobPostsListing = () => {
                   ? "Saving..."
                   : "Adding..."
                 : editingItem
-                ? "Save Changes"
+                ? "Save"
                 : "Save Job Post"}
             </Button>
           </div>

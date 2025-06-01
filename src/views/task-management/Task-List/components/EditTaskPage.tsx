@@ -702,7 +702,7 @@ const EditTaskPage = () => {
           <div className="text-right mt-8 pt-4 border-t border-gray-200 dark:border-gray-600">
             <Button className="mr-2 rtl:ml-2" size="sm" variant="plain" onClick={handleTicketClose} type="button">Cancel</Button>
             <Button variant="solid" size="sm" type="submit" disabled={isSaveDisabled}>
-              Save Changes
+              Save
             </Button>
           </div>
         </form>

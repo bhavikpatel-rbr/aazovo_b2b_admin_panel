@@ -856,7 +856,7 @@ const CompanyProfile = () => {
           icon={<TbDeviceFloppy />}
           disabled={isButtonDisabled}
         >
-          {isSubmitting ? "Saving..." : "Save Changes"}
+          {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </StickyFooter>
     </>

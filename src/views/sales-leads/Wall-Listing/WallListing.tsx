@@ -67,7 +67,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { deleteAllWallAction, getWallListingAction } from "@/reduxtool/master/middleware";
+// import { deleteAllWallAction, getWallListingAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 import { z } from "zod";
@@ -806,7 +806,7 @@ const WallListing = () => {
 
 
   useEffect(() => {
-    dispatch(getWallListingAction()); // Fetch continents for select dropdown
+    // dispatch(getWallListingAction()); // Fetch continents for select dropdown
   }, [dispatch]);
 
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
@@ -935,7 +935,7 @@ const WallListing = () => {
 
     try {
       const ids = selectedItems.map((data) => data.id);
-      await dispatch(deleteAllWallAction({ ids: ids.toString() })).unwrap();
+      // await dispatch(deleteAllWallAction({ ids: ids.toString() })).unwrap();
       // toast.push(
       //   <Notification title="Wall Deleted" type="success" duration={2000}>
       //     Wall "{selectedItems.name}" deleted.
@@ -944,7 +944,7 @@ const WallListing = () => {
       setSelectedItems((prev) =>
         prev.filter((item) => item.id !== selectedItems!.id)
       );
-      dispatch(getWallListingAction());
+      // dispatch(getWallListingAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Delete" type="danger" duration={3000}>

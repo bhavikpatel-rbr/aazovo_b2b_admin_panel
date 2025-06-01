@@ -528,7 +528,7 @@ const EditSellerForm = () => {
         <Button type="button" onClick={handleCancel} disabled={isSubmitting}> Cancel </Button>
         <Button type="button" onClick={handleSaveAsDraft} variant="twoTone" disabled={isSubmitting}> Draft </Button>
         <Button type="submit" form="editSellerForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !isDirty || !isValid } >
-          {isSubmitting ? "Saving..." : "Save Changes"}
+          {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </Card>
     </>

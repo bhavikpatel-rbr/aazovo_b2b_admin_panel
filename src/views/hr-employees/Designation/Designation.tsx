@@ -933,7 +933,7 @@ const DesignationListing = () => {
                 !editFormMethods.formState.isDirty
               }
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }

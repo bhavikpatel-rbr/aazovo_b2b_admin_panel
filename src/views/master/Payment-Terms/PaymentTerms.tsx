@@ -5,7 +5,7 @@ import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import classNames from "classnames"; // Assuming this is imported
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -16,16 +16,16 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
+// import StickyFooter from "@/components/shared/StickyFooter"; // Commented out for row selection
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Added Tag
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
   TbTrash,
-  TbChecks,
+  // TbChecks, // Commented out for row selection
   TbSearch,
   TbFilter,
   TbPlus,
@@ -37,7 +37,8 @@ import {
 import type {
   OnSortParam,
   ColumnDef,
-  Row,
+  // Row, // Commented out if not used elsewhere after removing selection
+  CellContext,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -46,36 +47,32 @@ import {
   addPaymentTermAction,
   editPaymentTermAction,
   deletePaymentTermAction,
-  deleteAllPaymentTermAction,
-  submitExportReasonAction, // Placeholder for future action
+  // deleteAllPaymentTermAction, // Commented out for row selection
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-// Type for Select options
 type SelectOption = {
   value: string | number;
   label: string;
 };
 
-// --- Define PaymentTermsItem Type ---
 export type PaymentTermsItem = {
   id: string | number;
   term_name: string;
-  status: "Active" | "Inactive"; // Added status field
-  created_at?: string; // Added for audit
-  updated_at?: string; // Added for audit
-  updated_by_name?: string; // Added for audit
-  updated_by_role?: string; // Added for audit
+  status: "Active" | "Inactive";
+  created_at?: string;
+  updated_at?: string;
+  updated_by_name?: string;
+  updated_by_role?: string;
 };
 
-// --- Status Options ---
 const statusOptions: SelectOption[] = [
   { value: "Active", label: "Active" },
   { value: "Inactive", label: "Inactive" },
 ];
 
-// --- Zod Schema for Add/Edit Payment Term Form ---
 const paymentTermFormSchema = z.object({
   term_name: z
     .string()
@@ -83,22 +80,20 @@ const paymentTermFormSchema = z.object({
     .max(100, "Name cannot exceed 100 characters."),
   status: z.enum(["Active", "Inactive"], {
     required_error: "Status is required.",
-  }), // Added status
+  }),
 });
 type PaymentTermFormData = z.infer<typeof paymentTermFormSchema>;
 
-// --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
   filterNames: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  filterStatus: z // Added status filter
+  filterStatus: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
   reason: z
     .string()
@@ -107,7 +102,6 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- CSV Exporter Utility ---
 const CSV_HEADERS_PAYMENT_TERM = [
   "ID",
   "Payment Term Name",
@@ -186,7 +180,6 @@ function exportToCsvPaymentTerm(filename: string, rows: PaymentTermsItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    // Success toast now handled by handleConfirmExportWithReason
     return true;
   }
   toast.push(
@@ -197,13 +190,12 @@ function exportToCsvPaymentTerm(filename: string, rows: PaymentTermsItem[]) {
   return false;
 }
 
-// --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
+  // onDelete,
 }: {
   onEdit: () => void;
-  onDelete: () => void;
+  // onDelete: () => void;
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
@@ -218,12 +210,14 @@ const ActionColumn = ({
             "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
           )}
           role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && onEdit()}
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete">
         <div
           className={classNames(
             iconButtonClass,
@@ -231,16 +225,17 @@ const ActionColumn = ({
             "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
           )}
           role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && onDelete()}
           onClick={onDelete}
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
 
-// --- PaymentTermSearch Component ---
 type PaymentTermSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -261,7 +256,6 @@ const PaymentTermSearch = React.forwardRef<
 });
 PaymentTermSearch.displayName = "PaymentTermSearch";
 
-// --- PaymentTermTableTools Component ---
 const PaymentTermTableTools = ({
   onSearchChange,
   onFilter,
@@ -279,11 +273,15 @@ const PaymentTermTableTools = ({
         <PaymentTermSearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Button
-          title="Clear Filters"
-          icon={<TbReload />}
-          onClick={() => onClearFilters()}
-        ></Button>
+        <Tooltip title="Clear Filters">
+            <Button
+            icon={<TbReload />}
+            onClick={() => onClearFilters()}
+            variant="plain"
+            shape="circle"
+            size="sm"
+            />
+        </Tooltip>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -293,7 +291,7 @@ const PaymentTermTableTools = ({
         </Button>
         <Button
           icon={<TbCloudUpload />}
-          onClick={onExport} // Will open export reason modal
+          onClick={onExport}
           className="w-full sm:w-auto"
         >
           Export
@@ -303,61 +301,16 @@ const PaymentTermTableTools = ({
   );
 };
 
-// --- PaymentTermTable Component ---
-type PaymentTermTableProps = {
-  columns: ColumnDef<PaymentTermsItem>[];
-  data: PaymentTermsItem[];
-  loading: boolean;
-  pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: PaymentTermsItem[];
-  onPaginationChange: (page: number) => void;
-  onSelectChange: (value: number) => void;
-  onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: PaymentTermsItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<PaymentTermsItem>[]) => void;
-};
-const PaymentTermTable = ({
-  columns,
-  data,
-  loading,
-  pagingData,
-  selectedItems,
-  onPaginationChange,
-  onSelectChange,
-  onSort,
-  onRowSelect,
-  onAllRowSelect,
-}: PaymentTermTableProps) => {
-  return (
-    <DataTable
-      selectable
-      columns={columns}
-      data={data}
-      noData={!loading && data.length === 0}
-      loading={loading}
-      pagingData={pagingData}
-      checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
-      }
-      onPaginationChange={onPaginationChange}
-      onSelectChange={onSelectChange}
-      onSort={onSort}
-      onCheckBoxChange={onRowSelect}
-      onIndeterminateCheckBoxChange={onAllRowSelect}
-    />
-  );
-};
-
-// --- PaymentTermSelectedFooter Component ---
+/* // --- PaymentTermSelectedFooter Component (Commented Out) ---
 type PaymentTermSelectedFooterProps = {
   selectedItems: PaymentTermsItem[];
   onDeleteSelected: () => void;
-  isDeleting: boolean; // Added for loading state
+  isDeleting: boolean;
 };
 const PaymentTermSelectedFooter = ({
   selectedItems,
   onDeleteSelected,
-  isDeleting, // Added
+  isDeleting,
 }: PaymentTermSelectedFooterProps) => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const handleDeleteClick = () => setDeleteConfirmationOpen(true);
@@ -389,7 +342,7 @@ const PaymentTermSelectedFooter = ({
               variant="plain"
               className="text-red-600 hover:text-red-500"
               onClick={handleDeleteClick}
-              loading={isDeleting} // Added loading state
+              loading={isDeleting}
             >
               Delete Selected
             </Button>
@@ -406,7 +359,7 @@ const PaymentTermSelectedFooter = ({
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        loading={isDeleting} // Added loading state
+        loading={isDeleting}
       >
         <p>
           Are you sure you want to delete the selected payment term
@@ -416,8 +369,8 @@ const PaymentTermSelectedFooter = ({
     </>
   );
 };
+*/
 
-// --- Main PaymentTerms Component ---
 const PaymentTerms = () => {
   const dispatch = useAppDispatch();
 
@@ -428,20 +381,19 @@ const PaymentTerms = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false); // Used for both single and multi-delete
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [paymentTermToDelete, setPaymentTermToDelete] =
     useState<PaymentTermsItem | null>(null);
 
-  // State for export reason modal
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
-    filterStatus: [], // Added
+    filterStatus: [],
   });
 
   const { PaymentTermsData = [], status: masterLoadingStatus = "idle" } =
@@ -450,7 +402,7 @@ const PaymentTerms = () => {
   const defaultFormValues: PaymentTermFormData = useMemo(
     () => ({
       term_name: "",
-      status: "Active", // Default status
+      status: "Active",
     }),
     []
   );
@@ -490,7 +442,6 @@ const PaymentTerms = () => {
   const onAddPaymentTermSubmit = async (data: PaymentTermFormData) => {
     setIsSubmitting(true);
     try {
-      // API expected to handle audit fields, only send form data
       await dispatch(addPaymentTermAction(data)).unwrap();
       toast.push(
         <Notification title="Payment Term Added" type="success" duration={2000}>
@@ -514,7 +465,7 @@ const PaymentTerms = () => {
     setEditingPaymentTerm(term);
     editFormMethods.reset({
       term_name: term.term_name,
-      status: term.status || "Active", // Set status, default to Active
+      status: term.status || "Active",
     });
     setIsEditDrawerOpen(true);
   };
@@ -535,7 +486,6 @@ const PaymentTerms = () => {
     }
     setIsSubmitting(true);
     try {
-      // API expected to handle audit fields
       await dispatch(
         editPaymentTermAction({ id: editingPaymentTerm.id, ...data })
       ).unwrap();
@@ -581,7 +531,6 @@ const PaymentTerms = () => {
           Cannot delete: Payment Term ID is missing.
         </Notification>
       );
-      setIsDeleting(false);
       setPaymentTermToDelete(null);
       setSingleDeleteConfirmOpen(false);
       return;
@@ -601,9 +550,7 @@ const PaymentTerms = () => {
           Payment Term "{paymentTermToDelete.term_name}" deleted.
         </Notification>
       );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== paymentTermToDelete!.id)
-      );
+      // setSelectedItems((prev) => prev.filter((item) => item.id !== paymentTermToDelete!.id)); // Commented out
       dispatch(getPaymentTermAction());
     } catch (error: any) {
       toast.push(
@@ -616,6 +563,8 @@ const PaymentTerms = () => {
       setPaymentTermToDelete(null);
     }
   };
+
+  /* // --- handleDeleteSelected (Commented Out) ---
   const handleDeleteSelected = async () => {
     if (selectedItems.length === 0) {
       toast.push(
@@ -629,6 +578,7 @@ const PaymentTerms = () => {
     const validItemsToDelete = selectedItems.filter(
       (item) => item.id !== undefined && item.id !== null
     );
+
     if (validItemsToDelete.length !== selectedItems.length) {
       const skippedCount = selectedItems.length - validItemsToDelete.length;
       toast.push(
@@ -638,6 +588,7 @@ const PaymentTerms = () => {
         </Notification>
       );
     }
+
     if (validItemsToDelete.length === 0) {
       toast.push(
         <Notification title="No Valid Items" type="info">
@@ -647,6 +598,7 @@ const PaymentTerms = () => {
       setIsDeleting(false);
       return;
     }
+
     const idsToDelete = validItemsToDelete.map((item) => String(item.id));
     try {
       await dispatch(
@@ -662,6 +614,8 @@ const PaymentTerms = () => {
           deletion.
         </Notification>
       );
+      setSelectedItems([]);
+      dispatch(getPaymentTermAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Deletion Failed" type="danger" duration={3000}>
@@ -669,11 +623,10 @@ const PaymentTerms = () => {
         </Notification>
       );
     } finally {
-      setSelectedItems([]);
-      dispatch(getPaymentTermAction());
       setIsDeleting(false);
     }
   };
+  */
 
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria);
@@ -683,19 +636,21 @@ const PaymentTerms = () => {
   const onApplyFiltersSubmit = (data: FilterFormData) => {
     setFilterCriteria({
       filterNames: data.filterNames || [],
-      filterStatus: data.filterStatus || [], // Added
+      filterStatus: data.filterStatus || [],
     });
     handleSetTableData({ pageIndex: 1 });
+    // setSelectedItems([]); // Commented out
     closeFilterDrawer();
   };
   const onClearFilters = () => {
     const defaultFilters = {
       filterNames: [],
-      filterStatus: [], // Added
+      filterStatus: [],
     };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    handleSetTableData({ pageIndex: 1 });
+    handleSetTableData({ pageIndex: 1, query: "" });
+    // setSelectedItems([]); // Commented out
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -704,7 +659,7 @@ const PaymentTerms = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<PaymentTermsItem[]>([]);
+  // const [selectedItems, setSelectedItems] = useState<PaymentTermsItem[]>([]); // Commented out
 
   const paymentTermNameOptions = useMemo(() => {
     if (!Array.isArray(PaymentTermsData)) return [];
@@ -719,7 +674,7 @@ const PaymentTerms = () => {
     const sourceData: PaymentTermsItem[] = Array.isArray(PaymentTermsData)
       ? PaymentTermsData.map((item) => ({
           ...item,
-          status: item.status || "Inactive", // Ensure status has a default
+          status: item.status || "Inactive",
         }))
       : [];
     let processedData: PaymentTermsItem[] = cloneDeep(sourceData);
@@ -733,7 +688,6 @@ const PaymentTerms = () => {
       );
     }
     if (filterCriteria.filterStatus?.length) {
-      // Added status filter
       const statuses = filterCriteria.filterStatus.map((opt) => opt.value);
       processedData = processedData.filter((item) =>
         statuses.includes(item.status)
@@ -745,7 +699,7 @@ const PaymentTerms = () => {
       processedData = processedData.filter(
         (item) =>
           (item.term_name?.trim().toLowerCase() ?? "").includes(query) ||
-          (item.status?.trim().toLowerCase() ?? "").includes(query) || // Search by status
+          (item.status?.trim().toLowerCase() ?? "").includes(query) ||
           (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
           String(item.id ?? "")
             .trim()
@@ -761,12 +715,11 @@ const PaymentTerms = () => {
         key
       )
     ) {
-      // Added status and audit keys
       processedData.sort((a, b) => {
         let aValue: any, bValue: any;
         if (key === "updated_at") {
-          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : (order === 'asc' ? Infinity : -Infinity);
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : (order === 'asc' ? Infinity : -Infinity);
           return order === "asc" ? dateA - dateB : dateB - dateA;
         } else if (key === "status") {
           aValue = a.status ?? "";
@@ -775,7 +728,13 @@ const PaymentTerms = () => {
           aValue = a[key as keyof PaymentTermsItem] ?? "";
           bValue = b[key as keyof PaymentTermsItem] ?? "";
         }
-
+         if (key === 'id') {
+            const numA = Number(aValue);
+            const numB = Number(bValue);
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return order === 'asc' ? numA - numB : numB - numA;
+            }
+        }
         return order === "asc"
           ? String(aValue).localeCompare(String(bValue))
           : String(bValue).localeCompare(String(aValue));
@@ -817,13 +776,14 @@ const PaymentTerms = () => {
         })
       ).unwrap();
     } catch (error: any) {
-      setIsSubmittingExportReason(false);
-      return;
+      // Optional error handling for reason submission
     }
+
     const success = exportToCsvPaymentTerm(
       "payment_terms_export.csv",
       allFilteredAndSortedData
     );
+
     if (success) {
       toast.push(
         <Notification title="Export Successful" type="success">
@@ -835,127 +795,132 @@ const PaymentTerms = () => {
     setIsExportReasonModalOpen(false);
   };
 
-
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
   }, []);
+
   const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
+    (page: number) => {
+        handleSetTableData({ pageIndex: page });
+        // setSelectedItems([]); // Commented out
+    },
     [handleSetTableData]
   );
+
   const handleSelectChange = useCallback(
     (value: number) => {
       handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
+      // setSelectedItems([]); // Commented out
     },
     [handleSetTableData]
   );
+
   const handleSort = useCallback(
     (sort: OnSortParam) => {
       handleSetTableData({ sort: sort, pageIndex: 1 });
+      // setSelectedItems([]); // Commented out
     },
     [handleSetTableData]
   );
+
   const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
+    (query: string) => {
+        handleSetTableData({ query: query, pageIndex: 1 });
+        // setSelectedItems([]); // Commented out
+    },
     [handleSetTableData]
   );
+
+  /* // --- REVISED Row Selection Logic (Commented Out) ---
   const handleRowSelect = useCallback(
     (checked: boolean, row: PaymentTermsItem) => {
-      setSelectedItems((prev) => {
-        if (checked)
-          return prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row];
-        return prev.filter((item) => item.id !== row.id);
+      setSelectedItems((prevSelected) => {
+        if (checked) {
+          return prevSelected.some((item) => item.id === row.id)
+            ? prevSelected
+            : [...prevSelected, row];
+        } else {
+          return prevSelected.filter((item) => item.id !== row.id);
+        }
       });
     },
     []
   );
+
   const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<PaymentTermsItem>[]) => {
-      const currentPageRowOriginals = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((prevSelected) => {
-          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-          const newRowsToAdd = currentPageRowOriginals.filter(
-            (r) => !prevSelectedIds.has(r.id)
+    (checked: boolean, currentTableRows: Row<PaymentTermsItem>[]) => {
+      const currentPageOriginals = currentTableRows.map(r => r.original);
+      const currentPageIds = new Set(currentPageOriginals.map(item => item.id));
+
+      setSelectedItems((prevSelected) => {
+        if (checked) {
+          const newItemsToAdd = currentPageOriginals.filter(
+            item => !prevSelected.some(sel => sel.id === item.id)
           );
-          return [...prevSelected, ...newRowsToAdd];
-        });
-      } else {
-        const currentPageRowIds = new Set(
-          currentPageRowOriginals.map((r) => r.id)
-        );
-        setSelectedItems((prevSelected) =>
-          prevSelected.filter((item) => !currentPageRowIds.has(item.id))
-        );
-      }
+          return [...prevSelected, ...newItemsToAdd];
+        } else {
+          return prevSelected.filter(item => !currentPageIds.has(item.id));
+        }
+      });
     },
     []
   );
+  */
+
 
   const columns: ColumnDef<PaymentTermsItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
       {
         header: "Payment Term Name",
         accessorKey: "term_name",
         enableSorting: true,
       },
       {
-        // Added Updated Info Column
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 170,
-        cell: (props) => {
+        size: 180,
+        cell: (props: CellContext<PaymentTermsItem, unknown>) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
-            ? `${new Date(updated_at).getDate()} ${new Date(
-                updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(
-                updated_at
-              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
-                "en-US",
-                { hour: "numeric", minute: "2-digit", hour12: true }
-              )}`
+            ? new Date(updated_at).toLocaleString('en-US', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: 'numeric', minute: '2-digit', hour12: true
+              })
             : "N/A";
           return (
-            <div className="text-xs">
-              <span>
+            <div className="text-xs leading-tight">
+              <span className="font-semibold">
                 {updated_by_name || "N/A"}
-                {updated_by_role && (
-                  <>
-                    <br />
-                    <b>{updated_by_role}</b>
-                  </>
-                )}
               </span>
-              <br />
-              <span>{formattedDate}</span>
+              {updated_by_role && (
+                <span className="block text-gray-500 dark:text-gray-400">
+                  {updated_by_role}
+                </span>
+              )}
+              <span className="block text-gray-500 dark:text-gray-400">{formattedDate}</span>
             </div>
           );
         },
       },
       {
-        // Added Status Column
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
         size: 100,
-        cell: (props) => {
+        cell: (props: CellContext<PaymentTermsItem, unknown>) => {
           const status = props.row.original.status;
           return (
             <Tag
               className={classNames(
-                "capitalize font-semibold whitespace-nowrap",
+                "capitalize font-semibold whitespace-nowrap border text-xs px-2 py-0.5 rounded-full",
                 {
-                  "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500":
+                  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500":
                     status === "Active",
-                  "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500":
+                  "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500":
                     status === "Inactive",
                 }
               )}
@@ -970,22 +935,25 @@ const PaymentTerms = () => {
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
         size: 120,
-        cell: (props) => (
+        cell: (props: CellContext<PaymentTermsItem, unknown>) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
+            // onDelete={() => handleDeleteClick(props.row.original)}
           />
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [openEditDrawer, handleDeleteClick] // Added dependencies
+    [] // No need for openEditDrawer, handleDeleteClick if they are stable via useCallback
   );
+
+  const isLoading = masterLoadingStatus === "pending" || isSubmitting || isDeleting;
+
 
   return (
     <>
       <Container className="h-auto">
-        <AdaptiveCard className="h-full" bodyClass="h-full">
+        <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Payment Terms</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
@@ -995,37 +963,37 @@ const PaymentTerms = () => {
           <PaymentTermTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal} // Changed to open reason modal
+            onExport={handleOpenExportReasonModal}
             onClearFilters={onClearFilters}
           />
-          <div className="mt-4">
-            <PaymentTermTable
+          <div className="mt-4 flex-grow overflow-auto">
+            <DataTable
+              // selectable // Commented out
               columns={columns}
               data={pageData}
-              loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
-              }
+              loading={isLoading}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
+              // onCheckBoxChange={handleRowSelect} // Commented out
+              // onIndeterminateCheckBoxChange={handleAllRowSelect} // Commented out
             />
           </div>
         </AdaptiveCard>
       </Container>
 
+      {/*
       <PaymentTermSelectedFooter
         selectedItems={selectedItems}
         onDeleteSelected={handleDeleteSelected}
         isDeleting={isDeleting}
       />
+      */}
 
       {[
         {
@@ -1075,7 +1043,9 @@ const PaymentTerms = () => {
                 type="submit"
                 loading={isSubmitting}
                 disabled={
-                  !drawerProps.formMethods.formState.isValid || isSubmitting
+                  !drawerProps.formMethods.formState.isValid ||
+                  (drawerProps.isEdit && !drawerProps.formMethods.formState.isDirty) ||
+                  isSubmitting
                 }
               >
                 {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
@@ -1088,15 +1058,14 @@ const PaymentTerms = () => {
             onSubmit={drawerProps.formMethods.handleSubmit(
               drawerProps.onSubmit as any
             )}
-            className="flex flex-col gap-4 relative pb-28"
+            className="flex flex-col gap-4"
           >
             <FormItem
               label="Payment Term Name"
+              isRequired
               invalid={!!drawerProps.formMethods.formState.errors.term_name}
               errorMessage={
-                drawerProps.formMethods.formState.errors.term_name?.message as
-                  | string
-                  | undefined
+                drawerProps.formMethods.formState.errors.term_name?.message
               }
             >
               <Controller
@@ -1109,11 +1078,10 @@ const PaymentTerms = () => {
             </FormItem>
             <FormItem
               label="Status"
+              isRequired
               invalid={!!drawerProps.formMethods.formState.errors.status}
               errorMessage={
-                drawerProps.formMethods.formState.errors.status?.message as
-                  | string
-                  | undefined
+                drawerProps.formMethods.formState.errors.status?.message
               }
             >
               <Controller
@@ -1135,59 +1103,37 @@ const PaymentTerms = () => {
                 )}
               />
             </FormItem>
-          </Form>
-          {drawerProps.isEdit && editingPaymentTerm && (
-            <div className="absolute bottom-[14%] w-[92%]">
-              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+            {drawerProps.isEdit && editingPaymentTerm && (
+            <div className="mt-4">
+              <h6 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Audit Information</h6>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
                 <div>
-                  <b className="mt-3 mb-3 font-semibold text-primary">
-                    Latest Update By:
-                  </b>
-                  <br />
-                  <p className="text-sm font-semibold">
-                    {editingPaymentTerm.updated_by_name || "N/A"}
-                  </p>
-                  <p>{editingPaymentTerm.updated_by_role || "N/A"}</p>
-                </div>
-                <div>
-                  <br />
-                  <span className="font-semibold">Created At:</span>{" "}
-                  <span>
+                  <p className="text-gray-500 dark:text-gray-400">Created At:</p>
+                  <p className="font-medium">
                     {editingPaymentTerm.created_at
-                      ? new Date(editingPaymentTerm.created_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? new Date(editingPaymentTerm.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
                       : "N/A"}
-                  </span>
-                  <br />
-                  <span className="font-semibold">Updated At:</span>{" "}
-                  <span>
+                  </p>
+                </div>
+                 <div>
+                  <p className="text-gray-500 dark:text-gray-400">Last Updated At:</p>
+                  <p className="font-medium">
                     {editingPaymentTerm.updated_at
-                      ? new Date(editingPaymentTerm.updated_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? new Date(editingPaymentTerm.updated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
                       : "N/A"}
-                  </span>
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
+                   <p className="text-gray-500 dark:text-gray-400">Last Updated By:</p>
+                   <p className="font-medium">
+                    {editingPaymentTerm.updated_by_name || "N/A"}
+                    {editingPaymentTerm.updated_by_role && ` (${editingPaymentTerm.updated_by_role})`}
+                  </p>
                 </div>
               </div>
             </div>
           )}
+          </Form>
         </Drawer>
       ))}
 
@@ -1274,16 +1220,12 @@ const PaymentTerms = () => {
       >
         <Form
           id="exportReasonForm"
-          onSubmit={(e) => {
-            e.preventDefault();
-            exportReasonFormMethods.handleSubmit(
-              handleConfirmExportWithReason
-            )();
-          }}
+          onSubmit={(e) => e.preventDefault()}
           className="flex flex-col gap-4 mt-2"
         >
           <FormItem
             label="Please provide a reason for exporting this data:"
+            isRequired
             invalid={!!exportReasonFormMethods.formState.errors.reason}
             errorMessage={
               exportReasonFormMethods.formState.errors.reason?.message
