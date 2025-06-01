@@ -2039,7 +2039,7 @@ export const getcompanyAsync = async () => {
 export const addcompanyAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(
-      `${config.apiURL}/company`,
+      `${config.apiURL}/setting/company_profile_setting`,
       unitData,
       {
         headers: {
@@ -2177,16 +2177,6 @@ export const deletepartnerAsync = async (unitData: any) => {
 export const deleteAllpartnerAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/partner/delete`, unitData)
-    return response
-  } catch (err) {
-    return isAxiosError(err)
-  }
-}
-
-export const submitExportAsync = async (unitData: any) => {
-  try {
-    console.log("unitdataaa",unitData);
-    const response = await axiosInstance.post(`${config.apiURL}/other/export_mapping/add`, unitData)
     return response
   } catch (err) {
     return isAxiosError(err)
