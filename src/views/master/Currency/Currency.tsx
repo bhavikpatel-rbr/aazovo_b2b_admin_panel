@@ -1,9 +1,11 @@
+// src/views/your-path/Currency.tsx
+
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom'; // Link/useNavigate not used in this pattern
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -13,18 +15,17 @@ import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
+import ConfirmDialog from "@/components/shared/ConfirmDialog"; // Kept for export reason modal
+// import StickyFooter from "@/components/shared/StickyFooter"; // Commented out
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
-// import { CSVLink } from 'react-csv' // Removed as custom export is used
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
-  TbTrash,
-  TbChecks,
+  // TbTrash, // Commented out
+  // TbChecks, // Commented out
   TbSearch,
   TbFilter,
   TbPlus,
@@ -36,57 +37,106 @@ import {
 import type {
   OnSortParam,
   ColumnDef,
-  Row,
+  // Row, // Commented out
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
 import {
   getCurrencyAction,
-  addCurrencyAction, // Ensure these actions exist or are created
-  editCurrencyAction, // Ensure these actions exist or are created
-  deleteCurrencyAction, // Ensure these actions exist or are created
-  deleteAllCurrencyAction, // Ensure these actions exist or are created
-} from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
+  addCurrencyAction,
+  editCurrencyAction,
+  // deleteCurrencyAction, // Commented out
+  // deleteAllCurrencyAction, // Commented out
+  submitExportReasonAction, // Placeholder for future action
+} from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+
+// Type for Select options
+type SelectOption = {
+  value: string | number;
+  label: string;
+};
 
 // --- Define CurrencyItem Type ---
 export type CurrencyItem = {
   id: string | number;
   currency_code: string;
   currency_symbol: string;
+  status: "Active" | "Inactive";
+  created_at?: string;
+  updated_at?: string;
+  updated_by_name?: string;
+  updated_by_role?: string;
 };
+
+// --- Status Options ---
+const statusOptions: SelectOption[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
 
 // --- Zod Schema for Add/Edit Currency Form ---
 const currencyFormSchema = z.object({
   currency_code: z
     .string()
     .min(1, "Currency code is required.")
-    .max(10, "Code cannot exceed 10 characters."), // Adjusted max length
+    .max(10, "Code cannot exceed 10 characters."),
   currency_symbol: z
     .string()
     .min(1, "Currency symbol is required.")
-    .max(5, "Symbol cannot exceed 5 characters."), // Adjusted max length
+    .max(5, "Symbol cannot exceed 5 characters."),
+  status: z.enum(["Active", "Inactive"], {
+    required_error: "Status is required.",
+  }),
 });
 type CurrencyFormData = z.infer<typeof currencyFormSchema>;
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
-  filterCodes: z // Filter by currency_code
+  filterCodes: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  filterSymbols: z // Filter by currency_symbol
+  filterSymbols: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
+  filterStatus: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_CURRENCY = ["ID", "Currency Code", "Currency Symbol"];
-const CSV_KEYS_CURRENCY: (keyof CurrencyItem)[] = [
+const CSV_HEADERS_CURRENCY = [
+  "ID",
+  "Currency Code",
+  "Currency Symbol",
+  "Status",
+  "Updated By",
+  "Updated Role",
+  "Updated At",
+];
+type CurrencyExportItem = Omit<CurrencyItem, "created_at" | "updated_at"> & {
+  status: "Active" | "Inactive";
+  updated_at_formatted?: string;
+};
+const CSV_KEYS_CURRENCY_EXPORT: (keyof CurrencyExportItem)[] = [
   "id",
   "currency_code",
   "currency_symbol",
+  "status",
+  "updated_by_name",
+  "updated_by_role",
+  "updated_at_formatted",
 ];
 
 function exportToCsvCurrency(filename: string, rows: CurrencyItem[]) {
@@ -98,15 +148,26 @@ function exportToCsvCurrency(filename: string, rows: CurrencyItem[]) {
     );
     return false;
   }
-  const separator = ",";
+  const transformedRows: CurrencyExportItem[] = rows.map((row) => ({
+    id: row.id,
+    currency_code: row.currency_code,
+    currency_symbol: row.currency_symbol,
+    status: row.status,
+    updated_by_name: row.updated_by_name || "N/A",
+    updated_by_role: row.updated_by_role || "N/A",
+    updated_at_formatted: row.updated_at
+      ? new Date(row.updated_at).toLocaleString()
+      : "N/A",
+  }));
 
+  const separator = ",";
   const csvContent =
     CSV_HEADERS_CURRENCY.join(separator) +
     "\n" +
-    rows
+    transformedRows
       .map((row) => {
-        return CSV_KEYS_CURRENCY.map((k) => {
-          let cell = row[k];
+        return CSV_KEYS_CURRENCY_EXPORT.map((k) => {
+          let cell = row[k as keyof CurrencyExportItem];
           if (cell === null || cell === undefined) {
             cell = "";
           } else {
@@ -143,13 +204,13 @@ function exportToCsvCurrency(filename: string, rows: CurrencyItem[]) {
   return false;
 }
 
-// --- ActionColumn Component (No changes needed) ---
+// --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
-}: {
+}: // onDelete, // Commented out
+{
   onEdit: () => void;
-  onDelete: () => void;
+  // onDelete: () => void; // Commented out
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
@@ -169,7 +230,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete"> // Commented out
         <div
           className={classNames(
             iconButtonClass,
@@ -181,7 +242,7 @@ const ActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
@@ -216,7 +277,7 @@ const CurrencyTableTools = ({
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
-  onClearFilters: ()=> void;
+  onClearFilters: () => void;
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -224,7 +285,11 @@ const CurrencyTableTools = ({
         <CurrencySearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
+        <Button
+          title="Clear Filters"
+          icon={<TbReload />}
+          onClick={() => onClearFilters()}
+        ></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -250,53 +315,55 @@ type CurrencyTableProps = {
   data: CurrencyItem[];
   loading: boolean;
   pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: CurrencyItem[];
+  // selectedItems: CurrencyItem[]; // Commented out
   onPaginationChange: (page: number) => void;
   onSelectChange: (value: number) => void;
   onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: CurrencyItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<CurrencyItem>[]) => void;
+  // onRowSelect: (checked: boolean, row: CurrencyItem) => void; // Commented out
+  // onAllRowSelect: (checked: boolean, rows: Row<CurrencyItem>[]) => void; // Commented out
 };
 const CurrencyTable = ({
   columns,
   data,
   loading,
   pagingData,
-  selectedItems,
+  // selectedItems, // Commented out
   onPaginationChange,
   onSelectChange,
   onSort,
-  onRowSelect,
-  onAllRowSelect,
-}: CurrencyTableProps) => {
+}: // onRowSelect, // Commented out
+// onAllRowSelect, // Commented out
+CurrencyTableProps) => {
   return (
     <DataTable
-      selectable
+      // selectable // Commented out
       columns={columns}
       data={data}
       noData={!loading && data.length === 0}
       loading={loading}
       pagingData={pagingData}
-      checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
-      }
+      // checkboxChecked={(row) => // Commented out
+      //   selectedItems.some((selected) => selected.id === row.id)
+      // }
       onPaginationChange={onPaginationChange}
       onSelectChange={onSelectChange}
       onSort={onSort}
-      onCheckBoxChange={onRowSelect}
-      onIndeterminateCheckBoxChange={onAllRowSelect}
+      // onCheckBoxChange={onRowSelect} // Commented out
+      // onIndeterminateCheckBoxChange={onAllRowSelect} // Commented out
     />
   );
 };
 
-// --- CurrencySelectedFooter Component ---
+/* // --- CurrencySelectedFooter Component (Commented out) ---
 type CurrencySelectedFooterProps = {
   selectedItems: CurrencyItem[];
   onDeleteSelected: () => void;
+  isDeleting: boolean; 
 };
 const CurrencySelectedFooter = ({
   selectedItems,
   onDeleteSelected,
+  isDeleting, 
 }: CurrencySelectedFooterProps) => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const handleDeleteClick = () => setDeleteConfirmationOpen(true);
@@ -328,6 +395,7 @@ const CurrencySelectedFooter = ({
               variant="plain"
               className="text-red-600 hover:text-red-500"
               onClick={handleDeleteClick}
+              loading={isDeleting} 
             >
               Delete Selected
             </Button>
@@ -344,6 +412,7 @@ const CurrencySelectedFooter = ({
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+        loading={isDeleting} 
       >
         <p>
           Are you sure you want to delete the selected currency
@@ -353,6 +422,7 @@ const CurrencySelectedFooter = ({
     </>
   );
 };
+*/
 
 // --- Main Currency Component ---
 const Currency = () => {
@@ -366,20 +436,32 @@ const Currency = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // const [isDeleting, setIsDeleting] = useState(false); // Commented out
 
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [currencyToDelete, setCurrencyToDelete] = useState<CurrencyItem | null>(
-    null
-  );
+  // const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false); // Commented out
+  // const [currencyToDelete, setCurrencyToDelete] = useState<CurrencyItem | null>(null); // Commented out
+
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterCodes: [],
     filterSymbols: [],
+    filterStatus: [],
   });
 
   const { CurrencyData = [], status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
+
+  const defaultFormValues: CurrencyFormData = useMemo(
+    () => ({
+      currency_code: "",
+      currency_symbol: "",
+      status: "Active",
+    }),
+    []
+  );
 
   useEffect(() => {
     dispatch(getCurrencyAction());
@@ -387,31 +469,36 @@ const Currency = () => {
 
   const addFormMethods = useForm<CurrencyFormData>({
     resolver: zodResolver(currencyFormSchema),
-    defaultValues: { currency_code: "", currency_symbol: "" },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const editFormMethods = useForm<CurrencyFormData>({
     resolver: zodResolver(currencyFormSchema),
-    defaultValues: { currency_code: "", currency_symbol: "" },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   const openAddDrawer = () => {
-    addFormMethods.reset({ currency_code: "", currency_symbol: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(true);
   };
   const closeAddDrawer = () => {
-    addFormMethods.reset({ currency_code: "", currency_symbol: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(false);
   };
   const onAddCurrencySubmit = async (data: CurrencyFormData) => {
     setIsSubmitting(true);
     try {
-      await dispatch(addCurrencyAction(data)).unwrap(); // Pass the whole data object
+      await dispatch(addCurrencyAction(data)).unwrap();
       toast.push(
         <Notification title="Currency Added" type="success" duration={2000}>
           Currency "{data.currency_code}" added.
@@ -425,7 +512,6 @@ const Currency = () => {
           {error.message || "Could not add currency."}
         </Notification>
       );
-      console.error("Add Currency Error:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -433,21 +519,20 @@ const Currency = () => {
 
   const openEditDrawer = (currency: CurrencyItem) => {
     setEditingCurrency(currency);
-    editFormMethods.setValue("currency_code", currency.currency_code);
-    editFormMethods.setValue("currency_symbol", currency.currency_symbol);
+    editFormMethods.reset({
+      currency_code: currency.currency_code,
+      currency_symbol: currency.currency_symbol,
+      status: currency.status || "Active",
+    });
     setIsEditDrawerOpen(true);
   };
   const closeEditDrawer = () => {
     setEditingCurrency(null);
-    editFormMethods.reset({ currency_code: "", currency_symbol: "" });
+    editFormMethods.reset(defaultFormValues);
     setIsEditDrawerOpen(false);
   };
   const onEditCurrencySubmit = async (data: CurrencyFormData) => {
-    if (
-      !editingCurrency ||
-      editingCurrency.id === undefined ||
-      editingCurrency.id === null
-    ) {
+    if (!editingCurrency?.id) {
       toast.push(
         <Notification title="Error" type="danger">
           Cannot edit: Currency ID is missing.
@@ -459,10 +544,7 @@ const Currency = () => {
     setIsSubmitting(true);
     try {
       await dispatch(
-        editCurrencyAction({
-          id: editingCurrency.id,
-          ...data, // Send all fields from the form
-        })
+        editCurrencyAction({ id: editingCurrency.id, ...data })
       ).unwrap();
       toast.push(
         <Notification title="Currency Updated" type="success" duration={2000}>
@@ -477,19 +559,15 @@ const Currency = () => {
           {error.message || "Could not update currency."}
         </Notification>
       );
-      console.error("Edit Currency Error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  /* // --- Delete Logic (Commented out) ---
   const handleDeleteClick = (currency: CurrencyItem) => {
     if (currency.id === undefined || currency.id === null) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Currency ID is missing.
-        </Notification>
-      );
+      toast.push(<Notification title="Error" type="danger">Cannot delete: Currency ID is missing.</Notification>);
       return;
     }
     setCurrencyToDelete(currency);
@@ -497,33 +575,20 @@ const Currency = () => {
   };
 
   const onConfirmSingleDelete = async () => {
-    if (
-      !currencyToDelete ||
-      currencyToDelete.id === undefined ||
-      currencyToDelete.id === null
-    ) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Currency ID is missing.
-        </Notification>
-      );
-      setIsDeleting(false);
-      setCurrencyToDelete(null);
-      setSingleDeleteConfirmOpen(false);
-      return;
+    if (!currencyToDelete?.id) {
+      toast.push(<Notification title="Error" type="danger">Cannot delete: Currency ID is missing.</Notification>);
+      setIsDeleting(false); setCurrencyToDelete(null); setSingleDeleteConfirmOpen(false); return;
     }
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      await dispatch(deleteCurrencyAction(currencyToDelete)).unwrap();
+      await dispatch(deleteCurrencyAction({id: currencyToDelete.id})).unwrap();
       toast.push(
         <Notification title="Currency Deleted" type="success" duration={2000}>
           Currency "{currencyToDelete.currency_code}" deleted.
         </Notification>
       );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== currencyToDelete!.id)
-      );
+      // setSelectedItems((prev) => prev.filter((item) => item.id !== currencyToDelete!.id)); // selectedItems commented
       dispatch(getCurrencyAction());
     } catch (error: any) {
       toast.push(
@@ -531,77 +596,39 @@ const Currency = () => {
           {error.message || `Could not delete currency.`}
         </Notification>
       );
-      console.error("Delete Currency Error:", error);
     } finally {
       setIsDeleting(false);
       setCurrencyToDelete(null);
     }
   };
   const handleDeleteSelected = async () => {
-    if (selectedItems.length === 0) {
-      toast.push(
-        <Notification title="No Selection" type="info">
-          Please select items to delete.
-        </Notification>
-      );
-      return;
-    }
+    // if (selectedItems.length === 0) { // selectedItems commented
+    //   toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>);
+    //   return;
+    // }
     setIsDeleting(true);
-
-    const validItemsToDelete = selectedItems.filter(
-      (item) => item.id !== undefined && item.id !== null
-    );
-
-    if (validItemsToDelete.length !== selectedItems.length) {
-      const skippedCount = selectedItems.length - validItemsToDelete.length;
-      toast.push(
-        <Notification title="Deletion Warning" type="warning" duration={3000}>
-          {skippedCount} item(s) could not be processed due to missing IDs and
-          were skipped.
-        </Notification>
-      );
-    }
-
-    if (validItemsToDelete.length === 0) {
-      toast.push(
-        <Notification title="No Valid Items" type="info">
-          No valid items to delete.
-        </Notification>
-      );
-      setIsDeleting(false);
-      return;
-    }
-
-    const idsToDelete = validItemsToDelete.map((item) => item.id);
-    const commaSeparatedIds = idsToDelete.join(",");
-
+    // const validItemsToDelete = selectedItems.filter(item => item.id !== undefined && item.id !== null); // selectedItems commented
+    // if (validItemsToDelete.length !== selectedItems.length) { // selectedItems commented
+    //   const skippedCount = selectedItems.length - validItemsToDelete.length; // selectedItems commented
+    //   toast.push(<Notification title="Deletion Warning" type="warning" duration={3000}>{skippedCount} item(s) could not be processed due to missing IDs and were skipped.</Notification>);
+    // }
+    // if (validItemsToDelete.length === 0) { // selectedItems commented
+    //   toast.push(<Notification title="No Valid Items" type="info">No valid items to delete.</Notification>);
+    //   setIsDeleting(false); return;
+    // }
+    // const idsToDelete = validItemsToDelete.map((item) => String(item.id)); // selectedItems commented
     try {
-      await dispatch(
-        deleteAllCurrencyAction({ ids: commaSeparatedIds })
-      ).unwrap();
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-          duration={2000}
-        >
-          {validItemsToDelete.length} currency(ies) successfully processed for
-          deletion.
-        </Notification>
-      );
+      // await dispatch(deleteAllCurrencyAction({ ids: idsToDelete.join(',') })).unwrap(); // selectedItems commented
+      // toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{validItemsToDelete.length} currency(ies) successfully processed for deletion.</Notification>); // selectedItems commented
     } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger" duration={3000}>
-          {error.message || "Failed to delete selected currencies."}
-        </Notification>
-      );
-      console.error("Delete selected currencies error:", error);
+      // toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message || "Failed to delete selected currencies."}</Notification>);
     } finally {
-      setSelectedItems([]);
+      // setSelectedItems([]); // selectedItems commented
       dispatch(getCurrencyAction());
       setIsDeleting(false);
     }
   };
+  */ // --- End Delete Logic ---
 
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria);
@@ -612,12 +639,17 @@ const Currency = () => {
     setFilterCriteria({
       filterCodes: data.filterCodes || [],
       filterSymbols: data.filterSymbols || [],
+      filterStatus: data.filterStatus || [],
     });
     handleSetTableData({ pageIndex: 1 });
     closeFilterDrawer();
   };
   const onClearFilters = () => {
-    const defaultFilters = { filterCodes: [], filterSymbols: [] };
+    const defaultFilters = {
+      filterCodes: [],
+      filterSymbols: [],
+      filterStatus: [],
+    };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
@@ -629,7 +661,7 @@ const Currency = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<CurrencyItem[]>([]);
+  // const [selectedItems, setSelectedItems] = useState<CurrencyItem[]>([]); // Commented out
 
   const currencyCodeOptions = useMemo(() => {
     if (!Array.isArray(CurrencyData)) return [];
@@ -655,97 +687,133 @@ const Currency = () => {
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: CurrencyItem[] = Array.isArray(CurrencyData)
-      ? CurrencyData
+      ? CurrencyData.map((item) => ({
+          ...item,
+          status: item.status || "Inactive",
+        }))
       : [];
     let processedData: CurrencyItem[] = cloneDeep(sourceData);
 
-    // Filter by currency codes
-    if (filterCriteria.filterCodes && filterCriteria.filterCodes.length > 0) {
-      const selectedFilterCodes = filterCriteria.filterCodes.map((opt) =>
+    if (filterCriteria.filterCodes?.length) {
+      const codes = filterCriteria.filterCodes.map((opt) =>
         opt.value.toLowerCase()
       );
-      processedData = processedData.filter((item: CurrencyItem) =>
-        selectedFilterCodes.includes(
-          item.currency_code?.trim().toLowerCase() ?? ""
-        )
+      processedData = processedData.filter((item) =>
+        codes.includes(item.currency_code?.trim().toLowerCase() ?? "")
+      );
+    }
+    if (filterCriteria.filterSymbols?.length) {
+      const symbols = filterCriteria.filterSymbols.map((opt) =>
+        opt.value.toLowerCase()
+      );
+      processedData = processedData.filter((item) =>
+        symbols.includes(item.currency_symbol?.trim().toLowerCase() ?? "")
+      );
+    }
+    if (filterCriteria.filterStatus?.length) {
+      const statuses = filterCriteria.filterStatus.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        statuses.includes(item.status)
       );
     }
 
-    // Filter by currency symbols
-    if (
-      filterCriteria.filterSymbols &&
-      filterCriteria.filterSymbols.length > 0
-    ) {
-      const selectedFilterSymbols = filterCriteria.filterSymbols.map(
-        (opt) => opt.value.toLowerCase() // Symbols might be case-sensitive, adjust if needed
-      );
-      processedData = processedData.filter((item: CurrencyItem) =>
-        selectedFilterSymbols.includes(
-          item.currency_symbol?.trim().toLowerCase() ?? ""
-        )
-      );
-    }
-
-    if (tableData.query && tableData.query.trim() !== "") {
+    if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item: CurrencyItem) => {
-        const codeLower = item.currency_code?.trim().toLowerCase() ?? "";
-        const symbolLower = item.currency_symbol?.trim().toLowerCase() ?? "";
-        const idString = String(item.id ?? "")
-          .trim()
-          .toLowerCase();
-        return (
-          codeLower.includes(query) ||
-          symbolLower.includes(query) ||
-          idString.includes(query)
-        );
-      });
+      processedData = processedData.filter(
+        (item) =>
+          (item.currency_code?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.currency_symbol?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.status?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
+          String(item.id ?? "")
+            .trim()
+            .toLowerCase()
+            .includes(query)
+      );
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (
       order &&
       key &&
-      (key === "id" || key === "currency_code" || key === "currency_symbol") &&
-      processedData.length > 0
+      [
+        "id",
+        "currency_code",
+        "currency_symbol",
+        "status",
+        "updated_at",
+        "updated_by_name",
+      ].includes(key)
     ) {
-      const sortedData = [...processedData];
-      sortedData.sort((a, b) => {
-        const aValue = String(a[key as keyof CurrencyItem] ?? "");
-        const bValue = String(b[key as keyof CurrencyItem] ?? "");
-        return order === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      });
-      processedData = sortedData;
-    }
+      processedData.sort((a, b) => {
+        let aValue: any, bValue: any;
+        if (key === "updated_at") {
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else if (key === "status") {
+          aValue = a.status ?? "";
+          bValue = b.status ?? "";
+        } else {
+          aValue = a[key as keyof CurrencyItem] ?? "";
+          bValue = b[key as keyof CurrencyItem] ?? "";
+        }
 
-    const dataToExport = [...processedData];
+        return order === "asc"
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
+      });
+    }
 
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     return {
-      pageData: dataForPage,
+      pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      allFilteredAndSortedData: processedData,
     };
   }, [CurrencyData, tableData, filterCriteria]);
 
-  const handleExportData = () => {
-    const success = exportToCsvCurrency(
-      "currencies_export.csv",
-      allFilteredAndSortedData
-    );
-    if (success) {
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
       toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported.
+        <Notification title="No Data" type="info">
+          Nothing to export.
         </Notification>
       );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Currency";
+    try {
+      await dispatch(submitExportReasonAction({
+        reason: data.reason,
+        module: moduleName,
+      })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      
+      // Proceed with CSV export after successful reason submission
+      exportToCsvCurrency("currencies_export.csv", allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+          message={error.message}
+        />
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
     }
   };
+
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
@@ -756,8 +824,10 @@ const Currency = () => {
   );
   const handleSelectChange = useCallback(
     (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
+      handleSetTableData({
+        pageSize: Number(value),
+        pageIndex: 1,
+      }); /* setSelectedItems([]); // Commented out */
     },
     [handleSetTableData]
   );
@@ -771,35 +841,28 @@ const Currency = () => {
     (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
     [handleSetTableData]
   );
+
+  /* // --- Row Select Logic (Commented out) ---
   const handleRowSelect = useCallback((checked: boolean, row: CurrencyItem) => {
-    setSelectedItems((prev) => {
-      if (checked)
-        return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
-      return prev.filter((item) => item.id !== row.id);
-    });
+    // setSelectedItems((prev) => {
+    //   if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
+    //   return prev.filter((item) => item.id !== row.id);
+    // });
   }, []);
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<CurrencyItem>[]) => {
-      const currentPageRowOriginals = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((prevSelected) => {
-          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-          const newRowsToAdd = currentPageRowOriginals.filter(
-            (r) => !prevSelectedIds.has(r.id)
-          );
-          return [...prevSelected, ...newRowsToAdd];
-        });
-      } else {
-        const currentPageRowIds = new Set(
-          currentPageRowOriginals.map((r) => r.id)
-        );
-        setSelectedItems((prevSelected) =>
-          prevSelected.filter((item) => !currentPageRowIds.has(item.id))
-        );
-      }
-    },
-    []
-  );
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<CurrencyItem>[]) => {
+    // const currentPageRowOriginals = currentRows.map((r) => r.original);
+    // if (checked) {
+    //   setSelectedItems((prevSelected) => {
+    //     const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
+    //     const newRowsToAdd = currentPageRowOriginals.filter((r) => !prevSelectedIds.has(r.id));
+    //     return [...prevSelected, ...newRowsToAdd];
+    //   });
+    // } else {
+    //   const currentPageRowIds = new Set(currentPageRowOriginals.map((r) => r.id));
+    //   setSelectedItems((prevSelected) => prevSelected.filter((item) => !currentPageRowIds.has(item.id)));
+    // }
+  }, []);
+  */ // --- End Row Select Logic ---
 
   const columns: ColumnDef<CurrencyItem>[] = useMemo(
     () => [
@@ -815,19 +878,81 @@ const Currency = () => {
         enableSorting: true,
       },
       {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        meta: { HeaderClass: "text-red-500" },
+        size: 170,
+        cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } =
+            props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_name || "N/A"}
+                {updated_by_role && (
+                  <>
+                    <br />
+                    <b>{updated_by_role}</b>
+                  </>
+                )}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Status",
+        accessorKey: "status",
+        enableSorting: true,
+        size: 100,
+        cell: (props) => {
+          const status = props.row.original.status;
+          return (
+            <Tag
+              className={classNames(
+                "capitalize font-semibold whitespace-nowrap",
+                {
+                  "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500":
+                    status === "Active",
+                  "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500":
+                    status === "Inactive",
+                }
+              )}
+            >
+              {status}
+            </Tag>
+          );
+        },
+      },
+      {
         header: "Actions",
         id: "action",
-        meta: { HeaderClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
+        size: 120,
         cell: (props) => (
           <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
+            onEdit={() =>
+              openEditDrawer(props.row.original)
+            } /* onDelete={() => handleDeleteClick(props.row.original)} // Commented out */
           />
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [openEditDrawer /*, handleDeleteClick // Commented out */]
   );
 
   return (
@@ -843,199 +968,226 @@ const Currency = () => {
           <CurrencyTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal}
             onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <CurrencyTable
               columns={columns}
               data={pageData}
-              loading={
-                masterLoadingStatus === "idle" || isSubmitting || isDeleting
-              }
+              // loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented */}
+              loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectedItems={selectedItems}
+              // selectedItems={selectedItems} // Commented out
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
+              // onRowSelect={handleRowSelect} // Commented out
+              // onAllRowSelect={handleAllRowSelect} // Commented out
             />
           </div>
         </AdaptiveCard>
       </Container>
 
-      <CurrencySelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
+      {/* <CurrencySelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} /> // Commented out */}
 
-      <Drawer
-        title="Add Currency"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="addCurrencyForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="addCurrencyForm"
-          onSubmit={addFormMethods.handleSubmit(onAddCurrencySubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Currency Code"
-            invalid={!!addFormMethods.formState.errors.currency_code}
-            errorMessage={
-              addFormMethods.formState.errors.currency_code?.message
-            }
-          >
-            <Controller
-              name="currency_code"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  placeholder="Enter Currency Code (e.g., USD)"
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Currency Symbol"
-            invalid={!!addFormMethods.formState.errors.currency_symbol}
-            errorMessage={
-              addFormMethods.formState.errors.currency_symbol?.message
-            }
-          >
-            <Controller
-              name="currency_symbol"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  placeholder="Enter Currency Symbol (e.g., $)"
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      <Drawer
-        title="Edit Currency"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="editCurrencyForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="editCurrencyForm"
-          onSubmit={editFormMethods.handleSubmit(onEditCurrencySubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Currency Code"
-            invalid={!!editFormMethods.formState.errors.currency_code}
-            errorMessage={
-              editFormMethods.formState.errors.currency_code?.message
-            }
-          >
-            <Controller
-              name="currency_code"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  placeholder="Enter Currency Code (e.g., USD)"
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Currency Symbol"
-            invalid={!!editFormMethods.formState.errors.currency_symbol}
-            errorMessage={
-              editFormMethods.formState.errors.currency_symbol?.message
-            }
-          >
-            <Controller
-              name="currency_symbol"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  placeholder="Enter Currency Symbol (e.g., $)"
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-        <div className="absolute bottom-[14%] w-[88%]">
-          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br/>
-              <p className="text-sm font-semibold">Tushar Joshi</p>
-              <p>System Admin</p>
+      {[
+        {
+          formMethods: addFormMethods,
+          onSubmit: onAddCurrencySubmit,
+          isOpen: isAddDrawerOpen,
+          closeFn: closeAddDrawer,
+          title: "Add Currency",
+          formId: "addCurrencyForm",
+          submitText: "Adding...",
+          saveText: "Save",
+          isEdit: false,
+        },
+        {
+          formMethods: editFormMethods,
+          onSubmit: onEditCurrencySubmit,
+          isOpen: isEditDrawerOpen,
+          closeFn: closeEditDrawer,
+          title: "Edit Currency",
+          formId: "editCurrencyForm",
+          submitText: "Saving...",
+          saveText: "Save",
+          isEdit: true,
+        },
+      ].map((drawerProps) => (
+        <Drawer
+          key={drawerProps.formId}
+          title={drawerProps.title}
+          isOpen={drawerProps.isOpen}
+          onClose={drawerProps.closeFn}
+          onRequestClose={drawerProps.closeFn}
+          width={600}
+          footer={
+            <div className="text-right w-full">
+              <Button
+                size="sm"
+                className="mr-2"
+                onClick={drawerProps.closeFn}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                form={drawerProps.formId}
+                type="submit"
+                loading={isSubmitting}
+                disabled={
+                  !drawerProps.formMethods.formState.isValid || isSubmitting
+                }
+              >
+                {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
+              </Button>
             </div>
-            <div className="w-[210px]"><br/>
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br/>
-              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+          }
+        >
+          <Form
+            id={drawerProps.formId}
+            onSubmit={drawerProps.formMethods.handleSubmit(
+              drawerProps.onSubmit as any
+            )}
+            className="flex flex-col gap-4 relative pb-28"
+          >
+            <FormItem
+              label="Currency Code"
+              invalid={!!drawerProps.formMethods.formState.errors.currency_code}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.currency_code
+                  ?.message as string | undefined
+              }
+            >
+              <Controller
+                name="currency_code"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    placeholder="Enter Currency Code (e.g., USD)"
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label="Currency Symbol"
+              invalid={
+                !!drawerProps.formMethods.formState.errors.currency_symbol
+              }
+              errorMessage={
+                drawerProps.formMethods.formState.errors.currency_symbol
+                  ?.message as string | undefined
+              }
+            >
+              <Controller
+                name="currency_symbol"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    placeholder="Enter Currency Symbol (e.g., $)"
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label="Status"
+              invalid={!!drawerProps.formMethods.formState.errors.status}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.status?.message as
+                  | string
+                  | undefined
+              }
+            >
+              <Controller
+                name="status"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Select
+                    placeholder="Select Status"
+                    options={statusOptions}
+                    value={
+                      statusOptions.find(
+                        (option) => option.value === field.value
+                      ) || null
+                    }
+                    onChange={(option) =>
+                      field.onChange(option ? option.value : "")
+                    }
+                  />
+                )}
+              />
+            </FormItem>
+          </Form>
+          {drawerProps.isEdit && editingCurrency && (
+            <div className="absolute bottom-[14%] w-[92%]">
+              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                <div>
+                  <b className="mt-3 mb-3 font-semibold text-primary">
+                    Latest Update By:
+                  </b>
+                  <br />
+                  <p className="text-sm font-semibold">
+                    {editingCurrency.updated_by_name || "N/A"}
+                  </p>
+                  <p>{editingCurrency.updated_by_role || "N/A"}</p>
+                </div>
+                <div>
+                  <br />
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>
+                    {editingCurrency.created_at
+                      ? new Date(editingCurrency.created_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
+                      : "N/A"}
+                  </span>
+                  <br />
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>
+                    {editingCurrency.updated_at
+                      ? new Date(editingCurrency.updated_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </Drawer>
+          )}
+        </Drawer>
+      ))}
 
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
+        width={400}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
@@ -1087,44 +1239,92 @@ const Currency = () => {
               )}
             />
           </FormItem>
+          <FormItem label="Status">
+            <Controller
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select status..."
+                  options={statusOptions}
+                  value={field.value || []}
+                  onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                />
+              )}
+            />
+          </FormItem>
         </Form>
       </Drawer>
 
       <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
+
+      {/* <ConfirmDialog // Commented out single delete confirm dialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
         title="Delete Currency"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setCurrencyToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setCurrencyToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setCurrencyToDelete(null);
-        }}
+        onClose={() => {setSingleDeleteConfirmOpen(false); setCurrencyToDelete(null);}}
+        onRequestClose={() => {setSingleDeleteConfirmOpen(false); setCurrencyToDelete(null);}}
+        onCancel={() => {setSingleDeleteConfirmOpen(false); setCurrencyToDelete(null);}}
         onConfirm={onConfirmSingleDelete}
         loading={isDeleting}
       >
-        <p>
-          Are you sure you want to delete the currency "
-          <strong>
-            {currencyToDelete?.currency_code} (
-            {currencyToDelete?.currency_symbol})
-          </strong>
-          "?
-        </p>
-      </ConfirmDialog>
+        <p>Are you sure you want to delete the currency "<strong>{currencyToDelete?.currency_code} ({currencyToDelete?.currency_symbol})</strong>"?</p>
+      </ConfirmDialog> */}
     </>
   );
 };
 
 export default Currency;
-
-// Helper
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}

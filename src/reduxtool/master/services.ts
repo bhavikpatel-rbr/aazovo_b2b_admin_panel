@@ -2182,3 +2182,13 @@ export const deleteAllpartnerAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+
+export const submitExportAsync = async (unitData: any) => {
+  try {
+    console.log("unitdataaa",unitData);
+    const response = await axiosInstance.post(`${config.apiURL}/other/export_mapping/add`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
