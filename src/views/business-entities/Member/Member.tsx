@@ -485,8 +485,7 @@ const FormListTable = () => {
 
     return { pageData: dataForPage, total: dataTotal };
   }, [forms, tableData, filterCriteria]);
-
-  const handleEdit = (form: FormItem) => { console.log("Edit:", form.id); /* Implement edit logic */ };
+  const handleEdit = (form: FormItem) => { navigate("/business-entities/member-create"); console.log("Edit:", form.id); /* Implement edit logic */ };
   const handleViewDetails = (form: FormItem) => { console.log("View Details:", form.id); /* Implement view detail logic */ };
   const handleChangeStatus = (form: FormItem) => { console.log("Change Status:", form.id); /* Implement status change */ };
   const handleShare = (form: FormItem) => { console.log("Share:", form.id); };

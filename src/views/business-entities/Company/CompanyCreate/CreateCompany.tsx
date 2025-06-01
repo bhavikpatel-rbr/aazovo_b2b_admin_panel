@@ -213,6 +213,7 @@ interface ApiSingleCompanyItem {
     id: number;
     name?: string;
     // CompanyProfileSetting fields (backend names)
+    company_profile_settings_id?:any,
     status?: string;
     company_code?: string;
     company_primary_contact_number?: string;
@@ -291,6 +292,7 @@ interface ApiSingleCompanyItem {
 const transformApiToFormSchema = (apiData: ApiSingleCompanyItem): Partial<CompanyFormSchema> => {
     return {
         id: apiData.id,
+        company_profile_settings_id: apiData.company_profile_settings_id,
         // Map backend names to frontend schema names
         name: apiData.name,
         company_primary_contact_number: apiData.company_primary_contact_number,
@@ -447,6 +449,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean, 
     appendField('name', dataToProcess.name);
     appendField('status', dataToProcess.status);
     appendField('company_code', dataToProcess.company_code);
+    appendField('company_profile_settings_id', dataToProcess.company_profile_settings_id);
     appendField('company_primary_contact_number', dataToProcess.company_primary_contact_number);
     appendField('alternate_contact_number', dataToProcess.alternate_contact_number);
     appendField('company_primary_email_id', dataToProcess.company_primary_email_id);
@@ -1247,7 +1250,7 @@ const CompanyCreate = () => {
     const getEmptyFormValues = (): Partial<CompanyFormSchema> => ({
         // Initialize all fields to default/empty to ensure controlled components
         // And ensure arrays are initialized for useFieldArray hooks
-        name: '', company_primary_contact_number: '', primary_contact_country_code: '',
+        name: '', company_primary_contact_number: '', primary_contact_country_code: '',company_profile_settings_id:'',
         alternate_contact_number: '', alternate_contact_country_code: '', company_primary_email_id: '',
         alternate_email_id: '', ownership_type: undefined, owner_director_proprietor_name: '',
         company_address: '', city: undefined, state: undefined, zip_postal_code: '', country: undefined,
@@ -1345,7 +1348,7 @@ const CompanyCreate = () => {
                 // The 'id' is added to payload in preparePayloadForApi if needed by backend
                 // Or it's often part of the URL for PUT/PATCH requests.
                 // Ensure your editcompanyAction handles FormData correctly.
-                await dispatch(editcompanyAction(payload)).unwrap(); 
+                await dispatch(editcompanyAction({payload})).unwrap(); 
                 toast.push(<Notification type="success" title="Company Updated">Details updated successfully.</Notification>);
             } else {
                 await dispatch(addcompanyAction(payload)).unwrap();
