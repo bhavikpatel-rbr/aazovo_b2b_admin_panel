@@ -775,8 +775,8 @@ const CompanyListSelected = () => {
       const ids = selectedCompanies.map((data) => data.id);
       await dispatch(deleteAllcompanyAction({ ids: ids.toString() })).unwrap();
       toast.push(
-        <Notification title="Country Deleted" type="success" duration={2000}>
-          Company "{selectedCompanies.name}" deleted.
+        <Notification title="Comapny Deleted" type="success" duration={2000}>
+          "{selectedCompanies.name}" deleted.
         </Notification>
       );
       setSelectedItems((prev) =>

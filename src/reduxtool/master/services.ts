@@ -2182,3 +2182,21 @@ export const deleteAllpartnerAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+
+export const getpWallListingAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/wall/enquiry?page=1`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllWallAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/wall/enquiry/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
