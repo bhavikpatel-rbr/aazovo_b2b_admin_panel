@@ -10,20 +10,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { BiChevronRight } from "react-icons/bi";
 import { TbPlus } from "react-icons/tb";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import {
-  addMemberAction,
-  editMemberAction,
-  // editMemberAction,
-  // getMembersAction, // If you need to refetch the list after add/edit
+  addpartnerAction,
 } from "@/reduxtool/master/middleware"; // Or your members middleware path
 import { useAppDispatch } from "@/reduxtool/store";
+import { toast } from "react-toastify";
+import { Notification } from "@/components/ui";
 
 const CreatePartner = () => {
   const phoneRegex = new RegExp(
     /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
   );
+   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch(); // Initialize dispatch
 
@@ -114,15 +114,15 @@ const CreatePartner = () => {
     mode: "onChange",
   });
 
-  const onSubmit = (data: any) => {
+   const  onSubmit = async (data: any) => {
     console.log("Partner submitted", data);
     try {
-      await dispatch(addpartnerAction(payload)).unwrap();
-      // toast.push(
-      //   <Notification type="success" title="Partner Created">
-      //     New Partner created successfully.
-      //   </Notification>
-      // );
+      await dispatch(addpartnerAction(data)).unwrap();
+      toast.push(
+        <Notification type="success" title="Partner Created">
+          New Partner created successfully.
+        </Notification>
+      );
       reset({}); // Reset form after successful creation to clear fields
       // }
       navigate("/business-entities/partner"); // Or to the partner's detail page
@@ -604,8 +604,6 @@ const CreatePartner = () => {
                   )}
                 />
               </FormItem>
-              {/* Footer with Save and Cancel buttons */}
-
               {/* Upload Documents */}
               <FormItem
                 className="col-span-3"
@@ -668,12 +666,20 @@ const CreatePartner = () => {
                   ))}
                 </div>
               </FormItem>
+              <Card bodyClass="flex justify-end gap-2" className="mt-4">
+        <Button type="button" className="px-4 py-2" onClick={()=>  navigate("/business-entities/partner")}>
+          Cancel
+        </Button>
+        <Button type="submit" className="px-4 py-2" variant="solid">
+          Save
+        </Button>
+      </Card>
             </form>
           </div>
         </AdaptiveCard>
       </Container>
       {/* Footer with Save and Cancel buttons */}
-    
+      
     </>
   );
 };

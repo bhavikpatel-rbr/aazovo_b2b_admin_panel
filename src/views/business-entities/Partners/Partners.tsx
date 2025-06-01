@@ -549,8 +549,8 @@ const PartnerListTable = () => {
     return { pageData: dataForPage, total: dataTotal };
   }, [partnerList, tableData, filterCriteria]);
 
-  const handleEditPartner = (id: string) => { console.log("Edit Partner:", id); /* navigate(`/app/partners/edit/${id}`) */ };
-  const handleViewPartnerDetails = (id: string) => { console.log("View Partner Details:", id); /* navigate(`/app/partners/details/${id}`) */ };
+  const handleEditPartner = (id: string) => { console.log("Edit Partner:", id); navigate(`/business-entities/create-partner`) };
+  const handleViewPartnerDetails = (id: string) => { console.log("View Partner Details:", id); navigate(`/business-entities/create-partner`) };
   const handleSharePartner = (id: string) => { console.log("Share Partner:", id); };
 
   // More actions (from dropdown)
