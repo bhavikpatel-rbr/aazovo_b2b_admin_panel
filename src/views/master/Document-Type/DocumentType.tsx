@@ -1,9 +1,11 @@
+// src/views/your-path/Documentmaster.tsx
+
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom'; // useNavigate was unused, Link might be if not used in breadcrumbs
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -13,17 +15,17 @@ import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
+import ConfirmDialog from "@/components/shared/ConfirmDialog"; // Kept for export reason modal
+// import StickyFooter from "@/components/shared/StickyFooter"; // Commented out
 import DebouceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select"; // Added for filter drawer
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
+import Select from "@/components/ui/Select";
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Added Tag
 
 // Icons
 import {
   TbPencil,
-  TbTrash,
-  TbChecks,
+  // TbTrash, // Commented out
+  // TbChecks, // Commented out
   TbSearch,
   TbFilter,
   TbPlus,
@@ -35,25 +37,43 @@ import {
 import type {
   OnSortParam,
   ColumnDef,
-  Row,
+  // Row, // Commented out
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
 import {
   getDocumentTypeAction,
-  addDocumentTypeAction, // Ensure these actions exist or are created
-  editDocumentTypeAction, // Ensure these actions exist or are created
-  deleteDocumentTypeAction, // Ensure these actions exist or are created
-  deleteAllDocumentTypeAction, // Ensure these actions exist or are created
-} from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
+  addDocumentTypeAction,
+  editDocumentTypeAction,
+  // deleteDocumentTypeAction, // Commented out
+  // deleteAllDocumentTypeAction, // Commented out
+  submitExportReasonAction, // Placeholder for future action
+} from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-// --- Define DocumentItem Type ---
-export type DocumentItem = {
-  id: string | number; // Allow number for consistency if backend might send it
-  name: string;
+// Type for Select options
+type SelectOption = {
+  value: string | number;
+  label: string;
 };
+
+// --- Define DocumentItem Type (Represents DocumentType) ---
+export type DocumentItem = {
+  id: string | number;
+  name: string;
+  status: "Active" | "Inactive"; // Added status field
+  created_at?: string; // Added for audit
+  updated_at?: string; // Added for audit
+  updated_by_name?: string; // Added for audit
+  updated_by_role?: string; // Added for audit
+};
+
+// --- Status Options ---
+const statusOptions: SelectOption[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
 
 // --- Zod Schema for Add/Edit Document Type Form ---
 const documentTypeFormSchema = z.object({
@@ -61,6 +81,9 @@ const documentTypeFormSchema = z.object({
     .string()
     .min(1, "Document type name is required.")
     .max(100, "Name cannot exceed 100 characters."),
+  status: z.enum(["Active", "Inactive"], {
+    required_error: "Status is required.",
+  }), // Added status
 });
 type DocumentTypeFormData = z.infer<typeof documentTypeFormSchema>;
 
@@ -69,12 +92,45 @@ const filterFormSchema = z.object({
   filterNames: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
+  filterStatus: z // Added status filter
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_DOC_TYPE = ["ID", "Document Type Name"];
-const CSV_KEYS_DOC_TYPE: (keyof DocumentItem)[] = ["id", "name"];
+const CSV_HEADERS_DOC_TYPE = [
+  "ID",
+  "Document Type Name",
+  "Status",
+  "Updated By",
+  "Updated Role",
+  "Updated At",
+];
+type DocumentTypeExportItem = Omit<
+  DocumentItem,
+  "created_at" | "updated_at"
+> & {
+  status: "Active" | "Inactive";
+  updated_at_formatted?: string;
+};
+const CSV_KEYS_DOC_TYPE_EXPORT: (keyof DocumentTypeExportItem)[] = [
+  "id",
+  "name",
+  "status",
+  "updated_by_name",
+  "updated_by_role",
+  "updated_at_formatted",
+];
 
 function exportToCsvDocType(filename: string, rows: DocumentItem[]) {
   if (!rows || !rows.length) {
@@ -85,15 +141,25 @@ function exportToCsvDocType(filename: string, rows: DocumentItem[]) {
     );
     return false;
   }
-  const separator = ",";
+  const transformedRows: DocumentTypeExportItem[] = rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    status: row.status,
+    updated_by_name: row.updated_by_name || "N/A",
+    updated_by_role: row.updated_by_role || "N/A",
+    updated_at_formatted: row.updated_at
+      ? new Date(row.updated_at).toLocaleString()
+      : "N/A",
+  }));
 
+  const separator = ",";
   const csvContent =
     CSV_HEADERS_DOC_TYPE.join(separator) +
     "\n" +
-    rows
+    transformedRows
       .map((row) => {
-        return CSV_KEYS_DOC_TYPE.map((k) => {
-          let cell = row[k];
+        return CSV_KEYS_DOC_TYPE_EXPORT.map((k) => {
+          let cell = row[k as keyof DocumentTypeExportItem];
           if (cell === null || cell === undefined) {
             cell = "";
           } else {
@@ -120,6 +186,7 @@ function exportToCsvDocType(filename: string, rows: DocumentItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    // Success toast now handled by handleConfirmExportWithReason
     return true;
   }
   toast.push(
@@ -133,10 +200,10 @@ function exportToCsvDocType(filename: string, rows: DocumentItem[]) {
 // --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
-}: {
+}: // onDelete, // Commented out
+{
   onEdit: () => void;
-  onDelete: () => void;
+  // onDelete: () => void; // Commented out
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
@@ -156,7 +223,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete"> // Commented out
         <div
           className={classNames(
             iconButtonClass,
@@ -168,12 +235,12 @@ const ActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
 
-// --- DocumentTypeSearch Component (was FormListSearch) ---
+// --- DocumentTypeSearch Component ---
 type DocumentTypeSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -185,7 +252,7 @@ const DocumentTypeSearch = React.forwardRef<
   return (
     <DebouceInput
       ref={ref}
-      className="w-full" // Use w-full for better layout in TableTools
+      className="w-full"
       placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
@@ -194,18 +261,17 @@ const DocumentTypeSearch = React.forwardRef<
 });
 DocumentTypeSearch.displayName = "DocumentTypeSearch";
 
-// --- DocumentTypeTableTools Component (Patterned after UnitsTableTools) ---
+// --- DocumentTypeTableTools Component ---
 const DocumentTypeTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
   onClearFilters,
-
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
-  onClearFilters: ()=> void
+  onClearFilters: () => void;
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -213,7 +279,11 @@ const DocumentTypeTableTools = ({
         <DocumentTypeSearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
+        <Button
+          title="Clear Filters"
+          icon={<TbReload />}
+          onClick={() => onClearFilters()}
+        ></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -223,7 +293,7 @@ const DocumentTypeTableTools = ({
         </Button>
         <Button
           icon={<TbCloudUpload />}
-          onClick={onExport}
+          onClick={onExport} // Will open export reason modal
           className="w-full sm:w-auto"
         >
           Export
@@ -233,59 +303,61 @@ const DocumentTypeTableTools = ({
   );
 };
 
-// --- DocumentTypeTable Component (was FormListTable) ---
+// --- DocumentTypeTable Component ---
 type DocumentTypeTableProps = {
   columns: ColumnDef<DocumentItem>[];
   data: DocumentItem[];
   loading: boolean;
   pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: DocumentItem[]; // Renamed from selectedForms
+  // selectedItems: DocumentItem[]; // Commented out
   onPaginationChange: (page: number) => void;
   onSelectChange: (value: number) => void;
   onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: DocumentItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<DocumentItem>[]) => void;
+  // onRowSelect: (checked: boolean, row: DocumentItem) => void; // Commented out
+  // onAllRowSelect: (checked: boolean, rows: Row<DocumentItem>[]) => void; // Commented out
 };
 const DocumentTypeTable = ({
   columns,
   data,
   loading,
   pagingData,
-  selectedItems,
+  // selectedItems, // Commented out
   onPaginationChange,
   onSelectChange,
   onSort,
-  onRowSelect,
-  onAllRowSelect,
-}: DocumentTypeTableProps) => {
+}: // onRowSelect, // Commented out
+// onAllRowSelect, // Commented out
+DocumentTypeTableProps) => {
   return (
     <DataTable
-      selectable
+      // selectable // Commented out
       columns={columns}
       data={data}
       noData={!loading && data.length === 0}
       loading={loading}
       pagingData={pagingData}
-      checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
-      }
+      // checkboxChecked={(row) => // Commented out
+      //   selectedItems.some((selected) => selected.id === row.id)
+      // }
       onPaginationChange={onPaginationChange}
       onSelectChange={onSelectChange}
       onSort={onSort}
-      onCheckBoxChange={onRowSelect}
-      onIndeterminateCheckBoxChange={onAllRowSelect}
+      // onCheckBoxChange={onRowSelect} // Commented out
+      // onIndeterminateCheckBoxChange={onAllRowSelect} // Commented out
     />
   );
 };
 
-// --- DocumentTypeSelectedFooter Component (was FormListSelected) ---
+/* // --- DocumentTypeSelectedFooter Component (Commented out) ---
 type DocumentTypeSelectedFooterProps = {
-  selectedItems: DocumentItem[]; // Renamed from selectedForms
+  selectedItems: DocumentItem[];
   onDeleteSelected: () => void;
+  isDeleting: boolean; // Added
 };
 const DocumentTypeSelectedFooter = ({
   selectedItems,
   onDeleteSelected,
+  isDeleting, // Added
 }: DocumentTypeSelectedFooterProps) => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const handleDeleteClick = () => setDeleteConfirmationOpen(true);
@@ -317,6 +389,7 @@ const DocumentTypeSelectedFooter = ({
               variant="plain"
               className="text-red-600 hover:text-red-500"
               onClick={handleDeleteClick}
+              loading={isDeleting} // Added
             >
               Delete Selected
             </Button>
@@ -333,6 +406,7 @@ const DocumentTypeSelectedFooter = ({
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+        loading={isDeleting} // Added
       >
         <p>
           Are you sure you want to delete the selected document type
@@ -342,11 +416,11 @@ const DocumentTypeSelectedFooter = ({
     </>
   );
 };
+*/
 
 // --- Main Documentmaster Component ---
 const Documentmaster = () => {
   const dispatch = useAppDispatch();
-  // const navigate = useNavigate(); // Uncomment if navigation on edit/add is needed
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -355,18 +429,30 @@ const Documentmaster = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // const [isDeleting, setIsDeleting] = useState(false); // Commented out
 
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [documentTypeToDelete, setDocumentTypeToDelete] =
-    useState<DocumentItem | null>(null);
+  // const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false); // Commented out
+  // const [documentTypeToDelete, setDocumentTypeToDelete] = useState<DocumentItem | null>(null); // Commented out
+
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
+    filterStatus: [], // Added
   });
 
   const { DocumentTypeData = [], status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
+
+  const defaultFormValues: DocumentTypeFormData = useMemo(
+    () => ({
+      name: "",
+      status: "Active", // Default status
+    }),
+    []
+  );
 
   useEffect(() => {
     dispatch(getDocumentTypeAction());
@@ -374,31 +460,37 @@ const Documentmaster = () => {
 
   const addFormMethods = useForm<DocumentTypeFormData>({
     resolver: zodResolver(documentTypeFormSchema),
-    defaultValues: { name: "" },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const editFormMethods = useForm<DocumentTypeFormData>({
     resolver: zodResolver(documentTypeFormSchema),
-    defaultValues: { name: "" },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   const openAddDrawer = () => {
-    addFormMethods.reset({ name: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(true);
   };
   const closeAddDrawer = () => {
-    addFormMethods.reset({ name: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(false);
   };
   const onAddDocumentTypeSubmit = async (data: DocumentTypeFormData) => {
     setIsSubmitting(true);
     try {
-      await dispatch(addDocumentTypeAction({ name: data.name })).unwrap();
+      // API expected to handle audit fields, only send form data
+      await dispatch(addDocumentTypeAction(data)).unwrap();
       toast.push(
         <Notification
           title="Document Type Added"
@@ -416,7 +508,6 @@ const Documentmaster = () => {
           {error.message || "Could not add document type."}
         </Notification>
       );
-      console.error("Add Document Type Error:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -424,20 +515,19 @@ const Documentmaster = () => {
 
   const openEditDrawer = (docType: DocumentItem) => {
     setEditingDocumentType(docType);
-    editFormMethods.setValue("name", docType.name); // Set form value for editing
+    editFormMethods.reset({
+      name: docType.name,
+      status: docType.status || "Active", // Set status, default to Active
+    });
     setIsEditDrawerOpen(true);
   };
   const closeEditDrawer = () => {
     setEditingDocumentType(null);
-    editFormMethods.reset({ name: "" });
+    editFormMethods.reset(defaultFormValues);
     setIsEditDrawerOpen(false);
   };
   const onEditDocumentTypeSubmit = async (data: DocumentTypeFormData) => {
-    if (
-      !editingDocumentType ||
-      editingDocumentType.id === undefined ||
-      editingDocumentType.id === null
-    ) {
+    if (!editingDocumentType?.id) {
       toast.push(
         <Notification title="Error" type="danger">
           Cannot edit: Document Type ID is missing.
@@ -448,11 +538,9 @@ const Documentmaster = () => {
     }
     setIsSubmitting(true);
     try {
+      // API expected to handle audit fields
       await dispatch(
-        editDocumentTypeAction({
-          id: editingDocumentType.id,
-          name: data.name,
-        })
+        editDocumentTypeAction({ id: editingDocumentType.id, ...data })
       ).unwrap();
       toast.push(
         <Notification
@@ -471,151 +559,44 @@ const Documentmaster = () => {
           {error.message || "Could not update document type."}
         </Notification>
       );
-      console.error("Edit Document Type Error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  /* // --- Delete Logic (Commented out) ---
   const handleDeleteClick = (docType: DocumentItem) => {
-    if (docType.id === undefined || docType.id === null) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Document Type ID is missing.
-        </Notification>
-      );
-      return;
-    }
-    setDocumentTypeToDelete(docType);
-    setSingleDeleteConfirmOpen(true);
+    // ...
   };
   const onConfirmSingleDelete = async () => {
-    if (
-      !documentTypeToDelete ||
-      documentTypeToDelete.id === undefined ||
-      documentTypeToDelete.id === null
-    ) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Document Type ID is missing.
-        </Notification>
-      );
-      setIsDeleting(false);
-      setDocumentTypeToDelete(null);
-      setSingleDeleteConfirmOpen(false);
-      return;
-    }
-    setIsDeleting(true);
-    setSingleDeleteConfirmOpen(false);
-    try {
-      await dispatch(deleteDocumentTypeAction(documentTypeToDelete)).unwrap(); // Ensure action takes correct payload
-      toast.push(
-        <Notification
-          title="Document Type Deleted"
-          type="success"
-          duration={2000}
-        >
-          Document Type "{documentTypeToDelete.name}" deleted.
-        </Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== documentTypeToDelete!.id)
-      );
-      dispatch(getDocumentTypeAction());
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Failed to Delete" type="danger" duration={3000}>
-          {error.message || `Could not delete document type.`}
-        </Notification>
-      );
-      console.error("Delete Document Type Error:", error);
-    } finally {
-      setIsDeleting(false);
-      setDocumentTypeToDelete(null);
-    }
+    // ...
   };
   const handleDeleteSelected = async () => {
-    if (selectedItems.length === 0) {
-      toast.push(
-        <Notification title="No Selection" type="info">
-          Please select items to delete.
-        </Notification>
-      );
-      return;
-    }
-    setIsDeleting(true);
-
-    const validItemsToDelete = selectedItems.filter(
-      (item) => item.id !== undefined && item.id !== null
-    );
-
-    if (validItemsToDelete.length !== selectedItems.length) {
-      const skippedCount = selectedItems.length - validItemsToDelete.length;
-      toast.push(
-        <Notification title="Deletion Warning" type="warning" duration={3000}>
-          {skippedCount} item(s) could not be processed due to missing IDs and
-          were skipped.
-        </Notification>
-      );
-    }
-
-    if (validItemsToDelete.length === 0) {
-      toast.push(
-        <Notification title="No Valid Items" type="info">
-          No valid items to delete.
-        </Notification>
-      );
-      setIsDeleting(false);
-      return;
-    }
-
-    const idsToDelete = validItemsToDelete.map((item) => item.id);
-    const commaSeparatedIds = idsToDelete.join(",");
-
-    try {
-      await dispatch(
-        deleteAllDocumentTypeAction({ ids: commaSeparatedIds })
-      ).unwrap();
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-          duration={2000}
-        >
-          {validItemsToDelete.length} document type(s) successfully processed
-          for deletion.
-        </Notification>
-      );
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger" duration={3000}>
-          {error.message || "Failed to delete selected document types."}
-        </Notification>
-      );
-      console.error("Delete selected document types error:", error);
-    } finally {
-      setSelectedItems([]);
-      dispatch(getDocumentTypeAction());
-      setIsDeleting(false);
-    }
+    // ...
   };
+  */ // --- End Delete Logic ---
 
   const openFilterDrawer = () => {
-    filterFormMethods.reset(filterCriteria); // Reset form with current criteria
+    filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
   };
   const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
   const onApplyFiltersSubmit = (data: FilterFormData) => {
-    setFilterCriteria({ filterNames: data.filterNames || [] });
-    handleSetTableData({ pageIndex: 1 }); // Reset to first page on filter change
+    setFilterCriteria({
+      filterNames: data.filterNames || [],
+      filterStatus: data.filterStatus || [], // Added
+    });
+    handleSetTableData({ pageIndex: 1 });
     closeFilterDrawer();
   };
   const onClearFilters = () => {
-    const defaultFilters = { filterNames: [] };
+    const defaultFilters = {
+      filterNames: [],
+      filterStatus: [], // Added
+    };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    handleSetTableData({ pageIndex: 1 }); // Reset to first page
-    // Optionally close drawer: closeFilterDrawer();
+    handleSetTableData({ pageIndex: 1 });
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -624,7 +605,7 @@ const Documentmaster = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<DocumentItem[]>([]); // Renamed from selectedForms
+  // const [selectedItems, setSelectedItems] = useState<DocumentItem[]>([]); // Commented out
 
   const documentTypeNameOptions = useMemo(() => {
     if (!Array.isArray(DocumentTypeData)) return [];
@@ -639,73 +620,113 @@ const Documentmaster = () => {
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: DocumentItem[] = Array.isArray(DocumentTypeData)
-      ? DocumentTypeData
+      ? DocumentTypeData.map((item) => ({
+          ...item,
+          status: item.status || "Inactive", // Ensure status has a default
+        }))
       : [];
     let processedData: DocumentItem[] = cloneDeep(sourceData);
 
-    if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
-      const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
+    if (filterCriteria.filterNames?.length) {
+      const names = filterCriteria.filterNames.map((opt) =>
         opt.value.toLowerCase()
       );
-      processedData = processedData.filter((item: DocumentItem) =>
-        selectedFilterNames.includes(item.name?.trim().toLowerCase() ?? "")
+      processedData = processedData.filter((item) =>
+        names.includes(item.name?.trim().toLowerCase() ?? "")
+      );
+    }
+    if (filterCriteria.filterStatus?.length) {
+      // Added status filter
+      const statuses = filterCriteria.filterStatus.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        statuses.includes(item.status)
       );
     }
 
-    if (tableData.query && tableData.query.trim() !== "") {
+    if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item: DocumentItem) => {
-        const itemNameLower = item.name?.trim().toLowerCase() ?? "";
-        const itemIdString = String(item.id ?? "").trim();
-        const itemIdLower = itemIdString.toLowerCase();
-        return itemNameLower.includes(query) || itemIdLower.includes(query);
-      });
+      processedData = processedData.filter(
+        (item) =>
+          (item.name?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.status?.trim().toLowerCase() ?? "").includes(query) || // Search by status
+          (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
+          String(item.id ?? "")
+            .trim()
+            .toLowerCase()
+            .includes(query)
+      );
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (
       order &&
       key &&
-      (key === "id" || key === "name") &&
-      processedData.length > 0
+      ["id", "name", "status", "updated_at", "updated_by_name"].includes(key)
     ) {
-      const sortedData = [...processedData];
-      sortedData.sort((a, b) => {
-        const aValue = String(a[key as keyof DocumentItem] ?? "");
-        const bValue = String(b[key as keyof DocumentItem] ?? "");
-        return order === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      });
-      processedData = sortedData;
-    }
+      // Added status and audit keys
+      processedData.sort((a, b) => {
+        let aValue: any, bValue: any;
+        if (key === "updated_at") {
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else if (key === "status") {
+          aValue = a.status ?? "";
+          bValue = b.status ?? "";
+        } else {
+          aValue = a[key as keyof DocumentItem] ?? "";
+          bValue = b[key as keyof DocumentItem] ?? "";
+        }
 
-    const dataToExport = [...processedData];
+        return order === "asc"
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
+      });
+    }
 
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     return {
-      pageData: dataForPage,
+      pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      allFilteredAndSortedData: processedData,
     };
   }, [DocumentTypeData, tableData, filterCriteria]);
 
-  const handleExportData = () => {
-    const success = exportToCsvDocType(
-      "document_types_export.csv",
-      allFilteredAndSortedData
-    );
-    if (success) {
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
       toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported.
+        <Notification title="No Data" type="info">
+          Nothing to export.
         </Notification>
       );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Document Type";
+    try {
+      await dispatch(submitExportReasonAction({
+        reason: data.reason,
+        module: moduleName,
+      })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      
+      // Proceed with CSV export after successful reason submit
+      exportToCsvDocType("document_types_export.csv", allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
+    } finally {
+      setIsSubmittingExportReason(false);
     }
   };
+
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
@@ -716,8 +737,10 @@ const Documentmaster = () => {
   );
   const handleSelectChange = useCallback(
     (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
+      handleSetTableData({
+        pageSize: Number(value),
+        pageIndex: 1,
+      }); /* setSelectedItems([]); // Commented out */
     },
     [handleSetTableData]
   );
@@ -731,35 +754,18 @@ const Documentmaster = () => {
     (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
     [handleSetTableData]
   );
+
+  /* // --- Row Select Logic (Commented out) ---
   const handleRowSelect = useCallback((checked: boolean, row: DocumentItem) => {
-    setSelectedItems((prev) => {
-      if (checked)
-        return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
-      return prev.filter((item) => item.id !== row.id);
-    });
+    // setSelectedItems((prev) => {
+    //   if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
+    //   return prev.filter((item) => item.id !== row.id);
+    // });
   }, []);
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<DocumentItem>[]) => {
-      const currentPageRowOriginals = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((prevSelected) => {
-          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-          const newRowsToAdd = currentPageRowOriginals.filter(
-            (r) => !prevSelectedIds.has(r.id)
-          );
-          return [...prevSelected, ...newRowsToAdd];
-        });
-      } else {
-        const currentPageRowIds = new Set(
-          currentPageRowOriginals.map((r) => r.id)
-        );
-        setSelectedItems((prevSelected) =>
-          prevSelected.filter((item) => !currentPageRowIds.has(item.id))
-        );
-      }
-    },
-    []
-  );
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<DocumentItem>[]) => {
+    // ...
+  }, []);
+  */ // --- End Row Select Logic ---
 
   const columns: ColumnDef<DocumentItem>[] = useMemo(
     () => [
@@ -770,19 +776,83 @@ const Documentmaster = () => {
         enableSorting: true,
       },
       {
+        // Added Updated Info Column
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        meta: { HeaderClass: "text-red-500" },
+        size: 170,
+        cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } =
+            props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_name || "N/A"}
+                {updated_by_role && (
+                  <>
+                    <br />
+                    <b>{updated_by_role}</b>
+                  </>
+                )}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
+      },
+      {
+        // Added Status Column
+        header: "Status",
+        accessorKey: "status",
+        enableSorting: true,
+        size: 100,
+        cell: (props) => {
+          const status = props.row.original.status;
+          return (
+            <Tag
+              className={classNames(
+                "capitalize font-semibold whitespace-nowrap",
+                {
+                  "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500":
+                    status === "Active",
+                  "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500":
+                    status === "Inactive",
+                }
+              )}
+            >
+              {status}
+            </Tag>
+          );
+        },
+      },
+      {
         header: "Actions",
         id: "action",
-        meta: { HeaderClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
+        size: 120,
         cell: (props) => (
           <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
+            onEdit={() =>
+              openEditDrawer(props.row.original)
+            } /* onDelete={() => handleDeleteClick(props.row.original)} // Commented out */
           />
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [] // openEditDrawer and handleDeleteClick are stable
+    [openEditDrawer /*, handleDeleteClick // Commented out */]
   );
 
   return (
@@ -798,156 +868,203 @@ const Documentmaster = () => {
           <DocumentTypeTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal} // Changed to open reason modal
             onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <DocumentTypeTable
               columns={columns}
               data={pageData}
-              loading={
-                masterLoadingStatus === "idle" || isSubmitting || isDeleting
-              }
+              // loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented */}
+              loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectedItems={selectedItems}
+              // selectedItems={selectedItems} // Commented out
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
+              // onRowSelect={handleRowSelect} // Commented out
+              // onAllRowSelect={handleAllRowSelect} // Commented out
             />
           </div>
         </AdaptiveCard>
       </Container>
 
-      <DocumentTypeSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
+      {/* <DocumentTypeSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} /> // Commented out */}
 
-      {/* Add Drawer */}
-      <Drawer
-        title="Add Document Type"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="addDocumentTypeForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="addDocumentTypeForm"
-          onSubmit={addFormMethods.handleSubmit(onAddDocumentTypeSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Document Type"
-            invalid={!!addFormMethods.formState.errors.name}
-            errorMessage={addFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Document Type" />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      {/* Edit Drawer */}
-      <Drawer
-        title="Edit Document Type"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="editDocumentTypeForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="editDocumentTypeForm"
-          onSubmit={editFormMethods.handleSubmit(onEditDocumentTypeSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Document Type"
-            invalid={!!editFormMethods.formState.errors.name}
-            errorMessage={editFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Document Type" />
-              )}
-            />
-          </FormItem>
-        </Form>
-        <div className="absolute bottom-[14%] w-[88%]">
-          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br/>
-              <p className="text-sm font-semibold">Tushar Joshi</p>
-              <p>System Admin</p>
+      {[
+        {
+          formMethods: addFormMethods,
+          onSubmit: onAddDocumentTypeSubmit,
+          isOpen: isAddDrawerOpen,
+          closeFn: closeAddDrawer,
+          title: "Add Document Type",
+          formId: "addDocumentTypeForm",
+          submitText: "Adding...",
+          saveText: "Save",
+          isEdit: false,
+        },
+        {
+          formMethods: editFormMethods,
+          onSubmit: onEditDocumentTypeSubmit,
+          isOpen: isEditDrawerOpen,
+          closeFn: closeEditDrawer,
+          title: "Edit Document Type",
+          formId: "editDocumentTypeForm",
+          submitText: "Saving...",
+          saveText: "Save",
+          isEdit: true,
+        },
+      ].map((drawerProps) => (
+        <Drawer
+          key={drawerProps.formId}
+          title={drawerProps.title}
+          isOpen={drawerProps.isOpen}
+          onClose={drawerProps.closeFn}
+          onRequestClose={drawerProps.closeFn}
+          width={600}
+          footer={
+            <div className="text-right w-full">
+              <Button
+                size="sm"
+                className="mr-2"
+                onClick={drawerProps.closeFn}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                form={drawerProps.formId}
+                type="submit"
+                loading={isSubmitting}
+                disabled={
+                  !drawerProps.formMethods.formState.isValid || isSubmitting
+                }
+              >
+                {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
+              </Button>
             </div>
-            <div className="w-[210px]"><br/>
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br/>
-              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+          }
+        >
+          <Form
+            id={drawerProps.formId}
+            onSubmit={drawerProps.formMethods.handleSubmit(
+              drawerProps.onSubmit as any
+            )}
+            className="flex flex-col gap-4 relative pb-28"
+          >
+            <FormItem
+              label="Document Type Name"
+              invalid={!!drawerProps.formMethods.formState.errors.name}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.name?.message as
+                  | string
+                  | undefined
+              }
+            >
+              <Controller
+                name="name"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Input {...field} placeholder="Enter Document Type Name" />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label="Status"
+              invalid={!!drawerProps.formMethods.formState.errors.status}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.status?.message as
+                  | string
+                  | undefined
+              }
+            >
+              <Controller
+                name="status"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Select
+                    placeholder="Select Status"
+                    options={statusOptions}
+                    value={
+                      statusOptions.find(
+                        (option) => option.value === field.value
+                      ) || null
+                    }
+                    onChange={(option) =>
+                      field.onChange(option ? option.value : "")
+                    }
+                  />
+                )}
+              />
+            </FormItem>
+          </Form>
+          {drawerProps.isEdit && editingDocumentType && (
+            <div className="absolute bottom-[14%] w-[92%]">
+              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                <div>
+                  <b className="mt-3 mb-3 font-semibold text-primary">
+                    Latest Update By:
+                  </b>
+                  <br />
+                  <p className="text-sm font-semibold">
+                    {editingDocumentType.updated_by_name || "N/A"}
+                  </p>
+                  <p>{editingDocumentType.updated_by_role || "N/A"}</p>
+                </div>
+                <div>
+                  <br />
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>
+                    {editingDocumentType.created_at
+                      ? new Date(editingDocumentType.created_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
+                      : "N/A"}
+                  </span>
+                  <br />
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>
+                    {editingDocumentType.updated_at
+                      ? new Date(editingDocumentType.updated_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </Drawer>
+          )}
+        </Drawer>
+      ))}
 
-      {/* Filter Drawer */}
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
+        width={400}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
@@ -969,15 +1086,30 @@ const Documentmaster = () => {
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          <FormItem label="Document Type">
+          <FormItem label="Document Type Name">
             <Controller
               name="filterNames"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Select document types..."
+                  placeholder="Select document type names..."
                   options={documentTypeNameOptions}
+                  value={field.value || []}
+                  onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Status">
+            <Controller
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select status..."
+                  options={statusOptions}
                   value={field.value || []}
                   onChange={(selectedVal) => field.onChange(selectedVal || [])}
                 />
@@ -987,38 +1119,73 @@ const Documentmaster = () => {
         </Form>
       </Drawer>
 
-      {/* Single Delete Confirmation */}
       <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
+
+      {/* <ConfirmDialog // Commented out single delete confirm dialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
         title="Delete Document Type"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setDocumentTypeToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setDocumentTypeToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setDocumentTypeToDelete(null);
-        }}
+        onClose={() => {setSingleDeleteConfirmOpen(false); setDocumentTypeToDelete(null);}}
+        onRequestClose={() => {setSingleDeleteConfirmOpen(false); setDocumentTypeToDelete(null);}}
+        onCancel={() => {setSingleDeleteConfirmOpen(false); setDocumentTypeToDelete(null);}}
         onConfirm={onConfirmSingleDelete}
-        // loading={isDeleting} // Add if your ConfirmDialog supports it
+        loading={isDeleting}
       >
-        <p>
-          Are you sure you want to delete the document type "
-          <strong>{documentTypeToDelete?.name}</strong>"?
-        </p>
-      </ConfirmDialog>
+        <p>Are you sure you want to delete the document type "<strong>{documentTypeToDelete?.name}</strong>"?</p>
+      </ConfirmDialog> */}
     </>
   );
 };
 
 export default Documentmaster;
-
-// Helper
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}

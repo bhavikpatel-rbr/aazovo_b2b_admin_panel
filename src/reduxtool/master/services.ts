@@ -2204,7 +2204,6 @@ export const deleteAllWallAsync = async (unitData: any) => {
 
 
 
-
 export const addInquiriesAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/inquiry`, unitData)
