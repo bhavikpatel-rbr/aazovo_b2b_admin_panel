@@ -1109,7 +1109,7 @@ const NumberSystems = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-              Numbering Systems
+              Numbering System
             </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New
@@ -1196,6 +1196,23 @@ const NumberSystems = () => {
         >
           {renderDrawerForm()}
         </Form>
+        {
+          editingItem &&
+          <div className="relative w-full">
+            <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+              <div className="">
+                <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                <p className="text-sm font-semibold">Tushar Joshi</p>
+                <p>System Admin</p>
+              </div>
+              <div className="w-[210px]">
+                <br />
+                <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+              </div>
+            </div>
+          </div>
+        }
       </Drawer>
 
       <Drawer

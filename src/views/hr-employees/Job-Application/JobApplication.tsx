@@ -78,14 +78,14 @@ const ActionColumn = ({ onView, onEdit, onDelete, onScheduleInterview, onAddJobL
   onView: () => void; onEdit: () => void; onDelete: () => void;
   onScheduleInterview: () => void; onAddJobLink: () => void;
 }) => {
-  const iconButtonClass = "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+  const iconButtonClass = "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
     <div className="flex items-center justify-end">
       <Tooltip title="View Details"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400")} role="button" onClick={onView}><TbEye /></div></Tooltip>
       <Tooltip title="Edit Application"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
       <Tooltip title="Delete Application"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400")} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
-      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-1 mr-2 cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"/>}>
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"/>}>
           <Dropdown.Item onClick={onScheduleInterview} className="flex items-center gap-2"><TbCalendarEvent size={18}/> <span className="text-xs">Schedule Interview</span></Dropdown.Item>
           <Dropdown.Item onClick={onAddJobLink} className="flex items-center gap-2"><TbLink size={18}/> <span className="text-xs">Add Job Link</span></Dropdown.Item>
       </Dropdown>

@@ -133,15 +133,15 @@ function exportPriceListToCsv(filename: string, rows: PriceListItem[]) {
 
 
 // --- ActionColumn, PriceListSearch, PriceListTableTools, PriceListTable, PriceListSelectedFooter ---
-const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => { /* ... as before ... */ return ( <div className="flex items-center justify-center"> <Tooltip title="Edit"> <div className={classNames("text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none", "hover:bg-gray-100 dark:hover:bg-gray-700", "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div> </Tooltip> <Tooltip title="Delete"> <div className={classNames("text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none", "hover:bg-gray-100 dark:hover:bg-gray-700", "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400")} role="button" onClick={onDelete}><TbTrash /></div> </Tooltip> </div> ); };
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => { /* ... as before ... */ return (<div className="flex items-center justify-center"> <Tooltip title="Edit"> <div className={classNames("text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none", "hover:bg-gray-100 dark:hover:bg-gray-700", "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div> </Tooltip> <Tooltip title="Delete"> <div className={classNames("text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none", "hover:bg-gray-100 dark:hover:bg-gray-700", "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400")} role="button" onClick={onDelete}><TbTrash /></div> </Tooltip> </div>); };
 type PriceListSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const PriceListSearch = React.forwardRef<HTMLInputElement, PriceListSearchProps>(({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search Product Name, ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
+const PriceListSearch = React.forwardRef<HTMLInputElement, PriceListSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 PriceListSearch.displayName = "PriceListSearch";
-const PriceListTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: ()=> void; }) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> <div className="flex-grow"><PriceListSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"> <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button><Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+const PriceListTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; }) => (<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> <div className="flex-grow"><PriceListSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"> <Button title="Clear Filters" icon={<TbReload />} onClick={() => onClearFilters()}></Button><Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div>);
 type PriceListTableProps = { columns: ColumnDef<PriceListItem>[]; data: PriceListItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: PriceListItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: PriceListItem) => void; onAllRowSelect: (checked: boolean, rows: Row<PriceListItem>[]) => void; };
-const PriceListTable = (props: PriceListTableProps) => ( <DataTable selectable columns={props.columns} data={props.data} noData={!props.loading && props.data.length === 0} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} /> );
+const PriceListTable = (props: PriceListTableProps) => (<DataTable selectable columns={props.columns} data={props.data} noData={!props.loading && props.data.length === 0} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} />);
 type PriceListSelectedFooterProps = { selectedItems: PriceListItem[]; onDeleteSelected: () => void; isDeleting: boolean; }; // Added isDeleting
-const PriceListSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: PriceListSelectedFooterProps) => { const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false); if (selectedItems.length === 0) return null; return ( <> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Item{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmationOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Item(s)`} onClose={() => setDeleteConfirmationOpen(false)} onRequestClose={() => setDeleteConfirmationOpen(false)} onCancel={() => setDeleteConfirmationOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmationOpen(false); }}> <p>Are you sure you want to delete selected item(s)?</p> </ConfirmDialog> </> ); };
+const PriceListSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: PriceListSelectedFooterProps) => { const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false); if (selectedItems.length === 0) return null; return (<> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Item{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmationOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Item(s)`} onClose={() => setDeleteConfirmationOpen(false)} onRequestClose={() => setDeleteConfirmationOpen(false)} onCancel={() => setDeleteConfirmationOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmationOpen(false); }}> <p>Are you sure you want to delete selected item(s)?</p> </ConfirmDialog> </>); };
 
 // --- Main PriceList Component ---
 const PriceList = () => {
@@ -152,7 +152,7 @@ const PriceList = () => {
     productsMasterData = [], // <<< --- ADDED: Fetched products for dropdowns
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector); // Ensure masterSelector provides productsMasterData
-console.log("productsMasterData",productsMasterData);
+  console.log("productsMasterData", productsMasterData);
 
   // Prepare options for Product Name Select in forms and filters
   const productSelectOptions = useMemo(() => {
@@ -200,7 +200,8 @@ console.log("productsMasterData",productsMasterData);
       await dispatch(addPriceListAction(apiPayload)).unwrap();
       toast.push(<Notification title="Price List Item Added" type="success">{`Item for "${productNameForNotification}" added.`}</Notification>);
       closeAddDrawer(); dispatch(getPriceListAction());
-    } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error.message || "Could not add item."}</Notification>);
+    } catch (error: any) {
+      toast.push(<Notification title="Failed to Add" type="danger">{error.message || "Could not add item."}</Notification>);
     } finally { setIsSubmitting(false); }
   };
 
@@ -224,15 +225,19 @@ console.log("productsMasterData",productsMasterData);
       await dispatch(editPriceListAction(apiPayload)).unwrap();
       toast.push(<Notification title="Price List Item Updated" type="success">{`Item for "${productNameForNotification}" updated.`}</Notification>);
       closeEditDrawer(); dispatch(getPriceListAction());
-    } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message || "Could not update."}</Notification>);
+    } catch (error: any) {
+      toast.push(<Notification title="Failed to Update" type="danger">{error.message || "Could not update."}</Notification>);
     } finally { setIsSubmitting(false); }
   };
 
   const handleDeleteClick = (item: PriceListItem) => { if (item.id === undefined) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
-  const onConfirmSingleDelete = async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deletePriceListAction({ id: itemToDelete.id })).unwrap(); // Pass object with id
+  const onConfirmSingleDelete = async () => {
+    if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try {
+      await dispatch(deletePriceListAction({ id: itemToDelete.id })).unwrap(); // Pass object with id
       toast.push(<Notification title="Item Deleted" type="success">{`"${itemToDelete.product.name}" deleted.`}</Notification>);
       setSelectedItems((prev) => prev.filter((i) => i.id !== itemToDelete!.id)); dispatch(getPriceListAction());
-    } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger">{error.message || `Could not delete.`}</Notification>);
+    } catch (error: any) {
+      toast.push(<Notification title="Delete Failed" type="danger">{error.message || `Could not delete.`}</Notification>);
     } finally { setIsDeleting(false); setItemToDelete(null); }
   };
   const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id)).join(","); try { await dispatch(deleteAllPriceListAction({ ids: idsToDelete })).unwrap(); toast.push(<Notification title="Selected Deleted" type="success">{`${selectedItems.length} item(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger">{error.message || "Failed to delete."}</Notification>); } finally { setIsDeleting(false); } };
@@ -244,7 +249,7 @@ console.log("productsMasterData",productsMasterData);
 
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<PriceListItem[]>([]);
-  
+
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: PriceListItem[] = Array.isArray(priceListData) ? priceListData : [];
     let processedData: PriceListItem[] = cloneDeep(sourceData);
@@ -258,11 +263,11 @@ console.log("productsMasterData",productsMasterData);
         else { aValue = String(a[key as keyof PriceListItem] ?? ""); bValue = String(b[key as keyof PriceListItem] ?? ""); }
         // Convert to number if key suggests numeric comparison
         if (['price', 'base_price', 'gst_price', 'usd_rate', 'usd', 'expance', 'interest', 'nlc', 'margin', 'sales_price'].includes(key)) {
-            const numA = parseFloat(aValue);
-            const numB = parseFloat(bValue);
-            if (!isNaN(numA) && !isNaN(numB)) {
-                return order === 'asc' ? numA - numB : numB - numA;
-            }
+          const numA = parseFloat(aValue);
+          const numB = parseFloat(bValue);
+          if (!isNaN(numA) && !isNaN(numB)) {
+            return order === 'asc' ? numA - numB : numB - numA;
+          }
         }
         return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       });
@@ -280,14 +285,14 @@ console.log("productsMasterData",productsMasterData);
   const handleRowSelect = useCallback((checked: boolean, row: PriceListItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<PriceListItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
-  const columns: ColumnDef<PriceListItem>[] = useMemo( () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 70 },
-      { header: "Product Name", accessorFn: (row) => row.product?.name, id: "product.name", enableSorting: true, size: 200, cell: props => props.row.original.product?.name || "N/A" },
-      { header: "Price Breakup", id: "priceBreakup", size: 180, cell: ({row}) => { const { price, base_price, gst_price, usd } = row.original; return (<div className="flex flex-col text-xs"><span>Price: {price}</span><span>Base: {base_price}</span><span>GST: {gst_price}</span><span>USD: {usd}</span></div>); }},
-      { header: "Cost Split", id: "costSplit", size: 180, cell: ({row}) => { const { expance, margin, interest, nlc } = row.original; return (<div className="flex flex-col text-xs"><span>Expense: {expance}</span><span>Margin: {margin}</span><span>Interest: {interest}</span><span>NLC: {nlc}</span></div>); }},
-      { header: "Sales Price", accessorKey: "sales_price", enableSorting: true, size: 110 },
-      { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
-    ], [openEditDrawer, handleDeleteClick]
+  const columns: ColumnDef<PriceListItem>[] = useMemo(() => [
+    { header: "ID", accessorKey: "id", enableSorting: true, size: 70 },
+    { header: "Product Name", accessorFn: (row) => row.product?.name, id: "product.name", enableSorting: true, size: 200, cell: props => props.row.original.product?.name || "N/A" },
+    { header: "Price Breakup", id: "priceBreakup", size: 180, cell: ({ row }) => { const { price, base_price, gst_price, usd } = row.original; return (<div className="flex flex-col text-xs"><span>Price: {price}</span><span>Base: {base_price}</span><span>GST: {gst_price}</span><span>USD: {usd}</span></div>); } },
+    { header: "Cost Split", id: "costSplit", size: 180, cell: ({ row }) => { const { expance, margin, interest, nlc } = row.original; return (<div className="flex flex-col text-xs"><span>Expense: {expance}</span><span>Margin: {margin}</span><span>Interest: {interest}</span><span>NLC: {nlc}</span></div>); } },
+    { header: "Sales Price", accessorKey: "sales_price", enableSorting: true, size: 120 },
+    { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+  ], [openEditDrawer, handleDeleteClick]
   );
 
   const formFieldsConfig: { name: keyof PriceListFormData; label: string; type?: "text" | "number" | "select"; options?: SelectOption[]; }[] = [
@@ -296,30 +301,30 @@ console.log("productsMasterData",productsMasterData);
     { name: "expance", label: "Expenses", type: "text" }, { name: "margin", label: "Margin", type: "text" },
   ];
 
-  const renderFormField = ( fieldConfig: (typeof formFieldsConfig)[0], formControl: any ) => { /* ... as before ... */ const commonProps = { name: fieldConfig.name, control: formControl }; const placeholderText = `Enter ${fieldConfig.label}`; if (fieldConfig.type === "select") { return ( <Controller {...commonProps} render={({ field }) => ( <Select placeholder={`Select ${fieldConfig.label}`} options={fieldConfig.options || []} value={ fieldConfig.options?.find((opt) => opt.value === field.value) || null } onChange={(option) => field.onChange(option ? option.value : "")} /> )} /> ); } return ( <Controller {...commonProps} render={({ field }) => ( <Input {...field} type={fieldConfig.type || "text"} placeholder={placeholderText} /> )} /> ); };
+  const renderFormField = (fieldConfig: (typeof formFieldsConfig)[0], formControl: any) => { /* ... as before ... */ const commonProps = { name: fieldConfig.name, control: formControl }; const placeholderText = `Enter ${fieldConfig.label}`; if (fieldConfig.type === "select") { return (<Controller {...commonProps} render={({ field }) => (<Select placeholder={`Select ${fieldConfig.label}`} options={fieldConfig.options || []} value={fieldConfig.options?.find((opt) => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : "")} />)} />); } return (<Controller {...commonProps} render={({ field }) => (<Input {...field} type={fieldConfig.type || "text"} placeholder={placeholderText} />)} />); };
 
   return (
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"> <h5 className="mb-2 sm:mb-0">Price List</h5> 
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"> <h5 className="mb-2 sm:mb-0">Price List</h5>
             <div>
               <Link to='/task/task-list/create'>
-              <Button
-                className="mr-2"
-                icon={<TbUser />}
-                clickFeedback={false}
-                customColorClass={({ active, unclickable }) =>
+                <Button
+                  className="mr-2"
+                  icon={<TbUser />}
+                  clickFeedback={false}
+                  customColorClass={({ active, unclickable }) =>
                     classNames(
-                        'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
-                        active ? 'bg-gray-200' : 'bg-gray-100',
-                        unclickable && 'opacity-50 cursor-not-allowed',
-                        !active && !unclickable && 'hover:bg-gray-200',
+                      'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
+                      active ? 'bg-gray-200' : 'bg-gray-100',
+                      unclickable && 'opacity-50 cursor-not-allowed',
+                      !active && !unclickable && 'hover:bg-gray-200',
                     )
-                }
-              >Assigned to Task</Button>
+                  }
+                >Assigned to Task</Button>
               </Link>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button> 
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
             </div>
           </div>
           <PriceListTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters} />
@@ -327,8 +332,74 @@ console.log("productsMasterData",productsMasterData);
         </AdaptiveCard>
       </Container>
       <PriceListSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} /> {/* Passed isDeleting */}
-      {[ { title: "Add Price List Item", isOpen: isAddDrawerOpen, closeFn: closeAddDrawer, formId: "addPriceListForm", methods: addFormMethods, onSubmit: onAddPriceListSubmit, submitText: "Adding...", saveText: "Save", }, { title: "Edit Price List Item", isOpen: isEditDrawerOpen, closeFn: closeEditDrawer, formId: "editPriceListForm", methods: editFormMethods, onSubmit: onEditPriceListSubmit, submitText: "Saving...", saveText: "Save Changes", } ].map((drawerProps) => ( <Drawer key={drawerProps.formId} title={drawerProps.title} isOpen={drawerProps.isOpen} onClose={drawerProps.closeFn} onRequestClose={drawerProps.closeFn} width={600} footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form={drawerProps.formId} type="submit" loading={isSubmitting} disabled={!drawerProps.methods.formState.isValid || isSubmitting}>{isSubmitting ? drawerProps.submitText : drawerProps.saveText}</Button> </div> } > <Form id={drawerProps.formId} onSubmit={drawerProps.methods.handleSubmit(drawerProps.onSubmit as any)} className="flex flex-col gap-4"> {formFieldsConfig.map((fConfig) => ( <FormItem key={fConfig.name} label={fConfig.label} invalid={!!drawerProps.methods.formState.errors[fConfig.name]} errorMessage={ drawerProps.methods.formState.errors[fConfig.name]?.message as string | undefined } > {renderFormField(fConfig, drawerProps.methods.control)} </FormItem> ))} </Form>{" "} </Drawer> ))}
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawerCb} onRequestClose={closeFilterDrawerCb} width={400} footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button> <Button size="sm" variant="solid" form="filterPriceListForm" type="submit">Apply</Button> </div> } > <Form id="filterPriceListForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4"> <FormItem label="Product Name"> <Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => ( <Select isMulti placeholder="Select product names..." options={productSelectOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )}/> </FormItem> </Form> </Drawer>
+      {[
+        {
+          title: "Add Price List",
+          isOpen: isAddDrawerOpen, closeFn: closeAddDrawer,
+          formId: "addPriceListForm",
+          methods: addFormMethods,
+          onSubmit: onAddPriceListSubmit,
+          submitText: "Adding...", saveText: "Save",
+        },
+        {
+          title: "Edit Price List",
+          isOpen: isEditDrawerOpen,
+          closeFn: closeEditDrawer,
+          formId: "editPriceListForm",
+          methods: editFormMethods,
+          onSubmit: onEditPriceListSubmit,
+          submitText: "Saving...",
+          saveText: "Save",
+        }
+      ].map((drawerProps) => (
+        <Drawer
+          key={drawerProps.formId}
+          title={drawerProps.title}
+          isOpen={drawerProps.isOpen}
+          onClose={drawerProps.closeFn}
+          onRequestClose={drawerProps.closeFn}
+          width={600}
+          footer={
+            <div className="text-right w-full">
+              <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button>
+              <Button size="sm" variant="solid" form={drawerProps.formId} type="submit" loading={isSubmitting} disabled={!drawerProps.methods.formState.isValid || isSubmitting}>
+                {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
+              </Button>
+            </div>}
+        >
+          <Form
+            id={drawerProps.formId}
+            onSubmit={drawerProps.methods.handleSubmit(drawerProps.onSubmit as any)}
+            className="flex flex-col gap-4">
+            {formFieldsConfig.map((fConfig) => (
+              <FormItem
+                key={fConfig.name}
+                label={fConfig.label}
+                invalid={!!drawerProps.methods.formState.errors[fConfig.name]}
+                errorMessage={
+                  drawerProps.methods.formState.errors[fConfig.name]?.message as string | undefined
+                }
+              >
+                {renderFormField(fConfig, drawerProps.methods.control)}
+              </FormItem>
+            ))}
+          </Form>
+          <div className="relative bottom-[0%] w-full">
+            <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+              <div className="">
+                <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                <p className="text-sm font-semibold">Tushar Joshi</p>
+                <p>System Admin</p>
+              </div>
+              <div className=""><br />
+                <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+              </div>
+            </div>
+          </div>
+          {" "}
+        </Drawer>))}
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawerCb} onRequestClose={closeFilterDrawerCb} width={400} footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button> <Button size="sm" variant="solid" form="filterPriceListForm" type="submit">Apply</Button> </div>} > <Form id="filterPriceListForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4"> <FormItem label="Product Name"> <Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select product names..." options={productSelectOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /> </FormItem> </Form> </Drawer>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Price List Item" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} > <p>Are you sure you want to delete item for "<strong>{itemToDelete?.product.name}</strong>"?</p> </ConfirmDialog>
     </>
   );

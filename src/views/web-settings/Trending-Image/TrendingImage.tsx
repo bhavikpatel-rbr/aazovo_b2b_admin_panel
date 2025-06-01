@@ -160,12 +160,12 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
 ItemSearch.displayName = 'ItemSearch';
 
 // --- TableTools Component ---
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters : ()=> void; searchPlaceholder: string }
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; searchPlaceholder: string }
 const ItemTableTools = ({ onSearchChange, onFilter, onExport, searchPlaceholder, onClearFilters }: ItemTableToolsProps) => (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
         <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} placeholder={searchPlaceholder} /></div>
         <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-            <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
+            <Button title="Clear Filters" icon={<TbReload />} onClick={() => onClearFilters()}></Button>
             <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
             <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
         </div>
@@ -207,11 +207,11 @@ const TrendingImagesSelectedFooter = ({ selectedItems, onDeleteSelected }: Trend
 const TrendingImages = () => {
     const dispatch = useAppDispatch();
 
-const {
-    trendingImagesData = [],
-    productsMasterData = [], // <<< --- ADDED: Fetched products for dropdowns
-    status: masterLoadingStatus = 'idle'
-} = useSelector(masterSelector);
+    const {
+        trendingImagesData = [],
+        productsMasterData = [], // <<< --- ADDED: Fetched products for dropdowns
+        status: masterLoadingStatus = 'idle'
+    } = useSelector(masterSelector);
 
     const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -228,18 +228,18 @@ const {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterPageNames: [] });
 
-  useEffect(() => {
-    dispatch(getTrendingImagesAction());
-    dispatch(getProductsAction()); // Fetch products
-}, [dispatch]);
+    useEffect(() => {
+        dispatch(getTrendingImagesAction());
+        dispatch(getProductsAction()); // Fetch products
+    }, [dispatch]);
 
-  const productSelectOptions = useMemo(() => {
-    if (!Array.isArray(productsMasterData)) return [];
-    return productsMasterData.map((p: TrendingPageImageItem) => ({
-      value: String(p.id), // Use product ID as value
-      label: p.name,
-    }));
-  }, [productsMasterData]);
+    const productSelectOptions = useMemo(() => {
+        if (!Array.isArray(productsMasterData)) return [];
+        return productsMasterData.map((p: TrendingPageImageItem) => ({
+            value: String(p.id), // Use product ID as value
+            label: p.name,
+        }));
+    }, [productsMasterData]);
 
     const addFormMethods = useForm<TrendingPageImageFormData>({
         resolver: zodResolver(trendingPageImageFormSchema),
@@ -262,19 +262,19 @@ const {
     }, [addFormMethods]);
     const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
-  const openEditDrawer = useCallback((item: TrendingPageImageItem) => {
-    setEditingItem(item);
-    console.log('Editing Item:', item);
-    // Parse product_ids string to array for the form's trendingProducts field
-    const selectedProductIds = item.product_ids
-        ? item.product_ids.split(',').map((id :any) => id.trim()).filter(id => id) // Ensure IDs are trimmed and non-empty
-        : [];
-    editFormMethods.reset({
-        page_name: item.page_name,
-        trendingProducts: selectedProductIds, // Use the parsed array of string IDs
-    });
-    setIsEditDrawerOpen(true);
-}, [editFormMethods]);
+    const openEditDrawer = useCallback((item: TrendingPageImageItem) => {
+        setEditingItem(item);
+        console.log('Editing Item:', item);
+        // Parse product_ids string to array for the form's trendingProducts field
+        const selectedProductIds = item.product_ids
+            ? item.product_ids.split(',').map((id: any) => id.trim()).filter(id => id) // Ensure IDs are trimmed and non-empty
+            : [];
+        editFormMethods.reset({
+            page_name: item.page_name,
+            trendingProducts: selectedProductIds, // Use the parsed array of string IDs
+        });
+        setIsEditDrawerOpen(true);
+    }, [editFormMethods]);
     const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
     const onAddItemSubmit = async (data: TrendingPageImageFormData) => {
@@ -303,16 +303,16 @@ const {
     };
 
     useEffect(() => {
-    if (productsMasterData && Array.isArray(productsMasterData)) { // Access the nested 'data' array
-        const options = productsMasterData.map((product: any) => ({
-            value: String(product.id), // Using product ID as the value
-            label: `${product.name} ${product.sku_code ? `(${product.sku_code})` : ''}`.trim(),
-        }));
-        setProductOptions(options);
-    } else {
-        setProductOptions([]);
-    }
-}, [productsMasterData]); // This effect runs when productsMasterData from Redux changes
+        if (productsMasterData && Array.isArray(productsMasterData)) { // Access the nested 'data' array
+            const options = productsMasterData.map((product: any) => ({
+                value: String(product.id), // Using product ID as the value
+                label: `${product.name} ${product.sku_code ? `(${product.sku_code})` : ''}`.trim(),
+            }));
+            setProductOptions(options);
+        } else {
+            setProductOptions([]);
+        }
+    }, [productsMasterData]); // This effect runs when productsMasterData from Redux changes
 
     const onEditItemSubmit = async (data: TrendingPageImageFormData) => {
         if (!editingItem) return;
@@ -488,18 +488,19 @@ const {
 
     const columns: ColumnDef<TrendingPageImageItem>[] = useMemo(() => [
         { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 250, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
-        { 
-            header: 'Date Created', 
-            accessorKey: 'created_at', 
-            enableSorting: true, 
-            size: 180, 
-            cell: (props) => { 
+        {
+            header: 'Date Created',
+            accessorKey: 'created_at',
+            enableSorting: true,
+            size: 180,
+            cell: (props) => {
                 return (
                     `${new Date(props.getValue<string>()).getDate()} ${new Date(props.getValue<string>()).toLocaleString("en-US", { month: "long" })}, 
                     ${new Date(props.getValue<string>()).getFullYear()},
-                    ${new Date(props.getValue<string>()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                    ${new Date(props.getValue<string>()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
                 )
-            } },
+            }
+        },
         { header: 'Actions', id: 'action', meta: { HeaderClass: 'text-center', cellClass: 'text-center' }, size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
     ], [openEditDrawer, handleDeleteClick]);
 
@@ -509,20 +510,20 @@ const {
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                         <h5 className="mb-2 sm:mb-0">Trending Images</h5>
-                    <div>
+                        <div>
                             <Link to='/task/task-list/create'>
                                 <Button
-                                className="mr-2"
-                                icon={<TbUser />}
-                                clickFeedback={false}
-                                customColorClass={({ active, unclickable }) =>
-                                    classNames(
-                                        'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
-                                        active ? 'bg-gray-200' : 'bg-gray-100',
-                                        unclickable && 'opacity-50 cursor-not-allowed',
-                                        !active && !unclickable && 'hover:bg-gray-200',
-                                    )
-                                }
+                                    className="mr-2"
+                                    icon={<TbUser />}
+                                    clickFeedback={false}
+                                    customColorClass={({ active, unclickable }) =>
+                                        classNames(
+                                            'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
+                                            active ? 'bg-gray-200' : 'bg-gray-100',
+                                            unclickable && 'opacity-50 cursor-not-allowed',
+                                            !active && !unclickable && 'hover:bg-gray-200',
+                                        )
+                                    }
                                 >Assigned to Task</Button>
                             </Link>
                             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
@@ -544,7 +545,7 @@ const {
 
             <TrendingImagesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} />
 
-            <Drawer title="Add Trending Image Group" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer}
+            <Drawer title="Add Trending Image" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer}
                 footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="addPageImageForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Adding...' : 'Save'}</Button></div>}>
                 <Form id="addPageImageForm" onSubmit={addFormMethods.handleSubmit(onAddItemSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Page Name" invalid={!!addFormMethods.formState.errors.page_name} errorMessage={addFormMethods.formState.errors.page_name?.message}>
@@ -556,8 +557,8 @@ const {
                 </Form>
             </Drawer>
 
-            <Drawer title="Edit Trending Image Group" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer}
-                footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="editPageImageForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button></div>}>
+            <Drawer title="Edit Trending Image" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer}
+                footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="editPageImageForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</Button></div>}>
                 <Form id="editPageImageForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Page Name" invalid={!!editFormMethods.formState.errors.page_name} errorMessage={editFormMethods.formState.errors.page_name?.message}>
                         <Controller name="page_name" control={editFormMethods.control} render={({ field }) => (<Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
@@ -566,13 +567,26 @@ const {
                         <Controller name="trendingProducts" control={editFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select trending products..." options={productOptions} value={productOptions.filter(opt => field.value?.includes(opt.value))} onChange={(selectedVal) => field.onChange(selectedVal ? selectedVal.map(opt => opt.value) : [])} />)} />
                     </FormItem>
                 </Form>
+                <div className="absolute bottom-[14%] w-[88%]">
+                    <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                        <div className="">
+                            <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                            <p className="text-sm font-semibold">Tushar Joshi</p>
+                            <p>System Admin</p>
+                        </div>
+                        <div className="w-[210px]"><br />
+                            <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                            <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+                        </div>
+                    </div>
+                </div>
             </Drawer>
 
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
                 footer={<div className="text-right w-full"><div><Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Clear</Button><Button size="sm" variant="solid" form="filterItemsForm" type="submit">Apply</Button></div></div>}>
                 <Form id="filterItemsForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Page Name">
-                        <Controller name="filterPageNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select page name(s)..." options={pageNameOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />)} />
+                        <Controller name="filterPageNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select page names..." options={pageNameOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />)} />
                     </FormItem>
                 </Form>
             </Drawer>

@@ -187,7 +187,7 @@ const ActionColumn = ({
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit">
         <div
           className={classNames(
@@ -849,7 +849,7 @@ const TrendingCarousel = () => {
       {
         header: "Actions",
         id: "action", // Important for non-accessor columns
-        meta: { headerClass: "text-center", cellClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
         size: 120,
         cell: (props) => (
           <ActionColumn
@@ -937,7 +937,7 @@ const TrendingCarousel = () => {
 
       {/* Add Drawer */}
       <Drawer
-        title="Add Trending Carousel Item"
+        title="Add Trending Carousel"
         isOpen={isAddDrawerOpen}
         onClose={closeAddDrawer}
         onRequestClose={closeAddDrawer} // For accessibility (e.g., pressing Esc)
@@ -1032,7 +1032,7 @@ const TrendingCarousel = () => {
 
       {/* Edit Drawer */}
       <Drawer
-        title="Edit Trending Carousel Item"
+        title="Edit Trending Carousel"
         isOpen={isEditDrawerOpen}
         onClose={closeEditDrawer}
         onRequestClose={closeEditDrawer}
@@ -1061,7 +1061,7 @@ const TrendingCarousel = () => {
                 !formMethods.formState.isValid
               }
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }
@@ -1140,13 +1140,27 @@ const TrendingCarousel = () => {
             />
           </FormItem>
         </Form>
+        <div className="relative w-full">
+            <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+              <div className="">
+                <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                <p className="text-sm font-semibold">Tushar Joshi</p>
+                <p>System Admin</p>
+              </div>
+              <div className="w-[210px]">
+                <br />
+                <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+              </div>
+            </div>
+          </div>
       </Drawer>
 
       {/* Single Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
-        title="Delete Carousel Item"
+        title="Delete Carousel"
         onClose={() => {
           setSingleDeleteConfirmOpen(false);
           setItemToDelete(null);
