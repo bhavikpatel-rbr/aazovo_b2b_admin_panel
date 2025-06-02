@@ -614,7 +614,7 @@ const TrendingCarousel = () => {
                     Assigned to Task
                 </Button>
                 </Link>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "loading" || isSubmitting || isDeleting}> Add New </Button>
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "idle" || isSubmitting || isDeleting}> Add New </Button>
             </div>
           </div>
           <ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchPlaceholder="Quick Search..." onClearSearch={handleClearSearch} />
@@ -622,7 +622,7 @@ const TrendingCarousel = () => {
             <DataTable
               columns={columns}
               data={pageData}
-              loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting}
+              loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting}
               pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectable
               checkboxChecked={(row: TrendingCarouselItemData) => selectedItems.some((selected) => selected.id === row.id)}
@@ -636,7 +636,7 @@ const TrendingCarousel = () => {
         </AdaptiveCard>
       </Container>
 
-      <TrendingCarouselSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting || masterLoadingStatus === "loading"} />
+      <TrendingCarouselSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting || masterLoadingStatus === "idle"} />
 
       <Drawer title="Add Trending Carousel" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={600}
         footer={

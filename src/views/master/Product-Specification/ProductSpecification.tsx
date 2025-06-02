@@ -1138,12 +1138,12 @@ const ProductSpecification = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Product Specifications</h5>
-            {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented out>Add New</Button> */}
+            {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "idle" || isSubmitting || isDeleting /* isDeleting commented out>Add New</Button> */}
             <Button
               variant="solid"
               icon={<TbPlus />}
               onClick={openAddDrawer}
-              disabled={masterLoadingStatus === "loading" || isSubmitting}
+              disabled={masterLoadingStatus === "idle" || isSubmitting}
             >
               Add New
             </Button>
@@ -1158,8 +1158,8 @@ const ProductSpecification = () => {
             <DataTable
               columns={columns}
               data={pageData}
-              // loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented out */}
-              loading={masterLoadingStatus === "loading" || isSubmitting}
+              // loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting /* isDeleting commented out */}
+              loading={masterLoadingStatus === "idle" || isSubmitting}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
@@ -1177,7 +1177,7 @@ const ProductSpecification = () => {
         </AdaptiveCard>
       </Container>
 
-      {/* <ItemSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} disabled={isDeleting || masterLoadingStatus === "loading"}/> // Commented out */}
+      {/* <ItemSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} disabled={isDeleting || masterLoadingStatus === "idle"}/> // Commented out */}
 
       {[
         {
@@ -1364,7 +1364,7 @@ const ProductSpecification = () => {
                     }
                     onChange={(opt) => field.onChange(opt?.value)}
                     isLoading={
-                      masterLoadingStatus === "loading" &&
+                      masterLoadingStatus === "idle" &&
                       countryOptions.length === 0
                     }
                   />

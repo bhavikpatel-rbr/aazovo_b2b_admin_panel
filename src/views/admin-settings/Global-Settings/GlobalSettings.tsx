@@ -226,7 +226,7 @@ const GlobalSettings = () => {
   //     if (existingSettings && settingsStatus === 'succeeded') {
   //         formMethods.reset(existingSettings);
   //         setIsLoading(false);
-  //     } else if (settingsStatus === 'loading') {
+  //     } else if (settingsStatus === "idle") {
   //         setIsLoading(true);
   //     }
   // }, [existingSettings, settingsStatus, formMethods]);

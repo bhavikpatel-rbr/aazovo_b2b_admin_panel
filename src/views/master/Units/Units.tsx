@@ -676,7 +676,7 @@ const Units = () => {
             <UnitsTable
               columns={columns}
               data={pageData}
-              loading={masterLoadingStatus === "loading" || isSubmitting}
+              loading={masterLoadingStatus === "idle" || isSubmitting}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,

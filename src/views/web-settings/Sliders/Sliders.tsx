@@ -748,7 +748,7 @@ const Sliders = () => {
     ], [openImageViewer] // Removed mappedSliders as it's part of the outer scope's useMemo
   );
 
-  const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isDeleting;
+  const tableLoading = masterLoadingStatus === "idle" || isSubmitting || isDeleting;
 
   const renderFormFields = (formMethodsInstance: typeof addFormMethods | typeof editFormMethods, isEditMode: boolean, currentSlider?: SliderItem | null) => (
     <>
