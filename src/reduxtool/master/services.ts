@@ -2224,9 +2224,73 @@ export const editInquiriesAsync = async (unitData: any) => {
 
 export const submitResponseAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/export-mapping`, unitData)
+    const response = await axiosInstance.post(`${config.apiURL}/other/export_mapping/add`, unitData)
     return response
   } catch (err) {
     return isAxiosError(err)
+  }
+}
+
+
+export const getFormBuilderAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/form_builder`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addFormBuilderAsync = async (formData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/form_builder`, formData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editFormBuilderAsync = async (formData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/form_builder/${formData?.id}`, { _method: "PUT", ...formData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteFormBuilderAsync = async (formData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/form_builder/${formData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllFormBuilderAsync = async (formData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/form_builder/delete`, formData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const changeFormBuilderStatusAsync = async (data: { id: string | number; status: string }) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/form_builder/change-status`, data);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const cloneFormBuilderAsync = async (formData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/form_builder/clone`, formData);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
   }
 }
