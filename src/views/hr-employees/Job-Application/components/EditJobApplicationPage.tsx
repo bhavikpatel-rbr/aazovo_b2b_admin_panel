@@ -569,7 +569,7 @@ const EditJobApplicationPage = () => {
                     <div className="mt-8 flex justify-end gap-2">
                         <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
                         <Button type="submit" variant="solid" loading={isSubmitting} disabled={isSubmitting}>
-                            Save Changes
+                            Save
                         </Button>
                     </div>
                 </form>

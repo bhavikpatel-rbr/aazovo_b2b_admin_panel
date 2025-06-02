@@ -1027,7 +1027,7 @@ const ChangeLogListing = () => {
                   ? "Saving..."
                   : "Adding..."
                 : editingItem
-                  ? "Save Changes"
+                  ? "Save"
                   : "Save"}
             </Button>
           </div>

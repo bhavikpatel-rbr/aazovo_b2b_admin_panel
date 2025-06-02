@@ -1292,7 +1292,7 @@ const FormBuilder = () => {
                     ? "Saving..."
                     : "Creating..."
                   : editingItem
-                  ? "Save Changes"
+                  ? "Save"
                   : "Create Form"}
               </Button>
             </div>

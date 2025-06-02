@@ -564,7 +564,7 @@ const GlobalSettings = () => {
             isSubmitting
           } // Disable if no changes or invalid
         >
-          {isSubmitting ? "Saving..." : "Save Changes"}
+          {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </StickyFooter>
     </>

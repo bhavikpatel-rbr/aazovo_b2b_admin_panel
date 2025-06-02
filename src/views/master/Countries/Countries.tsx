@@ -1,17 +1,17 @@
+// src/views/your-path/Countries.tsx
+
 import React, {
   useState,
   useMemo,
   useCallback,
   Ref,
   useEffect,
-  lazy,
-  Suspense,
 } from "react";
-// import { Link, useNavigate } from 'react-router-dom'; // Link/useNavigate not used in this pattern
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -22,46 +22,45 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
+// import StickyFooter from "@/components/shared/StickyFooter"; // Not needed as CountrySelectedFooter is commented out
 import DebouceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select"; // For Select component in drawers
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
-// import { CSVLink } from 'react-csv'; // Using custom export
+import Select from "@/components/ui/Select";
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Added Tag
 
 // Icons
 import {
   TbPencil,
   TbTrash,
-  TbChecks,
+  // TbChecks, // Not needed as CountrySelectedFooter is commented out
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
   TbReload,
-  // TbCloudDownload, // Not used if custom export is preferred
 } from "react-icons/tb";
 
 // Types
 import type {
   OnSortParam,
   ColumnDef,
-  Row,
+  // Row, // Not needed as onAllRowSelect is commented out
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
 import {
   getCountriesAction,
-  addCountryAction, // Ensure these actions exist or are created
-  editCountryAction, // Ensure these actions exist or are created
-  deleteCountryAction, // Ensure these actions exist or are created
-  deleteAllCountriesAction,
-  getContinentsAction, // Ensure these actions exist or are created
-} from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
+  addCountryAction,
+  editCountryAction,
+  deleteCountryAction,
+  // deleteAllCountriesAction, // Commented out
+  getContinentsAction,
+  submitExportReasonAction, // Placeholder for future action
+} from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-// Type for Continent options in Select
-type ContinentOption = {
+// Type for Continent & Status options in Select
+type SelectOption = {
   value: string | number;
   label: string;
 };
@@ -69,16 +68,26 @@ type ContinentOption = {
 // --- Define CountryItem Type ---
 export type CountryItem = {
   id: string | number;
-  continent_id: string | number; // Changed to allow number
+  continent_id: string | number;
   name: string;
   iso: string;
   phonecode: string;
+  status: 'Active' | 'Inactive'; // Added status field
   continent?: {
-    // Optional continent object from backend
     id: string | number;
     name: string;
   };
+  created_at?: string;
+  updated_at?: string;
+  updated_by_name?: string;
+  updated_by_role?: string;
 };
+
+// --- Status Options ---
+const statusOptions: SelectOption[] = [
+  { value: 'Active', label: 'Active' },
+  { value: 'Inactive', label: 'Inactive' },
+];
 
 // --- Zod Schema for Add/Edit Country Form ---
 const countryFormSchema = z.object({
@@ -98,6 +107,7 @@ const countryFormSchema = z.object({
     .string()
     .min(1, "Phone code is required.")
     .max(10, "Phone code cannot exceed 10 characters."),
+  status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }), // Added status
 });
 type CountryFormData = z.infer<typeof countryFormSchema>;
 
@@ -114,8 +124,18 @@ const filterFormSchema = z.object({
   filterIsos: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
+  filterStatus: z // Added status filter
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
+
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS_COUNTRY = [
@@ -124,18 +144,30 @@ const CSV_HEADERS_COUNTRY = [
   "Country Name",
   "ISO Code",
   "Phone Code",
+  "Status", // Added Status
+  "Updated By",
+  "Updated Role",
+  "Updated At",
 ];
-const CSV_KEYS_COUNTRY_EXPORT = [
+
+type CountryExportItem = Omit<CountryItem, "continent_id" | "continent" | "created_at" | "updated_at"> & {
+  continentName?: string;
+  status: 'Active' | 'Inactive'; // Ensure status is part of export
+  updated_at_formatted?: string;
+};
+
+const CSV_KEYS_COUNTRY_EXPORT: (keyof CountryExportItem)[] = [
   "id",
   "continentName",
   "name",
   "iso",
   "phonecode",
-]; // Adjusted for transformed data
+  "status", // Added Status
+  "updated_by_name",
+  "updated_by_role",
+  "updated_at_formatted",
+];
 
-type CountryExportItem = Omit<CountryItem, "continent_id" | "continent"> & {
-  continentName?: string;
-};
 
 function exportToCsvCountry(filename: string, rows: CountryItem[]) {
   if (!rows || !rows.length) {
@@ -146,18 +178,19 @@ function exportToCsvCountry(filename: string, rows: CountryItem[]) {
     );
     return false;
   }
-
-  // Transform data for export to include continent name
   const transformedRows: CountryExportItem[] = rows.map((row) => ({
     id: row.id,
     name: row.name,
     iso: row.iso,
     phonecode: row.phonecode,
+    status: row.status, // Added status
     continentName: row.continent?.name || String(row.continent_id) || "N/A",
+    updated_by_name: row.updated_by_name || "N/A",
+    updated_by_role: row.updated_by_role || "N/A",
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
   }));
 
   const separator = ",";
-
   const csvContent =
     CSV_HEADERS_COUNTRY.join(separator) +
     "\n" +
@@ -191,6 +224,11 @@ function exportToCsvCountry(filename: string, rows: CountryItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    toast.push(
+      <Notification title="Export Successful" type="success">
+        Data exported to {filename}.
+      </Notification>
+    );
     return true;
   }
   toast.push(
@@ -201,13 +239,13 @@ function exportToCsvCountry(filename: string, rows: CountryItem[]) {
   return false;
 }
 
-// --- ActionColumn Component (No changes needed) ---
+// --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
+  // onDelete, // Delete action is commented out for now
 }: {
   onEdit: () => void;
-  onDelete: () => void;
+  // onDelete: () => void;
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
@@ -227,19 +265,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
-          role="button"
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip>
+      {/* Delete button can be re-added here */}
     </div>
   );
 };
@@ -292,7 +318,7 @@ const CountryTableTools = ({
         </Button>
         <Button
           icon={<TbCloudUpload />}
-          onClick={onExport}
+          onClick={onExport} // This will now open the reason modal
           className="w-full sm:w-auto"
         >
           Export
@@ -308,107 +334,30 @@ type CountryTableProps = {
   data: CountryItem[];
   loading: boolean;
   pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: CountryItem[];
   onPaginationChange: (page: number) => void;
   onSelectChange: (value: number) => void;
   onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: CountryItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<CountryItem>[]) => void;
 };
 const CountryTable = ({
   columns,
   data,
   loading,
   pagingData,
-  selectedItems,
   onPaginationChange,
   onSelectChange,
   onSort,
-  onRowSelect,
-  onAllRowSelect,
 }: CountryTableProps) => {
   return (
     <DataTable
-      selectable
       columns={columns}
       data={data}
       noData={!loading && data.length === 0}
       loading={loading}
       pagingData={pagingData}
-      checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
-      }
       onPaginationChange={onPaginationChange}
       onSelectChange={onSelectChange}
       onSort={onSort}
-      onCheckBoxChange={onRowSelect}
-      onIndeterminateCheckBoxChange={onAllRowSelect}
     />
-  );
-};
-
-// --- CountrySelectedFooter Component ---
-type CountrySelectedFooterProps = {
-  selectedItems: CountryItem[];
-  onDeleteSelected: () => void;
-};
-const CountrySelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-}: CountrySelectedFooterProps) => {
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmationOpen(false);
-  };
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              <span className="heading-text">{selectedItems.length}</span>
-              <span>Item{selectedItems.length > 1 ? "s" : ""} selected</span>
-            </span>
-          </span>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={handleDeleteClick}
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Countr${selectedItems.length > 1 ? "ies" : "y"
-          }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-      >
-        <p>
-          Are you sure you want to delete the selected countr
-          {selectedItems.length > 1 ? "ies" : "y"}? This action cannot be
-          undone.
-        </p>
-      </ConfirmDialog>
-    </>
   );
 };
 
@@ -418,52 +367,31 @@ const Countries = () => {
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [editingCountry, setEditingCountry] = useState<CountryItem | null>(
-    null
-  );
+  const [editingCountry, setEditingCountry] = useState<CountryItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [countryToDelete, setCountryToDelete] = useState<CountryItem | null>(
-    null
-  );
+  const [countryToDelete, setCountryToDelete] = useState<CountryItem | null>(null);
+  
+  // State for export reason modal
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterContinentIds: [],
     filterNames: [],
     filterIsos: [],
+    filterStatus: [], // Added
   });
 
   const {
     CountriesData = [],
-    ContinentsData = [], // For populating select options
+    ContinentsData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
-  useEffect(() => {
-    dispatch(getCountriesAction());
-    dispatch(getContinentsAction()); // Fetch continents for select dropdown
-  }, [dispatch]);
-
-  const addFormMethods = useForm<CountryFormData>({
-    resolver: zodResolver(countryFormSchema),
-    defaultValues: { continent_id: "", name: "", iso: "", phonecode: "" },
-    mode: "onChange",
-  });
-  const editFormMethods = useForm<CountryFormData>({
-    resolver: zodResolver(countryFormSchema),
-    defaultValues: { continent_id: "", name: "", iso: "", phonecode: "" },
-    mode: "onChange",
-  });
-  const filterFormMethods = useForm<FilterFormData>({
-    resolver: zodResolver(filterFormSchema),
-    defaultValues: filterCriteria,
-  });
-
-  const continentOptions = useMemo(() => {
+  const continentOptions: SelectOption[] = useMemo(() => {
     if (!Array.isArray(ContinentsData)) return [];
     return ContinentsData.map(
       (continent: { id: string | number; name: string }) => ({
@@ -472,29 +400,53 @@ const Countries = () => {
       })
     );
   }, [ContinentsData]);
+  
+  const defaultFormValues: CountryFormData = useMemo(() => ({
+    continent_id: continentOptions[0]?.value || "", 
+    name: "", 
+    iso: "", 
+    phonecode: "",
+    status: 'Active', // Default status
+  }), [continentOptions]);
+
+
+  useEffect(() => {
+    dispatch(getCountriesAction());
+    dispatch(getContinentsAction());
+  }, [dispatch]);
+
+  const addFormMethods = useForm<CountryFormData>({
+    resolver: zodResolver(countryFormSchema),
+    defaultValues: defaultFormValues,
+    mode: "onChange",
+  });
+  const editFormMethods = useForm<CountryFormData>({
+    resolver: zodResolver(countryFormSchema),
+    defaultValues: defaultFormValues,
+    mode: "onChange",
+  });
+  const filterFormMethods = useForm<FilterFormData>({
+    resolver: zodResolver(filterFormSchema),
+    defaultValues: filterCriteria,
+  });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   const openAddDrawer = () => {
-    addFormMethods.reset({
-      continent_id: "",
-      name: "",
-      iso: "",
-      phonecode: "",
-    });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(true);
   };
   const closeAddDrawer = () => {
-    addFormMethods.reset({
-      continent_id: "",
-      name: "",
-      iso: "",
-      phonecode: "",
-    });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(false);
   };
   const onAddCountrySubmit = async (data: CountryFormData) => {
     setIsSubmitting(true);
     try {
-      await dispatch(addCountryAction(data)).unwrap();
+      await dispatch(addCountryAction(data)).unwrap(); // data includes status
       toast.push(
         <Notification title="Country Added" type="success" duration={2000}>
           Country "{data.name}" added.
@@ -508,51 +460,35 @@ const Countries = () => {
           {error.message || "Could not add country."}
         </Notification>
       );
-      console.error("Add Country Error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const openEditDrawer = (country: CountryItem) => {
+  const openEditDrawer = useCallback((country: CountryItem) => {
     setEditingCountry(country);
-    editFormMethods.setValue("continent_id", country.continent_id);
-    editFormMethods.setValue("name", country.name);
-    editFormMethods.setValue("iso", country.iso);
-    editFormMethods.setValue("phonecode", country.phonecode);
+    editFormMethods.reset({
+        continent_id: country.continent_id,
+        name: country.name,
+        iso: country.iso,
+        phonecode: country.phonecode,
+        status: country.status || 'Active', // Set status, default to Active
+    });
     setIsEditDrawerOpen(true);
-  };
+  }, [editFormMethods]);
+
   const closeEditDrawer = () => {
     setEditingCountry(null);
-    editFormMethods.reset({
-      continent_id: "",
-      name: "",
-      iso: "",
-      phonecode: "",
-    });
+    editFormMethods.reset(defaultFormValues);
     setIsEditDrawerOpen(false);
   };
+
   const onEditCountrySubmit = async (data: CountryFormData) => {
-    if (
-      !editingCountry ||
-      editingCountry.id === undefined ||
-      editingCountry.id === null
-    ) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot edit: Country ID is missing.
-        </Notification>
-      );
-      setIsSubmitting(false);
-      return;
-    }
+    if (!editingCountry?.id) return;
     setIsSubmitting(true);
     try {
       await dispatch(
-        editCountryAction({
-          id: editingCountry.id,
-          ...data,
-        })
+        editCountryAction({ id: editingCountry.id, ...data }) // data includes status
       ).unwrap();
       toast.push(
         <Notification title="Country Updated" type="success" duration={2000}>
@@ -567,52 +503,27 @@ const Countries = () => {
           {error.message || "Could not update country."}
         </Notification>
       );
-      console.error("Edit Country Error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeleteClick = (country: CountryItem) => {
-    if (country.id === undefined || country.id === null) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Country ID is missing.
-        </Notification>
-      );
-      return;
-    }
+  const handleDeleteClick = useCallback((country: CountryItem) => {
+    if (!country?.id) return;
     setCountryToDelete(country);
     setSingleDeleteConfirmOpen(true);
-  };
+  }, []);
 
   const onConfirmSingleDelete = async () => {
-    if (
-      !countryToDelete ||
-      countryToDelete.id === undefined ||
-      countryToDelete.id === null
-    ) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Country ID is missing.
-        </Notification>
-      );
-      setIsDeleting(false);
-      setCountryToDelete(null);
-      setSingleDeleteConfirmOpen(false);
-      return;
-    }
+    if (!countryToDelete?.id) return;
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      await dispatch(deleteCountryAction(countryToDelete)).unwrap();
+      await dispatch(deleteCountryAction({id: countryToDelete.id})).unwrap();
       toast.push(
         <Notification title="Country Deleted" type="success" duration={2000}>
           Country "{countryToDelete.name}" deleted.
         </Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== countryToDelete!.id)
       );
       dispatch(getCountriesAction());
     } catch (error: any) {
@@ -621,76 +532,9 @@ const Countries = () => {
           {error.message || `Could not delete country.`}
         </Notification>
       );
-      console.error("Delete Country Error:", error);
     } finally {
       setIsDeleting(false);
       setCountryToDelete(null);
-    }
-  };
-  const handleDeleteSelected = async () => {
-    if (selectedItems.length === 0) {
-      toast.push(
-        <Notification title="No Selection" type="info">
-          Please select items to delete.
-        </Notification>
-      );
-      return;
-    }
-    setIsDeleting(true);
-
-    const validItemsToDelete = selectedItems.filter(
-      (item) => item.id !== undefined && item.id !== null
-    );
-
-    if (validItemsToDelete.length !== selectedItems.length) {
-      const skippedCount = selectedItems.length - validItemsToDelete.length;
-      toast.push(
-        <Notification title="Deletion Warning" type="warning" duration={3000}>
-          {skippedCount} item(s) could not be processed due to missing IDs and
-          were skipped.
-        </Notification>
-      );
-    }
-
-    if (validItemsToDelete.length === 0) {
-      toast.push(
-        <Notification title="No Valid Items" type="info">
-          No valid items to delete.
-        </Notification>
-      );
-      setIsDeleting(false);
-      return;
-    }
-
-    const idsToDelete = validItemsToDelete.map((item) => item.id);
-    const commaSeparatedIds = idsToDelete.join(",");
-
-    try {
-      await dispatch(
-        deleteAllCountriesAction({ ids: commaSeparatedIds })
-      ).unwrap();
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-          duration={2000}
-        >
-          {validItemsToDelete.length} countr
-          {validItemsToDelete.length > 1 ? "ies" : "y"} successfully processed
-          for deletion.
-        </Notification>
-      );
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger" duration={3000}>
-          {error.message || "Failed to delete selected countries."}
-        </Notification>
-      );
-      console.error("Delete selected countries error:", error);
-    } finally {
-      setSelectedItems([]);
-      dispatch(getCountriesAction());
-      setIsDeleting(false);
     }
   };
 
@@ -698,21 +542,23 @@ const Countries = () => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
   };
-  const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
+  const closeFilterDrawerCb = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = (data: FilterFormData) => {
     setFilterCriteria({
       filterContinentIds: data.filterContinentIds || [],
       filterNames: data.filterNames || [],
       filterIsos: data.filterIsos || [],
+      filterStatus: data.filterStatus || [], // Added
     });
     handleSetTableData({ pageIndex: 1 });
-    closeFilterDrawer();
+    closeFilterDrawerCb();
   };
   const onClearFilters = () => {
     const defaultFilters = {
       filterContinentIds: [],
       filterNames: [],
       filterIsos: [],
+      filterStatus: [], // Added
     };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
@@ -725,7 +571,6 @@ const Countries = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<CountryItem[]>([]);
 
   const countryNameOptions = useMemo(() => {
     if (!Array.isArray(CountriesData)) return [];
@@ -747,117 +592,123 @@ const Countries = () => {
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: CountryItem[] = Array.isArray(CountriesData)
-      ? CountriesData
+      ? CountriesData.map(item => ({
+          ...item,
+          status: item.status || 'Inactive' // Ensure status has a default
+      }))
       : [];
     let processedData: CountryItem[] = cloneDeep(sourceData);
 
-    if (
-      filterCriteria.filterContinentIds &&
-      filterCriteria.filterContinentIds.length > 0
-    ) {
+    if (filterCriteria.filterContinentIds?.length) {
       const selectedContinentIds = filterCriteria.filterContinentIds.map(
-        (opt) => String(opt.value) // Ensure comparison is consistent (string vs string)
+        (opt) => String(opt.value)
       );
-      processedData = processedData.filter((item: CountryItem) =>
+      processedData = processedData.filter((item) =>
         selectedContinentIds.includes(String(item.continent_id))
       );
     }
-
-    if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
-      const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
+    if (filterCriteria.filterNames?.length) {
+      const selectedNames = filterCriteria.filterNames.map((opt) =>
         opt.value.toLowerCase()
       );
-      processedData = processedData.filter((item: CountryItem) =>
-        selectedFilterNames.includes(item.name?.trim().toLowerCase() ?? "")
+      processedData = processedData.filter((item) =>
+        selectedNames.includes(item.name?.trim().toLowerCase() ?? "")
       );
     }
-    if (filterCriteria.filterIsos && filterCriteria.filterIsos.length > 0) {
-      const selectedFilterIsos = filterCriteria.filterIsos.map((opt) =>
+    if (filterCriteria.filterIsos?.length) {
+      const selectedIsos = filterCriteria.filterIsos.map((opt) =>
         opt.value.toLowerCase()
       );
-      processedData = processedData.filter((item: CountryItem) =>
-        selectedFilterIsos.includes(item.iso?.trim().toLowerCase() ?? "")
+      processedData = processedData.filter((item) =>
+        selectedIsos.includes(item.iso?.trim().toLowerCase() ?? "")
       );
     }
+    if (filterCriteria.filterStatus?.length) { // Added status filter
+        const statuses = filterCriteria.filterStatus.map(opt => opt.value);
+        processedData = processedData.filter(item => statuses.includes(item.status));
+    }
 
-    if (tableData.query && tableData.query.trim() !== "") {
+    if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item: CountryItem) => {
-        const nameLower = item.name?.trim().toLowerCase() ?? "";
-        const isoLower = item.iso?.trim().toLowerCase() ?? "";
-        const phonecodeLower = item.phonecode?.trim().toLowerCase() ?? "";
-        const continentNameLower =
-          item.continent?.name?.trim().toLowerCase() ?? "";
-        const idString = String(item.id ?? "")
-          .trim()
-          .toLowerCase();
-        return (
-          nameLower.includes(query) ||
-          isoLower.includes(query) ||
-          phonecodeLower.includes(query) ||
-          continentNameLower.includes(query) ||
-          idString.includes(query)
-        );
-      });
+      processedData = processedData.filter((item) =>
+        (item.name?.trim().toLowerCase() ?? "").includes(query) ||
+        (item.iso?.trim().toLowerCase() ?? "").includes(query) ||
+        (item.phonecode?.trim().toLowerCase() ?? "").includes(query) ||
+        (item.status?.trim().toLowerCase() ?? "").includes(query) || // Search by status
+        (item.continent?.name?.trim().toLowerCase() ?? "").includes(query) ||
+        (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
+        String(item.id ?? "").trim().toLowerCase().includes(query)
+      );
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (
-      order &&
-      key &&
-      (key === "id" ||
-        key === "name" ||
-        key === "iso" ||
-        key === "phonecode" ||
-        key === "continent.name") &&
+      order && key &&
+      ["id", "name", "iso", "phonecode", "status", "continent.name", "updated_at", "updated_by_name"].includes(key) && // Added status to sortable keys
       processedData.length > 0
     ) {
-      const sortedData = [...processedData];
-      sortedData.sort((a, b) => {
-        let aValue = "";
-        let bValue = "";
-
-        if (key === "continent.name") {
-          aValue = String(a.continent?.name ?? "");
-          bValue = String(b.continent?.name ?? "");
-        } else {
-          aValue = String(a[key as keyof CountryItem] ?? "");
-          bValue = String(b[key as keyof CountryItem] ?? "");
+      processedData.sort((a, b) => {
+        let aValue: any, bValue: any;
+        if (key === "continent.name") { aValue = a.continent?.name ?? ""; bValue = b.continent?.name ?? "";}
+        else if (key === "updated_at") {
+            const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+            const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+            return order === 'asc' ? dateA - dateB : dateB - dateA;
         }
-
+        else if (key === "status") { // Added status sorting
+            aValue = a.status ?? "";
+            bValue = b.status ?? "";
+        }
+        else { aValue = a[key as keyof CountryItem] ?? ""; bValue = b[key as keyof CountryItem] ?? "";}
+        
         return order === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
       });
-      processedData = sortedData;
     }
-
-    const dataToExport = [...processedData];
 
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     return {
-      pageData: dataForPage,
+      pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      allFilteredAndSortedData: processedData,
     };
   }, [CountriesData, tableData, filterCriteria]);
 
-  const handleExportData = () => {
-    const success = exportToCsvCountry(
-      "countries_export.csv",
-      allFilteredAndSortedData
-    );
-    if (success) {
-      toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported.
-        </Notification>
-      );
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+        toast.push(
+          <Notification title="No Data" type="info">
+            Nothing to export.
+          </Notification>
+        );
+        return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Countries";
+    try {
+      await dispatch(submitExportReasonAction({
+        reason: data.reason,
+        module: moduleName,
+      })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      // Proceed with CSV export after successful reason submit
+      exportToCsvCountry("countries_export.csv", allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
+    } finally {
+      setIsSubmittingExportReason(false);
     }
   };
+
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
@@ -866,10 +717,9 @@ const Countries = () => {
     (page: number) => handleSetTableData({ pageIndex: page }),
     [handleSetTableData]
   );
-  const handleSelectChange = useCallback(
+  const handleSelectPageSizeChange = useCallback(
     (value: number) => {
       handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
     },
     [handleSetTableData]
   );
@@ -883,74 +733,84 @@ const Countries = () => {
     (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
     [handleSetTableData]
   );
-  const handleRowSelect = useCallback((checked: boolean, row: CountryItem) => {
-    setSelectedItems((prev) => {
-      if (checked)
-        return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
-      return prev.filter((item) => item.id !== row.id);
-    });
-  }, []);
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<CountryItem>[]) => {
-      const currentPageRowOriginals = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((prevSelected) => {
-          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-          const newRowsToAdd = currentPageRowOriginals.filter(
-            (r) => !prevSelectedIds.has(r.id)
-          );
-          return [...prevSelected, ...newRowsToAdd];
-        });
-      } else {
-        const currentPageRowIds = new Set(
-          currentPageRowOriginals.map((r) => r.id)
-        );
-        setSelectedItems((prevSelected) =>
-          prevSelected.filter((item) => !currentPageRowIds.has(item.id))
-        );
-      }
-    },
-    []
-  );
 
   const columns: ColumnDef<CountryItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
+      { header: "ID", accessorKey: "id", enableSorting: true, size: 60 },
       {
         header: "Continent",
-        accessorKey: "continent.name", // Access nested property
+        accessorKey: "continent.name",
         enableSorting: true,
         cell: (props) => props.row.original.continent?.name || "N/A",
       },
+      { header: "Country Name", accessorKey: "name", enableSorting: true },
+      { header: "ISO Code", accessorKey: "iso", enableSorting: true, size: 80 },
+      { header: "Phone Code", accessorKey: "phonecode", enableSorting: true, size: 100 },
       {
-        header: "Country Name",
-        accessorKey: "name",
+        header: "Updated Info",
+        accessorKey: "updated_at",
         enableSorting: true,
+        meta: { HeaderClass: "text-red-500" }, // Optional styling
+
+        size: 170,
+        cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(
+                updated_at
+              ).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_name || "N/A"}
+                {updated_by_role && <><br /><b>{updated_by_role}</b></>}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
       },
-      {
-        header: "ISO Code",
-        accessorKey: "iso",
+      { // Added Status Column
+        header: "Status",
+        accessorKey: "status",
         enableSorting: true,
-      },
-      {
-        header: "Phone Code",
-        accessorKey: "phonecode",
-        enableSorting: true,
+        size: 100,
+        cell: (props) => {
+          const status = props.row.original.status;
+          return (
+            <Tag
+              className={classNames(
+                "capitalize font-semibold whitespace-nowrap",
+                {
+                  "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500": status === 'Active',
+                  "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500": status === 'Inactive',
+                }
+              )}
+            >
+              {status}
+            </Tag>
+          );
+        },
       },
       {
         header: "Actions",
         id: "action",
-        meta: { HeaderClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
+        size: 120,
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
+            // onDelete={() => handleDeleteClick(props.row.original)} // Can be re-added
           />
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [openEditDrawer /* , handleDeleteClick removed for now */] 
   );
 
   return (
@@ -966,7 +826,7 @@ const Countries = () => {
           <CountryTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal} // Changed to open reason modal
             onClearFilters={onClearFilters}
           />
           <div className="mt-4">
@@ -974,261 +834,165 @@ const Countries = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "idle" || isSubmitting || isDeleting
+                masterLoadingStatus === "loading" || isSubmitting || isDeleting
               }
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
+              onSelectChange={handleSelectPageSizeChange}
               onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
             />
           </div>
         </AdaptiveCard>
       </Container>
 
-      <CountrySelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
-
-      <Drawer
-        title="Add Country"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="addCountryForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="addCountryForm"
-          onSubmit={addFormMethods.handleSubmit(onAddCountrySubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Continent"
-            invalid={!!addFormMethods.formState.errors.continent_id}
-            errorMessage={addFormMethods.formState.errors.continent_id?.message}
-          >
-            <Controller
-              name="continent_id"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Continent"
-                  options={continentOptions}
-                  value={
-                    continentOptions.find(
-                      (option) => option.value === field.value
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    field.onChange(option ? option.value : "")
-                  }
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Country Name"
-            invalid={!!addFormMethods.formState.errors.name}
-            errorMessage={addFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Country Name" />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="ISO Code"
-            invalid={!!addFormMethods.formState.errors.iso}
-            errorMessage={addFormMethods.formState.errors.iso?.message}
-          >
-            <Controller
-              name="iso"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter ISO Code (e.g., US)" />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Phone Code"
-            invalid={!!addFormMethods.formState.errors.phonecode}
-            errorMessage={addFormMethods.formState.errors.phonecode?.message}
-          >
-            <Controller
-              name="phonecode"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Phone Code (e.g., +1)" />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      <Drawer
-        title="Edit Country"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="editCountryForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="editCountryForm"
-          onSubmit={editFormMethods.handleSubmit(onEditCountrySubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Continent"
-            invalid={!!editFormMethods.formState.errors.continent_id}
-            errorMessage={
-              editFormMethods.formState.errors.continent_id?.message
+      {[
+        { formMethods: addFormMethods, onSubmit: onAddCountrySubmit, isOpen: isAddDrawerOpen, closeFn: closeAddDrawer, title: "Add Country", formId: "addCountryForm", submitText: "Adding...", saveText: "Save", isEdit: false },
+        { formMethods: editFormMethods, onSubmit: onEditCountrySubmit, isOpen: isEditDrawerOpen, closeFn: closeEditDrawer, title: "Edit Country", formId: "editCountryForm", submitText: "Saving...", saveText: "Save", isEdit: true }
+      ].map(drawerProps => (
+        <Drawer
+            key={drawerProps.formId}
+            title={drawerProps.title}
+            isOpen={drawerProps.isOpen}
+            onClose={drawerProps.closeFn}
+            onRequestClose={drawerProps.closeFn}
+            width={600}
+            footer={
+                <div className="text-right w-full">
+                <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button>
+                <Button size="sm" variant="solid" form={drawerProps.formId} type="submit" loading={isSubmitting} disabled={!drawerProps.formMethods.formState.isValid || isSubmitting}>
+                    {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
+                </Button>
+                </div>
             }
-          >
-            <Controller
-              name="continent_id"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Continent"
-                  options={continentOptions}
-                  value={
-                    continentOptions.find(
-                      (option) => option.value == field.value
-                    ) || null
-                  }
-                  onChange={(option) =>
-                    field.onChange(option ? option.value : "")
-                  }
-                />
+            >
+            <Form
+                id={drawerProps.formId}
+                onSubmit={drawerProps.formMethods.handleSubmit(drawerProps.onSubmit as any)}
+                className="flex flex-col gap-4 relative pb-28"
+            >
+                <FormItem
+                    label="Continent"
+                    invalid={!!drawerProps.formMethods.formState.errors.continent_id}
+                    errorMessage={drawerProps.formMethods.formState.errors.continent_id?.message as string | undefined}
+                >
+                    <Controller
+                    name="continent_id"
+                    control={drawerProps.formMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            placeholder="Select Continent"
+                            options={continentOptions}
+                            value={continentOptions.find(option => String(option.value) === String(field.value)) || null}
+                            onChange={(option) => field.onChange(option ? option.value : "")}
+                        />
+                    )}
+                    />
+                </FormItem>
+                <FormItem
+                    label="Country Name"
+                    invalid={!!drawerProps.formMethods.formState.errors.name}
+                    errorMessage={drawerProps.formMethods.formState.errors.name?.message as string | undefined}
+                >
+                    <Controller name="name" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Country Name" />)} />
+                </FormItem>
+                <FormItem
+                    label="ISO Code"
+                    invalid={!!drawerProps.formMethods.formState.errors.iso}
+                    errorMessage={drawerProps.formMethods.formState.errors.iso?.message as string | undefined}
+                >
+                    <Controller name="iso" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter ISO Code (e.g., US)" />)} />
+                </FormItem>
+                <FormItem
+                    label="Phone Code"
+                    invalid={!!drawerProps.formMethods.formState.errors.phonecode}
+                    errorMessage={drawerProps.formMethods.formState.errors.phonecode?.message as string | undefined}
+                >
+                    <Controller name="phonecode" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Phone Code (e.g., +1)" />)} />
+                </FormItem>
+                <FormItem // Added Status Field
+                    label="Status"
+                    invalid={!!drawerProps.formMethods.formState.errors.status}
+                    errorMessage={drawerProps.formMethods.formState.errors.status?.message as string | undefined}
+                >
+                    <Controller
+                    name="status"
+                    control={drawerProps.formMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            placeholder="Select Status"
+                            options={statusOptions}
+                            value={
+                                statusOptions.find(
+                                (option) => option.value === field.value
+                                ) || null
+                            }
+                            onChange={(option) =>
+                                field.onChange(option ? option.value : "")
+                            }
+                        />
+                    )}
+                    />
+                </FormItem>
+            </Form>
+              {drawerProps.isEdit && editingCountry && (
+                <div className="absolute bottom-[14%] w-[92%]">
+                  <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                    <div>
+                      <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b>
+                      <br />
+                      <p className="text-sm font-semibold">{editingCountry.updated_by_name || "N/A"}</p>
+                      <p>{editingCountry.updated_by_role || "N/A"}</p>
+                    </div>
+                    <div>
+                      <br />
+                      <span className="font-semibold">Created At:</span>{" "}
+                      <span>
+                        {editingCountry.created_at
+                          ? new Date(editingCountry.created_at).toLocaleString("en-US", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            })
+                          : "N/A"}
+                      </span>
+                      <br />
+                      <span className="font-semibold">Updated At:</span>{" "}
+                      <span>
+                        {editingCountry.updated_at
+                          ? new Date(editingCountry.updated_at).toLocaleString("en-US", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            })
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
-            />
-          </FormItem>
-          <FormItem
-            label="Country Name"
-            invalid={!!editFormMethods.formState.errors.name}
-            errorMessage={editFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Country Name" />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="ISO Code"
-            invalid={!!editFormMethods.formState.errors.iso}
-            errorMessage={editFormMethods.formState.errors.iso?.message}
-          >
-            <Controller
-              name="iso"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter ISO Code (e.g., US)" />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Phone Code"
-            invalid={!!editFormMethods.formState.errors.phonecode}
-            errorMessage={editFormMethods.formState.errors.phonecode?.message}
-          >
-            <Controller
-              name="phonecode"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Phone Code (e.g., +1)" />
-              )}
-            />
-          </FormItem>
-        </Form>
-        <div className="relative w-full">
-          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-              <p className="text-sm font-semibold">Tushar Joshi</p>
-              <p>System Admin</p>
-            </div>
-            <div className="w-[210px]">
-              <br />
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
-              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
-            </div>
-          </div>
-        </div>
-      </Drawer>
+        </Drawer>
+      ))}
 
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
+        onClose={closeFilterDrawerCb}
+        onRequestClose={closeFilterDrawerCb}
+        width={400}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterCountryForm"
-              type="submit"
-            >
-              Apply
-            </Button>
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
+            <Button size="sm" variant="solid" form="filterCountryForm" type="submit">Apply</Button>
           </div>
         }
       >
@@ -1245,7 +1009,7 @@ const Countries = () => {
                 <Select
                   isMulti
                   placeholder="Select continents..."
-                  options={continentOptions} // Use fetched continent options
+                  options={continentOptions}
                   value={field.value || []}
                   onChange={(selectedVal) => field.onChange(selectedVal || [])}
                 />
@@ -1282,34 +1046,73 @@ const Countries = () => {
               )}
             />
           </FormItem>
+          <FormItem label="Status"> {/* Added Status Filter */}
+            <Controller
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select status..."
+                  options={statusOptions}
+                  value={field.value || []}
+                  onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                />
+              )}
+            />
+          </FormItem>
         </Form>
       </Drawer>
 
       <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        disableConfirm={!exportReasonFormMethods.formState.isValid || isSubmittingExportReason}
+      >
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault(); // prevent native submit
+            exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input textArea {...field} placeholder="Enter reason..." rows={3} />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
+      <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
         title="Delete Country"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setCountryToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setCountryToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setCountryToDelete(null);
-        }}
+        onClose={() => { setSingleDeleteConfirmOpen(false); setCountryToDelete(null); }}
+        onRequestClose={() => { setSingleDeleteConfirmOpen(false); setCountryToDelete(null); }}
+        onCancel={() => { setSingleDeleteConfirmOpen(false); setCountryToDelete(null); }}
         onConfirm={onConfirmSingleDelete}
         loading={isDeleting}
       >
         <p>
           Are you sure you want to delete the country "
-          <strong>
-            {countryToDelete?.name} ({countryToDelete?.iso})
-          </strong>
-          "?
+          <strong>{countryToDelete?.name} ({countryToDelete?.iso})</strong>"? This action cannot be undone.
         </p>
       </ConfirmDialog>
     </>
@@ -1317,8 +1120,3 @@ const Countries = () => {
 };
 
 export default Countries;
-
-// Helper
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}

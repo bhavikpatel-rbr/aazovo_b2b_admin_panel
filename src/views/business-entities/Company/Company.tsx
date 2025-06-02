@@ -56,7 +56,9 @@ import type {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   deleteAllcompanyAction,
-  getCompanyAction
+  getCompanyAction,
+  getContinentsAction,
+  getCountriesAction
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
@@ -145,6 +147,8 @@ const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
 interface CompanyListStore {
   companyList: CompanyItem[];
   selectedCompanies: CompanyItem[];
+  CountriesData: [];
+  ContinentsData:[];
   companyListTotal: number;
   setCompanyList: React.Dispatch<React.SetStateAction<CompanyItem[]>>;
   setSelectedCompanies: React.Dispatch<React.SetStateAction<CompanyItem[]>>;
@@ -162,12 +166,17 @@ const useCompanyList = (): CompanyListStore => {
 };
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
-  const { CompanyData = [] } = useSelector(masterSelector);
+  const { CompanyData = [], CountriesData = [],
+    ContinentsData = [], } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
   const [companyList, setCompanyList] = useState<CompanyItem[]>(CompanyData);
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
   const [companyListTotal, setCompanyListTotal] = useState(CompanyData.length);
 
+  useEffect(() => {
+    dispatch(getCountriesAction());
+    dispatch(getContinentsAction());
+  }, [])
   useEffect(() => {
     setCompanyList(CompanyData)
     setCompanyListTotal(CompanyData.length)
@@ -181,7 +190,10 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <CompanyListContext.Provider value={{
       companyList, setCompanyList,
       selectedCompanies, setSelectedCompanies,
-      companyListTotal, setCompanyListTotal
+      companyListTotal, setCompanyListTotal,
+      ContinentsData: ContinentsData,
+      CountriesData:CountriesData,
+
     }}>
       {children}
     </CompanyListContext.Provider>
@@ -297,6 +309,8 @@ const CompanyListTable = () => {
     selectedCompanies,
     setSelectedCompanies,
     setCompanyListTotal,
+    CountriesData,
+    ContinentsData
   } = useCompanyList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
@@ -452,8 +466,9 @@ const CompanyListTable = () => {
     return { pageData: dataForPage, total: dataTotal };
   }, [companyList, tableData, filterCriteria]);
 
-  const handleEditCompany = (id: string) => { console.log("Edit Company:", id); /* navigate(...) */ };
-  const handleViewCompanyDetails = (id: string) => { console.log("View Company Details:", id); /* navigate(...) */ };
+
+  const handleEditCompany = (id: string) => { console.log("Edit Company:", id); navigate("/business-entities/company-create", { state: id }) };
+  const handleViewCompanyDetails = (id: string) => { console.log("View Company Details:", id); navigate("/business-entities/company-create", { state: id }) };
   const handleShareCompany = (id: string) => { console.log("Share Company:", id); };
   const handleChangeCompanyStatus = (id: string, currentStatus: CompanyItem["status"]) => {
     let newStatus: CompanyItem["status"] = "Inactive"; // Default to inactive
@@ -775,8 +790,8 @@ const CompanyListSelected = () => {
       const ids = selectedCompanies.map((data) => data.id);
       await dispatch(deleteAllcompanyAction({ ids: ids.toString() })).unwrap();
       toast.push(
-        <Notification title="Country Deleted" type="success" duration={2000}>
-          Company "{selectedCompanies.name}" deleted.
+        <Notification title="Comapny Deleted" type="success" duration={2000}>
+          "{selectedCompanies.name}" deleted.
         </Notification>
       );
       setSelectedItems((prev) =>

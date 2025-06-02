@@ -1,9 +1,11 @@
+// src/views/your-path/PaymentTerms.tsx
+
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom'; // useNavigate was unused, Link might be if not used in breadcrumbs
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -14,16 +16,16 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
+// import StickyFooter from "@/components/shared/StickyFooter"; // Commented out for row selection
 import DebouceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select"; // Added for filter drawer
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
+import Select from "@/components/ui/Select";
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
   TbTrash,
-  TbChecks,
+  // TbChecks, // Commented out for row selection
   TbSearch,
   TbFilter,
   TbPlus,
@@ -35,46 +37,94 @@ import {
 import type {
   OnSortParam,
   ColumnDef,
-  Row,
+  // Row, // Commented out if not used elsewhere after removing selection
+  CellContext,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
 import {
   getPaymentTermAction,
-  addPaymentTermAction, // Ensure these actions exist or are created
-  editPaymentTermAction, // Ensure these actions exist or are created
-  deletePaymentTermAction, // Ensure these actions exist or are created
-  deleteAllPaymentTermAction, // Ensure these actions exist or are created
-} from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
+  addPaymentTermAction,
+  editPaymentTermAction,
+  deletePaymentTermAction,
+  // deleteAllPaymentTermAction, // Commented out for row selection
+  submitExportReasonAction,
+} from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-// --- Define PaymentTermsItem Type ---
-export type PaymentTermsItem = {
-  id: string | number; // Allow number for consistency if backend might send it
-  term_name: string; // Changed from 'name' to 'term_name'
+type SelectOption = {
+  value: string | number;
+  label: string;
 };
 
-// --- Zod Schema for Add/Edit Payment Term Form ---
+export type PaymentTermsItem = {
+  id: string | number;
+  term_name: string;
+  status: "Active" | "Inactive";
+  created_at?: string;
+  updated_at?: string;
+  updated_by_name?: string;
+  updated_by_role?: string;
+};
+
+const statusOptions: SelectOption[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
+
 const paymentTermFormSchema = z.object({
-  term_name: z // Changed from 'name' to 'term_name'
+  term_name: z
     .string()
     .min(1, "Payment term name is required.")
     .max(100, "Name cannot exceed 100 characters."),
+  status: z.enum(["Active", "Inactive"], {
+    required_error: "Status is required.",
+  }),
 });
 type PaymentTermFormData = z.infer<typeof paymentTermFormSchema>;
 
-// --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
-  filterNames: z // This will filter by 'term_name'
+  filterNames: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
+  filterStatus: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// --- CSV Exporter Utility ---
-const CSV_HEADERS_PAYMENT_TERM = ["ID", "Payment Term Name"];
-const CSV_KEYS_PAYMENT_TERM: (keyof PaymentTermsItem)[] = ["id", "term_name"]; // Changed to 'term_name'
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+const CSV_HEADERS_PAYMENT_TERM = [
+  "ID",
+  "Payment Term Name",
+  "Status",
+  "Updated By",
+  "Updated Role",
+  "Updated At",
+];
+type PaymentTermExportItem = Omit<
+  PaymentTermsItem,
+  "created_at" | "updated_at"
+> & {
+  status: "Active" | "Inactive";
+  updated_at_formatted?: string;
+};
+const CSV_KEYS_PAYMENT_TERM_EXPORT: (keyof PaymentTermExportItem)[] = [
+  "id",
+  "term_name",
+  "status",
+  "updated_by_name",
+  "updated_by_role",
+  "updated_at_formatted",
+];
 
 function exportToCsvPaymentTerm(filename: string, rows: PaymentTermsItem[]) {
   if (!rows || !rows.length) {
@@ -85,15 +135,25 @@ function exportToCsvPaymentTerm(filename: string, rows: PaymentTermsItem[]) {
     );
     return false;
   }
-  const separator = ",";
+  const transformedRows: PaymentTermExportItem[] = rows.map((row) => ({
+    id: row.id,
+    term_name: row.term_name,
+    status: row.status,
+    updated_by_name: row.updated_by_name || "N/A",
+    updated_by_role: row.updated_by_role || "N/A",
+    updated_at_formatted: row.updated_at
+      ? new Date(row.updated_at).toLocaleString()
+      : "N/A",
+  }));
 
+  const separator = ",";
   const csvContent =
     CSV_HEADERS_PAYMENT_TERM.join(separator) +
     "\n" +
-    rows
+    transformedRows
       .map((row) => {
-        return CSV_KEYS_PAYMENT_TERM.map((k) => {
-          let cell = row[k];
+        return CSV_KEYS_PAYMENT_TERM_EXPORT.map((k) => {
+          let cell = row[k as keyof PaymentTermExportItem];
           if (cell === null || cell === undefined) {
             cell = "";
           } else {
@@ -130,13 +190,12 @@ function exportToCsvPaymentTerm(filename: string, rows: PaymentTermsItem[]) {
   return false;
 }
 
-// --- ActionColumn Component (No changes needed) ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
+  // onDelete,
 }: {
   onEdit: () => void;
-  onDelete: () => void;
+  // onDelete: () => void;
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
@@ -151,12 +210,14 @@ const ActionColumn = ({
             "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
           )}
           role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && onEdit()}
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete">
         <div
           className={classNames(
             iconButtonClass,
@@ -164,16 +225,17 @@ const ActionColumn = ({
             "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
           )}
           role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && onDelete()}
           onClick={onDelete}
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
 
-// --- PaymentTermSearch Component ---
 type PaymentTermSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -194,7 +256,6 @@ const PaymentTermSearch = React.forwardRef<
 });
 PaymentTermSearch.displayName = "PaymentTermSearch";
 
-// --- PaymentTermTableTools Component ---
 const PaymentTermTableTools = ({
   onSearchChange,
   onFilter,
@@ -204,7 +265,7 @@ const PaymentTermTableTools = ({
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
-  onClearFilters: ()=> void
+  onClearFilters: () => void;
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -212,7 +273,15 @@ const PaymentTermTableTools = ({
         <PaymentTermSearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
+        <Tooltip title="Clear Filters">
+            <Button
+            icon={<TbReload />}
+            onClick={() => onClearFilters()}
+            variant="plain"
+            shape="circle"
+            size="sm"
+            />
+        </Tooltip>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -232,59 +301,16 @@ const PaymentTermTableTools = ({
   );
 };
 
-// --- PaymentTermTable Component ---
-type PaymentTermTableProps = {
-  columns: ColumnDef<PaymentTermsItem>[];
-  data: PaymentTermsItem[];
-  loading: boolean;
-  pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: PaymentTermsItem[];
-  onPaginationChange: (page: number) => void;
-  onSelectChange: (value: number) => void;
-  onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: PaymentTermsItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<PaymentTermsItem>[]) => void;
-};
-const PaymentTermTable = ({
-  columns,
-  data,
-  loading,
-  pagingData,
-  selectedItems,
-  onPaginationChange,
-  onSelectChange,
-  onSort,
-  onRowSelect,
-  onAllRowSelect,
-}: PaymentTermTableProps) => {
-  return (
-    <DataTable
-      selectable
-      columns={columns}
-      data={data}
-      noData={!loading && data.length === 0}
-      loading={loading}
-      pagingData={pagingData}
-      checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
-      }
-      onPaginationChange={onPaginationChange}
-      onSelectChange={onSelectChange}
-      onSort={onSort}
-      onCheckBoxChange={onRowSelect}
-      onIndeterminateCheckBoxChange={onAllRowSelect}
-    />
-  );
-};
-
-// --- PaymentTermSelectedFooter Component ---
+/* // --- PaymentTermSelectedFooter Component (Commented Out) ---
 type PaymentTermSelectedFooterProps = {
   selectedItems: PaymentTermsItem[];
   onDeleteSelected: () => void;
+  isDeleting: boolean;
 };
 const PaymentTermSelectedFooter = ({
   selectedItems,
   onDeleteSelected,
+  isDeleting,
 }: PaymentTermSelectedFooterProps) => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const handleDeleteClick = () => setDeleteConfirmationOpen(true);
@@ -316,6 +342,7 @@ const PaymentTermSelectedFooter = ({
               variant="plain"
               className="text-red-600 hover:text-red-500"
               onClick={handleDeleteClick}
+              loading={isDeleting}
             >
               Delete Selected
             </Button>
@@ -332,6 +359,7 @@ const PaymentTermSelectedFooter = ({
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+        loading={isDeleting}
       >
         <p>
           Are you sure you want to delete the selected payment term
@@ -341,11 +369,10 @@ const PaymentTermSelectedFooter = ({
     </>
   );
 };
+*/
 
-// --- Main PaymentTerms Component ---
 const PaymentTerms = () => {
   const dispatch = useAppDispatch();
-  // const navigate = useNavigate(); // Uncomment if navigation on edit/add is needed
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -360,13 +387,25 @@ const PaymentTerms = () => {
   const [paymentTermToDelete, setPaymentTermToDelete] =
     useState<PaymentTermsItem | null>(null);
 
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
+
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
+    filterStatus: [],
   });
 
-  // Ensure PaymentTermsData is part of your masterSelector slice
   const { PaymentTermsData = [], status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
+
+  const defaultFormValues: PaymentTermFormData = useMemo(
+    () => ({
+      term_name: "",
+      status: "Active",
+    }),
+    []
+  );
 
   useEffect(() => {
     dispatch(getPaymentTermAction());
@@ -374,34 +413,36 @@ const PaymentTerms = () => {
 
   const addFormMethods = useForm<PaymentTermFormData>({
     resolver: zodResolver(paymentTermFormSchema),
-    defaultValues: { term_name: "" }, // Use term_name
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const editFormMethods = useForm<PaymentTermFormData>({
     resolver: zodResolver(paymentTermFormSchema),
-    defaultValues: { term_name: "" }, // Use term_name
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   const openAddDrawer = () => {
-    addFormMethods.reset({ term_name: "" }); // Use term_name
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(true);
   };
   const closeAddDrawer = () => {
-    addFormMethods.reset({ term_name: "" }); // Use term_name
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(false);
   };
   const onAddPaymentTermSubmit = async (data: PaymentTermFormData) => {
     setIsSubmitting(true);
     try {
-      // Ensure addPaymentTermAction takes { term_name: data.term_name }
-      await dispatch(
-        addPaymentTermAction({ term_name: data.term_name })
-      ).unwrap();
+      await dispatch(addPaymentTermAction(data)).unwrap();
       toast.push(
         <Notification title="Payment Term Added" type="success" duration={2000}>
           Payment Term "{data.term_name}" added.
@@ -415,7 +456,6 @@ const PaymentTerms = () => {
           {error.message || "Could not add payment term."}
         </Notification>
       );
-      console.error("Add Payment Term Error:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -423,20 +463,19 @@ const PaymentTerms = () => {
 
   const openEditDrawer = (term: PaymentTermsItem) => {
     setEditingPaymentTerm(term);
-    editFormMethods.setValue("term_name", term.term_name); // Use term_name
+    editFormMethods.reset({
+      term_name: term.term_name,
+      status: term.status || "Active",
+    });
     setIsEditDrawerOpen(true);
   };
   const closeEditDrawer = () => {
     setEditingPaymentTerm(null);
-    editFormMethods.reset({ term_name: "" }); // Use term_name
+    editFormMethods.reset(defaultFormValues);
     setIsEditDrawerOpen(false);
   };
   const onEditPaymentTermSubmit = async (data: PaymentTermFormData) => {
-    if (
-      !editingPaymentTerm ||
-      editingPaymentTerm.id === undefined ||
-      editingPaymentTerm.id === null
-    ) {
+    if (!editingPaymentTerm?.id) {
       toast.push(
         <Notification title="Error" type="danger">
           Cannot edit: Payment Term ID is missing.
@@ -447,14 +486,8 @@ const PaymentTerms = () => {
     }
     setIsSubmitting(true);
     try {
-      console.log();
-
-      // Ensure editPaymentTermAction takes { id: ..., term_name: ... }
       await dispatch(
-        editPaymentTermAction({
-          id: editingPaymentTerm.id,
-          term_name: data.term_name,
-        })
+        editPaymentTermAction({ id: editingPaymentTerm.id, ...data })
       ).unwrap();
       toast.push(
         <Notification
@@ -473,7 +506,6 @@ const PaymentTerms = () => {
           {error.message || "Could not update payment term."}
         </Notification>
       );
-      console.error("Edit Payment Term Error:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -493,17 +525,12 @@ const PaymentTerms = () => {
   };
 
   const onConfirmSingleDelete = async () => {
-    if (
-      !paymentTermToDelete ||
-      paymentTermToDelete.id === undefined ||
-      paymentTermToDelete.id === null
-    ) {
+    if (!paymentTermToDelete?.id) {
       toast.push(
         <Notification title="Error" type="danger">
           Cannot delete: Payment Term ID is missing.
         </Notification>
       );
-      setIsDeleting(false);
       setPaymentTermToDelete(null);
       setSingleDeleteConfirmOpen(false);
       return;
@@ -511,8 +538,9 @@ const PaymentTerms = () => {
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      // Ensure deletePaymentTermAction takes correct payload
-      await dispatch(deletePaymentTermAction(paymentTermToDelete)).unwrap();
+      await dispatch(
+        deletePaymentTermAction({ id: paymentTermToDelete.id })
+      ).unwrap();
       toast.push(
         <Notification
           title="Payment Term Deleted"
@@ -522,9 +550,7 @@ const PaymentTerms = () => {
           Payment Term "{paymentTermToDelete.term_name}" deleted.
         </Notification>
       );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== paymentTermToDelete!.id)
-      );
+      // setSelectedItems((prev) => prev.filter((item) => item.id !== paymentTermToDelete!.id)); // Commented out
       dispatch(getPaymentTermAction());
     } catch (error: any) {
       toast.push(
@@ -532,12 +558,13 @@ const PaymentTerms = () => {
           {error.message || `Could not delete payment term.`}
         </Notification>
       );
-      console.error("Delete Payment Term Error:", error);
     } finally {
       setIsDeleting(false);
       setPaymentTermToDelete(null);
     }
   };
+
+  /* // --- handleDeleteSelected (Commented Out) ---
   const handleDeleteSelected = async () => {
     if (selectedItems.length === 0) {
       toast.push(
@@ -548,7 +575,6 @@ const PaymentTerms = () => {
       return;
     }
     setIsDeleting(true);
-
     const validItemsToDelete = selectedItems.filter(
       (item) => item.id !== undefined && item.id !== null
     );
@@ -573,13 +599,10 @@ const PaymentTerms = () => {
       return;
     }
 
-    const idsToDelete = validItemsToDelete.map((item) => item.id);
-    const commaSeparatedIds = idsToDelete.join(",");
-
+    const idsToDelete = validItemsToDelete.map((item) => String(item.id));
     try {
-      // Ensure deleteAllPaymentTermAction takes correct payload
       await dispatch(
-        deleteAllPaymentTermAction({ ids: commaSeparatedIds })
+        deleteAllPaymentTermAction({ ids: idsToDelete.join(",") })
       ).unwrap();
       toast.push(
         <Notification
@@ -591,19 +614,19 @@ const PaymentTerms = () => {
           deletion.
         </Notification>
       );
+      setSelectedItems([]);
+      dispatch(getPaymentTermAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Deletion Failed" type="danger" duration={3000}>
           {error.message || "Failed to delete selected payment terms."}
         </Notification>
       );
-      console.error("Delete selected payment terms error:", error);
     } finally {
-      setSelectedItems([]);
-      dispatch(getPaymentTermAction());
       setIsDeleting(false);
     }
   };
+  */
 
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria);
@@ -611,15 +634,23 @@ const PaymentTerms = () => {
   };
   const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
   const onApplyFiltersSubmit = (data: FilterFormData) => {
-    setFilterCriteria({ filterNames: data.filterNames || [] });
+    setFilterCriteria({
+      filterNames: data.filterNames || [],
+      filterStatus: data.filterStatus || [],
+    });
     handleSetTableData({ pageIndex: 1 });
+    // setSelectedItems([]); // Commented out
     closeFilterDrawer();
   };
   const onClearFilters = () => {
-    const defaultFilters = { filterNames: [] };
+    const defaultFilters = {
+      filterNames: [],
+      filterStatus: [],
+    };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    handleSetTableData({ pageIndex: 1 });
+    handleSetTableData({ pageIndex: 1, query: "" });
+    // setSelectedItems([]); // Commented out
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -628,13 +659,11 @@ const PaymentTerms = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<PaymentTermsItem[]>([]);
+  // const [selectedItems, setSelectedItems] = useState<PaymentTermsItem[]>([]); // Commented out
 
   const paymentTermNameOptions = useMemo(() => {
     if (!Array.isArray(PaymentTermsData)) return [];
-    const uniqueNames = new Set(
-      PaymentTermsData.map((term) => term.term_name) // Use term_name
-    );
+    const uniqueNames = new Set(PaymentTermsData.map((term) => term.term_name));
     return Array.from(uniqueNames).map((name) => ({
       value: name,
       label: name,
@@ -643,67 +672,118 @@ const PaymentTerms = () => {
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: PaymentTermsItem[] = Array.isArray(PaymentTermsData)
-      ? PaymentTermsData
+      ? PaymentTermsData.map((item) => ({
+          ...item,
+          status: item.status || "Inactive",
+        }))
       : [];
     let processedData: PaymentTermsItem[] = cloneDeep(sourceData);
 
-    if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
-      const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
+    if (filterCriteria.filterNames?.length) {
+      const names = filterCriteria.filterNames.map((opt) =>
         opt.value.toLowerCase()
       );
-      processedData = processedData.filter((item: PaymentTermsItem) =>
-        selectedFilterNames.includes(
-          item.term_name?.trim().toLowerCase() ?? "" // Use term_name
-        )
+      processedData = processedData.filter((item) =>
+        names.includes(item.term_name?.trim().toLowerCase() ?? "")
+      );
+    }
+    if (filterCriteria.filterStatus?.length) {
+      const statuses = filterCriteria.filterStatus.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        statuses.includes(item.status)
       );
     }
 
-    if (tableData.query && tableData.query.trim() !== "") {
+    if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item: PaymentTermsItem) => {
-        const itemNameLower = item.term_name?.trim().toLowerCase() ?? ""; // Use term_name
-        const itemIdString = String(item.id ?? "").trim();
-        const itemIdLower = itemIdString.toLowerCase();
-        return itemNameLower.includes(query) || itemIdLower.includes(query);
-      });
+      processedData = processedData.filter(
+        (item) =>
+          (item.term_name?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.status?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
+          String(item.id ?? "")
+            .trim()
+            .toLowerCase()
+            .includes(query)
+      );
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (
       order &&
       key &&
-      (key === "id" || key === "term_name") && // Use term_name for sorting key
-      processedData.length > 0
+      ["id", "term_name", "status", "updated_at", "updated_by_name"].includes(
+        key
+      )
     ) {
-      const sortedData = [...processedData];
-      sortedData.sort((a, b) => {
-        const aValue = String(a[key as keyof PaymentTermsItem] ?? "");
-        const bValue = String(b[key as keyof PaymentTermsItem] ?? "");
+      processedData.sort((a, b) => {
+        let aValue: any, bValue: any;
+        if (key === "updated_at") {
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : (order === 'asc' ? Infinity : -Infinity);
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : (order === 'asc' ? Infinity : -Infinity);
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else if (key === "status") {
+          aValue = a.status ?? "";
+          bValue = b.status ?? "";
+        } else {
+          aValue = a[key as keyof PaymentTermsItem] ?? "";
+          bValue = b[key as keyof PaymentTermsItem] ?? "";
+        }
+         if (key === 'id') {
+            const numA = Number(aValue);
+            const numB = Number(bValue);
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return order === 'asc' ? numA - numB : numB - numA;
+            }
+        }
         return order === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
       });
-      processedData = sortedData;
     }
-
-    const dataToExport = [...processedData];
 
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     return {
-      pageData: dataForPage,
+      pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      allFilteredAndSortedData: processedData,
     };
   }, [PaymentTermsData, tableData, filterCriteria]);
 
-  const handleExportData = () => {
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Payment Terms";
+    try {
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+        })
+      ).unwrap();
+    } catch (error: any) {
+      // Optional error handling for reason submission
+    }
+
     const success = exportToCsvPaymentTerm(
       "payment_terms_export.csv",
       allFilteredAndSortedData
     );
+
     if (success) {
       toast.push(
         <Notification title="Export Successful" type="success">
@@ -711,95 +791,169 @@ const PaymentTerms = () => {
         </Notification>
       );
     }
+    setIsSubmittingExportReason(false);
+    setIsExportReasonModalOpen(false);
   };
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
   }, []);
+
   const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
+    (page: number) => {
+        handleSetTableData({ pageIndex: page });
+        // setSelectedItems([]); // Commented out
+    },
     [handleSetTableData]
   );
+
   const handleSelectChange = useCallback(
     (value: number) => {
       handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
+      // setSelectedItems([]); // Commented out
     },
     [handleSetTableData]
   );
+
   const handleSort = useCallback(
     (sort: OnSortParam) => {
       handleSetTableData({ sort: sort, pageIndex: 1 });
+      // setSelectedItems([]); // Commented out
     },
     [handleSetTableData]
   );
+
   const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
+    (query: string) => {
+        handleSetTableData({ query: query, pageIndex: 1 });
+        // setSelectedItems([]); // Commented out
+    },
     [handleSetTableData]
   );
+
+  /* // --- REVISED Row Selection Logic (Commented Out) ---
   const handleRowSelect = useCallback(
     (checked: boolean, row: PaymentTermsItem) => {
-      setSelectedItems((prev) => {
-        if (checked)
-          return prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row];
-        return prev.filter((item) => item.id !== row.id);
+      setSelectedItems((prevSelected) => {
+        if (checked) {
+          return prevSelected.some((item) => item.id === row.id)
+            ? prevSelected
+            : [...prevSelected, row];
+        } else {
+          return prevSelected.filter((item) => item.id !== row.id);
+        }
       });
     },
     []
   );
+
   const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<PaymentTermsItem>[]) => {
-      const currentPageRowOriginals = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((prevSelected) => {
-          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-          const newRowsToAdd = currentPageRowOriginals.filter(
-            (r) => !prevSelectedIds.has(r.id)
+    (checked: boolean, currentTableRows: Row<PaymentTermsItem>[]) => {
+      const currentPageOriginals = currentTableRows.map(r => r.original);
+      const currentPageIds = new Set(currentPageOriginals.map(item => item.id));
+
+      setSelectedItems((prevSelected) => {
+        if (checked) {
+          const newItemsToAdd = currentPageOriginals.filter(
+            item => !prevSelected.some(sel => sel.id === item.id)
           );
-          return [...prevSelected, ...newRowsToAdd];
-        });
-      } else {
-        const currentPageRowIds = new Set(
-          currentPageRowOriginals.map((r) => r.id)
-        );
-        setSelectedItems((prevSelected) =>
-          prevSelected.filter((item) => !currentPageRowIds.has(item.id))
-        );
-      }
+          return [...prevSelected, ...newItemsToAdd];
+        } else {
+          return prevSelected.filter(item => !currentPageIds.has(item.id));
+        }
+      });
     },
     []
   );
+  */
+
 
   const columns: ColumnDef<PaymentTermsItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
       {
-        header: "Payment Term Name", // Changed header
-        accessorKey: "term_name", // Use term_name
+        header: "Payment Term Name",
+        accessorKey: "term_name",
         enableSorting: true,
+      },
+      {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        meta: { HeaderClass: "text-red-500" },
+        size: 180,
+        cell: (props: CellContext<PaymentTermsItem, unknown>) => {
+          const { updated_at, updated_by_name, updated_by_role } =
+            props.row.original;
+          const formattedDate = updated_at
+            ? new Date(updated_at).toLocaleString('en-US', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: 'numeric', minute: '2-digit', hour12: true
+              })
+            : "N/A";
+          return (
+            <div className="text-xs leading-tight">
+              <span className="font-semibold">
+                {updated_by_name || "N/A"}
+              </span>
+              {updated_by_role && (
+                <span className="block text-gray-500 dark:text-gray-400">
+                  {updated_by_role}
+                </span>
+              )}
+              <span className="block text-gray-500 dark:text-gray-400">{formattedDate}</span>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Status",
+        accessorKey: "status",
+        enableSorting: true,
+        size: 100,
+        cell: (props: CellContext<PaymentTermsItem, unknown>) => {
+          const status = props.row.original.status;
+          return (
+            <Tag
+              className={classNames(
+                "capitalize font-semibold whitespace-nowrap border text-xs px-2 py-0.5 rounded-full",
+                {
+                  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500":
+                    status === "Active",
+                  "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500":
+                    status === "Inactive",
+                }
+              )}
+            >
+              {status}
+            </Tag>
+          );
+        },
       },
       {
         header: "Actions",
         id: "action",
-        meta: { HeaderClass: "text-center" },
-        cell: (props) => (
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
+        size: 120,
+        cell: (props: CellContext<PaymentTermsItem, unknown>) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
+            // onDelete={() => handleDeleteClick(props.row.original)}
           />
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [] // openEditDrawer and handleDeleteClick are stable
+    [] // No need for openEditDrawer, handleDeleteClick if they are stable via useCallback
   );
+
+  const isLoading = masterLoadingStatus === "pending" || isSubmitting || isDeleting;
+
 
   return (
     <>
       <Container className="h-auto">
-        <AdaptiveCard className="h-full" bodyClass="h-full">
+        <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Payment Terms</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
@@ -809,160 +963,186 @@ const PaymentTerms = () => {
           <PaymentTermTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal}
             onClearFilters={onClearFilters}
           />
-          <div className="mt-4">
-            <PaymentTermTable
+          <div className="mt-4 flex-grow overflow-auto">
+            <DataTable
+              // selectable // Commented out
               columns={columns}
               data={pageData}
-              loading={
-                masterLoadingStatus === "idle" || isSubmitting || isDeleting
-              }
+              loading={isLoading}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
+              // onCheckBoxChange={handleRowSelect} // Commented out
+              // onIndeterminateCheckBoxChange={handleAllRowSelect} // Commented out
             />
           </div>
         </AdaptiveCard>
       </Container>
 
+      {/*
       <PaymentTermSelectedFooter
         selectedItems={selectedItems}
         onDeleteSelected={handleDeleteSelected}
+        isDeleting={isDeleting}
       />
+      */}
 
-      {/* Add Drawer */}
-      <Drawer
-        title="Add Payment Term"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="addPaymentTermForm" // Ensure this matches the form id
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="addPaymentTermForm" // Form id
-          onSubmit={addFormMethods.handleSubmit(onAddPaymentTermSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Payment Term Name"
-            invalid={!!addFormMethods.formState.errors.term_name} // Use term_name
-            errorMessage={
-              addFormMethods.formState.errors.term_name?.message // Use term_name
-            }
-          >
-            <Controller
-              name="term_name" // Use term_name
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Payment Term Name" />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      {/* Edit Drawer */}
-      <Drawer
-        title="Edit Payment Term"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="editPaymentTermForm" // Ensure this matches the form id
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="editPaymentTermForm" // Form id
-          onSubmit={editFormMethods.handleSubmit(onEditPaymentTermSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Payment Term Name"
-            invalid={!!editFormMethods.formState.errors.term_name} // Use term_name
-            errorMessage={
-              editFormMethods.formState.errors.term_name?.message // Use term_name
-            }
-          >
-            <Controller
-              name="term_name" // Use term_name
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Payment Term Name" />
-              )}
-            />
-          </FormItem>
-        </Form>
-        <div className="absolute bottom-[14%] w-[88%]">
-          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br/>
-              <p className="text-sm font-semibold">Tushar Joshi</p>
-              <p>System Admin</p>
+      {[
+        {
+          formMethods: addFormMethods,
+          onSubmit: onAddPaymentTermSubmit,
+          isOpen: isAddDrawerOpen,
+          closeFn: closeAddDrawer,
+          title: "Add Payment Term",
+          formId: "addPaymentTermForm",
+          submitText: "Adding...",
+          saveText: "Save",
+          isEdit: false,
+        },
+        {
+          formMethods: editFormMethods,
+          onSubmit: onEditPaymentTermSubmit,
+          isOpen: isEditDrawerOpen,
+          closeFn: closeEditDrawer,
+          title: "Edit Payment Term",
+          formId: "editPaymentTermForm",
+          submitText: "Saving...",
+          saveText: "Save",
+          isEdit: true,
+        },
+      ].map((drawerProps) => (
+        <Drawer
+          key={drawerProps.formId}
+          title={drawerProps.title}
+          isOpen={drawerProps.isOpen}
+          onClose={drawerProps.closeFn}
+          onRequestClose={drawerProps.closeFn}
+          width={600}
+          footer={
+            <div className="text-right w-full">
+              <Button
+                size="sm"
+                className="mr-2"
+                onClick={drawerProps.closeFn}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                form={drawerProps.formId}
+                type="submit"
+                loading={isSubmitting}
+                disabled={
+                  !drawerProps.formMethods.formState.isValid ||
+                  (drawerProps.isEdit && !drawerProps.formMethods.formState.isDirty) ||
+                  isSubmitting
+                }
+              >
+                {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
+              </Button>
             </div>
-            <div className="w-[210px]"><br/>
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br/>
-              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+          }
+        >
+          <Form
+            id={drawerProps.formId}
+            onSubmit={drawerProps.formMethods.handleSubmit(
+              drawerProps.onSubmit as any
+            )}
+            className="flex flex-col gap-4"
+          >
+            <FormItem
+              label="Payment Term Name"
+              isRequired
+              invalid={!!drawerProps.formMethods.formState.errors.term_name}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.term_name?.message
+              }
+            >
+              <Controller
+                name="term_name"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Input {...field} placeholder="Enter Payment Term Name" />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label="Status"
+              isRequired
+              invalid={!!drawerProps.formMethods.formState.errors.status}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.status?.message
+              }
+            >
+              <Controller
+                name="status"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Select
+                    placeholder="Select Status"
+                    options={statusOptions}
+                    value={
+                      statusOptions.find(
+                        (option) => option.value === field.value
+                      ) || null
+                    }
+                    onChange={(option) =>
+                      field.onChange(option ? option.value : "")
+                    }
+                  />
+                )}
+              />
+            </FormItem>
+            {drawerProps.isEdit && editingPaymentTerm && (
+            <div className="mt-4">
+              <h6 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Audit Information</h6>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400">Created At:</p>
+                  <p className="font-medium">
+                    {editingPaymentTerm.created_at
+                      ? new Date(editingPaymentTerm.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                      : "N/A"}
+                  </p>
+                </div>
+                 <div>
+                  <p className="text-gray-500 dark:text-gray-400">Last Updated At:</p>
+                  <p className="font-medium">
+                    {editingPaymentTerm.updated_at
+                      ? new Date(editingPaymentTerm.updated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                      : "N/A"}
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
+                   <p className="text-gray-500 dark:text-gray-400">Last Updated By:</p>
+                   <p className="font-medium">
+                    {editingPaymentTerm.updated_by_name || "N/A"}
+                    {editingPaymentTerm.updated_by_role && ` (${editingPaymentTerm.updated_by_role})`}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </Drawer>
+          )}
+          </Form>
+        </Drawer>
+      ))}
 
-      {/* Filter Drawer */}
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
+        width={400}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
@@ -971,7 +1151,7 @@ const PaymentTerms = () => {
             <Button
               size="sm"
               variant="solid"
-              form="filterPaymentTermForm" // Ensure this matches the form id
+              form="filterPaymentTermForm"
               type="submit"
             >
               Apply
@@ -980,13 +1160,13 @@ const PaymentTerms = () => {
         }
       >
         <Form
-          id="filterPaymentTermForm" // Form id
+          id="filterPaymentTermForm"
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
           <FormItem label="Payment Term Name">
             <Controller
-              name="filterNames" // This filters by term_name based on options
+              name="filterNames"
               control={filterFormMethods.control}
               render={({ field }) => (
                 <Select
@@ -999,10 +1179,74 @@ const PaymentTerms = () => {
               )}
             />
           </FormItem>
+          <FormItem label="Status">
+            <Controller
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select status..."
+                  options={statusOptions}
+                  value={field.value || []}
+                  onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                />
+              )}
+            />
+          </FormItem>
         </Form>
       </Drawer>
 
-      {/* Single Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => e.preventDefault()}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            isRequired
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
+
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
@@ -1020,7 +1264,7 @@ const PaymentTerms = () => {
           setPaymentTermToDelete(null);
         }}
         onConfirm={onConfirmSingleDelete}
-        loading={isDeleting} // Add if your ConfirmDialog supports it
+        loading={isDeleting}
       >
         <p>
           Are you sure you want to delete the payment term "
@@ -1032,8 +1276,3 @@ const PaymentTerms = () => {
 };
 
 export default PaymentTerms;
-
-// Helper
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}

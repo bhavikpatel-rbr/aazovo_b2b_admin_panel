@@ -1268,7 +1268,7 @@ const MessageTemplates = () => {
               loading={isSubmitting}
               disabled={!editFormMethods.formState.isValid || isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }

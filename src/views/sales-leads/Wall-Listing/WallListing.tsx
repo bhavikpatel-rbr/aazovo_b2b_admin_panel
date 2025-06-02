@@ -1,14 +1,14 @@
 // src/views/your-path/WallListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import cloneDeep from "lodash/cloneDeep";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form"; // Retained for Filter Form
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import cloneDeep from "lodash/cloneDeep";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form"; // Retained for Filter Form
+import { useNavigate } from "react-router-dom";
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -16,59 +16,60 @@ dayjs.extend(isSameOrAfter);
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import Tag from "@/components/ui/Tag";
-import Button from "@/components/ui/Button";
-import Dialog from "@/components/ui/Dialog";
-import Avatar from "@/components/ui/Avatar";
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
+import StickyFooter from "@/components/shared/StickyFooter";
 import {
+  DatePicker,
   Drawer,
+  Dropdown,
   Form,
   FormItem,
   Input,
   Select as UiSelect,
-  DatePicker,
-  Dropdown,
 } from "@/components/ui";
+import Avatar from "@/components/ui/Avatar";
+import Button from "@/components/ui/Button";
+import Dialog from "@/components/ui/Dialog";
+import Notification from "@/components/ui/Notification";
+import Tag from "@/components/ui/Tag";
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbPencil,
-  TbTrash,
-  TbChecks,
-  TbSearch,
-  TbCloudUpload,
-  TbFilter,
-  TbPlus,
-  TbShare,
-  TbEye,
-  TbDotsVertical,
-  TbLink,
-  TbCloudDownload,
-  TbPhoto,
-  TbCurrencyDollar,
-  TbStack2,
-  TbBookmark, // For outline bookmark
-  TbBookmarkFilled, // For filled bookmark
-  TbMessageCircle,
+  TbBookmark,
   TbCalendarEvent,
+  TbChecks,
+  TbCloudDownload,
+  TbCloudUpload,
+  TbCurrencyDollar,
+  TbDotsVertical,
+  TbEye,
+  TbFilter, // For filled bookmark
+  TbMessageCircle,
+  TbPencil,
+  TbPhoto,
+  TbPlus,
+  TbSearch,
+  TbShare,
+  TbStack2
 } from "react-icons/tb";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-  CellContext,
-} from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import type {
+  CellContext,
+  ColumnDef,
+  OnSortParam,
+  Row,
+} from "@/components/shared/DataTable";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+// import { deleteAllWallAction, getWallListingAction } from "@/reduxtool/master/middleware";
+import { useAppDispatch } from "@/reduxtool/store";
+import { useSelector } from "react-redux";
 import { z } from "zod";
 
 // --- Define Types ---
@@ -486,7 +487,7 @@ const StyledActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-            <Tooltip title="Share">
+      <Tooltip title="Share">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
@@ -500,12 +501,12 @@ const StyledActionColumn = ({
           role="button"
         >
           <Dropdown renderTitle={<TbDotsVertical />} >
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Request For</Dropdown.Item>
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add in Active</Dropdown.Item>
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Schedule</Dropdown.Item>
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Task</Dropdown.Item>
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Documents</Dropdown.Item>
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Alert</Dropdown.Item>
+            <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">Request For</Dropdown.Item>
+            <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">Add in Active</Dropdown.Item>
+            <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">Add Schedule</Dropdown.Item>
+            <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">Add Task</Dropdown.Item>
+            <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">View Documents</Dropdown.Item>
+            <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">View Alert</Dropdown.Item>
           </Dropdown>
         </div>
       </Tooltip>
@@ -578,7 +579,7 @@ interface WallTableProps {
   data: WallItem[];
   loading: boolean;
   pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: WallItem[];
+  // selectedItems: WallItem[];
   onPaginationChange: (page: number) => void;
   onSelectChange: (size: number) => void;
   onSort: (sort: OnSortParam) => void;
@@ -586,7 +587,8 @@ interface WallTableProps {
   onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void;
 }
 const WallTable = (props: WallTableProps) => (
-  <DataTable
+
+  < DataTable
     selectable
     columns={props.columns}
     data={props.data}
@@ -596,12 +598,8 @@ const WallTable = (props: WallTableProps) => (
     onPaginationChange={props.onPaginationChange}
     onSelectChange={props.onSelectChange}
     onSort={props.onSort}
-    onCheckBoxChange={(checked, row) =>
-      props.onRowSelect(checked, row.original)
-    }
-    onIndeterminateCheckBoxChange={(checked, rows) =>
-      props.onAllRowSelect(checked, rows)
-    }
+    onCheckBoxChange={props.onRowSelect}
+    onIndeterminateCheckBoxChange={props.onAllRowSelect}
     noData={!props.loading && props.data.length === 0}
   />
 );
@@ -609,12 +607,25 @@ const WallTable = (props: WallTableProps) => (
 interface WallSelectedFooterProps {
   selectedItems: WallItem[];
   onDeleteSelected: () => void;
+  singleDeleteConfirmOpen: boolean;
+  setSingleDeleteConfirmOpen: () => void;
+  setIsDeleting: () => void;
+  onConfirmSingleDelete: () => void;
+  isDeleting: string;
+  setSelectedItems: () => void;
 }
+
+
 const WallSelectedFooter = ({
   selectedItems,
-  onDeleteSelected,
+  singleDeleteConfirmOpen,
+  setSingleDeleteConfirmOpen,
+  setIsDeleting,
+  onConfirmSingleDelete,
+  isDeleting,
+  setSelectedItems
 }: WallSelectedFooterProps) => {
-  const [deleteOpen, setDeleteOpen] = useState(false);
+
   if (selectedItems.length === 0) return null;
   return (
     <>
@@ -634,24 +645,38 @@ const WallSelectedFooter = ({
             size="sm"
             variant="plain"
             className="text-red-500 hover:text-red-700"
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => setSingleDeleteConfirmOpen(true)}
           >
             Delete Selected
           </Button>
         </div>
       </StickyFooter>
+
       <ConfirmDialog
-        isOpen={deleteOpen}
+        isOpen={singleDeleteConfirmOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} items?`}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={() => {
-          onDeleteSelected();
-          setDeleteOpen(false);
+        title="Delete Wall Item"
+        onClose={() => {
+          setIsDeleting(false);
+          setSelectedItems([]);
+          setSingleDeleteConfirmOpen(false);
         }}
-        onCancel={() => setDeleteOpen(false)}
+        onRequestClose={() => {
+          setIsDeleting(false);
+          setSelectedItems([]);
+          setSingleDeleteConfirmOpen(false);
+        }}
+        onCancel={() => {
+          setIsDeleting(false);
+          setSelectedItems([]);
+          setSingleDeleteConfirmOpen(false);
+        }}
+        onConfirm={onConfirmSingleDelete}
+        loading={isDeleting}
       >
-        <p>This action cannot be undone.</p>
+        <p>
+          Are you sure you want to delete item
+        </p>
       </ConfirmDialog>
     </>
   );
@@ -659,10 +684,11 @@ const WallSelectedFooter = ({
 
 const WallListing = () => {
   const navigate = useNavigate();
-  const [allWallItems, setAllWallItems] = useState<WallItem[]>([]);
-  const [apiRawData, setApiRawData] = useState<ApiWallItem[]>(
-    initialDummyWallItems
-  );
+  const { wallListing = [] } = useSelector(masterSelector);
+  const dispatch = useAppDispatch();
+
+  const [allWallItems, setAllWallItems] = useState<WallItem[]>(wallListing.data);
+  const [apiRawData, setApiRawData] = useState<ApiWallItem[]>(wallListing);
   const [loadingStatus, setLoadingStatus] = useState<
     "idle" | "idle" | "succeeded" | "failed"
   >("idle");
@@ -694,10 +720,10 @@ const WallListing = () => {
             updatedApiRawData = apiRawData.map((item) =>
               item.id === action.payload.id
                 ? {
-                    ...item,
-                    status: action.payload.newStatus,
-                    last_updated: new Date().toISOString(),
-                  }
+                  ...item,
+                  status: action.payload.newStatus,
+                  last_updated: new Date().toISOString(),
+                }
                 : item
             );
             break;
@@ -705,10 +731,10 @@ const WallListing = () => {
             updatedApiRawData = apiRawData.map((item) =>
               item.id === action.payload.id
                 ? {
-                    ...item,
-                    is_bookmarked: !item.is_bookmarked,
-                    last_updated: new Date().toISOString(),
-                  }
+                  ...item,
+                  is_bookmarked: !item.is_bookmarked,
+                  last_updated: new Date().toISOString(),
+                }
                 : item
             );
             break;
@@ -731,7 +757,7 @@ const WallListing = () => {
   );
 
   useEffect(() => {
-    const mapped = apiRawData.map(
+    const mapped = apiRawData.data.map(
       (apiItem): WallItem => ({
         id: apiItem.id,
         listing_id: apiItem.listing_id,
@@ -775,7 +801,13 @@ const WallListing = () => {
       })
     );
     setAllWallItems(mapped);
+    setLoadingStatus("succeeded");
   }, [apiRawData]);
+
+
+  useEffect(() => {
+    // dispatch(getWallListingAction()); // Fetch continents for select dropdown
+  }, [dispatch]);
 
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -820,36 +852,6 @@ const WallListing = () => {
     setEditingItem(null);
   }, []);
 
-  const handleDeleteClick = useCallback((item: WallItem) => {
-    setItemToDelete(item);
-    setSingleDeleteConfirmOpen(true);
-  }, []);
-  const onConfirmSingleDelete = useCallback(async () => {
-    if (!itemToDelete) return;
-    setIsDeleting(true);
-    setSingleDeleteConfirmOpen(false);
-    try {
-      await dispatchSimulated({
-        type: "wall/delete",
-        payload: { id: itemToDelete.id },
-      }).unwrap();
-      toast.push(
-        <Notification title="Deleted" type="success">
-          Item deleted.
-        </Notification>
-      );
-      setSelectedItems((prev) => prev.filter((i) => i.id !== itemToDelete.id));
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          {error.message || "Delete failed."}
-        </Notification>
-      );
-    } finally {
-      setIsDeleting(false);
-      setItemToDelete(null);
-    }
-  }, [dispatchSimulated, itemToDelete]);
 
   const onDeleteSelected = useCallback(async () => {
     if (selectedItems.length === 0) return;
@@ -914,6 +916,49 @@ const WallListing = () => {
     [dispatchSimulated]
   );
 
+  const onConfirmSingleDelete = async () => {
+    if (
+      !selectedItems
+    ) {
+      toast.push(
+        <Notification title="Error" type="danger">
+          Cannot delete: Wall id is missing.
+        </Notification>
+      );
+      setIsDeleting(false);
+      setSelectedItems([]);
+      setSingleDeleteConfirmOpen(false);
+      return;
+    }
+    setIsDeleting(true);
+    setSingleDeleteConfirmOpen(false);
+
+    try {
+      const ids = selectedItems.map((data) => data.id);
+      // await dispatch(deleteAllWallAction({ ids: ids.toString() })).unwrap();
+      // toast.push(
+      //   <Notification title="Wall Deleted" type="success" duration={2000}>
+      //     Wall "{selectedItems.name}" deleted.
+      //   </Notification>
+      // );
+      setSelectedItems((prev) =>
+        prev.filter((item) => item.id !== selectedItems!.id)
+      );
+      // dispatch(getWallListingAction());
+    } catch (error: any) {
+      toast.push(
+        <Notification title="Failed to Delete" type="danger" duration={3000}>
+          {error.message || `Could not delete wall.`}
+        </Notification>
+      );
+      console.error("Delete wall Error:", error);
+    } finally {
+      setIsDeleting(false);
+      setSelectedItems([]);
+    }
+  };
+
+
   const handleToggleBookmark = useCallback(
     async (item: WallItem) => {
       setIsSubmitting(true);
@@ -973,6 +1018,7 @@ const WallListing = () => {
   const { pageData, total, allFilteredAndSortedData } =
     useMemo((): ProcessedDataType => {
       let processedData: WallItem[] = cloneDeep(allWallItems);
+      // debugger
       if (
         filterCriteria.dateRange &&
         (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])
@@ -1020,7 +1066,7 @@ const WallListing = () => {
         processedData = processedData.filter(
           (item) =>
             productIds.has(item.productId) ||
-            filterCriteria.filterProductIds.some((fpi) =>
+            filterCriteria?.filterProductIds?.some((fpi) =>
               item.product_name
                 .toLowerCase()
                 .includes(String(fpi.label).toLowerCase())
@@ -1038,14 +1084,14 @@ const WallListing = () => {
           String(opt.value).toLowerCase()
         );
 
-        processedData = processedData.filter(
+        processedData = processedData?.filter(
           (item) =>
-            companySearchTerms.some((term) =>
-              item.company_name.toLowerCase().includes(term)
+            companySearchTerms?.some((term) =>
+              item.company_name?.toLowerCase()?.includes(term)
             ) ||
             (item.companyId &&
               companyIdTerms.some((term) =>
-                item.companyId?.toLowerCase().includes(term)
+                item.companyId?.toLowerCase()?.includes(term)
               ))
         );
       }
@@ -1074,13 +1120,13 @@ const WallListing = () => {
               ? aVal === bVal
                 ? 0
                 : aVal
-                ? -1
-                : 1
+                  ? -1
+                  : 1
               : aVal === bVal
-              ? 0
-              : aVal
-              ? 1
-              : -1;
+                ? 0
+                : aVal
+                  ? 1
+                  : -1;
           }
           if (aVal instanceof Date && bVal instanceof Date) {
             return order === "asc"
@@ -1099,8 +1145,10 @@ const WallListing = () => {
       const pageIndex = tableData.pageIndex as number;
       const pageSize = tableData.pageSize as number;
       const startIndex = (pageIndex - 1) * pageSize;
+
       return {
-        pageData: processedData.slice(startIndex, startIndex + pageSize),
+        pageData: processedData,
+        // pageData: processedData?.slice(startIndex, startIndex + pageSize),
         total: currentTotal,
         allFilteredAndSortedData: processedData,
       };
@@ -1130,17 +1178,12 @@ const WallListing = () => {
     (query: string) => handleSetTableData({ query, pageIndex: 1 }),
     [handleSetTableData]
   );
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: WallItem) =>
-      setSelectedItems((prev) =>
-        checked
-          ? prev.some((i) => i.id === row.id)
-            ? prev
-            : [...prev, row]
-          : prev.filter((i) => i.id !== row.id)
-      ),
-    []
-  );
+  const handleRowSelect = (checked: boolean, row: WallItem) => {
+    setSelectedItems((prevSelected) => {
+      if (checked) return [...prevSelected, row];
+      return prevSelected.filter((item) => item.id !== row.id);
+    });
+  }
   const handleAllRowSelect = useCallback(
     (checked: boolean, currentRows: Row<WallItem>[]) => {
       const originals = currentRows.map((r) => r.original);
@@ -1211,9 +1254,8 @@ const WallListing = () => {
                   <span>
                     <b>Want To: </b>
                     <Tag
-                      className={`capitalize text-xs px-1 py-0.5 ${
-                        intentTagColor[intent] || productApiStatusColor.default
-                      }`}
+                      className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default
+                        }`}
                     >
                       {want_to}
                     </Tag>
@@ -1340,10 +1382,9 @@ const WallListing = () => {
                     Product Status:
                   </span>{" "}
                   <Tag
-                    className={`capitalize text-xs px-1 py-0.5 ${
-                      productApiStatusColor[currentProductStatus] ||
+                    className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductStatus] ||
                       productApiStatusColor.default
-                    }`}
+                      }`}
                   >
                     {product_status}
                   </Tag>
@@ -1441,9 +1482,8 @@ const WallListing = () => {
             <div className="flex flex-col gap-1 text-xs">
               {recordStatus && (
                 <Tag
-                  className={`${
-                    recordStatusColor[recordStatus] || recordStatusColor.Pending
-                  } font-semibold capitalize`}
+                  className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending
+                    } font-semibold capitalize`}
                 >
                   {recordStatus}
                 </Tag>
@@ -1542,9 +1582,9 @@ const WallListing = () => {
               selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
               onSelectChange={handlePageSizeChange}
-              onSort={handleSort}
               onRowSelect={handleRowSelect}
               onAllRowSelect={handleAllRowSelect}
+              onSort={handleSort}
             />
           </div>
         </AdaptiveCard>
@@ -1552,7 +1592,12 @@ const WallListing = () => {
       <WallSelectedFooter
         selectedItems={selectedItems}
         onDeleteSelected={onDeleteSelected}
-      />
+        singleDeleteConfirmOpen={singleDeleteConfirmOpen}
+        setSingleDeleteConfirmOpen={setSingleDeleteConfirmOpen}
+        setIsDeleting={setIsDeleting}
+        onConfirmSingleDelete={onConfirmSingleDelete}
+        isDeleting={isDeleting}
+        setSelectedItems={setSelectedItems} />
 
       <Drawer
         title="View Wall Item Details"
@@ -1707,7 +1752,7 @@ const WallListing = () => {
                 )}
               />
             </FormItem>
-             <FormItem label="Companies">
+            <FormItem label="Companies">
               <Controller
                 name="filterCompanyIds"
                 control={filterFormMethods.control}
@@ -1768,7 +1813,7 @@ const WallListing = () => {
                     className="text-nowrap text-ellipsis"
                     placeholder="Select Categories..."
                     options={[
-                      {label: "Electronics",value: "Electronics"},
+                      { label: "Electronics", value: "Electronics" },
                     ]}
                     {...field}
                   />
@@ -1785,7 +1830,7 @@ const WallListing = () => {
                     className="text-nowrap text-ellipsis"
                     placeholder="Select Sub Categories..."
                     options={[
-                      {label: "Mobile",value: "Mobile"},
+                      { label: "Mobile", value: "Mobile" },
                     ]}
                     {...field}
                   />
@@ -1802,7 +1847,7 @@ const WallListing = () => {
                     className="text-nowrap text-ellipsis"
                     placeholder="Select Brands..."
                     options={[
-                      {label: "Samsung",value: "Samsung"},
+                      { label: "Samsung", value: "Samsung" },
                     ]}
                     {...field}
                   />
@@ -1819,8 +1864,8 @@ const WallListing = () => {
                     className="text-nowrap text-ellipsis"
                     placeholder="Select Product Status..."
                     options={[
-                      {label: "Active",value: "Active"},
-                      {label: "In-Active",value: "In-Active"},
+                      { label: "Active", value: "Active" },
+                      { label: "In-Active", value: "In-Active" },
                     ]}
                     {...field}
                   />
@@ -1835,9 +1880,9 @@ const WallListing = () => {
                   <DatePicker.DatePickerRange
                     value={
                       field.value as
-                        | [Date | null, Date | null]
-                        | null
-                        | undefined
+                      | [Date | null, Date | null]
+                      | null
+                      | undefined
                     }
                     onChange={field.onChange}
                     placeholder="Select date range"
@@ -1855,8 +1900,8 @@ const WallListing = () => {
                     className="text-nowrap text-ellipsis"
                     placeholder="Select Source..."
                     options={[
-                      {label: "in",value: "in"},
-                      {label: "com",value: "com"},
+                      { label: "in", value: "in" },
+                      { label: "com", value: "com" },
                     ]}
                     {...field}
                   />
@@ -1873,7 +1918,7 @@ const WallListing = () => {
                     className="text-nowrap text-ellipsis"
                     placeholder="Select Product Spec..."
                     options={[
-                      {label: "India",value: "India"},
+                      { label: "India", value: "India" },
                     ]}
                     {...field}
                   />
@@ -1890,7 +1935,7 @@ const WallListing = () => {
                     className="text-nowrap text-ellipsis"
                     placeholder="Select Member Type..."
                     options={[
-                      {label: "INS - Premium",value: "INS - Premium"},
+                      { label: "INS - Premium", value: "INS - Premium" },
                     ]}
                     {...field}
                   />
@@ -1907,7 +1952,7 @@ const WallListing = () => {
                     className="text-nowrap text-ellipsis"
                     placeholder="Select Employee..."
                     options={[
-                      {label: "Mahendra Patel",value: "Mahendra Patel"},
+                      { label: "Mahendra Patel", value: "Mahendra Patel" },
                     ]}
                     {...field}
                   />

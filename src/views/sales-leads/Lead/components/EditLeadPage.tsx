@@ -283,7 +283,7 @@ const EditLeadPage = () => {
 
                     <div className="mt-6 flex justify-end gap-2">
                         <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
-                        <Button type="submit" variant="solid" loading={isSubmitting} disabled={(!isDirty && !isValid) || isSubmitting || isLoadingPage}>Save Changes</Button>
+                        <Button type="submit" variant="solid" loading={isSubmitting} disabled={(!isDirty && !isValid) || isSubmitting || isLoadingPage}>Save</Button>
                     </div>
                 </form>
             </FormContainer>

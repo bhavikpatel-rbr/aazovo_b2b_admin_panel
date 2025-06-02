@@ -1,32 +1,165 @@
-import { useForm, Controller } from "react-hook-form";
+import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import Container from "@/components/shared/Container";
+import { Notification, toast } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import Card from "@/components/ui/Card"; // Keep Card
+import DatePicker from "@/components/ui/DatePicker";
+import { FormItem } from "@/components/ui/Form";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { FormItem } from "@/components/ui/Form";
-import { useState } from "react";
-import AdaptiveCard from "@/components/shared/AdaptiveCard";
-import Card from "@/components/ui/Card"; // Keep Card
-import Container from "@/components/shared/Container";
-import DatePicker from "@/components/ui/DatePicker";
-import { NavLink } from "react-router-dom";
+import { addInquiriesAction, addpartnerAction, editInquiriesAction, editpartnerAction, getCountriesAction } from "@/reduxtool/master/middleware";
+import { useAppDispatch } from "@/reduxtool/store";
+import axiosInstance from '@/services/api/api';
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { BiChevronRight } from "react-icons/bi";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+
 const CreateInquiry = () => {
+  const transformApiToFormSchema = (apiData) => {
+    // ... (same as your previous definition, ensure it's complete) ...
+    return {
+      "id": 1,
+      "inquiry_type": apiData.inquiry_type,
+      "inquiry_subject": apiData.inquiry_subject,
+      "inquiry_description": apiData.inquiry_description,
+      "inquiry_priority": apiData.inquiry_priority,
+      "inquiry_status": apiData.inquiry_status,
+      "assigned_to": apiData.assigned_to,
+      "inquiry_date": apiData.inquiry_date,
+      "response_date": apiData.response_date,
+      "resolution_date": apiData.resolution_date,
+      "follow_up_date": apiData.follow_up_date,
+      "feedback_status": apiData.feedback_status,
+      "inquiry_resolution": apiData.inquiry_resolution,
+      "inquiry_attachments": apiData.inquiry_attachments,
+      "name": apiData.name,
+      "email": apiData.email,
+      "mobile_no": apiData.mobile_no,
+      "company_name": apiData.company_name,
+      "requirements": apiData.requirements,
+      "created_at": apiData.created_at,
+      "updated_at": apiData.updated_at,
+      "deleted_at": apiData.deleted_at,
+      "inquiry_id": apiData.inquiry_id,
+      "inquiry_department": apiData.inquiry_department,
+      "inquiry_from": apiData.inquiry_from,
+      "inquiry_attachments_array": apiData.inquiry_attachments_array,
+      "assigned_to_name": apiData.assigned_to_name,
+      "inquiry_department_name": apiData.inquiry_department_name
+    }
+  };
+  const [formdata, setformdata] = useState({
+    "id": 1,
+    "inquiry_type": '',
+    "inquiry_subject": '',
+    "inquiry_description": '',
+    "inquiry_priority": '',
+    "inquiry_status": '',
+    "assigned_to": '',
+    "inquiry_date": '',
+    "response_date": '',
+    "resolution_date": '',
+    "follow_up_date": '',
+    "feedback_status": '',
+    "inquiry_resolution": '',
+    "inquiry_attachments": '',
+    "name": '',
+    "email": '',
+    "mobile_no": '',
+    "company_name": '',
+    "requirements": '',
+    "created_at": '',
+    "updated_at": '',
+    "deleted_at": '',
+    "inquiry_id": '',
+    "inquiry_department": '',
+    "inquiry_from": '',
+    "inquiry_attachments_array": '',
+    "assigned_to_name": '',
+    "inquiry_department_name": ''
+  })
   const {
     control,
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm();
-
+  } = useForm({
+    defaultValues: formdata,
+  });
+  const dispatch = useAppDispatch(); // Initialize dispatch
+  const location = useLocation();
+  const navigate = useNavigate();
+  const inquiryID = location.state ? location.state : undefined
+  const isEditMode = Boolean(location.state ? true : false);
   const [attachments, setAttachments] = useState<File[]>([]);
 
-  const onSubmit = (data: any) => {
-    console.log("Submitted Inquiry:", {
-      ...data,
-      inquiry_attachments: attachments.map((file) => file.name),
-    });
 
-    
+  useEffect(() => {
+    if (isEditMode && inquiryID) {
+      const fetchMemberData = async () => {
+        try {
+          const response = await axiosInstance.get(`/inquiry/${inquiryID}`);
+          if (response.data && response.data.status === true && response.data.data) {
+            const transformed = transformApiToFormSchema(response.data.data);
+            console.log(transformed, 'transformed')
+            reset(transformed)
+            setformdata(transformed)
+          } else {
+            toast.push(<Notification type="danger" title="Fetch Error">{response.data?.message || 'Failed to load inquiries data.'}</Notification>);
+            navigate('/business-entities/inquiries');
+          }
+        } catch (error: any) {
+          toast.push(<Notification type="danger" title="Fetch Error">{error.message || 'Error fetching inquiries.'}</Notification>);
+          navigate('/business-entities/inquiries');
+        } finally {
+
+        }
+      };
+      fetchMemberData();
+    } else {
+      reset({});
+
+    }
+  }, [inquiryID, isEditMode, navigate]);
+
+  const onSubmit = async (data: any) => {
+    try {
+      if (isEditMode && inquiryID) {
+        await dispatch(editInquiriesAction({ ...formdata, ...data, inquiry_attachments: attachments.map((file) => file.name),inquiry_status: data.inquiry_status.value,assigned_to: data.assigned_to.value,  })).unwrap();
+        toast.push(
+          <Notification type="success" title="Inquery Update">
+            Inquery updated successfully.
+          </Notification>
+        );
+        reset({}); // Reset form after successful creation to clear fields
+        navigate("/business-entities/inquiries"); // Or to the Inquery's detail page
+      } else {
+        await dispatch(addInquiriesAction({ ...formdata, ...data, inquiry_attachments: attachments.map((file) => file.name), })).unwrap();
+        toast.push(
+          <Notification type="success" title="Inquery Created">
+            New Inquery created successfully.
+          </Notification>
+        );
+        reset({}); // Reset form after successful creation to clear fields;
+        navigate("/business-entities/inquiries", { replace: true }); // Or to the Inquery's detail page
+      }
+
+    } catch (error) {
+      const errorMessage =
+        error?.message ||
+        `Failed to ${isEditMode ? "update" : "create"} member.`;
+      toast.push(
+        <Notification
+          type="danger"
+          title={`${isEditMode ? "Update" : "Creation"} Failed`}
+        >
+          {errorMessage}
+        </Notification>
+      );
+      console.error("Submit Member Error:", error);
+    }
+
     reset();
     setAttachments([]);
   };
@@ -93,17 +226,17 @@ const CreateInquiry = () => {
 
               <FormItem
                 label="Contact Person Name"
-                invalid={!!errors.contact_person_name}
+                invalid={!!errors.name}
                 errorMessage={
-                  typeof errors.contact_person_name === "object" &&
-                  errors.contact_person_name
-                    ? (errors.contact_person_name as { message?: string })
-                        .message
+                  typeof errors.name === "object" &&
+                    errors.name
+                    ? (errors.name as { message?: string })
+                      .message
                     : undefined
                 }
               >
                 <Controller
-                  name="contact_person_name"
+                  name="name"
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="Full Name" {...field} />
@@ -113,17 +246,17 @@ const CreateInquiry = () => {
 
               <FormItem
                 label="Contact Person Email"
-                invalid={!!errors.contact_person_email}
+                invalid={!!errors.email}
                 errorMessage={
-                  typeof errors.contact_person_email === "object" &&
-                  errors.contact_person_email
-                    ? (errors.contact_person_email as { message?: string })
-                        .message
+                  typeof errors.email === "object" &&
+                    errors.email
+                    ? (errors.email as { message?: string })
+                      .message
                     : undefined
                 }
               >
                 <Controller
-                  name="contact_person_email"
+                  name="email"
                   control={control}
                   render={({ field }) => (
                     <Input
@@ -137,17 +270,17 @@ const CreateInquiry = () => {
 
               <FormItem
                 label="Contact Person Phone"
-                invalid={!!errors.contact_person_phone}
+                invalid={!!errors.mobile_no}
                 errorMessage={
-                  typeof errors.contact_person_phone === "object" &&
-                  errors.contact_person_phone
-                    ? (errors.contact_person_phone as { message?: string })
-                        .message
+                  typeof errors.mobile_no === "object" &&
+                    errors.mobile_no
+                    ? (errors.mobile_no as { message?: string })
+                      .message
                     : undefined
                 }
               >
                 <Controller
-                  name="contact_person_phone"
+                  name="mobile_no"
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="Phone Number" {...field} />
@@ -188,7 +321,7 @@ const CreateInquiry = () => {
                 className="md:col-span-2"
                 errorMessage={
                   typeof errors.inquiry_subject === "object" &&
-                  errors.inquiry_subject
+                    errors.inquiry_subject
                     ? (errors.inquiry_subject as { message?: string }).message
                     : undefined
                 }
@@ -201,13 +334,13 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-                
+
               <FormItem
                 label="Priority"
                 invalid={!!errors.inquiry_priority}
                 errorMessage={
                   typeof errors.inquiry_priority === "object" &&
-                  errors.inquiry_priority
+                    errors.inquiry_priority
                     ? (errors.inquiry_priority as { message?: string }).message
                     : undefined
                 }
@@ -228,16 +361,16 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-              
+
               <FormItem
                 label="Inquiry Description"
                 invalid={!!errors.inquiry_description}
                 className="md:col-span-3"
                 errorMessage={
                   typeof errors.inquiry_description === "object" &&
-                  errors.inquiry_description
+                    errors.inquiry_description
                     ? (errors.inquiry_description as { message?: string })
-                        .message
+                      .message
                     : undefined
                 }
               >
@@ -255,7 +388,7 @@ const CreateInquiry = () => {
                 invalid={!!errors.inquiry_status}
                 errorMessage={
                   typeof errors.inquiry_status === "object" &&
-                  errors.inquiry_status
+                    errors.inquiry_status
                     ? (errors.inquiry_status as { message?: string }).message
                     : undefined
                 }
@@ -361,7 +494,7 @@ const CreateInquiry = () => {
                 invalid={!!errors.response_date}
                 errorMessage={
                   typeof errors.response_date === "object" &&
-                  errors.response_date
+                    errors.response_date
                     ? (errors.response_date as { message?: string }).message
                     : undefined
                 }
@@ -386,7 +519,7 @@ const CreateInquiry = () => {
                 invalid={!!errors.resolution_date}
                 errorMessage={
                   typeof errors.resolution_date === "object" &&
-                  errors.resolution_date
+                    errors.resolution_date
                     ? (errors.resolution_date as { message?: string }).message
                     : undefined
                 }
@@ -412,9 +545,9 @@ const CreateInquiry = () => {
                 className="md:col-span-3"
                 errorMessage={
                   typeof errors.inquiry_resolution === "object" &&
-                  errors.inquiry_resolution
+                    errors.inquiry_resolution
                     ? (errors.inquiry_resolution as { message?: string })
-                        .message
+                      .message
                     : undefined
                 }
               >
@@ -422,7 +555,7 @@ const CreateInquiry = () => {
                   name="inquiry_resolution"
                   control={control}
                   render={({ field }) => (
-                    <Input placeholder="Enter resolution" {...field} textArea/>
+                    <Input placeholder="Enter resolution" {...field} textArea />
                   )}
                 />
               </FormItem>
@@ -432,7 +565,7 @@ const CreateInquiry = () => {
                 invalid={!!errors.follow_up_date}
                 errorMessage={
                   typeof errors.follow_up_date === "object" &&
-                  errors.follow_up_date
+                    errors.follow_up_date
                     ? (errors.follow_up_date as { message?: string }).message
                     : undefined
                 }
@@ -457,7 +590,7 @@ const CreateInquiry = () => {
                 invalid={!!errors.feedback_status}
                 errorMessage={
                   typeof errors.feedback_status === "object" &&
-                  errors.feedback_status
+                    errors.feedback_status
                     ? (errors.feedback_status as { message?: string }).message
                     : undefined
                 }
@@ -478,7 +611,7 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-                
+
               <FormItem
                 label="Inquiry From"
                 invalid={!!errors.inquiry_from}
@@ -505,7 +638,7 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-              
+
               <FormItem label="Attachments" className="md:col-span-3">
                 <Controller
                   name="inquiry_attachments"
@@ -532,20 +665,20 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-              
+
+              {/* Footer with Save and Cancel buttons */}
+              <Card bodyClass="flex justify-end gap-2" className="mt-4">
+                <Button type="button" className="px-4 py-2">
+                  Cancel
+                </Button>
+                <Button type="submit" className="px-4 py-2" variant="solid">
+                  Save
+                </Button>
+              </Card>
             </form>
           </div>
         </AdaptiveCard>
       </Container>
-      {/* Footer with Save and Cancel buttons */}
-      <Card bodyClass="flex justify-end gap-2" className="mt-4">
-        <Button type="button" className="px-4 py-2">
-          Cancel
-        </Button>
-        <Button type="submit" className="px-4 py-2" variant="solid">
-          Save
-        </Button>
-      </Card>
     </>
   );
 };

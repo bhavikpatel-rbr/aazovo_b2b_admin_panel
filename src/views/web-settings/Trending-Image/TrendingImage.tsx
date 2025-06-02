@@ -12,11 +12,11 @@ import Tooltip from '@/components/ui/Tooltip'
 import Button from '@/components/ui/Button'
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog' // Import Props
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input } from '@/components/ui'
+import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui' // Added Tag
 
 // Icons
 import {
@@ -40,15 +40,16 @@ import { useAppDispatch } from '@/reduxtool/store'
 import { useSelector } from 'react-redux'
 import {
     getTrendingImagesAction,
-    // Assuming these actions are also in your master/middleware or a similar place
     addTrendingImageAction,
     editTrendingImageAction,
     deleteTrendingImageAction,
     deleteMultipleTrendingImagesAction,
-    getProductsAction
-} from '@/reduxtool/master/middleware' // Adjust path if these are elsewhere
+    getProductsAction,
+    submitExportReasonAction, // Placeholder for actual action
+} from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { Link } from 'react-router-dom'
+
 
 // --- Constants ---
 const pageNameOptionsConst = [
@@ -73,8 +74,11 @@ export type TrendingPageImageItem = {
     deleted_at?: string | null;
     created_at: string;
     updated_at?: string;
-    trendingProducts?: string[];
-    [key: string]: any; // For dynamic access in sorting/filtering
+    product_ids?: string; // Keep as string from backend, parse on client
+    trendingProducts?: string[]; // For form/client-side use
+    updated_by_name?: string; // Added
+    updated_by_role?: string; // Added
+    [key: string]: any;
 };
 
 // --- Zod Schema for Add/Edit Form ---
@@ -94,27 +98,61 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+
 // --- CSV Exporter Utility ---
-const CSV_HEADERS = ['Page Name', 'Date Created', 'Trending Product IDs'];
-const CSV_KEYS: (keyof TrendingPageImageItem | string)[] = ['page_name', 'created_at', 'trendingProducts'];
+const CSV_HEADERS = [
+    'ID',
+    'Page Name',
+    'Trending Product IDs',
+    'Created At',
+    'Updated By',
+    'Updated Role',
+    'Updated At',
+];
+type TrendingImageExportItem = Omit<TrendingPageImageItem, 'created_at' | 'updated_at' | 'trendingProducts'> & {
+    created_at_formatted?: string;
+    updated_at_formatted?: string;
+    // product_ids is directly from TrendingPageImageItem
+};
+
+const CSV_KEYS_EXPORT: (keyof TrendingImageExportItem)[] = [
+    'id',
+    'page_name',
+    'product_ids', // This will export the raw comma-separated string of IDs
+    'created_at_formatted',
+    'updated_by_name',
+    'updated_by_role',
+    'updated_at_formatted',
+];
 
 function exportTrendingImagesToCsv(filename: string, rows: TrendingPageImageItem[]) {
     if (!rows || !rows.length) {
-        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+        // Toast handled by caller or handleOpenExportReasonModal
         return false;
     }
+     const transformedRows: TrendingImageExportItem[] = rows.map((row) => ({
+        ...row, // Spread existing properties
+        product_ids: row.product_ids || "N/A", // Use existing or default
+        created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : "N/A",
+        updated_by_name: row.updated_by_name || "N/A",
+        updated_by_role: row.updated_by_role || "N/A",
+        updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
+    }));
+
     const separator = ',';
     const csvContent =
         CSV_HEADERS.join(separator) + '\n' +
-        rows.map(row => CSV_KEYS.map(k => {
-            let cell: any = row[k as keyof TrendingPageImageItem];
-            if (k === 'trendingProducts' && Array.isArray(cell)) {
-                cell = cell.join(';');
-            } else if (k === 'created_at' && typeof cell === 'string') {
-                try {
-                    cell = new Date(cell).toLocaleDateString();
-                } catch (e) { /* keep original if invalid date */ }
-            }
+        transformedRows.map(row => CSV_KEYS_EXPORT.map(k => {
+            let cell = row[k as keyof TrendingImageExportItem];
             if (cell === null || cell === undefined) cell = '';
             else cell = String(cell).replace(/"/g, '""');
             if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
@@ -173,8 +211,8 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, searchPlaceholder,
 );
 
 // --- SelectedFooter Component ---
-type TrendingImagesSelectedFooterProps = { selectedItems: TrendingPageImageItem[]; onDeleteSelected: () => void }
-const TrendingImagesSelectedFooter = ({ selectedItems, onDeleteSelected }: TrendingImagesSelectedFooterProps) => {
+type TrendingImagesSelectedFooterProps = { selectedItems: TrendingPageImageItem[]; onDeleteSelected: () => void; isDeleting: boolean; } // Added isDeleting
+const TrendingImagesSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: TrendingImagesSelectedFooterProps) => { // Added isDeleting
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
     const handleDeleteClick = () => setDeleteConfirmationOpen(true);
     const handleCancelDelete = () => setDeleteConfirmationOpen(false);
@@ -192,11 +230,11 @@ const TrendingImagesSelectedFooter = ({ selectedItems, onDeleteSelected }: Trend
                         </span>
                     </span>
                     <div className="flex items-center gap-3">
-                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick}>Delete Selected</Button>
+                        <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button> {/* Added loading */}
                     </div>
                 </div>
             </StickyFooter>
-            <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Image Group${selectedItems.length > 1 ? 's' : ''}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete}>
+            <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Delete ${selectedItems.length} Image Group${selectedItems.length > 1 ? 's' : ''}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} loading={isDeleting}> {/* Added loading */}
                 <p>Are you sure you want to delete the selected image group{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p>
             </ConfirmDialog>
         </>
@@ -209,11 +247,10 @@ const TrendingImages = () => {
 
     const {
         trendingImagesData = [],
-        productsMasterData = [], // <<< --- ADDED: Fetched products for dropdowns
+        productsMasterData = [],
         status: masterLoadingStatus = 'idle'
     } = useSelector(masterSelector);
 
-    const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<TrendingPageImageItem | null>(null);
@@ -223,21 +260,26 @@ const TrendingImages = () => {
     const [isDeleting, setIsDeleting] = useState(false);
 
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: '', key: '' }, query: '' });
+    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '' }); // Default sort
     const [selectedItems, setSelectedItems] = useState<TrendingPageImageItem[]>([]);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterPageNames: [] });
 
+    // --- Export Reason Modal State ---
+    const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+    const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
     useEffect(() => {
         dispatch(getTrendingImagesAction());
-        dispatch(getProductsAction()); // Fetch products
+        dispatch(getProductsAction());
     }, [dispatch]);
 
     const productSelectOptions = useMemo(() => {
         if (!Array.isArray(productsMasterData)) return [];
-        return productsMasterData.map((p: TrendingPageImageItem) => ({
-            value: String(p.id), // Use product ID as value
-            label: p.name,
+        // Assuming productsMasterData is an array of objects with id and name
+        return productsMasterData.map((p: { id: string | number; name: string; sku_code?: string }) => ({
+            value: String(p.id),
+            label: `${p.name} ${p.sku_code ? `(${p.sku_code})` : ''}`.trim(),
         }));
     }, [productsMasterData]);
 
@@ -255,6 +297,11 @@ const TrendingImages = () => {
         resolver: zodResolver(filterFormSchema),
         defaultValues: filterCriteria,
     });
+    const exportReasonFormMethods = useForm<ExportReasonFormData>({ // For export reason modal
+        resolver: zodResolver(exportReasonSchema),
+        defaultValues: { reason: "" },
+        mode: "onChange",
+    });
 
     const openAddDrawer = useCallback(() => {
         addFormMethods.reset({ page_name: pageNameValues[0], trendingProducts: [] });
@@ -264,14 +311,12 @@ const TrendingImages = () => {
 
     const openEditDrawer = useCallback((item: TrendingPageImageItem) => {
         setEditingItem(item);
-        console.log('Editing Item:', item);
-        // Parse product_ids string to array for the form's trendingProducts field
         const selectedProductIds = item.product_ids
-            ? item.product_ids.split(',').map((id: any) => id.trim()).filter(id => id) // Ensure IDs are trimmed and non-empty
+            ? item.product_ids.split(',').map(id => id.trim()).filter(id => id)
             : [];
         editFormMethods.reset({
             page_name: item.page_name,
-            trendingProducts: selectedProductIds, // Use the parsed array of string IDs
+            trendingProducts: selectedProductIds,
         });
         setIsEditDrawerOpen(true);
     }, [editFormMethods]);
@@ -280,88 +325,70 @@ const TrendingImages = () => {
     const onAddItemSubmit = async (data: TrendingPageImageFormData) => {
         setIsSubmitting(true);
         try {
+            // Backend expects product_ids as a comma-separated string
             const payload = {
                 ...data,
-                // Default empty structures for fields not in the form
+                product_ids: data.trendingProducts ? data.trendingProducts.join(',') : '',
+                // Default empty structures for complex fields if not handled by backend on create
                 img_1: JSON.stringify({ image: "", link: "" }),
                 img_2: JSON.stringify({ image: "", link: "" }),
                 img_3: JSON.stringify({ image: "", link: "" }),
-                product_ids: data.trendingProducts ? data.trendingProducts.join(',') : '',
                 summary_text: JSON.stringify({ image: "", link: "", short_desc: "" }),
                 multimedia_content: JSON.stringify({ images: [], long_desc: "", btn_name: "", btn_link: "" }),
             };
+            delete (payload as any).trendingProducts; // Remove the array form before sending
+
             await dispatch(addTrendingImageAction(payload)).unwrap();
             toast.push(<Notification title="Image Group Added" type="success" duration={2000}>Item added successfully.</Notification>);
             closeAddDrawer();
             dispatch(getTrendingImagesAction());
         } catch (error: any) {
             toast.push(<Notification title="Failed to Add" type="danger" duration={3000}>{error?.data?.message || 'Could not add item.'}</Notification>);
-            console.error('Save Error:', error);
         } finally {
             setIsSubmitting(false);
         }
     };
-
-    useEffect(() => {
-        if (productsMasterData && Array.isArray(productsMasterData)) { // Access the nested 'data' array
-            const options = productsMasterData.map((product: any) => ({
-                value: String(product.id), // Using product ID as the value
-                label: `${product.name} ${product.sku_code ? `(${product.sku_code})` : ''}`.trim(),
-            }));
-            setProductOptions(options);
-        } else {
-            setProductOptions([]);
-        }
-    }, [productsMasterData]); // This effect runs when productsMasterData from Redux changes
 
     const onEditItemSubmit = async (data: TrendingPageImageFormData) => {
         if (!editingItem) return;
         setIsSubmitting(true);
         try {
             const payload = {
-                id: editingItem.id,
-                ...editingItem, // Preserve existing complex fields
-                ...data,        // Apply form changes
-                updated_at: new Date().toISOString(),
-                product_ids: data.trendingProducts ? data.trendingProducts.join(',') : '',
+                ...editingItem, // Preserve existing complex fields like img_1, img_2 etc.
+                ...data,        // Apply form changes (page_name, trendingProducts as array)
+                product_ids: data.trendingProducts ? data.trendingProducts.join(',') : '', // Convert array to string for backend
+                // updated_at: new Date().toISOString(), // Backend should handle this
             };
+            delete (payload as any).trendingProducts; // Remove the array form before sending
+
             await dispatch(editTrendingImageAction(payload)).unwrap();
             toast.push(<Notification title="Image Group Updated" type="success" duration={2000}>Item updated successfully.</Notification>);
             closeEditDrawer();
             dispatch(getTrendingImagesAction());
         } catch (error: any) {
             toast.push(<Notification title="Failed to Update" type="danger" duration={3000}>{error?.data?.message || 'Could not update item.'}</Notification>);
-            console.error('Edit Item Error:', error);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDeleteClick = useCallback((item: TrendingPageImageItem) => {
-        if (item.id === undefined || item.id === null) {
-            toast.push(<Notification title="Error" type="danger">Cannot delete: Item ID is missing.</Notification>);
-            return;
-        }
+        if (item.id === undefined || item.id === null) return;
         setItemToDelete(item);
         setSingleDeleteConfirmOpen(true);
     }, []);
 
     const onConfirmSingleDelete = async () => {
-        if (!itemToDelete || itemToDelete.id === undefined || itemToDelete.id === null) {
-            toast.push(<Notification title="Error" type="danger">Cannot delete: Item ID is missing.</Notification>);
-            setIsDeleting(false); setItemToDelete(null); setSingleDeleteConfirmOpen(false);
-            return;
-        }
+        if (!itemToDelete || itemToDelete.id === undefined || itemToDelete.id === null) return;
         setIsDeleting(true);
         setSingleDeleteConfirmOpen(false);
         try {
-            await dispatch(deleteTrendingImageAction({ id: itemToDelete.id })).unwrap(); // Pass ID or full item as per action's need
+            await dispatch(deleteTrendingImageAction({ id: itemToDelete.id })).unwrap();
             toast.push(<Notification title="Item Deleted" type="success" duration={2000}>{`Group for "${itemToDelete.page_name}" deleted.`}</Notification>);
             setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id));
             dispatch(getTrendingImagesAction());
         } catch (error: any) {
             toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}>{error?.message || 'Could not delete item.'}</Notification>);
-            console.error('Delete Item Error:', error);
         } finally {
             setIsDeleting(false);
             setItemToDelete(null);
@@ -369,29 +396,16 @@ const TrendingImages = () => {
     };
 
     const handleDeleteSelected = async () => {
-        if (selectedItems.length === 0) {
-            toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>);
-            return;
-        }
+        if (selectedItems.length === 0) return;
         setIsDeleting(true);
-        const validItemsToDelete = selectedItems.filter(item => item.id !== undefined && item.id !== null);
-        if (validItemsToDelete.length !== selectedItems.length) {
-            toast.push(<Notification title="Deletion Warning" type="warning" duration={3000}>Some items could not be processed.</Notification>);
-        }
-        if (validItemsToDelete.length === 0) {
-            toast.push(<Notification title="No Valid Items" type="info">No valid items to delete.</Notification>);
-            setIsDeleting(false);
-            return;
-        }
-        const idsToDelete = validItemsToDelete.map(item => String(item.id));
+        const idsToDelete = selectedItems.map(item => String(item.id));
         try {
-            await dispatch(deleteMultipleTrendingImagesAction({ ids: idsToDelete.join(',') })).unwrap(); // Or { ids: idsToDelete }
-            toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{validItemsToDelete.length} item(s) deleted.</Notification>);
+            await dispatch(deleteMultipleTrendingImagesAction({ ids: idsToDelete.join(',') })).unwrap();
+            toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{selectedItems.length} item(s) deleted.</Notification>);
             setSelectedItems([]);
             dispatch(getTrendingImagesAction());
         } catch (error: any) {
             toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error?.message || 'Failed to delete selected items.'}</Notification>);
-            console.error('Delete Selected Error:', error);
         } finally {
             setIsDeleting(false);
         }
@@ -427,39 +441,62 @@ const TrendingImages = () => {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item =>
                 String(item.page_name).toLowerCase().includes(query) ||
-                String(item.id).toLowerCase().includes(query)
+                String(item.id).toLowerCase().includes(query) ||
+                (item.updated_by_name?.toLowerCase() ?? "").includes(query) // Search by updated_by_name
             );
         }
         const { order, key } = tableData.sort as OnSortParam;
-        if (order && key && processedData.length > 0) {
+        if (order && key && ["id", "page_name", "created_at", "updated_at", "updated_by_name"].includes(key)) { // Added new sort keys
             processedData.sort((a, b) => {
-                const aValue = a[key as keyof TrendingPageImageItem];
-                const bValue = b[key as keyof TrendingPageImageItem];
-                if (aValue === null || aValue === undefined) return order === 'asc' ? -1 : 1;
-                if (bValue === null || bValue === undefined) return order === 'asc' ? 1 : -1;
-                if (key === 'created_at') {
-                    const dateA = new Date(aValue as string).getTime();
-                    const dateB = new Date(bValue as string).getTime();
-                    return order === 'asc' ? dateA - dateB : dateB - dateA;
+                let aValue: any, bValue: any;
+                if (key === 'created_at' || key === 'updated_at') {
+                    const dateA = a[key as 'created_at' | 'updated_at'] ? new Date(a[key as 'created_at' | 'updated_at']!).getTime() : 0;
+                    const dateB = b[key as 'created_at' | 'updated_at'] ? new Date(b[key as 'created_at' | 'updated_at']!).getTime() : 0;
+                    return order === "asc" ? dateA - dateB : dateB - dateA;
+                } else {
+                    aValue = a[key as keyof TrendingPageImageItem] ?? "";
+                    bValue = b[key as keyof TrendingPageImageItem] ?? "";
                 }
-                const aStr = String(aValue).toLowerCase();
-                const bStr = String(bValue).toLowerCase();
-                return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+                 return order === "asc"
+                    ? String(aValue).localeCompare(String(bValue))
+                    : String(bValue).localeCompare(String(aValue));
             });
         }
-        const dataToExport = [...processedData];
         const currentTotal = processedData.length;
         const pageIndex = tableData.pageIndex as number;
         const pageSize = tableData.pageSize as number;
         const startIndex = (pageIndex - 1) * pageSize;
-        const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-        return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
+        return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
     }, [trendingImagesData, tableData, filterCriteria]);
 
-    const handleExportData = () => {
-        const success = exportTrendingImagesToCsv('trending_page_images.csv', allFilteredAndSortedData);
-        if (success) toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
+
+    const handleOpenExportReasonModal = () => { // For export reason modal
+        if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+            toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+            return;
+        }
+        exportReasonFormMethods.reset({ reason: "" });
+        setIsExportReasonModalOpen(true);
     };
+
+    const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { // For export reason modal
+        setIsSubmittingExportReason(true);
+        const moduleName = "Trending Page Images";
+        try {
+            await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })).unwrap();
+            toast.push(<Notification title="Export Reason Submitted" type="success" />);
+            exportTrendingImagesToCsv('trending_page_images.csv', allFilteredAndSortedData);
+            // Optional success message, if needed beyond "Reason Submitted"
+            toast.push(<Notification title="Data Exported" type="success">Trending images data has been exported.</Notification>);
+            
+            setIsExportReasonModalOpen(false);
+        } catch (error: any) {
+            toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete the export process."} />);
+        } finally {
+            setIsSubmittingExportReason(false);
+        }
+    };
+
 
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -477,31 +514,58 @@ const TrendingImages = () => {
         if (checked) {
             setSelectedItems(prev => {
                 const prevIds = new Set(prev.map(item => item.id));
-                const newToAdd = originals.filter(r => !prevIds.has(r.id));
+                const newToAdd = originals.filter(r => r.id && !prevIds.has(r.id));
                 return [...prev, ...newToAdd];
             });
         } else {
-            const currentIds = new Set(originals.map(r => r.id));
-            setSelectedItems(prev => prev.filter(item => !currentIds.has(item.id)));
+            const currentIds = new Set(originals.map(r => r.id).filter(id => id !== undefined));
+            setSelectedItems(prev => prev.filter(item => item.id && !currentIds.has(item.id)));
         }
     }, []);
 
     const columns: ColumnDef<TrendingPageImageItem>[] = useMemo(() => [
-        { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 250, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
+        { header: 'ID', accessorKey: 'id', enableSorting: true, size: 80, meta: { tdClass: "text-center", thClass: "text-center" }  },
+        { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 200, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
         {
             header: 'Date Created',
             accessorKey: 'created_at',
             enableSorting: true,
-            size: 180,
+            size: 200,
             cell: (props) => {
-                return (
-                    `${new Date(props.getValue<string>()).getDate()} ${new Date(props.getValue<string>()).toLocaleString("en-US", { month: "long" })}, 
-                    ${new Date(props.getValue<string>()).getFullYear()},
-                    ${new Date(props.getValue<string>()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
-                )
+                const dateVal = props.getValue<string>();
+                if (!dateVal) return 'N/A';
+                try {
+                    return (
+                        `${new Date(dateVal).getDate()} ${new Date(dateVal).toLocaleString("en-US", { month: "long" })}, ${new Date(dateVal).getFullYear()}, ${new Date(dateVal).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                    )
+                } catch (e) { return 'Invalid Date'; }
             }
         },
+        {
+            header: "Updated Info",
+            accessorKey: "updated_at", // Sort by updated_at
+            enableSorting: true,
+            meta: { HeaderClass: "text-red-500" }, // Optional: if you want red header like reference
+            size: 170,
+            cell: (props) => {
+                const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+                const formattedDate = updated_at
+                ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                : "N/A";
+                return (
+                    <div className="text-xs">
+                        <span>
+                        {updated_by_name || "N/A"}
+                        {updated_by_role && (<><br /><b>{updated_by_role}</b></>)}
+                        </span>
+                        <br />
+                        <span>{formattedDate}</span>
+                    </div>
+                );
+            },
+        },
         { header: 'Actions', id: 'action', meta: { HeaderClass: 'text-center', cellClass: 'text-center' }, size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [openEditDrawer, handleDeleteClick]);
 
     return (
@@ -512,28 +576,18 @@ const TrendingImages = () => {
                         <h5 className="mb-2 sm:mb-0">Trending Images</h5>
                         <div>
                             <Link to='/task/task-list/create'>
-                                <Button
-                                    className="mr-2"
-                                    icon={<TbUser />}
-                                    clickFeedback={false}
-                                    customColorClass={({ active, unclickable }) =>
-                                        classNames(
-                                            'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
-                                            active ? 'bg-gray-200' : 'bg-gray-100',
-                                            unclickable && 'opacity-50 cursor-not-allowed',
-                                            !active && !unclickable && 'hover:bg-gray-200',
-                                        )
-                                    }
-                                >Assigned to Task</Button>
+                                <Button className="mr-2" icon={<TbUser />} clickFeedback={false} customColorClass={({ active, unclickable }) => classNames('hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0', active ? 'bg-gray-200' : 'bg-gray-100', unclickable && 'opacity-50 cursor-not-allowed', !active && !unclickable && 'hover:bg-gray-200')}>
+                                    Assigned to Task
+                                </Button>
                             </Link>
-                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
+                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === 'loading' || isSubmitting}>Add New</Button>
                         </div>
                     </div>
-                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters} searchPlaceholder="Quick Search..." />
+                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} searchPlaceholder="Quick Search..." />
                     <div className="mt-4">
                         <DataTable
                             columns={columns} data={pageData}
-                            loading={masterLoadingStatus === 'idle' || isSubmitting || isDeleting}
+                            loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting}
                             pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             selectable checkboxChecked={(row) => selectedItems.some(selected => selected.id === row.id)}
                             onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
@@ -543,47 +597,73 @@ const TrendingImages = () => {
                 </AdaptiveCard>
             </Container>
 
-            <TrendingImagesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} />
+            <TrendingImagesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-            <Drawer title="Add Trending Image" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer}
+            <Drawer title="Add Trending Image" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={600} // Matched width
                 footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="addPageImageForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Adding...' : 'Save'}</Button></div>}>
                 <Form id="addPageImageForm" onSubmit={addFormMethods.handleSubmit(onAddItemSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Page Name" invalid={!!addFormMethods.formState.errors.page_name} errorMessage={addFormMethods.formState.errors.page_name?.message}>
                         <Controller name="page_name" control={addFormMethods.control} render={({ field }) => (<Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                     </FormItem>
-                    <FormItem label="Trending Products" invalid={!!addFormMethods.formState.errors.trendingProducts} errorMessage={addFormMethods.formState.errors.trendingProducts?.message}>
+                    <FormItem label="Trending Products" invalid={!!addFormMethods.formState.errors.trendingProducts} errorMessage={addFormMethods.formState.errors.trendingProducts?.message as string | undefined}>
                         <Controller name="trendingProducts" control={addFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select trending products..." options={productSelectOptions} value={productSelectOptions.filter(opt => field.value?.includes(opt.value))} onChange={(selectedVal) => field.onChange(selectedVal ? selectedVal.map(opt => opt.value) : [])} />)} />
                     </FormItem>
                 </Form>
             </Drawer>
 
-            <Drawer title="Edit Trending Image" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer}
+            <Drawer title="Edit Trending Image" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={600} // Matched width
                 footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="editPageImageForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</Button></div>}>
-                <Form id="editPageImageForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-4">
+                <Form id="editPageImageForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-4 relative pb-28"> {/* Added relative pb-28 */}
                     <FormItem label="Page Name" invalid={!!editFormMethods.formState.errors.page_name} errorMessage={editFormMethods.formState.errors.page_name?.message}>
                         <Controller name="page_name" control={editFormMethods.control} render={({ field }) => (<Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                     </FormItem>
-                    <FormItem label="Trending Products" invalid={!!editFormMethods.formState.errors.trendingProducts} errorMessage={editFormMethods.formState.errors.trendingProducts?.message}>
-                        <Controller name="trendingProducts" control={editFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select trending products..." options={productOptions} value={productOptions.filter(opt => field.value?.includes(opt.value))} onChange={(selectedVal) => field.onChange(selectedVal ? selectedVal.map(opt => opt.value) : [])} />)} />
+                    <FormItem label="Trending Products" invalid={!!editFormMethods.formState.errors.trendingProducts} errorMessage={editFormMethods.formState.errors.trendingProducts?.message  as string | undefined}>
+                        <Controller name="trendingProducts" control={editFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select trending products..." options={productSelectOptions} value={productSelectOptions.filter(opt => field.value?.includes(opt.value))} onChange={(selectedVal) => field.onChange(selectedVal ? selectedVal.map(opt => opt.value) : [])} />)} />
                     </FormItem>
+                
+                    {editingItem && (
+                        <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2"> {/* Positioned audit info */}
+                            <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                                <div>
+                                <b className="mt-3 mb-3 font-semibold text-primary">
+                                    Latest Update By:
+                                </b>
+                                <br />
+                                <p className="text-sm font-semibold">
+                                    {editingItem.updated_by_name || "N/A"}
+                                </p>
+                                <p>{editingItem.updated_by_role || "N/A"}</p>
+                                </div>
+                                <div>
+                                <br />
+                                <span className="font-semibold">Created At:</span>{" "}
+                                <span>
+                                    {editingItem.created_at
+                                    ? new Date(editingItem.created_at).toLocaleString("en-US", {
+                                        day: "2-digit", month: "short", year: "numeric",
+                                        hour: "numeric", minute: "2-digit", hour12: true,
+                                        })
+                                    : "N/A"}
+                                </span>
+                                <br />
+                                <span className="font-semibold">Updated At:</span>{" "}
+                                <span>
+                                    {editingItem.updated_at
+                                    ? new Date(editingItem.updated_at).toLocaleString("en-US", {
+                                        day: "2-digit", month: "short", year: "numeric",
+                                        hour: "numeric", minute: "2-digit", hour12: true,
+                                        })
+                                    : "N/A"}
+                                </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </Form>
-                <div className="absolute bottom-[14%] w-[88%]">
-                    <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                        <div className="">
-                            <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                            <p className="text-sm font-semibold">Tushar Joshi</p>
-                            <p>System Admin</p>
-                        </div>
-                        <div className="w-[210px]"><br />
-                            <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
-                            <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
-                        </div>
-                    </div>
-                </div>
             </Drawer>
 
-            <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
-                footer={<div className="text-right w-full"><div><Button size="sm" className="mr-2" onClick={closeFilterDrawer} type="button">Clear</Button><Button size="sm" variant="solid" form="filterItemsForm" type="submit">Apply</Button></div></div>}>
+            <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400} // Matched width
+                footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterItemsForm" type="submit">Apply</Button></div>}> {/* Applied onClearFilters to Clear button */}
                 <Form id="filterItemsForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Page Name">
                         <Controller name="filterPageNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select page names..." options={pageNameOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />)} />
@@ -593,6 +673,41 @@ const TrendingImages = () => {
 
             <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Item Group" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting}>
                 <p>Are you sure you want to delete this item group? {itemToDelete && ` (Page: ${itemToDelete.page_name})`} This action cannot be undone.</p>
+            </ConfirmDialog>
+
+            {/* --- Export Reason Modal --- */}
+            <ConfirmDialog
+                isOpen={isExportReasonModalOpen}
+                type="info"
+                title="Reason for Export"
+                onClose={() => setIsExportReasonModalOpen(false)}
+                onRequestClose={() => setIsExportReasonModalOpen(false)}
+                onCancel={() => setIsExportReasonModalOpen(false)}
+                onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+                loading={isSubmittingExportReason}
+                confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+                cancelText="Cancel"
+                confirmButtonProps={{
+                disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason,
+                }}
+            >
+                <Form
+                id="exportTrendingImagesReasonForm"
+                onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
+                className="flex flex-col gap-4 mt-2"
+                >
+                <FormItem
+                    label="Please provide a reason for exporting this data:"
+                    invalid={!!exportReasonFormMethods.formState.errors.reason}
+                    errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+                >
+                    <Controller
+                    name="reason"
+                    control={exportReasonFormMethods.control}
+                    render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)}
+                    />
+                </FormItem>
+                </Form>
             </ConfirmDialog>
         </>
     );

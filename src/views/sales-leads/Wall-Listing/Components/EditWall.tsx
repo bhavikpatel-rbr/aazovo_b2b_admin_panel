@@ -781,7 +781,7 @@ const WallItemEdit = () => {
             variant="solid" 
             loading={isSubmitting} 
             disabled={isSubmitting || isLoadingCombined || !formMethods.formState.isDirty || !formMethods.formState.isValid} >
-          {isSubmitting ? "Saving..." : "Save Changes"}
+          {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </Card>
     </>

@@ -1,9 +1,11 @@
+// src/views/your-path/Units.tsx
+
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom'; // useNavigate was unused, Link might be if not used in breadcrumbs
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -13,17 +15,16 @@ import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog"; // Import Props
-import StickyFooter from "@/components/shared/StickyFooter";
+import ConfirmDialog from "@/components/shared/ConfirmDialog"; // Kept for export reason modal
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Added Tag
 
 // Icons
 import {
   TbPencil,
-  TbTrash,
-  TbChecks,
+  // TbTrash, // Commented out
+  // TbChecks, // Commented out
   TbSearch,
   TbFilter,
   TbPlus,
@@ -35,7 +36,7 @@ import {
 import type {
   OnSortParam,
   ColumnDef,
-  Row,
+  // Row, // Commented out
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -43,17 +44,35 @@ import {
   getUnitAction,
   addUnitAction,
   editUnitAction,
-  deletUnitAction,
-  deletAllUnitAction, // Corrected spelling
+  // deleteUnitAction, // Commented out
+  // deleteAllUnitAction, // Commented out
+  submitExportReasonAction, // Placeholder for future action
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+
+// Type for Select options
+type SelectOption = {
+  value: string | number;
+  label: string;
+};
 
 // --- Define Unit Type ---
 export type UnitItem = {
   id: string | number;
   name: string;
+  status: 'Active' | 'Inactive'; // Added status field
+  created_at?: string;
+  updated_at?: string;
+  updated_by_name?: string;
+  updated_by_role?: string;
 };
+
+// --- Status Options ---
+const statusOptions: SelectOption[] = [
+  { value: 'Active', label: 'Active' },
+  { value: 'Inactive', label: 'Inactive' },
+];
 
 // --- Zod Schema for Add/Edit Unit Form ---
 const unitFormSchema = z.object({
@@ -61,6 +80,7 @@ const unitFormSchema = z.object({
     .string()
     .min(1, "Unit name is required.")
     .max(100, "Name cannot exceed 100 characters."),
+  status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }), // Added status
 });
 type UnitFormData = z.infer<typeof unitFormSchema>;
 
@@ -69,13 +89,33 @@ const filterFormSchema = z.object({
   filterNames: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
+  filterStatus: z // Added status filter
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
 // --- CSV Exporter Utility ---
-// Define specific headers and keys for export
-const CSV_HEADERS = ["ID", "Unit Name"];
-const CSV_KEYS: (keyof UnitItem)[] = ["id", "name"];
+const CSV_HEADERS = ["ID", "Unit Name", "Status", "Updated By", "Updated Role", "Updated At"];
+type UnitExportItem = Omit<UnitItem, "created_at" | "updated_at"> & {
+    status: 'Active' | 'Inactive'; // Ensure status is part of export
+    updated_at_formatted?: string;
+};
+const CSV_KEYS_EXPORT: (keyof UnitExportItem)[] = [
+    "id", 
+    "name",
+    "status", // Added status
+    "updated_by_name",
+    "updated_by_role",
+    "updated_at_formatted"
+];
+
 
 function exportToCsv(filename: string, rows: UnitItem[]) {
   if (!rows || !rows.length) {
@@ -86,23 +126,29 @@ function exportToCsv(filename: string, rows: UnitItem[]) {
     );
     return false;
   }
-  const separator = ",";
+   const transformedRows: UnitExportItem[] = rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    status: row.status, // Added status
+    updated_by_name: row.updated_by_name || "N/A",
+    updated_by_role: row.updated_by_role || "N/A",
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
+  }));
 
+  const separator = ",";
   const csvContent =
     CSV_HEADERS.join(separator) +
     "\n" +
-    rows
+    transformedRows
       .map((row) => {
-        return CSV_KEYS.map((k) => {
-          let cell = row[k];
+        return CSV_KEYS_EXPORT.map((k) => {
+          let cell = row[k as keyof UnitExportItem];
           if (cell === null || cell === undefined) {
             cell = "";
           } else {
-            // For UnitItem, id and name are string/number, no Date expected
-            cell = String(cell).replace(/"/g, '""'); // Ensure string and escape double quotes
+            cell = String(cell).replace(/"/g, '""');
           }
           if (String(cell).search(/("|,|\n)/g) >= 0) {
-            // Ensure cell is string for search
             cell = `"${cell}"`;
           }
           return cell;
@@ -123,6 +169,11 @@ function exportToCsv(filename: string, rows: UnitItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    toast.push(
+        <Notification title="Export Successful" type="success">
+          Data exported to {filename}.
+        </Notification>
+      );
     return true;
   }
   toast.push(
@@ -136,19 +187,15 @@ function exportToCsv(filename: string, rows: UnitItem[]) {
 // --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
 }: {
   onEdit: () => void;
-  onDelete: () => void;
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
     <div className="flex items-center justify-center">
-      {" "}
       <Tooltip title="Edit">
-        {" "}
         <div
           className={classNames(
             iconButtonClass,
@@ -158,25 +205,9 @@ const ActionColumn = ({
           role="button"
           onClick={onEdit}
         >
-          {" "}
-          <TbPencil />{" "}
-        </div>{" "}
-      </Tooltip>{" "}
-      <Tooltip title="Delete">
-        {" "}
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
-          role="button"
-          onClick={onDelete}
-        >
-          {" "}
-          <TbTrash />{" "}
-        </div>{" "}
-      </Tooltip>{" "}
+          <TbPencil />
+        </div>
+      </Tooltip>
     </div>
   );
 };
@@ -215,31 +246,26 @@ const UnitsTableTools = ({
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-      {" "}
       <div className="flex-grow">
-        {" "}
-        <UnitsSearch onInputChange={onSearchChange} />{" "}
-      </div>{" "}
+        <UnitsSearch onInputChange={onSearchChange} />
+      </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
-        {" "}
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
           className="w-full sm:w-auto"
         >
-          {" "}
-          Filter{" "}
-        </Button>{" "}
+          Filter
+        </Button>
         <Button
           icon={<TbCloudUpload />}
-          onClick={onExport}
+          onClick={onExport} // This will now open the reason modal
           className="w-full sm:w-auto"
         >
-          {" "}
-          Export{" "}
-        </Button>{" "}
-      </div>{" "}
+          Export
+        </Button>
+      </div>
     </div>
   );
 };
@@ -250,120 +276,30 @@ type UnitsTableProps = {
   data: UnitItem[];
   loading: boolean;
   pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: UnitItem[];
   onPaginationChange: (page: number) => void;
   onSelectChange: (value: number) => void;
   onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: UnitItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<UnitItem>[]) => void;
 };
 const UnitsTable = ({
   columns,
   data,
   loading,
   pagingData,
-  selectedItems,
   onPaginationChange,
   onSelectChange,
   onSort,
-  onRowSelect,
-  onAllRowSelect,
 }: UnitsTableProps) => {
   return (
     <DataTable
-      selectable
       columns={columns}
       data={data}
       noData={!loading && data.length === 0}
       loading={loading}
       pagingData={pagingData}
-      checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
-      }
       onPaginationChange={onPaginationChange}
       onSelectChange={onSelectChange}
       onSort={onSort}
-      onCheckBoxChange={onRowSelect}
-      onIndeterminateCheckBoxChange={onAllRowSelect}
     />
-  );
-};
-
-// --- UnitsSelectedFooter Component ---
-type UnitsSelectedFooterProps = {
-  selectedItems: UnitItem[];
-  onDeleteSelected: () => void;
-};
-const UnitsSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-}: UnitsSelectedFooterProps) => {
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmationOpen(false);
-  };
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      {" "}
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        {" "}
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          {" "}
-          <span className="flex items-center gap-2">
-            {" "}
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              {" "}
-              <TbChecks />{" "}
-            </span>{" "}
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              {" "}
-              <span className="heading-text">
-                {" "}
-                {selectedItems.length}{" "}
-              </span>{" "}
-              <span> Item{selectedItems.length > 1 ? "s" : ""} selected </span>{" "}
-            </span>{" "}
-          </span>{" "}
-          <div className="flex items-center gap-3">
-            {" "}
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={handleDeleteClick}
-            >
-              {" "}
-              Delete Selected{" "}
-            </Button>{" "}
-          </div>{" "}
-        </div>{" "}
-      </StickyFooter>{" "}
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Unit${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-      >
-        {" "}
-        <p>
-          {" "}
-          Are you sure you want to delete the selected unit
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.{" "}
-        </p>{" "}
-      </ConfirmDialog>{" "}
-    </>
   );
 };
 
@@ -375,19 +311,24 @@ const Units = () => {
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<UnitItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [unitToDelete, setUnitToDelete] = useState<UnitItem | null>(null);
-
+  
+  // State for export reason modal
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
+    filterStatus: [], // Added
   });
 
   const { unitData = [], status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
+
+  const defaultFormValues: UnitFormData = useMemo(() => ({ 
+    name: "",
+    status: 'Active', // Default status
+  }), []);
 
   useEffect(() => {
     dispatch(getUnitAction());
@@ -395,35 +336,40 @@ const Units = () => {
 
   const addFormMethods = useForm<UnitFormData>({
     resolver: zodResolver(unitFormSchema),
-    defaultValues: { name: "" },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const editFormMethods = useForm<UnitFormData>({
     resolver: zodResolver(unitFormSchema),
-    defaultValues: { name: "" },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   const openAddDrawer = () => {
-    addFormMethods.reset({ name: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(true);
   };
   const closeAddDrawer = () => {
-    addFormMethods.reset({ name: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(false);
   };
   const onAddUnitSubmit = async (data: UnitFormData) => {
     setIsSubmitting(true);
     try {
-      await dispatch(addUnitAction({ name: data.name })).unwrap();
+      // API expected to handle audit fields, only send name and status
+      await dispatch(addUnitAction({ name: data.name, status: data.status })).unwrap();
       toast.push(
         <Notification title="Unit Added" type="success" duration={2000}>
-          {" "}
-          Unit "{data.name}" added.{" "}
+          Unit "{data.name}" added.
         </Notification>
       );
       closeAddDrawer();
@@ -431,49 +377,39 @@ const Units = () => {
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Add" type="danger" duration={3000}>
-          {" "}
-          {error.message || "Could not add unit."}{" "}
+          {error.message || "Could not add unit."}
         </Notification>
       );
-      console.error("Add Unit Error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const openEditDrawer = (unit: UnitItem) => {
+  const openEditDrawer = useCallback((unit: UnitItem) => {
     setEditingUnit(unit);
-    editFormMethods.setValue("name", unit.name);
+    editFormMethods.reset({ 
+        name: unit.name,
+        status: unit.status || 'Active', // Set status, default to Active
+    });
     setIsEditDrawerOpen(true);
-  };
+  },[editFormMethods]);
+
   const closeEditDrawer = () => {
     setEditingUnit(null);
-    editFormMethods.reset({ name: "" });
+    editFormMethods.reset(defaultFormValues);
     setIsEditDrawerOpen(false);
   };
   const onEditUnitSubmit = async (data: UnitFormData) => {
-    if (
-      !editingUnit ||
-      editingUnit.id === undefined ||
-      editingUnit.id === null
-    ) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot edit: Unit ID is missing.
-        </Notification>
-      );
-      setIsSubmitting(false);
-      return;
-    }
+    if (!editingUnit?.id) return;
     setIsSubmitting(true);
     try {
+      // API expected to handle audit fields, only send id, name and status
       await dispatch(
-        editUnitAction({ id: editingUnit.id, name: data.name })
+        editUnitAction({ id: editingUnit.id, name: data.name, status: data.status })
       ).unwrap();
       toast.push(
         <Notification title="Unit Updated" type="success" duration={2000}>
-          {" "}
-          Unit "{data.name}" updated.{" "}
+          Unit "{data.name}" updated.
         </Notification>
       );
       closeEditDrawer();
@@ -481,141 +417,11 @@ const Units = () => {
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Update" type="danger" duration={3000}>
-          {" "}
-          {error.message || "Could not update unit."}{" "}
+          {error.message || "Could not update unit."}
         </Notification>
       );
-      console.error("Edit Unit Error:", error);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteClick = (unit: UnitItem) => {
-    if (unit.id === undefined || unit.id === null) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Unit ID is missing.
-        </Notification>
-      );
-      return;
-    }
-    setUnitToDelete(unit);
-    setSingleDeleteConfirmOpen(true);
-  };
-  const onConfirmSingleDelete = async () => {
-    if (
-      !unitToDelete ||
-      unitToDelete.id === undefined ||
-      unitToDelete.id === null
-    ) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Unit ID is missing.
-        </Notification>
-      );
-      setIsDeleting(false);
-      setUnitToDelete(null);
-      setSingleDeleteConfirmOpen(false);
-      return;
-    }
-    setIsDeleting(true);
-    setSingleDeleteConfirmOpen(false);
-    try {
-      await dispatch(deletUnitAction(unitToDelete)).unwrap(); // Ensure deletUnitAction takes only ID
-      toast.push(
-        <Notification title="Unit Deleted" type="success" duration={2000}>
-          {" "}
-          Unit "{unitToDelete.name}" deleted.{" "}
-        </Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== unitToDelete!.id)
-      ); // Use non-null assertion if confident it's set
-      dispatch(getUnitAction());
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Failed to Delete" type="danger" duration={3000}>
-          {" "}
-          {error.message || `Could not delete unit.`}{" "}
-        </Notification>
-      );
-      console.error("Delete Unit Error:", error);
-    } finally {
-      setIsDeleting(false);
-      setUnitToDelete(null);
-    }
-  };
-  const handleDeleteSelected = async () => {
-    console.log("bhavik");
-
-    if (selectedItems.length === 0) {
-      toast.push(
-        <Notification title="No Selection" type="info">
-          Please select items to delete.
-        </Notification>
-      );
-      return;
-    }
-    setIsDeleting(true);
-
-    const validItemsToDelete = selectedItems.filter(
-      (item) => item.id !== undefined && item.id !== null
-    );
-
-    if (validItemsToDelete.length !== selectedItems.length) {
-      const skippedCount = selectedItems.length - validItemsToDelete.length;
-      toast.push(
-        <Notification title="Deletion Warning" type="warning" duration={3000}>
-          {skippedCount} item(s) could not be processed due to missing IDs and
-          were skipped.
-        </Notification>
-      );
-    }
-
-    if (validItemsToDelete.length === 0) {
-      toast.push(
-        <Notification title="No Valid Items" type="info">
-          No valid items to delete.
-        </Notification>
-      );
-      setIsDeleting(false);
-      return;
-    }
-
-    const idsToDelete = validItemsToDelete.map((item) => item.id);
-    const commaSeparatedIds = idsToDelete.join(",");
-
-    console.log(
-      "Attempting to delete multiple units with IDs:",
-      commaSeparatedIds
-    ); // For debugging
-
-    try {
-      // Dispatch the new action for bulk delete
-      await dispatch(deletAllUnitAction({ ids: commaSeparatedIds })).unwrap(); // Pass as an object or string based on your action's expectation
-
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-          duration={2000}
-        >
-          {validItemsToDelete.length} unit(s) successfully processed for
-          deletion.
-        </Notification>
-      );
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger" duration={3000}>
-          {error.message || "Failed to delete selected units."}
-        </Notification>
-      );
-      console.error("Delete selected units error:", error);
-    } finally {
-      setSelectedItems([]); // Clear selection
-      dispatch(getUnitAction()); // Refresh the list
-      setIsDeleting(false);
     }
   };
 
@@ -623,14 +429,20 @@ const Units = () => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
   };
-  const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
+  const closeFilterDrawerCb = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = (data: FilterFormData) => {
-    setFilterCriteria({ filterNames: data.filterNames || [] });
+    setFilterCriteria({ 
+        filterNames: data.filterNames || [],
+        filterStatus: data.filterStatus || [], // Added
+    });
     handleSetTableData({ pageIndex: 1 });
-    closeFilterDrawer();
+    closeFilterDrawerCb();
   };
   const onClearFilters = () => {
-    const defaultFilters = { filterNames: [] };
+    const defaultFilters = { 
+        filterNames: [],
+        filterStatus: [], // Added
+    };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
@@ -642,7 +454,6 @@ const Units = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<UnitItem[]>([]);
 
   const unitNameOptions = useMemo(() => {
     if (!Array.isArray(unitData)) return [];
@@ -654,69 +465,103 @@ const Units = () => {
   }, [unitData]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const sourceData: UnitItem[] = Array.isArray(unitData) ? unitData : [];
+    const sourceData: UnitItem[] = Array.isArray(unitData) 
+      ? unitData.map(item => ({
+          ...item,
+          status: item.status || 'Inactive' // Ensure status has a default
+      }))
+      : [];
     let processedData: UnitItem[] = cloneDeep(sourceData);
 
-    if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
+    if (filterCriteria.filterNames?.length) {
       const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
         opt.value.toLowerCase()
       );
-      processedData = processedData.filter((item: UnitItem) =>
+      processedData = processedData.filter((item) =>
         selectedFilterNames.includes(item.name?.trim().toLowerCase() ?? "")
       );
     }
+    if (filterCriteria.filterStatus?.length) { // Added status filter
+        const statuses = filterCriteria.filterStatus.map(opt => opt.value);
+        processedData = processedData.filter(item => statuses.includes(item.status));
+    }
 
-    if (tableData.query && tableData.query.trim() !== "") {
+    if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item: UnitItem) => {
-        const itemNameLower = item.name?.trim().toLowerCase() ?? "";
-        const itemIdString = String(item.id ?? "").trim();
-        const itemIdLower = itemIdString.toLowerCase();
-        return itemNameLower.includes(query) || itemIdLower.includes(query);
-      });
+      processedData = processedData.filter((item) =>
+        (item.name?.trim().toLowerCase() ?? "").includes(query) ||
+        (item.status?.trim().toLowerCase() ?? "").includes(query) || // Search by status
+        (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
+        String(item.id ?? "").trim().toLowerCase().includes(query)
+      );
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (
-      order &&
-      key &&
-      (key === "id" || key === "name") &&
+      order && key &&
+      ["id", "name", "status", "updated_at", "updated_by_name"].includes(key) && // Added status to sortable keys
       processedData.length > 0
     ) {
-      const sortedData = [...processedData];
-      sortedData.sort((a, b) => {
-        const aValue = String(a[key as keyof UnitItem] ?? "");
-        const bValue = String(b[key as keyof UnitItem] ?? "");
+      processedData.sort((a, b) => {
+        let aValue: any, bValue: any;
+        if (key === "updated_at") {
+            const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+            const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+            return order === 'asc' ? dateA - dateB : dateB - dateA;
+        }
+        else if (key === "status") { // Added status sorting
+            aValue = a.status ?? "";
+            bValue = b.status ?? "";
+        }
+        else { aValue = a[key as keyof UnitItem] ?? ""; bValue = b[key as keyof UnitItem] ?? "";}
+        
         return order === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
       });
-      processedData = sortedData;
     }
-
-    const dataToExport = [...processedData];
 
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     return {
-      pageData: dataForPage,
+      pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      allFilteredAndSortedData: processedData,
     };
   }, [unitData, tableData, filterCriteria]);
 
-  const handleExportData = () => {
-    const success = exportToCsv("units_export.csv", allFilteredAndSortedData);
-    if (success) {
-      toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported.
-        </Notification>
-      );
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+        toast.push(
+          <Notification title="No Data" type="info">
+            Nothing to export.
+          </Notification>
+        );
+        return;
     }
-    // The exportToCsv function already handles the "No Data" toast.
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Units";
+    try {
+      await dispatch(submitExportReasonAction({
+        reason: data.reason,
+        module: moduleName,
+      })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+
+      // Proceed with export
+      exportToCsv("units_export.csv", allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
   };
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
@@ -726,16 +571,14 @@ const Units = () => {
     (page: number) => handleSetTableData({ pageIndex: page }),
     [handleSetTableData]
   );
-  const handleSelectChange = useCallback(
+  const handleSelectPageSizeChange = useCallback(
     (value: number) => {
       handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
     },
     [handleSetTableData]
   );
   const handleSort = useCallback(
     (sort: OnSortParam) => {
-      // Ensure this is used if DataTable has onSort
       handleSetTableData({ sort: sort, pageIndex: 1 });
     },
     [handleSetTableData]
@@ -744,53 +587,73 @@ const Units = () => {
     (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
     [handleSetTableData]
   );
-  const handleRowSelect = useCallback((checked: boolean, row: UnitItem) => {
-    setSelectedItems((prev) => {
-      if (checked)
-        return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
-      return prev.filter((item) => item.id !== row.id);
-    });
-  }, []);
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<UnitItem>[]) => {
-      const currentPageRowOriginals = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((prevSelected) => {
-          const prevSelectedIds = new Set(prevSelected.map((item) => item.id));
-          const newRowsToAdd = currentPageRowOriginals.filter(
-            (r) => !prevSelectedIds.has(r.id)
-          );
-          return [...prevSelected, ...newRowsToAdd];
-        });
-      } else {
-        const currentPageRowIds = new Set(
-          currentPageRowOriginals.map((r) => r.id)
-        );
-        setSelectedItems((prevSelected) =>
-          prevSelected.filter((item) => !currentPageRowIds.has(item.id))
-        );
-      }
-    },
-    []
-  );
 
   const columns: ColumnDef<UnitItem>[] = useMemo(
     () => [
       { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
       { header: "Unit Name", accessorKey: "name", enableSorting: true },
       {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        meta: { HeaderClass: "text-red-500" },
+        size: 170,
+        cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(
+                updated_at
+              ).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_name || "N/A"}
+                {updated_by_role && <><br /><b>{updated_by_role}</b></>}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
+      },
+      { // Added Status Column
+        header: "Status",
+        accessorKey: "status",
+        enableSorting: true,
+        size: 100,
+        cell: (props) => {
+          const status = props.row.original.status;
+          return (
+            <Tag
+              className={classNames(
+                "capitalize font-semibold whitespace-nowrap",
+                {
+                  "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500": status === 'Active',
+                  "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500": status === 'Inactive',
+                }
+              )}
+            >
+              {status}
+            </Tag>
+          );
+        },
+      },
+      {
         header: "Actions",
         id: "action",
-        meta: { HeaderClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
+        size: 120,
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
           />
         ),
       },
     ],
-    [openEditDrawer, handleDeleteClick] // Added dependencies that might change if component re-renders for other reasons
+    [openEditDrawer]
   );
 
   return (
@@ -800,182 +663,145 @@ const Units = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Units</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              {" "}
-              Add New{" "}
+              Add New
             </Button>
           </div>
           <UnitsTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal} // Changed to open reason modal
             onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <UnitsTable
               columns={columns}
               data={pageData}
-              loading={
-                masterLoadingStatus === "idle" || isSubmitting || isDeleting
-              }
+              loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort} // Pass handleSort to DataTable
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
+              onSelectChange={handleSelectPageSizeChange}
+              onSort={handleSort}
             />
           </div>
         </AdaptiveCard>
       </Container>
 
-      <UnitsSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
-
-      <Drawer
-        title="Add Unit"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        footer={
-          <div className="text-right w-full">
-            {" "}
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
+      {[
+        { formMethods: addFormMethods, onSubmit: onAddUnitSubmit, isOpen: isAddDrawerOpen, closeFn: closeAddDrawer, title: "Add Unit", formId: "addUnitForm", submitText: "Adding...", saveText: "Save", isEdit: false },
+        { formMethods: editFormMethods, onSubmit: onEditUnitSubmit, isOpen: isEditDrawerOpen, closeFn: closeEditDrawer, title: "Edit Unit", formId: "editUnitForm", submitText: "Saving...", saveText: "Save", isEdit: true }
+      ].map(drawerProps => (
+        <Drawer
+            key={drawerProps.formId}
+            title={drawerProps.title}
+            isOpen={drawerProps.isOpen}
+            onClose={drawerProps.closeFn}
+            onRequestClose={drawerProps.closeFn}
+            width={600}
+            footer={
+                <div className="text-right w-full">
+                <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button>
+                <Button size="sm" variant="solid" form={drawerProps.formId} type="submit" loading={isSubmitting} disabled={!drawerProps.formMethods.formState.isValid || isSubmitting}>
+                    {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
+                </Button>
+                </div>
+            }
             >
-              {" "}
-              Cancel{" "}
-            </Button>{" "}
-            <Button
-              size="sm"
-              variant="solid"
-              form="addUnitForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
+            <Form
+                id={drawerProps.formId}
+                onSubmit={drawerProps.formMethods.handleSubmit(drawerProps.onSubmit as any)}
+                className="flex flex-col gap-4 relative pb-28"
             >
-              {" "}
-              {isSubmitting ? "Adding..." : "Save"}{" "}
-            </Button>{" "}
-          </div>
-        }
-      >
-        <Form
-          id="addUnitForm"
-          onSubmit={addFormMethods.handleSubmit(onAddUnitSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Unit Name"
-            invalid={!!addFormMethods.formState.errors.name}
-            errorMessage={addFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Unit Name" />
+                <FormItem
+                    label="Unit Name"
+                    invalid={!!drawerProps.formMethods.formState.errors.name}
+                    errorMessage={drawerProps.formMethods.formState.errors.name?.message as string | undefined}
+                >
+                    <Controller name="name" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Unit Name" />)} />
+                </FormItem>
+                <FormItem // Added Status Field
+                    label="Status"
+                    invalid={!!drawerProps.formMethods.formState.errors.status}
+                    errorMessage={drawerProps.formMethods.formState.errors.status?.message as string | undefined}
+                >
+                    <Controller
+                    name="status"
+                    control={drawerProps.formMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            placeholder="Select Status"
+                            options={statusOptions}
+                            value={
+                                statusOptions.find(
+                                (option) => option.value === field.value
+                                ) || null
+                            }
+                            onChange={(option) =>
+                                field.onChange(option ? option.value : "")
+                            }
+                        />
+                    )}
+                    />
+                </FormItem>
+            </Form>
+              {drawerProps.isEdit && editingUnit && (
+                <div className="absolute bottom-[14%] w-[92%]">
+                  <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                    <div>
+                      <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b>
+                      <br />
+                      <p className="text-sm font-semibold">{editingUnit.updated_by_name || "N/A"}</p>
+                      <p>{editingUnit.updated_by_role || "N/A"}</p>
+                    </div>
+                    <div>
+                      <br />
+                      <span className="font-semibold">Created At:</span>{" "}
+                      <span>
+                        {editingUnit.created_at
+                          ? new Date(editingUnit.created_at).toLocaleString("en-US", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            })
+                          : "N/A"}
+                      </span>
+                      <br />
+                      <span className="font-semibold">Updated At:</span>{" "}
+                      <span>
+                        {editingUnit.updated_at
+                          ? new Date(editingUnit.updated_at).toLocaleString("en-US", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            })
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      <Drawer
-        title="Edit Unit"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        footer={
-          <div className="text-right w-full">
-            {" "}
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              {" "}
-              Cancel{" "}
-            </Button>{" "}
-            <Button
-              size="sm"
-              variant="solid"
-              form="editUnitForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {" "}
-              {isSubmitting ? "Saving..." : "Save"}{" "}
-            </Button>{" "}
-          </div>
-        }
-      >
-        <Form
-          id="editUnitForm"
-          onSubmit={editFormMethods.handleSubmit(onEditUnitSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label="Unit Name"
-            invalid={!!editFormMethods.formState.errors.name}
-            errorMessage={editFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Unit Name" />
-              )}
-            />
-          </FormItem>
-        </Form>
-        <div className="absolute bottom-[14%] w-[88%]">
-          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br/>
-              <p className="text-sm font-semibold">Tushar Joshi</p>
-              <p>System Admin</p>
-            </div>
-            <div className="w-[210px]"><br/>
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br/>
-              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
-            </div>
-          </div>
-        </div>
-      </Drawer>
+        </Drawer>
+      ))}
 
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
+        onClose={closeFilterDrawerCb}
+        onRequestClose={closeFilterDrawerCb}
+        width={400}
         footer={
           <div className="text-right w-full">
-            {" "}
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              {" "}
-              Clear{" "}
-            </Button>{" "}
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterUnitForm"
-              type="submit"
-            >
-              {" "}
-              Apply{" "}
-            </Button>{" "}
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
+            <Button size="sm" variant="solid" form="filterUnitForm" type="submit">Apply</Button>
           </div>
         }
       >
@@ -993,7 +819,22 @@ const Units = () => {
                   isMulti
                   placeholder="Select unit names..."
                   options={unitNameOptions}
-                  value={field.value || []} // Ensure value is always an array for MultiSelect
+                  value={field.value || []}
+                  onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Status"> {/* Added Status Filter */}
+            <Controller
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select status..."
+                  options={statusOptions}
+                  value={field.value || []}
                   onChange={(selectedVal) => field.onChange(selectedVal || [])}
                 />
               )}
@@ -1003,40 +844,47 @@ const Units = () => {
       </Drawer>
 
       <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Unit"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setUnitToDelete(null);
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{
+            disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason
         }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setUnitToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setUnitToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        // Add loading prop to ConfirmDialogProps if your component supports it
-        // For now, I'm removing it to avoid the TypeScript error.
-        // You'll need to handle the visual loading state inside ConfirmDialog if desired.
-        // loading={isDeleting}
       >
-        <p>
-          {" "}
-          Are you sure you want to delete the unit "
-          <strong>{unitToDelete?.name}</strong>"?{" "}
-        </p>
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => { 
+            e.preventDefault(); 
+            exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); 
+          }} 
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input textArea {...field} placeholder="Enter reason..." rows={3} />
+              )}
+            />
+          </FormItem>
+        </Form>
       </ConfirmDialog>
+
+      {/* Individual delete ConfirmDialog remains commented out as per template */}
     </>
   );
 };
 
 export default Units;
-
-// Helper
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}
