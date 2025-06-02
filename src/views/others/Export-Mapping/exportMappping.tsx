@@ -25,7 +25,7 @@ import DebouceInput from "@/components/shared/DebouceInput"; // Corrected typo i
 import { IoEyeOutline } from "react-icons/io5";
 import { getExportMappingsAction } from "@/reduxtool/master/middleware";
 // Icons
-import { TbChecks, TbSearch, TbCloudDownload, TbFilter } from "react-icons/tb";
+import { TbChecks, TbSearch, TbCloudDownload, TbFilter, TbActivity, TbCloudUpload, TbCalendarUp, TbUserUp, TbBookUpload } from "react-icons/tb";
 import userIconPlaceholder from "/img/avatars/thumb-1.jpg"; // Generic placeholder
 // Types
 import type {
@@ -997,7 +997,44 @@ const ExportMapping = () => {
         <div className="lg:flex items-center justify-between mb-4">
           <h5 className="mb-4 lg:mb-0">Export Mapping Log</h5>
         </div>
-
+        <div className="grid grid-cols-4 mb-4 gap-2">
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+              <TbCloudUpload size={24}/>
+            </div>
+            <div>
+              <h6 className="text-blue-500">879</h6>
+              <span className="font-semibold text-xs">Total Exports</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300" >
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+              <TbCalendarUp size={24}/>
+            </div>
+            <div>
+              <h6 className="text-violet-500">879</h6>
+              <span className="font-semibold text-xs">Exports Today</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+              <TbUserUp size={24}/>
+            </div>
+            <div>
+              <h6 className="text-pink-500">System Admin</h6>
+              <span className="font-semibold text-xs">Top User</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+              <TbBookUpload size={24}/>
+            </div>
+            <div>
+              <h6 className="text-green-500">Company</h6>
+              <span className="font-semibold text-xs">Top Module</span>
+            </div>
+          </Card>
+        </div>
         <div className="mb-4">
           <ExportMappingTableTools
             onSearchChange={handleSearchChange}

@@ -5808,3 +5808,29 @@ export const deleteAllWallAction = createAsyncThunk<any, any>(
     }
   }
 )
+
+export const submitExportReasonAction = createAsyncThunk("auth/submitResponse",
+async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await submitResponseAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "success",
+          }))
+        return response?.data?.data
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "failed",
+        }))
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
