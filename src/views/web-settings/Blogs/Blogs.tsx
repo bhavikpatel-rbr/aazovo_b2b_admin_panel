@@ -332,7 +332,7 @@ const Blogs = () => {
     itemBeingDeleted?: number | null;
   };
 
-  const tableLoading = masterLoading === true || masterLoading === "loading" || isSubmitting || isDeleting; // Adjusted condition
+  const tableLoading = masterLoading === true || masterLoading === "idle" || isSubmitting || isDeleting; // Adjusted condition
 
 
   useEffect(() => { dispatch(getBlogsAction()); }, [dispatch]);
@@ -712,7 +712,7 @@ const Blogs = () => {
 
       {/* <Drawer title="Import Blogs" isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)}> ... </Drawer> // Commented out */}
 
-      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Blog" onClose={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting || (masterLoading === "loading" && !!itemBeingDeleted && blogToDelete?.id === itemBeingDeleted)}> {/* Changed isProcessing to isDeleting */}
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Blog" onClose={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting || (masterLoading === "idle" && !!itemBeingDeleted && blogToDelete?.id === itemBeingDeleted)}> {/* Changed isProcessing to isDeleting */}
         <p>Are you sure you want to delete the blog "<strong>{blogToDelete?.title}</strong>"? This action cannot be undone.</p>
       </ConfirmDialog>
 

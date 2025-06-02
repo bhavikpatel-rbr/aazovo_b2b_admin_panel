@@ -593,7 +593,7 @@ const DomainManagementListing = () => {
     </div>
   );
 
-  const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isDeleting;
+  const tableLoading = masterLoadingStatus === "idle" || isSubmitting || isDeleting;
 
   return (
     <>
