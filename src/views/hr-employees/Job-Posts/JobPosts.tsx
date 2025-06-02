@@ -91,9 +91,9 @@ const JOB_POST_STATUS_OPTIONS_FORM: {
   value: JobPostStatusForm;
   label: string;
 }[] = [
-  { value: "Active", label: "Active" },
-  { value: "Disabled", label: "Disabled" },
-];
+    { value: "Active", label: "Active" },
+    { value: "Disabled", label: "Disabled" },
+  ];
 const jobPostStatusFormValues = JOB_POST_STATUS_OPTIONS_FORM.map(
   (s) => s.value
 ) as [JobPostStatusForm, ...JobPostStatusForm[]];
@@ -166,67 +166,67 @@ const CSV_KEYS_JOB: (keyof JobPostItem)[] = [
 ];
 
 function exportJobPostsToCsv(filename: string, rows: JobPostItem[], departmentOptions: JobDepartmentOption[]) {
-    if (!rows || !rows.length) {
-        toast.push(
-            <Notification title="No Data" type="info">
-                Nothing to export.
-            </Notification>
-        );
-        return false;
-    }
-
-    const preparedRows = rows.map(row => ({
-        ...row,
-        job_department_name: departmentOptions.find(d => String(d.value) === String(row.job_department_id))?.label || row.job_department_id,
-    }));
-
-    const csvKeysWithDeptName: (keyof JobPostItem | 'job_department_name')[] = [
-        "id", "job_title", "status", "job_department_name", "description", 
-        "location", "experience", "vacancies", "created_at"
-    ];
-    const csvHeadersWithDeptName = [
-        "ID", "Job Title", "Status", "Department Name", "Description", 
-        "Location", "Experience", "Vacancies", "Created At"
-    ];
-
-
-    const separator = ",";
-    const csvContent =
-        csvHeadersWithDeptName.join(separator) +
-        "\n" +
-        preparedRows
-            .map((row: any) =>
-                csvKeysWithDeptName.map((k) => {
-                    let cell: any = row[k];
-                    if (cell === null || cell === undefined) cell = "";
-                    else cell = String(cell).replace(/"/g, '""');
-                    if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-                    return cell;
-                }).join(separator)
-            )
-            .join("\n");
-
-    const blob = new Blob(["\ufeff" + csvContent], {
-        type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        return true;
-    }
+  if (!rows || !rows.length) {
     toast.push(
-        <Notification title="Export Failed" type="danger">
-            Browser does not support this feature.
-        </Notification>
+      <Notification title="No Data" type="info">
+        Nothing to export.
+      </Notification>
     );
     return false;
+  }
+
+  const preparedRows = rows.map(row => ({
+    ...row,
+    job_department_name: departmentOptions.find(d => String(d.value) === String(row.job_department_id))?.label || row.job_department_id,
+  }));
+
+  const csvKeysWithDeptName: (keyof JobPostItem | 'job_department_name')[] = [
+    "id", "job_title", "status", "job_department_name", "description",
+    "location", "experience", "vacancies", "created_at"
+  ];
+  const csvHeadersWithDeptName = [
+    "ID", "Job Title", "Status", "Department Name", "Description",
+    "Location", "Experience", "Vacancies", "Created At"
+  ];
+
+
+  const separator = ",";
+  const csvContent =
+    csvHeadersWithDeptName.join(separator) +
+    "\n" +
+    preparedRows
+      .map((row: any) =>
+        csvKeysWithDeptName.map((k) => {
+          let cell: any = row[k];
+          if (cell === null || cell === undefined) cell = "";
+          else cell = String(cell).replace(/"/g, '""');
+          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+          return cell;
+        }).join(separator)
+      )
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  }
+  toast.push(
+    <Notification title="Export Failed" type="danger">
+      Browser does not support this feature.
+    </Notification>
+  );
+  return false;
 }
 
 
@@ -313,7 +313,7 @@ type ItemTableToolsProps = {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
-  onClearFilters: ()=> void;
+  onClearFilters: () => void;
 };
 const ItemTableTools = ({
   onSearchChange,
@@ -440,9 +440,8 @@ const JobPostsSelectedFooter = ({
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Job Post${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
+        title={`Delete ${selectedItems.length} Job Post${selectedItems.length > 1 ? "s" : ""
+          }`}
         onClose={handleCancelDelete}
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
@@ -523,8 +522,8 @@ const JobPostsListing = () => {
 
   // Reset form with potentially new default values if departmentOptions load after form init
   useEffect(() => {
-    if(!isAddDrawerOpen && !isEditDrawerOpen) { // Only reset if no drawer is open
-        formMethods.reset(defaultFormValues);
+    if (!isAddDrawerOpen && !isEditDrawerOpen) { // Only reset if no drawer is open
+      formMethods.reset(defaultFormValues);
     }
   }, [defaultFormValues, formMethods, isAddDrawerOpen, isEditDrawerOpen]);
 
@@ -677,9 +676,8 @@ const JobPostsListing = () => {
           title="Job Post Deleted"
           type="success"
           duration={2000}
-        >{`Job post "${
-          itemToDelete.job_title || itemToDelete.id
-        }" deleted.`}</Notification>
+        >{`Job post "${itemToDelete.job_title || itemToDelete.id
+          }" deleted.`}</Notification>
       );
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
       dispatch(getJobPostsAction()); // Refresh list
@@ -901,7 +899,7 @@ const JobPostsListing = () => {
         size: 250,
         enableSorting: true,
         cell: (props) => (
-            <span className="font-semibold">{props.getValue<string>()}</span>
+          <span className="font-semibold">{props.getValue<string>()}</span>
         )
       },
       {
@@ -942,11 +940,11 @@ const JobPostsListing = () => {
         enableSorting: false,
         size: 200, // Adjusted size
         cell: (props) => (
-            <Tooltip title={props.getValue<string>()} placement="top-start">
-                <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">
-                    {props.getValue<string>()}
-                </span>
-            </Tooltip>
+          <Tooltip title={props.getValue<string>()} placement="top-start">
+            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">
+              {props.getValue<string>()}
+            </span>
+          </Tooltip>
         ),
       },
       {
@@ -1210,6 +1208,24 @@ const JobPostsListing = () => {
         >
           {renderDrawerForm(formMethods)}
         </Form>
+        {
+          editingItem && (
+            <div className="relative w-full">
+              <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                <div className="">
+                  <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                  <p className="text-sm font-semibold">Tushar Joshi</p>
+                  <p>System Admin</p>
+                </div>
+                <div className="w-[210px]">
+                  <br />
+                  <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+                  <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+                </div>
+              </div>
+            </div>
+          )
+        }
       </Drawer>
 
       <Drawer

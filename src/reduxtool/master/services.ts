@@ -2221,3 +2221,12 @@ export const editInquiriesAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+
+export const submitResponseAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/other/export-mapping`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
