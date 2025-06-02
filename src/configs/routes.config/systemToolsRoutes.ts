@@ -25,7 +25,7 @@ const systemToolsRoutes: Routes = [
     {
         key: 'systemTools.formBuilder',
         path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-create`,
-        component: lazy(() => import('@/views/system-tools/Form-Builder/components/FormBuilderFormPage'),
+        component: lazy(() => import('@/views/system-tools/Form-Builder/components/FormBuilderManagePage'),
         ),
         authority: [ADMIN],
         meta: {
@@ -34,8 +34,8 @@ const systemToolsRoutes: Routes = [
     },
     {
         key: 'systemTools.formBuilder',
-        path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-edit:id`,
-        component: lazy(() => import('@/views/system-tools/Form-Builder/components/FormBuilderFormPage'),
+        path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-edit/:formId`,
+        component: lazy(() => import('@/views/system-tools/Form-Builder/components/FormBuilderManagePage'),
         ),
         authority: [ADMIN],
         meta: {

@@ -379,11 +379,11 @@ const RowDataListing = () => {
     try {
       if (editingItem) {
         await dispatch(editRowDataAction({ id: editingItem.id, ...apiPayload })).unwrap();
-        toast.push(<Notification title="Row Data Updated" type="success" duration={2000} />);
+        toast.push(<Notification title="Raw Data Updated" type="success" duration={2000} />);
         closeEditDrawer();
       } else {
         await dispatch(addRowDataAction(apiPayload)).unwrap();
-        toast.push(<Notification title="Row Data Added" type="success" duration={2000} />);
+        toast.push(<Notification title="Raw Data Added" type="success" duration={2000} />);
         closeAddDrawer();
       }
       dispatch(getRowDataAction());
@@ -398,7 +398,7 @@ const RowDataListing = () => {
     setIsDeleting(true); setSingleDeleteConfirmOpen(false);
     try {
       await dispatch(deleteRowDataAction({ id: String(itemToDelete.id) })).unwrap();
-      toast.push(<Notification title="Row Data Deleted" type="success" duration={2000}>{`Entry "${itemToDelete.name || itemToDelete.mobile_no}" deleted.`}</Notification>);
+      toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`Entry "${itemToDelete.name || itemToDelete.mobile_no}" deleted.`}</Notification>);
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
       dispatch(getRowDataAction());
     } catch (e: any) {
@@ -413,7 +413,7 @@ const RowDataListing = () => {
     const idsToDelete = validItems.map((item) => String(item.id));
     try {
       await dispatch(deleteAllRowDataAction({ ids: idsToDelete.join(',') })).unwrap();
-      toast.push(<Notification title="Row Data Deleted" type="success" duration={2000}>{`${validItems.length} item(s) deleted.`}</Notification>);
+      toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`${validItems.length} item(s) deleted.`}</Notification>);
       setSelectedItems([]); dispatch(getRowDataAction());
     } catch (e: any) {
       toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Failed to delete selected items."}</Notification>);
@@ -429,7 +429,7 @@ const RowDataListing = () => {
     delete payload.country; delete payload.category; delete payload.brand;
     try {
       await dispatch(editRowDataAction(payload)).unwrap();
-      toast.push(<Notification title="Row Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>);
+      toast.push(<Notification title="Raw Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>);
       dispatch(getRowDataAction());
     } catch (e: any) {
       toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>);
@@ -501,7 +501,7 @@ const RowDataListing = () => {
 
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    const moduleName = "Row Data Management"; // Module name for logging
+    const moduleName = "Raw Data Management"; // Module name for logging
     try {
       await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
@@ -578,7 +578,7 @@ const RowDataListing = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Row Data Management</h5>
+            <h5 className="mb-2 sm:mb-0">Raw Data Management</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
           </div>
           <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} />
@@ -597,7 +597,7 @@ const RowDataListing = () => {
 
       <RowDataSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting && selectedItems.length > 0} />
 
-      <Drawer title={editingItem ? "Edit Row Data" : "Add New Row Data"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={940}
+      <Drawer title={editingItem ? "Edit Raw Data" : "Add New Raw Data"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={940}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
@@ -630,7 +630,7 @@ const RowDataListing = () => {
       </Drawer>
 
       <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={700}>
-        <h5 className="mb-4 text-lg font-semibold">Row Data Details - {viewingItem?.name || viewingItem?.mobile_no}</h5>
+        <h5 className="mb-4 text-lg font-semibold">Raw Data Details - {viewingItem?.name || viewingItem?.mobile_no}</h5>
         {viewingItem && (
           <div className="space-y-3 text-sm">
             {(Object.keys(viewingItem) as Array<keyof RowDataItem>).filter(key => key !== 'country' && key !== 'category' && key !== 'brand').map((key) => {
@@ -661,11 +661,11 @@ const RowDataListing = () => {
         </Form>
       </Drawer>
 
-      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Row Data" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting && !!itemToDelete}>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Raw Data" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting && !!itemToDelete}>
         <p>Are you sure you want to delete entry for "<strong>{itemToDelete?.name || itemToDelete?.mobile_no}</strong>"? This cannot be undone.</p>
       </ConfirmDialog>
 
-      <ConfirmDialog isOpen={blacklistConfirmOpen} type="warning" title="Blacklist Row Data" onClose={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }} confirmText="Yes, Blacklist" cancelText="No, Cancel" onConfirm={onConfirmBlacklist} loading={isBlacklisting} onCancel={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }} onRequestClose={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }}>
+      <ConfirmDialog isOpen={blacklistConfirmOpen} type="warning" title="Blacklist Raw Data" onClose={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }} confirmText="Yes, Blacklist" cancelText="No, Cancel" onConfirm={onConfirmBlacklist} loading={isBlacklisting} onCancel={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }} onRequestClose={() => { setBlacklistConfirmOpen(false); setItemToBlacklist(null); }}>
         <p>Are you sure you want to blacklist entry for "<strong>{itemToBlacklist?.name || itemToBlacklist?.mobile_no}</strong>"? This will change status to 'Blacklist'.</p>
       </ConfirmDialog>
 
