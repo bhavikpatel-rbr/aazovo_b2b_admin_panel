@@ -134,6 +134,9 @@ interface ApiSingleCustomerItem { /* ... (same as your previous definition) ... 
   country_id?: string;
   continent_id?: string;
   customer_ids?: string;
+  created_by?: string,
+  password?: string,
+  reset_count?: number,
   pincode?: string;
   status?: string;
   company_name?: string;
@@ -188,6 +191,9 @@ const transformApiToFormSchema = (apiData: ApiSingleCustomerItem): Partial<Membe
     country_id: apiData.country_id ? { label: `Country ${apiData.country_id}`, value: apiData.country_id } : undefined,
     continent_id: apiData.continent_id ? { label: `Continent ${apiData.continent_id}`, value: apiData.continent_id } : undefined,
     customer_ids: apiData.customer_ids,
+    created_by: apiData.created_by,
+    password: apiData.password,
+    reset_count: apiData.reset_count,
     pincode: apiData.pincode,
     status: apiData.status ? { label: apiData.status, value: apiData.status } : undefined,
     company_name: apiData.company_name,
@@ -532,10 +538,7 @@ const MemberFormComponent = (props: MemberFormComponentProps) => {
     name: z
       .string()
       .trim()
-      .min(1, { message: "Name is Required!" })
-      .regex(/^[A-Za-z\s'-]+$/, {
-        message: "Name must contain only letters, spaces, apostrophes, or hyphens",
-      }),
+      .min(1, { message: "Name is Required!" }),
     contact_country_code: z
       .string()
       .trim()
@@ -550,24 +553,15 @@ const MemberFormComponent = (props: MemberFormComponentProps) => {
     company_name_temp: z
       .string()
       .trim()
-      .min(1, { message: "Company Name Temp is required!" })
-      .regex(/^[A-Za-z0-9&.,'’\-\s]+$/, {
-        message: "Company Name Temp contains invalid characters",
-      }),
+      .min(1, { message: "Company Name Temp is required!" }),
     company_name: z
       .string()
       .trim()
-      .min(1, { message: "Company Name Temp is required!" })
-      .regex(/^[A-Za-z0-9&.,'’\-\s]+$/, {
-        message: "Company Name Temp contains invalid characters",
-      }),
+      .min(1, { message: "Company Name Temp is required!" }),
     address: z
       .string()
       .trim()
-      .min(1, { message: "Address is required!" })
-      .regex(/^[A-Za-z0-9\s.,#\-\/]+$/, {
-        message: "Address contains invalid characters",
-      }),
+      .min(1, { message: "Address is required!" }),
     // partner_kyc_status: z.string().trim().min(1, { message: "KYC is Required !" }),
     status: z.object({
       value: z.string(),
