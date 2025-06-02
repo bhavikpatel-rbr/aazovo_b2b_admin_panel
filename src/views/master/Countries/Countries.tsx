@@ -300,7 +300,7 @@ const CountryTableTools = ({
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
-  onClearFilters : ()=> void;
+  onClearFilters: () => void;
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -308,7 +308,7 @@ const CountryTableTools = ({
         <CountrySearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
+        <Button title="Clear Filters" icon={<TbReload />} onClick={() => onClearFilters()}></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -834,7 +834,7 @@ const Countries = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
+                masterLoadingStatus === "idle" || isSubmitting || isDeleting
               }
               pagingData={{
                 total: total,

@@ -19,7 +19,7 @@ import Select from "@/components/ui/Select"; // RHF-compatible Select
 import Avatar from "@/components/ui/Avatar";
 import Tag from "@/components/ui/Tag";
 // import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Assuming this is not needed as Input can be textArea
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input } from "@/components/ui";
 import Dialog from "@/components/ui/Dialog";
 
 // Icons
@@ -37,6 +37,9 @@ import {
   // TbCloudDownload, // Commented out, import functionality not implemented
   TbReload,
   TbUser,
+  TbCalendarUp,
+  TbUserUp,
+  TbBookUpload,
 } from "react-icons/tb";
 
 // Types
@@ -136,8 +139,8 @@ const CSV_HEADERS = [
   "Updated At",
 ];
 type BlogExportItem = Omit<BlogItem, "created_at" | "updated_at"> & {
-    created_at_formatted?: string;
-    updated_at_formatted?: string;
+  created_at_formatted?: string;
+  updated_at_formatted?: string;
 };
 
 const CSV_KEYS_EXPORT: (keyof BlogExportItem)[] = [
@@ -238,7 +241,7 @@ const BlogsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }:
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       <div className="flex-grow"><BlogsSearch onInputChange={onSearchChange} /></div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Button title="Clear Filters" icon={<TbReload/>} onClick={onClearFilters}></Button> {/* Changed onClick */}
+        <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters}></Button> {/* Changed onClick */}
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
         <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
       </div>
@@ -332,7 +335,7 @@ const Blogs = () => {
     itemBeingDeleted?: number | null;
   };
 
-  const tableLoading = masterLoading === true || masterLoading === "loading" || isSubmitting || isDeleting; // Adjusted condition
+  const tableLoading = masterLoading === true || masterLoading === "idle" || isSubmitting || isDeleting; // Adjusted condition
 
 
   useEffect(() => { dispatch(getBlogsAction()); }, [dispatch]);
@@ -508,20 +511,20 @@ const Blogs = () => {
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key && ["id", "title", "slug", "status", "created_at", "updated_at", "updated_by_name"].includes(key)) { // Added new sort keys
-        processedData.sort((a, b) => {
-            let aValue: any, bValue: any;
-            if (key === "created_at" || key === "updated_at") {
-                const dateA = a[key as 'created_at' | 'updated_at'] ? new Date(a[key as 'created_at' | 'updated_at']!).getTime() : 0;
-                const dateB = b[key as 'created_at' | 'updated_at'] ? new Date(b[key as 'created_at' | 'updated_at']!).getTime() : 0;
-                return order === "asc" ? dateA - dateB : dateB - dateA;
-            } else {
-                aValue = a[key as keyof BlogItem] ?? "";
-                bValue = b[key as keyof BlogItem] ?? "";
-            }
-            return order === "asc"
-                ? String(aValue).localeCompare(String(bValue))
-                : String(bValue).localeCompare(String(aValue));
-        });
+      processedData.sort((a, b) => {
+        let aValue: any, bValue: any;
+        if (key === "created_at" || key === "updated_at") {
+          const dateA = a[key as 'created_at' | 'updated_at'] ? new Date(a[key as 'created_at' | 'updated_at']!).getTime() : 0;
+          const dateB = b[key as 'created_at' | 'updated_at'] ? new Date(b[key as 'created_at' | 'updated_at']!).getTime() : 0;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else {
+          aValue = a[key as keyof BlogItem] ?? "";
+          bValue = b[key as keyof BlogItem] ?? "";
+        }
+        return order === "asc"
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
+      });
     }
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
@@ -574,7 +577,8 @@ const Blogs = () => {
   const columns: ColumnDef<BlogItem>[] = useMemo(
     () => [
       { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
-      { header: "Icon", accessorKey: "icon_full_path", enableSorting: false, size: 80, meta: { headerClass: "text-center", cellClass: "text-center" },
+      {
+        header: "Icon", accessorKey: "icon_full_path", enableSorting: false, size: 80, meta: { headerClass: "text-center", cellClass: "text-center" },
         cell: (props) => {
           const iconPath = props.row.original.icon_full_path; const titleInitial = props.row.original.title?.charAt(0).toUpperCase();
           return (<Avatar size={40} shape="circle" src={iconPath || undefined} icon={!iconPath ? <TbFileText /> : undefined} onClick={() => openImageViewer(iconPath)} className={iconPath ? "cursor-pointer hover:ring-2 hover:ring-indigo-500" : ""}>{!iconPath ? titleInitial : null}</Avatar>);
@@ -582,20 +586,23 @@ const Blogs = () => {
       },
       { header: "Title", accessorKey: "title", enableSorting: true, size: 200, cell: (props) => (<span className="">{props.getValue<string>()}</span>) },
       { header: "Slug", accessorKey: "slug", enableSorting: true, size: 180 },
-      { header: "Status", accessorKey: "status", enableSorting: true, size: 120,
+      {
+        header: "Status", accessorKey: "status", enableSorting: true, size: 120,
         cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); },
       },
-      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 170,
+      {
+        header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 170,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } = props.row.original;
           const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
           return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
         },
       },
-      { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, // Reduced size as Clone is removed
+      {
+        header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, // Reduced size as Clone is removed
         cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />), // Removed onClone
       },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [openImageViewer, openEditDrawer, handleDeleteClick] // Removed handleCloneBlog
   );
 
@@ -611,6 +618,65 @@ const Blogs = () => {
               <Link to='/task/task-list/create'><Button className="mr-2" icon={<TbUser />} clickFeedback={false} customColorClass={({ active, unclickable }) => classNames('hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0', active ? 'bg-gray-200' : 'bg-gray-100', unclickable && 'opacity-50 cursor-not-allowed', !active && !unclickable && 'hover:bg-gray-200')}>Assigned to Task</Button></Link>
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
             </div>
+          </div>
+          <div className="grid grid-cols-6 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbCloudUpload size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">879</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbBookUpload size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">23</h6>
+                <span className="font-semibold text-xs">Today</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbBookUpload size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">345</h6>
+                <span className="font-semibold text-xs">Total Views</span>
+              </div>
+            </Card>
+            
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbCalendarUp size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">879</h6>
+                <span className="font-semibold text-xs">Published</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbUserUp size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">78</h6>
+                <span className="font-semibold text-xs">Unpublished</span>
+              </div>
+            </Card>
+            
+            
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-gray-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500">
+                <TbUserUp size={24} />
+              </div>
+              <div>
+                <h6 className="text-gray-500">34</h6>
+                <span className="font-semibold text-xs">Drafts</span>
+              </div>
+            </Card>
           </div>
           <BlogsTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} /> {/* Changed onExport */}
           <div className="mt-4 flex-grow overflow-y-auto">
@@ -673,23 +739,23 @@ const Blogs = () => {
             </FormItem>
 
             {drawer.type === "edit" && editingBlog && (
-                <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2"> {/* Positioned audit info */}
-                    <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                        <div>
-                            <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b><br />
-                            <p className="text-sm font-semibold">{editingBlog.updated_by_name || "N/A"}</p>
-                            <p>{editingBlog.updated_by_role || "N/A"}</p>
-                        </div>
-                        <div>
-                            <br />
-                            <span className="font-semibold">Created At:</span>{" "}
-                            <span>{editingBlog.created_at ? new Date(editingBlog.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
-                            <br />
-                            <span className="font-semibold">Updated At:</span>{" "}
-                            <span>{editingBlog.updated_at ? new Date(editingBlog.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
-                        </div>
-                    </div>
+              <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2"> {/* Positioned audit info */}
+                <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                  <div>
+                    <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b><br />
+                    <p className="text-sm font-semibold">{editingBlog.updated_by_name || "N/A"}</p>
+                    <p>{editingBlog.updated_by_role || "N/A"}</p>
+                  </div>
+                  <div>
+                    <br />
+                    <span className="font-semibold">Created At:</span>{" "}
+                    <span>{editingBlog.created_at ? new Date(editingBlog.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                    <br />
+                    <span className="font-semibold">Updated At:</span>{" "}
+                    <span>{editingBlog.updated_at ? new Date(editingBlog.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                  </div>
                 </div>
+              </div>
             )}
           </Form>
         </Drawer>
@@ -712,7 +778,7 @@ const Blogs = () => {
 
       {/* <Drawer title="Import Blogs" isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)}> ... </Drawer> // Commented out */}
 
-      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Blog" onClose={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting || (masterLoading === "loading" && !!itemBeingDeleted && blogToDelete?.id === itemBeingDeleted)}> {/* Changed isProcessing to isDeleting */}
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Blog" onClose={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setBlogToDelete(null); }} confirmButtonColor="red-600" onConfirm={onConfirmSingleDelete} loading={isDeleting || (masterLoading === "idle" && !!itemBeingDeleted && blogToDelete?.id === itemBeingDeleted)}> {/* Changed isProcessing to isDeleting */}
         <p>Are you sure you want to delete the blog "<strong>{blogToDelete?.title}</strong>"? This action cannot be undone.</p>
       </ConfirmDialog>
 

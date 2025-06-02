@@ -5807,7 +5807,6 @@ export const deleteAllWallAction = createAsyncThunk<any, any>(
       return rejectWithValue(error as Error)
     }
   }
-  
 )
 
 export const submitExportReasonAction = createAsyncThunk("auth/submitResponse",
@@ -5832,6 +5831,6 @@ async (data, { rejectWithValue, dispatch }) => {
       return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
-    }
-  }
+    }
+  }
 )

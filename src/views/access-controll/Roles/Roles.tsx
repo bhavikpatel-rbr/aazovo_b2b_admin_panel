@@ -31,7 +31,7 @@ import {
 import {
   TbPencil,
   TbEye,
-  TbShieldLock ,
+  TbShieldLock,
   TbShare,
   TbChecks,
   TbSearch,
@@ -41,7 +41,8 @@ import {
   TbUserShield,
   TbLockAccess,
   TbFileDescription,
-  TbCalendarTime, // Additional icons
+  TbCalendarTime,
+  TbReload, // Additional icons
 } from "react-icons/tb";
 
 // Types
@@ -152,9 +153,9 @@ const ActionColumn = ({
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
-          onClick={()=>navigate("/access-control/permission")}
+          onClick={() => navigate("/access-control/permission")}
         >
-          <TbShieldLock  />
+          <TbShieldLock />
         </div>
       </Tooltip>
       <Tooltip title="Edit">
@@ -202,16 +203,21 @@ const RoleTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onClearFilters
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onClearFilters: () => void;
 }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <RoleSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload />} onClick={() => onClearFilters()} />
+      </Tooltip>
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -270,9 +276,8 @@ const RoleSelectedFooter = ({
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Role${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
+        title={`Delete ${selectedItems.length} Role${selectedItems.length > 1 ? "s" : ""
+          }`}
         onClose={() => setDeleteConfirmOpen(false)}
         onRequestClose={() => setDeleteConfirmOpen(false)}
         onCancel={() => setDeleteConfirmOpen(false)}
@@ -770,6 +775,7 @@ const RolesListing = () => {
             </Button>
           </div>
           <RoleTableTools
+            onClearFilters={onClearFilters}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleExportData}
@@ -896,61 +902,61 @@ const RolesListing = () => {
             />
           </FormItem>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* EMPLOYEE */}
-          <FormItem label="Employee" className="col-span-1">
-          <Controller
-          name="isEmployee"
-          control={addFormMethods.control}
-          render={({ field }) => (
-          <div className="flex space-x-4">
-          <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
-          <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
-          </div>
-          )}
-          />
-          </FormItem>
+            {/* EMPLOYEE */}
+            <FormItem label="Employee" className="col-span-1">
+              <Controller
+                name="isEmployee"
+                control={addFormMethods.control}
+                render={({ field }) => (
+                  <div className="flex space-x-4">
+                    <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
+                    <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
+                  </div>
+                )}
+              />
+            </FormItem>
 
-          {/* DESIGNATION */}
-          <FormItem label="Designation" className="col-span-1">
-          <Controller
-          name="isDesignation"
-          control={addFormMethods.control}
-          render={({ field }) => (
-          <div className="flex space-x-4">
-          <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
-          <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
-          </div>
-          )}
-          />
-          </FormItem>
+            {/* DESIGNATION */}
+            <FormItem label="Designation" className="col-span-1">
+              <Controller
+                name="isDesignation"
+                control={addFormMethods.control}
+                render={({ field }) => (
+                  <div className="flex space-x-4">
+                    <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
+                    <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
+                  </div>
+                )}
+              />
+            </FormItem>
 
-          {/* DEPARTMENT */}
-          <FormItem label="Department" className="col-span-1">
-          <Controller
-          name="isDepartment"
-          control={addFormMethods.control}
-          render={({ field }) => (
-          <div className="flex space-x-4">
-          <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
-          <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
-          </div>
-          )}
-          />
-          </FormItem>
+            {/* DEPARTMENT */}
+            <FormItem label="Department" className="col-span-1">
+              <Controller
+                name="isDepartment"
+                control={addFormMethods.control}
+                render={({ field }) => (
+                  <div className="flex space-x-4">
+                    <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
+                    <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
+                  </div>
+                )}
+              />
+            </FormItem>
 
-          {/* ROLE */}
-          <FormItem label="Role" className="col-span-1">
-          <Controller
-          name="isRole"
-          control={addFormMethods.control}
-          render={({ field }) => (
-          <div className="flex space-x-4">
-          <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
-          <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
-          </div>
-          )}
-          />
-          </FormItem>
+            {/* ROLE */}
+            <FormItem label="Role" className="col-span-1">
+              <Controller
+                name="isRole"
+                control={addFormMethods.control}
+                render={({ field }) => (
+                  <div className="flex space-x-4">
+                    <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
+                    <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
+                  </div>
+                )}
+              />
+            </FormItem>
           </div>
         </Form>
       </Drawer>
@@ -1041,120 +1047,134 @@ const RolesListing = () => {
               )}
             />
           </FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Employee Access">
-  <div className="flex gap-6">
-    <Controller
-      name="isEmployee"
-      control={editFormMethods.control}
-      render={({ field }) => (
-        <>
-          <Radio
-            className="mr-4"
-            checked={field.value === true}
-            onChange={() => field.onChange(true)}
-            name="isEmployee"
-          >
-            Yes
-          </Radio>
-          <Radio
-            checked={field.value === false}
-            onChange={() => field.onChange(false)}
-            name="isEmployee"
-          >
-            No
-          </Radio>
-        </>
-      )}
-    />
-  </div>
-</FormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem label="Employee Access">
+              <div className="flex gap-6">
+                <Controller
+                  name="isEmployee"
+                  control={editFormMethods.control}
+                  render={({ field }) => (
+                    <>
+                      <Radio
+                        className="mr-4"
+                        checked={field.value === true}
+                        onChange={() => field.onChange(true)}
+                        name="isEmployee"
+                      >
+                        Yes
+                      </Radio>
+                      <Radio
+                        checked={field.value === false}
+                        onChange={() => field.onChange(false)}
+                        name="isEmployee"
+                      >
+                        No
+                      </Radio>
+                    </>
+                  )}
+                />
+              </div>
+            </FormItem>
 
-<FormItem label="Designation Access">
-  <div className="flex gap-6">
-    <Controller
-      name="isDesignation"
-      control={editFormMethods.control}
-      render={({ field }) => (
-        <>
-          <Radio
-            className="mr-4"
-            checked={field.value === true}
-            onChange={() => field.onChange(true)}
-            name="isDesignation"
-          >
-            Yes
-          </Radio>
-          <Radio
-            checked={field.value === false}
-            onChange={() => field.onChange(false)}
-            name="isDesignation"
-          >
-            No
-          </Radio>
-        </>
-      )}
-    />
-  </div>
-</FormItem>
+            <FormItem label="Designation Access">
+              <div className="flex gap-6">
+                <Controller
+                  name="isDesignation"
+                  control={editFormMethods.control}
+                  render={({ field }) => (
+                    <>
+                      <Radio
+                        className="mr-4"
+                        checked={field.value === true}
+                        onChange={() => field.onChange(true)}
+                        name="isDesignation"
+                      >
+                        Yes
+                      </Radio>
+                      <Radio
+                        checked={field.value === false}
+                        onChange={() => field.onChange(false)}
+                        name="isDesignation"
+                      >
+                        No
+                      </Radio>
+                    </>
+                  )}
+                />
+              </div>
+            </FormItem>
 
-<FormItem label="Department Access">
-  <div className="flex gap-6">
-    <Controller
-      name="isDepartment"
-      control={editFormMethods.control}
-      render={({ field }) => (
-        <>
-          <Radio
-            className="mr-4"
-            checked={field.value === true}
-            onChange={() => field.onChange(true)}
-            name="isDepartment"
-          >
-            Yes
-          </Radio>
-          <Radio
-            checked={field.value === false}
-            onChange={() => field.onChange(false)}
-            name="isDepartment"
-          >
-            No
-          </Radio>
-        </>
-      )}
-    />
-  </div>
-</FormItem>
+            <FormItem label="Department Access">
+              <div className="flex gap-6">
+                <Controller
+                  name="isDepartment"
+                  control={editFormMethods.control}
+                  render={({ field }) => (
+                    <>
+                      <Radio
+                        className="mr-4"
+                        checked={field.value === true}
+                        onChange={() => field.onChange(true)}
+                        name="isDepartment"
+                      >
+                        Yes
+                      </Radio>
+                      <Radio
+                        checked={field.value === false}
+                        onChange={() => field.onChange(false)}
+                        name="isDepartment"
+                      >
+                        No
+                      </Radio>
+                    </>
+                  )}
+                />
+              </div>
+            </FormItem>
 
-<FormItem label="Role Access">
-  <div className="flex gap-6">
-    <Controller
-      name="isRole"
-      control={editFormMethods.control}
-      render={({ field }) => (
-        <>
-          <Radio
-            className="mr-4"
-            checked={field.value === true}
-            onChange={() => field.onChange(true)}
-            name="isRole"
-          >
-            Yes
-          </Radio>
-          <Radio
-            checked={field.value === false}
-            onChange={() => field.onChange(false)}
-            name="isRole"
-          >
-            No
-          </Radio>
-        </>
-      )}
-    />
-  </div>
-</FormItem>
-</div>
+            <FormItem label="Role Access">
+              <div className="flex gap-6">
+                <Controller
+                  name="isRole"
+                  control={editFormMethods.control}
+                  render={({ field }) => (
+                    <>
+                      <Radio
+                        className="mr-4"
+                        checked={field.value === true}
+                        onChange={() => field.onChange(true)}
+                        name="isRole"
+                      >
+                        Yes
+                      </Radio>
+                      <Radio
+                        checked={field.value === false}
+                        onChange={() => field.onChange(false)}
+                        name="isRole"
+                      >
+                        No
+                      </Radio>
+                    </>
+                  )}
+                />
+              </div>
+            </FormItem>
+          </div>
         </Form>
+        <div className="relative w-full">
+          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+            <div className="">
+              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+              <p className="text-sm font-semibold">Tushar Joshi</p>
+              <p>System Admin</p>
+            </div>
+            <div className="w-[210px]">
+              <br />
+              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
+              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+            </div>
+          </div>
+        </div>
       </Drawer>
 
       {/* Filter Drawer (Simple Example) */}
@@ -1199,9 +1219,8 @@ const RolesListing = () => {
 
       {/* Permissions Drawer (Placeholder Content) */}
       <Drawer
-        title={`Permissions for ${
-          currentRoleForPermissions?.displayName || "Role"
-        }`}
+        title={`Permissions for ${currentRoleForPermissions?.displayName || "Role"
+          }`}
         isOpen={isPermissionsDrawerOpen}
         onClose={closePermissionsDrawer}
         onRequestClose={closePermissionsDrawer}
