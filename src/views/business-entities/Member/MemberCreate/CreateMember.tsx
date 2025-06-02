@@ -1,22 +1,22 @@
 // src/views/members/MemberFormPage.tsx (or your chosen path)
-import React, { useEffect, useState, ReactNode } from 'react';
-import { useForm, Controller, Control, FieldErrors, UseFormReturn } from 'react-hook-form';
-import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
-import isEmpty from 'lodash/isEmpty';
-import classNames from 'classnames';
 import { useAppDispatch } from '@/reduxtool/store'; // For dispatching Redux actions
+import classNames from 'classnames';
+import isEmpty from 'lodash/isEmpty';
+import { useEffect, useState } from 'react';
+import { Control, Controller, FieldErrors, useForm, UseFormReturn } from 'react-hook-form';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 // UI Components
-import { Form, FormItem } from '@/components/ui/Form';
-import Card from '@/components/ui/Card';
-import Container from '@/components/shared/Container';
-import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
-import Checkbox from '@/components/ui/Checkbox';
-import Button from '@/components/ui/Button';
-import Notification from '@/components/ui/Notification';
-import toast from '@/components/ui/toast';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import Container from '@/components/shared/Container';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Checkbox from '@/components/ui/Checkbox';
+import { Form, FormItem } from '@/components/ui/Form';
+import Input from '@/components/ui/Input';
+import Notification from '@/components/ui/Notification';
+import Select from '@/components/ui/Select';
+import toast from '@/components/ui/toast';
 
 // Icons
 import { BiChevronRight } from 'react-icons/bi';
@@ -24,7 +24,6 @@ import { TbTrash } from 'react-icons/tb';
 
 // Utils & Services
 // import sleep from '@/utils/sleep'; // Can be removed if API calls handle delay
-import config from '@/configs/app.config';
 
 // --- Redux Actions (Ensure these paths and names are correct) ---
 import {
@@ -32,13 +31,13 @@ import {
   editMemberAction,
   getContinentsAction,
   getCountriesAction,
-  // editMemberAction,
-  // getMembersAction, // If you need to refetch the list after add/edit
 } from '@/reduxtool/master/middleware'; // Or your members middleware path
 
-import axiosInstance, { isAxiosError } from '@/services/api/api';
-import { useSelector } from 'react-redux';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
+import axiosInstance from '@/services/api/api';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useSelector } from 'react-redux';
+import { z } from 'zod';
 
 // --- Type Definitions ---
 export interface MemberFormSchema {
@@ -63,6 +62,7 @@ export interface MemberFormSchema {
   status?: string | { label: string; value: string };
   company_name?: string;
   company_name_temp?: string;
+  address?: string,
   company_description?: string | null;
   company_address?: string;
   whatsapp_number?: string;
@@ -331,9 +331,10 @@ const PersonalDetailsComponent = ({ control, errors }: FormSectionBaseProps) => 
         <FormItem label="Full Name" invalid={Boolean(errors.name)} errorMessage={errors.name?.message}>
           <Controller name="name" control={control} render={({ field }) => <Input placeholder="Member’s full name" {...field} />} />
         </FormItem>
-        <FormItem label="Mobile Number">
+        <FormItem label="Mobile Number" invalid={Boolean(errors.contact_country_code)} errorMessage={errors.contact_country_code?.message}>
           <div className="flex items-center gap-2">
-            <Controller name="contact_country_code" control={control} render={({ field }) => <Input placeholder="+1" className="w-20" {...field} />} />
+            <Controller name="contact_country_code" control={control} render={({ field }) =>
+              <Input placeholder="+1" className="w-20" {...field} />} />
             <Controller name="mobile_no" control={control} render={({ field }) => <Input placeholder="Primary contact number" {...field} />} />
           </div>
         </FormItem>
@@ -380,7 +381,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
         <FormItem label="WhatsApp No." invalid={Boolean(errors.whatsapp_number)} errorMessage={errors.whatsapp_number?.message}>
           <Controller name="whatsapp_number" control={control} render={({ field }) => <Input placeholder="Enter WhatsApp number" {...field} />} />
         </FormItem>
-        <FormItem label="Alternate Contact Number">
+        <FormItem label="Alternate Contact Number" invalid={Boolean(errors.alternate_contact_country_code)} errorMessage={errors.alternate_contact_country_code?.message}>
           <div className="flex items-center gap-2">
             <Controller name="alternate_contact_country_code" control={control} render={({ field }) => <Input placeholder="+1" className="w-20" {...field} />} />
             <Controller name="alternate_contact_number" control={control} render={({ field }) => <Input placeholder="Alternate contact" {...field} />} />
@@ -527,8 +528,88 @@ const MemberFormComponent = (props: MemberFormComponentProps) => {
   const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
   const [activeSection, setActiveSection] = useState<any>("personalDetails");
 
-  const formMethods = useForm<MemberFormSchema>({ defaultValues: defaultValues || {} });
+  const memberSchema = z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, { message: "Name is Required!" })
+      .regex(/^[A-Za-z\s'-]+$/, {
+        message: "Name must contain only letters, spaces, apostrophes, or hyphens",
+      }),
+    contact_country_code: z
+      .string()
+      .trim()
+      .min(1, { message: "Country code is required!" })
+      .regex(/^\+\d{1,4}$/, {
+        message: "Country code must start with '+' and contain 1 to 4 digits",
+      }),
+    email: z
+      .string()
+      .trim()
+      .min(1, { message: "Email is Required !" }),
+    company_name_temp: z
+      .string()
+      .trim()
+      .min(1, { message: "Company Name Temp is required!" })
+      .regex(/^[A-Za-z0-9&.,'’\-\s]+$/, {
+        message: "Company Name Temp contains invalid characters",
+      }),
+    company_name: z
+      .string()
+      .trim()
+      .min(1, { message: "Company Name Temp is required!" })
+      .regex(/^[A-Za-z0-9&.,'’\-\s]+$/, {
+        message: "Company Name Temp contains invalid characters",
+      }),
+    address: z
+      .string()
+      .trim()
+      .min(1, { message: "Address is required!" })
+      .regex(/^[A-Za-z0-9\s.,#\-\/]+$/, {
+        message: "Address contains invalid characters",
+      }),
+    // partner_kyc_status: z.string().trim().min(1, { message: "KYC is Required !" }),
+    status: z.object({
+      value: z.string(),
+      label: z.string(),
+    }),
+    city: z.object({
+      value: z.string(),
+      label: z.string(),
+    }),
+    state: z.object({
+      value: z.string(),
+      label: z.string(),
+    }),
+    country_id: z.object({
+      value: z.number(),
+      label: z.string(),
+    }),
+    continent_id: z.object({
+      value: z.number(),
+      label: z.string(),
+    }),
+    pincode: z.string()
+      .trim()
+      .min(1, { message: "Pincode is required!" })
+      .regex(/^\d{6}$/, { message: "Pincode must be exactly 6 digits" }),
+    whatsapp_number: z.string()
+      .trim()
+      .min(1, { message: "WhatsApp number is required!" })
+      .regex(/^\d{7,15}$/, {
+        message: "WhatsApp number must be between 7 and 15 digits, digits only",
+      })
+  });
+
+  const formMethods = useForm<MemberFormSchema>({
+    defaultValues: defaultValues || {},
+    resolver: zodResolver(memberSchema),
+  });
   const { handleSubmit, reset, formState: { errors }, control } = formMethods;
+
+
+  console.log(errors, "errors");
+
 
   useEffect(() => {
     if (!isEmpty(defaultValues)) {
@@ -620,10 +701,10 @@ const MemberCreate = () => {
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        dispatch(getCountriesAction());
-        dispatch(getContinentsAction());
-    }, [])
+  useEffect(() => {
+    dispatch(getCountriesAction());
+    dispatch(getContinentsAction());
+  }, [])
   useEffect(() => {
     if (isEditMode && memberId) {
       const fetchMemberData = async () => {
