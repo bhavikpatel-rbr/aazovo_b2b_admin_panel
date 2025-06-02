@@ -1,32 +1,34 @@
 
 // src/views/companies/CompanyFormPage.tsx (or your chosen path)
-import React, { useEffect, useState, ReactNode } from 'react';
-import { useForm, Controller, Control, FieldErrors, UseFormReturn, useFieldArray } from 'react-hook-form'; // Keep useFieldArray for sections that already imply arrays
-import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
-import isEmpty from 'lodash/isEmpty';
 import classNames from 'classnames';
+import isEmpty from 'lodash/isEmpty';
+import { useEffect, useState } from 'react';
+import { Control, Controller, FieldErrors, UseFormReturn, useFieldArray, useForm } from 'react-hook-form'; // Keep useFieldArray for sections that already imply arrays
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 // UI Components (Assuming these are correct)
-import { Form, FormItem } from '@/components/ui/Form';
-import Card from '@/components/ui/Card';
-import Container from '@/components/shared/Container';
-import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
-import Checkbox from '@/components/ui/Checkbox';
-import Button from '@/components/ui/Button';
-import Notification from '@/components/ui/Notification';
-import toast from '@/components/ui/toast';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import Container from '@/components/shared/Container';
 import NumericInput from '@/components/shared/NumericInput';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Checkbox from '@/components/ui/Checkbox';
+import { Form, FormItem } from '@/components/ui/Form';
+import Input from '@/components/ui/Input';
+import Notification from '@/components/ui/Notification';
+import Select from '@/components/ui/Select';
+import toast from '@/components/ui/toast';
 
 // Icons
-import { BiChevronRight } from 'react-icons/bi';
-import { TbTrash, TbPlus } from 'react-icons/tb';
-import { addcompanyAction, editcompanyAction, getContinentsAction, getCountriesAction, getInquiriesAction } from '@/reduxtool/master/middleware';
+import { masterSelector } from '@/reduxtool/master/masterSlice';
+import { addcompanyAction, editcompanyAction, getContinentsAction, getCountriesAction } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
 import axiosInstance from '@/services/api/api';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { BiChevronRight } from 'react-icons/bi';
+import { TbPlus, TbTrash } from 'react-icons/tb';
 import { useSelector } from 'react-redux';
-import { masterSelector } from '@/reduxtool/master/masterSlice';
+import { z } from 'zod';
 
 // --- Type Definitions ---
 
@@ -1155,8 +1157,35 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
     const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
+    const companySchema = z.object({
+        name: z
+            .string()
+            .trim()
+            .min(1, { message: "Name is Required!" }),
+        company_code: z
+            .string()
+            .trim()
+            .min(1, { message: "Comapny code is required!" }),
+        company_primary_email_id: z
+            .string()
+            .trim()
+            .min(1, { message: "Email is Required !" }),
+        status: z.object({
+            value: z.string(),
+            label: z.string(),
+        }),
+        company_primary_contact_number: z
+            .string()
+            .trim()
+            .min(1, { message: "Primary contact number is required!" })
+            .regex(/^\+?\d{7,15}$/, {
+                message: "Primary contact number must be between 7 and 15 digits, optionally starting with '+'",
+            })
+    });
+
     const formMethods = useForm<CompanyFormSchema>({
         defaultValues: defaultValues || {},
+        resolver: zodResolver(companySchema)
     });
     const { handleSubmit, reset, formState: { errors }, control } = formMethods;
 

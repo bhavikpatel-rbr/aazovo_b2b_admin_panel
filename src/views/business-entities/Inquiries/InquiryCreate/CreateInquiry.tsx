@@ -7,13 +7,15 @@ import DatePicker from "@/components/ui/DatePicker";
 import { FormItem } from "@/components/ui/Form";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { addInquiriesAction, addpartnerAction, editInquiriesAction, editpartnerAction, getCountriesAction } from "@/reduxtool/master/middleware";
+import { addInquiriesAction, editInquiriesAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import axiosInstance from '@/services/api/api';
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { BiChevronRight } from "react-icons/bi";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 const CreateInquiry = () => {
   const transformApiToFormSchema = (apiData) => {
@@ -78,7 +80,29 @@ const CreateInquiry = () => {
     "inquiry_attachments_array": '',
     "assigned_to_name": '',
     "inquiry_department_name": ''
-  })
+  });
+
+  const inquirySchema = z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, { message: "Name is Required!" }),
+    company_name: z
+      .string()
+      .trim()
+      .min(1, { message: "Company Name is Required!" }),
+    inquiry_id: z
+      .string()
+      .trim()
+      .min(1, { message: "Inquiry ID is required!" }),
+    email: z.string()
+      .trim()
+      .min(1, { message: "Email is required!" })
+      .email({ message: "Invalid email address" }),
+  });
+
+
+
   const {
     control,
     handleSubmit,
@@ -86,7 +110,11 @@ const CreateInquiry = () => {
     reset,
   } = useForm({
     defaultValues: formdata,
+    resolver: zodResolver(inquirySchema)
   });
+
+  console.log(errors, "errors");
+
   const dispatch = useAppDispatch(); // Initialize dispatch
   const location = useLocation();
   const navigate = useNavigate();
@@ -124,9 +152,10 @@ const CreateInquiry = () => {
   }, [inquiryID, isEditMode, navigate]);
 
   const onSubmit = async (data: any) => {
+    // debugger
     try {
       if (isEditMode && inquiryID) {
-        await dispatch(editInquiriesAction({ ...formdata, ...data, inquiry_attachments: attachments.map((file) => file.name),inquiry_status: data.inquiry_status.value,assigned_to: data.assigned_to.value,  })).unwrap();
+        await dispatch(editInquiriesAction({ ...formdata, ...data, inquiry_attachments: attachments?.map((file) => file?.name), inquiry_status: data?.inquiry_status?.value, assigned_to: data?.assigned_to?.value, })).unwrap();
         toast.push(
           <Notification type="success" title="Inquery Update">
             Inquery updated successfully.
