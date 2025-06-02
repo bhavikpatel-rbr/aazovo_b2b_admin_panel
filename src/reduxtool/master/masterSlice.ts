@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addcompanyAction, addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addInquiriesAction, addMemberAction, addpartnerAction, addPaymentTermAction, addUnitAction, deletAllUnitAction, deleteAllcompanyAction, deleteAllMemberAction, deleteAllpartnerAction, deletecompanyAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deleteMemberAction, deletepartnerAction, deletePaymentTermAction, deletUnitAction, editcompanyAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editInquiriesAction, editMemberAction, editpartnerAction, editPaymentTermAction, editUnitAction, getAllProductAction, getAutoEmailsAction, getAutoEmailTemplatesAction, getAutoMatchDataAction, getBlogsAction, getBrandAction, getBugReportsAction, getBuyerListingsAction, getCategoriesAction, getCompanyAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getEmailCampaignsAction, getEmailTemplatesAction, getExportMappingsAction, getFormBuilderAction, getHomeCategoryAction, getInquiriesAction, getJobApplicationsAction, getJobDepartmentsAction, getJobPostsAction, getLeadAction, getMailTemplatesAction, getMemberAction, getMembersAction, getNumberSystemsAction, getpartnerAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getRequestFeedbacksAction, getRolesAction, getRowDataAction, getSellerListingsAction, getSlidersAction, getSubcategoriesByCategoryIdAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getUsersAction, getWallItemsAction, getWallListingAction } from "./middleware"
+import { addcompanyAction, addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addInquiriesAction, addMemberAction, addpartnerAction, addPaymentTermAction, addUnitAction, deletAllUnitAction, deleteAllcompanyAction, deleteAllMemberAction, deleteAllpartnerAction, deletecompanyAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deleteMemberAction, deletepartnerAction, deletePaymentTermAction, deletUnitAction, editcompanyAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editInquiriesAction, editMemberAction, editpartnerAction, editPaymentTermAction, editUnitAction, getActivityLogAction, getAllProductAction, getAutoEmailsAction, getAutoEmailTemplatesAction, getAutoMatchDataAction, getBlogsAction, getBrandAction, getBugReportsAction, getBuyerListingsAction, getCategoriesAction, getCompanyAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getEmailCampaignsAction, getEmailTemplatesAction, getExportMappingsAction, getFormBuilderAction, getHomeCategoryAction, getInquiriesAction, getJobApplicationsAction, getJobDepartmentsAction, getJobPostsAction, getLeadAction, getMailTemplatesAction, getMemberAction, getMembersAction, getNumberSystemsAction, getpartnerAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getRequestFeedbacksAction, getRolesAction, getRowDataAction, getSellerListingsAction, getSlidersAction, getSubcategoriesByCategoryIdAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getUsersAction, getWallItemsAction, getWallListingAction } from "./middleware"
 
 const INITIAL_STATE: any = {
   unitData: "",
@@ -51,7 +51,8 @@ const INITIAL_STATE: any = {
   partnerData: [],
   jobApplicationsData: [],
   wallListing: [],
-  formsData:[]
+  formsData:"",
+  activityLogsData:[]
 }
 
 const masterSlice = createSlice({
@@ -404,6 +405,10 @@ const masterSlice = createSlice({
     builder.addCase(getFormBuilderAction.fulfilled, (state, { payload }) => ({
       ...state,
       formsData: payload
+    }))
+    builder.addCase(getActivityLogAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      activityLogsData: payload
     }))
   },
 })

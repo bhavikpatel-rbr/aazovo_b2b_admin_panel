@@ -2270,7 +2270,8 @@ export const deleteFormBuilderAsync = async (formData: any) => {
 
 export const deleteAllFormBuilderAsync = async (formData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/form_builder/delete`, formData)
+    console.log(formData);
+    const response = await axiosInstance.delete(`${config.apiURL}/master/form_builder/delete`, formData)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2292,5 +2293,14 @@ export const cloneFormBuilderAsync = async (formData: any) => {
     return response;
   } catch (err) {
     return isAxiosError(err);
+  }
+}
+
+export const getActivityLogAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/activity-logs`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
   }
 }

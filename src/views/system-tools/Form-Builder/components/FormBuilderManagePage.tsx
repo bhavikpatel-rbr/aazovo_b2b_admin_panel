@@ -20,7 +20,8 @@ import toast from '@/components/ui/toast';
 import { DatePicker, Radio, Switcher, Tooltip } from '@/components/ui';
 import { BiChevronRight } from 'react-icons/bi';
 import { TbCirclePlus, TbCopy, TbLayoutList, TbPlus, TbTrash } from 'react-icons/tb';
-
+import { useSelector } from 'react-redux'; // Added
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // Assuming masterSelector provides access to the slice state containing formsData
 // Import types and constants from FormBuilder.tsx or a shared file
 // IMPORTANT: Assume DEPARTMENT_OPTIONS and CATEGORY_OPTIONS are arrays of objects like:
 // { id: number; value: string; label: string; } for the ID mapping to work.
@@ -34,7 +35,7 @@ import {
 } from '../FormBuilder'; // Adjust path
 
 // Import store actions
-import { getFormByIdFromStore /*, addFormToStore, updateFormInStore */ } from '../formBuilderStore'; // Adjust path. add/update removed from onSubmit.
+import { getFormByIdFromStore , addFormToStore,/* updateFormInStore */ } from '../formBuilderStore'; // Adjust path. add/update removed from onSubmit.
 
 import {
 editFormBuilderAction, addFormBuilderAction
@@ -240,7 +241,7 @@ const QuestionComponent: React.FC<QuestionComponentProps> = ({ sectionIndex, que
                 removeOption={removeOption} 
             />
           ))}
-          <Button type="button" variant="outline" size="sm" icon={<TbPlus />} onClick={() => appendOption({ label: "", value: "" })}>Add Option</Button>
+          <Button type="button" size="sm" icon={<TbPlus />} onClick={() => appendOption({ label: "", value: "" })}>Add Option</Button>
         </Card>
       )}
       {currentQuestionType === 'Text' && <Input type="text" placeholder="Preview: Text Input" disabled />}
@@ -318,11 +319,13 @@ const SectionComponent: React.FC<SectionComponentProps> = ({ sectionIndex, contr
 
 // --- Main Form Builder Page (Create/Edit) ---
 const FormBuilderManagePage = () => {
-  const { formId } = useParams<{ formId?: string }>();
+  const { id } = useParams<{ id?: string }>();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const isEditMode = !!formId;
+  const isEditMode = !!id;
   const [isLoading, setIsLoading] = useState(false);
+
+  const { formsData = [] } = useSelector(masterSelector); // Or a more specific selector if available
 
   const formMethods = useForm<PageFormBuilderFormData>({
     resolver: zodResolver(pageFormBuilderSchema),
@@ -344,57 +347,81 @@ const FormBuilderManagePage = () => {
     name: "sections"
   });
 
-  useEffect(() => {
-    if (isEditMode && formId) {
+useEffect(() => {
+    if (isEditMode && id) {
       setIsLoading(true);
-      const formDataFromStore = getFormByIdFromStore(formId); // This returns FormBuilderItem
-      if (formDataFromStore) {
+      // Find the form in the Redux state
+      const formDataFromRedux = formsData.find(form => String(form.id) === String(id));
+
+      if (formDataFromRedux) {
         const pageData: PageFormBuilderFormData = {
-          form_name: formDataFromStore.formName,
-          status: formDataFromStore.status,
-          department_name: formDataFromStore.departmentName, // Stored as single string value
-          category_name: formDataFromStore.categoryName,   // Stored as single string value
-          form_title: formDataFromStore.formTitle || formDataFromStore.formName,
-          form_description: formDataFromStore.formDescription || "",
+          form_name: formDataFromRedux.form_name,
+          status: formDataFromRedux.status,
+          department_name: formDataFromRedux.departmentName,
+          category_name: formDataFromRedux.categoryName,
+          form_title: formDataFromRedux.form_title || formDataFromRedux.form_name,
+          form_description: formDataFromRedux.form_description || "",
           sections: [],
         };
 
         const sectionsMap: Record<string, { title: string; description?: string; questions: PageQuestionFormData[] }> = {};
-        formDataFromStore.questions.forEach(q => {
+        
+        if (Array.isArray(formDataFromRedux.questions)) {
+          formDataFromRedux.questions.forEach((q: any) => {
             const sectionKey = q.questionSectionTitle || "Default Section";
             if (!sectionsMap[sectionKey]) {
-                sectionsMap[sectionKey] = { 
-                    title: sectionKey, 
-                    description: q.questionSectionDescription || "",
-                    questions: [] 
-                };
+              sectionsMap[sectionKey] = { 
+                title: sectionKey, 
+                description: q.questionSectionDescription || "",
+                questions: [] 
+              };
             }
             sectionsMap[sectionKey].questions.push({
-                question_text: q.questionText,
-                question_type: mapMainTypeToPageType(q.questionType),
-                is_required: q.isRequired || false,
-                options: q.options?.map(opt => ({ label: opt.label, value: opt.value })) || []
+              id: q.id, // Pass ID if available and useful for react-hook-form keys
+              question_text: q.questionText,
+              question_type: mapMainTypeToPageType(q.questionType),
+              is_required: q.isRequired || false,
+              options: Array.isArray(q.options)
+                ? q.options.map((opt: any) => ({ id: opt.value, label: opt.label, value: opt.value }))
+                : [] // Ensure options also have an ID for useFieldArray if needed, or just map
             });
-        });
-        
-        pageData.sections = Object.values(sectionsMap).map(s => ({
-            section_title: s.title,
-            section_description: s.description,
-            questions: s.questions,
-        }));
-        
-        if(pageData.sections.length === 0) {
-            pageData.sections.push({ section_title: "Section 1", section_description: "", questions: [{ question_text: "", question_type: pageQuestionTypeValues[0], is_required: false, options:[] }] });
+          });
         }
 
+        pageData.sections = Object.values(sectionsMap).map(s => ({
+          // id: generate_some_unique_id_if_needed_for_sections_field_array_key,
+          section_title: s.title,
+          section_description: s.description,
+          questions: s.questions,
+        }));
+
+        if(pageData.sections.length === 0) {
+          pageData.sections.push({ 
+            section_title: "Section 1", 
+            section_description: "", 
+            questions: [{ question_text: "", question_type: pageQuestionTypeValues[0], is_required: false, options:[] }] 
+          });
+        }
         reset(pageData);
       } else {
         toast.push(<Notification title="Error" type="danger">Form not found.</Notification>);
-        navigate("/system-tools/form-builder"); // Adjust path
+        navigate("/system-tools/form-builder"); 
       }
       setIsLoading(false);
+    } else {
+      // For create mode, ensure form is reset to default or desired initial state
+      reset({
+        form_name: "",
+        status: FORM_STATUS_OPTIONS.length > 0 ? FORM_STATUS_OPTIONS[0].value : "",
+        department_name: DEPARTMENT_OPTIONS.length > 0 ? DEPARTMENT_OPTIONS[0].value : "",
+        category_name: CATEGORY_OPTIONS.length > 0 ? CATEGORY_OPTIONS[0].value : "",
+        form_title: "",
+        form_description: "",
+        sections: [{ section_title: "Section 1", section_description: "", questions: [{ question_text: "", question_type: pageQuestionTypeValues[0], is_required: false, options: [] }] }],
+      });
     }
-  }, [formId, isEditMode, navigate, reset]);
+  }, [id, isEditMode, navigate, reset, formsData]); // Add formsData to dependency array
+
 
   const onSubmit = async (data: PageFormBuilderFormData) => {
     setIsLoading(true);
@@ -462,8 +489,8 @@ const FormBuilderManagePage = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
-      if (isEditMode && formId) {
-        dispatch(editFormBuilderAction({id: formId, ...transformedPayload}));
+      if (isEditMode && id) {
+        dispatch(editFormBuilderAction({id: id, ...transformedPayload}));
         toast.push(<Notification title="Success" type="success">Form updated successfully!</Notification>);
       } else {
         dispatch(addFormBuilderAction(transformedPayload));

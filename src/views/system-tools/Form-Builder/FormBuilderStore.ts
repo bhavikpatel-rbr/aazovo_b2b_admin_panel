@@ -97,7 +97,7 @@ export const cloneFormInStore = (itemToClone: FormBuilderItem): FormBuilderItem 
     const clonedForm: FormBuilderItem = {
         ...(JSON.parse(JSON.stringify(itemToClone))), 
         id: `FORM${Date.now()}_CLONE`,
-        formName: `${itemToClone.formName} (Clone)`,
+        form_name: `${itemToClone.form_name} (Clone)`,
         status: "draft", // Cloned forms usually start as draft
         created_at: now,
         updated_at: now,

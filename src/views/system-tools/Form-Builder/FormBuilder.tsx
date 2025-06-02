@@ -131,12 +131,12 @@ export type QuestionItem = {
 
 export type FormBuilderItem = {
   id: string | number;
-  formName: string; 
+  form_name: string; 
   status: string; 
   departmentName: string; 
   categoryName: string; 
-  formTitle?: string; 
-  formDescription?: string;
+  form_title?: string; 
+  form_description?: string;
   questions: QuestionItem[];
   created_at?: string; 
   updated_at?: string; 
@@ -163,11 +163,12 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 export const initialDummyForms: FormBuilderItem[] = [ 
   {
     id: "FORM001",
-    formName: "Employee Feedback Survey Q3",
+    form_name: "Employee Feedback Survey Q3",
     status: "published",
     departmentName: "hr",
     categoryName: "survey",
-    formTitle: "Q3 Employee Feedback",
+    form_title: "Q3 Employee Feedback",
+    // form_description: "A survey to gather feedback from employees for Q3.", // Example addition
     questions: [{ questionSectionTitle: "General Feedback", questionText: "Overall satisfaction with Q3?", questionType: "radio", options: [{label: "Good", value: "good"}, {label: "Bad", value: "bad"}], isRequired: true }],
     created_at: new Date(Date.now() - 100000000).toISOString(),
     updated_at: new Date().toISOString(),
@@ -189,15 +190,15 @@ type FormExportItem = Omit<FormBuilderItem, 'created_at' | 'updated_at' | 'quest
 };
 
 const CSV_HEADERS_FORM = ["ID", "Form Name", "Form Title", "Status", "Department", "Category", "Question Count", "Created At", "Updated By", "Updated Role", "Updated At"];
-const CSV_KEYS_FORM_EXPORT: (keyof FormExportItem | 'formTitle')[] = [
-  "id", "formName", "formTitle", "statusDisplay", "departmentNameDisplay", "categoryNameDisplay", "questionCount", "created_at_formatted", "updated_by_name", "updated_by_role", "updated_at_formatted",
+const CSV_KEYS_FORM_EXPORT: (keyof FormExportItem | 'form_title')[] = [
+  "id", "form_name", "form_title", "statusDisplay", "departmentNameDisplay", "categoryNameDisplay", "questionCount", "created_at_formatted", "updated_by_name", "updated_by_role", "updated_at_formatted",
 ];
 
 function exportFormsToCsvLogic(filename: string, rows: FormBuilderItem[]) {
   if (!rows || !rows.length) { return false; }
   const preparedRows: FormExportItem[] = rows.map((row) => ({
     ...row,
-    formTitle: row.formTitle || "N/A",
+    form_title: row.form_title || "N/A",
     departmentNameDisplay: DEPARTMENT_OPTIONS.find((d) => d.value === row.departmentName)?.label || row.departmentName,
     categoryNameDisplay: CATEGORY_OPTIONS.find((c) => c.value === row.categoryName)?.label || row.categoryName,
     statusDisplay: FORM_STATUS_OPTIONS.find((s) => s.value === row.status)?.label || row.status,
@@ -218,7 +219,7 @@ function exportFormsToCsvLogic(filename: string, rows: FormBuilderItem[]) {
 }
 
 // --- ActionColumn ---
-const ActionColumn = ({ item, onEdit, onViewDetail, onChangeStatus, onClone, onDelete,}: { item: FormBuilderItem; onEdit: (formId: string | number) => void; onViewDetail: (item: FormBuilderItem) => void; onChangeStatus: (item: FormBuilderItem) => void; onClone: (item: FormBuilderItem) => void; onDelete: (item: FormBuilderItem) => void; }) => {
+const ActionColumn = ({ item, onEdit, onViewDetail, onChangeStatus, onClone, onDelete,}: { item: FormBuilderItem; onEdit: (id: string | number) => void; onViewDetail: (item: FormBuilderItem) => void; onChangeStatus: (item: FormBuilderItem) => void; onClone: (item: FormBuilderItem) => void; onDelete: (item: FormBuilderItem) => void; }) => {
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={() => onEdit(item.id)}><TbPencil /></div></Tooltip>
@@ -247,11 +248,188 @@ const FormBuilderTableTools = ({ onSearchChange, onFilter, onExport, onClearFilt
   </div>
 );
 
+
+/**
+ * --- Data Transformation Example: API JSON to FormBuilderItem ---
+ *
+ * The FormBuilder component expects data in the `FormBuilderItem[]` format.
+ * If the API returns data in a different structure, a transformation step
+ * is required, typically within Redux middleware or a service layer, before
+ * the data reaches this component.
+ *
+ * **Example API JSON Data Item:**
+ *
+ * ```json
+ * {
+ *   "id": 39,
+ *   "form_name": "test",
+ *   "section": "{\"section_1\":{\"questionSectionTitle\":\"Section 1\",\"questionSectionDescription\":\"test\",\"question_1\":{\"questionText\":\"test\",\"questionType\":\"text\",\"isRequired\":true,\"options\":[]}}}",
+ *   "status": "Draft",
+ *   "department_ids": "[0]",
+ *   "category_ids": "[0]",
+ *   "created_at": "2025-06-02T18:41:28.000000Z",
+ *   "updated_at": "2025-06-02T18:41:28.000000Z",
+ *   "deleted_at": null,
+ *   "form_title": "test",
+ *   "form_description": "test"
+ * }
+ * ```
+ *
+ * **Interface for API Data Item (for clarity):**
+ *
+ * ```typescript
+ * interface ApiFormSectionQuestion {
+ *     questionText: string;
+ *     questionType: string;
+ *     isRequired: boolean;
+ *     options: Array<{ label: string; value: string }>;
+ * }
+ *
+ * interface ApiFormSection {
+ *     questionSectionTitle: string;
+ *     questionSectionDescription: string;
+ *     [key: string]: any; // For question_1, question_2, etc.
+ * }
+ *
+ * interface ApiFormBuilderData {
+ *     id: number;
+ *     form_name: string;
+ *     section: string; // JSON string
+ *     status: string;
+ *     department_ids: string; // JSON string like "[0]"
+ *     category_ids: string; // JSON string like "[0]"
+ *     created_at: string;
+ *     updated_at: string;
+ *     deleted_at: string | null;
+ *     form_title: string;
+ *     form_description: string;
+ * }
+ * ```
+ *
+ * **Transformation Logic (Conceptual - would live in Redux middleware/service):**
+ *
+ * ```typescript
+ * function transformApiFormToFormBuilderItem(apiData: ApiFormBuilderData): FormBuilderItem {
+ *     // 1. Parse 'section' JSON string to extract questions
+ *     let parsedSections: Record<string, ApiFormSection> = {};
+ *     try {
+ *         parsedSections = JSON.parse(apiData.section);
+ *     } catch (e) {
+ *         console.error("Failed to parse section JSON:", apiData.section, e);
+ *     }
+ *
+ *     const questions: QuestionItem[] = [];
+ *     for (const sectionKey in parsedSections) {
+ *         if (parsedSections.hasOwnProperty(sectionKey)) {
+ *             const sectionContent = parsedSections[sectionKey];
+ *             const sectionTitle = sectionContent.questionSectionTitle;
+ *             const sectionDescription = sectionContent.questionSectionDescription;
+ *
+ *             for (const itemKey in sectionContent) {
+ *                 if (sectionContent.hasOwnProperty(itemKey) && itemKey.startsWith("question_")) {
+ *                     const questionContent = sectionContent[itemKey] as ApiFormSectionQuestion;
+ *                     questions.push({
+ *                         questionSectionTitle: sectionTitle,
+ *                         questionSectionDescription: sectionDescription,
+ *                         questionText: questionContent.questionText,
+ *                         questionType: questionContent.questionType,
+ *                         isRequired: questionContent.isRequired,
+ *                         options: questionContent.options || [],
+ *                     });
+ *                 }
+ *             }
+ *         }
+ *     }
+ *
+ *     // 2. Map status (e.g., "Draft" to "draft")
+ *     const statusValue = apiData.status.toLowerCase();
+ *
+ *     // 3. Map department_ids to departmentName
+ *     //    This is a simplified mapping. In a real app, ID 0 (or other IDs)
+ *     //    would be looked up against a list of department objects that include an 'id'
+ *     //    and a 'value' (like 'eng'). Assuming '0' maps to the first department option.
+ *     let departmentName = DEPARTMENT_OPTIONS.length > 0 ? DEPARTMENT_OPTIONS[0].value : "N/A";
+ *     try {
+ *         const deptIds: number[] = JSON.parse(apiData.department_ids);
+ *         if (deptIds.length > 0 && deptIds.includes(0) && DEPARTMENT_OPTIONS.length > 0) {
+ *             departmentName = DEPARTMENT_OPTIONS[0].value; // e.g., "eng"
+ *         } else if (deptIds.length > 0) {
+ *             // Handle other specific ID mappings if necessary or set to a default/placeholder
+ *             // For this example, if not [0], it might fall back to the initial default or "N/A"
+ *             // or require a more complex lookup not shown here.
+ *         }
+ *     } catch (e) {
+ *         console.error("Failed to parse department_ids JSON:", apiData.department_ids, e);
+ *     }
+ *
+ *     // 4. Map category_ids to categoryName (similar logic to departments)
+ *     let categoryName = CATEGORY_OPTIONS.length > 0 ? CATEGORY_OPTIONS[0].value : "N/A";
+ *     try {
+ *         const catIds: number[] = JSON.parse(apiData.category_ids);
+ *         if (catIds.length > 0 && catIds.includes(0) && CATEGORY_OPTIONS.length > 0) {
+ *             categoryName = CATEGORY_OPTIONS[0].value; // e.g., "feedback"
+ *         } // else, similar handling as departments for other IDs
+ *     } catch (e) {
+ *         console.error("Failed to parse category_ids JSON:", apiData.category_ids, e);
+ *     }
+ *
+ *     return {
+ *         id: apiData.id,
+ *         form_name: apiData.form_name,
+ *         status: statusValue,
+ *         departmentName: departmentName,
+ *         categoryName: categoryName,
+ *         form_title: apiData.form_title,
+ *         form_description: apiData.form_description,
+ *         questions: questions,
+ *         created_at: apiData.created_at,
+ *         updated_at: apiData.updated_at,
+ *         // updated_by_name and updated_by_role are not in the example API data,
+ *         // so they will be undefined, which is acceptable for optional fields.
+ *     };
+ * }
+ * ```
+ *
+ * **Resulting `FormBuilderItem` (to be used in `formsData`):**
+ *
+ * Based on the example API JSON, the transformed item would be:
+ * ```typescript
+ * const transformedItem: FormBuilderItem = {
+ *   id: 39,
+ *   form_name: "test",
+ *   status: "draft", // "Draft" from API -> "draft"
+ *   departmentName: "eng", // Mapped from "[0]" assuming DEPARTMENT_OPTIONS[0].value
+ *   categoryName: "feedback", // Mapped from "[0]" assuming CATEGORY_OPTIONS[0].value
+ *   form_title: "test",
+ *   form_description: "test", // From apiData.form_description
+ *   questions: [
+ *     {
+ *       questionSectionTitle: "Section 1",
+ *       questionSectionDescription: "test",
+ *       questionText: "test",
+ *       questionType: "text",
+ *       isRequired: true,
+ *       options: []
+ *     }
+ *   ],
+ *   created_at: "2025-06-02T18:41:28.000000Z",
+ *   updated_at: "2025-06-02T18:41:28.000000Z",
+ *   // updated_by_name: undefined,
+ *   // updated_by_role: undefined,
+ * };
+ * ```
+ *
+ * This `transformedItem` (or an array of such items) would then be the content of
+ * the `formsData` state variable in the `FormBuilder` component, retrieved via
+ * the `useSelector(masterSelector)`. The `DataTable` and other UI elements
+ * would then render this data.
+ */
+
 // --- Main FormBuilder Component ---
 const FormBuilder = () => {
   const dispatch = useAppDispatch();
   const {
-    formsData = [], // Data from Redux store
+    formsData = [], // Data from Redux store, expected to be FormBuilderItem[]
     status: masterLoadingStatus = "idle", // Loading status from Redux store
     // Add other relevant state parts from selector if needed, e.g., error
   } = useSelector(masterSelector, shallowEqual); // Using placeholder selector
@@ -280,8 +458,8 @@ const FormBuilder = () => {
     // Removed local store subscription
   }, [dispatch]);
 
-  const handleEdit = (formId: string | number) => {
-    navigate(`/system-tools/formbuilder-edit/${formId}`);
+  const handleEdit = (id: string | number) => {
+    navigate(`/system-tools/formbuilder-edit/${id}`);
   };
 
   const openViewDialog = (item: FormBuilderItem) => setViewingItem(item);
@@ -295,7 +473,7 @@ const FormBuilder = () => {
     setSingleDeleteConfirmOpen(false);
     try {
       await dispatch(deleteFormBuilderAction({ id: itemToDelete.id })).unwrap(); // Redux action
-      toast.push(<Notification title="Form Deleted" type="success" duration={2000}>{`Form "${itemToDelete.formName}" deleted.`}</Notification>);
+      toast.push(<Notification title="Form Deleted" type="success" duration={2000}>{`Form "${itemToDelete.form_name}" deleted.`}</Notification>);
       setSelectedItems((prev) => prev.filter((f) => f.id !== itemToDelete!.id));
       // Optionally, dispatch getFormBuilderAction() again if the slice doesn't auto-update the list
       // dispatch(getFormBuilderAction()); 
@@ -330,7 +508,7 @@ const FormBuilder = () => {
     const nextStatusValue = FORM_STATUS_OPTIONS[(currentStatusIndex + 1) % FORM_STATUS_OPTIONS.length].value;
     try {
       await dispatch(changeFormBuilderStatusAction({ id: item.id, status: nextStatusValue })).unwrap(); // Redux action
-      toast.push(<Notification title="Status Changed" type="success" duration={2000}>{`Form "${item.formName}" status changed to ${FORM_STATUS_OPTIONS.find((s) => s.value === nextStatusValue)?.label}.`}</Notification>);
+      toast.push(<Notification title="Status Changed" type="success" duration={2000}>{`Form "${item.form_name}" status changed to ${FORM_STATUS_OPTIONS.find((s) => s.value === nextStatusValue)?.label}.`}</Notification>);
       // Optionally, dispatch getFormBuilderAction()
       // dispatch(getFormBuilderAction());
     } catch (e: any) {
@@ -344,12 +522,12 @@ const FormBuilder = () => {
     setIsProcessing(true);
     try {
       // The cloneFormBuilderAction should handle creating a new form with copied data
-      // It might need a payload like { ...itemToClone, formName: `${itemToClone.formName} (Clone)` }
+      // It might need a payload like { ...itemToClone, form_name: `${itemToClone.form_name} (Clone)` }
       // or the backend might handle naming.
       const clonedPayload = { 
         ...cloneDeep(itemToClone), 
         id: undefined, // Or let backend generate new ID
-        formName: `${itemToClone.formName} (Clone) - ${new Date().getTime()}`, // Ensure unique name
+        form_name: `${itemToClone.form_name} (Clone) - ${new Date().getTime()}`, // Ensure unique name
         status: 'draft' // Cloned forms usually start as draft
       }; 
       // Remove fields that should be reset or generated anew by backend for a new entity
@@ -360,7 +538,7 @@ const FormBuilder = () => {
       delete clonedPayload.updated_by_role;
 
       await dispatch(cloneFormBuilderAction(clonedPayload)).unwrap(); // Redux action
-      toast.push(<Notification title="Form Cloned" type="success" duration={2000}>{`Form "${itemToClone.formName}" cloned successfully.`}</Notification>);
+      toast.push(<Notification title="Form Cloned" type="success" duration={2000}>{`Form "${itemToClone.form_name}" cloned successfully.`}</Notification>);
       // Optionally, dispatch getFormBuilderAction()
       // dispatch(getFormBuilderAction());
     } catch (e: any) {
@@ -414,10 +592,10 @@ const FormBuilder = () => {
     if (filterCriteria.filterCategory?.length) { const catValues = filterCriteria.filterCategory.map((c) => c.value); processedData = processedData.filter((item) => catValues.includes(item.categoryName)); }
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) => String(item.id).toLowerCase().includes(query) || item.formName.toLowerCase().includes(query) || (item.formTitle?.toLowerCase() || "").includes(query) || item.status.toLowerCase().includes(query) || (DEPARTMENT_OPTIONS.find((d) => d.value === item.departmentName)?.label.toLowerCase() || "").includes(query) || (CATEGORY_OPTIONS.find((c) => c.value === item.categoryName)?.label.toLowerCase() || "").includes(query) || (item.updated_by_name?.toLowerCase() ?? "").includes(query));
+      processedData = processedData.filter((item) => String(item.id).toLowerCase().includes(query) || item.form_name.toLowerCase().includes(query) || (item.form_title?.toLowerCase() || "").includes(query) || (item.form_description?.toLowerCase() || "").includes(query) || item.status.toLowerCase().includes(query) || (DEPARTMENT_OPTIONS.find((d) => d.value === item.departmentName)?.label.toLowerCase() || "").includes(query) || (CATEGORY_OPTIONS.find((c) => c.value === item.categoryName)?.label.toLowerCase() || "").includes(query) || (item.updated_by_name?.toLowerCase() ?? "").includes(query));
     }
     const { order, key } = tableData.sort as OnSortParam;
-    const validSortKeys: (keyof FormBuilderItem | 'questionCount')[] = ["id", "formName", "formTitle", "status", "departmentName", "categoryName", "created_at", "updated_at", "updated_by_name", "questionCount"];
+    const validSortKeys: (keyof FormBuilderItem | 'questionCount')[] = ["id", "form_name", "form_title", "status", "departmentName", "categoryName", "created_at", "updated_at", "updated_by_name", "questionCount"];
     if (order && key && validSortKeys.includes(String(key) as any)) {
         processedData.sort((a, b) => {
             let aVal: any, bVal: any;
@@ -440,21 +618,139 @@ const FormBuilder = () => {
   }, [formsData, tableData, filterCriteria]);
 
   const columns: ColumnDef<FormBuilderItem>[] = useMemo(() => [
-    { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
-    { header: "Form Name", accessorKey: "formName", size: 200, enableSorting: true, cell: (props) => (<span className="font-semibold">{props.getValue<string>()}</span>) },
-    { header: "Form Title", accessorKey: "formTitle", size: 200, enableSorting: true, cell: (props) => props.getValue() || "-" },
-    { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => (<Tag className={classNames("capitalize", statusColors[props.getValue<string>()])}>{FORM_STATUS_OPTIONS.find((o) => o.value === props.getValue())?.label}</Tag>) },
-    { header: "Department", accessorKey: "departmentName", size: 140, enableSorting: true, cell: (props) => DEPARTMENT_OPTIONS.find((o) => o.value === props.getValue())?.label || props.getValue() },
-    { header: "Category", accessorKey: "categoryName", size: 140, enableSorting: true, cell: (props) => CATEGORY_OPTIONS.find((o) => o.value === props.getValue())?.label || props.getValue() },
-    { header: "Questions", id: "questionCount", size: 90, enableSorting: true, cell: (props) => props.row.original.questions.length, meta: { tdClass: "text-center", thClass: "text-center" } },
-    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170,
-        cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
-          const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
-          return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
-        },
+   {
+    header: "ID",
+    accessorKey: "id",
+    size: 60,
+    enableSorting: true,
+    meta: { tdClass: "text-center", thClass: "text-center" },
+  },
+  {
+    header: "Form Name",
+    accessorKey: "form_name",
+    size: 200,
+    enableSorting: true,
+    cell: (props) => (
+      <span className="font-semibold text-blue-600 dark:text-blue-400">
+        {props.row.original.form_name}
+      </span>
+    ),
+  },
+  {
+    header: "Form Title",
+    accessorKey: "form_title",
+    size: 200,
+    enableSorting: true,
+    cell: (props) => props.row.original.form_title || "-",
+  },
+  {
+    header: "Status",
+    accessorKey: "status",
+    size: 120,
+    enableSorting: true,
+    cell: (props) => {
+      const status = props.row.original.status;
+      const label = FORM_STATUS_OPTIONS.find((o) => o.value === status)?.label;
+      return (
+        <Tag className={classNames("capitalize", statusColors[status])}>
+          {label || status}
+        </Tag>
+      );
     },
-    { header: "Actions", id: "action", size: 180, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn item={props.row.original} onEdit={handleEdit} onViewDetail={openViewDialog} onChangeStatus={handleChangeStatus} onClone={handleCloneForm} onDelete={handleDeleteClick} />) },
+  },
+  {
+    header: "Department",
+    accessorKey: "departmentName",
+    size: 140,
+    enableSorting: true,
+    cell: (props) =>
+      DEPARTMENT_OPTIONS.find((o) => o.value === props.row.original.departmentName)?.label ||
+      String(props.row.original.departmentName),
+  },
+  {
+    header: "Category",
+    accessorKey: "categoryName",
+    size: 140,
+    enableSorting: true,
+    cell: (props) =>
+      CATEGORY_OPTIONS.find((o) => o.value === props.row.original.categoryName)?.label ||
+      String(props.row.original.categoryName),
+  },
+  {
+    header: "Questions",
+    id: "questionCount",
+    size: 90,
+    enableSorting: false,
+    meta: { tdClass: "text-center", thClass: "text-center" },
+    cell: (props) => {
+      const rawSection = props.row.original.section;
+      let count = 0;
+      try {
+        const section = JSON.parse(rawSection);
+        Object.values(section).forEach((sec: any) => {
+          Object.keys(sec).forEach((k) => {
+            if (!["questionSectionTitle", "questionSectionDescription"].includes(k)) {
+              count++;
+            }
+          });
+        });
+      } catch (err) {
+        count = 0;
+      }
+      return <span>{count}</span>;
+    }
+  },
+  {
+    header: "Updated Info",
+    accessorKey: "updated_at",
+    size: 170,
+    enableSorting: true,
+    meta: { HeaderClass: "text-red-500" },
+    cell: (props) => {
+      const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+      const date = new Date(updated_at);
+      const formattedDate = updated_at
+        ? `${date.getDate()} ${date.toLocaleString("en-US", {
+            month: "long",
+          })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })}`
+        : "N/A";
+      return (
+        <div className="text-xs">
+          <span>
+            {updated_by_name || "N/A"}
+            {updated_by_role && (
+              <>
+                <br />
+                <b>{updated_by_role}</b>
+              </>
+            )}
+          </span>
+          <br />
+          <span>{formattedDate}</span>
+        </div>
+      );
+    },
+  },
+  {
+    header: "Actions",
+    id: "action",
+    size: 180,
+    meta: { HeaderClass: "text-center", cellClass: "text-center" },
+    cell: (props) => (
+      <ActionColumn
+        item={props.row.original}
+        onEdit={() => handleEdit(props.row.original.id)}
+        onViewDetail={() => openViewDialog(props.row.original)}
+        onChangeStatus={() => handleChangeStatus(props.row.original)}
+        onClone={() => handleCloneForm(props.row.original)}
+        onDelete={() => handleDeleteClick(props.row.original)}
+      />
+    ),
+  },
   ], [handleChangeStatus, handleCloneForm, handleDeleteClick, handleEdit, openViewDialog]);
 
   const tableLoading = masterLoadingStatus === "pending" || isProcessing; // isProcessing can be used for optimistic updates or specific button loading
@@ -487,13 +783,14 @@ const FormBuilder = () => {
       </StickyFooter>
 
       <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={800} contentClassName="pb-0">
-        <Dialog.Header title={`Form Details: ${viewingItem?.formName}`} />
+        <Dialog.Header title={`Form Details: ${viewingItem?.form_name}`} />
         <Dialog.Body className="p-4 max-h-[70vh] overflow-y-auto">
             {viewingItem && (
                 <div className="space-y-4">
                     <p><strong>ID:</strong> {viewingItem.id}</p>
-                    <p><strong>Form Name:</strong> {viewingItem.formName}</p>
-                    <p><strong>Form Title:</strong> {viewingItem.formTitle || 'N/A'}</p>
+                    <p><strong>Form Name:</strong> {viewingItem.form_name}</p>
+                    <p><strong>Form Title:</strong> {viewingItem.form_title || 'N/A'}</p>
+                    <p><strong>Form Description:</strong> {viewingItem.form_description || 'N/A'}</p> {/* Added form_description */}
                     <p><strong>Status:</strong> <Tag className={classNames("capitalize", statusColors[viewingItem.status])}>{FORM_STATUS_OPTIONS.find(s => s.value === viewingItem.status)?.label}</Tag></p>
                     <p><strong>Department:</strong> {DEPARTMENT_OPTIONS.find(d => d.value === viewingItem.departmentName)?.label || viewingItem.departmentName}</p>
                     <p><strong>Category:</strong> {CATEGORY_OPTIONS.find(c => c.value === viewingItem.categoryName)?.label || viewingItem.categoryName}</p>
@@ -538,7 +835,7 @@ const FormBuilder = () => {
       </Drawer>
 
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Form" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isProcessing && !!itemToDelete} confirmButtonColor="red-600">
-        <p>Are you sure you want to delete the form "<strong>{itemToDelete?.formName}</strong>"? This action cannot be undone.</p>
+        <p>Are you sure you want to delete the form "<strong>{itemToDelete?.form_name}</strong>"? This action cannot be undone.</p>
       </ConfirmDialog>
 
       <ConfirmDialog

@@ -34,7 +34,7 @@ const systemToolsRoutes: Routes = [
     },
     {
         key: 'systemTools.formBuilder',
-        path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-edit/:formId`,
+        path: `${SYSTEM_TOOLS_PREFIX_PATH}/formbuilder-edit/:id`,
         component: lazy(() => import('@/views/system-tools/Form-Builder/components/FormBuilderManagePage'),
         ),
         authority: [ADMIN],
@@ -54,7 +54,7 @@ const systemToolsRoutes: Routes = [
     {
         key: 'systemTools.activityLog',
         path: `${SYSTEM_TOOLS_PREFIX_PATH}/activity-log`,
-        component: lazy(() => import('@/views/system-tools/Change-Log')),
+        component: lazy(() => import('@/views/system-tools/Activity-Log')),
         authority: [ADMIN],
         meta: {
             pageContainerType: 'contained',
