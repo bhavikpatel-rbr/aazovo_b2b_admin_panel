@@ -2234,7 +2234,7 @@ export const submitResponseAsync = async (unitData: any) => {
 
 export const getFormBuilderAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/form_builder`)
+    const response = await axiosInstance.get(`${config.apiURL}/master/form_builder`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2243,7 +2243,7 @@ export const getFormBuilderAsync = async () => {
 
 export const addFormBuilderAsync = async (formData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/form_builder`, formData)
+    const response = await axiosInstance.post(`${config.apiURL}/master/form_builder`, formData)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2252,7 +2252,7 @@ export const addFormBuilderAsync = async (formData: any) => {
 
 export const editFormBuilderAsync = async (formData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/form_builder/${formData?.id}`, { _method: "PUT", ...formData })
+    const response = await axiosInstance.post(`${config.apiURL}/master/form_builder/${formData?.id}`, { _method: "PUT", ...formData })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2261,7 +2261,7 @@ export const editFormBuilderAsync = async (formData: any) => {
 
 export const deleteFormBuilderAsync = async (formData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/form_builder/${formData.id}`)
+    const response = await axiosInstance.post(`${config.apiURL}/master/form_builder/${formData.id}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2270,7 +2270,7 @@ export const deleteFormBuilderAsync = async (formData: any) => {
 
 export const deleteAllFormBuilderAsync = async (formData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/form_builder/delete`, formData)
+    const response = await axiosInstance.post(`${config.apiURL}/master/form_builder/delete`, formData)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2279,7 +2279,7 @@ export const deleteAllFormBuilderAsync = async (formData: any) => {
 
 export const changeFormBuilderStatusAsync = async (data: { id: string | number; status: string }) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/form_builder/change-status`, data);
+    const response = await axiosInstance.post(`${config.apiURL}/master/form_builder/change-status`, data);
     return response;
   } catch (err) {
     return isAxiosError(err);
@@ -2288,7 +2288,7 @@ export const changeFormBuilderStatusAsync = async (data: { id: string | number; 
 
 export const cloneFormBuilderAsync = async (formData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/form_builder/clone`, formData);
+    const response = await axiosInstance.post(`${config.apiURL}/master/form_builder/clone`, formData);
     return response;
   } catch (err) {
     return isAxiosError(err);
