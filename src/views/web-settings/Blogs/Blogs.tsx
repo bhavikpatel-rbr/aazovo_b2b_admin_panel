@@ -40,6 +40,12 @@ import {
   TbCalendarUp,
   TbUserUp,
   TbBookUpload,
+  TbMessageStar,
+  TbMessageShare,
+  TbMessageUser,
+  TbMessageCheck,
+  TbMessage2X,
+  TbMessagePause,
 } from "react-icons/tb";
 
 // Types
@@ -622,7 +628,7 @@ const Blogs = () => {
           <div className="grid grid-cols-6 mb-4 gap-2">
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                <TbCloudUpload size={24} />
+                <TbMessageStar size={24} />
               </div>
               <div>
                 <h6 className="text-blue-500">879</h6>
@@ -631,7 +637,7 @@ const Blogs = () => {
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                <TbBookUpload size={24} />
+                <TbMessageShare size={24} />
               </div>
               <div>
                 <h6 className="text-violet-500">23</h6>
@@ -640,7 +646,7 @@ const Blogs = () => {
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                <TbBookUpload size={24} />
+                <TbMessageUser size={24} />
               </div>
               <div>
                 <h6 className="text-orange-500">345</h6>
@@ -650,7 +656,7 @@ const Blogs = () => {
             
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                <TbCalendarUp size={24} />
+                <TbMessageCheck size={24} />
               </div>
               <div>
                 <h6 className="text-green-500">879</h6>
@@ -659,7 +665,7 @@ const Blogs = () => {
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                <TbUserUp size={24} />
+                <TbMessage2X size={24} />
               </div>
               <div>
                 <h6 className="text-red-500">78</h6>
@@ -670,7 +676,7 @@ const Blogs = () => {
             
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-gray-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500">
-                <TbUserUp size={24} />
+                <TbMessagePause size={24} />
               </div>
               <div>
                 <h6 className="text-gray-500">34</h6>
