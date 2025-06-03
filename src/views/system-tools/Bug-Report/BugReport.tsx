@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected spelling
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -37,6 +37,13 @@ import {
   TbCalendarEvent,
   TbInfoCircle,
   TbReload,
+  TbUserPlus,
+  TbBug,
+  TbCalendarWeek,
+  TbMailPlus,
+  TbLoader,
+  TbCircleCheck,
+  TbCircleX,
   // TbTrash, // Already imported, no need to re-declare if ActionColumn handles it
 } from "react-icons/tb";
 
@@ -62,6 +69,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import classNames from "@/utils/classNames";
+import { Link } from "react-router-dom";
 
 // --- Define Types ---
 export type BugReportStatusApi = "Read" | "Unread" | string;
@@ -85,9 +93,9 @@ const BUG_REPORT_STATUS_OPTIONS_FORM: {
   value: BugReportStatusForm;
   label: string;
 }[] = [
-  { value: "Unread", label: "Unread" },
-  { value: "Read", label: "Read" },
-];
+    { value: "Unread", label: "Unread" },
+    { value: "Read", label: "Read" },
+  ];
 
 const bugStatusColor: Record<BugReportStatusApi, string> = {
   Unread:
@@ -233,7 +241,7 @@ const ActionColumn = ({
   onChangeStatus: () => void;
 }) => {
   return (
-    <div className="flex items-center justify-start">
+    <div className="flex items-center justify-center text-center">
       {" "}
       <Tooltip title="Edit (Admin)">
         {" "}
@@ -253,6 +261,17 @@ const ActionColumn = ({
           onClick={onViewDetail}
         >
           <TbEye />
+        </button>
+      </Tooltip>{" "}
+      <Tooltip title="Assign to task">
+        {" "}
+        <button
+          className={`text-xl cursor-pointer mr-0.5 select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
+          role="button"
+        >
+          <Link to="/task/task-list/create" >
+            <TbUserPlus size={18} />
+          </Link>
         </button>
       </Tooltip>{" "}
     </div>
@@ -367,9 +386,8 @@ const BugReportsSelectedFooter = ({
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Report${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
+        title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? "s" : ""
+          }`}
         onClose={handleCancelDelete}
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
@@ -940,22 +958,48 @@ const BugReportListing = () => {
           <span className="font-semibold">{props.getValue<string>()}</span>
         ),
       },
-      { header: "Email", accessorKey: "email", size: 200, enableSorting: true },
+      // { header: "", accessorKey: "email", size: 200, enableSorting: true },
       {
-        header: "Mobile No",
+        header: "Contact",
         accessorKey: "mobile_no",
         size: 130,
-        cell: (props) => props.getValue() || "-",
+        cell: (props) => {
+
+          return (
+            <div className="">
+              <span>{props.row.original.email}</span> <br />
+              <span>{props.row.original.mobile_no}</span>
+            </div>
+          )
+        },
       },
       {
         header: "Reported On",
         accessorKey: "created_at",
-        size: 150,
+        size: 200,
         enableSorting: true,
-        cell: (props) =>
-          props.getValue()
-            ? new Date(props.getValue<string>()).toLocaleDateString()
-            : "-",
+        cell: (props) => {
+          return (
+            <div className="text-xs">
+              {`${new Date(props.getValue()).getDate()} ${new Date(
+                props.getValue()
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+                props.getValue()
+              ).getFullYear()}, ${new Date(props.getValue()).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`}
+            </div>
+          )
+        }
+      },
+      {
+        header: "Severity",
+        enableSorting: true,
+        meta: { HeaderClass: "text-red-500" },
+        cell: (props) => {
+          return <Tag className="bg-red-100 text-red-500 text-[10px]">Critical</Tag>
+        }
       },
       {
         header: "Updated Info",
@@ -968,13 +1012,13 @@ const BugReportListing = () => {
             props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
-                updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(
-                updated_at
-              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
-                "en-US",
-                { hour: "numeric", minute: "2-digit", hour12: true }
-              )}`
+              updated_at
+            ).toLocaleString("en-US", { month: "long" })} ${new Date(
+              updated_at
+            ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+              "en-US",
+              { hour: "numeric", minute: "2-digit", hour12: true }
+            )}`
             : "N/A";
           return (
             <div className="text-xs">
@@ -1005,7 +1049,7 @@ const BugReportListing = () => {
               className={classNames(
                 "capitalize whitespace-nowrap min-w-[60px] text-center",
                 bugStatusColor[statusVal] ||
-                  "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
+                "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
               )}
             >
               {statusVal || "N/A"}
@@ -1016,7 +1060,7 @@ const BugReportListing = () => {
       {
         header: "Actions",
         id: "actions",
-        meta: { headerClass: "text-center", cellClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
         size: 100, // Reduced size as one icon removed
         cell: (props) => (
           <ActionColumn
@@ -1089,6 +1133,27 @@ const BugReportListing = () => {
               type="tel"
               prefix={<TbPhone className="text-lg" />}
               placeholder="+XX-XXXXXXXXXX"
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label="Severity"
+        className="md:col-span-1 text-red-500"
+      >
+        <Controller
+          name="severity"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Select
+              {...field}
+              placeholder="Select Severity"
+              options={[
+                { label: "Low", value: "Low" },
+                { label: "Medium", value: "Medium" },
+                { label: "High", value: "High" },
+                { label: "Critical", value: "Critical" },
+              ]}
             />
           )}
         />
@@ -1171,7 +1236,7 @@ const BugReportListing = () => {
               className={classNames(
                 "capitalize text-sm",
                 bugStatusColor[item.status] ||
-                  "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
+                "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
               )}
             >
               {item.status}
@@ -1337,15 +1402,76 @@ const BugReportListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Bug Reports</h5>
+
+            
+
             <Button
               variant="solid"
               icon={<TbPlus />}
               onClick={openAddDrawer}
               disabled={tableLoading}
             >
-              Add New Report
+              Add New
             </Button>
           </div>
+          <div className="grid grid-cols-6 mb-4 gap-2">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                  <TbBug size={24} />
+                </div>
+                <div>
+                  <h6 className="text-blue-500">879</h6>
+                  <span className="font-semibold text-xs">Total</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                  <TbCalendarWeek size={24} />
+                </div>
+                <div>
+                  <h6 className="text-violet-500">23</h6>
+                  <span className="font-semibold text-xs">Today</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                  <TbMailPlus size={24} />
+                </div>
+                <div>
+                  <h6 className="text-pink-500">34</h6>
+                  <span className="font-semibold text-xs">New</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                  <TbLoader size={24} />
+                </div>
+                <div>
+                  <h6 className="text-orange-500">345</h6>
+                  <span className="font-semibold text-xs">Under Review</span>
+                </div>
+              </Card>
+
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                  <TbCircleCheck size={24} />
+                </div>
+                <div>
+                  <h6 className="text-green-500">879</h6>
+                  <span className="font-semibold text-xs">Resolved</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbCircleX size={24} />
+                </div>
+                <div>
+                  <h6 className="text-red-500">78</h6>
+                  <span className="font-semibold text-xs">Unresolved</span>
+                </div>
+              </Card>
+              
+            </div>
           <ItemTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
@@ -1413,8 +1539,8 @@ const BugReportListing = () => {
                   ? "Saving..."
                   : "Submitting..."
                 : editingItem
-                ? "Save Changes"
-                : "Submit Report"}
+                  ? "Save"
+                  : "Submit"}
             </Button>{" "}
           </div>
         }
@@ -1428,7 +1554,7 @@ const BugReportListing = () => {
           {/* Added relative pb-28 */}
           {renderDrawerForm(formMethods)}
           {editingItem && (
-            <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2">
+            <div className="absolute bottom-[4%] w-full left-1/2 transform -translate-x-1/2">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4">
                 {" "}
                 {/* Increased padding and mt */}
@@ -1446,6 +1572,7 @@ const BugReportListing = () => {
                 </div>
                 <div className="text-right">
                   {" "}
+                  <br />
                   {/* Align text to right for dates */}
                   <span className="font-semibold text-gray-700 dark:text-gray-200">
                     Created:
@@ -1453,16 +1580,16 @@ const BugReportListing = () => {
                   <span className="text-gray-600 dark:text-gray-300">
                     {editingItem.created_at
                       ? new Date(editingItem.created_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                        "en-US",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        }
+                      )
                       : "N/A"}
                   </span>
                   <br />
@@ -1472,16 +1599,16 @@ const BugReportListing = () => {
                   <span className="text-gray-600 dark:text-gray-300">
                     {editingItem.updated_at
                       ? new Date(editingItem.updated_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                        "en-US",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        }
+                      )
                       : "N/A"}
                   </span>
                 </div>

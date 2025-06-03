@@ -21,7 +21,7 @@ import Select from "@/components/ui/Select";
 import Avatar from "@/components/ui/Avatar";
 import Tag from "@/components/ui/Tag";
 import DatePicker from "@/components/ui/DatePicker";
-import { Dialog, Drawer, Form, FormItem, Input } from "@/components/ui";
+import { Card, Dialog, Drawer, Form, FormItem, Input } from "@/components/ui";
 
 // Icons
 import {
@@ -32,6 +32,13 @@ import {
   TbEye,
   TbUserCircle,
   TbReload,
+  TbActivity,
+  TbCalendarWeek,
+  TbLogin,
+  TbCloudNetwork,
+  TbCloudExclamation,
+  TbCloudPin,
+  TbCloudCog,
 } from "react-icons/tb";
 
 // Types
@@ -159,8 +166,8 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- MOCK Redux Action for Submit Export Reason (replace with your actual action) ---
 const submitExportReasonAction = (payload: { reason: string; module: string }) => {
-    console.log("Dispatching conceptual submitExportReasonAction with:", payload);
-    return { type: "master/submitExportReason/pending" };
+  console.log("Dispatching conceptual submitExportReasonAction with:", payload);
+  return { type: "master/submitExportReason/pending" };
 };
 
 
@@ -193,14 +200,14 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
   const separator = ",";
   const csvContent = CSV_HEADERS_LOG.join(separator) + "\n" +
     preparedRows.map((row) =>
-        CSV_KEYS_LOG_EXPORT.map((k) => {
-          let cell: any = row[k as keyof ChangeLogExportItem];
-          if (cell === null || cell === undefined) cell = "";
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-          return cell;
-        }).join(separator)
-      ).join("\n");
+      CSV_KEYS_LOG_EXPORT.map((k) => {
+        let cell: any = row[k as keyof ChangeLogExportItem];
+        if (cell === null || cell === undefined) cell = "";
+        else cell = String(cell).replace(/"/g, '""');
+        if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+        return cell;
+      }).join(separator)
+    ).join("\n");
   const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   if (link.download !== undefined) {
@@ -317,7 +324,7 @@ const ActivityLog = () => {
 
   const openAddDrawer = useCallback(() => {
     formMethods.reset({
-      timestamp: new Date().toISOString().substring(0,16),
+      timestamp: new Date().toISOString().substring(0, 16),
       userName: "System", userId: null, action: "OTHER", entity: "Other",
       entityId: null, description: "", details: "",
     });
@@ -332,7 +339,7 @@ const ActivityLog = () => {
   }, [formMethods]);
   const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingItem(null); }, []);
 
-  const onSubmitLog = useCallback( async (data: ChangeLogFormData) => {
+  const onSubmitLog = useCallback(async (data: ChangeLogFormData) => {
     setIsSubmitting(true);
     const payload = { ...data, timestamp: new Date(data.timestamp).toISOString() };
     try {
@@ -343,9 +350,9 @@ const ActivityLog = () => {
         // Manually update local Redux store for demo if not using real backend + thunk
         // This part would be handled by the thunk and reducer in a real app
         const updatedItem: ChangeLogItem = {
-            ...editingItem, ...payload,
-            updated_at: new Date().toISOString(),
-            updated_by_name: 'Admin Editor', updated_by_role: 'Administrator'
+          ...editingItem, ...payload,
+          updated_at: new Date().toISOString(),
+          updated_by_name: 'Admin Editor', updated_by_role: 'Administrator'
         };
         // dispatch(updateActivityLogEntryInStore(updatedItem)); // conceptual local update
         toast.push(<Notification title="Log Entry Updated" type="success" />);
@@ -427,21 +434,21 @@ const ActivityLog = () => {
     // If you need to re-apply sorting for export (if `activityLogsData` is not sorted as per `tableData.sort`)
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
-        dataToExport.sort((a, b) => {
-            if (key === "timestamp" || key === "updated_at") {
-                const dateA = a[key as 'timestamp' | 'updated_at'] ? new Date(a[key as 'timestamp' | 'updated_at']!).getTime() : 0;
-                const dateB = b[key as 'timestamp' | 'updated_at'] ? new Date(b[key as 'timestamp' | 'updated_at']!).getTime() : 0;
-                if (dateA === 0 && dateB === 0) return 0;
-                if (dateA === 0) return order === 'asc' ? 1 : -1;
-                if (dateB === 0) return order === 'asc' ? -1 : 1;
-                return order === "asc" ? dateA - dateB : dateB - dateA;
-            }
-            const aVal = a[key as keyof ChangeLogItem];
-            const bVal = b[key as keyof ChangeLogItem];
-            const aStr = String(aVal ?? "").toLowerCase();
-            const bStr = String(bVal ?? "").toLowerCase();
-            return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
-        });
+      dataToExport.sort((a, b) => {
+        if (key === "timestamp" || key === "updated_at") {
+          const dateA = a[key as 'timestamp' | 'updated_at'] ? new Date(a[key as 'timestamp' | 'updated_at']!).getTime() : 0;
+          const dateB = b[key as 'timestamp' | 'updated_at'] ? new Date(b[key as 'timestamp' | 'updated_at']!).getTime() : 0;
+          if (dateA === 0 && dateB === 0) return 0;
+          if (dateA === 0) return order === 'asc' ? 1 : -1;
+          if (dateB === 0) return order === 'asc' ? -1 : 1;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        }
+        const aVal = a[key as keyof ChangeLogItem];
+        const bVal = b[key as keyof ChangeLogItem];
+        const aStr = String(aVal ?? "").toLowerCase();
+        const bStr = String(bVal ?? "").toLowerCase();
+        return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+      });
     }
     return dataToExport;
   }, [activityLogsData, tableData.sort]);
@@ -470,148 +477,148 @@ const ActivityLog = () => {
       }
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
-        toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
+      toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
     } finally {
-        setIsSubmittingExportReason(false);
+      setIsSubmittingExportReason(false);
     }
   }, [dispatch, allFilteredAndSortedDataForExport]);
 
-const columns: ColumnDef<ChangeLogItem>[] = useMemo(
-  () => [
-{
-  header: "Timestamp",
-  size: 180,
-  enableSorting: true,
-  cell: (props) => {
-    const { created_at, timestamp, updated_at } = props.row.original as any;
-    const val = created_at || timestamp || updated_at;
+  const columns: ColumnDef<ChangeLogItem>[] = useMemo(
+    () => [
+      {
+        header: "Timestamp",
+        size: 180,
+        enableSorting: true,
+        cell: (props) => {
+          const { created_at, timestamp, updated_at } = props.row.original as any;
+          const val = created_at || timestamp || updated_at;
 
-    if (!val) {
-      return <span className="text-xs text-gray-400">-</span>;
-    }
+          if (!val) {
+            return <span className="text-xs text-gray-400">-</span>;
+          }
 
-    const d = new Date(val);
-    const formattedDate = `${d.toLocaleDateString()} ${d.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })}`;
+          const d = new Date(val);
+          const formattedDate = `${d.toLocaleDateString()} ${d.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })}`;
 
-    return (
-      <div className="text-xs">
-        <span className="text-gray-700">{formattedDate}</span>
-      </div>
-    );
-  },
-}
-,
-
-    {
-      header: "User",
-      size: 160,
-      enableSorting: true,
-      cell: (props) => {
-        const { userName, userId } = props.row.original;
-        return (
-          <div className="flex items-center gap-2">
-            <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
-            <div className="text-xs leading-tight">
-              <b>{userName || "Unknown"}</b>
-              <p className="text-gray-500">{userId || "System"}</p>
+          return (
+            <div className="text-xs">
+              <span className="text-gray-700">{formattedDate}</span>
             </div>
-          </div>
-        );
+          );
+        },
+      }
+      ,
+
+      {
+        header: "User",
+        size: 160,
+        enableSorting: true,
+        cell: (props) => {
+          const { userName, userId } = props.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
+              <div className="text-xs leading-tight">
+                <b>{userName || "Unknown"}</b>
+                <p className="text-gray-500">{userId || "System"}</p>
+              </div>
+            </div>
+          );
+        },
       },
-    },
-    {
-      header: "Action",
-      size: 110,
-      enableSorting: true,
-      cell: (props) => {
-        const action = props.row.original.action;
-        return (
-          <Tag
-            className={classNames(
-              "capitalize whitespace-nowrap font-semibold min-w-[70px] text-center",
-              changeTypeColor[action]
-            )}
-          >
-            {CHANGE_TYPE_OPTIONS.find((o) => o.value === action)?.label || action}
-          </Tag>
-        );
+      {
+        header: "Action",
+        size: 110,
+        enableSorting: true,
+        cell: (props) => {
+          const action = props.row.original.action;
+          return (
+            <Tag
+              className={classNames(
+                "capitalize whitespace-nowrap font-semibold min-w-[70px] text-center",
+                changeTypeColor[action]
+              )}
+            >
+              {CHANGE_TYPE_OPTIONS.find((o) => o.value === action)?.label || action}
+            </Tag>
+          );
+        },
       },
-    },
-    {
-      header: "Entity",
-      size: 150,
-      enableSorting: true,
-      cell: (props) => {
-        const { entityId, entity } = props.row.original;
-        const entityLabel = ENTITY_TYPE_OPTIONS.find((o) => o.value === entity)?.label || entity;
-        return (
-          <div className="text-xs leading-tight">
-            <div className="font-semibold">{entityId || "-"}</div>
-            <div className="text-gray-500">{entityLabel}</div>
-          </div>
-        );
+      {
+        header: "Entity",
+        size: 150,
+        enableSorting: true,
+        cell: (props) => {
+          const { entityId, entity } = props.row.original;
+          const entityLabel = ENTITY_TYPE_OPTIONS.find((o) => o.value === entity)?.label || entity;
+          return (
+            <div className="text-xs leading-tight">
+              <div className="font-semibold">{entityId || "-"}</div>
+              <div className="text-gray-500">{entityLabel}</div>
+            </div>
+          );
+        },
       },
-    },
-    {
-      header: "Description",
-      enableSorting: false,
-      cell: (props) => {
-        const description = props.row.original.description || "-";
-        return (
-          <div className="text-xs whitespace-pre-wrap break-words max-w-[400px]">
-            {description}
-          </div>
-        );
+      {
+        header: "Description",
+        enableSorting: false,
+        cell: (props) => {
+          const description = props.row.original.description || "-";
+          return (
+            <div className="text-xs whitespace-pre-wrap break-words max-w-[400px]">
+              {description}
+            </div>
+          );
+        },
       },
-    },
-    {
-      header: "Updated Info",
-      size: 170,
-      enableSorting: true,
-      meta: { HeaderClass: "text-red-500" },
-      cell: (props) => {
-        const { updated_at, updated_by_name, updated_by_role } = props.row.original;
-        if (!updated_at && !updated_by_name && !updated_by_role) {
-          return <span className="text-xs text-gray-400">-</span>;
-        }
-        const formattedDate = updated_at
-          ? `${new Date(updated_at).toLocaleDateString()} ${new Date(updated_at).toLocaleTimeString("en-US", {
+      {
+        header: "Updated Info",
+        size: 170,
+        enableSorting: true,
+        meta: { HeaderClass: "text-red-500" },
+        cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+          if (!updated_at && !updated_by_name && !updated_by_role) {
+            return <span className="text-xs text-gray-400">-</span>;
+          }
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).toLocaleDateString()} ${new Date(updated_at).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
             })}`
-          : "N/A";
-        return (
-          <div className="text-xs">
-            <span>
-              {updated_by_name || "N/A"}
-              {updated_by_role && (
-                <>
-                  <br />
-                  <span className="font-semibold">{updated_by_role}</span>
-                </>
-              )}
-            </span>
-            <br />
-            <span className="text-gray-500 dark:text-gray-400">{formattedDate}</span>
-          </div>
-        );
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_name || "N/A"}
+                {updated_by_role && (
+                  <>
+                    <br />
+                    <span className="font-semibold">{updated_by_role}</span>
+                  </>
+                )}
+              </span>
+              <br />
+              <span className="text-gray-500 dark:text-gray-400">{formattedDate}</span>
+            </div>
+          );
+        },
       },
-    },
-    {
-      header: "Actions",
-      id: "action",
-    meta: { headerClass: "text-center", cellClass: "text-center" },
-    size: 100, // Reduced size as one icon removed
-      cell: (props) => <ActionColumn onViewDetail={() => openViewDialog(props.row.original)} />,
-    },
-  ],
-  [openViewDialog]
-);
+      {
+        header: "Actions",
+        id: "action",
+        meta: { headerClass: "text-center", cellClass: "text-center" },
+        size: 100, // Reduced size as one icon removed
+        cell: (props) => <ActionColumn onViewDetail={() => openViewDialog(props.row.original)} />,
+      },
+    ],
+    [openViewDialog]
+  );
 
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
@@ -638,7 +645,7 @@ const columns: ColumnDef<ChangeLogItem>[] = useMemo(
         <Controller name="description" control={currentFormMethods.control} render={({ field }) => (<Input textArea  {...field} rows={3} placeholder="Summary of the change" />)} />
       </FormItem>
       <FormItem label="Details (JSON or Text, Optional)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.details} errorMessage={currentFormMethods.formState.errors.details?.message}>
-        <Controller name="details" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value || ''} rows={4} placeholder='e.g., {"oldValue": "X", "newValue": "Y"}'/>)} />
+        <Controller name="details" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value || ''} rows={4} placeholder='e.g., {"oldValue": "X", "newValue": "Y"}' />)} />
       </FormItem>
     </div>
   );
@@ -652,6 +659,65 @@ const columns: ColumnDef<ChangeLogItem>[] = useMemo(
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Activity Log</h5>
             {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add Log Entry (Admin)</Button> */}
+          </div>
+          <div className="grid grid-cols-6 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbActivity size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">879</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbCalendarWeek size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">23</h6>
+                <span className="font-semibold text-xs">Today</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbLogin size={24} />
+              </div>
+              <div>
+                <h6 className="text-pink-500">34</h6>
+                <span className="font-semibold text-xs">Failed Login</span>
+              </div>
+            </Card>
+
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbCloudPin size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">9</h6>
+                <span className="font-semibold text-xs">Unique IP</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbCloudCog size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">23</h6>
+                <span className="font-semibold text-xs">Distinct IP</span>
+              </div>
+            </Card>
+
+
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbCloudExclamation size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">3</h6>
+                <span className="font-semibold text-xs">Suspicious IP</span>
+              </div>
+            </Card>
           </div>
           <ChangeLogsTableTools
             onSearchChange={handleSearchChange}
@@ -682,16 +748,16 @@ const columns: ColumnDef<ChangeLogItem>[] = useMemo(
         {viewingItem && (
           <div className="space-y-3 text-sm">
             {(Object.keys(viewingItem) as Array<keyof ChangeLogItem>).map((key) => {
-                let label = key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
-                let value: any = viewingItem[key];
-                if ((key === "timestamp" || key === "updated_at") && value) value = new Date(value).toLocaleString();
-                else if (key === "action") value = CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
-                else if (key === "entity") value = ENTITY_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
-                else if (key === "details" && value && typeof value === "string" ) {
-                  let isJson = false; try { const p = JSON.parse(value); if (typeof p === 'object' && p !== null) { value = JSON.stringify(p, null, 2); isJson = true;}} catch {}
-                  if(isJson) return (<div key={key} className="flex flex-col"><span className="font-semibold">{label}:</span><pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-40 overflow-auto">{value || "-"}</pre></div>);
-                }
-                return (<div key={key} className="flex"><span className="font-semibold w-1/3 md:w-1/4">{label}:</span><span className="w-2/3 md:w-3/4 break-words">{value === null || value === undefined || value === "" ? "-" : String(value)}</span></div>);
+              let label = key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
+              let value: any = viewingItem[key];
+              if ((key === "timestamp" || key === "updated_at") && value) value = new Date(value).toLocaleString();
+              else if (key === "action") value = CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
+              else if (key === "entity") value = ENTITY_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
+              else if (key === "details" && value && typeof value === "string") {
+                let isJson = false; try { const p = JSON.parse(value); if (typeof p === 'object' && p !== null) { value = JSON.stringify(p, null, 2); isJson = true; } } catch { }
+                if (isJson) return (<div key={key} className="flex flex-col"><span className="font-semibold">{label}:</span><pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-40 overflow-auto">{value || "-"}</pre></div>);
+              }
+              return (<div key={key} className="flex"><span className="font-semibold w-1/3 md:w-1/4">{label}:</span><span className="w-2/3 md:w-3/4 break-words">{value === null || value === undefined || value === "" ? "-" : String(value)}</span></div>);
             })}
           </div>
         )}
@@ -718,17 +784,17 @@ const columns: ColumnDef<ChangeLogItem>[] = useMemo(
           </div>
         }>
         <Form id="filterLogForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Action Types"><Controller name="filteraction" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Action Type" options={CHANGE_TYPE_OPTIONS} value={field.value || []} onChange={(opts) => field.onChange(opts || [])}/>)}/></FormItem>
-          <FormItem label="Entity Types"><Controller name="filterentity" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Entity Type" options={ENTITY_TYPE_OPTIONS} value={field.value || []} onChange={(opts) => field.onChange(opts || [])}/>)}/></FormItem>
-          <FormItem label="User Name"><Controller name="filterUserName" control={filterFormMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="Enter user name to filter" />)}/></FormItem>
-          <FormItem label="Date Range"><Controller name="filterDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | undefined} onChange={(dates) => field.onChange(dates || [null, null])} placeholder="Start Date - End Date" inputFormat="YYYY-MM-DD"/>)}/></FormItem>
+          <FormItem label="Action Types"><Controller name="filteraction" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Action Type" options={CHANGE_TYPE_OPTIONS} value={field.value || []} onChange={(opts) => field.onChange(opts || [])} />)} /></FormItem>
+          <FormItem label="Entity Types"><Controller name="filterentity" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Entity Type" options={ENTITY_TYPE_OPTIONS} value={field.value || []} onChange={(opts) => field.onChange(opts || [])} />)} /></FormItem>
+          <FormItem label="User Name"><Controller name="filterUserName" control={filterFormMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="Enter user name to filter" />)} /></FormItem>
+          <FormItem label="Date Range"><Controller name="filterDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | undefined} onChange={(dates) => field.onChange(dates || [null, null])} placeholder="Start Date - End Date" inputFormat="YYYY-MM-DD" />)} /></FormItem>
         </Form>
       </Drawer>
 
-      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Activity Logs" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Activity Logs" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
         <Form id="exportChangeLogsReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
           <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3}/>)}/>
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
           </FormItem>
         </Form>
       </ConfirmDialog>
