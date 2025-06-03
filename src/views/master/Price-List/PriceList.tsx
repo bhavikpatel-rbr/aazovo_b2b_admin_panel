@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 // import StickyFooter from "@/components/shared/StickyFooter"; // Still imported, but footer usage is commented
 import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Tag already imported
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Tag already imported
 
 // Icons
 import {
@@ -32,6 +32,18 @@ import {
   TbCloudUpload,
   TbReload,
   TbUser,
+  TbMessagePause,
+  TbMessage2X,
+  TbMessageCheck,
+  TbMessageUser,
+  TbMessageShare,
+  TbMessageStar,
+  TbReceipt,
+  TbDeviceWatchDollar,
+  TbClockDollar,
+  TbPencilDollar,
+  TbDiscount,
+  TbDiscountOff,
 } from "react-icons/tb";
 
 // Types
@@ -947,6 +959,62 @@ const PriceList = () => {
                 Add New
               </Button>
             </div>
+          </div>
+          <div className="grid grid-cols-6 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbReceipt size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">879</h6>
+                <span className="font-semibold text-xs">Total Listed</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbDeviceWatchDollar size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">23</h6>
+                <span className="font-semibold text-xs">Today Listed</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbClockDollar size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">345</h6>
+                <span className="font-semibold text-xs">Avg Base (₹)</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-gray-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500">
+                <TbPencilDollar size={24} />
+              </div>
+              <div>
+                <h6 className="text-gray-500">34</h6>
+                <span className="font-semibold text-xs">Avg NLC (₹)</span>
+              </div>
+            </Card>  
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbDiscount size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">879</h6>
+                <span className="font-semibold text-xs">Acitve</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbDiscountOff size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">78</h6>
+                <span className="font-semibold text-xs">Inactive</span>
+              </div>
+            </Card>
           </div>
           <PriceListTableTools
             onSearchChange={handleSearchChange}
