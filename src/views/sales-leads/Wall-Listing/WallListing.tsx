@@ -66,29 +66,17 @@ import type {
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-// import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming this exists
-// import { deleteAllWallAction, getWallListingAction } from "@/reduxtool/master/middleware"; // Assuming these exist
-// import { useAppDispatch } from "@/reduxtool/store"; // Assuming this exists
-// import { useSelector } from "react-redux"; // Assuming this exists
+import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming this exists
+import { 
+  deleteAllWallAction, 
+  getWallListingAction,
+  // --- Assuming these actions would be created for status/bookmark updates ---
+  // changeWallItemStatusAction, 
+  // toggleWallItemBookmarkAction 
+} from "@/reduxtool/master/middleware"; // Assuming these exist
+import { useAppDispatch } from "@/reduxtool/store"; // Assuming this exists
+import { useSelector } from "react-redux"; // Assuming this exists
 import { z } from "zod";
-
-// --- Mock Redux for standalone running ---
-const useAppDispatch = () => {
-  return async (action: any) => {
-    console.log("Mock dispatch:", action);
-    return { unwrap: () => Promise.resolve() };
-  };
-};
-const useSelector = (selector: any) => {
-  if (selector.name === 'masterSelector') {
-    return { wallListing: { data: [], total: 0 } }; // Initial empty state if wallListing is an object
-    // return { wallListing: [] }; // If wallListing is directly an array
-  }
-  return {};
-};
-const masterSelector = (state: any) => state.master;
-// --- End Mock Redux ---
-
 
 // --- Define Types ---
 export type WallRecordStatus =
@@ -100,88 +88,88 @@ export type WallRecordStatus =
   | string;
 export type WallIntent = "Buy" | "Sell" | "Exchange";
 export type WallProductCondition = "New" | "Used" | "Refurbished" | string;
-type LoadingStatus = "idle" | "loading" | "succeeded" | "failed";
+// type LoadingStatus = "idle" | "loading" | "succeeded" | "failed";
 
 
 export type ApiWallItem = {
   id: number;
-  listing_id: string;
+  listing_id: string | null;
   product_name: string;
-  company_name: string;
-  company_id_from_api?: string;
+  company_name: string | null;
+  company_id_from_api?: string | null;
   member_name: string;
-  member_id_from_api?: string;
-  member_email: string;
-  member_phone: string;
-  product_category: string;
-  product_subcategory: string;
-  product_description: string;
-  product_specs: string;
-  product_status: string;
-  quantity: number;
-  price: number;
-  want_to: string;
-  listing_type: string;
-  shipping_options: string;
-  payment_method: string;
-  warranty: string;
-  return_policy: string;
-  listing_url: string;
-  brand: string;
+  member_id_from_api?: string | null; // Could be string or number from API, treat as string | null
+  member_email: string | null;
+  member_phone: string | null;
+  product_category: string | null;
+  product_subcategory: string | null;
+  product_description: string | null;
+  product_specs: string | null;
+  product_status: string; // e.g., "Non-active", "available"
+  quantity: string; // e.g., "100"
+  price: string; // e.g., "0"
+  want_to: string; // e.g., "Buy", "Sell"
+  listing_type: string | null;
+  shipping_options: string | null;
+  payment_method: string | null;
+  warranty: string | null;
+  return_policy: string | null;
+  listing_url: string | null;
+  brand: string | null;
   product_images: string[];
-  created_date: string;
-  last_updated: string;
-  visibility: string;
-  priority: string;
-  assigned_to: string;
-  interaction_type: string;
-  action: string;
-  status: string; // This will be mapped to recordStatus
+  created_date: string; // ISO String e.g., "2023-10-28T22:05:37.000000Z"
+  last_updated: string; // ISO String
+  visibility: string | null;
+  priority: string | null;
+  assigned_to: string | null;
+  interaction_type: string | null;
+  action: string | null;
+  status: string; // This is the recordStatus e.g., "Active"
   cartoon_type_id?: number | null;
   device_condition?: string | null;
-  inquiry_count: number;
-  share_count: number;
+  inquiry_count: string; // e.g., "0"
+  share_count: string; // e.g., "0"
   is_bookmarked: boolean;
 };
 
 export type WallItem = {
   id: number;
-  listing_id: string;
+  listing_id: string; // Non-nullable in WallItem, default to "" if API is null
   product_name: string;
-  company_name: string;
+  company_name: string; // Non-nullable
   companyId?: string;
   member_name: string;
   memberId?: string;
-  member_email: string;
-  member_phone: string;
-  product_category: string;
-  product_subcategory: string;
-  product_description: string;
-  product_specs: string;
+  member_email: string; // Non-nullable
+  member_phone: string; // Non-nullable
+  product_category: string; // Non-nullable
+  product_subcategory: string; // Non-nullable
+  product_description: string; // Non-nullable
+  product_specs: string; // Non-nullable
   product_status: string;
-  quantity: number;
-  price: number;
+  quantity: number; // Parsed from ApiWallItem.quantity
+  price: number;    // Parsed from ApiWallItem.price
   want_to: WallIntent | string;
-  listing_type: string;
-  shipping_options: string;
-  payment_method: string;
-  warranty: string;
-  return_policy: string;
-  listing_url: string;
-  brand: string;
+  listing_type: string; // Non-nullable
+  shipping_options: string; // Non-nullable
+  payment_method: string; // Non-nullable
+  warranty: string; // Non-nullable
+  return_policy: string; // Non-nullable
+  listing_url: string; // Non-nullable
+  brand: string; // Non-nullable
   product_images: string[];
   created_date: Date;
   last_updated: Date;
-  visibility: string;
-  priority: string;
-  assigned_to: string;
-  interaction_type: string;
-  action: string;
+  visibility: string; // Non-nullable
+  priority: string; // Non-nullable
+  assigned_to: string; // Non-nullable
+  interaction_type: string; // Non-nullable
+  action: string; // Non-nullable
   recordStatus?: WallRecordStatus; // Mapped from ApiWallItem.status
   cartoonTypeId?: number | null;
   deviceCondition?: WallProductCondition | null;
-  inquiry_count: number;
-  share_count: number;
+  inquiry_count: number; // Parsed
+  share_count: number;   // Parsed
   is_bookmarked: boolean;
 
   // Optional fields that might not be in ApiWallItem directly
@@ -201,9 +189,7 @@ const selectOptionSchema = z.object({ value: z.any(), label: z.string() });
 const filterFormSchema = z.object({
   filterRecordStatuses: z.array(selectOptionSchema).optional().default([]),
   filterProductIds: z.array(selectOptionSchema).optional().default([]),
-  // filterProductSpecIds: z.array(selectOptionSchema).optional().default([]), // Assuming not used, can be re-added
   filterCompanyIds: z.array(selectOptionSchema).optional().default([]),
-  // filterCustomerIds: z.array(selectOptionSchema).optional().default([]), // Assuming not used
   filterIntents: z.array(selectOptionSchema).optional().default([]),
   dateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
   categories: z.array(selectOptionSchema).optional().default([]),
@@ -212,8 +198,8 @@ const filterFormSchema = z.object({
   productStatus: z.array(selectOptionSchema).optional().default([]),
   source: z.array(selectOptionSchema).optional().default([]),
   productSpec: z.array(selectOptionSchema).optional().default([]),
-  memberType: z.array(selectOptionSchema).optional().default([]), // Added for "Member Type" filter
-  createdBy: z.array(selectOptionSchema).optional().default([]), // Added for "Created By" filter
+  memberType: z.array(selectOptionSchema).optional().default([]), 
+  createdBy: z.array(selectOptionSchema).optional().default([]), 
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -226,6 +212,8 @@ const recordStatusColor: Record<WallRecordStatus, string> = {
   Rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
   Expired: "bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100",
   Fulfilled: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
+  Active: // Assuming "Active" from your example maps to "Approved" or a similar style
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", 
 };
 const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({
   value: s,
@@ -252,108 +240,25 @@ const productApiStatusColor: Record<string, string> = {
   "out of stock":
     "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
   discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
+  "non-active": // From your example "Non-active"
+    "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
 };
 
-// --- Dummy Data ---
+// --- Dummy Data (for filter dropdowns, keep as is or fetch from API if needed) ---
 const dummyProducts = [
   { id: 1, name: "iPhone 15 Pro" },
   { id: 2, name: "Samsung Galaxy S24 Ultra" },
+  { id: 544, name: "REDMI A2 PLUS 2GB 32GB" }, // Example from your data
 ];
 const dummyCompanies = [
   { id: "COMP001", name: "TechDistributors Inc." },
   { id: "COMP002", name: "Global Gadgets LLC" },
+  // Add more or fetch dynamically if these are used for filtering by company name
 ];
 export const dummyCartoonTypes = [
   { id: 1, name: "Master Carton" },
   { id: 2, name: "Inner Carton" },
-];
-
-const initialDummyWallItems: ApiWallItem[] = [
-  {
-    id: 1,
-    listing_id: "LIST-001",
-    product_name: "Electric Drill XT5000",
-    company_name: "ToolMaster Inc.",
-    company_id_from_api: "COMP001",
-    member_name: "John Doe",
-    member_id_from_api: "MEMBER001",
-    member_email: "john.doe@example.com",
-    member_phone: "+1 555 123 4567",
-    product_category: "Tools",
-    product_subcategory: "Power Tools",
-    product_description:
-      "A high-performance electric drill suitable for heavy-duty tasks.",
-    product_specs: "500W, 220V, 13mm chuck",
-    product_status: "available",
-    quantity: 25,
-    price: 149.99,
-    want_to: "Sell",
-    listing_type: "featured",
-    shipping_options: "Courier, Pickup",
-    payment_method: "Online, COD",
-    warranty: "1 Year Manufacturer Warranty",
-    return_policy: "7 Days Return",
-    listing_url: "https://example.com/product/electric-drill",
-    brand: "ToolMaster",
-    product_images: [
-      "https://picsum.photos/id/10/200/200",
-      "https://picsum.photos/id/11/200/200",
-    ],
-    created_date: "2024-01-01T10:00:00Z",
-    last_updated: "2024-01-15T12:30:00Z",
-    visibility: "public",
-    priority: "high",
-    assigned_to: "Sales Team A",
-    interaction_type: "call",
-    action: "follow_up",
-    status: "Approved", // This maps to recordStatus
-    cartoon_type_id: 1,
-    device_condition: "New",
-    inquiry_count: 42,
-    share_count: 150,
-    is_bookmarked: false,
-  },
-  {
-    id: 2,
-    listing_id: "LIST-002",
-    product_name: "Industrial Grade Sander G2",
-    company_name: "BuildRight Supplies",
-    company_id_from_api: "COMP002",
-    member_name: "Alice Smith",
-    member_id_from_api: "MEMBER002",
-    member_email: "alice.smith@example.com",
-    member_phone: "+1 555 987 6543",
-    product_category: "Tools",
-    product_subcategory: "Sanding Tools",
-    product_description: "Robust sander for industrial applications.",
-    product_specs: "300W, 110V, Orbital Action",
-    product_status: "low stock",
-    quantity: 5,
-    price: 89.5,
-    want_to: "Sell",
-    listing_type: "standard",
-    shipping_options: "Courier",
-    payment_method: "Online",
-    warranty: "6 Months Warranty",
-    return_policy: "No Returns",
-    listing_url: "https://example.com/product/sander-g2",
-    brand: "BuildRight",
-    product_images: ["https://picsum.photos/id/12/200/200"],
-    created_date: "2023-11-10T09:00:00Z",
-    last_updated: "2024-01-20T14:00:00Z",
-    visibility: "public",
-    priority: "medium",
-    assigned_to: "Sales Team B",
-    interaction_type: "email",
-    action: "quote_sent",
-    status: "Pending", // This maps to recordStatus
-    cartoon_type_id: null,
-    device_condition: "Used",
-    inquiry_count: 15,
-    share_count: 75,
-    is_bookmarked: true,
-  },
 ];
 
 // --- CSV Export ---
@@ -413,7 +318,7 @@ function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
   return false;
 }
 
-// --- Child Components ---
+// --- Child Components (Remain mostly unchanged) ---
 const StyledActionColumn = ({
   onEdit,
   onViewDetail,
@@ -585,124 +490,61 @@ const WallSelectedFooter = ({
 // --- Main Component ---
 const WallListing = () => {
   const navigate = useNavigate();
-  // const { wallListing: reduxWallListingData } = useSelector(masterSelector); // Real Redux selector
-  const dispatch = useAppDispatch(); // Real Redux dispatch
+  const dispatch = useAppDispatch();
+  const { 
+    wallListing = [], 
+    status: masterLoadingStatus = "idle", 
+  } = useSelector(masterSelector);
 
   const [allWallItems, setAllWallItems] = useState<WallItem[]>([]);
-  const [apiRawData, setApiRawData] = useState<ApiWallItem[]>([]);
-  const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>("idle");
-
-  const dispatchSimulated = useCallback(
-    async (action: { type: string; payload?: any }) => {
-      setLoadingStatus("loading");
-      await new Promise((res) => setTimeout(res, 300)); // Simulate network delay
-      try {
-        let updatedApiRawData = cloneDeep(apiRawData); // Use cloneDeep to ensure a new array reference for state updates
-        switch (action.type) {
-          case "wall/get":
-            updatedApiRawData = initialDummyWallItems;
-            break;
-          case "wall/delete": // Assuming this is for a single item not currently used by UI
-            updatedApiRawData = apiRawData.filter(
-              (item) => item.id !== action.payload.id
-            );
-            break;
-          case "wall/deleteAll":
-            const idsToDelete = new Set(
-              (action.payload.ids as string).split(",").map(Number)
-            );
-            updatedApiRawData = apiRawData.filter(
-              (item) => !idsToDelete.has(item.id)
-            );
-            break;
-          case "wall/changeStatus":
-            updatedApiRawData = apiRawData.map((item) =>
-              item.id === action.payload.id
-                ? {
-                  ...item,
-                  status: action.payload.newStatus, // API uses 'status'
-                  last_updated: new Date().toISOString(),
-                }
-                : item
-            );
-            break;
-          case "wall/toggleBookmark":
-            updatedApiRawData = apiRawData.map((item) =>
-              item.id === action.payload.id
-                ? {
-                  ...item,
-                  is_bookmarked: !item.is_bookmarked,
-                  last_updated: new Date().toISOString(),
-                }
-                : item
-            );
-            break;
-          default:
-            console.warn("Unknown action type in dispatchSimulated:", action.type);
-        }
-        setApiRawData(updatedApiRawData);
-        setLoadingStatus("succeeded");
-        return { unwrap: () => Promise.resolve({ data: updatedApiRawData }) }; // Simulate unwrap returning data
-      } catch (e) {
-        setLoadingStatus("failed");
-        console.error("Simulated dispatch error:", e);
-        return { unwrap: () => Promise.reject(e) };
-      }
-    },
-    [apiRawData] // Add apiRawData as dependency for cloneDeep
-  );
-
-  // Effect for initial data load
+  
   useEffect(() => {
-    const fetchData = async () => {
-      // For real app: dispatch(getWallListingAction()).then(response => setApiRawData(response.payload.data || []));
-      await dispatchSimulated({ type: "wall/get" });
-    };
-    fetchData();
-  }, [dispatchSimulated]); // dispatchSimulated is memoized
+    dispatch(getWallListingAction());
+  }, [dispatch]);
 
-  // Effect to map apiRawData (ApiWallItem[]) to allWallItems (WallItem[])
+  // const wallListing = useMemo(() => reduxWallListing?.data || [], [reduxWallListing?.data]);
+
   useEffect(() => {
-    if (Array.isArray(apiRawData)) {
-      const mapped = apiRawData.map(
-        (apiItem): WallItem => ({
+    if (Array.isArray(wallListing)) {
+      const mapped = wallListing.map(
+        (apiItem: ApiWallItem): WallItem => ({
           id: apiItem.id,
-          listing_id: apiItem.listing_id,
+          listing_id: apiItem.listing_id || "",
           product_name: apiItem.product_name,
-          company_name: apiItem.company_name,
-          companyId: apiItem.company_id_from_api,
+          company_name: apiItem.company_name || "",
+          companyId: apiItem.company_id_from_api || undefined,
           member_name: apiItem.member_name,
-          memberId: apiItem.member_id_from_api,
-          member_email: apiItem.member_email,
-          member_phone: apiItem.member_phone,
-          product_category: apiItem.product_category,
-          product_subcategory: apiItem.product_subcategory,
-          product_description: apiItem.product_description,
-          product_specs: apiItem.product_specs,
+          memberId: String(apiItem.member_id_from_api || ""), // Ensure memberId is string
+          member_email: apiItem.member_email || "",
+          member_phone: apiItem.member_phone || "",
+          product_category: apiItem.product_category || "",
+          product_subcategory: apiItem.product_subcategory || "",
+          product_description: apiItem.product_description || "",
+          product_specs: apiItem.product_specs || "",
           product_status: apiItem.product_status,
-          quantity: apiItem.quantity,
-          price: apiItem.price,
+          quantity: Number(apiItem.quantity) || 0, // Parse and default to 0 if NaN
+          price: Number(apiItem.price) || 0, // Parse and default to 0 if NaN
           want_to: apiItem.want_to as WallIntent | string,
-          listing_type: apiItem.listing_type,
-          shipping_options: apiItem.shipping_options,
-          payment_method: apiItem.payment_method,
-          warranty: apiItem.warranty,
-          return_policy: apiItem.return_policy,
-          listing_url: apiItem.listing_url,
-          brand: apiItem.brand,
+          listing_type: apiItem.listing_type || "",
+          shipping_options: apiItem.shipping_options || "",
+          payment_method: apiItem.payment_method || "",
+          warranty: apiItem.warranty || "",
+          return_policy: apiItem.return_policy || "",
+          listing_url: apiItem.listing_url || "",
+          brand: apiItem.brand || "",
           product_images: apiItem.product_images || [],
           created_date: new Date(apiItem.created_date),
           last_updated: new Date(apiItem.last_updated),
-          visibility: apiItem.visibility,
-          priority: apiItem.priority,
-          assigned_to: apiItem.assigned_to,
-          interaction_type: apiItem.interaction_type,
-          action: apiItem.action,
-          recordStatus: apiItem.status as WallRecordStatus, // Map 'status' from API to 'recordStatus'
+          visibility: apiItem.visibility || "",
+          priority: apiItem.priority || "",
+          assigned_to: apiItem.assigned_to || "",
+          interaction_type: apiItem.interaction_type || "",
+          action: apiItem.action || "",
+          recordStatus: apiItem.status as WallRecordStatus,
           cartoonTypeId: apiItem.cartoon_type_id,
-          deviceCondition: apiItem.device_condition as WallProductCondition | null,
-          inquiry_count: apiItem.inquiry_count,
-          share_count: apiItem.share_count,
+          deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null,
+          inquiry_count: Number(apiItem.inquiry_count) || 0, // Parse and default
+          share_count: Number(apiItem.share_count) || 0,   // Parse and default
           is_bookmarked: apiItem.is_bookmarked,
         })
       );
@@ -710,15 +552,14 @@ const WallListing = () => {
     } else {
       setAllWallItems([]);
     }
-    // setLoadingStatus("succeeded") is now handled within dispatchSimulated
-  }, [apiRawData]);
+  }, [wallListing]);
 
 
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WallItem | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false); // For operations like status change, bookmark
-  const [isDeleting, setIsDeleting] = useState(false); // Specifically for delete operations
+  const [isSubmitting, setIsSubmitting] = useState(false); 
+  const [isDeleting, setIsDeleting] = useState(false); 
   const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
@@ -755,19 +596,18 @@ const WallListing = () => {
       return;
     }
     setIsDeleting(true);
-    setDeleteSelectedConfirmOpen(false); // Close dialog immediately
+    setDeleteSelectedConfirmOpen(false); 
 
     const ids = selectedItems.map((item) => item.id).join(",");
     try {
-      // await dispatch(deleteAllWallAction({ ids })).unwrap(); // Real Redux action
-      await dispatchSimulated({ type: "wall/deleteAll", payload: { ids } }).unwrap(); // Simulated
+      await dispatch(deleteAllWallAction({ ids })).unwrap();
       toast.push(
         <Notification title="Success" type="success">
           {selectedItems.length} item{selectedItems.length > 1 ? "s" : ""} deleted.
         </Notification>
       );
-      setSelectedItems([]); // Clear selection on successful deletion
-      // Optionally, re-fetch or update local data state if not handled by dispatchSimulated/apiRawData effect
+      setSelectedItems([]); 
+      dispatch(getWallListingAction()); 
     } catch (error: any) {
       toast.push(
         <Notification title="Error" type="danger">
@@ -777,42 +617,54 @@ const WallListing = () => {
     } finally {
       setIsDeleting(false);
     }
-  }, [dispatchSimulated, selectedItems]);
+  }, [dispatch, selectedItems]);
 
 
   const handleChangeStatus = useCallback(
     async (item: WallItem) => {
-      const statusesCycle: WallRecordStatus[] = ["Pending", "Approved", "Rejected", "Expired", "Fulfilled"];
+      const statusesCycle: WallRecordStatus[] = ["Pending", "Approved", "Rejected", "Expired", "Fulfilled", "Active"];
       const currentRecordStatus = item.recordStatus || "Pending";
-      const currentIndex = statusesCycle.indexOf(currentRecordStatus);
+      let currentIndex = statusesCycle.indexOf(currentRecordStatus);
+      if (currentIndex === -1) currentIndex = 0; // Default to first if not found
       const newStatus = statusesCycle[(currentIndex + 1) % statusesCycle.length];
 
       setIsSubmitting(true);
       try {
-        await dispatchSimulated({ type: "wall/changeStatus", payload: { id: item.id, newStatus } }).unwrap();
+        // Assuming a Redux action like:
+        // await dispatch(changeWallItemStatusAction({ wallId: item.id, status: newStatus })).unwrap();
+        console.log(`Simulating dispatch changeWallItemStatusAction for item ${item.id} to ${newStatus}`);
+        await new Promise(res => setTimeout(res, 500)); 
+
         toast.push(<Notification title="Status Updated" type="success">{`Status changed to ${newStatus}.`}</Notification>);
+        dispatch(getWallListingAction()); 
       } catch (error: any) {
         toast.push(<Notification title="Error" type="danger">Failed to update status.</Notification>);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [dispatchSimulated]
+    [dispatch] 
   );
 
   const handleToggleBookmark = useCallback(
     async (item: WallItem) => {
       setIsSubmitting(true);
       try {
-        await dispatchSimulated({ type: "wall/toggleBookmark", payload: { id: item.id } }).unwrap();
+        // Assuming a Redux action like:
+        // await dispatch(toggleWallItemBookmarkAction({ wallId: item.id, bookmarked: !item.is_bookmarked })).unwrap();
+        console.log(`Simulating dispatch toggleWallItemBookmarkAction for item ${item.id}`);
+        await new Promise(res => setTimeout(res, 500)); 
+
         toast.push(<Notification title="Bookmark Updated" type="success">{`Item ${!item.is_bookmarked ? "bookmarked" : "unbookmarked"}.`}</Notification>);
-      } catch (error: any) {
+        dispatch(getWallListingAction()); 
+      } catch (error: any)        
+      {
         toast.push(<Notification title="Error" type="danger">Failed to update bookmark.</Notification>);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [dispatchSimulated]
+    [dispatch] 
   );
 
   const openFilterDrawer = useCallback(() => {
@@ -871,7 +723,7 @@ const WallListing = () => {
       const productIds = new Set(filterCriteria.filterProductIds.map((opt) => opt.value as number));
       const productLabels = filterCriteria.filterProductIds.map(opt => String(opt.label).toLowerCase());
       processedData = processedData.filter(
-        (item) => productIds.has(item.productId as number) || // productId might be undefined
+        (item) => productIds.has(item.id as number) || // Match by actual item ID from API
                    productLabels.some(label => item.product_name.toLowerCase().includes(label))
       );
     }
@@ -884,8 +736,6 @@ const WallListing = () => {
           (item.companyId && companyIdTerms.some((term) => item.companyId?.toLowerCase()?.includes(term)))
       );
     }
-    // Add other filters from filterFormSchema here if needed (categories, brands, etc.)
-    // Example for categories:
     if (filterCriteria.categories && filterCriteria.categories.length > 0) {
         const categories = new Set(filterCriteria.categories.map(opt => opt.value));
         processedData = processedData.filter(item => categories.has(item.product_category));
@@ -931,9 +781,9 @@ const WallListing = () => {
     const startIndex = (pageIndex - 1) * pageSize;
 
     return {
-      pageData: processedData.slice(startIndex, startIndex + pageSize), // Apply pagination
+      pageData: processedData.slice(startIndex, startIndex + pageSize), 
       total: currentTotal,
-      allFilteredAndSortedData: processedData, // Full filtered list for export
+      allFilteredAndSortedData: processedData, 
     };
   }, [allWallItems, tableData, filterCriteria]);
 
@@ -976,7 +826,7 @@ const WallListing = () => {
       toast.push(<Notification title="Import Started" type="info">File processing initiated. (Dummy)</Notification>);
       setImportDialogOpen(false);
     }
-    event.target.value = ""; // Reset file input
+    event.target.value = ""; 
   }, []);
 
   const columns: ColumnDef<WallItem>[] = useMemo(
@@ -1001,7 +851,7 @@ const WallListing = () => {
                   {product_name}
                 </div>
               </div>
-              <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {listing_id}</span>
+              <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {listing_id || "N/A"}</span>
               <span className="text-xs">
                 {want_to && (
                   <span><b>Want To: </b><Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>{want_to}</Tag></span>
@@ -1021,7 +871,7 @@ const WallListing = () => {
             <div className="flex flex-col gap-0.5 text-xs">
               <div className="mb-1 w-full">
                 {companyId && (<span className="font-semibold text-gray-500 dark:text-gray-400">{companyId} | </span>)}
-                <span className="font-semibold text-gray-800 dark:text-gray-100">{company_name}</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-100">{company_name || "N/A"}</span>
               </div>
               <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700 w-full">
                 {memberId && (<span className="font-semibold text-gray-500 dark:text-gray-400">{memberId} | </span>)}
@@ -1050,7 +900,7 @@ const WallListing = () => {
           const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
           return (
             <div className="flex flex-col gap-0.5 text-xs">
-              <span><span className="font-semibold text-gray-700 dark:text-gray-300">Category:</span> {product_category}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
+              <span><span className="font-semibold text-gray-700 dark:text-gray-300">Category:</span> {product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
               {product_specs && (
                 <Tooltip title={product_specs}>
                   <span className="truncate max-w-[250px]"><span className="font-semibold text-gray-700 dark:text-gray-300">Specs:</span> {product_specs.length > 20 ? product_specs.substring(0, 20) + "..." : product_specs}</span>
@@ -1154,7 +1004,7 @@ const WallListing = () => {
             <WallTable
               columns={columns}
               data={pageData}
-              loading={loadingStatus === 'loading' || isSubmitting || isDeleting}
+              loading={masterLoadingStatus === 'idle' || isSubmitting || isDeleting}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
@@ -1190,7 +1040,7 @@ const WallListing = () => {
               )}
               <div>
                 <h5 className="font-semibold text-xl text-gray-800 dark:text-gray-100">{editingItem.product_name}</h5>
-                <p className="text-gray-500 dark:text-gray-400">ID: {editingItem.listing_id}</p>
+                <p className="text-gray-500 dark:text-gray-400">ID: {editingItem.listing_id || "N/A"}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
@@ -1256,13 +1106,13 @@ const WallListing = () => {
               <Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select products..." options={dummyProducts.map((p) => ({ value: p.id, label: p.name }))} {...field} />)} />
             </FormItem>
             <FormItem label="Categories">
-              <Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Categories..." options={[{ label: "Tools", value: "Tools" }, { label: "Electronics", value: "Electronics" }]} {...field} />)} />
+              <Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Categories..." options={[{ label: "Tools", value: "Tools" }, { label: "Electronics", value: "Electronics" }, { label: "Mobile", value: "MOBILE" }]} {...field} />)} />
             </FormItem>
             <FormItem label="Sub Categories">
-              <Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Sub Categories..." options={[{ label: "Power Tools", value: "Power Tools" }, { label: "Sanding Tools", value: "Sanding Tools" }]} {...field} />)} />
+              <Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Sub Categories..." options={[{ label: "Power Tools", value: "Power Tools" }, { label: "Sanding Tools", value: "Sanding Tools" }, { label: "Mobile", value: "MOBILE" }]} {...field} />)} />
             </FormItem>
             <FormItem label="Brands">
-              <Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Brands..." options={[{ label: "ToolMaster", value: "ToolMaster" }, { label: "BuildRight", value: "BuildRight" }]} {...field} />)} />
+              <Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Brands..." options={[{ label: "ToolMaster", value: "ToolMaster" }, { label: "BuildRight", value: "BuildRight" }, {label: "Redmi", value: "Redmi"}]} {...field} />)} />
             </FormItem>
             <FormItem label="Product Status (API)">
               <Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Product Status..." options={Object.keys(productApiStatusColor).filter(k => k !== 'default').map(s => ({label: s.charAt(0).toUpperCase() + s.slice(1), value: s}))} {...field} />)} />

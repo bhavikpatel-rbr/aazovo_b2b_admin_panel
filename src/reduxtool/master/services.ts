@@ -2313,3 +2313,12 @@ export const addWallItemAsync = async (unitData: FormData) => {
     return isAxiosError(err);
   }
 };
+
+export const getOpportunitiesAsync = async () => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
