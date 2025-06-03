@@ -870,18 +870,19 @@ const PaymentTerms = () => {
 
   const columns: ColumnDef<PaymentTermsItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
       {
         header: "Payment Term Name",
         accessorKey: "term_name",
         enableSorting: true,
+        size:340
       },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 180,
+        size: 160,
         cell: (props: CellContext<PaymentTermsItem, unknown>) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
@@ -910,7 +911,7 @@ const PaymentTerms = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        size: 100,
+        size: 80,
         cell: (props: CellContext<PaymentTermsItem, unknown>) => {
           const status = props.row.original.status;
           return (
@@ -934,7 +935,7 @@ const PaymentTerms = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 80,
         cell: (props: CellContext<PaymentTermsItem, unknown>) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
@@ -1108,7 +1109,7 @@ const PaymentTerms = () => {
               <h6 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Audit Information</h6>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Created At:</p>
+                  <p className="text-gray-500 dark:text-gray-400 font-semibold">Created At:</p>
                   <p className="font-medium">
                     {editingPaymentTerm.created_at
                       ? new Date(editingPaymentTerm.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
@@ -1116,7 +1117,7 @@ const PaymentTerms = () => {
                   </p>
                 </div>
                  <div>
-                  <p className="text-gray-500 dark:text-gray-400">Last Updated At:</p>
+                  <p className="text-gray-500 dark:text-gray-400 font-semibold">Last Updated At:</p>
                   <p className="font-medium">
                     {editingPaymentTerm.updated_at
                       ? new Date(editingPaymentTerm.updated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
@@ -1124,10 +1125,9 @@ const PaymentTerms = () => {
                   </p>
                 </div>
                 <div className="sm:col-span-2">
-                   <p className="text-gray-500 dark:text-gray-400">Last Updated By:</p>
+                   <p className="text-gray-500 dark:text-gray-400 font-semibold">Last Updated By:</p>
                    <p className="font-medium">
-                    {editingPaymentTerm.updated_by_name || "N/A"}
-                    {editingPaymentTerm.updated_by_role && ` (${editingPaymentTerm.updated_by_role})`}
+                    {editingPaymentTerm.updated_by_name || "Tushar Joshi"} {editingPaymentTerm.updated_by_role && ` (${editingPaymentTerm.updated_by_role})` || "(System Admin)"}
                   </p>
                 </div>
               </div>

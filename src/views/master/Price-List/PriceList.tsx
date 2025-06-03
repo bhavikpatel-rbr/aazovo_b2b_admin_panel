@@ -726,19 +726,19 @@ const PriceList = () => {
 
   const columns: ColumnDef<PriceListItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 60 },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 60 },
       {
         header: "Product Name",
         accessorFn: (row) => row.product?.name,
         id: "product.name",
         enableSorting: true,
-        size: 180,
+        size: 240,
         cell: (props) => props.row.original.product?.name || "N/A",
       },
       {
         header: "Price Breakup",
         id: "priceBreakup",
-        size: 150,
+        size: 160,
         cell: ({ row }) => {
           const { price, base_price, gst_price, usd } = row.original;
           return (
@@ -754,7 +754,7 @@ const PriceList = () => {
       {
         header: "Cost Split",
         id: "costSplit",
-        size: 150,
+        size: 160,
         cell: ({ row }) => {
           const { expance, margin, interest, nlc } = row.original;
           return (
@@ -771,14 +771,14 @@ const PriceList = () => {
         header: "Sales Price",
         accessorKey: "sales_price",
         enableSorting: true,
-        size: 100,
+        size: 140,
       },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 170,
+        size: 160,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
@@ -816,7 +816,7 @@ const PriceList = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        size: 100,
+        size: 80,
         cell: (props) => {
           const status = props.row.original.status;
           return (
@@ -840,7 +840,7 @@ const PriceList = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 80,
         cell: (props) => (
           <div className="flex justify-center items-center">
             <ActionColumn
