@@ -582,18 +582,18 @@ const Blogs = () => {
 
   const columns: ColumnDef<BlogItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
       {
-        header: "Icon", accessorKey: "icon_full_path", enableSorting: false, size: 80, meta: { headerClass: "text-center", cellClass: "text-center" },
+        header: "Icon", accessorKey: "icon_full_path", enableSorting: false, size: 60, meta: { headerClass: "text-center", cellClass: "text-center" },
         cell: (props) => {
           const iconPath = props.row.original.icon_full_path; const titleInitial = props.row.original.title?.charAt(0).toUpperCase();
           return (<Avatar size={40} shape="circle" src={iconPath || undefined} icon={!iconPath ? <TbFileText /> : undefined} onClick={() => openImageViewer(iconPath)} className={iconPath ? "cursor-pointer hover:ring-2 hover:ring-indigo-500" : ""}>{!iconPath ? titleInitial : null}</Avatar>);
         },
       },
-      { header: "Title", accessorKey: "title", enableSorting: true, size: 200, cell: (props) => (<span className="">{props.getValue<string>()}</span>) },
-      { header: "Slug", accessorKey: "slug", enableSorting: true, size: 180 },
+      { header: "Title", accessorKey: "title", enableSorting: true, size: 240, cell: (props) => (<span className="">{props.getValue<string>()}</span>) },
+      { header: "Slug", accessorKey: "slug", enableSorting: true, size: 240 },
       {
-        header: "Status", accessorKey: "status", enableSorting: true, size: 120,
+        header: "Status", accessorKey: "status", enableSorting: true, size: 80,
         cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); },
       },
       {
@@ -605,7 +605,7 @@ const Blogs = () => {
         },
       },
       {
-        header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, // Reduced size as Clone is removed
+        header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 80, // Reduced size as Clone is removed
         cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />), // Removed onClone
       },
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -745,7 +745,7 @@ const Blogs = () => {
             </FormItem>
 
             {drawer.type === "edit" && editingBlog && (
-              <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2"> {/* Positioned audit info */}
+              <div className="absolute bottom-[4%] w-full"> {/* Positioned audit info */}
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                   <div>
                     <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b><br />

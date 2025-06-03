@@ -722,21 +722,21 @@ const Sliders = () => {
 
   const columns: ColumnDef<SliderItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
       { header: "Image", accessorKey: "imageFullPath", enableSorting: false, size: 80,
         cell: (props) => {
           const { imageFullPath, title } = props.row.original;
           return (<Avatar size={40} shape="circle" src={imageFullPath || undefined} icon={<TbPhoto />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => imageFullPath && openImageViewer(imageFullPath)}>{!imageFullPath && title ? title.charAt(0).toUpperCase() : ""}</Avatar>);
         },
       },
-      { header: "Index", accessorKey: "indexPosition", enableSorting: true, size: 70, cell: (props) => props.row.original.indexPosition ?? 'N/A' }, // Added Index column
-      { header: "Title", accessorKey: "title", enableSorting: true, size: 150 },
-      { header: "Display Page", accessorKey: "displayPage", enableSorting: true, size: 150, cell: (props) => displayPageOptionsConst.find((p) => p.value === props.row.original.displayPage)?.label || props.row.original.displayPage },
-      { header: "Source", accessorKey: "source", enableSorting: true, size: 100, cell: (props) => sourceOptionsConst.find((s) => s.value === props.row.original.source)?.label || props.row.original.source },
-      { header: "Status", accessorKey: "status", enableSorting: true, size: 100,
+      { header: "Index", accessorKey: "indexPosition", enableSorting: true, size: 100, cell: (props) => props.row.original.indexPosition ?? 'N/A' }, // Added Index column
+      { header: "Title", accessorKey: "title", enableSorting: true, size: 180 },
+      { header: "Display Page", accessorKey: "displayPage", enableSorting: true, size: 180, cell: (props) => displayPageOptionsConst.find((p) => p.value === props.row.original.displayPage)?.label || props.row.original.displayPage },
+      { header: "Source", accessorKey: "source", enableSorting: true, size: 140, cell: (props) => sourceOptionsConst.find((s) => s.value === props.row.original.source)?.label || props.row.original.source },
+      { header: "Status", accessorKey: "status", enableSorting: true, size: 80,
         cell: (props) => (<Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold border-0`}>{props.row.original.status}</Tag>),
       },
-      { header: "Updated Info", accessorKey: "updatedAt", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 170,
+      { header: "Updated Info", accessorKey: "updatedAt", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 160,
         cell: (props) => {
           const { updatedAt, updatedByName, updatedByRole } = props.row.original;
           const formattedDate = updatedAt ? `${new Date(updatedAt).getDate()} ${new Date(updatedAt).toLocaleString("en-US", { month: "long" })} ${new Date(updatedAt).getFullYear()}, ${new Date(updatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
