@@ -39,6 +39,8 @@ import {
   TbCloudExclamation,
   TbCloudPin,
   TbCloudCog,
+  TbTrashX,
+  TbCancel,
 } from "react-icons/tb";
 
 // Types
@@ -286,6 +288,11 @@ const ActionColumn = ({
         </button>
       </Tooltip>
     )}
+    <Tooltip title="Block Activity">
+        <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}>
+          <TbCancel />
+        </button>
+      </Tooltip>
   </div>
 );
 
@@ -320,26 +327,12 @@ const ChangeLogsTableTools = ({
       <ChangeLogsSearch onInputChange={onSearchChange} />{" "}
     </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters">
-        {" "}
-        <Button icon={<TbReload />} onClick={onClearFilters} />{" "}
+      <Tooltip title="Clear Filters"> <Button icon={<TbReload />} onClick={onClearFilters} /> </Tooltip>
+      <Button icon={<TbFilter />} className="w-full sm:w-auto" onClick={onFilter}> Filter </Button>
+      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto"> Export </Button>
+      <Tooltip title="Previous 3 Month">
+        <Button icon={<TbTrashX />} className="w-full sm:w-auto"> Clear History </Button>
       </Tooltip>
-      <Button
-        icon={<TbFilter />}
-        className="w-full sm:w-auto"
-        onClick={onFilter}
-      >
-        {" "}
-        Filter{" "}
-      </Button>
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport}
-        className="w-full sm:w-auto"
-      >
-        {" "}
-        Export{" "}
-      </Button>
     </div>
   </div>
 );

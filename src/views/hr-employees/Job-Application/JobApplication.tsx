@@ -28,13 +28,21 @@ import { Input } from "@/components/ui/Input";
 import { FormItem, FormContainer, Form } from "@/components/ui/Form"; // Keep Form if Edit drawer uses it
 import DatePicker from "@/components/ui/DatePicker";
 import Select from "@/components/ui/Select";
-import { Drawer, Dropdown } from "@/components/ui";
+import { Card, Drawer, Dropdown } from "@/components/ui";
 
 // Icons
 import {
   TbPencil, TbTrash, TbEye, TbCalendarEvent, TbPlus, TbChecks,
   TbSearch, TbFilter, TbUserCircle, TbBriefcase, TbLink, TbClipboardCopy,
-  TbReload
+  TbReload,
+  TbMail,
+  TbCalendarWeek,
+  TbMailSpark,
+  TbMailUp,
+  TbMailSearch,
+  TbMailCheck,
+  TbMailHeart,
+  TbMailX
 } from "react-icons/tb";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
@@ -42,11 +50,11 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux"; // Import useSelector and shallowEqual
 import {
-    getJobApplicationsAction,
-    // Import other actions like add, edit, delete if they exist for applications
-    // addJobApplicationAction,
-    // editJobApplicationAction,
-    // deleteJobApplicationAction,
+  getJobApplicationsAction,
+  // Import other actions like add, edit, delete if they exist for applications
+  // addJobApplicationAction,
+  // editJobApplicationAction,
+  // deleteJobApplicationAction,
 } from '@/reduxtool/master/middleware';
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming applications are part of masterSlice
 
@@ -85,9 +93,9 @@ const ActionColumn = ({ onView, onEdit, onDelete, onScheduleInterview, onAddJobL
       <Tooltip title="View Details"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400")} role="button" onClick={onView}><TbEye /></div></Tooltip>
       <Tooltip title="Edit Application"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
       <Tooltip title="Delete Application"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400")} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
-      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"/>}>
-          <Dropdown.Item onClick={onScheduleInterview} className="flex items-center gap-2"><TbCalendarEvent size={18}/> <span className="text-xs">Schedule Interview</span></Dropdown.Item>
-          <Dropdown.Item onClick={onAddJobLink} className="flex items-center gap-2"><TbLink size={18}/> <span className="text-xs">Add Job Link</span></Dropdown.Item>
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item onClick={onScheduleInterview} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Schedule Interview</span></Dropdown.Item>
+        <Dropdown.Item onClick={onAddJobLink} className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Add Job Link</span></Dropdown.Item>
       </Dropdown>
     </div>
   );
@@ -99,7 +107,7 @@ const ApplicationSearch = React.forwardRef<HTMLInputElement, any>((props, ref) =
 ApplicationSearch.displayName = "ApplicationSearch";
 const ApplicationTableTools = ({ onSearchChange, onFilterOpen, onClearFilters }: { onSearchChange: (query: string) => void; onFilterOpen: () => void; onClearFilters: () => void; }) => (
   <div className="flex flex-col md:flex-row items-center gap-1 w-full">
-    <div className="flex-grow w-full md:w-auto"><ApplicationSearch onInputChange={onSearchChange} placeholder="Search applications..." suffix={<TbSearch/>}/></div>
+    <div className="flex-grow w-full md:w-auto"><ApplicationSearch onInputChange={onSearchChange} placeholder="Search applications..." suffix={<TbSearch />} /></div>
     <Tooltip title="Clear Filters">
       <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
     </Tooltip>
@@ -108,13 +116,13 @@ const ApplicationTableTools = ({ onSearchChange, onFilterOpen, onClearFilters }:
 );
 const ApplicationSelected = ({ selectedApplications, onDeleteSelected, isDeleting }: { selectedApplications: JobApplicationItem[]; onDeleteSelected: () => void; isDeleting: boolean }) => {
   const [open, setOpen] = useState(false); if (selectedApplications.length === 0) return null;
-  return (<><StickyFooter stickyClass="-mx-4 sm:-mx-8 border-t px-8" className="py-4"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500"/><span className="font-semibold">{selectedApplications.length} selected</span></span><Button size="sm" variant="plain" className="text-red-500" onClick={()=>setOpen(true)} loading={isDeleting}>Delete</Button></div></StickyFooter><ConfirmDialog type="danger" title="Delete Selected" isOpen={open} onClose={()=>setOpen(false)} onConfirm={()=>{onDeleteSelected(); setOpen(false);}} loading={isDeleting}><p>Are you sure you want to delete the selected {selectedApplications.length} application(s)?</p></ConfirmDialog></>);
+  return (<><StickyFooter stickyClass="-mx-4 sm:-mx-8 border-t px-8" className="py-4"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500" /><span className="font-semibold">{selectedApplications.length} selected</span></span><Button size="sm" variant="plain" className="text-red-500" onClick={() => setOpen(true)} loading={isDeleting}>Delete</Button></div></StickyFooter><ConfirmDialog type="danger" title="Delete Selected" isOpen={open} onClose={() => setOpen(false)} onConfirm={() => { onDeleteSelected(); setOpen(false); }} loading={isDeleting}><p>Are you sure you want to delete the selected {selectedApplications.length} application(s)?</p></ConfirmDialog></>);
 };
 
 // --- Dialog Components (No change) ---
 const ApplicationDetailDialog = ({ isOpen, onClose, application }: any) => { if (!application) return null; return <Dialog isOpen={isOpen} onClose={onClose} title={`Details: ${application.name}`}><p>ID: {application.id}</p>{/* ... more details ... */}<Button onClick={onClose}>Close</Button></Dialog> };
 const ScheduleInterviewDialog = ({ isOpen, onClose, application }: any) => { if (!application) return null; return <Dialog isOpen={isOpen} onClose={onClose} title={`Schedule for ${application.name}`}><p>Form to schedule...</p><Button onClick={onClose}>Close</Button></Dialog> };
-const AddJobLinkDialog = ({ isOpen, onClose, application, onLinkSubmit }: any) => { if (!application) return null; return <Dialog isOpen={isOpen} onClose={onClose} title="Add Job Link"><Input placeholder="Enter link"/><Button onClick={() => onLinkSubmit(application.id, 'dummy-link')}>Save</Button></Dialog> };
+const AddJobLinkDialog = ({ isOpen, onClose, application, onLinkSubmit }: any) => { if (!application) return null; return <Dialog isOpen={isOpen} onClose={onClose} title="Add Job Link"><Input placeholder="Enter link" /><Button onClick={() => onLinkSubmit(application.id, 'dummy-link')}>Save</Button></Dialog> };
 
 
 // --- Main JobApplicationListing Component ---
@@ -136,7 +144,7 @@ const JobApplicationListing = () => {
 
   // isLoading now primarily reflects the Redux store's masterLoadingStatus
   // const [isLoading, setIsLoading] = useState(false); // Can be removed or used for local loading states
-  
+
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
@@ -148,7 +156,7 @@ const JobApplicationListing = () => {
   const [scheduleInterviewOpen, setScheduleInterviewOpen] = useState(false);
   const [addJobLinkOpen, setAddJobLinkOpen] = useState(false);
   const [currentItemForDialog, setCurrentItemForDialog] = useState<JobApplicationItem | null>(null);
-  
+
   // Deletion states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<JobApplicationItem | null>(null);
@@ -211,13 +219,13 @@ const JobApplicationListing = () => {
         let bVal = b[key as keyof JobApplicationItem] as any;
 
         if (key === "applicationDate") {
-            // Ensure dates are valid before getTime()
-            const dateA = aVal ? new Date(aVal).getTime() : 0;
-            const dateB = bVal ? new Date(bVal).getTime() : 0;
-            if (isNaN(dateA) && isNaN(dateB)) return 0;
-            if (isNaN(dateA)) return order === 'asc' ? -1 : 1;
-            if (isNaN(dateB)) return order === 'asc' ? 1 : -1;
-            return order === "asc" ? dateA - dateB : dateB - dateA;
+          // Ensure dates are valid before getTime()
+          const dateA = aVal ? new Date(aVal).getTime() : 0;
+          const dateB = bVal ? new Date(bVal).getTime() : 0;
+          if (isNaN(dateA) && isNaN(dateB)) return 0;
+          if (isNaN(dateA)) return order === 'asc' ? -1 : 1;
+          if (isNaN(dateB)) return order === 'asc' ? 1 : -1;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
         }
         // Generic sort for other types
         if (aVal === null && bVal === null) return 0;
@@ -249,7 +257,7 @@ const JobApplicationListing = () => {
 
   // --- Action Handlers ---
   const handleViewDetails = useCallback((item: JobApplicationItem) => { setCurrentItemForDialog(item); setDetailViewOpen(true); }, []);
-  
+
   const handleDeleteClick = useCallback((item: JobApplicationItem) => {
     if (!item.id) return;
     setItemToDelete(item);
@@ -324,7 +332,7 @@ const JobApplicationListing = () => {
     setIsEditDrawerOpen(true);
   }, [editFormMethods]);
   const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingApplication(null); editFormMethods.reset(); }, [editFormMethods]);
-  
+
   const onEditApplicationSubmit = useCallback(async (data: EditApplicationFormData) => {
     if (!editingApplication) return;
     setIsSubmittingDrawer(true);
@@ -351,9 +359,9 @@ const JobApplicationListing = () => {
     { header: "Status", accessorKey: "status", width: 120, cell: props => <Tag className={`${applicationStatusColor[props.row.original.status]} text-white capitalize px-2 py-1 text-xs`}>{props.row.original.status.replace(/_/g, " ")}</Tag> },
     { header: "Applicant", accessorKey: "name", cell: props => <div className="flex items-center"><Avatar size={28} shape="circle" src={props.row.original.avatar} icon={<TbUserCircle />}>{!props.row.original.avatar && props.row.original.name ? props.row.original.name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2"><span className="font-semibold">{props.row.original.name}</span><div className="text-xs text-gray-500">{props.row.original.email}</div></div></div> },
     { header: "Mobile", accessorKey: "mobileNo", width: 140, cell: props => props.row.original.mobile_no || "-" },
-    { header: "Department", accessorKey: "department", width: 160,  cell: props => props.row.original.job_department_id || "-"  },
-    { header: "Job Title", accessorKey: "jobTitle", width: 200, cell: props => props.row.original.job_title	 || "N/A" },
-    { header: "Experience", accessorKey: "workExperience", width: 150,  cell: props => props.row.original.work_experience		 || "N/A" },
+    { header: "Department", accessorKey: "department", width: 160, cell: props => props.row.original.job_department_id || "-" },
+    { header: "Job Title", accessorKey: "jobTitle", width: 200, cell: props => props.row.original.job_title || "N/A" },
+    { header: "Experience", accessorKey: "workExperience", width: 150, cell: props => props.row.original.work_experience || "N/A" },
     { header: "Applied Date", accessorKey: "applicationDate", width: 160, cell: props => props.row.original.application_date ? dayjs(props.row.original.application_date).format("MMM D, YYYY h:mm A") : "-" },
     { header: "Action", id: "action", width: 130, meta: { HeaderClass: "text-center" }, cell: props => <ActionColumn onView={() => handleViewDetails(props.row.original)} onEdit={() => navigate(`/hr-employees/job-applications/edit/${props.row.original.id}`)} onDelete={() => handleDeleteClick(props.row.original)} onScheduleInterview={() => handleScheduleInterview(props.row.original)} onAddJobLink={() => handleAddJobLink(props.row.original)} /> },
   ], [navigate, handleViewDetails, handleDeleteClick, handleScheduleInterview, handleAddJobLink]); // Removed openEditDrawer if not used here
@@ -362,8 +370,8 @@ const JobApplicationListing = () => {
     // Now derives from the full jobApplicationsData from Redux
     const sourceData: JobApplicationItem[] = Array.isArray(jobApplicationsData) ? jobApplicationsData : [];
     return Array.from(new Set(sourceData.map(app => app.department)))
-           .filter(dept => dept)
-           .map(dept => ({ value: dept, label: dept }));
+      .filter(dept => dept)
+      .map(dept => ({ value: dept, label: dept }));
   }, [jobApplicationsData]);
 
   return (
@@ -372,9 +380,74 @@ const JobApplicationListing = () => {
         <div className="lg:flex items-center justify-between mb-4">
           <h5 className="mb-4 lg:mb-0">Job Applications</h5>
           <div className="flex flex-col sm:flex-row items-center gap-3">
-            <Button variant="outline" icon={<TbBriefcase />} onClick={openDialog} className="w-full sm:w-auto">Add New Job Post</Button>
+            <Button icon={<TbBriefcase />} onClick={openDialog} className="w-full sm:w-auto">Add New Job Post</Button>
             <Button variant="solid" icon={<TbPlus />} onClick={() => navigate('/hr-employees/job-applications/add')} className="w-full sm:w-auto">Add New Application</Button>
           </div>
+        </div>
+        <div className="grid grid-cols-7 mb-4 gap-2">
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+              <TbMail size={24} />
+            </div>
+            <div>
+              <h6 className="text-blue-500">879</h6>
+              <span className="font-semibold text-xs">Total</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-emerald-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
+              <TbMailSpark size={24} />
+            </div>
+            <div>
+              <h6 className="text-emerald-500">34</h6>
+              <span className="font-semibold text-xs">New</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+              <TbMailUp size={24} />
+            </div>
+            <div>
+              <h6 className="text-pink-500">3</h6>
+              <span className="font-semibold text-xs">Today</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+              <TbMailSearch size={24} />
+            </div>
+            <div>
+              <h6 className="text-orange-500">345</h6>
+              <span className="font-semibold text-xs">In Review</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+              <TbMailCheck size={24} />
+            </div>
+            <div>
+              <h6 className="text-violet-500">23</h6>
+              <span className="font-semibold text-xs">Shortlisted</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+              <TbMailHeart size={24} />
+            </div>
+            <div>
+              <h6 className="text-green-500">18</h6>
+              <span className="font-semibold text-xs">Hired</span>
+            </div>
+          </Card>
+          <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+              <TbMailX size={24} />
+            </div>
+            <div>
+              <h6 className="text-red-500">78</h6>
+              <span className="font-semibold text-xs">Rejected</span>
+            </div>
+          </Card>
         </div>
         <div className="mb-4"><ApplicationTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilterOpen={openFilterDrawer} /></div>
         <div className="flex-grow overflow-auto">
@@ -428,27 +501,27 @@ const JobApplicationListing = () => {
       </Drawer>
 
       <Dialog
-          isOpen={dialogIsOpen}
-          onClose={onDialogClose}
-          onRequestClose={onDialogClose}
+        isOpen={dialogIsOpen}
+        onClose={onDialogClose}
+        onRequestClose={onDialogClose}
       >
-          <h5 className="mb-4">Job application Link</h5>
-          <p>
-            Link Goes Here!
-          </p>
-            <div className="text-right mt-6 flex items-center justify-end gap-4">
-              <Button
-              className="ltr:mr-2 rtl:ml-2"
-              variant="plain"
-              onClick={onDialogClose}
-              >
-              Cancel
-              </Button>
-              <Button variant="solid" onClick={onDialogOk}>
-              Generate New Add Link
-              </Button>
-              <TbClipboardCopy size={25} className="text-gray-500 hover:text-blue-600 cursor-pointer" />
-            </div>
+        <h5 className="mb-4">Job application Link</h5>
+        <p>
+          Link Goes Here!
+        </p>
+        <div className="text-right mt-6 flex items-center justify-end gap-4">
+          <Button
+            className="ltr:mr-2 rtl:ml-2"
+            variant="plain"
+            onClick={onDialogClose}
+          >
+            Cancel
+          </Button>
+          <Button variant="solid" onClick={onDialogOk}>
+            Generate New Add Link
+          </Button>
+          <TbClipboardCopy size={25} className="text-gray-500 hover:text-blue-600 cursor-pointer" />
+        </div>
       </Dialog>
     </Container>
   );
