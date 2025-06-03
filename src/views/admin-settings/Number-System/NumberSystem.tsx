@@ -473,8 +473,8 @@ const NumberSystems = () => {
 
   const columns: ColumnDef<NumberSystemItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
-      { header: "Name", accessorKey: "name", enableSorting: true, size: 200, cell: (props) => (<span className="font-semibold">{props.row.original.name}</span>) },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
+      { header: "Name", accessorKey: "name", enableSorting: true, size: 160, cell: (props) => (<span className="font-semibold">{props.row.original.name}</span>) },
       { header: "Countries", accessorKey: "country_ids", id: "countriesCount", enableSorting: true,
         cell: (props) => {
           const countryIdString = props.row.original.country_ids; if (!countryIdString) return <Tag>N/A</Tag>;
@@ -482,16 +482,16 @@ const NumberSystems = () => {
           const names = ids.map((id) => { const country = CountriesData.find((c: CountryListItem) => String(c.id) === id); return country ? country.name : `ID:${id}`; });
           const displayLimit = 2; const displayedNames = names.slice(0, displayLimit); const remainingCount = names.length - displayLimit;
           return (<div className="flex flex-wrap gap-1">{displayedNames.map((name, index) => (<Tag key={`${name}-${index}`} className="bg-gray-100 dark:bg-gray-600">{name}</Tag>))}{remainingCount > 0 && (<Tag className="bg-gray-200 dark:bg-gray-500">+{remainingCount} more</Tag>)}</div>);
-        }, size: 250,
+        }, size: 360,
       },
-      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 170,
+      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 160,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } = props.row.original;
           const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
           return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
         },
       },
-      { header: "Actions", id: "action", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" }, // Adjusted size
+      { header: "Actions", id: "action", size: 60, meta: { HeaderClass: "text-center", cellClass: "text-center" }, // Adjusted size
         cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} /* onDelete={() => handleDeleteClick(props.row.original)} // Commented out */ />),
       },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -577,7 +577,7 @@ const NumberSystems = () => {
           {renderDrawerForm()}
         
            {editingItem && (
-             <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2">
+             <div className="absolute bottom-0 w-full">
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
                         <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />

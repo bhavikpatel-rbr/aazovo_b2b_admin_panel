@@ -525,32 +525,38 @@ const DomainManagementListing = () => {
 
   const columns: ColumnDef<DomainItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
-      { header: "Domain", accessorKey: "domain", enableSorting: true, size: 200, cell: (props) => (<span className="font-semibold text-blue-600 dark:text-blue-400">{props.row.original.domain}</span>) },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
+      { header: "Domain", accessorKey: "domain", enableSorting: true, size: 160, cell: (props) => (<span className="font-semibold text-blue-600 dark:text-blue-400">{props.row.original.domain}</span>) },
       { header: "Countries", accessorKey: "country_ids", id: "countriesDisplay", enableSorting: true, sortingFn: (rowA, rowB) => { const countA = rowA.original.country_ids?.split(",").filter((id) => id).length || 0; const countB = rowB.original.country_ids?.split(",").filter((id) => id).length || 0; return countA - countB; },
         cell: (props) => {
           const countryIdString = props.row.original.country_ids; if (!countryIdString) return <Tag>N/A</Tag>;
           const idsArray = countryIdString.split(",").map((id) => id.trim()).filter((id) => id); if (idsArray.length === 0) return <Tag>None</Tag>;
           const names = idsArray.map((idStr) => { const country = allCountryOptions.find((opt) => opt.value === idStr); return country ? country.label : `ID:${idStr}`; });
           const displayLimit = 2; const displayedNames = names.slice(0, displayLimit); const remainingCount = names.length - displayLimit;
-          return (<Tooltip title={names.join(", ")} wrapperClassName="whitespace-nowrap max-w-[250px] overflow-hidden text-ellipsis"><div className="flex flex-wrap gap-1">{displayedNames.map((name, index) => (<Tag key={`${name}-${index}`} className="bg-gray-100 dark:bg-gray-600">{name}</Tag>))}{remainingCount > 0 && (<Tag className="bg-gray-200 dark:bg-gray-500">+{remainingCount} more</Tag>)}</div></Tooltip>);
-        }, size: 250,
+          return (
+
+          // <Tooltip title={names.join(", ")} 
+            // wrapperClassName="whitespace-nowrap max-w-[250px] overflow-hidden text-ellipsis">
+            <div className="flex flex-wrap gap-1">{displayedNames.map((name, index) => (<Tag key={`${name}-${index}`} className="bg-gray-100 dark:bg-gray-600">{name}</Tag>))}{remainingCount > 0 && (<Tag className="bg-gray-200 dark:bg-gray-500">+{remainingCount} more</Tag>)}</div>
+          // </Tooltip>
+        );
+        }, size: 360,
       },
-      { header: "Currency", accessorKey: "currency_id", enableSorting: true, size: 120,
+      { header: "Currency", accessorKey: "currency_id", enableSorting: true, size: 100,
         cell: (props) => {
             const currencyId = String(props.row.original.currency_id);
             const currency = currencyFormOptions.find(c => c.value === currencyId);
             return currency ? currency.label.split(' - ')[0] : 'N/A'; // Display only code e.g. INR
         }
       },
-      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 170,
+      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 160,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } = props.row.original;
           const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
           return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
         },
       },
-      { header: "Actions", id: "action", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" },
+      { header: "Actions", id: "action", size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" },
         cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openEditDrawer(props.row.original)} />), // Removed onDelete from here, use selected footer
       },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -630,7 +636,7 @@ const DomainManagementListing = () => {
           {renderDrawerForm()}
         
           {editingItem && (
-             <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2">
+             <div className="absolute bottom-0 w-full">
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
                         <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />

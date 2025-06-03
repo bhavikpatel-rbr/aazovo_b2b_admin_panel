@@ -560,7 +560,7 @@ const HomeCategoriesListing = () => {
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<HomeCategoryItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => r.id && !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id).filter(id => id !== undefined)); setSelectedItems((pS) => pS.filter((i) => i.id && !cPRIds.has(i.id))); } }, []);
 
   const columns: ColumnDef<HomeCategoryItem>[] = useMemo(() => [
-    { header: "ID", accessorKey: "id", enableSorting: true, size: 80, meta: { tdClass: "text-center", thClass: "text-center" } },
+    // { header: "ID", accessorKey: "id", enableSorting: true, size: 80, meta: { tdClass: "text-center", thClass: "text-center" } },
     {
       header: "Images", accessorKey: "images", enableSorting: false, size: 150,
       cell: ({ row }) => {
@@ -574,14 +574,17 @@ const HomeCategoriesListing = () => {
         );
       },
     },
-    { header: "Category Name", accessorKey: "category_name", enableSorting: true, size: 200 },
+    { header: "Category Name", accessorKey: "category_name", enableSorting: true, size: 160 },
     { header: "View More Link", accessorKey: "view_more", enableSorting: false, size: 200, cell: ({ row }) => row.original.view_more ? <a href={row.original.view_more} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block max-w-[180px]" title={row.original.view_more}>{row.original.view_more}</a> : <span className="text-gray-400">-</span> },
+    { header: "Status",  accessorKey: "status", meta: { HeaderClass: "text-red-500" }, enableSorting: true, size: 80,
+            cell: (props) => (<Tag className={`bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0`}>{'Active'}</Tag>),
+    },
     {
       header: "Updated Info",
       accessorKey: "updated_at",
       enableSorting: true,
       meta: { HeaderClass: "text-red-500" },
-      size: 170,
+      size: 160,
       cell: (props) => {
         const { updated_at, updated_by_name, updated_by_role } = props.row.original;
         const formattedDate = updated_at
@@ -599,7 +602,7 @@ const HomeCategoriesListing = () => {
         );
       },
     },
-    { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+    { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 80, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [openEditDrawer, handleDeleteClick]);
 
@@ -700,7 +703,7 @@ const HomeCategoriesListing = () => {
           {renderDrawerForm()}
         
           {editingItem && (
-            <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2"> {/* Positioned audit info */}
+            <div className="absolute bottom-0 w-full"> {/* Positioned audit info */}
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">

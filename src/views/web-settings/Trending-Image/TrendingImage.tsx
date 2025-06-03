@@ -524,13 +524,13 @@ const TrendingImages = () => {
     }, []);
 
     const columns: ColumnDef<TrendingPageImageItem>[] = useMemo(() => [
-        { header: 'ID', accessorKey: 'id', enableSorting: true, size: 80, meta: { tdClass: "text-center", thClass: "text-center" }  },
-        { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 200, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
+        // { header: 'ID', accessorKey: 'id', enableSorting: true, size: 80, meta: { tdClass: "text-center", thClass: "text-center" }  },
+        { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 320, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
         {
             header: 'Date Created',
             accessorKey: 'created_at',
             enableSorting: true,
-            size: 200,
+            size: 160,
             cell: (props) => {
                 const dateVal = props.getValue<string>();
                 if (!dateVal) return 'N/A';
@@ -541,12 +541,15 @@ const TrendingImages = () => {
                 } catch (e) { return 'Invalid Date'; }
             }
         },
+        { header: "Status",  accessorKey: "status", meta: { HeaderClass: "text-red-500" }, enableSorting: true, size: 80,
+                      cell: (props) => (<Tag className={`bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0`}>{'Active'}</Tag>),
+        },
         {
             header: "Updated Info",
             accessorKey: "updated_at", // Sort by updated_at
             enableSorting: true,
             meta: { HeaderClass: "text-red-500" }, // Optional: if you want red header like reference
-            size: 170,
+            size: 160,
             cell: (props) => {
                 const { updated_at, updated_by_name, updated_by_role } = props.row.original;
                 const formattedDate = updated_at
@@ -564,7 +567,7 @@ const TrendingImages = () => {
                 );
             },
         },
-        { header: 'Actions', id: 'action', meta: { HeaderClass: 'text-center', cellClass: 'text-center' }, size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+        { header: 'Actions', id: 'action', meta: { HeaderClass: 'text-center', cellClass: 'text-center' }, size: 80, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [openEditDrawer, handleDeleteClick]);
 
@@ -622,7 +625,7 @@ const TrendingImages = () => {
                     </FormItem>
                 
                     {editingItem && (
-                        <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2"> {/* Positioned audit info */}
+                        <div className="absolute bottom-0 w-full"> {/* Positioned audit info */}
                             <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                                 <div>
                                 <b className="mt-3 mb-3 font-semibold text-primary">

@@ -46,6 +46,7 @@ import {
   TbReload,
   TbCategory2,
   TbBuildingCommunity,
+  TbFileSymlink,
 } from "react-icons/tb";
 
 // Types
@@ -363,7 +364,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="View">
+      <Tooltip title="Preview">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
@@ -394,14 +395,14 @@ const ActionColumn = ({
           <TbCopy />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      <Tooltip title="Publish Link">
         {" "}
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-800 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
-          onClick={() => onDelete(item)}
+          // onClick={() => onDelete(item)}
         >
-          <TbTrash />
+          <TbFileSymlink />
         </div>
       </Tooltip>
     </div>
@@ -905,31 +906,37 @@ const FormBuilder = () => {
 
   const columns: ColumnDef<FormBuilderItem>[] = useMemo(
     () => [
-      {
-        header: "ID",
-        accessorKey: "id",
-        size: 60,
-        enableSorting: true,
-        meta: { tdClass: "text-center", thClass: "text-center" },
-      },
+      // {
+      //   header: "ID",
+      //   accessorKey: "id",
+      //   size: 60,
+      //   enableSorting: true,
+      //   meta: { tdClass: "text-center", thClass: "text-center" },
+      // },
       {
         header: "Form Name",
         accessorKey: "form_name",
-        size: 200,
+        size: 260,
         enableSorting: true,
         cell: (props) => (
-          <span className="font-semibold text-blue-600 dark:text-blue-400">
-            {props.row.original.form_name}
-          </span>
+          <div> 
+            <span className="font-semibold text-blue-600 dark:text-blue-400">
+              {props.row.original.form_name}
+            </span><br/> 
+            <span>
+              {props.row.original.form_title || "-" }
+            </span>
+          </div> 
+          
         ),
       },
-      {
-        header: "Form Title",
-        accessorKey: "form_title",
-        size: 200,
-        enableSorting: true,
-        cell: (props) => props.row.original.form_title || "-",
-      },
+      // {
+      //   header: "Form Title",
+      //   accessorKey: "form_title",
+      //   size: 200,
+      //   enableSorting: true,
+      //   cell: (props) => props.row.original.form_title || "-",
+      // },
       {
         header: "Status",
         accessorKey: "status",

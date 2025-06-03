@@ -62,6 +62,7 @@ export type TrendingCarouselItemData = {
   deleted_at?: string | null;
   created_at: string;
   updated_at?: string;
+  status: "Active" | "Inactive"; // Changed to match API
   images_full_path: string;
   updated_by_name?: string; // Added
   updated_by_role?: string; // Added
@@ -104,7 +105,10 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-
+const statusColor: Record<TrendingCarouselItemData["status"], string> = { // Use SliderItem["status"]
+  Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
+};
 // --- CSV Exporter Utility ---
 const CSV_CAROUSEL_HEADERS = [
   "ID",
@@ -555,25 +559,28 @@ const TrendingCarousel = () => {
         header: "Image",
         accessorKey: "images_full_path",
         enableSorting: false,
-        size: 100,
+        size: 80,
         meta: { cellClass: "p-1" },
-        cell: (props) => (<Avatar size={60} className="rounded-sm" shape="square" src={props.row.original.images_full_path || undefined} icon={<TbPhoto />} />),
+        cell: (props) => (<Avatar size={60} className="rounded-sm"  src={props.row.original.images_full_path || undefined} icon={<TbPhoto />} />),
       },
       {
         header: "Link",
         accessorKey: "links",
         enableSorting: true,
-        size: 250, // Adjusted size
+        size: 280, // Adjusted size
         cell: (props) => props.row.original.links ? (
             <a href={props.row.original.links} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate block max-w-[230px]" title={props.row.original.links}> {props.row.original.links} </a>
           ) : ( <span className="text-gray-500">No Link</span> ),
+      },
+      { header: "Status",  accessorKey: "status", meta: { HeaderClass: "text-red-500" }, enableSorting: true, size: 80,
+              cell: (props) => (<Tag className={`bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0`}>{'Active'}</Tag>),
       },
       {
         header: "Updated Info",
         accessorKey: "updated_at", // Sort by updated_at
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" }, // Optional styling
-        size: 170,
+        size: 160,
         cell: (props) => {
             const { updated_at, updated_by_name, updated_by_role } = props.row.original;
             const formattedDate = updated_at
@@ -595,7 +602,7 @@ const TrendingCarousel = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 80,
         cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />),
       },
     // eslint-disable-next-line react-hooks/exhaustive-deps
