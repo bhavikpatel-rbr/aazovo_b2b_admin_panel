@@ -634,7 +634,7 @@ const RowDataListing = () => {
              <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2">
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
-                        <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b><br />
+                        <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
                         <p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p>
                         <p>{editingItem.updated_by_role || "N/A"}</p>
                     </div>

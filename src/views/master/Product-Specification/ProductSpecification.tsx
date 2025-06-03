@@ -1428,7 +1428,7 @@ const ProductSpecification = () => {
                 <div className="absolute bottom-[0px] w-full">
                   <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
-                      <b className="font-semibold text-primary">Latest Update By:</b>
+                      <b className="font-semibold text-primary">Latest Update:</b>
                       <p className="text-sm font-semibold mt-1">
                         {drawerProps.currentItem.updated_by_name || "N/A"}
                       </p>

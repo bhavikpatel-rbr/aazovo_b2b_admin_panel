@@ -1560,7 +1560,7 @@ const BugReportListing = () => {
                 {/* Increased padding and mt */}
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">
-                    Latest Update By:
+                    Latest Update:
                   </b>
                   <br />
                   <p className="text-sm font-medium mt-1">
