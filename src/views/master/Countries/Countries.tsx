@@ -736,23 +736,24 @@ const Countries = () => {
 
   const columns: ColumnDef<CountryItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 60 },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 60 },
       {
         header: "Continent",
         accessorKey: "continent.name",
         enableSorting: true,
+        size:120,
         cell: (props) => props.row.original.continent?.name || "N/A",
       },
-      { header: "Country Name", accessorKey: "name", enableSorting: true },
-      { header: "ISO Code", accessorKey: "iso", enableSorting: true, size: 80 },
-      { header: "Phone Code", accessorKey: "phonecode", enableSorting: true, size: 100 },
+      { header: "Country Name", accessorKey: "name", enableSorting: true, size:160 },
+      { header: "ISO Code", accessorKey: "iso", enableSorting: true, size: 100 },
+      { header: "Phone Code", accessorKey: "phonecode", enableSorting: true, size: 130 },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" }, // Optional styling
 
-        size: 170,
+        size: 160,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } = props.row.original;
           const formattedDate = updated_at
@@ -778,7 +779,7 @@ const Countries = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        size: 100,
+        size: 80,
         cell: (props) => {
           const status = props.row.original.status;
           return (
@@ -800,7 +801,7 @@ const Countries = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 60,
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}

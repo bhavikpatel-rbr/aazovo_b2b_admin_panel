@@ -527,10 +527,33 @@ const RowDataListing = () => {
   }, []);
 
 
+  const mobileNoCount: Record<string, number> = {};
+  pageData.forEach(item => {
+    if (item.mobile_no) {
+      mobileNoCount[item.mobile_no] = (mobileNoCount[item.mobile_no] || 0) + 1;
+    }
+  });
+
   const columns: ColumnDef<RowDataItem>[] = useMemo(() => [
     { header: 'ID', accessorKey: 'id', enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
     { header: 'Name', accessorKey: 'name', enableSorting: true, size: 150, cell: (props) => (<span className="font-semibold text-blue-600 dark:text-blue-400">{props.row.original.name}</span>)},
-    { header: 'Mobile No', accessorKey: 'mobile_no', enableSorting: true, size: 130 },
+    { header: 'Mobile No', accessorKey: 'mobile_no', enableSorting: true, size: 130, 
+      cell: (props) => {
+        const mobileNo = props.getValue<string>();
+        const isDuplicate = mobileNo && mobileNoCount[mobileNo] > 1;
+        return (
+          <div className="flex flex-col gap-1">
+            {mobileNo}
+            {isDuplicate && (
+              <Tag className="bg-red-200 text-red-600 text-xs w-fit px-2 py-0.5 rounded-md">
+                Duplicate
+              </Tag>
+            )}
+          </div>
+        );
+  }
+
+    },
     { header: 'Country', accessorKey: 'country_id', enableSorting: true, size: 120, cell: props => props.row.original.country?.name || String(props.getValue()) },
     { header: 'Category', accessorKey: 'category_id', enableSorting: true, size: 140, cell: props => props.row.original.category?.name || String(props.getValue()) },
     { header: 'Brand', accessorKey: 'brand_id', enableSorting: true, size: 120, cell: props => props.row.original.brand?.name || String(props.getValue()) },

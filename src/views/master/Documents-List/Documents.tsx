@@ -684,12 +684,13 @@ const Documents = () => {
 
   const columns: ColumnDef<DocumentItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
-      { header: "Document Name", accessorKey: "name", enableSorting: true },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
+      { header: "Document Name", accessorKey: "name", enableSorting: true, size:200 },
       {
         header: "Document Type",
         accessorKey: "document_type_name",
         enableSorting: true,
+        size:200,
         cell: (props) => props.row.original.document_type_name || "N/A",
       },
       {
@@ -697,7 +698,7 @@ const Documents = () => {
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 180,
+        size: 140,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } = props.row.original;
           const formattedDate = updated_at
@@ -729,7 +730,7 @@ const Documents = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        size: 120,
+        size: 80,
         cell: (props) => {
           const status = props.row.original.status;
           return (
@@ -751,7 +752,7 @@ const Documents = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 60,
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}

@@ -1016,7 +1016,7 @@ const ProductSpecification = () => {
 
   const columns: ColumnDef<ProductSpecificationItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
       {
         header: "Flag Icon",
         accessorKey: "icon_full_path",
@@ -1040,12 +1040,13 @@ const ProductSpecification = () => {
         header: "Specification Name",
         accessorKey: "name",
         enableSorting: true,
+        size:200
       },
       {
         header: "Country Name",
         accessorKey: "country.name",
         enableSorting: true,
-        size: 150, // Updated accessorKey for sorting
+        size: 160, // Updated accessorKey for sorting
         cell: (props) => {
           const countryName =
             props.row.original.country?.name || props.row.original.country_name;
@@ -1063,7 +1064,7 @@ const ProductSpecification = () => {
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 170,
+        size: 160,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
@@ -1098,7 +1099,7 @@ const ProductSpecification = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        size: 100,
+        size: 80,
         cell: (props) => {
           const status = props.row.original.status;
           return (
@@ -1119,7 +1120,7 @@ const ProductSpecification = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 80,
         cell: (props) => (
           <ActionColumn
             onEdit={() =>
@@ -1137,7 +1138,7 @@ const ProductSpecification = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Product Specifications</h5>
+            <h5 className="mb-2 sm:mb-0">Product Spec</h5>
             {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "idle" || isSubmitting || isDeleting /* isDeleting commented out>Add New</Button> */}
             <Button
               variant="solid"
@@ -1424,7 +1425,7 @@ const ProductSpecification = () => {
             </FormItem>
             {drawerProps.currentItem &&
               drawerProps.formId === "editProductSpecificationForm" && (
-                <div className="absolute bottom-[52px] w-[calc(100%-2rem)] mx-4">
+                <div className="absolute bottom-[0px] w-full">
                   <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
                       <b className="font-semibold text-primary">Latest Update By:</b>
@@ -1434,6 +1435,7 @@ const ProductSpecification = () => {
                       <p>{drawerProps.currentItem.updated_by_role || "N/A"}</p>
                     </div>
                     <div>
+                      <br/>
                       <span className="font-semibold">Created At:</span>{" "}
                       <span>
                         {drawerProps.currentItem.created_at

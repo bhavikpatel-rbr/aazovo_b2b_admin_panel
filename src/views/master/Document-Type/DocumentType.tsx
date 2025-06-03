@@ -769,11 +769,12 @@ const Documentmaster = () => {
 
   const columns: ColumnDef<DocumentItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
       {
         header: "Document Type Name",
         accessorKey: "name",
         enableSorting: true,
+        size:360
       },
       {
         // Added Updated Info Column
@@ -781,7 +782,7 @@ const Documentmaster = () => {
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 170,
+        size: 160,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
@@ -817,7 +818,7 @@ const Documentmaster = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        size: 100,
+        size: 80,
         cell: (props) => {
           const status = props.row.original.status;
           return (
@@ -841,7 +842,7 @@ const Documentmaster = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 80,
         cell: (props) => (
           <ActionColumn
             onEdit={() =>

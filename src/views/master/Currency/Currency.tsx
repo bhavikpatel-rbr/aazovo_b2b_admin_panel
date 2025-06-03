@@ -866,23 +866,25 @@ const Currency = () => {
 
   const columns: ColumnDef<CurrencyItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
       {
         header: "Currency Code",
         accessorKey: "currency_code",
         enableSorting: true,
+        size:180
       },
       {
         header: "Currency Symbol",
         accessorKey: "currency_symbol",
         enableSorting: true,
+        size:180
       },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 170,
+        size: 120,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
@@ -917,7 +919,7 @@ const Currency = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        size: 100,
+        size: 80,
         cell: (props) => {
           const status = props.row.original.status;
           return (
@@ -941,7 +943,7 @@ const Currency = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 80,
         cell: (props) => (
           <ActionColumn
             onEdit={() =>

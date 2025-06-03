@@ -598,14 +598,14 @@ const Continents = () => {
 
   const columns: ColumnDef<ContinentItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
-      { header: "Continent Name", accessorKey: "name", enableSorting: true },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      { header: "Continent Name", accessorKey: "name", enableSorting: true,size:320 },
       {
         header: "Updated Info",
         accessorKey: "updated_at", // For sorting by date
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 170,
+        size: 120,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } = props.row.original;
           const formattedDate = updated_at
@@ -631,7 +631,7 @@ const Continents = () => {
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
-        size: 100,
+        size: 80,
         cell: (props) => {
           const status = props.row.original.status;
           return (
@@ -653,7 +653,7 @@ const Continents = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 120,
+        size: 60,
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
