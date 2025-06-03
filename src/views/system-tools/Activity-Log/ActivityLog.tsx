@@ -35,16 +35,13 @@ import {
 } from "react-icons/tb";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-} from "@/components/shared/DataTable";
+import type { OnSortParam, ColumnDef } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store"; // Assuming this path
 import { shallowEqual, useSelector } from "react-redux";
-// conceptual: 
+// conceptual:
 import { getActivityLogAction } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming this path and selector
 
@@ -158,41 +155,70 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- MOCK Redux Action for Submit Export Reason (replace with your actual action) ---
-const submitExportReasonAction = (payload: { reason: string; module: string }) => {
-    console.log("Dispatching conceptual submitExportReasonAction with:", payload);
-    return { type: "master/submitExportReason/pending" };
+const submitExportReasonAction = (payload: {
+  reason: string;
+  module: string;
+}) => {
+  console.log("Dispatching conceptual submitExportReasonAction with:", payload);
+  return { type: "master/submitExportReason/pending" };
 };
-
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS_LOG = [
-  "ID", "Timestamp", "User Name", "User ID", "Action Type", "Entity Type",
-  "Entity ID", "Description", "Details", "Updated At", "Updated By Name", "Updated By Role",
+  "ID",
+  "Timestamp",
+  "User Name",
+  "User ID",
+  "Action Type",
+  "Entity Type",
+  "Entity ID",
+  "Description",
+  "Details",
+  "Updated At",
+  "Updated By Name",
+  "Updated By Role",
 ];
 type ChangeLogExportItem = Omit<ChangeLogItem, "timestamp" | "updated_at"> & {
   timestamp_formatted?: string;
   updated_at_formatted?: string;
 };
 const CSV_KEYS_LOG_EXPORT: (keyof ChangeLogExportItem)[] = [
-  "id", "timestamp_formatted", "userName", "userId", "action", "entity",
-  "entityId", "description", "details", "updated_at_formatted", "updated_by_name", "updated_by_role",
+  "id",
+  "timestamp_formatted",
+  "userName",
+  "userId",
+  "action",
+  "entity",
+  "entityId",
+  "description",
+  "details",
+  "updated_at_formatted",
+  "updated_by_name",
+  "updated_by_role",
 ];
 
 function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
   if (!rows || !rows.length) return false;
   const preparedRows: ChangeLogExportItem[] = rows.map((row) => ({
     ...row,
-    timestamp_formatted: row.timestamp ? new Date(row.timestamp).toLocaleString() : "N/A",
+    timestamp_formatted: row.timestamp
+      ? new Date(row.timestamp).toLocaleString()
+      : "N/A",
     details: row.details || "N/A",
     userId: row.userId || "N/A",
     entityId: row.entityId || "N/A",
-    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
+    updated_at_formatted: row.updated_at
+      ? new Date(row.updated_at).toLocaleString()
+      : "N/A",
     updated_by_name: row.updated_by_name || "N/A",
     updated_by_role: row.updated_by_role || "N/A",
   }));
   const separator = ",";
-  const csvContent = CSV_HEADERS_LOG.join(separator) + "\n" +
-    preparedRows.map((row) =>
+  const csvContent =
+    CSV_HEADERS_LOG.join(separator) +
+    "\n" +
+    preparedRows
+      .map((row) =>
         CSV_KEYS_LOG_EXPORT.map((k) => {
           let cell: any = row[k as keyof ChangeLogExportItem];
           if (cell === null || cell === undefined) cell = "";
@@ -200,8 +226,11 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
           if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
           return cell;
         }).join(separator)
-      ).join("\n");
-  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+      )
+      .join("\n");
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -214,20 +243,38 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
     URL.revokeObjectURL(url);
     return true;
   }
-  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+  toast.push(
+    <Notification title="Export Failed" type="danger">
+      Browser does not support this feature.
+    </Notification>
+  );
   return false;
 }
 
-const ActionColumn = ({ onViewDetail, onEdit }: { onViewDetail: () => void; onEdit?: () => void; }) => (
+const ActionColumn = ({
+  onViewDetail,
+  onEdit,
+}: {
+  onViewDetail: () => void;
+  onEdit?: () => void;
+}) => (
   <div className="flex items-center justify-center gap-1">
     <Tooltip title="View">
-      <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}>
+      <button
+        className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
+        role="button"
+        onClick={onViewDetail}
+      >
         <TbEye />
       </button>
     </Tooltip>
     {onEdit && (
       <Tooltip title="Edit (Admin)">
-        <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}>
+        <button
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
+          role="button"
+          onClick={onEdit}
+        >
           <TbPencil />
         </button>
       </Tooltip>
@@ -235,24 +282,88 @@ const ActionColumn = ({ onViewDetail, onEdit }: { onViewDetail: () => void; onEd
   </div>
 );
 
-const ChangeLogsSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void }>(({ onInputChange }, ref) => (
-  <DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
+const ChangeLogsSearch = React.forwardRef<
+  HTMLInputElement,
+  { onInputChange: (value: string) => void }
+>(({ onInputChange }, ref) => (
+  <DebouceInput
+    ref={ref}
+    className="w-full"
+    placeholder="Quick Search..."
+    suffix={<TbSearch className="text-lg" />}
+    onChange={(e) => onInputChange(e.target.value)}
+  />
 ));
 ChangeLogsSearch.displayName = "ChangeLogsSearch";
 
-const ChangeLogsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; }) => (
+const ChangeLogsTableTools = ({
+  onSearchChange,
+  onFilter,
+  onExport,
+  onClearFilters,
+}: {
+  onSearchChange: (query: string) => void;
+  onFilter: () => void;
+  onExport: () => void;
+  onClearFilters: () => void;
+}) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    <div className="flex-grow"> <ChangeLogsSearch onInputChange={onSearchChange} /> </div>
+    <div className="flex-grow">
+      {" "}
+      <ChangeLogsSearch onInputChange={onSearchChange} />{" "}
+    </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters"> <Button icon={<TbReload />} onClick={onClearFilters} /> </Tooltip>
-      <Button icon={<TbFilter />} className="w-full sm:w-auto" onClick={onFilter}> Filter </Button>
-      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto"> Export </Button>
+      <Tooltip title="Clear Filters">
+        {" "}
+        <Button icon={<TbReload />} onClick={onClearFilters} />{" "}
+      </Tooltip>
+      <Button
+        icon={<TbFilter />}
+        className="w-full sm:w-auto"
+        onClick={onFilter}
+      >
+        {" "}
+        Filter{" "}
+      </Button>
+      <Button
+        icon={<TbCloudUpload />}
+        onClick={onExport}
+        className="w-full sm:w-auto"
+      >
+        {" "}
+        Export{" "}
+      </Button>
     </div>
   </div>
 );
 
-const ChangeLogsTable = ({ columns, data, loading, pagingData, onPaginationChange, onSelectChange, onSort }: { columns: ColumnDef<ChangeLogItem>[]; data: ChangeLogItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; }) => (
-  <DataTable columns={columns} data={data} loading={loading} pagingData={pagingData} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} noData={!loading && data.length === 0} />
+const ChangeLogsTable = ({
+  columns,
+  data,
+  loading,
+  pagingData,
+  onPaginationChange,
+  onSelectChange,
+  onSort,
+}: {
+  columns: ColumnDef<ChangeLogItem>[];
+  data: ChangeLogItem[];
+  loading: boolean;
+  pagingData: { total: number; pageIndex: number; pageSize: number };
+  onPaginationChange: (page: number) => void;
+  onSelectChange: (value: number) => void;
+  onSort: (sort: OnSortParam) => void;
+}) => (
+  <DataTable
+    columns={columns}
+    data={data}
+    loading={loading}
+    pagingData={pagingData}
+    onPaginationChange={onPaginationChange}
+    onSelectChange={onSelectChange}
+    onSort={onSort}
+    noData={!loading && data.length === 0}
+  />
 );
 
 // --- Main ActivityLog Component ---
@@ -261,7 +372,7 @@ const ActivityLog = () => {
   // Ensure your masterSelector and Redux state provide these:
   const {
     activityLogsData = [], // Default to empty array
-    activityLogsTotal = 0,  // Default to 0
+    activityLogsTotal = 0, // Default to 0
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
@@ -272,7 +383,8 @@ const ActivityLog = () => {
   const [viewingItem, setViewingItem] = useState<ChangeLogItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
-  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
     filterFormSchema.parse({})
@@ -286,7 +398,9 @@ const ActivityLog = () => {
 
   const formMethods = useForm<ChangeLogFormData>({
     resolver: zodResolver(changeLogFormSchema),
-    defaultValues: { /* default values set in openAddDrawer */ },
+    defaultValues: {
+      /* default values set in openAddDrawer */
+    },
     mode: "onChange",
   });
   const filterFormMethods = useForm<FilterFormData>({
@@ -304,8 +418,8 @@ const ActivityLog = () => {
     const paramsToSubmit = {
       ...tableData,
       // Convert filterCriteria to params format expected by API
-      filteraction: filterCriteria.filteraction?.map(f => f.value),
-      filterentity: filterCriteria.filterentity?.map(f => f.value),
+      filteraction: filterCriteria.filteraction?.map((f) => f.value),
+      filterentity: filterCriteria.filterentity?.map((f) => f.value),
       filterUserName: filterCriteria.filterUserName,
       filterDateStart: filterCriteria.filterDateRange?.[0]?.toISOString(),
       filterDateEnd: filterCriteria.filterDateRange?.[1]?.toISOString(),
@@ -314,62 +428,100 @@ const ActivityLog = () => {
     dispatch(getActivityLogAction({ params: paramsToSubmit }));
   }, [dispatch, tableData, filterCriteria]);
 
-
   const openAddDrawer = useCallback(() => {
     formMethods.reset({
-      timestamp: new Date().toISOString().substring(0,16),
-      userName: "System", userId: null, action: "OTHER", entity: "Other",
-      entityId: null, description: "", details: "",
+      timestamp: new Date().toISOString().substring(0, 16),
+      userName: "System",
+      userId: null,
+      action: "OTHER",
+      entity: "Other",
+      entityId: null,
+      description: "",
+      details: "",
     });
     setIsAddDrawerOpen(true);
   }, [formMethods]);
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
-  const openEditDrawer = useCallback((item: ChangeLogItem) => {
-    setEditingItem(item);
-    formMethods.reset({ ...item, timestamp: item.timestamp.substring(0, 16) });
-    setIsEditDrawerOpen(true);
-  }, [formMethods]);
-  const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingItem(null); }, []);
+  const openEditDrawer = useCallback(
+    (item: ChangeLogItem) => {
+      setEditingItem(item);
+      formMethods.reset({
+        ...item,
+        timestamp: item.timestamp.substring(0, 16),
+      });
+      setIsEditDrawerOpen(true);
+    },
+    [formMethods]
+  );
+  const closeEditDrawer = useCallback(() => {
+    setIsEditDrawerOpen(false);
+    setEditingItem(null);
+  }, []);
 
-  const onSubmitLog = useCallback( async (data: ChangeLogFormData) => {
-    setIsSubmitting(true);
-    const payload = { ...data, timestamp: new Date(data.timestamp).toISOString() };
-    try {
-      if (editingItem) {
-        // conceptual: await dispatch(editChangeLogAction({ id: editingItem.id, data: payload })).unwrap();
-        console.log("Simulating edit log:", { ...payload, id: editingItem.id });
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
-        // Manually update local Redux store for demo if not using real backend + thunk
-        // This part would be handled by the thunk and reducer in a real app
-        const updatedItem: ChangeLogItem = {
-            ...editingItem, ...payload,
+  const onSubmitLog = useCallback(
+    async (data: ChangeLogFormData) => {
+      setIsSubmitting(true);
+      const payload = {
+        ...data,
+        timestamp: new Date(data.timestamp).toISOString(),
+      };
+      try {
+        if (editingItem) {
+          // conceptual: await dispatch(editChangeLogAction({ id: editingItem.id, data: payload })).unwrap();
+          console.log("Simulating edit log:", {
+            ...payload,
+            id: editingItem.id,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API
+          // Manually update local Redux store for demo if not using real backend + thunk
+          // This part would be handled by the thunk and reducer in a real app
+          const updatedItem: ChangeLogItem = {
+            ...editingItem,
+            ...payload,
             updated_at: new Date().toISOString(),
-            updated_by_name: 'Admin Editor', updated_by_role: 'Administrator'
-        };
-        // dispatch(updateActivityLogEntryInStore(updatedItem)); // conceptual local update
-        toast.push(<Notification title="Log Entry Updated" type="success" />);
-        closeEditDrawer();
-      } else {
-        // conceptual: await dispatch(addChangeLogAction(payload)).unwrap();
-        console.log("Simulating add log:", payload);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API
-        // dispatch(addActivityLogEntryToStore(newItem)); // conceptual local update
-        toast.push(<Notification title="Log Entry Added" type="success" />);
-        closeAddDrawer();
+            updated_by_name: "Admin Editor",
+            updated_by_role: "Administrator",
+          };
+          // dispatch(updateActivityLogEntryInStore(updatedItem)); // conceptual local update
+          toast.push(<Notification title="Log Entry Updated" type="success" />);
+          closeEditDrawer();
+        } else {
+          // conceptual: await dispatch(addChangeLogAction(payload)).unwrap();
+          console.log("Simulating add log:", payload);
+          await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API
+          // dispatch(addActivityLogEntryToStore(newItem)); // conceptual local update
+          toast.push(<Notification title="Log Entry Added" type="success" />);
+          closeAddDrawer();
+        }
+        // Refetch list after add/edit
+        const paramsToSubmit = { ...tableData /* ... filter params ... */ };
+        // @ts-ignore // conceptual action
+        dispatch(getActivityLogAction({ params: paramsToSubmit }));
+      } catch (e: any) {
+        toast.push(
+          <Notification title="Operation Failed" type="danger">
+            {e.message || "Error"}
+          </Notification>
+        );
+      } finally {
+        setIsSubmitting(false);
       }
-      // Refetch list after add/edit
-      const paramsToSubmit = { ...tableData, /* ... filter params ... */ };
-      // @ts-ignore // conceptual action
-      dispatch(getActivityLogAction({ params: paramsToSubmit }));
-    } catch (e: any) {
-      toast.push(<Notification title="Operation Failed" type="danger">{e.message || "Error"}</Notification>);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [dispatch, editingItem, closeAddDrawer, closeEditDrawer, tableData, filterCriteria]); // Added dependencies
+    },
+    [
+      dispatch,
+      editingItem,
+      closeAddDrawer,
+      closeEditDrawer,
+      tableData,
+      filterCriteria,
+    ]
+  ); // Added dependencies
 
-  const openViewDialog = useCallback((item: ChangeLogItem) => setViewingItem(item), []);
+  const openViewDialog = useCallback(
+    (item: ChangeLogItem) => setViewingItem(item),
+    []
+  );
   const closeViewDialog = useCallback(() => setViewingItem(null), []);
 
   const openFilterDrawer = useCallback(() => {
@@ -379,7 +531,7 @@ const ActivityLog = () => {
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
     setFilterCriteria(data);
-    setTableData(prev => ({ ...prev, pageIndex: 1 })); // Reset to page 1 on filter change
+    setTableData((prev) => ({ ...prev, pageIndex: 1 })); // Reset to page 1 on filter change
     setIsFilterDrawerOpen(false);
     // useEffect will trigger data fetch
   }, []);
@@ -388,20 +540,32 @@ const ActivityLog = () => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    setTableData(prev => ({ ...prev, pageIndex: 1, query: "" }));
+    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     // useEffect will trigger data fetch
   }, [filterFormMethods]);
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-    setTableData(prev => ({ ...prev, ...data }));
+    setTableData((prev) => ({ ...prev, ...data }));
     // useEffect will trigger data fetch
   }, []);
 
-  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
-  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
-  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
-
+  const handlePaginationChange = useCallback(
+    (page: number) => handleSetTableData({ pageIndex: page }),
+    [handleSetTableData]
+  );
+  const handleSelectChange = useCallback(
+    (value: number) =>
+      handleSetTableData({ pageSize: Number(value), pageIndex: 1 }),
+    [handleSetTableData]
+  );
+  const handleSort = useCallback(
+    (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
+    [handleSetTableData]
+  );
+  const handleSearchChange = useCallback(
+    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
+    [handleSetTableData]
+  );
 
   // Data for table display: directly use Redux state if server paginates
   // If server sends all filtered data and client paginates/sorts, useMemo is more complex
@@ -422,223 +586,365 @@ const ActivityLog = () => {
     // If activityLogsData contains ALL filtered items (not just one page), this is fine.
     // If it's just one page, export will be limited.
     // A real solution might involve a separate fetch for all export data.
-    let dataToExport = cloneDeep(Array.isArray(activityLogsData) ? activityLogsData : []);
+    let dataToExport = cloneDeep(
+      Array.isArray(activityLogsData) ? activityLogsData : []
+    );
 
     // If you need to re-apply sorting for export (if `activityLogsData` is not sorted as per `tableData.sort`)
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
-        dataToExport.sort((a, b) => {
-            if (key === "timestamp" || key === "updated_at") {
-                const dateA = a[key as 'timestamp' | 'updated_at'] ? new Date(a[key as 'timestamp' | 'updated_at']!).getTime() : 0;
-                const dateB = b[key as 'timestamp' | 'updated_at'] ? new Date(b[key as 'timestamp' | 'updated_at']!).getTime() : 0;
-                if (dateA === 0 && dateB === 0) return 0;
-                if (dateA === 0) return order === 'asc' ? 1 : -1;
-                if (dateB === 0) return order === 'asc' ? -1 : 1;
-                return order === "asc" ? dateA - dateB : dateB - dateA;
-            }
-            const aVal = a[key as keyof ChangeLogItem];
-            const bVal = b[key as keyof ChangeLogItem];
-            const aStr = String(aVal ?? "").toLowerCase();
-            const bStr = String(bVal ?? "").toLowerCase();
-            return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
-        });
+      dataToExport.sort((a, b) => {
+        if (key === "timestamp" || key === "updated_at") {
+          const dateA = a[key as "timestamp" | "updated_at"]
+            ? new Date(a[key as "timestamp" | "updated_at"]!).getTime()
+            : 0;
+          const dateB = b[key as "timestamp" | "updated_at"]
+            ? new Date(b[key as "timestamp" | "updated_at"]!).getTime()
+            : 0;
+          if (dateA === 0 && dateB === 0) return 0;
+          if (dateA === 0) return order === "asc" ? 1 : -1;
+          if (dateB === 0) return order === "asc" ? -1 : 1;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        }
+        const aVal = a[key as keyof ChangeLogItem];
+        const bVal = b[key as keyof ChangeLogItem];
+        const aStr = String(aVal ?? "").toLowerCase();
+        const bStr = String(bVal ?? "").toLowerCase();
+        return order === "asc"
+          ? aStr.localeCompare(bStr)
+          : bStr.localeCompare(aStr);
+      });
     }
     return dataToExport;
   }, [activityLogsData, tableData.sort]);
 
-
   const handleOpenExportReasonModal = useCallback(() => {
-    if (!allFilteredAndSortedDataForExport || !allFilteredAndSortedDataForExport.length) {
-      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+    if (
+      !allFilteredAndSortedDataForExport ||
+      !allFilteredAndSortedDataForExport.length
+    ) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
       return;
     }
     exportReasonFormMethods.reset({ reason: "" });
     setIsExportReasonModalOpen(true);
   }, [allFilteredAndSortedDataForExport, exportReasonFormMethods]);
 
-  const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
-    setIsSubmittingExportReason(true);
-    const moduleName = "Activity Log";
-    try {
-      // @ts-ignore // conceptual action
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })).unwrap(); // If it's a thunk
-      // dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })); // If it's a simple action
+  const handleConfirmExportWithReason = useCallback(
+    async (data: ExportReasonFormData) => {
+      setIsSubmittingExportReason(true);
+      const moduleName = "Activity Log";
+      try {
+        // @ts-ignore // conceptual action
+        await dispatch(
+          submitExportReasonAction({ reason: data.reason, module: moduleName })
+        ).unwrap(); // If it's a thunk
+        // dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })); // If it's a simple action
 
-      const success = exportChangeLogsToCsv("change_logs.csv", allFilteredAndSortedDataForExport);
-      if (success) {
-        toast.push(<Notification title="Export Successful" type="success" duration={3000}>Data exported.</Notification>);
-      }
-      setIsExportReasonModalOpen(false);
-    } catch (error: any) {
-        toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
-    } finally {
-        setIsSubmittingExportReason(false);
-    }
-  }, [dispatch, allFilteredAndSortedDataForExport]);
-
-const columns: ColumnDef<ChangeLogItem>[] = useMemo(
-  () => [
-{
-  header: "Timestamp",
-  size: 180,
-  enableSorting: true,
-  cell: (props) => {
-    const { created_at, timestamp, updated_at } = props.row.original as any;
-    const val = created_at || timestamp || updated_at;
-
-    if (!val) {
-      return <span className="text-xs text-gray-400">-</span>;
-    }
-
-    const d = new Date(val);
-    const formattedDate = `${d.toLocaleDateString()} ${d.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })}`;
-
-    return (
-      <div className="text-xs">
-        <span className="text-gray-700">{formattedDate}</span>
-      </div>
-    );
-  },
-}
-,
-
-    {
-      header: "User",
-      size: 160,
-      enableSorting: true,
-      cell: (props) => {
-        const { userName, userId } = props.row.original;
-        return (
-          <div className="flex items-center gap-2">
-            <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
-            <div className="text-xs leading-tight">
-              <b>{userName || "Unknown"}</b>
-              <p className="text-gray-500">{userId || "System"}</p>
-            </div>
-          </div>
+        const success = exportChangeLogsToCsv(
+          "change_logs.csv",
+          allFilteredAndSortedDataForExport
         );
-      },
-    },
-    {
-      header: "Action",
-      size: 110,
-      enableSorting: true,
-      cell: (props) => {
-        const action = props.row.original.action;
-        return (
-          <Tag
-            className={classNames(
-              "capitalize whitespace-nowrap font-semibold min-w-[70px] text-center",
-              changeTypeColor[action]
-            )}
-          >
-            {CHANGE_TYPE_OPTIONS.find((o) => o.value === action)?.label || action}
-          </Tag>
-        );
-      },
-    },
-    {
-      header: "Entity",
-      size: 150,
-      enableSorting: true,
-      cell: (props) => {
-        const { entityId, entity } = props.row.original;
-        const entityLabel = ENTITY_TYPE_OPTIONS.find((o) => o.value === entity)?.label || entity;
-        return (
-          <div className="text-xs leading-tight">
-            <div className="font-semibold">{entityId || "-"}</div>
-            <div className="text-gray-500">{entityLabel}</div>
-          </div>
-        );
-      },
-    },
-    {
-      header: "Description",
-      enableSorting: false,
-      cell: (props) => {
-        const description = props.row.original.description || "-";
-        return (
-          <div className="text-xs whitespace-pre-wrap break-words max-w-[400px]">
-            {description}
-          </div>
-        );
-      },
-    },
-    {
-      header: "Updated Info",
-      size: 170,
-      enableSorting: true,
-      meta: { HeaderClass: "text-red-500" },
-      cell: (props) => {
-        const { updated_at, updated_by_name, updated_by_role } = props.row.original;
-        if (!updated_at && !updated_by_name && !updated_by_role) {
-          return <span className="text-xs text-gray-400">-</span>;
+        if (success) {
+          toast.push(
+            <Notification
+              title="Export Successful"
+              type="success"
+              duration={3000}
+            >
+              Data exported.
+            </Notification>
+          );
         }
-        const formattedDate = updated_at
-          ? `${new Date(updated_at).toLocaleDateString()} ${new Date(updated_at).toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            })}`
-          : "N/A";
-        return (
-          <div className="text-xs">
-            <span>
-              {updated_by_name || "N/A"}
-              {updated_by_role && (
-                <>
-                  <br />
-                  <span className="font-semibold">{updated_by_role}</span>
-                </>
-              )}
-            </span>
-            <br />
-            <span className="text-gray-500 dark:text-gray-400">{formattedDate}</span>
-          </div>
+        setIsExportReasonModalOpen(false);
+      } catch (error: any) {
+        toast.push(
+          <Notification
+            title="Operation Failed"
+            type="danger"
+            message={error.message || "Could not complete export."}
+          />
         );
-      },
+      } finally {
+        setIsSubmittingExportReason(false);
+      }
     },
-    {
-      header: "Actions",
-      id: "action",
-    meta: { headerClass: "text-center", cellClass: "text-center" },
-    size: 100, // Reduced size as one icon removed
-      cell: (props) => <ActionColumn onViewDetail={() => openViewDialog(props.row.original)} />,
-    },
-  ],
-  [openViewDialog]
-);
+    [dispatch, allFilteredAndSortedDataForExport]
+  );
 
+  const columns: ColumnDef<ChangeLogItem>[] = useMemo(
+    () => [
+      {
+        header: "Timestamp",
+        size: 180,
+        enableSorting: true,
+        cell: (props) => {
+          const { created_at, timestamp, updated_at } = props.row
+            .original as any;
+          const val = created_at || timestamp || updated_at;
+
+          if (!val) {
+            return <span className="text-xs text-gray-400">-</span>;
+          }
+
+          const d = new Date(val);
+          const formattedDate = `${d.getDate()} ${d.toLocaleString("en-US", {
+            month: "long",
+          })} ${d.getFullYear()}, ${d.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })}`;
+
+          return (
+            <div className="text-xs">
+              <span className="text-gray-700">{formattedDate}</span>
+            </div>
+          );
+        },
+      },
+      {
+        header: "User",
+        size: 160,
+        enableSorting: true,
+        cell: (props) => {
+          const { userName, userId } = props.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
+              <div className="text-xs leading-tight">
+                <b>{userName || "Unknown"}</b>
+                <p className="text-gray-500">{userId || "System"}</p>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Action",
+        size: 110,
+        enableSorting: true,
+        cell: (props) => {
+          const action = props.row.original.action;
+          return (
+            <Tag
+              className={classNames(
+                "capitalize whitespace-nowrap font-semibold min-w-[70px] text-start",
+                changeTypeColor[action]
+              )}
+            >
+              {CHANGE_TYPE_OPTIONS.find((o) => o.value === action)?.label ||
+                action}
+            </Tag>
+          );
+        },
+      },
+      {
+        header: "Entity",
+        size: 150,
+        enableSorting: true,
+        cell: (props) => {
+          const entity = props.row.original.entity;
+          return (
+            <div className="text-xs leading-tight">
+              <div className="text-gray-500">{entity}</div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Description",
+        enableSorting: false,
+        cell: (props) => {
+          const description = props.row.original.description || "-";
+          return (
+            <div className="text-xs whitespace-pre-wrap break-words max-w-[400px]">
+              {description}
+            </div>
+          );
+        },
+      },
+      {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        size: 170,
+        meta: { HeaderClass: "text-red-500" }, // Matched size with Domain module
+        cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } =
+            props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_name || "N/A"}
+                {updated_by_role && (
+                  <>
+                    <br />
+                    <b>{updated_by_role}</b>
+                  </>
+                )}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Actions",
+        id: "action",
+        size: 130,
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
+        cell: (props) => (
+          <ActionColumn
+            onViewDetail={() => openViewDialog(props.row.original)}
+          />
+        ),
+      },
+    ],
+    [openViewDialog]
+  );
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem label="Timestamp" invalid={!!currentFormMethods.formState.errors.timestamp} errorMessage={currentFormMethods.formState.errors.timestamp?.message}>
-        <Controller name="timestamp" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="datetime-local" />)} />
+      <FormItem
+        label="Timestamp"
+        invalid={!!currentFormMethods.formState.errors.timestamp}
+        errorMessage={currentFormMethods.formState.errors.timestamp?.message}
+      >
+        <Controller
+          name="timestamp"
+          control={currentFormMethods.control}
+          render={({ field }) => <Input {...field} type="datetime-local" />}
+        />
       </FormItem>
-      <FormItem label="User Name" invalid={!!currentFormMethods.formState.errors.userName} errorMessage={currentFormMethods.formState.errors.userName?.message}>
-        <Controller name="userName" control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Username or System" />)} />
+      <FormItem
+        label="User Name"
+        invalid={!!currentFormMethods.formState.errors.userName}
+        errorMessage={currentFormMethods.formState.errors.userName?.message}
+      >
+        <Controller
+          name="userName"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Input {...field} placeholder="Username or System" />
+          )}
+        />
       </FormItem>
-      <FormItem label="User ID (Optional)" invalid={!!currentFormMethods.formState.errors.userId} errorMessage={currentFormMethods.formState.errors.userId?.message}>
-        <Controller name="userId" control={currentFormMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} placeholder="U001" />} />
+      <FormItem
+        label="User ID (Optional)"
+        invalid={!!currentFormMethods.formState.errors.userId}
+        errorMessage={currentFormMethods.formState.errors.userId?.message}
+      >
+        <Controller
+          name="userId"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Input {...field} value={field.value || ""} placeholder="U001" />
+          )}
+        />
       </FormItem>
-      <FormItem label="Action Type" invalid={!!currentFormMethods.formState.errors.action} errorMessage={currentFormMethods.formState.errors.action?.message}>
-        <Controller name="action" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select action" options={CHANGE_TYPE_OPTIONS} value={CHANGE_TYPE_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
+      <FormItem
+        label="Action Type"
+        invalid={!!currentFormMethods.formState.errors.action}
+        errorMessage={currentFormMethods.formState.errors.action?.message}
+      >
+        <Controller
+          name="action"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Select
+              placeholder="Select action"
+              options={CHANGE_TYPE_OPTIONS}
+              value={CHANGE_TYPE_OPTIONS.find((o) => o.value === field.value)}
+              onChange={(opt) => field.onChange(opt?.value)}
+            />
+          )}
+        />
       </FormItem>
-      <FormItem label="Entity Type" invalid={!!currentFormMethods.formState.errors.entity} errorMessage={currentFormMethods.formState.errors.entity?.message}>
-        <Controller name="entity" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select entity type" options={ENTITY_TYPE_OPTIONS} value={ENTITY_TYPE_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
+      <FormItem
+        label="Entity Type"
+        invalid={!!currentFormMethods.formState.errors.entity}
+        errorMessage={currentFormMethods.formState.errors.entity?.message}
+      >
+        <Controller
+          name="entity"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Select
+              placeholder="Select entity type"
+              options={ENTITY_TYPE_OPTIONS}
+              value={ENTITY_TYPE_OPTIONS.find((o) => o.value === field.value)}
+              onChange={(opt) => field.onChange(opt?.value)}
+            />
+          )}
+        />
       </FormItem>
-      <FormItem label="Entity ID (Optional)" invalid={!!currentFormMethods.formState.errors.entityId} errorMessage={currentFormMethods.formState.errors.entityId?.message}>
-        <Controller name="entityId" control={currentFormMethods.control} render={({ field }) => <Input {...field} value={field.value || ''} placeholder="PROD005" />} />
+      <FormItem
+        label="Entity ID (Optional)"
+        invalid={!!currentFormMethods.formState.errors.entityId}
+        errorMessage={currentFormMethods.formState.errors.entityId?.message}
+      >
+        <Controller
+          name="entityId"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Input {...field} value={field.value || ""} placeholder="PROD005" />
+          )}
+        />
       </FormItem>
-      <FormItem label="Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.description} errorMessage={currentFormMethods.formState.errors.description?.message}>
-        <Controller name="description" control={currentFormMethods.control} render={({ field }) => (<Input textArea  {...field} rows={3} placeholder="Summary of the change" />)} />
+      <FormItem
+        label="Description"
+        className="md:col-span-2"
+        invalid={!!currentFormMethods.formState.errors.description}
+        errorMessage={currentFormMethods.formState.errors.description?.message}
+      >
+        <Controller
+          name="description"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Input
+              textArea
+              {...field}
+              rows={3}
+              placeholder="Summary of the change"
+            />
+          )}
+        />
       </FormItem>
-      <FormItem label="Details (JSON or Text, Optional)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.details} errorMessage={currentFormMethods.formState.errors.details?.message}>
-        <Controller name="details" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value || ''} rows={4} placeholder='e.g., {"oldValue": "X", "newValue": "Y"}'/>)} />
+      <FormItem
+        label="Details (JSON or Text, Optional)"
+        className="md:col-span-2"
+        invalid={!!currentFormMethods.formState.errors.details}
+        errorMessage={currentFormMethods.formState.errors.details?.message}
+      >
+        <Controller
+          name="details"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Input
+              textArea
+              {...field}
+              value={field.value || ""}
+              rows={4}
+              placeholder='e.g., {"oldValue": "X", "newValue": "Y"}'
+            />
+          )}
+        />
       </FormItem>
     </div>
   );
@@ -677,58 +983,271 @@ const columns: ColumnDef<ChangeLogItem>[] = useMemo(
         </AdaptiveCard>
       </Container>
 
-      <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={700}>
+      <Dialog
+        isOpen={!!viewingItem}
+        onClose={closeViewDialog}
+        onRequestClose={closeViewDialog}
+        width={700}
+      >
         <h5 className="mb-4">Log Details (ID: {viewingItem?.id})</h5>
         {viewingItem && (
           <div className="space-y-3 text-sm">
-            {(Object.keys(viewingItem) as Array<keyof ChangeLogItem>).map((key) => {
-                let label = key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
+            {(Object.keys(viewingItem) as Array<keyof ChangeLogItem>).map(
+              (key) => {
+                let label = key
+                  .replace(/_/g, " ")
+                  .replace(/([A-Z])/g, " $1")
+                  .replace(/^./, (str) => str.toUpperCase());
                 let value: any = viewingItem[key];
-                if ((key === "timestamp" || key === "updated_at") && value) value = new Date(value).toLocaleString();
-                else if (key === "action") value = CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
-                else if (key === "entity") value = ENTITY_TYPE_OPTIONS.find((o) => o.value === value)?.label || value;
-                else if (key === "details" && value && typeof value === "string" ) {
-                  let isJson = false; try { const p = JSON.parse(value); if (typeof p === 'object' && p !== null) { value = JSON.stringify(p, null, 2); isJson = true;}} catch {}
-                  if(isJson) return (<div key={key} className="flex flex-col"><span className="font-semibold">{label}:</span><pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-40 overflow-auto">{value || "-"}</pre></div>);
+                if ((key === "timestamp" || key === "updated_at") && value)
+                  value = new Date(value).toLocaleString();
+                else if (key === "action")
+                  value =
+                    CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label ||
+                    value;
+                else if (key === "entity")
+                  value =
+                    ENTITY_TYPE_OPTIONS.find((o) => o.value === value)?.label ||
+                    value;
+                else if (
+                  key === "details" &&
+                  value &&
+                  typeof value === "string"
+                ) {
+                  let isJson = false;
+                  try {
+                    const p = JSON.parse(value);
+                    if (typeof p === "object" && p !== null) {
+                      value = JSON.stringify(p, null, 2);
+                      isJson = true;
+                    }
+                  } catch {}
+                  if (isJson)
+                    return (
+                      <div key={key} className="flex flex-col">
+                        <span className="font-semibold">{label}:</span>
+                        <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-40 overflow-auto">
+                          {value || "-"}
+                        </pre>
+                      </div>
+                    );
                 }
-                return (<div key={key} className="flex"><span className="font-semibold w-1/3 md:w-1/4">{label}:</span><span className="w-2/3 md:w-3/4 break-words">{value === null || value === undefined || value === "" ? "-" : String(value)}</span></div>);
-            })}
+                return (
+                  <div key={key} className="flex">
+                    <span className="font-semibold w-1/3 md:w-1/4">
+                      {label}:
+                    </span>
+                    <span className="w-2/3 md:w-3/4 break-words">
+                      {value === null || value === undefined || value === ""
+                        ? "-"
+                        : String(value)}
+                    </span>
+                  </div>
+                );
+              }
+            )}
           </div>
         )}
-        <div className="text-right mt-6"> <Button variant="solid" onClick={closeViewDialog}>Close</Button> </div>
+        <div className="text-right mt-6">
+          {" "}
+          <Button variant="solid" onClick={closeViewDialog}>
+            Close
+          </Button>{" "}
+        </div>
       </Dialog>
 
-      <Drawer title={editingItem ? "Edit Log Entry (Admin)" : "Add New Log Entry (Admin)"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700}
+      <Drawer
+        title={
+          editingItem ? "Edit Log Entry (Admin)" : "Add New Log Entry (Admin)"
+        }
+        isOpen={isAddDrawerOpen || isEditDrawerOpen}
+        onClose={editingItem ? closeEditDrawer : closeAddDrawer}
+        onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
+        width={700}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
-            <Button size="sm" variant="solid" form="changeLogForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}> {isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save" : "Save")} </Button>
+            <Button
+              size="sm"
+              className="mr-2"
+              onClick={editingItem ? closeEditDrawer : closeAddDrawer}
+              disabled={isSubmitting}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="changeLogForm"
+              type="submit"
+              loading={isSubmitting}
+              disabled={!formMethods.formState.isValid || isSubmitting}
+            >
+              {" "}
+              {isSubmitting
+                ? editingItem
+                  ? "Saving..."
+                  : "Adding..."
+                : editingItem
+                ? "Save"
+                : "Save"}{" "}
+            </Button>
           </div>
-        }>
-        <Form id="changeLogForm" onSubmit={formMethods.handleSubmit(onSubmitLog)} className="flex flex-col gap-4">{renderDrawerForm(formMethods)}</Form>
-      </Drawer>
-
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} onRequestClose={() => setIsFilterDrawerOpen(false)} width={400}
-        footer={
-          <div className="text-right w-full">
-            <div>
-              <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button>
-              <Button size="sm" variant="solid" form="filterLogForm" type="submit">Apply</Button>
-            </div>
-          </div>
-        }>
-        <Form id="filterLogForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Action Types"><Controller name="filteraction" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Action Type" options={CHANGE_TYPE_OPTIONS} value={field.value || []} onChange={(opts) => field.onChange(opts || [])}/>)}/></FormItem>
-          <FormItem label="Entity Types"><Controller name="filterentity" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Entity Type" options={ENTITY_TYPE_OPTIONS} value={field.value || []} onChange={(opts) => field.onChange(opts || [])}/>)}/></FormItem>
-          <FormItem label="User Name"><Controller name="filterUserName" control={filterFormMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="Enter user name to filter" />)}/></FormItem>
-          <FormItem label="Date Range"><Controller name="filterDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | undefined} onChange={(dates) => field.onChange(dates || [null, null])} placeholder="Start Date - End Date" inputFormat="YYYY-MM-DD"/>)}/></FormItem>
+        }
+      >
+        <Form
+          id="changeLogForm"
+          onSubmit={formMethods.handleSubmit(onSubmitLog)}
+          className="flex flex-col gap-4"
+        >
+          {renderDrawerForm(formMethods)}
         </Form>
       </Drawer>
 
-      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Activity Logs" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
-        <Form id="exportChangeLogsReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
-          <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3}/>)}/>
+      <Drawer
+        title="Filters"
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        onRequestClose={() => setIsFilterDrawerOpen(false)}
+        width={400}
+        footer={
+          <div className="text-right w-full">
+            <div>
+              <Button
+                size="sm"
+                className="mr-2"
+                onClick={onClearFilters}
+                type="button"
+              >
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                form="filterLogForm"
+                type="submit"
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        <Form
+          id="filterLogForm"
+          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+          className="flex flex-col gap-4"
+        >
+          <FormItem label="Action Types">
+            <Controller
+              name="filteraction"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select Action Type"
+                  options={CHANGE_TYPE_OPTIONS}
+                  value={field.value || []}
+                  onChange={(opts) => field.onChange(opts || [])}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Entity Types">
+            <Controller
+              name="filterentity"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select Entity Type"
+                  options={ENTITY_TYPE_OPTIONS}
+                  value={field.value || []}
+                  onChange={(opts) => field.onChange(opts || [])}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="User Name">
+            <Controller
+              name="filterUserName"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ""}
+                  placeholder="Enter user name to filter"
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Date Range">
+            <Controller
+              name="filterDateRange"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <DatePicker.DatePickerRange
+                  value={field.value as [Date | null, Date | null] | undefined}
+                  onChange={(dates) => field.onChange(dates || [null, null])}
+                  placeholder="Start Date - End Date"
+                  inputFormat="YYYY-MM-DD"
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </Drawer>
+
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Exporting Activity Logs"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <Form
+          id="exportChangeLogsReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
           </FormItem>
         </Form>
       </ConfirmDialog>

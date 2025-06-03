@@ -29,9 +29,11 @@ import { useSelector } from 'react-redux'
 
 import {
     getProductsAction,
-    getCompanyProfileAction, // VERIFY: Assumes this fetches a LIST of companies
+    getCompanyAction, // VERIFY: Assumes this fetches a LIST of companies
     getProductSpecificationsAction,
+    getPaymentTermAction,
     getAllProductAction,
+    addWallItemAction,
 } from '@/reduxtool/master/middleware'; // VERIFY PATH
 import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
 
@@ -93,6 +95,7 @@ type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 // Define option types for clarity
 type ProductOptionType = { value: string; label: string; id: number };
 type CompanyOptionType = { value: string; label: string; id: number };
+type PaymentTermType = { value: string; label: string; id: number };
 type ProductSpecOptionType = { value: number; label: string };
 
 
@@ -164,12 +167,13 @@ const WallItemAdd = () => {
   // --- Selectors for Redux state ---
   // VERIFY: Ensure `masterSelector` provides these specific keys and that their data structure is an array.
   // e.g., productsMasterData: [{id: 1, name: "Product A", sku_code: "P001"}, ...]
-  // e.g., rawProfileArrayFromState: [{id: 1, company_name: "Company X"}, ...]
+  // e.g., CompanyData: [{id: 1, company_name: "Company X"}, ...]
   // e.g., ProductSpecificationsData: [{id: 1, name: "Spec Y"}, ...]
   const {
     productsMasterData = [],
-    rawProfileArrayFromState = [], // VERIFY name if getCompanyProfileAction fetches a list
+    CompanyData = [], // VERIFY name if getCompanyAction fetches a list
     ProductSpecificationsData = [],
+    PaymentTermsData = [],
     status: masterDataAccessStatus = 'idle', // General status from masterSlice
   } = useSelector(masterSelector);
 
@@ -213,8 +217,9 @@ const WallItemAdd = () => {
         // VERIFY: Pass necessary params if actions require them (e.g., for pagination)
         await Promise.all([
           dispatch(getAllProductAction()),
-          dispatch(getCompanyProfileAction()), // Ensure this fetches a LIST
+          dispatch(getCompanyAction()), // Ensure this fetches a LIST
           dispatch(getProductSpecificationsAction()),
+          dispatch(getPaymentTermAction()),
         ]);
       } catch (error) {
         console.error("Failed to fetch dropdown data:", error);
@@ -239,13 +244,23 @@ const WallItemAdd = () => {
   
 
   const companyOptions: CompanyOptionType[] = useMemo(() => {
-    if (!Array.isArray(rawProfileArrayFromState)) return [];
-    return rawProfileArrayFromState.map((company: any) => ({
-      value: company.company_name || company.name, // Adjust if company name field is different
+    if (!CompanyData || !Array.isArray(CompanyData.data)) return [];
+    return CompanyData.data.map((company: any) => ({
+      value: company.company_name || company.name,
       label: company.company_name || company.name,
       id: company.id,
     }));
-  }, [rawProfileArrayFromState]);
+  }, [CompanyData]);
+
+
+  const paymentTermsOption: PaymentTermType[] = useMemo(() => {
+    if (!Array.isArray(PaymentTermsData)) return [];
+    return PaymentTermsData.map((payment: any) => ({
+      value: payment.id || payment.id, // Adjust if payment name field is different
+      label: payment.term_name || payment.term_name,
+      id: payment.id,
+    }));
+  }, [PaymentTermsData]);
 
   const productSpecOptionsForSelect: ProductSpecOptionType[] = useMemo(() => {
     if (!Array.isArray(ProductSpecificationsData)) return [];
@@ -255,125 +270,107 @@ const WallItemAdd = () => {
     }));
   }, [ProductSpecificationsData]);
 
-  const onFormSubmit = useCallback(
-    async (formData: WallItemFormData) => {
-      setIsSubmitting(true);
+  const onFormSubmit = async (formData: WallItemFormData) => {
+    setIsSubmitting(true);
 
+    try {
       const productSpecDetails = formData.productSpecId
         ? productSpecOptionsForSelect.find(spec => spec.value === formData.productSpecId)
         : null;
-      
+
       const cartoonTypeDetails = formData.cartoonTypeId
         ? dummyCartoonTypes.find(ct => ct.id === formData.cartoonTypeId)
         : null;
 
-      const loggedPayload: any = { ...formData };
-
-      loggedPayload.id = null;
-      loggedPayload.product_id = formData.productId ? String(formData.productId) : null;
-      loggedPayload.customer_id = formData.customerId ? String(formData.customerId) : null;
-      loggedPayload.product_spec_id = formData.productSpecId ? String(formData.productSpecId) : null;
-      loggedPayload.assigned_to = formData.assignedTeamId ? String(formData.assignedTeamId) : null;
-      
-      loggedPayload.want_to = formData.intent;
-      loggedPayload.qty = String(formData.qty);
-      loggedPayload.price = (formData.price !== null && formData.price !== undefined) ? String(formData.price) : "0";
-      
-      loggedPayload.status = formData.adminStatus;
-      loggedPayload.product_status = formData.productStatus;
-      loggedPayload.product_status_listing = null;
-      loggedPayload.dispatch_status = formData.dispatchStatus;
-
-      loggedPayload.color = formData.color;
-      loggedPayload.device_condition = formData.deviceCondition;
-      loggedPayload.product_specs = productSpecDetails ? productSpecDetails.label : null;
-
-      loggedPayload.cartoon_type = cartoonTypeDetails ? cartoonTypeDetails.name : (formData.cartoonTypeId ? String(formData.cartoonTypeId) : null);
-      loggedPayload.delivery_at = formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null;
-      loggedPayload.location = formData.location;
-      loggedPayload.shipping_options = formData.dispatchMode;
-
-      loggedPayload.payment_term = formData.paymentTermId ? String(formData.paymentTermId) : "0";
-      loggedPayload.visibility = formData.visibility;
-      loggedPayload.priority = formData.priority;
-      loggedPayload.active_hrs = formData.activeHours;
-      loggedPayload.listing_url = formData.productUrl;
-      
-      loggedPayload.warranty = formData.warrantyInfo;
-
-      loggedPayload.internal_remarks = formData.internalRemarks;
-      loggedPayload.notes = formData.internalRemarks;
-
-      loggedPayload.opportunity_id = loggedPayload.opportunity_id ?? null;
-      loggedPayload.opportunity_status = loggedPayload.opportunity_status ?? null;
-      loggedPayload.match_score = loggedPayload.match_score ?? null;
-      loggedPayload.buy_listing_id = loggedPayload.buy_listing_id ?? null;
-      loggedPayload.sell_listing_id = loggedPayload.sell_listing_id ?? null;
-      loggedPayload.spb_role = loggedPayload.spb_role ?? null;
-      loggedPayload.product_category = loggedPayload.product_category ?? null;
-      loggedPayload.product_subcategory = loggedPayload.product_subcategory ?? null;
-      loggedPayload.brand = loggedPayload.brand ?? null;
-      loggedPayload.price_match_type = loggedPayload.price_match_type ?? null;
-      loggedPayload.quantity_match_listing = String(formData.qty);
-      loggedPayload.location_match = loggedPayload.location_match ?? null;
-      loggedPayload.matches_found_count = loggedPayload.matches_found_count ?? null;
-      loggedPayload.last_updated = loggedPayload.last_updated ?? null;
-      loggedPayload.payment_method = loggedPayload.payment_method ?? null;
-      loggedPayload.interaction_type = loggedPayload.interaction_type ?? null;
-      loggedPayload.created_from = "FormUI-Add";
-      loggedPayload.source = "in";
-      loggedPayload.delivery_details = loggedPayload.delivery_details ?? null;
-      loggedPayload.created_by = "1";
-      loggedPayload.expired_date = loggedPayload.expired_date ?? null;
-      loggedPayload.created_at = new Date().toISOString();
-      loggedPayload.updated_at = new Date().toISOString();
-      loggedPayload.device_type = loggedPayload.device_type ?? null;
-      loggedPayload.master_cartoon = loggedPayload.master_cartoon ?? null;
-      loggedPayload.eta_details = loggedPayload.eta_details ?? null;
-      loggedPayload.is_wall_manual = "0";
-      loggedPayload.wall_link_token = loggedPayload.wall_link_token ?? null;
-      loggedPayload.wall_link_datetime = loggedPayload.wall_link_datetime ?? null;
-      loggedPayload.inquiries = "0";
-      loggedPayload.share = "0";
-      loggedPayload.bookmark = "0";
-      loggedPayload.company_id = loggedPayload.company_id ?? null; // This might be formData.customerId if applicable for company context
-      loggedPayload.member_type = loggedPayload.member_type ?? null;
-      loggedPayload.brands_id = loggedPayload.brands_id ?? null;
-      loggedPayload.leads_count = 0;
-
-      loggedPayload.product = {
-          id: formData.productId,
-          name: formData.product_name, // Now correctly sourced from form
-          description: null, 
-          status: formData.productStatus, 
-          minimum_order_quantity: null, category_id: null, sub_category_id: null, brand_id: null, icon_full_path: null, product_images_array: [],
-          sub_category: null, brand: null, category: null 
+      const payload = {
+        id: null,
+        opportunity_id: null,
+        opportunity_status: null,
+        match_score: null,
+        buy_listing_id: null,
+        sell_listing_id: null,
+        spb_role: null,
+        product_category: null,
+        product_subcategory: null,
+        brand: formData.brand ?? null,
+        product_specs: productSpecDetails?.label ?? null,
+        product_status_listing: null,
+        price_match_type: null,
+        quantity_match_listing: String(formData.qty),
+        location_match: null,
+        matches_found_count: null,
+        last_updated: null,
+        notes: formData.internalRemarks,
+        priority: formData.priority,
+        visibility: formData.visibility,
+        warranty: formData.warrantyInfo,
+        listing_url: formData.productUrl,
+        shipping_options: formData.dispatchMode,
+        payment_method: null,
+        interaction_type: null,
+        product_id: formData.productId ? String(formData.productId) : null,
+        customer_id: formData.companyId ? String(formData.companyId) : null,
+        status: formData.adminStatus,
+        created_from: "FormUI-Add",
+        want_to: formData.intent,
+        qty: String(formData.qty),
+        product_status: formData.productStatus,
+        source: "in",
+        delivery_at: formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null,
+        delivery_details: null,
+        created_by: "1",
+        active_hrs: String(formData.activeHours),
+        expired_date: null,
+        internal_remarks: formData.internalRemarks,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null,
+        device_type: null,
+        price: formData.price ? String(formData.price) : "0",
+        color: formData.color,
+        master_cartoon: null,
+        dispatch_status: formData.dispatchStatus,
+        payment_term: formData.paymentTermId ? String(formData.paymentTermId) : "0",
+        device_condition: formData.deviceCondition,
+        eta_details: null,
+        location: formData.location,
+        is_wall_manual: "0",
+        wall_link_token: null,
+        wall_link_datetime: null,
+        cartoon_type: cartoonTypeDetails?.name ?? String(formData.cartoonTypeId),
+        inquiries: "0",
+        share: "0",
+        bookmark: "0",
+        assigned_to: formData.assignedTeamId ? String(formData.assignedTeamId) : null,
+        company_id: formData.companyId ?? null,
+        member_type: null,
+        brands_id: formData.brands_id ?? null,
+        dispatch_mode: formData.dispatchMode,
+        listing_type: formData.listingType,
+        admin_status: formData.adminStatus,
+        assigned_team: formData.assignedTeamId ?? null,
       };
-      loggedPayload.product_spec = productSpecDetails ? { id: productSpecDetails.value, name: productSpecDetails.label } : null;
-      loggedPayload.customer = {
-          id: formData.customerId,
-          name: formData.company_name, // Now correctly sourced from form
-          full_profile_pic: null, brand_name: null, category: null, subcategory: null
-      };
-      loggedPayload.company = null;
 
-      console.log("--- WallItemAdd Form Submission Log ---");
-      console.log("1. Original formData (from react-hook-form):", formData);
-      console.log("2. Constructed Payload (for API/logging - matches target structure, includes all form data):", loggedPayload);
-      console.log("--- End WallItemAdd Form Submission Log ---");
-
-      await new Promise((res) => setTimeout(res, 1000)); // Simulate API call
+      await dispatch(addWallItemAction(payload)).unwrap();
 
       toast.push(
-        <Notification title="Success" type="success">
-          Wall item added. (Simulated)
+        <Notification title="Wall Item Added" type="success" duration={2000}>
+          Wall item for "{formData.product_name}" added.
         </Notification>
       );
-      setIsSubmitting(false);
+
       navigate("/sales-leads/wall-listing");
-    },
-    [navigate, productSpecOptionsForSelect] // Added dependency
-  );
+    } catch (error: any) {
+      toast.push(
+        <Notification title="Failed to Add" type="danger" duration={3000}>
+          {error.message || "Could not add Wall Item."}
+        </Notification>
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   const handleCancel = () => {
     navigate("/sales-leads/wall-listing");
@@ -431,28 +428,26 @@ const WallItemAdd = () => {
                 invalid={!!formMethods.formState.errors.company_name}
                 errorMessage={formMethods.formState.errors.company_name?.message}
             >
-                <Controller
-                    name="company_name"
-                    control={formMethods.control}
-                    render={({ field }) => (
-                        <UiSelect
-                            isLoading={isLoadingOptions}
-                            options={companyOptions}
-                            value={companyOptions.find(opt => opt.value === field.value) || null}
-                            onChange={option => {
-                                if (option) {
-                                    field.onChange(option.value);
-                                    formMethods.setValue('customerId', option.id, { shouldValidate: true, shouldDirty: true });
-                                } else {
-                                    field.onChange("");
-                                    formMethods.setValue('customerId', null, { shouldValidate: true, shouldDirty: true });
-                                }
-                            }}
-                            placeholder="Select Company Name"
-                            isClearable
-                        />
-                    )}
-                />
+            <Controller
+                name="company_name" // This will store the company's name (label)
+                control={formMethods.control}
+                render={({ field }) => (
+                    <UiSelect
+                        options={companyOptions} // { value: "Company X Name", label: "Company X Name", id: 1 }
+                        value={companyOptions.find(opt => opt.value === field.value) || null}
+                        onChange={option => {
+                            if (option) {
+                                field.onChange(option.value); // Sets formData.company_name to option.value (the name)
+                                formMethods.setValue('customerId', option.id, { shouldValidate: true, shouldDirty: true }); // Sets formData.customerId to option.id
+                            } else {
+                                field.onChange("");
+                                formMethods.setValue('customerId', null, { shouldValidate: true, shouldDirty: true });
+                            }
+                        }}
+                        // ...
+                    />
+                )}
+            />
             </FormItem>
             <FormItem
               label="Quantity"
@@ -567,8 +562,8 @@ const WallItemAdd = () => {
               errorMessage={formMethods.formState.errors.paymentTermId?.message}
             >
               <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name }))} {...field} 
-                  value={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name })).find(opt => opt.value === field.value) || null} 
+                  <UiSelect options={paymentTermsOption} {...field} 
+                  value={companyOptions.find(opt => opt.value === field.value) || null}
                   onChange={(option) => field.onChange(option ? option.value : null)} 
                   placeholder="Select Payment Term (Optional)" 
                   isClearable
