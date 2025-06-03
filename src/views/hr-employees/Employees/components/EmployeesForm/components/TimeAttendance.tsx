@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import Card from '@/components/ui/Card'
-import { Button } from '@/components/ui'
+import { Button, Input, Table } from '@/components/ui'
 import type { FormSectionBaseProps } from '../types'
+import Tr from '@/components/ui/Table/Tr'
+import Td from '@/components/ui/Table/Td'
+import TBody from '@/components/ui/Table/TBody'
 
 interface TrainingFormValues {
     inductionDateCompletion?: Date | string | null
@@ -39,23 +42,43 @@ const TimeAttendance = ({ control, errors }: TimeAttendanceProps) => {
         <Card id="timeAttendence">
             <h4 className="mb-6">Time Attendance</h4>
             <div className="flex gap-4">
-                <Button
-                    type="button"
-                    onClick={handleInClick}
-                    variant="outline"
-                    className="px-6 py-2"
-                >
-                    {inTime ? `In: ${inTime}` : 'In'}
-                </Button>
-                <Button
-                    type="button"
-                    onClick={handleOutClick}
-                    variant="outline"
-                    className="px-6 py-2"
-                >
-                    {outTime ? `Out: ${outTime}` : 'Out'}
-                </Button>
+                <div className='flex flex-col gap-1'>
+                    <Button
+                        type="button"
+                        onClick={handleInClick}
+                        variant="outline"
+                        className="px-6 py-2"
+                    >
+                        {inTime ? `In: ${inTime}` : 'In'}
+                    </Button>
+                    <Input type="time" className=''/>
+                </div>
+                <div className='flex flex-col gap-1'>
+                    <Button
+                        type="button"
+                        onClick={handleOutClick}
+                        variant="outline"
+                        className="px-6 py-2"
+                    >
+                        {outTime ? `Out: ${outTime}` : 'Out'}
+                    </Button>
+                    <Input type="time" className=''/>
+                </div>
             </div>
+            {/* <Table className='mt-4'>
+                <TBody>
+                    <Tr>
+                        <Td>12/04/2025</Td>
+                        <Td>9:59</Td>
+                        <Td>7:02</Td>
+                    </Tr>
+                    <Tr>
+                        <Td>11/04/2025</Td>
+                        <Td>9:57</Td>
+                        <Td>7:00</Td>
+                    </Tr>
+                </TBody>
+            </Table> */}
         </Card>
     )
 }
