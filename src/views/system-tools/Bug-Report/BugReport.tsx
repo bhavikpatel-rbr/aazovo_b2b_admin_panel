@@ -1403,8 +1403,6 @@ const BugReportListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Bug Reports</h5>
 
-            
-
             <Button
               variant="solid"
               icon={<TbPlus />}
@@ -1415,63 +1413,63 @@ const BugReportListing = () => {
             </Button>
           </div>
           <div className="grid grid-cols-6 mb-4 gap-2">
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                  <TbBug size={24} />
-                </div>
-                <div>
-                  <h6 className="text-blue-500">879</h6>
-                  <span className="font-semibold text-xs">Total</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                  <TbCalendarWeek size={24} />
-                </div>
-                <div>
-                  <h6 className="text-violet-500">23</h6>
-                  <span className="font-semibold text-xs">Today</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                  <TbMailPlus size={24} />
-                </div>
-                <div>
-                  <h6 className="text-pink-500">34</h6>
-                  <span className="font-semibold text-xs">New</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                  <TbLoader size={24} />
-                </div>
-                <div>
-                  <h6 className="text-orange-500">345</h6>
-                  <span className="font-semibold text-xs">Under Review</span>
-                </div>
-              </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbBug size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">879</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbCalendarWeek size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">23</h6>
+                <span className="font-semibold text-xs">Today</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbMailPlus size={24} />
+              </div>
+              <div>
+                <h6 className="text-pink-500">34</h6>
+                <span className="font-semibold text-xs">New</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbLoader size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">345</h6>
+                <span className="font-semibold text-xs">Under Review</span>
+              </div>
+            </Card>
 
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                  <TbCircleCheck size={24} />
-                </div>
-                <div>
-                  <h6 className="text-green-500">879</h6>
-                  <span className="font-semibold text-xs">Resolved</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                  <TbCircleX size={24} />
-                </div>
-                <div>
-                  <h6 className="text-red-500">78</h6>
-                  <span className="font-semibold text-xs">Unresolved</span>
-                </div>
-              </Card>
-              
-            </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbCircleCheck size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">879</h6>
+                <span className="font-semibold text-xs">Resolved</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbCircleX size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">78</h6>
+                <span className="font-semibold text-xs">Unresolved</span>
+              </div>
+            </Card>
+
+          </div>
           <ItemTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}

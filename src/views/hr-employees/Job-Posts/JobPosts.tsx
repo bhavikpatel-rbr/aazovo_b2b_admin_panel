@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 // import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Ensure this path is correct, seems unused in this file for Input prefix
 
 // Icons
@@ -37,6 +37,10 @@ import {
   TbSwitchHorizontal, // Keep if change status is re-enabled
   TbBuildingSkyscraper,
   TbReload,
+  TbFileCheck,
+  TbFileExcel,
+  TbFileSmile,
+  TbFileLike,
 } from "react-icons/tb";
 
 // Types
@@ -984,133 +988,202 @@ const JobPostsListing = () => {
     [departmentOptions, openEditDrawer, handleDeleteClick, handleChangeStatus]
   );
 
-  const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem
-        label="Job Title"
-        className="md:col-span-2"
-        invalid={!!currentFormMethods.formState.errors.job_title}
-        errorMessage={currentFormMethods.formState.errors.job_title?.message}
-      >
-        <Controller
-          name="job_title"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              prefix={<TbBriefcase />}
-              placeholder="e.g., Software Engineer"
-            />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Job Department"
-        invalid={!!currentFormMethods.formState.errors.job_department_id}
-        errorMessage={
-          currentFormMethods.formState.errors.job_department_id?.message
-        }
-      >
-        <Controller
-          name="job_department_id"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              placeholder={departmentOptions.length > 0 ? "Select Department" : "Loading Departments..."}
-              options={departmentOptions}
-              value={departmentOptions.find((o) => o.value === field.value)}
-              onChange={(opt) => field.onChange(opt?.value)}
-              disabled={departmentOptions.length === 0 && masterLoadingStatus === "idle"}
-            />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Status"
-        invalid={!!currentFormMethods.formState.errors.status}
-        errorMessage={currentFormMethods.formState.errors.status?.message}
-      >
-        <Controller
-          name="status"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              placeholder="Select Status"
-              options={JOB_POST_STATUS_OPTIONS_FORM}
-              value={JOB_POST_STATUS_OPTIONS_FORM.find(
-                (o) => o.value === field.value
-              )}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Location"
-        className="md:col-span-2"
-        invalid={!!currentFormMethods.formState.errors.location}
-        errorMessage={currentFormMethods.formState.errors.location?.message}
-      >
-        <Controller
-          name="location"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              prefix={<TbMapPin />}
-              placeholder="e.g., Remote, New York"
-            />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Experience Required"
-        invalid={!!currentFormMethods.formState.errors.experience}
-        errorMessage={currentFormMethods.formState.errors.experience?.message}
-      >
-        <Controller
-          name="experience"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input {...field} placeholder="e.g., 2+ Years, Entry Level" />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Total Vacancies"
-        invalid={!!currentFormMethods.formState.errors.vacancies}
-        errorMessage={currentFormMethods.formState.errors.vacancies?.message}
-      >
-        <Controller
-          name="vacancies"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input {...field} type="number" prefix={<TbUsers />} min={0} />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Description"
-        className="md:col-span-2"
-        invalid={!!currentFormMethods.formState.errors.description}
-        errorMessage={currentFormMethods.formState.errors.description?.message}
-      >
-        <Controller
-          name="description"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              rows={5}
-              // prefix={<TbFileText />} // prefix on textArea might look odd, remove if so
-              placeholder="Detailed job description, responsibilities, qualifications..."
-              textArea
-            />
-          )}
-        />
-      </FormItem>
-    </div>
-  );
+  const renderDrawerForm = (currentFormMethods: typeof formMethods) => {
+    type Portal = {
+      id: number,
+    }
+    const [portals, setPortals] = useState<Portal[]>([{ id: 1 }])
+    const addPortal = (id: number) => setPortals(prev => [...prev, { id: prev[prev.length - 1].id + 1 }])
+    const removePortal = (id: number) => setPortals(prev => prev.length > 1 ? prev.filter(portal => portal.id !== id) : prev)
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        <FormItem
+          label="Job Title"
+          className="md:col-span-2"
+          invalid={!!currentFormMethods.formState.errors.job_title}
+          errorMessage={currentFormMethods.formState.errors.job_title?.message}
+        >
+          <Controller
+            name="job_title"
+            control={currentFormMethods.control}
+            render={({ field }) => (
+              <Input
+                {...field}
+                prefix={<TbBriefcase />}
+                placeholder="e.g., Software Engineer"
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Job Department"
+          invalid={!!currentFormMethods.formState.errors.job_department_id}
+          errorMessage={
+            currentFormMethods.formState.errors.job_department_id?.message
+          }
+        >
+          <Controller
+            name="job_department_id"
+            control={currentFormMethods.control}
+            render={({ field }) => (
+              <Select
+                placeholder={departmentOptions.length > 0 ? "Select Department" : "Loading Departments..."}
+                options={departmentOptions}
+                value={departmentOptions.find((o) => o.value === field.value)}
+                onChange={(opt) => field.onChange(opt?.value)}
+                disabled={departmentOptions.length === 0 && masterLoadingStatus === "idle"}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Status"
+          invalid={!!currentFormMethods.formState.errors.status}
+          errorMessage={currentFormMethods.formState.errors.status?.message}
+        >
+          <Controller
+            name="status"
+            control={currentFormMethods.control}
+            render={({ field }) => (
+              <Select
+                placeholder="Select Status"
+                options={JOB_POST_STATUS_OPTIONS_FORM}
+                value={JOB_POST_STATUS_OPTIONS_FORM.find(
+                  (o) => o.value === field.value
+                )}
+                onChange={(opt) => field.onChange(opt?.value)}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Location"
+          className="md:col-span-2"
+          invalid={!!currentFormMethods.formState.errors.location}
+          errorMessage={currentFormMethods.formState.errors.location?.message}
+        >
+          <Controller
+            name="location"
+            control={currentFormMethods.control}
+            render={({ field }) => (
+              <Input
+                {...field}
+                prefix={<TbMapPin />}
+                placeholder="e.g., Remote, New York"
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Experience Required"
+          invalid={!!currentFormMethods.formState.errors.experience}
+          errorMessage={currentFormMethods.formState.errors.experience?.message}
+        >
+          <Controller
+            name="experience"
+            control={currentFormMethods.control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., 2+ Years, Entry Level" />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Total Vacancies"
+          invalid={!!currentFormMethods.formState.errors.vacancies}
+          errorMessage={currentFormMethods.formState.errors.vacancies?.message}
+        >
+          <Controller
+            name="vacancies"
+            control={currentFormMethods.control}
+            render={({ field }) => (
+              <Input {...field} type="number" prefix={<TbUsers />} min={0} />
+            )}
+          />
+        </FormItem>
+
+        <FormItem
+          label="Description"
+          className="md:col-span-2"
+          invalid={!!currentFormMethods.formState.errors.description}
+          errorMessage={currentFormMethods.formState.errors.description?.message}
+        >
+          <Controller
+            name="description"
+            control={currentFormMethods.control}
+            render={({ field }) => (
+              <Input
+                {...field}
+                rows={5}
+                // prefix={<TbFileText />} // prefix on textArea might look odd, remove if so
+                placeholder="Detailed job description, responsibilities, qualifications..."
+                textArea
+              />
+            )}
+          />
+        </FormItem>
+        <div className="col-span-2 text-red-500">
+          <div className="">
+            <div className="flex justify-between">
+              <b className="text-base">Post on</b>
+              <Button onClick={() => addPortal()} type="button">Add Portal</Button>
+            </div>
+            {
+              portals?.map(portal => {
+                return (
+                  <div className="flex flex-col gap-2 border p-5 pb-0 mt-2 rounded-xl">
+                    <div className="flex gap-2">
+                      <FormItem className="w-full">
+                        <Controller
+                          name={`portal_${portal.id}`}
+                          control={currentFormMethods.control}
+                          render={({ field }) => (
+                            <Select
+                              placeholder="Select Portal"
+                              options={[
+                                { label: "Linkedin", value: "Linkedin" },
+                                { label: "Naukri", value: "Naukri" },
+                                { label: "Internal", value: "Internal" },
+                                { label: "Glassdoor", value: "Glassdoor" },
+                              ]}
+                            />
+                          )}
+                        />
+                      </FormItem>
+                      <FormItem className="w-full">
+                        <Controller
+                          name={`url_${portal.id}`}
+                          control={currentFormMethods.control}
+                          render={({ field }) => (
+                            <Input placeholder="Application Count" />
+                          )}
+                        />
+                      </FormItem>
+                      <Button
+                        type="button"
+                        className="w-18 h-9.5"
+                        onClick={() => removePortal(portal.id)} icon={<TbTrash className="" />}
+                      ></Button>
+
+                    </div>
+                    <FormItem className="w-full">
+                      <Controller
+                        name={`url_${portal.id}`}
+                        control={currentFormMethods.control}
+                        render={({ field }) => (
+                          <Input placeholder="Enter url link" />
+                        )}
+                      />
+                    </FormItem>
+
+                  </div>
+                )
+              })
+            }
+          </div>
+        </div>
+      </div>
+    )
+  };
 
   return (
     <>
@@ -1126,6 +1199,53 @@ const JobPostsListing = () => {
                 Add New
               </Button>
             </div>
+          </div>
+          <div className="grid grid-cols-5 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbBriefcase size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">879</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbFileCheck size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">23</h6>
+                <span className="font-semibold text-xs">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbFileExcel size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">78</h6>
+                <span className="font-semibold text-xs">Expired Portals</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbFileSmile size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">345</h6>
+                <span className="font-semibold text-xs">Total Views</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbFileLike size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">34</h6>
+                <span className="font-semibold text-xs">Applicants</span>
+              </div>
+            </Card>
           </div>
           <ItemTableTools
             onSearchChange={handleSearchChange}
@@ -1195,8 +1315,8 @@ const JobPostsListing = () => {
                   ? "Saving..."
                   : "Adding..."
                 : editingItem
-                ? "Save"
-                : "Save Job Post"}
+                  ? "Save"
+                  : "Save Job Post"}
             </Button>
           </div>
         }

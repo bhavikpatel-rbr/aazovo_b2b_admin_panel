@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import Select from "@/components/ui/Select";
 import DebounceInput from "@/components/shared/DebouceInput";
-import { Drawer, Form, FormItem, Input, Tag, Dialog } from "@/components/ui"; // Removed Upload as not directly used in this pattern
+import { Drawer, Form, FormItem, Input, Tag, Dialog, Card } from "@/components/ui"; // Removed Upload as not directly used in this pattern
 
 // Icons
 import {
@@ -43,7 +43,10 @@ import {
   TbCancel,
   TbReload,
   TbUserShare,
-  TbSettingsCog, // Added for consistency if needed in drawer titles
+  TbSettingsCog,
+  TbDatabase,
+  TbCalendarWeek,
+  TbSquares, // Added for consistency if needed in drawer titles
 } from "react-icons/tb";
 
 // Types
@@ -217,7 +220,7 @@ const ActionColumn = ({ onEdit, onViewDetail, onDelete, onBlacklist, item }: { o
       </Tooltip>
       {item.status !== "Blacklist" && (
         <Tooltip title="Blacklist">
-            <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`} role="button" onClick={onBlacklist}><TbCancel size={16} /></div>
+          <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`} role="button" onClick={onBlacklist}><TbCancel size={16} /></div>
         </Tooltip>
       )}
       <Tooltip title="Delete">
@@ -238,7 +241,7 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Button title="Clear Filters" icon={<TbReload/>} onClick={onClearFilters}></Button>
+      <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters}></Button>
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
       <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
       <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
@@ -471,20 +474,20 @@ const RowDataListing = () => {
     const validSortKeys: (keyof RowDataItem | 'countryName' | 'categoryName' | 'brandName')[] = ["id", "name", "mobile_no", "email", "status", "quality", "created_at", "updated_at", "country_id", "category_id", "brand_id", "updated_by_name"];
 
     if (order && key && validSortKeys.includes(String(key) as any)) {
-        processedData.sort((a, b) => {
-            let aVal: any, bVal: any;
-            if (key === "created_at" || key === "updated_at") {
-                const dateA = a[key as 'created_at' | 'updated_at'] ? new Date(a[key as 'created_at' | 'updated_at']!).getTime() : 0;
-                const dateB = b[key as 'created_at' | 'updated_at'] ? new Date(b[key as 'created_at' | 'updated_at']!).getTime() : 0;
-                return order === "asc" ? dateA - dateB : dateB - dateA;
-            } else if (key === 'country_id') { aVal = a.country?.name; bVal = b.country?.name; }
-            else if (key === 'category_id') { aVal = a.category?.name; bVal = b.category?.name; }
-            else if (key === 'brand_id') { aVal = a.brand?.name; bVal = b.brand?.name; }
-            else { aVal = a[key as keyof RowDataItem] ?? ""; bVal = b[key as keyof RowDataItem] ?? ""; }
+      processedData.sort((a, b) => {
+        let aVal: any, bVal: any;
+        if (key === "created_at" || key === "updated_at") {
+          const dateA = a[key as 'created_at' | 'updated_at'] ? new Date(a[key as 'created_at' | 'updated_at']!).getTime() : 0;
+          const dateB = b[key as 'created_at' | 'updated_at'] ? new Date(b[key as 'created_at' | 'updated_at']!).getTime() : 0;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else if (key === 'country_id') { aVal = a.country?.name; bVal = b.country?.name; }
+        else if (key === 'category_id') { aVal = a.category?.name; bVal = b.category?.name; }
+        else if (key === 'brand_id') { aVal = a.brand?.name; bVal = b.brand?.name; }
+        else { aVal = a[key as keyof RowDataItem] ?? ""; bVal = b[key as keyof RowDataItem] ?? ""; }
 
-            if (typeof aVal === "number" && typeof bVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal;
-            return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? ""));
-        });
+        if (typeof aVal === "number" && typeof bVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal;
+        return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? ""));
+      });
     }
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number;
@@ -535,9 +538,15 @@ const RowDataListing = () => {
   });
 
   const columns: ColumnDef<RowDataItem>[] = useMemo(() => [
-    { header: 'ID', accessorKey: 'id', enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
-    { header: 'Name', accessorKey: 'name', enableSorting: true, size: 150, cell: (props) => (<span className="font-semibold text-blue-600 dark:text-blue-400">{props.row.original.name}</span>)},
-    { header: 'Mobile No', accessorKey: 'mobile_no', enableSorting: true, size: 130, 
+    // { header: 'ID', accessorKey: 'id', enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
+    { header: 'Name', accessorKey: 'name', enableSorting: true, size: 280, cell: (props) => (
+      <div>
+        <span className="font-semibold text-blue-600 dark:text-blue-400">{props.row.original.id}</span> <br />
+        <span className="">{props.row.original.name}</span>
+      </div>
+  ) },
+    {
+      header: 'Mobile No', accessorKey: 'mobile_no', enableSorting: true, size: 130,
       cell: (props) => {
         const mobileNo = props.getValue<string>();
         const isDuplicate = mobileNo && mobileNoCount[mobileNo] > 1;
@@ -551,25 +560,27 @@ const RowDataListing = () => {
             )}
           </div>
         );
-  }
+      }
 
     },
-    { header: 'Country', accessorKey: 'country_id', enableSorting: true, size: 120, cell: props => props.row.original.country?.name || String(props.getValue()) },
-    { header: 'Category', accessorKey: 'category_id', enableSorting: true, size: 140, cell: props => props.row.original.category?.name || String(props.getValue()) },
-    { header: 'Brand', accessorKey: 'brand_id', enableSorting: true, size: 120, cell: props => props.row.original.brand?.name || String(props.getValue()) },
+    { header: 'Country', accessorKey: 'country_id', enableSorting: true, size: 160, cell: props => props.row.original.country?.name || String(props.getValue()) },
+    { header: 'Category', accessorKey: 'category_id', enableSorting: true, size: 170, cell: props => props.row.original.category?.name || String(props.getValue()) },
+    { header: 'Brand', accessorKey: 'brand_id', enableSorting: true, size: 160, cell: props => props.row.original.brand?.name || String(props.getValue()) },
     { header: 'Quality', accessorKey: 'quality', enableSorting: true, size: 100, cell: props => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find(q => q.value === qVal); return <Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100", qVal === "B" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100", qVal === "C" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100")}>Grade: {qOpt?.label.split(' ')[1] || qVal}</Tag>; } },
     { header: 'Status', accessorKey: 'status', enableSorting: true, size: 110, cell: props => { const sVal = props.getValue<string>(); const sOpt = STATUS_OPTIONS_UI.find(s => s.value === sVal); return <Tag className={classNames("capitalize", statusColors[sVal])}>{sOpt?.label || sVal}</Tag>; } },
-    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, meta: { HeaderClass: "text-red-500" },// Matched size with Domain module
-        cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
-          const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
-          return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
-        },
+    {
+      header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, meta: { HeaderClass: "text-red-500" },// Matched size with Domain module
+      cell: (props) => {
+        const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+        const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
+        return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
+      },
     },
-    { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center", cellClass: "text-center" },
+    {
+      header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center", cellClass: "text-center" },
       cell: props => <ActionColumn item={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} />
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [openEditDrawer, openViewDialog, handleDeleteClick, handleBlacklistClick, countryOptions, categoryOptions, brandOptions]); // Added dependencies
 
   const renderDrawerForm = () => (
@@ -604,8 +615,69 @@ const RowDataListing = () => {
             <h5 className="mb-2 sm:mb-0">Raw Data Management</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
           </div>
+
+          <div className="grid grid-cols-6 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbDatabase size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">879</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbCalendarWeek size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">23</h6>
+                <span className="font-semibold text-xs">Today</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbSquares size={24} />
+              </div>
+              <div>
+                <h6 className="text-pink-500">345</h6>
+                <span className="font-semibold text-xs">Duplicate</span>
+              </div>
+            </Card>
+
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <span className="text-xl">A</span>
+              </div>
+              <div>
+                <h6 className="text-green-500">87</h6>
+                <span className="font-semibold text-xs">Grade A</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <span className="text-xl">B</span>
+              </div>
+              <div>
+                <h6 className="text-orange-500">78</h6>
+                <span className="font-semibold text-xs">Grade B</span>
+              </div>
+            </Card>
+
+
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-yellow-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500">
+                <span className="text-xl">C</span>
+              </div>
+              <div>
+                <h6 className="text-yellow-500">34</h6>
+                <span className="font-semibold text-xs">Grade C</span>
+              </div>
+            </Card>
+          </div>
+
           <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} />
-          <div className="mt-4 flex-grow overflow-auto">
+          <div className="mt-4 flex-grow overflow-auto w-full">
             <DataTable
               columns={columns} data={pageData} loading={tableLoading}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
@@ -631,22 +703,22 @@ const RowDataListing = () => {
         <Form id="rowDataForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28">
           {renderDrawerForm()}
           {editingItem && (
-             <div className="absolute bottom-[4%] w-[92%] left-1/2 transform -translate-x-1/2">
-                <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                    <div>
-                        <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b><br />
-                        <p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p>
-                        <p>{editingItem.updated_by_role || "N/A"}</p>
-                    </div>
-                    <div>
-                        <br />
-                        <span className="font-semibold">Created At:</span>{" "}
-                        <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
-                        <br />
-                        <span className="font-semibold">Updated At:</span>{" "}
-                        <span>{editingItem.updated_at ? new Date(editingItem.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
-                    </div>
+            <div className="absolute bottom-[4%] w-full left-1/2 transform -translate-x-1/2">
+              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                <div>
+                  <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b><br />
+                  <p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p>
+                  <p>{editingItem.updated_by_role || "N/A"}</p>
                 </div>
+                <div>
+                  <br />
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                  <br />
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>{editingItem.updated_at ? new Date(editingItem.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                </div>
+              </div>
             </div>
           )}
         </Form>
@@ -674,7 +746,7 @@ const RowDataListing = () => {
       </Dialog>
 
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400}
-        footer={ <div className="text-right w-full flex justify-end gap-2"> <Button size="sm" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterRowDataForm" type="submit">Apply</Button> </div> } >
+        footer={<div className="text-right w-full flex justify-end gap-2"> <Button size="sm" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterRowDataForm" type="submit">Apply</Button> </div>} >
         <Form id="filterRowDataForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Country" options={countryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Category"><Controller name="filterCategory" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Category" options={categoryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>

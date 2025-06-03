@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select"; // For filter, if needed later
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -30,7 +30,11 @@ import {
   TbPlus,
   TbCloudUpload,
   TbBuildingSkyscraper,
-  TbReload, // Icon for Job Department (example)
+  TbReload,
+  TbBuilding,
+  TbBuildingCog,
+  TbBuildingOff,
+  TbUsers, // Icon for Job Department (example)
 } from "react-icons/tb";
 
 // Types
@@ -205,8 +209,8 @@ const ItemTableTools = ({
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
-  onExport: () => void; 
-  onClearFilters: () => void; 
+  onExport: () => void;
+  onClearFilters: () => void;
 }) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
@@ -287,9 +291,8 @@ const JobDepartmentsSelectedFooter = ({
       <ConfirmDialog
         isOpen={deleteConfirmationOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Job Department${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
+        title={`Delete ${selectedItems.length} Job Department${selectedItems.length > 1 ? "s" : ""
+          }`}
         onClose={handleCancelDelete}
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
@@ -658,8 +661,14 @@ const JobDepartment = () => {
   // Columns for Listing: ID, Name
   const columns: ColumnDef<JobDepartmentItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
       { header: "Department Name", accessorKey: "name", enableSorting: true },
+      { header: "Status", accessorKey: "status", enableSorting: true, size: 100, meta : {HeaderClass: "text-red-500"},
+        cell : ()=>{
+          return  (
+            <Tag className="bg-green-200 text-green-500">Active</Tag>
+          )
+        }
+      },
       {
         header: "Actions",
         id: "action",
@@ -686,6 +695,46 @@ const JobDepartment = () => {
               Add New
             </Button>
           </div>
+
+          <div className="grid grid-cols-4 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbBuilding size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">12</h6>
+                <span className="font-semibold text-xs">Total Departments</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbBuildingCog size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">4</h6>
+                <span className="font-semibold text-xs">Departments with jobs</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbBuildingOff size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">8</h6>
+                <span className="font-semibold text-xs">No jobs posted</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbUsers size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">34</h6>
+                <span className="font-semibold text-xs">Total Applicants</span>
+              </div>
+            </Card>
+          </div>
+
           <ItemTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
@@ -713,7 +762,7 @@ const JobDepartment = () => {
               onSort={handleSort}
               onCheckBoxChange={handleRowSelect}
               onIndeterminateCheckBoxChange={handleAllRowSelect}
-              // noData={!loading && pageData.length === 0}
+            // noData={!loading && pageData.length === 0}
             />
           </div>
         </AdaptiveCard>
@@ -781,12 +830,12 @@ const JobDepartment = () => {
         <div className="absolute bottom-[14%] w-[88%]">
           <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
             <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br/>
+              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
               <p className="text-sm font-semibold">Tushar Joshi</p>
               <p>System Admin</p>
             </div>
-            <div className="w-[210px]"><br/>
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br/>
+            <div className="w-[210px]"><br />
+              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
               <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
             </div>
           </div>
@@ -801,7 +850,7 @@ const JobDepartment = () => {
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            
+
             <div>
               <Button
                 size="sm"
