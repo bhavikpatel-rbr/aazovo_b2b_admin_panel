@@ -558,7 +558,8 @@ const EmailCampaignListing = () => {
       // { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
       { header: "Campaign Name", accessorKey: "campaign_name", size: 220, enableSorting: true, cell: props => props.row.original.campaign_name || <span className="italic text-gray-400">N/A</span> },
       { header: "Template Used", accessorKey: "mail_template.name", size: 200, enableSorting: true, cell: props => props.row.original.mail_template?.name || `ID: ${props.row.original.template_id}` },
-      { header: "Date & Time", accessorKey: "dateTimeDisplay", size: 180, enableSorting: true, cell: props => { 
+      { header: "Date & Time", accessorKey: "dateTimeDisplay", size: 180, enableSorting: true, 
+        cell: props => { 
           const d = props.getValue<Date>(); 
           return d ? (
             <span className="text-xs">
