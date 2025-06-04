@@ -29,12 +29,12 @@ const TrainingSection = ({
     return (
         <Card id="trainingInformation">
             <h4 className="mb-6">Training Information</h4>
-            <div className="flex flex-col gap-8"> {/* Increased gap between sections */}
+            <div className="grid grid-cols-2 gap-6"> {/* Increased gap between sections */}
 
                 {/* Induction Training Section */}
-                <div>
+                <div className=''>
                     <h5 className="mb-4 text-base font-semibold">Induction Training</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    <div className="">
                         {/* Induction Training (Date of Completion) */}
                         <FormItem
                             label="Date of Completion"
@@ -82,7 +82,7 @@ const TrainingSection = ({
                 {/* Department Specific Training Section */}
                 <div>
                     <h5 className="mb-4 text-base font-semibold">Department Specific Training</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    <div className="">
                         {/* Department Specific Training (Date of Completion) */}
                         <FormItem
                             label="Date of Completion"

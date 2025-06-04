@@ -80,9 +80,10 @@ const PersonalInformationSection = ({
         <Card id="personalInformation">
             <h4 className="mb-6">Personal Information</h4>
             <div className="flex flex-col gap-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+                <div className="md:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-4 items-end">
                     {/* Status Select */}
                     <FormItem
+                        className='col-span-6 lg:col-span-4'
                         label="Status"
                         invalid={Boolean(errors.personalInformation?.status)}
                         errorMessage={errors.personalInformation?.status?.message as string}
@@ -105,6 +106,7 @@ const PersonalInformationSection = ({
 
                     {/* Date of Birth */}
                     <FormItem
+                        className='col-span-6 lg:col-span-4'
                         label="Date of Birth"
                         invalid={Boolean(errors.personalInformation?.dateOfBirth)}
                         errorMessage={errors.personalInformation?.dateOfBirth?.message as string}
@@ -127,6 +129,7 @@ const PersonalInformationSection = ({
 
                     {/* Age */}
                     <FormItem
+                        className='col-span-4 lg:col-span-4'
                         label="Age"
                         invalid={Boolean(errors.personalInformation?.age)}
                         errorMessage={errors.personalInformation?.age?.message as string}
@@ -156,6 +159,7 @@ const PersonalInformationSection = ({
 
                     {/* Gender Select */}
                     <FormItem
+                        className='col-span-4 lg:col-span-3'
                         label="Gender"
                         invalid={Boolean(errors.personalInformation?.gender)}
                         errorMessage={errors.personalInformation?.gender?.message as string}
@@ -166,6 +170,7 @@ const PersonalInformationSection = ({
                             rules={{ required: 'Gender is required' }}
                             render={({ field }) => (
                                 <Select
+                                    className='text-nowrap'
                                     placeholder="Select Gender"
                                     options={genderOptions}
                                     value={genderOptions.find(option => option.value === field.value)}
@@ -178,6 +183,7 @@ const PersonalInformationSection = ({
 
                     {/* Marital Status Select */}
                     <FormItem
+                        className='col-span-4 lg:col-span-3'
                         label="Marital Status"
                         invalid={Boolean(errors.personalInformation?.maritalStatus)}
                         errorMessage={errors.personalInformation?.maritalStatus?.message as string}
@@ -189,6 +195,7 @@ const PersonalInformationSection = ({
                             render={({ field }) => (
                                 <Select
                                     placeholder="Select Marital Status"
+                                    className='text-nowrap'
                                     options={maritalStatusOptions}
                                     value={maritalStatusOptions.find(option => option.value === field.value)}
                                     onChange={option => field.onChange(option?.value)}
@@ -200,6 +207,7 @@ const PersonalInformationSection = ({
 
                     {/* Nationality Select */}
                     <FormItem
+                        className='col-span-6 lg:col-span-3'
                         label="Nationality"
                         invalid={Boolean(errors.personalInformation?.nationality)}
                         errorMessage={errors.personalInformation?.nationality?.message as string}
@@ -211,6 +219,7 @@ const PersonalInformationSection = ({
                             render={({ field }) => (
                                 <Select
                                     placeholder="Select Nationality"
+                                    className='text-nowrap'
                                     options={nationalityOptions} // Can be a long list, consider search/async select
                                     value={nationalityOptions.find(option => option.value === field.value)}
                                     onChange={option => field.onChange(option?.value)}
@@ -222,6 +231,7 @@ const PersonalInformationSection = ({
 
                     {/* Blood Group Select */}
                     <FormItem
+                        className='col-span-6 lg:col-span-3'
                         label="Blood Group"
                         invalid={Boolean(errors.personalInformation?.bloodGroup)}
                         errorMessage={errors.personalInformation?.bloodGroup?.message as string}
@@ -235,6 +245,7 @@ const PersonalInformationSection = ({
                                 <Select
                                     placeholder="Select Blood Group"
                                     options={bloodGroupOptions}
+                                    className='text-nowrap'
                                     value={bloodGroupOptions.find(option => option.value === field.value)}
                                     onChange={option => field.onChange(option?.value)}
                                     {...field}
@@ -248,7 +259,7 @@ const PersonalInformationSection = ({
                         label="Permanent Address"
                         invalid={Boolean(errors.personalInformation?.permanentAddress)}
                         errorMessage={errors.personalInformation?.permanentAddress?.message as string}
-                        className="md:col-span-1" // Adjust span if needed
+                        className="col-span-12 lg:col-span-6" // Adjust span if needed
                     >
                         <Controller
                             name={`personalInformation.permanentAddress`}
@@ -271,7 +282,7 @@ const PersonalInformationSection = ({
                         label="Local Address"
                         invalid={Boolean(errors.personalInformation?.localAddress)}
                         errorMessage={errors.personalInformation?.localAddress?.message as string}
-                        className="md:col-span-1" // Adjust span if needed
+                        className="col-span-12 lg:col-span-6" // Adjust span if needed
                     >
                         <Controller
                             name={`personalInformation.localAddress`}
