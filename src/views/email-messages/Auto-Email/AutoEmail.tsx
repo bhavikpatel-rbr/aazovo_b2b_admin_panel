@@ -396,7 +396,7 @@ const AutoEmailListing = () => {
         <Controller name="email_type" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Email Type" options={EMAIL_TYPE_OPTIONS} value={EMAIL_TYPE_OPTIONS.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbMailForward />} />)} />
       </FormItem>
       <FormItem label="User(s)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.user_id} errorMessage={ (currentFormMethods.formState.errors.user_id as any)?.message || (currentFormMethods.formState.errors.user_id as any)?.[0]?.message }>
-        <Controller name="user_id" control={currentFormMethods.control} render={({ field }) => (<Select isMulti placeholder={userOptions.length > 0 ? "Select User(s)" : "Loading Users..."} options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} prefix={<TbUsers />} disabled={userOptions.length === 0 && masterLoadingStatus === "idle"} />)} />
+        <Controller name="user_id" control={currentFormMethods.control} render={({ field }) => (<Select isMulti placeholder={userOptions.length > 0 ? "Select User(s)" : "Loading Users..."} options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} prefix={<TbUsers />} disabled={userOptions.length === 0 && masterLoadingStatus === "loading"} />)} />
       </FormItem>
       <FormItem label="Status" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
         <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={AUTO_EMAIL_STATUS_OPTIONS} value={AUTO_EMAIL_STATUS_OPTIONS.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbToggleRight />} />)} />
@@ -414,7 +414,7 @@ const AutoEmailListing = () => {
           </div>
           <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
-            <AutoEmailsTable columns={columns} data={pageData} loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting || isChangingStatus} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
+            <AutoEmailsTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting || isChangingStatus} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -427,7 +427,7 @@ const AutoEmailListing = () => {
         footer={ <div className="text-right w-full flex justify-end gap-2"> <Button size="sm" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterAutoEmailForm" type="submit">Apply</Button> </div> } >
         <Form id="filterAutoEmailForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Email Type"><Controller name="filterEmailTypes" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Email Type" options={EMAIL_TYPE_OPTIONS} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="User"><Controller name="filterUserIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder={userOptions.length > 0 ? "Any User" : "Loading Users..."} options={userOptions} value={field.value || []} onChange={val => field.onChange(val || [])} disabled={userOptions.length === 0 && masterLoadingStatus === "idle"} />)} /></FormItem>
+          <FormItem label="User"><Controller name="filterUserIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder={userOptions.length > 0 ? "Any User" : "Loading Users..."} options={userOptions} value={field.value || []} onChange={val => field.onChange(val || [])} disabled={userOptions.length === 0 && masterLoadingStatus === "loading"} />)} /></FormItem>
           <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={AUTO_EMAIL_STATUS_OPTIONS} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
         </Form>
       </Drawer>

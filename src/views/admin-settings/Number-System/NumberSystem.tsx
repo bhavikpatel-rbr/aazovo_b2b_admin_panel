@@ -540,7 +540,7 @@ const NumberSystems = () => {
     </div>
   );
 
-  const tableLoading = masterLoadingStatus === "idle" || isSubmitting /*|| isDeleting // Commented out */;
+  const tableLoading = masterLoadingStatus === "loading" || isSubmitting /*|| isDeleting // Commented out */;
 
   return (
     <>

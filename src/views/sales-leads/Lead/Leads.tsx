@@ -416,7 +416,7 @@ const LeadsListing = () => {
     },
   ], [openViewDialog, handleOpenEditLeadPage, handleDeleteClick, openAssignDrawer, openChangeStatusDrawer, handleConvertToOpportunity]);
 
-  const tableIsLoading = masterLoadingStatus === "idle" || masterLoadingStatus === 'pending' || isSubmittingDrawer || isProcessingDelete;
+  const tableIsLoading = masterLoadingStatus === "loading" || masterLoadingStatus === 'pending' || isSubmittingDrawer || isProcessingDelete;
 
   return (
     <>

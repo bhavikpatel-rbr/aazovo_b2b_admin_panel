@@ -266,7 +266,7 @@ const CreateBuyer = () => {
   };
   
   //isLoadingOptions will be true if initial data hasn't been fetched OR master slice is still loading
-  const isLoadingOptions = !initialDataFetched || masterLoadingStatus === "idle";
+  const isLoadingOptions = !initialDataFetched || masterLoadingStatus === "loading";
 
 
   if (isLoadingOptions && !initialDataFetched) { // Show full page loader only on initial absolute load
@@ -330,7 +330,7 @@ const CreateBuyer = () => {
                     {...field}
                     placeholder="Select Product"
                     options={productOptions}
-                    isLoading={masterLoadingStatus === "idle" && productOptions.length === 0}
+                    isLoading={masterLoadingStatus === "loading" && productOptions.length === 0}
                     value={productOptions.find(opt => opt.value === field.value) || null}
                     onChange={(option) => field.onChange(option ? option.value : "")}
                     isClearable
@@ -352,7 +352,7 @@ const CreateBuyer = () => {
                     {...field}
                     placeholder="Select Category"
                     options={categoryOptions}
-                    isLoading={masterLoadingStatus === "idle" && categoryOptions.length === 0}
+                    isLoading={masterLoadingStatus === "loading" && categoryOptions.length === 0}
                     value={categoryOptions.find(opt => opt.value === field.value) || null}
                     onChange={(option) => field.onChange(option ? option.value : "")}
                     isClearable
@@ -374,7 +374,7 @@ const CreateBuyer = () => {
                     {...field}
                     placeholder="Select Subcategory"
                     options={subcategoryOptionsForForm}
-                    isLoading={masterLoadingStatus === "idle" && watchedProductCategoryId !== null && subcategoryOptionsForForm.length === 0}
+                    isLoading={masterLoadingStatus === "loading" && watchedProductCategoryId !== null && subcategoryOptionsForForm.length === 0}
                     isDisabled={!watchedProductCategoryId || (masterLoadingStatus !== "idle" && subcategoryOptionsForForm.length === 0 && !!watchedProductCategoryId) }
                     value={subcategoryOptionsForForm.find(opt => opt.value === field.value) || null}
                     onChange={(option) => field.onChange(option ? option.value : null)}
@@ -397,7 +397,7 @@ const CreateBuyer = () => {
                     {...field}
                     placeholder="Select Brand"
                     options={brandOptions}
-                    isLoading={masterLoadingStatus === "idle" && brandOptions.length === 0}
+                    isLoading={masterLoadingStatus === "loading" && brandOptions.length === 0}
                     value={brandOptions.find(opt => opt.value === field.value) || null}
                     onChange={(option) => field.onChange(option ? option.value : "")}
                     isClearable

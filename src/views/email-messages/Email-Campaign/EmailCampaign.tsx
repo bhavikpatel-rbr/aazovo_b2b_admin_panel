@@ -733,7 +733,7 @@ const EmailCampaignListing = () => {
             <EmailCampaignsTable 
                 columns={columns} 
                 data={pageData} 
-                loading={masterLoadingStatus === "idle" || masterLoadingStatus === "idle" || isSubmittingCampaign || isDeleting} 
+                loading={masterLoadingStatus === "loading" || isSubmittingCampaign || isDeleting} 
                 pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} 
                 onPaginationChange={handlePaginationChange} 
                 onSelectChange={handleSelectPageSizeChange} // Corrected, this is for DataTable page size selector

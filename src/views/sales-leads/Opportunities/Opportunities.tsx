@@ -1809,7 +1809,7 @@ const Opportunities = () => {
             selectable
             columns={columns}
             data={pageData}
-            loading={masterLoadingStatus === 'idle'}
+            loading={masterLoadingStatus === "loading"}
             pagingData={{ total, pageIndex: currentTableData.pageIndex as number, pageSize: currentTableData.pageSize as number }}
             onPaginationChange={handlePaginationChange}
             onSelectChange={handleSelectChange}

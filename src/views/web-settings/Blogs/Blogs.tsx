@@ -744,13 +744,13 @@ const Blogs = () => {
               invalid={!!drawer.methods.formState.errors.icon} errorMessage={drawer.methods.formState.errors.icon?.message as string | undefined}
             >
               {drawer.type === "edit" && iconPreview && editingBlog?.icon_full_path === iconPreview && (
-                <div className="mb-2 flex items-center gap-2">
-                  <img src={iconPreview} alt="Current Icon" className="h-16 w-20 object-contain border border-primary rounded" />
-                  <Button icon={<TbX />} size="xs" color="red" type="button" onClick={() => { if (iconPreview) URL.revokeObjectURL(iconPreview); setIconPreview(null); drawer.methods.setValue("icon", null, { shouldValidate: true }); }}>Remove Current Icon</Button>
+                <div className="text-right">
+                  <img src={iconPreview} alt="Current Icon"  className="w-[460px] h-[auto] border p-1 rounded-md mt-2" />
+                  <Button icon={<TbX />} size="xs" color="red" className="mt-2 mb-2" type="button" onClick={() => { if (iconPreview) URL.revokeObjectURL(iconPreview); setIconPreview(null); drawer.methods.setValue("icon", null, { shouldValidate: true }); }}>Remove Current Icon</Button>
                 </div>
               )}
               {iconPreview && (drawer.methods.watch("icon") instanceof File || (drawer.type === "edit" && editingBlog?.icon_full_path !== iconPreview)) && (
-                <img src={iconPreview} alt="Icon Preview" className="mt-2 mb-2 h-24 w-auto object-contain border rounded" />
+                <img src={iconPreview} alt="Icon Preview" className="w-[460px] h-[auto] border p-1 rounded-md mt-2 mb-2"/>
               )}
               {!iconPreview && drawer.type === "edit" && editingBlog?.icon_full_path && !drawer.methods.watch("icon") && (<p className="text-xs text-gray-500 mb-1">Current icon will be removed as "Remove Current Icon" was clicked.</p>)}
               <Input type="file" accept="image/*" onChange={(e) => handleIconChange(e, drawer.methods)} className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
@@ -800,8 +800,8 @@ const Blogs = () => {
         <p>Are you sure you want to delete the blog "<strong>{blogToDelete?.title}</strong>"? This action cannot be undone.</p>
       </ConfirmDialog>
 
-      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} bodyOpenClassName="overflow-hidden" title="Blog Icon" footer={<Button onClick={closeImageViewer}>Close</Button>} width={600}>
-        {imageToView ? (<img src={imageToView} alt="Blog Icon Full" className="max-w-full max-h-[80vh] mx-auto object-contain" />) : (<p>No image to display.</p>)}
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} bodyOpenClassName="overflow-hidden" title="Blog Icon" footer={<Button onClick={closeImageViewer}>Close</Button>} width={768} height={460}>
+        {imageToView ? (<img src={imageToView} alt="Blog Icon Full" className="max-w-full pt-10" />) : (<p>No image to display.</p>)}
       </Dialog>
 
       {/* --- Export Reason Modal --- */}

@@ -799,7 +799,7 @@ const DesignationListing = () => {
 
   // DataTable loading state should reflect Redux loading status and local submitting/deleting states
   const tableIsLoading =
-    masterLoadingStatus === "idle" || isSubmitting || isDeleting;
+    masterLoadingStatus === "loading" || isSubmitting || isDeleting;
 
   return (
     <>
@@ -852,7 +852,7 @@ const DesignationListing = () => {
       <DesignationsSelectedFooter
         selectedItems={selectedItems}
         onDeleteSelected={handleDeleteSelected}
-        disabled={isDeleting || masterLoadingStatus === "idle"}
+        disabled={isDeleting || masterLoadingStatus === "loading"}
       />
 
       <Drawer

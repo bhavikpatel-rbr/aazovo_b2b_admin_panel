@@ -1004,7 +1004,7 @@ const WallListing = () => {
             <WallTable
               columns={columns}
               data={pageData}
-              loading={masterLoadingStatus === 'idle' || isSubmitting || isDeleting}
+              loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}

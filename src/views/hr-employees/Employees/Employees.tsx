@@ -1213,7 +1213,7 @@ const EmployeesListing = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "idle" || isSubmitting || isDeleting
+                masterLoadingStatus === "loading" || isSubmitting || isDeleting
               }
               pagingData={{
                 total,

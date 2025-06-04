@@ -621,7 +621,7 @@ const TrendingCarousel = () => {
                     Assigned to Task
                 </Button>
                 </Link>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "idle" || isSubmitting || isDeleting}> Add New </Button>
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "loading" || isSubmitting || isDeleting}> Add New </Button>
             </div>
           </div>
           <ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchPlaceholder="Quick Search..." onClearSearch={handleClearSearch} />
@@ -629,7 +629,7 @@ const TrendingCarousel = () => {
             <DataTable
               columns={columns}
               data={pageData}
-              loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting}
+              loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting}
               pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectable
               checkboxChecked={(row: TrendingCarouselItemData) => selectedItems.some((selected) => selected.id === row.id)}
@@ -643,9 +643,9 @@ const TrendingCarousel = () => {
         </AdaptiveCard>
       </Container>
 
-      <TrendingCarouselSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting || masterLoadingStatus === "idle"} />
+      <TrendingCarouselSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting || masterLoadingStatus === "loading"} />
 
-      <Drawer title="Add Trending Carousel" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={600}
+      <Drawer title="Add Trending Carousel" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={480}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button"> Cancel </Button>
@@ -669,7 +669,7 @@ const TrendingCarousel = () => {
                 />
               )}
             />
-            {imagePreviewUrl && (<Avatar src={imagePreviewUrl} size={100} shape="square" className="mt-2 border border-gray-200 dark:border-gray-600" />)}
+            {imagePreviewUrl && (<Avatar src={imagePreviewUrl} className="w-[430px] h-[auto] border p-1 rounded-md mt-2" shape="square" />)}
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"> Max file size 5MB. Accepted: .jpg, .png, .webp, .gif </p>
           </FormItem>
           <FormItem label="Link (Optional)" invalid={!!formMethods.formState.errors.links} errorMessage={formMethods.formState.errors.links?.message}>
@@ -678,7 +678,7 @@ const TrendingCarousel = () => {
         </Form>
       </Drawer>
 
-      <Drawer title="Edit Trending Carousel" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={600}
+      <Drawer title="Edit Trending Carousel" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={480}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button"> Cancel </Button>

@@ -784,7 +784,7 @@ const Documents = () => {
               columns={columns}
               data={pageData}
               loading={
-                masterLoadingStatus === "idle" || isSubmitting || isDeleting
+                masterLoadingStatus === "loading" || isSubmitting || isDeleting
               }
               pagingData={{
                 total: total,
