@@ -2322,3 +2322,30 @@ export const getOpportunitiesAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+export const getWallItemByIdAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/wall/enquiry/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const getOffersAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/offer`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getDemandsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/demand`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}

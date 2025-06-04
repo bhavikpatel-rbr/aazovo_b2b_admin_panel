@@ -1,25 +1,26 @@
-// src/views/your-path/OffersDemands.tsx (New file name)
+// src/views/your-path/OffersDemands.tsx
 
-import React, { useState, useMemo, useCallback, Ref } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Ensure react-router-dom is installed
-import cloneDeep from "lodash/cloneDeep"; // Ensure lodash is installed
-import classNames from "classnames"; // Ensure classnames is installed
+import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import cloneDeep from "lodash/cloneDeep";
+import classNames from "classnames";
 
-// UI Components (Ensure these paths are correct for your project)
+// UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import Tooltip from "@/components/ui/Tooltip";
-// import Tag from '@/components/ui/Tag'; // Not needed for these fields
 import Button from "@/components/ui/Button";
-import Dialog from "@/components/ui/Dialog"; // Keep for potential edit/view modals
-import Avatar from "@/components/ui/Avatar"; // Keep if 'Created By' has an avatar
+import Dialog from "@/components/ui/Dialog";
+import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast"; // Ensure toast setup exists
+import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import { TbFilter, TbUserCircle } from "react-icons/tb"; // Placeholder icon for createdBy
+import { Dropdown } from "@/components/ui";
+import Spinner from "@/components/ui/Spinner"; // Import Spinner
+
 // Icons
 import {
   TbPencil,
@@ -29,7 +30,19 @@ import {
   TbChecks,
   TbSearch,
   TbPlus,
-} from "react-icons/tb"; // Ensure react-icons is installed
+  TbFilter,
+  TbUserCircle,
+  TbRefresh, // For a potential refresh button
+} from "react-icons/tb";
+
+// Redux (VERIFY PATHS)
+import { useAppDispatch } from '@/reduxtool/store'; // Assuming useAppDispatch is correctly typed
+import {
+    getOffersAction,
+    getDemandsAction,
+} from '@/reduxtool/master/middleware'; // VERIFY PATH
+import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
+import { useSelector } from 'react-redux';
 
 // Types
 import type {
@@ -37,136 +50,63 @@ import type {
   ColumnDef,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common"; // Ensure this type path is correct
-import CreateOfferPage from "./OfferCreate/CreateOffer";
-import { Dropdown } from "@/components/ui";
+import type { TableQueries } from "@/@types/common";
 
-// --- Define Item Type (Table Row Data) ---
-// Generic type for both Offers and Demands
-export type OfferDemandItem = {
-  id: string; // Unique ID for the offer/demand
-  type: "Offer" | "Demand"; // To differentiate data source
-  name: string; // Name of the offer/demand item
-  createdBy: string; // Name or ID of the user who created it
-  createdDate: Date;
+// --- API Item Types (Assumed Structure - Place this in a types file if shared) ---
+export type ApiCreatorInfo = {
+  userId?: string;
+  userName: string;
 };
-// --- End Item Type Definition ---
+
+export type ApiGroupItem = {
+  groupName: string;
+  items: string[];
+};
+
+export type ApiOfferItem = {
+  id: string;
+  offerName: string;
+  createdBy: ApiCreatorInfo;
+  assignedTo?: ApiCreatorInfo;
+  createdAt: string; // ISO date string
+  updatedAt?: string;
+  numberOfBuyers?: number;
+  numberOfSellers?: number;
+  groups?: ApiGroupItem[];
+};
+
+export type ApiDemandItem = {
+  id: string;
+  demandName: string;
+  requestedBy: ApiCreatorInfo; // Potentially different field name for creator
+  assignedTo?: ApiCreatorInfo;
+  createdAt: string; // ISO date string
+  updatedAt?: string;
+  numberOfBuyers?: number;
+  numberOfSellers?: number;
+  groups?: ApiGroupItem[];
+};
+// --- End API Item Types ---
+
+// --- Unified Table Row Data (OfferDemandItem) ---
+export type OfferDemandItem = {
+  id: string;
+  type: "Offer" | "Demand";
+  name: string;
+  createdByInfo: ApiCreatorInfo;
+  assignedToInfo?: ApiCreatorInfo;
+  createdDate: Date;
+  updatedDate?: Date;
+  numberOfBuyers?: number;
+  numberOfSellers?: number;
+  groups?: ApiGroupItem[];
+  originalOffer?: ApiOfferItem; // Store original for detailed views or actions
+  originalDemand?: ApiDemandItem;
+};
+// --- End Unified Table Row Data ---
+
 
 // --- Constants ---
-const initialDummyAll: OfferDemandItem[] = [
-  {
-    id: "OFF001",
-    type: "Offer",
-    name: "Discount on Mobiles",
-    createdBy: "AdminUser",
-    createdDate: new Date(2023, 10, 1, 10, 0),
-  },
-  {
-    id: "OFF002",
-    type: "Demand",
-    name: "Free Shipping Weekend",
-    createdBy: "MarketingTeam",
-    createdDate: new Date(2023, 9, 28, 15, 30),
-  },
-  {
-    id: "OFF003",
-    type: "Demand",
-    name: "BOGO on T-Shirts",
-    createdBy: "SalesDept",
-    createdDate: new Date(2023, 9, 25, 9, 0),
-  },
-  {
-    id: "OFF004",
-    type: "Offer",
-    name: "Clearance Sale - Home Goods",
-    createdBy: "AdminUser",
-    createdDate: new Date(2023, 9, 20, 12, 0),
-  },
-  {
-    id: "OFF005",
-    type: "Demand",
-    name: "New User Welcome Credit",
-    createdBy: "MarketingTeam",
-    createdDate: new Date(2023, 10, 3, 8, 0),
-  },
-];
-const initialDummyOffers: OfferDemandItem[] = [
-  {
-    id: "OFF001",
-    type: "Offer",
-    name: "Discount on Laptops",
-    createdBy: "AdminUser",
-    createdDate: new Date(2023, 10, 1, 10, 0),
-  },
-  {
-    id: "OFF002",
-    type: "Offer",
-    name: "Free Shipping Weekend",
-    createdBy: "MarketingTeam",
-    createdDate: new Date(2023, 9, 28, 15, 30),
-  },
-  {
-    id: "OFF003",
-    type: "Offer",
-    name: "BOGO on T-Shirts",
-    createdBy: "SalesDept",
-    createdDate: new Date(2023, 9, 25, 9, 0),
-  },
-  {
-    id: "OFF004",
-    type: "Offer",
-    name: "Clearance Sale - Home Goods",
-    createdBy: "AdminUser",
-    createdDate: new Date(2023, 9, 20, 12, 0),
-  },
-  {
-    id: "OFF005",
-    type: "Offer",
-    name: "New User Welcome Credit",
-    createdBy: "MarketingTeam",
-    createdDate: new Date(2023, 10, 3, 8, 0),
-  },
-];
-
-const initialDummyDemands: OfferDemandItem[] = [
-  {
-    id: "DEM001",
-    type: "Demand",
-    name: "Request for Bulk Purchase - Chairs",
-    createdBy: "BuyerX",
-    createdDate: new Date(2023, 10, 2, 11, 15),
-  },
-  {
-    id: "DEM002",
-    type: "Demand",
-    name: "Inquiry for Custom Software Dev",
-    createdBy: "CompanyY",
-    createdDate: new Date(2023, 10, 1, 16, 45),
-  },
-  {
-    id: "DEM003",
-    type: "Demand",
-    name: "Need Suppliers for Organic Coffee",
-    createdBy: "RetailerZ",
-    createdDate: new Date(2023, 9, 29, 10, 30),
-  },
-  {
-    id: "DEM004",
-    type: "Demand",
-    name: "Sourcing Vintage Camera Parts",
-    createdBy: "CollectorB",
-    createdDate: new Date(2023, 9, 27, 14, 0),
-  },
-  {
-    id: "DEM005",
-    type: "Demand",
-    name: "Partnership Opportunity - Logistics",
-    createdBy: "PartnerA",
-    createdDate: new Date(2023, 10, 3, 9, 20),
-  },
-];
-
-// Tab Definitions
 const TABS = {
   ALL: "all",
   OFFER: "offer",
@@ -174,30 +114,61 @@ const TABS = {
 };
 // --- End Constants ---
 
-// --- Reusable ActionColumn Component ---
+// Helper to transform API Offer to OfferDemandItem
+const transformApiOffer = (apiOffer: ApiOfferItem): OfferDemandItem => ({
+  id: apiOffer.id,
+  type: "Offer",
+  name: apiOffer.offerName,
+  createdByInfo: apiOffer.createdBy,
+  assignedToInfo: apiOffer.assignedTo,
+  createdDate: new Date(apiOffer.createdAt),
+  updatedDate: apiOffer.updatedAt ? new Date(apiOffer.updatedAt) : undefined,
+  numberOfBuyers: apiOffer.numberOfBuyers,
+  numberOfSellers: apiOffer.numberOfSellers,
+  groups: apiOffer.groups,
+  originalOffer: apiOffer,
+});
+
+// Helper to transform API Demand to OfferDemandItem
+const transformApiDemand = (apiDemand: ApiDemandItem): OfferDemandItem => ({
+  id: apiDemand.id,
+  type: "Demand",
+  name: apiDemand.demandName,
+  createdByInfo: apiDemand.requestedBy, // Use appropriate field
+  assignedToInfo: apiDemand.assignedTo,
+  createdDate: new Date(apiDemand.createdAt),
+  updatedDate: apiDemand.updatedAt ? new Date(apiDemand.updatedAt) : undefined,
+  numberOfBuyers: apiDemand.numberOfBuyers,
+  numberOfSellers: apiDemand.numberOfSellers,
+  groups: apiDemand.groups,
+  originalDemand: apiDemand,
+});
+
+
+// --- Reusable ActionColumn Component (No changes needed here) ---
 const ActionColumn = ({
   onEdit,
   onClone,
   onDelete,
-  onViewDetail,
+  // onViewDetail, // Can be handled by onEdit or a dedicated view page
 }: {
   onEdit: () => void;
-  onClone?: () => void; // Keep clone optional
+  onClone?: () => void;
   onDelete: () => void;
-  onViewDetail: () => void;
+  // onViewDetail: () => void; // If you have a separate read-only view
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
+      <Tooltip title="Edit / View">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
-          onClick={onEdit}
+          onClick={onEdit} // Combined Edit/View for simplicity, or use onViewDetail
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="View">
+      {/* <Tooltip title="View">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
@@ -205,11 +176,12 @@ const ActionColumn = ({
         >
           <TbEye />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Tooltip title="Share">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
+          onClick={() => toast.push(<Notification title="Share Clicked" type="info">Feature coming soon!</Notification>)}
         >
           <TbShare />
         </div>
@@ -220,21 +192,18 @@ const ActionColumn = ({
           role="button"
         >
           <Dropdown renderTitle={<TbDotsVertical />} >
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add in Active</Dropdown.Item>
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Schedule</Dropdown.Item>
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">Add Task</Dropdown.Item>
-            <Dropdown.Item style={{height: "auto"}} className="py-2 text-xs">View Alert</Dropdown.Item>
+            <Dropdown.Item eventKey="active" style={{height: "auto"}} className="py-2 text-xs">Add in Active</Dropdown.Item>
+            <Dropdown.Item eventKey="schedule" style={{height: "auto"}} className="py-2 text-xs">Add Schedule</Dropdown.Item>
+            <Dropdown.Item eventKey="task" style={{height: "auto"}} className="py-2 text-xs">Add Task</Dropdown.Item>
+            <Dropdown.Item eventKey="alert" style={{height: "auto"}} className="py-2 text-xs">View Alert</Dropdown.Item>
           </Dropdown>
         </div>
       </Tooltip>
-      
     </div>
   );
 };
-// --- End ActionColumn ---
 
-// --- ItemTable Component ---
-// (Implementation remains the same, using generic 'Item' names)
+// --- ItemTable Component (No changes needed here) ---
 const ItemTable = ({
   columns,
   data,
@@ -247,16 +216,16 @@ const ItemTable = ({
   onRowSelect,
   onAllRowSelect,
 }: {
-  columns: ColumnDef<OfferDemandItem>[]; // Use correct type
+  columns: ColumnDef<OfferDemandItem>[];
   data: OfferDemandItem[];
   loading: boolean;
   pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: OfferDemandItem[]; // Use correct type
+  selectedItems: OfferDemandItem[];
   onPaginationChange: (page: number) => void;
   onSelectChange: (value: number) => void;
   onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: OfferDemandItem) => void; // Use correct type
-  onAllRowSelect: (checked: boolean, rows: Row<OfferDemandItem>[]) => void; // Use correct type
+  onRowSelect: (checked: boolean, row: OfferDemandItem) => void;
+  onAllRowSelect: (checked: boolean, rows: Row<OfferDemandItem>[]) => void;
 }) => {
   return (
     <DataTable
@@ -277,9 +246,8 @@ const ItemTable = ({
     />
   );
 };
-// --- End ItemTable ---
 
-// --- ItemSearch Component ---
+// --- ItemSearch Component (No changes needed here) ---
 type ItemSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -289,7 +257,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
     return (
       <DebouceInput
         ref={ref}
-        placeholder="Quick Search..."
+        placeholder="Quick Search (ID, Name, Creator)..."
         suffix={<TbSearch className="text-lg" />}
         onChange={(e) => onInputChange(e.target.value)}
       />
@@ -297,9 +265,8 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
   }
 );
 ItemSearch.displayName = "ItemSearch";
-// --- End ItemSearch ---
 
-// --- ItemTableTools Component ---
+// --- ItemTableTools Component (No changes needed here) ---
 const ItemTableTools = ({
   onSearchChange,
 }: {
@@ -313,41 +280,20 @@ const ItemTableTools = ({
     </div>
   );
 };
-// --- End ItemTableTools ---
 
 // --- ItemActionTools Component ---
 const ItemActionTools = ({
-  allItems,
-  activeTab,
+  onRefresh, // Add refresh handler
 }: {
-  allItems: OfferDemandItem[];
-  activeTab: string;
+  onRefresh: () => void;
 }) => {
   const navigate = useNavigate();
-  // CSV Prep
-  const csvData = useMemo(() => {
-    /* ... prep logic ... */
-  }, [allItems]);
-  const csvHeaders = [
-    /* ... headers ... */
-  ];
-
-  const handleAddItem = () => {
-    const targetRoute =
-      activeTab === TABS.OFFER
-        ? "/sales-leads/offers/create"
-        : "/sales-leads/demands/create";
-    console.log(
-      `Navigate to Add New ${
-        activeTab === TABS.OFFER ? "Offer" : "Demand"
-      } page: ${targetRoute}`
-    );
-    navigate(targetRoute);
-  };
 
   return (
     <div className="flex flex-col md:flex-row gap-2">
-      {/* <CSVLink ... > Download </Button> </CSVLink> */}
+      <Button icon={<TbRefresh />} onClick={onRefresh} title="Refresh Data">
+        Refresh
+      </Button>
       <Button icon={<TbFilter />} block>
         Filter
       </Button>
@@ -360,17 +306,14 @@ const ItemActionTools = ({
     </div>
   );
 };
-// --- End ItemActionTools ---
 
-// --- ItemSelected Component ---
+// --- ItemSelected Component (No changes needed here, uses activeTab for itemType) ---
 const ItemSelected = ({
   selectedItems,
-  setSelectedItems,
   onDeleteSelected,
   activeTab,
 }: {
   selectedItems: OfferDemandItem[];
-  setSelectedItems: React.Dispatch<React.SetStateAction<OfferDemandItem[]>>;
   onDeleteSelected: () => void;
   activeTab: string;
 }) => {
@@ -384,7 +327,8 @@ const ItemSelected = ({
 
   if (selectedItems.length === 0) return null;
 
-  const itemType = activeTab === TABS.OFFER ? "Offer" : "Demand";
+  const itemType = activeTab === TABS.OFFER ? "Offer" : (activeTab === TABS.DEMAND ? "Demand" : "Item");
+
 
   return (
     <>
@@ -439,20 +383,26 @@ const ItemSelected = ({
     </>
   );
 };
-// --- End ItemSelected ---
 
 // --- Main OffersDemands Component ---
 const OffersDemands = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
-  // --- Lifted State ---
-  const [isLoading, setIsLoading] = useState(false);
-  const [allData, setAllData] =
-    useState<OfferDemandItem[]>(initialDummyAll);
-  const [offersData, setOffersData] =
-    useState<OfferDemandItem[]>(initialDummyOffers);
-  const [demandsData, setDemandsData] =
-    useState<OfferDemandItem[]>(initialDummyDemands);
+  // --- Redux State ---
+  const {
+    Offers = [], // Default to empty array
+    Demands = [], // Default to empty array
+    offersStatus,
+    demandsStatus,
+    offersError,
+    demandsError,
+  } = useSelector(masterSelector);
+
+  // --- Local State for UI & Table Config ---
+  const [transformedOffersData, setTransformedOffersData] = useState<OfferDemandItem[]>([]);
+  const [transformedDemandsData, setTransformedDemandsData] = useState<OfferDemandItem[]>([]);
+
   const [offerTableData, setOfferTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
@@ -465,41 +415,94 @@ const OffersDemands = () => {
     sort: { order: "", key: "" },
     query: "",
   });
+    const [allTableData, setAllTableData] = useState<TableQueries>({ // For 'All' tab
+    pageIndex: 1,
+    pageSize: 10,
+    sort: { order: "", key: "" },
+    query: "",
+  });
   const [selectedOffers, setSelectedOffers] = useState<OfferDemandItem[]>([]);
   const [selectedDemands, setSelectedDemands] = useState<OfferDemandItem[]>([]);
-  const [currentTab, setCurrentTab] = useState<string>(TABS.OFFER);
-  // --- End Lifted State ---
+  const [selectedAll, setSelectedAll] = useState<OfferDemandItem[]>([]); // For 'All' tab
 
-  // --- Derived State ---
-  const currentItems = useMemo(
-    () => (currentTab === TABS.ALL ? allData : currentTab === TABS.OFFER ? offersData : demandsData),
-    [currentTab, offersData, demandsData]
-  );
-  const currentTableData = useMemo(
-    () => (currentTab === TABS.OFFER ? offerTableData : demandTableData),
-    [currentTab, offerTableData, demandTableData]
-  );
-  const currentSelectedItems = useMemo(
-    () => (currentTab === TABS.OFFER ? selectedOffers : selectedDemands),
-    [currentTab, selectedOffers, selectedDemands]
-  );
-  const setCurrentItems = useMemo(
-    () => (currentTab === TABS.OFFER ? setOffersData : setDemandsData),
-    [currentTab]
-  );
-  const setCurrentTableData = useMemo(
-    () => (currentTab === TABS.OFFER ? setOfferTableData : setDemandTableData),
-    [currentTab]
-  );
-  const setCurrentSelectedItems = useMemo(
-    () => (currentTab === TABS.OFFER ? setSelectedOffers : setSelectedDemands),
-    [currentTab]
-  );
+  const [currentTab, setCurrentTab] = useState<string>(TABS.OFFER);
+  // --- End State ---
+
+  // Fetch data on mount and when refresh is triggered
+  const fetchData = useCallback(() => {
+    dispatch(getOffersAction());
+    dispatch(getDemandsAction());
+  }, [dispatch]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Process and set transformed data when API data or status changes
+  useEffect(() => {
+    if (offersStatus === 'succeeded' && Array.isArray(Offers)) {
+      setTransformedOffersData(Offers.map(transformApiOffer));
+    }
+    if (offersStatus === 'failed' && offersError) {
+      toast.push(<Notification title="Error Fetching Offers" type="danger">{offersError}</Notification>);
+    }
+  }, [Offers, offersStatus, offersError]);
+
+  useEffect(() => {
+    if (demandsStatus === 'succeeded' && Array.isArray(Demands)) {
+      setTransformedDemandsData(Demands.map(transformApiDemand));
+    }
+    if (demandsStatus === 'failed' && demandsError) {
+      toast.push(<Notification title="Error Fetching Demands" type="danger">{demandsError}</Notification>);
+    }
+  }, [Demands, demandsStatus, demandsError]);
+
+  const allTransformedData = useMemo(() => {
+    return [...transformedOffersData, ...transformedDemandsData];
+  }, [transformedOffersData, transformedDemandsData]);
+
+
+  // --- Derived State for Current Tab ---
+  const currentItems = useMemo(() => {
+    if (currentTab === TABS.ALL) return allTransformedData;
+    if (currentTab === TABS.OFFER) return transformedOffersData;
+    if (currentTab === TABS.DEMAND) return transformedDemandsData;
+    return [];
+  }, [currentTab, allTransformedData, transformedOffersData, transformedDemandsData]);
+
+  const currentTableData = useMemo(() => {
+    if (currentTab === TABS.ALL) return allTableData;
+    if (currentTab === TABS.OFFER) return offerTableData;
+    if (currentTab === TABS.DEMAND) return demandTableData;
+    return offerTableData; // Default
+  }, [currentTab, allTableData, offerTableData, demandTableData]);
+
+  const currentSelectedItems = useMemo(() => {
+    if (currentTab === TABS.ALL) return selectedAll;
+    if (currentTab === TABS.OFFER) return selectedOffers;
+    if (currentTab === TABS.DEMAND) return selectedDemands;
+    return [];
+  }, [currentTab, selectedAll, selectedOffers, selectedDemands]);
+
+  const setCurrentTableData = useMemo(() => {
+    if (currentTab === TABS.ALL) return setAllTableData;
+    if (currentTab === TABS.OFFER) return setOfferTableData;
+    if (currentTab === TABS.DEMAND) return setDemandTableData;
+    return setOfferTableData; // Default
+  }, [currentTab]);
+
+  const setCurrentSelectedItems = useMemo(() => {
+    if (currentTab === TABS.ALL) return setSelectedAll;
+    if (currentTab === TABS.OFFER) return setSelectedOffers;
+    if (currentTab === TABS.DEMAND) return setSelectedDemands;
+    return setSelectedOffers; // Default
+  }, [currentTab]);
   // --- End Derived State ---
 
-  // --- Memoized Data Processing ---
+
+  // --- Memoized Data Processing (Search, Sort, Paginate) ---
   const { pageData, total } = useMemo(() => {
-    let processedData = [...currentItems];
+    let processedData = [...currentItems]; // Use a copy for manipulation
 
     // Apply Search
     if (currentTableData.query) {
@@ -508,30 +511,40 @@ const OffersDemands = () => {
         (item) =>
           item.id.toLowerCase().includes(query) ||
           item.name.toLowerCase().includes(query) ||
-          item.createdBy.toLowerCase().includes(query)
+          item.createdByInfo.userName.toLowerCase().includes(query)
       );
     }
 
     // Apply Sorting
     const { order, key } = currentTableData.sort as OnSortParam;
     if (order && key) {
-      const sortedData = [...processedData];
-      sortedData.sort((a, b) => {
+      processedData.sort((a, b) => {
+        let aValue, bValue;
         if (key === "createdDate") {
-          const timeA = a.createdDate.getTime();
-          const timeB = b.createdDate.getTime();
-          return order === "asc" ? timeA - timeB : timeB - timeA;
+          aValue = a.createdDate.getTime();
+          bValue = b.createdDate.getTime();
+        } else if (key === "name" || key === "id") {
+            aValue = a[key as keyof Pick<OfferDemandItem, 'name' | 'id'>];
+            bValue = b[key as keyof Pick<OfferDemandItem, 'name' | 'id'>];
+        } else if (key === "createdBy") { // Sort by creator's user name
+            aValue = a.createdByInfo.userName;
+            bValue = b.createdByInfo.userName;
+        } else {
+            aValue = (a as any)[key];
+            bValue = (b as any)[key];
         }
-        const aValue = a[key as keyof OfferDemandItem] ?? "";
-        const bValue = b[key as keyof OfferDemandItem] ?? "";
+
+
         if (typeof aValue === "string" && typeof bValue === "string") {
           return order === "asc"
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         }
+        if (typeof aValue === "number" && typeof bValue === "number") {
+            return order === "asc" ? aValue - bValue : bValue - aValue;
+        }
         return 0;
       });
-      processedData = sortedData;
     }
 
     // Apply Pagination
@@ -545,49 +558,50 @@ const OffersDemands = () => {
   }, [currentItems, currentTableData]);
   // --- End Memoized Data Processing ---
 
-  // --- Lifted Handlers ---
+  // --- Handlers ---
   const handleSetTableData = useCallback(
-    (data: TableQueries) => {
-      setCurrentTableData(data);
+    (data: Partial<TableQueries>) => { // Allow partial updates
+      setCurrentTableData(prev => ({ ...prev, ...data }));
     },
     [setCurrentTableData]
   );
+
   const handlePaginationChange = useCallback(
     (page: number) => {
-      handleSetTableData({ ...currentTableData, pageIndex: page });
+      handleSetTableData({ pageIndex: page });
     },
-    [currentTableData, handleSetTableData]
+    [handleSetTableData]
   );
+
   const handleSelectChange = useCallback(
     (value: number) => {
       handleSetTableData({
-        ...currentTableData,
         pageSize: Number(value),
-        pageIndex: 1,
+        pageIndex: 1, // Reset to first page
       });
-      setCurrentSelectedItems([]);
+      setCurrentSelectedItems([]); // Clear selection on page size change
     },
-    [currentTableData, handleSetTableData, setCurrentSelectedItems]
+    [handleSetTableData, setCurrentSelectedItems]
   );
+
   const handleSort = useCallback(
     (sort: OnSortParam) => {
       handleSetTableData({
-        ...currentTableData,
         sort: sort,
-        pageIndex: 1,
+        pageIndex: 1, // Reset to first page
       });
     },
-    [currentTableData, handleSetTableData]
+    [handleSetTableData]
   );
+
   const handleSearchChange = useCallback(
     (query: string) => {
       handleSetTableData({
-        ...currentTableData,
         query: query,
-        pageIndex: 1,
+        pageIndex: 1, // Reset to first page
       });
     },
-    [currentTableData, handleSetTableData]
+    [handleSetTableData]
   );
 
   const handleRowSelect = useCallback(
@@ -605,227 +619,215 @@ const OffersDemands = () => {
 
   const handleAllRowSelect = useCallback(
     (checked: boolean, rows: Row<OfferDemandItem>[]) => {
-      const rowIds = new Set(rows.map((r) => r.original.id));
+      // Filter out rows that are not part of the current pageData to avoid deselecting items on other pages
+      const currentPageRowIds = new Set(pageData.map(item => item.id));
+      const relevantRows = rows.filter(row => currentPageRowIds.has(row.original.id));
+      const relevantRowIds = new Set(relevantRows.map((r) => r.original.id));
+
       setCurrentSelectedItems((prev) => {
         if (checked) {
-          const originalRows = rows.map((row) => row.original);
+          const originalRows = relevantRows.map((row) => row.original);
           const existingIds = new Set(prev.map((i) => i.id));
           const newSelection = originalRows.filter(
             (i) => !existingIds.has(i.id)
           );
           return [...prev, ...newSelection];
         } else {
-          return prev.filter((i) => !rowIds.has(i.id));
+          return prev.filter((i) => !relevantRowIds.has(i.id));
         }
       });
     },
-    [setCurrentSelectedItems]
+    [setCurrentSelectedItems, pageData] // Add pageData dependency
   );
 
   const handleEdit = useCallback(
     (item: OfferDemandItem) => {
-      console.log(`Edit ${item.type} item:`, item.id);
-      const editRoute = `/${currentTab}s/edit/${item.id}`; // Dynamic route
-      navigate(editRoute);
+      // Determine the base path based on item type for navigation
+      const basePath = item.type === "Offer" ? "offers" : "demands";
+      console.log(`Edit/View ${item.type} item:`, item.id);
+      // Navigate to a generic edit page or specific offer/demand edit page
+      navigate(`/sales-leads/${basePath}/edit/${item.id}`); // Adjust route as needed
     },
-    [navigate, currentTab]
+    [navigate]
   );
 
+  // Simulated CUD operations - these would typically involve API calls and Redux updates
   const handleClone = useCallback(
     (itemToClone: OfferDemandItem) => {
       console.log(`Cloning ${itemToClone.type} item:`, itemToClone.id);
-      const newId = `${itemToClone.type === "Offer" ? "OFF" : "DEM"}${
-        Math.floor(Math.random() * 9000) + 1000
-      }`;
+      // This is a local simulation. In a real app, dispatch an action to clone on backend.
+      const newId = `${itemToClone.type.substring(0,3).toUpperCase()}${Math.floor(Math.random() * 9000) + 1000}`;
       const clonedItem: OfferDemandItem = {
-        ...itemToClone,
+        ...cloneDeep(itemToClone), // Deep clone
         id: newId,
         createdDate: new Date(),
+        // Reset original references if they exist
+        originalOffer: itemToClone.originalOffer ? { ...itemToClone.originalOffer, id: newId, createdAt: new Date().toISOString() } : undefined,
+        originalDemand: itemToClone.originalDemand ? { ...itemToClone.originalDemand, id: newId, createdAt: new Date().toISOString() } : undefined,
       };
-      setCurrentItems((prev: OfferDemandItem[]) => [clonedItem, ...prev]);
-      toast.push(
-        <Notification title="Record Copied" type="success" duration={2000} />
-      );
+
+      if (itemToClone.type === "Offer") {
+        setTransformedOffersData(prev => [clonedItem, ...prev]);
+      } else {
+        setTransformedDemandsData(prev => [clonedItem, ...prev]);
+      }
+      toast.push(<Notification title="Record Copied (Simulated)" type="success" duration={2000} />);
     },
-    [setCurrentItems, currentTab]
+    [] // Dependencies might be needed if it interacts with more complex state
   );
 
   const handleDelete = useCallback(
     (itemToDelete: OfferDemandItem) => {
-      console.log(`Deleting ${itemToDelete.type} item:`, itemToDelete.id);
-      setCurrentItems((currentItems: OfferDemandItem[]) =>
-        currentItems.filter((item) => item.id !== itemToDelete.id)
-      );
-      setCurrentSelectedItems((prevSelected: OfferDemandItem[]) =>
-        prevSelected.filter((item) => item.id !== itemToDelete.id)
-      );
-      toast.push(
-        <Notification
-          title="Record Deleted"
-          type="success"
-          duration={2000}
-        >{`${itemToDelete.type} ${itemToDelete.id} deleted.`}</Notification>
-      );
+      console.log(`Deleting ${itemToDelete.type} item (Simulated):`, itemToDelete.id);
+      // Local simulation. Real app: dispatch delete action.
+      if (itemToDelete.type === "Offer") {
+        setTransformedOffersData(prev => prev.filter(item => item.id !== itemToDelete.id));
+        setSelectedOffers(prev => prev.filter(item => item.id !== itemToDelete.id));
+      } else {
+        setTransformedDemandsData(prev => prev.filter(item => item.id !== itemToDelete.id));
+        setSelectedDemands(prev => prev.filter(item => item.id !== itemToDelete.id));
+      }
+      // Also remove from 'All' selections if present
+      setSelectedAll(prev => prev.filter(item => item.id !== itemToDelete.id));
+
+      toast.push(<Notification title="Record Deleted (Simulated)" type="success" duration={2000}>{`${itemToDelete.type} ${itemToDelete.name} deleted.`}</Notification>);
     },
-    [setCurrentItems, setCurrentSelectedItems]
+    []
   );
 
   const handleDeleteSelected = useCallback(() => {
-    console.log(
-      `Deleting selected ${currentTab} items:`,
-      currentSelectedItems.map((i) => i.id)
-    );
-    const selectedIds = new Set(currentSelectedItems.map((i) => i.id));
-    setCurrentItems((currentItems: OfferDemandItem[]) =>
-      currentItems.filter((i) => !selectedIds.has(i.id))
-    );
-    setCurrentSelectedItems([]);
-    toast.push(
-      <Notification
-        title="Records Deleted"
-        type="success"
-        duration={2000}
-      >{`${selectedIds.size} record(s) deleted.`}</Notification>
-    );
-  }, [
-    currentSelectedItems,
-    setCurrentItems,
-    setCurrentSelectedItems,
-    currentTab,
-  ]);
+    const itemsToDelete = currentSelectedItems;
+    console.log(`Deleting selected ${currentTab} items (Simulated):`, itemsToDelete.map(i => i.id));
+
+    const selectedIds = new Set(itemsToDelete.map(i => i.id));
+
+    if (currentTab === TABS.OFFER || currentTab === TABS.ALL) {
+        setTransformedOffersData(prev => prev.filter(i => !selectedIds.has(i.id)));
+    }
+    if (currentTab === TABS.DEMAND || currentTab === TABS.ALL) {
+        setTransformedDemandsData(prev => prev.filter(i => !selectedIds.has(i.id)));
+    }
+    
+    setCurrentSelectedItems([]); // Clears selection for the current tab
+
+    toast.push(<Notification title="Records Deleted (Simulated)" type="success" duration={2000}>{`${selectedIds.size} record(s) deleted.`}</Notification>);
+  }, [currentSelectedItems, currentTab, setCurrentSelectedItems]);
+
 
   const handleTabChange = (tabKey: string) => {
     if (tabKey === currentTab) return;
     setCurrentTab(tabKey);
-    // Reset the other tab's table config
-    if (tabKey === TABS.ALL) {
-      setDemandTableData({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: "", key: "" },
-        query: "",
-      });
-    }else if (tabKey === TABS.OFFER) {
-      setDemandTableData({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: "", key: "" },
-        query: "",
-      });
-    } else {
-      setOfferTableData({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: "", key: "" },
-        query: "",
-      });
-    }
-    // Clear selection for the newly active tab - Use the direct setter
-    if (tabKey === TABS.OFFER) setSelectedOffers([]);
-    else setSelectedDemands([]);
+    // Reset query for the new tab if needed, or keep it global
+    // For simplicity, we'll let the currentTableData handle its own query.
+    // No need to reset other tab's table config if they are distinct states.
+    // Clear selection for the newly active tab:
+    if (tabKey === TABS.ALL) setSelectedAll([]);
+    else if (tabKey === TABS.OFFER) setSelectedOffers([]);
+    else if (tabKey === TABS.DEMAND) setSelectedDemands([]);
   };
-  // --- End Lifted Handlers ---
+  // --- End Handlers ---
 
-  // --- Define Columns in Parent ---
+  // --- Define Columns ---
   const columns: ColumnDef<OfferDemandItem>[] = useMemo(
     () => [
       {
         header: "ID",
         accessorKey: "id",
         enableSorting: true,
-        size: 60,
+        size: 70,
+        cell: props => <span className="font-mono text-xs">{props.getValue<string>()}</span>
       },
-      { header: "Name", accessorKey: "name", enableSorting: true,
+      { header: "Name", accessorKey: "name", enableSorting: true, size: 200,
         cell : (props)=>(
           <div>
-            <div className="text-xs">
-              <b>{props.getValue()}</b>
+            <div className="font-semibold">
+              {props.row.original.name}
             </div>
-            <div className="text-xs">
-              <span>Number of Buyer: </span> {3}
-            </div>
-            <div className="text-xs">
-              <span>Number of Seller: </span> {5}
-            </div>
+            { (props.row.original.numberOfBuyers !== undefined || props.row.original.numberOfSellers !== undefined) &&
+              <>
+                <div className="text-xs text-gray-600 dark:text-gray-300">
+                  Buyers: {props.row.original.numberOfBuyers ?? 'N/A'}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-300">
+                  Sellers: {props.row.original.numberOfSellers ?? 'N/A'}
+                </div>
+              </>
+            }
           </div>
         )
-
       },
       {
         header: "Section Details",
-        size:200,
-        cell : (props)=>{
+        id: "sectionDetails", // Important to have a unique id if not using accessorKey
+        size: 250,
+        cell : ({row})=>{
+          const { groups } = row.original;
+          if (!groups || groups.length === 0) return <span className="text-xs text-gray-500">No group details</span>;
           return (
-            <div>
-              
-              <div className="text-xs">
-                <b>Group A: </b> <br/>
-                <div className="flex flex-col gap-0.5">
-                  Lenovo Tab M10 3/32,
-                  Google Pixel 9A,
-                  Indian Spec 
+            <div className="space-y-1">
+              {groups.map((group, index) => (
+                <div key={index} className="text-xs">
+                  <b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b>
+                  <div className="pl-2 flex flex-col gap-0.5 text-gray-600 dark:text-gray-400">
+                    {group.items.slice(0,3).map((item, itemIdx) => <span key={itemIdx}>{item}</span>)}
+                    {group.items.length > 3 && <span className="italic">...and {group.items.length - 3} more</span>}
+                  </div>
                 </div>
-              </div>
-              <div className="text-xs">
-                <b>Group B: </b> <br/>
-                <div className="flex flex-col gap-0.5">
-                  Lenovo Tab M10 3/32 @260$,
-                  Google Pixel 9A @350$,
-                  Indian Spec 
-                </div>
-              </div>
+              ))}
             </div>
           )
         }
       },
       {
-        header: "Created By",
-        accessorKey: "createdBy",
-        enableSorting: true,
-        cell: (props) => (
-          <div className="flex flex-col gap-2">
-            <div>
-              <Avatar size={28} shape="circle" icon={<TbUserCircle />} />{" "}
-              <span>{props.row.original.createdBy}</span>
-            </div>
-            <div className="gap-1 text-xs"><b>Assigned: </b> Manan Patel</div>
-            <div className="gap-1 text-xs">
-              <span>
-                {props.row.original.createdDate.toLocaleDateString()}{" "}
-                {props.row.original.createdDate.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-            </span>
-            </div>
-          </div>
-        ),
+        header: "Created By / Assigned",
+        accessorKey: "createdByInfo", // Sort by this object if needed, or by userName
+        id: "createdBy", // explicit id for sorting key in tableData
+        enableSorting: true, // Enable sorting by creator's name
+        size: 200,
+        cell: (props) => {
+            const item = props.row.original;
+            return (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <Avatar size={28} shape="circle" icon={<TbUserCircle />} />{" "}
+                  <span className="font-semibold">{item.createdByInfo.userName}</span>
+                </div>
+                {item.assignedToInfo && (
+                    <div className="text-xs text-gray-600 dark:text-gray-300">
+                        <b>Assigned: </b> {item.assignedToInfo.userName}
+                    </div>
+                )}
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <span>
+                    {item.createdDate.toLocaleDateString()}{" "}
+                    {item.createdDate.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                </span>
+                </div>
+              </div>
+            )
+        },
       },
       {
         header: "Actions",
         id: "action",
         size: 120,
-        meta: { HeaderClass: "text-center" },
         cell: (props) => (
-          <div className="flex items-center justify-center gap-2">
-            <ActionColumn
-              onClone={() => handleClone(props.row.original)}
-              onEdit={() => handleEdit(props.row.original)}
-              onDelete={() => handleDelete(props.row.original)}
-            />
-          </div>
+          <ActionColumn
+            onClone={() => handleClone(props.row.original)}
+            onEdit={() => handleEdit(props.row.original)}
+            onDelete={() => handleDelete(props.row.original)}
+          />
         ),
       },
     ],
-    [
-      handleClone,
-      handleEdit,
-      handleDelete,
-      currentTableData.pageIndex,
-      currentTableData.pageSize,
-    ] // Add pagination state to dependencies for "No" column
+    [handleClone, handleEdit, handleDelete] // Dependencies for action handlers
   );
   // --- End Define Columns ---
+
+  const isLoading = offersStatus === 'idle' || demandsStatus === 'idle';
 
   // --- Render Main Component ---
   return (
@@ -834,48 +836,26 @@ const OffersDemands = () => {
         {/* Header Section */}
         <div className="lg:flex items-center justify-between mb-4">
           <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
-          <ItemActionTools allItems={currentItems} activeTab={currentTab} />
+          <ItemActionTools onRefresh={fetchData} />
         </div>
 
         {/* Tabs Section */}
         <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            <button
-              key={TABS.ALL}
-              onClick={() => handleTabChange(TABS.ALL)}
-              className={classNames(
-                "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm",
-                currentTab === TABS.ALL
-                  ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
-              )}
-            >
-              All
-            </button>
-            <button
-              key={TABS.OFFER}
-              onClick={() => handleTabChange(TABS.OFFER)}
-              className={classNames(
-                "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm",
-                currentTab === TABS.OFFER
-                  ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
-              )}
-            >
-              Offer Listing
-            </button>
-            <button
-              key={TABS.DEMAND}
-              onClick={() => handleTabChange(TABS.DEMAND)}
-              className={classNames(
-                "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm",
-                currentTab === TABS.DEMAND
-                  ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
-              )}
-            >
-              Demand Listing
-            </button>
+            {[TABS.ALL, TABS.OFFER, TABS.DEMAND].map(tabKey => (
+                 <button
+                    key={tabKey}
+                    onClick={() => handleTabChange(tabKey)}
+                    className={classNames(
+                        "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize",
+                        currentTab === tabKey
+                        ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
+                    )}
+                    >
+                    {tabKey === TABS.ALL ? "All" : `${tabKey} Listing`}
+                 </button>
+            ))}
           </nav>
         </div>
 
@@ -885,30 +865,37 @@ const OffersDemands = () => {
         </div>
 
         {/* Table Section */}
-        <div className="flex-grow overflow-auto">
-          <ItemTable
-            columns={columns}
-            data={pageData}
-            loading={isLoading}
-            pagingData={{
-              total,
-              pageIndex: currentTableData.pageIndex as number,
-              pageSize: currentTableData.pageSize as number,
-            }}
-            selectedItems={currentSelectedItems}
-            onPaginationChange={handlePaginationChange}
-            onSelectChange={handleSelectChange}
-            onSort={handleSort}
-            onRowSelect={handleRowSelect}
-            onAllRowSelect={handleAllRowSelect}
-          />
-        </div>
+        {isLoading && !pageData.length ? ( // Show spinner if loading and no data yet
+            <div className="flex-grow flex items-center justify-center">
+                <Spinner size="xl" />
+            </div>
+        ) : (
+            <div className="flex-grow overflow-auto">
+            <ItemTable
+                columns={columns}
+                data={pageData}
+                loading={isLoading && pageData.length > 0} // Show loading overlay on table if data exists but refreshing
+                pagingData={{
+                total,
+                pageIndex: currentTableData.pageIndex as number,
+                pageSize: currentTableData.pageSize as number,
+                }}
+                selectedItems={currentSelectedItems}
+                onPaginationChange={handlePaginationChange}
+                onSelectChange={handleSelectChange}
+                onSort={handleSort}
+                onRowSelect={handleRowSelect}
+                onAllRowSelect={handleAllRowSelect}
+            />
+            </div>
+        )}
+
       </AdaptiveCard>
 
       {/* Selected Actions Footer */}
       <ItemSelected
         selectedItems={currentSelectedItems}
-        setSelectedItems={setCurrentSelectedItems}
+        // setSelectedItems={setCurrentSelectedItems} // Not directly needed by ItemSelected if only deleting
         onDeleteSelected={handleDeleteSelected}
         activeTab={currentTab}
       />
@@ -918,8 +905,3 @@ const OffersDemands = () => {
 // --- End Main Component ---
 
 export default OffersDemands;
-
-// Helper Function
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//     return classes.filter(Boolean).join(' ');
-// }

@@ -116,12 +116,6 @@ const dummyCartoonTypes = [ // Keep if not from API, otherwise fetch similarly
   { id: 2, name: "Inner Carton" },
   { id: 3, name: "Pallet" },
 ];
-const dummyPaymentTerms = [ // Keep if not from API, otherwise fetch similarly
-  { id: 1, name: "Net 30 Days" },
-  { id: 2, name: "Net 60 Days" },
-  { id: 3, name: "Due on Receipt" },
-  { id: 4, name: "Prepaid" },
-];
 const deviceConditionRadioOptions = [
     { value: "New", label: "New" },
     { value: "Old", label: "Old" },
@@ -156,7 +150,6 @@ const adminStatusOptions = [
     { value: 'Rejected', label: 'Rejected' },
     { value: 'Active', label: 'Active' },
 ];
-
 
 const WallItemAdd = () => {
   const navigate = useNavigate();
@@ -563,7 +556,7 @@ const WallItemAdd = () => {
             >
               <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
                   <UiSelect options={paymentTermsOption} {...field} 
-                  value={companyOptions.find(opt => opt.value === field.value) || null}
+                  value={paymentTermsOption.find(opt => opt.value === field.value) || null}
                   onChange={(option) => field.onChange(option ? option.value : null)} 
                   placeholder="Select Payment Term (Optional)" 
                   isClearable
