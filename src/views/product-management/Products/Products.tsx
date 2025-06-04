@@ -171,10 +171,10 @@ const Products = () => {
 
   // REFACTOR: Memoize options to prevent re-creation on every render
   const domainOptions = useMemo(() => DomainsData?.map((d: any) => ({ value: d.id, label: d.name })) || [], [DomainsData]);
-  const categoryOptions = useMemo(() => GlobalCategoriesData?.map((c: any) => ({ value: c.id, label: c.name })) || [], [GlobalCategoriesData]);
+  const categoryOptions = useMemo(() => Array.isArray(GlobalCategoriesData) ? GlobalCategoriesData.map((c: any) => ({ value: c.id, label: c.name })) : [], [GlobalCategoriesData]);
   const brandOptions = useMemo(() => BrandsData?.map((b: any) => ({ value: b.id, label: b.name })) || [], [BrandsData]);
   const unitOptions = useMemo(() => UnitsData?.map((u: any) => ({ value: u.id, label: u.name })) || [], [UnitsData]);
-  const countryOptions = useMemo(() => CountriesData?.map((c: any) => ({ value: c.id, label: c.name })) || [], [CountriesData]);
+  const countryOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: c.id, label: c.name })) : [], [CountriesData]);
   const [subcategoryOptions, setSubcategoryOptions] = useState<{ value: number; label: string }[]>([]);
 
   const [isChangeStatusDialogOpen, setIsChangeStatusDialogOpen] = useState(false);
