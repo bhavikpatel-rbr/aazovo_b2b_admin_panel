@@ -983,7 +983,7 @@ const BugReportListing = () => {
             <div className="text-xs">
               {`${new Date(props.getValue()).getDate()} ${new Date(
                 props.getValue()
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(
                 props.getValue()
               ).getFullYear()}, ${new Date(props.getValue()).toLocaleTimeString(
                 "en-US",
@@ -1013,7 +1013,7 @@ const BugReportListing = () => {
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
               updated_at
-            ).toLocaleString("en-US", { month: "long" })} ${new Date(
+            ).toLocaleString("en-US", { month: "short" })} ${new Date(
               updated_at
             ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
               "en-US",

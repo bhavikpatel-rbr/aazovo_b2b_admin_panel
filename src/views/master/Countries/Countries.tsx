@@ -759,7 +759,7 @@ const Countries = () => {
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(
                 updated_at
               ).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
             : "N/A";
@@ -860,7 +860,7 @@ const Countries = () => {
             isOpen={drawerProps.isOpen}
             onClose={drawerProps.closeFn}
             onRequestClose={drawerProps.closeFn}
-            width={600}
+            width={520}
             footer={
                 <div className="text-right w-full">
                 <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button>
@@ -873,8 +873,10 @@ const Countries = () => {
             <Form
                 id={drawerProps.formId}
                 onSubmit={drawerProps.formMethods.handleSubmit(drawerProps.onSubmit as any)}
-                className="flex flex-col gap-4 relative pb-28"
+                className="flex flex-col relative"
             >
+              {
+                <div className="grid grid-cols-2 gap-2">
                 <FormItem
                     label="Continent"
                     invalid={!!drawerProps.formMethods.formState.errors.continent_id}
@@ -916,6 +918,7 @@ const Countries = () => {
                 </FormItem>
                 <FormItem // Added Status Field
                     label="Status"
+                    className="col-span-2"
                     invalid={!!drawerProps.formMethods.formState.errors.status}
                     errorMessage={drawerProps.formMethods.formState.errors.status?.message as string | undefined}
                 >
@@ -938,6 +941,8 @@ const Countries = () => {
                     )}
                     />
                 </FormItem>
+                </div>
+              }
             </Form>
               {drawerProps.isEdit && editingCountry && (
                 <div className="absolute bottom-[14%] w-[92%]">

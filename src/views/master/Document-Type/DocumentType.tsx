@@ -789,7 +789,7 @@ const Documentmaster = () => {
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(
                 updated_at
               ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
                 "en-US",
@@ -926,7 +926,7 @@ const Documentmaster = () => {
           isOpen={drawerProps.isOpen}
           onClose={drawerProps.closeFn}
           onRequestClose={drawerProps.closeFn}
-          width={600}
+          width={460}
           footer={
             <div className="text-right w-full">
               <Button
@@ -957,7 +957,7 @@ const Documentmaster = () => {
             onSubmit={drawerProps.formMethods.handleSubmit(
               drawerProps.onSubmit as any
             )}
-            className="flex flex-col gap-4 relative pb-28"
+            className="flex flex-col gap-4 relative"
           >
             <FormItem
               label="Document Type Name"

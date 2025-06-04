@@ -705,7 +705,7 @@ const Documents = () => {
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
               ).toLocaleString("en-US", {
-                month: "long",
+                month: "short",
               })} ${new Date(updated_at).getFullYear()}, ${new Date(
                 updated_at
               ).toLocaleTimeString("en-US", {
@@ -804,7 +804,7 @@ const Documents = () => {
         isOpen={isAddDrawerOpen}
         onClose={closeAddDrawer}
         onRequestClose={closeAddDrawer}
-        width={600}
+        width={460}
         footer={
           <div className="text-right w-full">
             <Button
@@ -901,7 +901,7 @@ const Documents = () => {
         isOpen={isEditDrawerOpen}
         onClose={closeEditDrawer}
         onRequestClose={closeEditDrawer}
-        width={600}
+        width={460}
         footer={
           <div className="text-right w-full">
             <Button

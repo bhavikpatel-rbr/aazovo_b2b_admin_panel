@@ -600,7 +600,7 @@ const Blogs = () => {
         header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 170,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } = props.row.original;
-          const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
+          const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
           return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
         },
       },
@@ -625,7 +625,7 @@ const Blogs = () => {
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
             </div>
           </div>
-          <div className="grid grid-cols-6 mb-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 mb-4 gap-2">
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                 <TbMessageStar size={24} />
@@ -696,7 +696,7 @@ const Blogs = () => {
         { type: "add", title: "Add New Blog", isOpen: isAddDrawerOpen, closeFn: closeAddDrawer, formId: "addBlogForm", methods: addFormMethods, onSubmit: onAddBlogSubmit, submitButtonText: "Save", submittingText: "Adding..." },
         { type: "edit", title: "Edit Blog", isOpen: isEditDrawerOpen, closeFn: closeEditDrawer, formId: "editBlogForm", methods: editFormMethods, onSubmit: onEditBlogSubmit, submitButtonText: "Save", submittingText: "Saving..." },
       ].map((drawer) => (
-        <Drawer key={drawer.formId} title={drawer.title} isOpen={drawer.isOpen} onClose={drawer.closeFn} onRequestClose={drawer.closeFn} width={600} // Matched width
+        <Drawer key={drawer.formId} title={drawer.title} isOpen={drawer.isOpen} onClose={drawer.closeFn} onRequestClose={drawer.closeFn} width={520} // Matched width
           footer={
             <div className="text-right w-full">
               <Button size="sm" className="mr-2" onClick={drawer.closeFn} disabled={isSubmitting} type="button">Cancel</Button>
@@ -704,37 +704,49 @@ const Blogs = () => {
             </div>
           }
         >
-          <Form id={drawer.formId} onSubmit={drawer.methods.handleSubmit(drawer.onSubmit as any)} className="flex flex-col gap-4 relative pb-28"> {/* Added relative pb-28 */}
+          <Form id={drawer.formId} onSubmit={drawer.methods.handleSubmit(drawer.onSubmit as any)} className="flex flex-col gap-4 relative"> {/* Added relative pb-28 */}
+            
             <FormItem label="Title" invalid={!!drawer.methods.formState.errors.title} errorMessage={drawer.methods.formState.errors.title?.message as string | undefined} isRequired>
               <Controller name="title" control={drawer.methods.control} render={({ field }) => (<Input {...field} placeholder="Enter Blog Title" />)} />
             </FormItem>
-            <FormItem label="Slug / URL (Optional)" invalid={!!drawer.methods.formState.errors.slug} errorMessage={drawer.methods.formState.errors.slug?.message as string | undefined}>
-              <Controller name="slug" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., my-awesome-blog-post" />)} />
-            </FormItem>
+            {
+              <div className="grid grid-cols-2 gap-2">
+                <FormItem label="Slug / URL (Optional)" invalid={!!drawer.methods.formState.errors.slug} errorMessage={drawer.methods.formState.errors.slug?.message as string | undefined}>
+                  <Controller name="slug" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., my-awesome-blog-post" />)} />
+                </FormItem>
+                <FormItem label="Status" invalid={!!drawer.methods.formState.errors.status} errorMessage={drawer.methods.formState.errors.status?.message as string | undefined} isRequired>
+                  <Controller name="status" control={drawer.methods.control} render={({ field }) => (<Select placeholder="Select Status" options={blogStatusOptions} value={blogStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
+                </FormItem>
+              </div>
+            }
+            
             <FormItem label="Description (Optional)" invalid={!!drawer.methods.formState.errors.blog_descr} errorMessage={drawer.methods.formState.errors.blog_descr?.message as string | undefined}>
               <Controller name="blog_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="Enter main blog content..." rows={5} />)} />
             </FormItem>
-            <FormItem label="Status" invalid={!!drawer.methods.formState.errors.status} errorMessage={drawer.methods.formState.errors.status?.message as string | undefined} isRequired>
-              <Controller name="status" control={drawer.methods.control} render={({ field }) => (<Select placeholder="Select Status" options={blogStatusOptions} value={blogStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
-            </FormItem>
-            <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
-            <FormItem label="Meta Title" invalid={!!drawer.methods.formState.errors.meta_title} errorMessage={drawer.methods.formState.errors.meta_title?.message as string | undefined}>
-              <Controller name="meta_title" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="SEO Title (max 70 chars)" />)} />
-            </FormItem>
+            
+            {/* <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem> */}
+            {
+              <div className="grid grid-cols-2 gap-2">
+                <FormItem label="Meta Title" invalid={!!drawer.methods.formState.errors.meta_title} errorMessage={drawer.methods.formState.errors.meta_title?.message as string | undefined}>
+                  <Controller name="meta_title" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="SEO Title (max 70 chars)" />)} />
+                </FormItem>
+                <FormItem label="Meta Keywords" invalid={!!drawer.methods.formState.errors.meta_keyword} errorMessage={drawer.methods.formState.errors.meta_keyword?.message as string | undefined}>
+                  <Controller name="meta_keyword" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="Comma-separated keywords" />)} />
+                </FormItem>
+            </div>
+            }
             <FormItem label="Meta Description" invalid={!!drawer.methods.formState.errors.meta_descr} errorMessage={drawer.methods.formState.errors.meta_descr?.message as string | undefined}>
               <Controller name="meta_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="SEO Description (max 160 chars)" rows={3} />)} />
             </FormItem>
-            <FormItem label="Meta Keywords" invalid={!!drawer.methods.formState.errors.meta_keyword} errorMessage={drawer.methods.formState.errors.meta_keyword?.message as string | undefined}>
-              <Controller name="meta_keyword" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="Comma-separated keywords" />)} />
-            </FormItem>
+            
             <FormItem
-              label={`Icon${drawer.type === "edit" && editingBlog?.icon_full_path && iconPreview === editingBlog.icon_full_path ? " (Current icon below. Select new to change)" : " (Optional)"}`}
+              label={`Icon${drawer.type === "edit" && editingBlog?.icon_full_path && iconPreview === editingBlog.icon_full_path ? " Change ?" : " "}`}
               invalid={!!drawer.methods.formState.errors.icon} errorMessage={drawer.methods.formState.errors.icon?.message as string | undefined}
             >
               {drawer.type === "edit" && iconPreview && editingBlog?.icon_full_path === iconPreview && (
                 <div className="mb-2 flex items-center gap-2">
-                  <img src={iconPreview} alt="Current Icon" className="h-20 w-20 object-contain border rounded" />
-                  <Button icon={<TbX />} variant="twoTone" size="xs" color="red" type="button" onClick={() => { if (iconPreview) URL.revokeObjectURL(iconPreview); setIconPreview(null); drawer.methods.setValue("icon", null, { shouldValidate: true }); }}>Remove Current Icon</Button>
+                  <img src={iconPreview} alt="Current Icon" className="h-16 w-20 object-contain border border-primary rounded" />
+                  <Button icon={<TbX />} size="xs" color="red" type="button" onClick={() => { if (iconPreview) URL.revokeObjectURL(iconPreview); setIconPreview(null); drawer.methods.setValue("icon", null, { shouldValidate: true }); }}>Remove Current Icon</Button>
                 </div>
               )}
               {iconPreview && (drawer.methods.watch("icon") instanceof File || (drawer.type === "edit" && editingBlog?.icon_full_path !== iconPreview)) && (
@@ -745,7 +757,7 @@ const Blogs = () => {
             </FormItem>
 
             {drawer.type === "edit" && editingBlog && (
-              <div className="absolute bottom-[4%] w-full"> {/* Positioned audit info */}
+              <div className="bottom-[4%] w-full"> {/* Positioned audit info */}
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                   <div>
                     <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />

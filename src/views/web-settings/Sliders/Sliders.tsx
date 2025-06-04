@@ -739,7 +739,7 @@ const Sliders = () => {
       { header: "Updated Info", accessorKey: "updatedAt", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 200,
         cell: (props) => {
           const { updatedAt, updatedByName, updatedByRole } = props.row.original;
-          const formattedDate = updatedAt ? `${new Date(updatedAt).getDate()} ${new Date(updatedAt).toLocaleString("en-US", { month: "long" })} ${new Date(updatedAt).getFullYear()}, ${new Date(updatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
+          const formattedDate = updatedAt ? `${new Date(updatedAt).getDate()} ${new Date(updatedAt).toLocaleString("en-US", { month: "short" })} ${new Date(updatedAt).getFullYear()}, ${new Date(updatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
           return (<div className="text-xs"><span>{updatedByName || "N/A"}{updatedByRole && (<><br /><b>{updatedByRole}</b></>)}</span><br /><span>{formattedDate}</span></div>);
         },
       },
@@ -758,10 +758,18 @@ const Sliders = () => {
       <FormItem label="Subtitle (Optional)" invalid={!!formMethodsInstance.formState.errors.subtitle} errorMessage={formMethodsInstance.formState.errors.subtitle?.message}>
         <Controller name="subtitle" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="Enter Subtitle" />)} />
       </FormItem>
-      <FormItem label="Button Text (Optional)" invalid={!!formMethodsInstance.formState.errors.button_text} errorMessage={formMethodsInstance.formState.errors.button_text?.message}>
-        <Controller name="button_text" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., Shop Now" />)} />
-      </FormItem>
-      {isEditMode && currentSlider?.imageFullPath && !editFormPreviewUrl && (<FormItem label="Current Image"><Avatar size={80} src={currentSlider.imageFullPath} shape="square" icon={<TbPhoto />} /></FormItem>)}
+      {
+        <div className="grid grid-cols-2 gap-2">
+          <FormItem label="Button Text (Optional)" invalid={!!formMethodsInstance.formState.errors.button_text} errorMessage={formMethodsInstance.formState.errors.button_text?.message}>
+            <Controller name="button_text" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., Shop Now" />)} />
+          </FormItem>    
+          <FormItem label="Index Position (Optional)" invalid={!!formMethodsInstance.formState.errors.index_position} errorMessage={formMethodsInstance.formState.errors.index_position?.message}>
+            <Controller name="index_position" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} type="number" placeholder="Enter position (e.g., 1)" value={field.value === null ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} />)} />
+          </FormItem>
+        </div>
+      }
+      
+      {isEditMode && currentSlider?.imageFullPath && !editFormPreviewUrl && (<FormItem label="Current Image"><Avatar className="w-[452px] h-[auto] border p-1 rounded-md" src={currentSlider.imageFullPath} shape="square" icon={<TbPhoto />} /></FormItem>)}
       <FormItem label={isEditMode ? "New Image (Optional)" : "Image"} invalid={!!formMethodsInstance.formState.errors.image} errorMessage={formMethodsInstance.formState.errors.image?.message as string} isRequired={!isEditMode}>
         <Controller name="image" control={formMethodsInstance.control}
           render={({ field: { onChange, onBlur, name, ref } }) => (
@@ -779,36 +787,40 @@ const Sliders = () => {
         />
         {(isEditMode ? editFormPreviewUrl : addFormPreviewUrl) && (
           <div className="mt-2">
-            <Avatar src={isEditMode ? editFormPreviewUrl! : addFormPreviewUrl!} size={80} shape="square" />
+            <Avatar src={isEditMode ? editFormPreviewUrl! : addFormPreviewUrl!} className="w-[452px] h-[auto] border p-1 rounded-md" shape="square" />
             {isEditMode && (<p className="text-xs text-gray-500 mt-1">Preview of new image.</p>)}
           </div>
         )}
         {isEditMode && (<p className="text-xs text-gray-500 mt-1">Leave blank to keep current image. Selecting a new file will replace it.</p>)}
       </FormItem>
-      <FormItem label="Index Position (Optional)" invalid={!!formMethodsInstance.formState.errors.index_position} errorMessage={formMethodsInstance.formState.errors.index_position?.message}>
-            <Controller name="index_position" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} type="number" placeholder="Enter position (e.g., 1)" value={field.value === null ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} />)} />
-      </FormItem>
-      <FormItem label="Display Page" invalid={!!formMethodsInstance.formState.errors.display_page} errorMessage={formMethodsInstance.formState.errors.display_page?.message} isRequired>
-        <Controller name="display_page" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={displayPageOptionsConst} value={displayPageOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select display page" />)} />
-      </FormItem>
-      <FormItem label="Link (Optional, include http/https)" invalid={!!formMethodsInstance.formState.errors.link} errorMessage={formMethodsInstance.formState.errors.link?.message}>
-        <Controller name="link" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/target-page" />)} />
-      </FormItem>
-      <FormItem label="Source" invalid={!!formMethodsInstance.formState.errors.source} errorMessage={formMethodsInstance.formState.errors.source?.message} isRequired>
-        <Controller name="source" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={sourceOptionsConst} value={sourceOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select source" />)} />
-      </FormItem>
-      <FormItem label="Status" invalid={!!formMethodsInstance.formState.errors.status} errorMessage={formMethodsInstance.formState.errors.status?.message} isRequired>
-        <Controller name="status" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select status" />)} />
-      </FormItem>
-      <FormItem label="Domain IDs (Optional, comma-separated)" invalid={!!formMethodsInstance.formState.errors.domain_ids} errorMessage={formMethodsInstance.formState.errors.domain_ids?.message}>
-        <Controller name="domain_ids" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., 1,2,3" />)} />
-      </FormItem>
-      <FormItem label="Slider Color (Optional)" invalid={!!formMethodsInstance.formState.errors.slider_color} errorMessage={formMethodsInstance.formState.errors.slider_color?.message}>
-        <div className="flex items-center gap-2">
-          <Controller name="slider_color" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? "#FFFFFF"} type="color" className="w-12 h-10 p-1" />)} />
-          <Controller name="slider_color" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="text" placeholder="#RRGGBB or color name" className="flex-grow" />)} />
+      {
+        <div className="grid grid-cols-2 gap-2">
+          <FormItem label="Display Page" invalid={!!formMethodsInstance.formState.errors.display_page} errorMessage={formMethodsInstance.formState.errors.display_page?.message} isRequired>
+            <Controller name="display_page" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={displayPageOptionsConst} value={displayPageOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select display page" />)} />
+          </FormItem>
+          <FormItem label="Link (Optional)" invalid={!!formMethodsInstance.formState.errors.link} errorMessage={formMethodsInstance.formState.errors.link?.message}>
+            <Controller name="link" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/target-page" />)} />
+          </FormItem>
+          <FormItem label="Source" invalid={!!formMethodsInstance.formState.errors.source} errorMessage={formMethodsInstance.formState.errors.source?.message} isRequired>
+            <Controller name="source" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={sourceOptionsConst} value={sourceOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select source" />)} />
+          </FormItem>
+          <FormItem label="Status" invalid={!!formMethodsInstance.formState.errors.status} errorMessage={formMethodsInstance.formState.errors.status?.message} isRequired>
+            <Controller name="status" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select status" />)} />
+          </FormItem>
+          <FormItem label="Domain IDs (Select)" invalid={!!formMethodsInstance.formState.errors.domain_ids} errorMessage={formMethodsInstance.formState.errors.domain_ids?.message}>
+            <Controller name="domain_ids" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., 1,2,3" />)} />
+          </FormItem>
+          <FormItem label="Slider Color (Optional)" invalid={!!formMethodsInstance.formState.errors.slider_color} errorMessage={formMethodsInstance.formState.errors.slider_color?.message}>
+            <div className="flex items-center gap-2">
+              <Controller name="slider_color" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? "#FFFFFF"} type="color" className="w-12 h-10 p-1" />)} />
+              <Controller name="slider_color" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="text" placeholder="#RRGGBB or color name" className="flex-grow" />)} />
+            </div>
+          </FormItem>
         </div>
-      </FormItem>
+      }
+
+      
+      
     </>
   );
 
@@ -831,7 +843,7 @@ const Sliders = () => {
       </Container>
       <SlidersSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-      <Drawer title="Add New Slider" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={600}
+      <Drawer title="Add New Slider" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={520}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
@@ -844,7 +856,7 @@ const Sliders = () => {
         </Form>
       </Drawer>
 
-      <Drawer title="Edit Slider" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={600}
+      <Drawer title="Edit Slider" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={520}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button>

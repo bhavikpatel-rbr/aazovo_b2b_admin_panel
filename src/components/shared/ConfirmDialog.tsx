@@ -100,11 +100,11 @@ const ConfirmDialog = (props: ConfirmDialogProps) => {
 
     return (
         <Dialog contentClassName="pb-0 px-0" {...rest}>
-            <div className="px-6 pb-6 pt-2 flex">
-                <div>
+            <div className="px-6 pb-6 pt-2">
+                {/* <div>
                     <StatusIcon status={type} />
-                </div>
-                <div className="ml-4 rtl:mr-4">
+                </div> */}
+                <div className="">
                     <h5 className="mb-2">{title}</h5>
                     {children}
                 </div>

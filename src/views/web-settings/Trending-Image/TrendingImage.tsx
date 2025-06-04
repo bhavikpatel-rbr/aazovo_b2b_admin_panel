@@ -536,7 +536,7 @@ const TrendingImages = () => {
                 if (!dateVal) return 'N/A';
                 try {
                     return (
-                        `${new Date(dateVal).getDate()} ${new Date(dateVal).toLocaleString("en-US", { month: "long" })}, ${new Date(dateVal).getFullYear()}, ${new Date(dateVal).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                        `${new Date(dateVal).getDate()} ${new Date(dateVal).toLocaleString("en-US", { month: "short" })}, ${new Date(dateVal).getFullYear()}, ${new Date(dateVal).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
                     )
                 } catch (e) { return 'Invalid Date'; }
             }
@@ -553,7 +553,7 @@ const TrendingImages = () => {
             cell: (props) => {
                 const { updated_at, updated_by_name, updated_by_role } = props.row.original;
                 const formattedDate = updated_at
-                ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
                 : "N/A";
                 return (
                     <div className="text-xs">

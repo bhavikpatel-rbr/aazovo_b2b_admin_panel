@@ -1071,7 +1071,7 @@ const ProductSpecification = () => {
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(
                 updated_at
               ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
                 "en-US",
@@ -1186,7 +1186,7 @@ const ProductSpecification = () => {
           onSubmit: onAddSubmit,
           isOpen: isAddDrawerOpen,
           closeFn: closeAddDrawer,
-          title: "Add Product Specification",
+          title: "Add Product Spec",
           formId: "addProductSpecificationForm",
           submitText: "Adding...",
           saveText: "Save",
@@ -1199,7 +1199,7 @@ const ProductSpecification = () => {
           onSubmit: onEditSubmit,
           isOpen: isEditDrawerOpen,
           closeFn: closeEditDrawer,
-          title: "Edit Product Specification",
+          title: "Edit Product Spec",
           formId: "editProductSpecificationForm",
           submitText: "Saving...",
           saveText: "Save",
@@ -1214,7 +1214,7 @@ const ProductSpecification = () => {
           isOpen={drawerProps.isOpen}
           onClose={drawerProps.closeFn}
           onRequestClose={drawerProps.closeFn}
-          width={600}
+          width={520}
           footer={
             <div className="text-right w-full">
               <Button
@@ -1250,7 +1250,7 @@ const ProductSpecification = () => {
             onSubmit={drawerProps.formMethods.handleSubmit(
               drawerProps.onSubmit as any
             )}
-            className="flex flex-col gap-y-6 relative pb-28"
+            className="flex flex-col gap-y-6 relative"
           >
             <FormItem
               label="Flag Icon (Image File)"
@@ -1341,66 +1341,71 @@ const ProductSpecification = () => {
                 )}
               />
             </FormItem>
-            <FormItem
-              label="Country"
-              invalid={!!drawerProps.formMethods.formState.errors.country_id}
-              errorMessage={
-                drawerProps.formMethods.formState.errors.country_id?.message as
-                  | string
-                  | undefined
-              }
-              isRequired
-            >
-              <Controller
-                name="country_id"
-                control={drawerProps.formMethods.control}
-                render={({ field }) => (
-                  <Select
-                    placeholder="Select country"
-                    options={countryOptions}
-                    value={
-                      countryOptions.find(
-                        (opt) => String(opt.value) === String(field.value)
-                      ) || null
+            {
+              <div className="grid grid-cols-2 gap-2">
+                  <FormItem
+                    label="Country"
+                    invalid={!!drawerProps.formMethods.formState.errors.country_id}
+                    errorMessage={
+                      drawerProps.formMethods.formState.errors.country_id?.message as
+                        | string
+                        | undefined
                     }
-                    onChange={(opt) => field.onChange(opt?.value)}
-                    isLoading={
-                      masterLoadingStatus === "idle" &&
-                      countryOptions.length === 0
+                    isRequired
+                  >
+                    <Controller
+                      name="country_id"
+                      control={drawerProps.formMethods.control}
+                      render={({ field }) => (
+                        <Select
+                          placeholder="Select country"
+                          options={countryOptions}
+                          value={
+                            countryOptions.find(
+                              (opt) => String(opt.value) === String(field.value)
+                            ) || null
+                          }
+                          onChange={(opt) => field.onChange(opt?.value)}
+                          isLoading={
+                            masterLoadingStatus === "idle" &&
+                            countryOptions.length === 0
+                          }
+                        />
+                      )}
+                    />
+                  </FormItem>
+                  <FormItem
+                    label="Status"
+                    invalid={!!drawerProps.formMethods.formState.errors.status}
+                    errorMessage={
+                      drawerProps.formMethods.formState.errors.status?.message as
+                        | string
+                        | undefined
                     }
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Status"
-              invalid={!!drawerProps.formMethods.formState.errors.status}
-              errorMessage={
-                drawerProps.formMethods.formState.errors.status?.message as
-                  | string
-                  | undefined
-              }
-              isRequired
-            >
-              <Controller
-                name="status"
-                control={drawerProps.formMethods.control}
-                render={({ field }) => (
-                  <Select
-                    placeholder="Select Status"
-                    options={statusOptions}
-                    value={
-                      statusOptions.find(
-                        (option) => option.value === field.value
-                      ) || null
-                    }
-                    onChange={(option) =>
-                      field.onChange(option ? option.value : "")
-                    }
-                  />
-                )}
-              />
-            </FormItem>
+                    isRequired
+                  >
+                    <Controller
+                      name="status"
+                      control={drawerProps.formMethods.control}
+                      render={({ field }) => (
+                        <Select
+                          placeholder="Select Status"
+                          options={statusOptions}
+                          value={
+                            statusOptions.find(
+                              (option) => option.value === field.value
+                            ) || null
+                          }
+                          onChange={(option) =>
+                            field.onChange(option ? option.value : "")
+                          }
+                        />
+                      )}
+                    />
+                  </FormItem>
+              </div>
+            }
+            
             <FormItem
               label="Notes (Optional)"
               invalid={!!drawerProps.formMethods.formState.errors.note_details}
@@ -1425,7 +1430,7 @@ const ProductSpecification = () => {
             </FormItem>
             {drawerProps.currentItem &&
               drawerProps.formId === "editProductSpecificationForm" && (
-                <div className="absolute bottom-[0px] w-full">
+                <div className="bottom-[0px] w-full">
                   <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
                       <b className="font-semibold text-primary">Latest Update:</b>

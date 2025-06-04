@@ -1,6 +1,6 @@
 @layer components {
   .form-item {
-    @apply mb-7 relative;
+    @apply mb-4 relative;
   
     &.horizontal {
       @apply flex flex-auto;
@@ -24,7 +24,7 @@
   }
   
   .form-explain {
-    @apply text-error absolute font-semibold;
+    @apply text-error absolute text-xs m-0 mt-3;
   }
   
   .form-container {

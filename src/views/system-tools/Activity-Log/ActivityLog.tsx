@@ -693,7 +693,7 @@ const ActivityLog = () => {
 
           const d = new Date(val);
           const formattedDate = `${d.getDate()} ${d.toLocaleString("en-US", {
-            month: "long",
+            month: "short",
           })} ${d.getFullYear()}, ${d.toLocaleTimeString("en-US", {
             hour: "numeric",
             minute: "2-digit",
@@ -780,7 +780,7 @@ const ActivityLog = () => {
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(
                 updated_at
               ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
                 "en-US",

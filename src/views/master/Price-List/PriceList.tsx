@@ -113,26 +113,26 @@ const statusOptions: SelectOption[] = [
 
 // --- Zod Schema for SIMPLIFIED Add/Edit PriceList Form ---
 const priceListFormSchema = z.object({
-  product_id: z.string().min(1, "Product selection is required."),
+  product_id: z.string().min(1, "Product is required."),
   price: z
     .string()
     .min(1, "Price is required.")
     .regex(
       /^\d+(\.\d{1,2})?$/,
-      "Price must be a valid number (e.g., 100 or 100.50)"
+      "Enter a valid number"
     ),
   usd_rate: z
     .string()
     .min(1, "USD Rate is required.")
-    .regex(/^\d+(\.\d{1,2})?$/, "USD Rate must be a valid number"),
+    .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid number"),
   expance: z
     .string()
     .min(1, "Expenses are required.")
-    .regex(/^\d+(\.\d{1,2})?$/, "Expenses must be a valid number"),
+    .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid number"),
   margin: z
     .string()
     .min(1, "Margin is required.")
-    .regex(/^\d+(\.\d{1,2})?$/, "Margin must be a valid number"),
+    .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid number"),
   status: z.enum(["active", "inactive"], {
     required_error: "Status is required.",
   }), // Added status
@@ -790,7 +790,7 @@ const PriceList = () => {
         accessorKey: "updated_at",
         enableSorting: true,
         meta: { HeaderClass: "text-red-500" },
-        size: 160,
+        size: 180,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
@@ -798,7 +798,7 @@ const PriceList = () => {
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
               ).toLocaleString("en-US", {
-                month: "long",
+                month: "short",
               })} ${new Date(updated_at).getFullYear()}, ${new Date(
                 updated_at
               ).toLocaleTimeString("en-US", {
@@ -960,7 +960,7 @@ const PriceList = () => {
               </Button>
             </div>
           </div>
-          <div className="grid grid-cols-6 mb-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 mb-4 gap-2">
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                 <TbReceipt size={24} />
@@ -1071,7 +1071,7 @@ const PriceList = () => {
           isOpen={drawerProps.isOpen}
           onClose={drawerProps.closeFn}
           onRequestClose={drawerProps.closeFn}
-          width={600}
+          width={520}
           footer={
             <div className="text-right w-full">
               <Button
@@ -1102,8 +1102,9 @@ const PriceList = () => {
             onSubmit={drawerProps.methods.handleSubmit(
               drawerProps.onSubmit as any
             )}
-            className="flex flex-col gap-4 relative pb-28"
+            className="flex flex-col gap-4 relative p-0"
           >
+            {<div className="grid grid-cols-2 gap-2">
             {formFieldsConfig.map((fConfig) => (
               <FormItem
                 key={fConfig.name}
@@ -1113,13 +1114,19 @@ const PriceList = () => {
                   drawerProps.methods.formState.errors[fConfig.name]
                     ?.message as string | undefined
                 }
+                className={
+                  ["product_id", "status"].includes(fConfig.name)
+                    ? "col-span-2"
+                    : "col-span-1"
+                } 
               >
                 {renderFormField(fConfig, drawerProps.methods.control)}
               </FormItem>
             ))}
+            </div>}
           </Form>
           {drawerProps.isEdit && editingPriceListItem && (
-            <div className="absolute bottom-[14%] w-[92%]">
+            <div className="w-full">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">
@@ -1234,6 +1241,7 @@ const PriceList = () => {
         isOpen={isExportReasonModalOpen}
         type="info"
         title="Reason for Export"
+        className={'w-full'}
         onClose={() => setIsExportReasonModalOpen(false)}
         onRequestClose={() => setIsExportReasonModalOpen(false)}
         onCancel={() => setIsExportReasonModalOpen(false)}
@@ -1263,7 +1271,7 @@ const PriceList = () => {
               handleConfirmExportWithReason
             )();
           }}
-          className="flex flex-col gap-4 mt-2"
+          className="flex flex-col mt-2"
         >
           <FormItem
             label="Please provide a reason for exporting this data:"

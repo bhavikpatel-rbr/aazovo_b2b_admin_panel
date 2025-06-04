@@ -603,7 +603,7 @@ const Units = () => {
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(
                 updated_at
               ).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
             : "N/A";
@@ -700,7 +700,7 @@ const Units = () => {
             isOpen={drawerProps.isOpen}
             onClose={drawerProps.closeFn}
             onRequestClose={drawerProps.closeFn}
-            width={600}
+            width={520}
             footer={
                 <div className="text-right w-full">
                 <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button>

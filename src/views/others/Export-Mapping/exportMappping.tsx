@@ -217,7 +217,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
                 {!isNaN(data.exportDate.getTime())
                   ? data.exportDate.toLocaleDateString(undefined, {
                       year: "numeric",
-                      month: "long",
+                      month: "short",
                       day: "numeric",
                       hour: "2-digit",
                       minute: "2-digit",

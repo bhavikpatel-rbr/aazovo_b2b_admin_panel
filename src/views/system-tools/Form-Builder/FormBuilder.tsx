@@ -1015,7 +1015,7 @@ const FormBuilder = () => {
           const date = new Date(updated_at);
           const formattedDate = updated_at
             ? `${date.getDate()} ${date.toLocaleString("en-US", {
-                month: "long",
+                month: "short",
               })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
                 hour: "numeric",
                 minute: "2-digit",

@@ -18,7 +18,7 @@
       duration-150 
       text-gray-800
       dark:text-gray-100
-      font-semibold
+      /* font-semibold */
       read-only:focus:ring-0
       read-only:focus:border-transparent!
       read-only:focus:bg-gray-100

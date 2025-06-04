@@ -1026,7 +1026,7 @@ const PaymentTerms = () => {
           isOpen={drawerProps.isOpen}
           onClose={drawerProps.closeFn}
           onRequestClose={drawerProps.closeFn}
-          width={600}
+          width={420}
           footer={
             <div className="text-right w-full">
               <Button
