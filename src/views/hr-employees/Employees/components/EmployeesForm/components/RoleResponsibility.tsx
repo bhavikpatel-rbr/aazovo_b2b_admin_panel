@@ -199,6 +199,7 @@ const RoleResponsibilitySection = ({
                             rules={{ required: 'Country is required' }}
                             render={({ field }) => (
                                 <Select
+                                    isMulti
                                     placeholder="Select Country"
                                     options={countryOptions}
                                     value={countryOptions.find(option => option.value === field.value)}
@@ -221,6 +222,7 @@ const RoleResponsibilitySection = ({
                             // rules={{ required: 'Category is required' }} // Make optional if not always applicable
                             render={({ field }) => (
                                 <Select
+                                    isMulti
                                     placeholder="Select Category"
                                     options={categoryOptions}
                                     value={categoryOptions.find(option => option.value === field.value)}
@@ -242,6 +244,7 @@ const RoleResponsibilitySection = ({
                             control={control}
                             render={({ field }) => (
                                 <Select
+                                    isMulti
                                     placeholder="Select Subcategory"
                                     options={subCategoryOptions} // Ideally, filter based on selected category
                                     value={subCategoryOptions.find(option => option.value === field.value)}
@@ -263,6 +266,7 @@ const RoleResponsibilitySection = ({
                             control={control}
                             render={({ field }) => (
                                 <Select
+                                    isMulti
                                     placeholder="Select Brand"
                                     options={brandOptions}
                                     value={brandOptions.find(option => option.value === field.value)}
@@ -284,6 +288,7 @@ const RoleResponsibilitySection = ({
                             control={control}
                             render={({ field }) => (
                                 <Select
+                                    isMulti
                                     placeholder="Select Product/Service"
                                     options={productOptions}
                                     value={productOptions.find(option => option.value === field.value)}

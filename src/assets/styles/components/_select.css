@@ -8,6 +8,7 @@
       dark:border-gray-700
       rounded-xl
       transition 
+      text-sm
       duration-150;
   }
 

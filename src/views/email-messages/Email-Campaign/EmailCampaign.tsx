@@ -16,7 +16,7 @@ import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-// import DebounceInput from "@/components/shared/DebounceInput"; // Corrected typo
+import DebounceInput from "@/components/shared/DebouceInput"; // Corrected typo
 import Select from "@/components/ui/Select";
 import DatePicker from "@/components/ui/DatePicker";
 import Radio from "@/components/ui/Radio";
@@ -44,7 +44,9 @@ import {
   TbToggleRight,
   TbForms,
   TbMail, // For email list
-  TbFileImport, // For file import
+  TbFileImport,
+  TbMailOpened,
+  TbMailForward, // For file import
 } from "react-icons/tb";
 
 // Types
@@ -62,6 +64,7 @@ import {
 } from "@/reduxtool/master/middleware"; 
 import { masterSelector } from "@/reduxtool/master/masterSlice"; 
 import { ConfirmDialog } from "@/components/shared";
+import dayjs from "dayjs";
 
 // --- Define Item Types & Constants ---
 export type ApiMailTemplate = { id: string | number; name: string; template_id?: string };
@@ -208,7 +211,32 @@ function exportCampaignsToCsv(filename: string, rows: EmailCampaignItem[]): bool
   if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = "hidden"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; }
   toast.push(<Notification title="Export Failed" type="danger" duration={3000}>Browser does not support this feature.</Notification>); return false;
 }
-const ActionColumn = ({ onViewDetails, onEdit, onDelete }: { onViewDetails: () => void; onEdit: () => void; onDelete: () => void; }) => { return ( <div className="flex items-center justify-center gap-2"> <Tooltip title="Edit Campaign"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" role="button" onClick={onEdit}><TbPencil/></div></Tooltip> <Tooltip title="View Details"><div className="text-xl cursor-pointer text-gray-500 hover:text-blue-600" role="button" onClick={onViewDetails}><TbEye/></div></Tooltip> <Tooltip title="Delete Campaign"><div className="text-xl cursor-pointer text-gray-500 hover:text-red-600" role="button" onClick={onDelete}><TbTrash/></div></Tooltip> </div> ); };
+const ActionColumn = ({ onViewDetails, onEdit, onDelete }: { onViewDetails: () => void; onEdit: () => void; onDelete: () => void; }) => { return ( 
+  <div className="flex items-center justify-center gap-2"> 
+    <Tooltip title="Edit Campaign">
+      <div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" role="button" onClick={onEdit}><TbPencil/></div>
+    </Tooltip> 
+    <Tooltip title="View Details">
+      <div className="text-xl cursor-pointer text-gray-500 hover:text-blue-600" role="button" onClick={onViewDetails}>
+        <TbEye/>
+      </div>
+    </Tooltip> 
+    <Tooltip title="Send test email">
+      <div className="text-xl cursor-pointer text-gray-500 hover:text-orange-600" role="button">
+        <TbMailForward size={18}/>
+      </div>
+    </Tooltip> 
+    <Tooltip title="View Template">
+      <div className="text-xl cursor-pointer text-gray-500 hover:text-blue-600" role="button">
+        <TbMailOpened size={18}/>
+      </div>
+    </Tooltip> 
+    <Tooltip title="Delete Campaign">
+      <div className="text-xl cursor-pointer text-gray-500 hover:text-red-600" role="button" onClick={onDelete}>
+        <TbTrash/>
+      </div>
+    </Tooltip> 
+  </div> ); };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search by Template Name, ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 ItemSearch.displayName = "ItemSearch";
@@ -527,11 +555,25 @@ const EmailCampaignListing = () => {
   const handleExportData = useCallback(() => { exportCampaignsToCsv("email_campaigns_log.csv", allFilteredAndSortedData); }, [allFilteredAndSortedData]);
 
   const columns: ColumnDef<EmailCampaignItem>[] = useMemo( () => [
-      { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
+      // { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
       { header: "Campaign Name", accessorKey: "campaign_name", size: 220, enableSorting: true, cell: props => props.row.original.campaign_name || <span className="italic text-gray-400">N/A</span> },
       { header: "Template Used", accessorKey: "mail_template.name", size: 200, enableSorting: true, cell: props => props.row.original.mail_template?.name || `ID: ${props.row.original.template_id}` },
-      { header: "Date & Time", accessorKey: "dateTimeDisplay", size: 180, enableSorting: true, cell: props => { const d = props.getValue<Date>(); return d ? (<span>{d.toLocaleDateString()} <span className="text-xs text-gray-500">{d.toLocaleTimeString()}</span></span>) : '-'; } },
-      { header: "Status", accessorKey: "status", size: 120, cell: props => { const s = props.getValue<CampaignApiStatus>(); const statusLabel = CAMPAIGN_STATUS_OPTIONS_FILTER.find(opt => opt.value === s)?.label || (s === null ? "Draft" : String(s || "N/A")); return (<Tag className={classNames("capitalize whitespace-nowrap", campaignDisplayStatusColor[String(s)] || campaignDisplayStatusColor.default)}>{statusLabel}</Tag>); }},
+      { header: "Date & Time", accessorKey: "dateTimeDisplay", size: 180, enableSorting: true, cell: props => { 
+          const d = props.getValue<Date>(); 
+          return d ? (
+            <span className="text-xs">
+              {
+                <span>{`${new Date(d.toLocaleDateString()).getDate()} 
+                  ${new Date(d.toLocaleDateString()).toLocaleString("en-US", { month: "short" })} 
+                  ${new Date(d.toLocaleDateString()).getFullYear()}, 
+                  ${new Date(d.toLocaleDateString()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                }</span>
+              }
+            </span>
+          ) : '-' 
+        } 
+      },
+      { header: "Status", accessorKey: "status", size: 100, cell: props => { const s = props.getValue<CampaignApiStatus>(); const statusLabel = CAMPAIGN_STATUS_OPTIONS_FILTER.find(opt => opt.value === s)?.label || (s === null ? "Draft" : String(s || "N/A")); return (<Tag className={classNames("capitalize whitespace-nowrap", campaignDisplayStatusColor[String(s)] || campaignDisplayStatusColor.default)}>{statusLabel}</Tag>); }},
       { header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onViewDetails={() => openViewDialog(props.row.original)} onEdit={() => openCreateDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
     ], [openViewDialog, openCreateDrawer, handleDeleteClick] // Dependencies are stable callbacks
   );

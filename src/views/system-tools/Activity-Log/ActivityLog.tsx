@@ -327,12 +327,26 @@ const ChangeLogsTableTools = ({
       <ChangeLogsSearch onInputChange={onSearchChange} />{" "}
     </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters"> <Button icon={<TbReload />} onClick={onClearFilters} /> </Tooltip>
-      <Button icon={<TbFilter />} className="w-full sm:w-auto" onClick={onFilter}> Filter </Button>
-      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto"> Export </Button>
-      <Tooltip title="Previous 3 Month">
-        <Button icon={<TbTrashX />} className="w-full sm:w-auto"> Clear History </Button>
+      <Tooltip title="Clear Filters">
+        {" "}
+        <Button icon={<TbReload />} onClick={onClearFilters} />{" "}
       </Tooltip>
+      <Button
+        icon={<TbFilter />}
+        className="w-full sm:w-auto"
+        onClick={onFilter}
+      >
+        {" "}
+        Filter{" "}
+      </Button>
+      <Button
+        icon={<TbCloudUpload />}
+        onClick={onExport}
+        className="w-full sm:w-auto"
+      >
+        {" "}
+        Export{" "}
+      </Button>
     </div>
   </div>
 );
