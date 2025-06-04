@@ -35,7 +35,7 @@ import {
     getProductSpecificationsAction, // For sourcing_productSpecId
     // Assuming actions for these exist:
     // getCartoonTypesAction,
-    // getPaymentTermsAction,
+    getPaymentTermAction,
     // getMembersForFormAction, // If you make these dynamic
     // getSalesPersonsForFormAction,
     // getSuppliersForFormAction, 
@@ -70,7 +70,7 @@ const AddLeadPage = () => {
         productsMasterData = [],
         ProductSpecificationsData = [], // Assumed from masterSelector
         cartoonTypesData = [],          // Assumed from masterSelector
-        paymentTermsData = [],          // Assumed from masterSelector
+        PaymentTermsData = [],          // Assumed from masterSelector
         // membersData = [], // If you fetch members via Redux
         // salesPersonsData = [], // If you fetch sales persons via Redux
         // suppliersData = [], // If you fetch suppliers via Redux
@@ -103,10 +103,10 @@ const AddLeadPage = () => {
         const fetchDropdownData = async () => {
             try {
                 await Promise.all([
-                    dispatch(getAllProductAction({})),
+                    dispatch(getAllProductAction()),
                     dispatch(getProductSpecificationsAction()),
-                    dispatch(getCartoonTypesAction()),
-                    dispatch(getPaymentTermsAction()),
+                    // dispatch(getCartoonTypesAction()),
+                    dispatch(getPaymentTermAction()),
                     // dispatch(getMembersForFormAction()), // Uncomment if dynamic
                     // dispatch(getSalesPersonsForFormAction()), // Uncomment if dynamic
                     // dispatch(getSuppliersForFormAction()), // Uncomment if dynamic
@@ -147,12 +147,12 @@ const AddLeadPage = () => {
     }, [cartoonTypesData]);
 
     const paymentTermOptions: SelectOption[] = useMemo(() => {
-        if (!Array.isArray(paymentTermsData)) return [];
-        return paymentTermsData.map((pt: ApiLookupItem) => ({
+        if (!Array.isArray(PaymentTermsData)) return [];
+        return PaymentTermsData.map((pt: ApiLookupItem) => ({
             value: pt.id, // Using original ID as value
-            label: pt.name,
+            label: pt.term_name,
         }));
-    }, [paymentTermsData]);
+    }, [PaymentTermsData]);
 
 
     const onSubmit = async (data: LeadFormData) => {

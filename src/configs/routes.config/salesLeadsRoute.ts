@@ -96,13 +96,34 @@ const salesLeadsRoute: Routes = [
       pageContainerType: "contained",
     },
   },
-
   {
     key: "salesLeads.offersDemands",
-    path: `${SALES_LEADS_PREFIX_PATH}/demands/create`,
+    path: `${SALES_LEADS_PREFIX_PATH}/offers/edit/:id`,
     component: lazy(
-      () =>
-        import("@/views/sales-Leads/Offers-Demands/DemandCreate/CreateDemand")
+      () => import("@/views/sales-Leads/Offers-Demands/OfferCreate/EditOffer")
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+{
+  key: "salesLeads.offersDemands",
+  path: `${SALES_LEADS_PREFIX_PATH}/demands/create`,
+  component: lazy(
+    () =>
+      import("@/views/sales-Leads/Offers-Demands/DemandCreate/CreateDemand")
+  ),
+  authority: [ADMIN, USER],
+  meta: {
+    pageContainerType: "contained",
+  },
+},
+  {
+    key: "salesLeads.offersDemands",
+    path: `${SALES_LEADS_PREFIX_PATH}/demands/edit/:id`,
+    component: lazy(
+      () => import("@/views/sales-Leads/Offers-Demands/DemandCreate/EditDemand")
     ),
     authority: [ADMIN, USER],
     meta: {

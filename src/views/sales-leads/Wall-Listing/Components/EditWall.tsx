@@ -1,6 +1,6 @@
 // src/views/your-path/business-entities/WallItemEdit.tsx
 
-import React, { useState, useCallback, useEffect, useMemo } from "react"; // Added useMemo
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams, NavLink } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,7 +32,10 @@ import {
     // getProductsAction, // Assuming getAllProductAction is the correct one from WallItemAdd
     getCompanyProfileAction, // VERIFY: Assumes this fetches a LIST of companies
     getProductSpecificationsAction,
-    getAllProductAction, // Used in WallItemAdd, assuming it's for product names
+    getPaymentTermAction,
+    getAllProductAction,
+    getWallItemById, // Used in WallItemAdd, assuming it's for product names
+    // getWallItemByIdAction, // << YOU WOULD ADD AN ACTION LIKE THIS FOR REAL API
 } from '@/reduxtool/master/middleware'; // VERIFY PATH
 import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
 
@@ -40,11 +43,11 @@ import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
 // Types
 export type WallIntent = "Buy" | "Sell" | "Exchange";
 
-// API data structure for fetching an item (remains the same)
+// API data structure for fetching an item
 export type ApiFetchedWallItem = {
   id: number;
-  product_name: string; // This will be the string name to match with productOptions
-  company_name: string; // This will be the string name to match with companyOptions
+  product_name: string;
+  company_name: string;
   quantity: number;
   price: number | null;
   intent: WallIntent;
@@ -52,7 +55,7 @@ export type ApiFetchedWallItem = {
   cartoon_type_id: number | null;
   internal_remarks: string | null;
   active_hours: string | null;
-  product_spec_id: number | null; // This will be the ID to match with productSpecOptions
+  product_spec_id: number | null;
   color: string | null;
   dispatch_status: string | null;
   dispatch_mode_from_api: string | null;
@@ -70,11 +73,10 @@ export type ApiFetchedWallItem = {
   return_policy_from_api: string | null;
   product_id_from_api?: number | null;
   customer_id_from_api?: number | null;
-  // Add other fields your API might return
-  source?: string; // Example from WallItemAdd logging
-  created_by?: string; // Example
-  is_wall_manual?: string; // Example
-  created_at_from_api?: string | null; // If your API provides created_at
+  source?: string;
+  created_by?: string;
+  is_wall_manual?: string;
+  created_at_from_api?: string | null;
 };
 
 // Zod Schema for Edit Wall Item Form (Identical to Add Form's schema)
@@ -108,15 +110,16 @@ const wallItemFormSchema = z.object({
   warrantyInfo: z.string().optional().nullable(),
   returnPolicy: z.string().optional().nullable(),
   internalRemarks: z.string().nullable().optional(),
-  productId: z.number().nullable().optional(), // Will be set by UiSelect's onChange for product_name
-  customerId: z.number().nullable().optional(), // Will be set by UiSelect's onChange for company_name
+  productId: z.number().nullable().optional(),
+  customerId: z.number().nullable().optional(),
 });
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
-// Define option types (same as WallItemAdd)
+// Define option types
 type ProductOptionType = { value: string; label: string; id: number };
 type CompanyOptionType = { value: string; label: string; id: number };
 type ProductSpecOptionType = { value: number; label: string };
+type PaymentTermType = { value: string; label: string; id: number };
 
 
 // --- Form Options (Static options remain) ---
@@ -132,10 +135,6 @@ const productStatusOptions: { value: string; label: string }[] = [
 ];
 const dummyCartoonTypes: { id: number; name: string }[] = [
   { id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }, { id: 3, name: "Pallet" }
-];
-// dummyProductSpecsForSelect will be replaced by Redux fetched data
-const dummyPaymentTerms: { id: number; name: string }[] = [
-  { id: 1, name: "Net 30 Days" }, { id: 2, name: "Net 60 Days" }, { id: 3, name: "Due on Receipt" }, { id: 4, name: "Prepaid" }
 ];
 const deviceConditionRadioOptions: { value: string; label: string }[] = [
   { value: "New", label: "New" }, { value: "Old", label: "Old" }
@@ -159,54 +158,47 @@ const adminStatusOptions: { value: string; label: string }[] = [
   { value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }, { value: 'Active', label: 'Active' }
 ];
 
-// Dummy data source (remains for initial item fetch simulation)
-const initialDummyApiItems: ApiFetchedWallItem[] = [
-  {
-    id: 1,
-    product_name: "Electric Drill XT5000 (Existing)", // This name should match a value in your productOptions
-    company_name: "ToolMaster Inc. (Existing)", // This name should match a value in your companyOptions
-    product_id_from_api: 101, // This ID should match an ID in your productOptions
-    customer_id_from_api: 201, // This ID should match an ID in your companyOptions
-    quantity: 30, price: 159.99, intent: "Buy", product_status_from_api: "low_stock",
-    cartoon_type_id: 2, internal_remarks: "Edited remarks: Check stock levels for Drill.",
-    active_hours: "8 AM - 7 PM Weekdays", product_spec_id: 2, // This ID should match a value in productSpecOptions
-    color: "Red", dispatch_status: "Awaiting shipment", dispatch_mode_from_api: "Courier",
-    payment_term_id: 2, eta_from_api: "2024-10-20", device_condition_from_api: "Old",
-    location: "Main Warehouse, Section B", listing_type_from_api: "Featured",
-    visibility: "internal", priority_from_api: "High", admin_status_from_api: "Approved",
-    assigned_team_id_from_api: 1, product_url_from_api: "https://example.com/drill-xt5000",
-    warranty_info_from_api: "2-year limited warranty by manufacturer.",
-    return_policy_from_api: "30-day returns, buyer pays shipping.",
-  },
-];
-
 const WallItemEdit = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { id: itemIdFromParams } = useParams<{ id: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true); // For fetching the item to edit
-  const [isLoadingDropdownData, setIsLoadingDropdownData] = useState(true); // For fetching dropdown options
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+  const [isLoadingDropdownData, setIsLoadingDropdownData] = useState(true);
 
   const [itemToEditApiData, setItemToEditApiData] = useState<ApiFetchedWallItem | null>(null);
 
-  // --- Selectors for Redux state (same as WallItemAdd) ---
   const {
     productsMasterData = [],
-    rawProfileArrayFromState = [],
+    CompanyData = [],
     ProductSpecificationsData = [],
+    PaymentTermsData = [],
     status: masterDataAccessStatus = 'idle',
+    // currentWallItem, // << YOU WOULD USE A SELECTOR LIKE THIS
+    // currentWallItemStatus, // << AND ITS STATUS
   } = useSelector(masterSelector);
 
   const formMethods = useForm<WallItemFormData>({
     resolver: zodResolver(wallItemFormSchema),
   });
 
-  // --- Prepare options for Select components (same as WallItemAdd) ---
+  const paymentTermsOption: PaymentTermType[] = useMemo(() => {
+    if (!Array.isArray(PaymentTermsData)) return [];
+    return PaymentTermsData.map((payment: any) => ({
+      value: payment.term_name || payment.term_name, // Adjust if payment name field is different
+      label: payment.term_name || payment.term_name,
+      id: payment.id,
+    }));
+  }, [PaymentTermsData]);
+
    const productOptions: ProductOptionType[] = useMemo(() => {
     if (!Array.isArray(productsMasterData)) return [];
+    // For simulation to work, ensure the names used in `fetchWallItemFromApi`
+    // can be generated by this mapping or exist in `productsMasterData`.
+    // Example: if `fetchWallItemFromApi` returns `product_name: "Electric Drill XT5000"`,
+    // one of the `productsMasterData` items should have `name: "Electric Drill XT5000"`.
     return productsMasterData.map((product: any) => ({
-      value: product.name, // Assuming product_name form field expects the name
+      value: product.name,
       label: `${product.name}${product.sku_code ? ` (${product.sku_code})` : ''}`.trim(),
       id: product.id,
     }));
@@ -214,18 +206,19 @@ const WallItemEdit = () => {
   
 
   const companyOptions: CompanyOptionType[] = useMemo(() => {
-    if (!Array.isArray(rawProfileArrayFromState)) return [];
-    return rawProfileArrayFromState.map((company: any) => ({
-      value: company.company_name || company.name, // Assuming company_name form field expects the name
+    if (!Array.isArray(CompanyData)) return [];
+    // Similar to productOptions, ensure names match for pre-selection.
+    return CompanyData.map((company: any) => ({
+      value: company.company_name || company.name,
       label: company.company_name || company.name,
       id: company.id,
     }));
-  }, [rawProfileArrayFromState]);
+  }, [CompanyData]);
 
   const productSpecOptionsForSelect: ProductSpecOptionType[] = useMemo(() => {
     if (!Array.isArray(ProductSpecificationsData)) return [];
     return ProductSpecificationsData.map((spec: any) => ({
-      value: spec.id, // productSpecId form field expects the ID
+      value: spec.id,
       label: spec.name,
     }));
   }, [ProductSpecificationsData]);
@@ -235,7 +228,7 @@ const WallItemEdit = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!itemIdFromParams) {
-        toast.push(<Notification title="Error" type="danger">Invalid item ID.</Notification>);
+        toast.push(<Notification title="Error" type="danger">Invalid item ID provided.</Notification>);
         navigate(-1);
         return;
       }
@@ -249,52 +242,62 @@ const WallItemEdit = () => {
           dispatch(getAllProductAction()),
           dispatch(getCompanyProfileAction()),
           dispatch(getProductSpecificationsAction()),
+          dispatch(getPaymentTermAction()),
         ]);
-        setIsLoadingDropdownData(false); // Dropdown data loaded or failed
+        setIsLoadingDropdownData(false);
 
-        // Simulate fetching the specific item to edit
-        // In a real app, this would be an API call: dispatch(getWallItemByIdAction(itemId))
-        await new Promise(res => setTimeout(res, 300)); // Simulate delay for item fetch
-        const itemId = parseInt(itemIdFromParams, 10);
-        const fetchedApiItem = initialDummyApiItems.find(item => item.id === itemId);
+        // Fetch the specific item to edit
+        const id = parseInt(itemIdFromParams, 10);
+        if (isNaN(id)) {
+          toast.push(<Notification title="Error" type="danger">Invalid item ID format.</Notification>);
+          navigate("/sales-leads/wall-listing");
+          setIsLoadingInitialData(false); // Clear loading state
+          return;
+        }
+
+        // In a real app, this would be:
+        // dispatch(getWallItemByIdAction(id));
+        // And then you'd select the item from the Redux store using `useSelector`.
+        // The result would then be set to `itemToEditApiData` or used directly.
+        // For this simulation, we call our mocked fetch function:
+        const fetchedApiItem = await dispatch(getWallItemById(id)).unwrap();
+
 
         if (fetchedApiItem) {
           setItemToEditApiData(fetchedApiItem);
         } else {
-          toast.push(<Notification title="Error" type="danger">Wall item not found.</Notification>);
+          toast.push(<Notification title="Error" type="danger">Wall item not found (ID: {id}).</Notification>);
           navigate("/sales-leads/wall-listing");
         }
       } catch (error) {
         console.error("Failed to fetch data for edit form:", error);
-        toast.push(<Notification title="Data Load Error" type="danger">Could not load data for editing.</Notification>);
-        if (isLoadingDropdownData) setIsLoadingDropdownData(false); // Ensure it's set if Promise.all fails early
+        toast.push(<Notification title="Data Load Error" type="danger">Could not load required data for editing.</Notification>);
+        if (isLoadingDropdownData) setIsLoadingDropdownData(false);
       } finally {
         setIsLoadingInitialData(false);
       }
     };
     fetchData();
-  }, [dispatch, itemIdFromParams, navigate]);
-
+  }, [dispatch, itemIdFromParams, navigate]); // isLoadingDropdownData removed as it's managed inside
 
   // --- Populate form once all data is available ---
   useEffect(() => {
-    // Only reset form if item data is fetched AND dropdown options are ready (or master status is not loading/idle)
-    if (itemToEditApiData && (!isLoadingDropdownData || masterDataAccessStatus === 'succeeded' || masterDataAccessStatus === 'failed')) {
+    if (itemToEditApiData && (!isLoadingDropdownData || ['succeeded', 'failed'].includes(masterDataAccessStatus))) {
       const matchedProductStatusOption = productStatusOptions.find(opt =>
         opt.label.toLowerCase().replace(/[^a-z0-9]/gi, '') ===
-        itemToEditApiData.product_status_from_api.toLowerCase().replace(/[^a-z0-9]/gi, '') ||
+        itemToEditApiData?.product_status_from_api ||
         opt.value.toLowerCase().replace(/[^a-z0-9]/gi, '') ===
-        itemToEditApiData.product_status_from_api.toLowerCase().replace(/[^a-z0-9]/gi, '')
+        itemToEditApiData?.product_status_from_api
       );
 
       formMethods.reset({
-        product_name: itemToEditApiData.product_name, // The string name from API
-        company_name: itemToEditApiData.company_name, // The string name from API
+        product_name: itemToEditApiData.product_name,
+        company_name: itemToEditApiData.company_name,
         qty: itemToEditApiData.quantity,
         price: itemToEditApiData.price,
         intent: itemToEditApiData.intent,
         productStatus: matchedProductStatusOption?.value || productStatusOptions[0]?.value || '',
-        productSpecId: itemToEditApiData.product_spec_id, // The ID from API
+        productSpecId: itemToEditApiData.product_spec_id,
         deviceCondition: itemToEditApiData.device_condition_from_api,
         color: itemToEditApiData.color,
         cartoonTypeId: itemToEditApiData.cartoon_type_id,
@@ -313,11 +316,11 @@ const WallItemEdit = () => {
         warrantyInfo: itemToEditApiData.warranty_info_from_api,
         returnPolicy: itemToEditApiData.return_policy_from_api,
         internalRemarks: itemToEditApiData.internal_remarks,
-        productId: itemToEditApiData.product_id_from_api, // Set from API if available
-        customerId: itemToEditApiData.customer_id_from_api, // Set from API if available
+        productId: itemToEditApiData.product_id_from_api,
+        customerId: itemToEditApiData.customer_id_from_api,
       });
     }
-  }, [itemToEditApiData, formMethods, isLoadingDropdownData, masterDataAccessStatus, productOptions, companyOptions, productSpecOptionsForSelect]); // Added options as dependencies to ensure reset happens after they are populated
+  }, [itemToEditApiData, formMethods, isLoadingDropdownData, masterDataAccessStatus, productOptions, companyOptions, productSpecOptionsForSelect]);
 
 
   const onFormSubmit = useCallback(
@@ -328,7 +331,6 @@ const WallItemEdit = () => {
       }
       setIsSubmitting(true);
 
-      // Use the prepared productSpecOptionsForSelect for finding details
       const productSpecDetails = formData.productSpecId
         ? productSpecOptionsForSelect.find(spec => spec.value === formData.productSpecId)
         : null;
@@ -340,8 +342,8 @@ const WallItemEdit = () => {
       const loggedPayload: any = { ...formData }; 
 
       loggedPayload.id = parseInt(itemIdFromParams, 10);
-      loggedPayload.product_id = String(formData.productId); // Ensure productId is set
-      loggedPayload.customer_id = String(formData.customerId); // Ensure customerId is set
+      loggedPayload.product_id = String(formData.productId);
+      loggedPayload.customer_id = String(formData.customerId);
       loggedPayload.product_spec_id = formData.productSpecId ? String(formData.productSpecId) : null;
       loggedPayload.assigned_to = formData.assignedTeamId ? String(formData.assignedTeamId) : null;
       
@@ -356,7 +358,7 @@ const WallItemEdit = () => {
 
       loggedPayload.color = formData.color;
       loggedPayload.device_condition = formData.deviceCondition;
-      loggedPayload.product_specs = productSpecDetails ? productSpecDetails.label : null; // Use label from selected spec
+      loggedPayload.product_specs = productSpecDetails ? productSpecDetails.label : null;
 
       loggedPayload.cartoon_type = cartoonTypeDetails ? cartoonTypeDetails.name : (formData.cartoonTypeId ? String(formData.cartoonTypeId) : null);
       loggedPayload.delivery_at = formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null;
@@ -375,25 +377,25 @@ const WallItemEdit = () => {
       loggedPayload.notes = formData.internalRemarks;
 
       loggedPayload.created_from = "FormUI-Edit"; 
-      loggedPayload.source = itemToEditApiData?.source || "in";
+      loggedPayload.source = itemToEditApiData?.source || "in_edit"; // Use fetched source or a default for edit
       loggedPayload.delivery_details = null;
-      loggedPayload.created_by = itemToEditApiData?.created_by || "1"; 
+      loggedPayload.created_by = itemToEditApiData?.created_by || "1"; // Use fetched creator or default
       loggedPayload.expired_date = null;
       
-      loggedPayload.created_at = itemToEditApiData?.created_at_from_api || new Date().toISOString(); // Prefer original creation date
+      loggedPayload.created_at = itemToEditApiData?.created_at_from_api || new Date().toISOString();
       loggedPayload.updated_at = new Date().toISOString(); 
       
-      loggedPayload.is_wall_manual = itemToEditApiData?.is_wall_manual || "0";
+      loggedPayload.is_wall_manual = itemToEditApiData?.is_wall_manual || "0"; // Use fetched value or default
 
       loggedPayload.product = {
-          id: formData.productId, // This should be correctly set
+          id: formData.productId,
           name: formData.product_name,
           description: null, 
           status: formData.productStatus, 
       };
       loggedPayload.product_spec = productSpecDetails ? { id: productSpecDetails.value, name: productSpecDetails.label } : null;
       loggedPayload.customer = {
-          id: formData.customerId, // This should be correctly set
+          id: formData.customerId,
           name: formData.company_name,
       };
       loggedPayload.company = null;
@@ -404,13 +406,15 @@ const WallItemEdit = () => {
       console.log("3. Constructed Payload (for API/logging - matches target structure, includes all form data):", loggedPayload);
       console.log("--- End WallItemEdit Form Submission Log ---");
       
+      // Simulate API call for update
+      // In a real app: await dispatch(updateWallItemAction(loggedPayload));
       await new Promise(res => setTimeout(res, 1000));
 
       toast.push(<Notification title="Success" type="success">Wall item updated. (Simulated)</Notification>);
       setIsSubmitting(false);
       navigate("/sales-leads/wall-listing");
     },
-    [navigate, itemIdFromParams, itemToEditApiData, productSpecOptionsForSelect] // Added productSpecOptionsForSelect
+    [navigate, itemIdFromParams, itemToEditApiData, productSpecOptionsForSelect]
   );
 
   const handleCancel = () => {
@@ -424,12 +428,20 @@ const WallItemEdit = () => {
         ...currentValues,
         id: parseInt(itemIdFromParams, 10),
         eta: currentValues.eta ? dayjs(currentValues.eta).format("YYYY-MM-DD") : null,
+        // Retain original source/creator if available from itemToEditApiData for drafts
+        source: itemToEditApiData?.source,
+        created_by: itemToEditApiData?.created_by,
+        is_wall_manual: itemToEditApiData?.is_wall_manual,
+        created_at_from_api: itemToEditApiData?.created_at_from_api,
+
     };
     console.log("Saving as draft (Edit):", draftData);
     toast.push(<Notification title="Draft Saved" type="info">Changes saved as draft. (Simulated)</Notification>);
   };
 
-  const isLoadingCombined = isLoadingInitialData || isLoadingDropdownData || masterDataAccessStatus === "idle";
+  // Combined loading state: true if initial item data is loading OR dropdown data is loading (either via its own state or Redux status)
+  const isLoadingCombined = isLoadingInitialData || isLoadingDropdownData || masterDataAccessStatus === "idle" || masterDataAccessStatus === "idle";
+
 
   if (isLoadingCombined) {
     return (
@@ -441,6 +453,20 @@ const WallItemEdit = () => {
     );
   }
   
+  if (!itemToEditApiData && !isLoadingInitialData) { // Handles case where item wasn't found but initial load finished
+    return (
+      <Container>
+        <div className="text-center p-8">
+          <h4 className="text-lg font-semibold mb-2">Item Not Found</h4>
+          <p>The requested wall item could not be loaded. It might have been removed or the ID is incorrect.</p>
+          <Button className="mt-4" variant="solid" onClick={() => navigate("/sales-leads/wall-listing")}>
+            Back to Wall Listing
+          </Button>
+        </div>
+      </Container>
+    );
+  }
+
   return (
     <>
       <div className="flex gap-1 items-end mb-3 ">
@@ -468,7 +494,7 @@ const WallItemEdit = () => {
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "idle"}
+                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading" || masterDataAccessStatus === "idle"}
                             options={productOptions}
                             value={productOptions.find(opt => opt.value === field.value) || null }
                             onChange={option => {
@@ -496,7 +522,7 @@ const WallItemEdit = () => {
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "idle"}
+                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading" || masterDataAccessStatus === "idle"}
                             options={companyOptions}
                             value={companyOptions.find(opt => opt.value === field.value) || null}
                             onChange={option => {
@@ -567,7 +593,7 @@ const WallItemEdit = () => {
             >
               <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
                   <UiSelect 
-                    isLoading={isLoadingDropdownData || masterDataAccessStatus === "idle"}
+                    isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading" || masterDataAccessStatus === "idle"}
                     options={productSpecOptionsForSelect} 
                     value={productSpecOptionsForSelect.find(opt => opt.value === field.value) || null} 
                     onChange={(option) => field.onChange(option ? option.value : null)} 
@@ -593,7 +619,6 @@ const WallItemEdit = () => {
               <Controller name="color" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="Enter Color (Optional)" /> )} />
             </FormItem>
             
-            {/* Other rows remain the same as previous version */}
             <FormItem
               label="Cartoon Type"
               invalid={!!formMethods.formState.errors.cartoonTypeId}
@@ -635,11 +660,12 @@ const WallItemEdit = () => {
               errorMessage={formMethods.formState.errors.paymentTermId?.message}
             >
               <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name }))} 
-                  value={dummyPaymentTerms.map(term => ({ value: term.id, label: term.name })).find(opt => opt.value === field.value) || null} 
+                  <UiSelect options={paymentTermsOption} {...field} 
+                  value={paymentTermsOption.find(opt => opt.value === field.value) || null}
                   onChange={(option) => field.onChange(option ? option.value : null)} 
                   placeholder="Select Payment Term (Optional)" 
-                  isClearable/>
+                  isClearable
+                  />
                 )} />
             </FormItem>
             <FormItem
