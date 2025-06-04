@@ -31,10 +31,12 @@ import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import { Drawer, Form, Input, Select as UiSelect, DatePicker, FormItem } from "@/components/ui";
 import Dropdown from "@/components/ui/Dropdown";
+import classNames from "classnames";
 
 // Icons
 import {
-  TbPencil, TbTrash, TbChecks, TbSearch, TbCloudUpload, TbFilter, TbPlus,
+  TbPencil, TbTrash,  TbAlertTriangle,
+  TbCalendarTime, TbSubtask , TbSearch, TbCloudUpload, TbFilter, TbPlus,
   TbDotsVertical, TbEye, TbUserPlus, TbArrowsExchange, TbRocket, TbInfoCircle,
   TbBulb
 } from "react-icons/tb";
@@ -93,25 +95,115 @@ function exportLeadsToCsv(filename: string, rows: LeadListItem[]) { /* ... (your
     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; } const separator = ","; const csvContent = CSV_LEAD_HEADERS.join(separator) + "\n" + rows.map(row => { return CSV_LEAD_KEYS.map(k => { let cell = row[k]; if (cell === null || cell === undefined) cell = ""; else if (cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss"); else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator); }).join("\n"); const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); const link = document.createElement("a"); if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = "hidden"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; } toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
-// --- Helper Components (LeadActionColumn, LeadSearch, etc. - Keep your existing complex ones) ---
-const LeadActionColumn = ({ onViewDetail, onEdit, onDelete, onAssign, onChangeStatus, onConvertToOpportunity }: any) => (
-    <div className="flex items-center justify-center gap-1"> {/* Reduced gap for tighter look */}
-        <Tooltip title="View"><div className="text-xl" onClick={onViewDetail} ><TbEye /></div></Tooltip>
-        <Tooltip title="Edit"><div className="text-xl" onClick={onEdit}><TbPencil /></div> </Tooltip>
-        <Tooltip title="Delete"><div className="text-xl" onClick={onDelete} > <TbTrash /></div></Tooltip>
-        <Dropdown placement="bottom-end" className="" renderTitle={<Tooltip title="More Actions"><div className="text-xl"><TbDotsVertical /></div></Tooltip>}>
-            <Dropdown.Item onClick={onAssign} className="flex items-center gap-2 text-xs"><TbUserPlus/>Assign Lead</Dropdown.Item>
-            <Dropdown.Item onClick={onChangeStatus} className="flex items-center gap-2 text-xs"><TbArrowsExchange/>Change Status</Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2 text-xs"><TbBulb/>Match Opportunity</Dropdown.Item>
-            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs"><TbRocket/>Convert to deal</Dropdown.Item>
-            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">Request For</Dropdown.Item>
-            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">Add in Active</Dropdown.Item>
-            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">Add Schedule</Dropdown.Item>
-            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">Add Task</Dropdown.Item>
-            <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">View Alert</Dropdown.Item>
-        </Dropdown>
+const LeadActionColumn = ({
+  onViewDetail,
+  onEdit,
+  onDelete,
+  onAssign,
+  onChangeStatus,
+  onConvertToOpportunity,
+}: {
+  onViewDetail: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAssign: () => void;
+  onChangeStatus: () => void;
+  onConvertToOpportunity: () => void;
+}) => {
+  const iconButtonClass =
+    "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <Tooltip title="View Lead">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+          )}
+          role="button"
+          onClick={onViewDetail}
+        >
+          <TbEye />
+        </div>
+      </Tooltip>
+
+      <Tooltip title="Edit Lead">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+          )}
+          role="button"
+          onClick={onEdit}
+        >
+          <TbPencil />
+        </div>
+      </Tooltip>
+
+      <Tooltip title="Delete Lead">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+          )}
+          role="button"
+          onClick={onDelete}
+        >
+          <TbTrash />
+        </div>
+      </Tooltip>
+
+      <Dropdown
+        placement="bottom-end"
+        renderTitle={
+          <div
+            className={classNames(
+              "ml-0.5 mr-2 p-1 rounded-md cursor-pointer",
+              hoverBgClass,
+              "text-gray-500 dark:text-gray-400"
+            )}
+          >
+            <TbDotsVertical />
+          </div>
+        }
+      >
+        <Dropdown.Item onClick={onAssign} className="flex items-center gap-2 text-xs">
+          <TbUserPlus size={18} /> Assign Lead
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onChangeStatus} className="flex items-center gap-2 text-xs">
+          <TbArrowsExchange size={18} /> Change Status
+        </Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2 text-xs">
+          <TbBulb size={18} /> Match Opportunity
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">
+          <TbRocket size={18} /> Convert to Deal
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">
+          <TbPlus size={18} /> Request For
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">
+          <TbPlus size={18} /> Add in Active
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">
+          <TbCalendarTime size={18} /> Add Schedule
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">
+          <TbSubtask size={18} /> Add Task
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs">
+          <TbAlertTriangle size={18} /> View Alert
+        </Dropdown.Item>
+      </Dropdown>
     </div>
-);
+  );
+};
+
 const LeadSearch = React.forwardRef<HTMLInputElement, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
 LeadSearch.displayName = "LeadSearch";
 const LeadTableTools = ({ onSearchChange, onFilter, onExport }: any) => ( /* ... (Keep your original) ... */
@@ -170,7 +262,7 @@ const LeadsListing = () => {
     if (!Array.isArray(LeadsData)) return [];
     return LeadsData.map((apiLead: any): LeadListItem => ({
         id: apiLead.id, leadNumber: apiLead.lead_number || `LD-${apiLead.id}`, status: apiLead.status || "New",
-        enquiryType: apiLead.enquiry_type || "Other", productName: apiLead.product_name,
+        enquiryType: apiLead.enquiry_type || "Other", productName: apiLead.product.name,
         memberId: String(apiLead.member_id || apiLead.user_id || 'N/A'), memberName: apiLead.member_name || apiLead.user?.name,
         intent: apiLead.intent, qty: apiLead.qty, targetPrice: apiLead.target_price,
         salesPersonId: apiLead.sales_person_id, salesPersonName: apiLead.sales_person?.name,
@@ -309,7 +401,8 @@ const LeadsListing = () => {
     },
     // { header: "Sales Person", accessorKey: "salesPersonName", size: 140, cell: (props: CellContext<LeadListItem, any>) => props.row.original.salesPersonName || 'Unassigned' },
     // { header: "Created At", accessorKey: "createdAt", size: 160, cell: (props: CellContext<LeadListItem, any>) => dayjs(props.row.original.createdAt).format("YYYY-MM-DD HH:mm") },
-    { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" },
+    { header: "Actions", id: "actions",         meta: { HeaderClass: "text-center", cellClass: "text-center" },
+        size: 80,
       cell: (props: CellContext<LeadListItem, any>) => (
         <LeadActionColumn
           onViewDetail={() => openViewDialog(props.row.original)}

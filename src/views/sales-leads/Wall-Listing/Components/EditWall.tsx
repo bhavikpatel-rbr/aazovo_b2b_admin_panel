@@ -158,55 +158,6 @@ const adminStatusOptions: { value: string; label: string }[] = [
   { value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }, { value: 'Active', label: 'Active' }
 ];
 
-// Simulate API call to fetch a single item by ID
-// In a real app, this logic would be replaced by a Redux thunk/action
-// that makes an API request and stores the result in the Redux store.
-// const fetchWallItemFromApi = async (id: number): Promise<ApiFetchedWallItem | null> => {
-//     console.log(`Simulating API fetch for item ID: ${id}`);
-//     await new Promise(resolve => setTimeout(resolve, 700)); // Simulate network delay
-
-//     // Example: This item ID (1) has data. Other IDs might not.
-//     if (id === 1) {
-//         return {
-//             id: 1,
-//             // Ensure these names can be found in your dynamic product/company options for correct UiSelect pre-selection
-//             product_name: "Electric Drill XT5000", // Assuming "Electric Drill XT5000" exists in productOptions
-//             company_name: "ToolMaster Inc.",       // Assuming "ToolMaster Inc." exists in companyOptions
-//             product_id_from_api: 101, // This ID should correspond to "Electric Drill XT5000"
-//             customer_id_from_api: 201, // This ID should correspond to "ToolMaster Inc."
-//             quantity: 55,
-//             price: 179.99,
-//             intent: "Sell",
-//             product_status_from_api: "Active", // Matches a `value` in productStatusOptions
-//             cartoon_type_id: 1,
-//             internal_remarks: "Fetched from API: Special discount applied. Monitor stock.",
-//             active_hours: "9 AM - 6 PM Mon-Fri",
-//             product_spec_id: 2, // Assuming this ID exists in productSpecOptions
-//             color: "Blue",
-//             dispatch_status: "Ready for dispatch",
-//             dispatch_mode_from_api: "Pickup", // Matches a `value` in dispatchModeOptions
-//             payment_term_id: 1,
-//             eta_from_api: dayjs().add(10, 'day').format("YYYY-MM-DD"), // e.g., 10 days from now
-//             device_condition_from_api: "New", // Matches a `value` in deviceConditionRadioOptions
-//             location: "Warehouse Alpha, Bay 3",
-//             listing_type_from_api: "Regular", // Matches a `value` in listingTypeOptions
-//             visibility: "public", // Matches a `value` in visibilityOptions
-//             priority_from_api: "Medium", // Matches a `value` in priorityOptions
-//             admin_status_from_api: "Pending", // Matches a `value` in adminStatusOptions
-//             assigned_team_id_from_api: 2,
-//             product_url_from_api: "https://example.com/drill-xt5000-pro",
-//             warranty_info_from_api: "3-year extended warranty.",
-//             return_policy_from_api: "60-day no-questions-asked returns.",
-//             source: "api_database_live",
-//             created_by: "user_abc_567",
-//             is_wall_manual: "0",
-//             created_at_from_api: dayjs().subtract(5, 'day').toISOString(), // e.g., 5 days ago
-//         };
-//     }
-//     return null; // Item not found for other IDs
-// };
-
-
 const WallItemEdit = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -219,7 +170,7 @@ const WallItemEdit = () => {
 
   const {
     productsMasterData = [],
-    rawProfileArrayFromState = [],
+    CompanyData = [],
     ProductSpecificationsData = [],
     PaymentTermsData = [],
     status: masterDataAccessStatus = 'idle',
@@ -255,14 +206,14 @@ const WallItemEdit = () => {
   
 
   const companyOptions: CompanyOptionType[] = useMemo(() => {
-    if (!Array.isArray(rawProfileArrayFromState)) return [];
+    if (!Array.isArray(CompanyData)) return [];
     // Similar to productOptions, ensure names match for pre-selection.
-    return rawProfileArrayFromState.map((company: any) => ({
+    return CompanyData.map((company: any) => ({
       value: company.company_name || company.name,
       label: company.company_name || company.name,
       id: company.id,
     }));
-  }, [rawProfileArrayFromState]);
+  }, [CompanyData]);
 
   const productSpecOptionsForSelect: ProductSpecOptionType[] = useMemo(() => {
     if (!Array.isArray(ProductSpecificationsData)) return [];

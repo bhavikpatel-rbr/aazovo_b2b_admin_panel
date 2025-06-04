@@ -50,8 +50,7 @@ import {
   getProductsAction, addProductAction, editProductAction, deleteProductAction,
   deleteAllProductsAction, getDomainsAction, getCategoriesAction,
   getSubcategoriesByCategoryIdAction, getBrandsAction, getUnitsAction, getCountriesAction,
-  changeProductStatusAction,
-  clearSubcategoriesAction // REFACTOR: Make sure this is correctly implemented if used
+  changeProductStatusAction
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";

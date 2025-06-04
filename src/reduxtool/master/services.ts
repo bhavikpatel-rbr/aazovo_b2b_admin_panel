@@ -2335,7 +2335,7 @@ export const getWallItemByIdAsync = async (id: string | number) => {
 export const getOffersAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/offer`)
-    return response
+    return response.data
   } catch (err) {
     return isAxiosError(err)
   }
@@ -2344,8 +2344,69 @@ export const getOffersAsync = async () => {
 export const getDemandsAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/demand`)
+    return response.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const addOfferAsync = async (offerData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/offer`, offerData)
     return response
   } catch (err) {
     return isAxiosError(err)
+  }
+}
+
+export const editOfferAsync = async (offerData: any) => {
+  try {
+    const response = await axiosInstance.post(
+      `${config.apiURL}/offer/${offerData?.id}`,
+      { _method: "PUT", ...offerData }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const addDemandAsync = async (demandData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/demand`, demandData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getOfferByIdAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/offer/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const editDemandAsync = async (demandData: any) => {
+  try {
+    const response = await axiosInstance.post(
+      `${config.apiURL}/demand/${demandData?.id}`,
+      { _method: "PUT", ...demandData }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const getDemandByIdAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/demand/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
   }
 }
