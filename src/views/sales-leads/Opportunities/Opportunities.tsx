@@ -8,7 +8,6 @@ import classNames from "classnames";
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
-// import DataTable from "@/components/shared/DataTable"; // We will use the provided DataTable1
 import Tooltip from "@/components/ui/Tooltip";
 import Tag from "@/components/ui/Tag";
 import Button from "@/components/ui/Button";
@@ -68,36 +67,79 @@ import type { CheckboxProps } from '@/components/ui/Checkbox';
 import { DatePicker, Drawer, Dropdown, Form, FormItem, Input } from "@/components/ui";
 import { Controller, useForm } from "react-hook-form";
 
+// Redux
+import { useAppDispatch } from "@/reduxtool/store"; // Assuming this exists
+import { useSelector } from "react-redux"; // Assuming this exists
+import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming this exists
+import { getOpportunitiesAction } from "@/reduxtool/master/middleware"; // Assuming this action exists
 
-// --- Define Item Type (Table Row Data) ---
+
+// --- Define API Item Type (Matches API Response Structure) ---
+export type ApiOpportunityItem = {
+  id: string;
+  opportunity_id: string | null;
+  product_name: string;
+  status: string; // e.g., "Pending", "Active" - from API
+  opportunity_status: string | null; // e.g., "New", "Converted" - from API
+  match_score: number | null;
+  created_date: string | null; // ISO string
+  buy_listing_id: string | null;
+  sell_listing_id: string | null;
+  spb_role: string | null; // "Seller" | "Buyer"
+  product_category: string | null;
+  product_subcategory: string | null;
+  brand: string | null;
+  product_specs: string | null;
+  quantity: string | number | null; // API has null in example, could be string or number if present
+  product_status_listing: string | null;
+  want_to: string; // "Sell" | "Buy" | "Exchange"
+  company_name: string | null;
+  company_id: string | null;
+  member_name: string | null;
+  member_id: string | null;
+  member_email: string | null;
+  member_phone: string | null;
+  member_type: string | null; // "Standard" | "Premium" | "INS-PREMIUM"
+  price_match_type: string | null; // "Exact" | "Range" | "Not Matched"
+  quantity_match_listing: string | null; // API example has "1", might need interpretation
+  location_match: string | null; // "Local" | "National" | "Not Matched"
+  matches_found_count: number | null;
+  last_updated: string | null; // ISO string
+  assigned_to: number | string | null; // API example shows number `1`
+  notes: string | null;
+  listing_url: string | null;
+};
+
+
+// --- Define UI Item Type (Table Row Data) ---
 export type OpportunityItem = {
   id: string;
-  opportunity_id: string;
+  opportunity_id: string; // Non-nullable in UI, default to "" or generated if API is null
   product_name: string;
-  status: "pending" | "active" | "on_hold" | "closed";
-  opportunity_status: "New" | "Shortlisted" | "Converted" | "Rejected";
-  match_score: number;
-  created_date: string;
+  status: "pending" | "active" | "on_hold" | "closed" | string; // Allow string for unmapped API statuses
+  opportunity_status: "New" | "Shortlisted" | "Converted" | "Rejected" | string; // Allow string
+  match_score: number; // Default to 0 if API is null
+  created_date: string; // Keep as string for FormattedDate, default to ""
   buy_listing_id?: string;
   sell_listing_id?: string;
-  spb_role?: "Seller" | "Buyer";
+  spb_role?: "Seller" | "Buyer" | string;
   product_category?: string;
   product_subcategory?: string;
   brand?: string;
   product_specs?: string;
   quantity?: number;
   product_status_listing?: "In Stock" | "Low Stock" | "Out of Stock" | string;
-  want_to?: "Buy" | "Sell" | "Exchange";
-  company_name: string;
+  want_to?: "Buy" | "Sell" | "Exchange" | string;
+  company_name: string; // Default to "N/A"
   company_id?: string;
-  member_name: string;
+  member_name: string; // Default to "N/A"
   member_id?: string;
   member_email?: string;
   member_phone?: string;
-  member_type: "Standard" | "Premium" | "INS-PREMIUM" | string;
-  price_match_type?: "Exact" | "Range" | "Not Matched";
-  quantity_match_listing?: "Sufficient" | "Partial" | "Not Matched";
-  location_match?: "Local" | "National" | "Not Matched";
+  member_type: "Standard" | "Premium" | "INS-PREMIUM" | string; // Allow string
+  price_match_type?: "Exact" | "Range" | "Not Matched" | string;
+  quantity_match_listing?: "Sufficient" | "Partial" | "Not Matched" | string; // Mapped from API
+  location_match?: "Local" | "National" | "Not Matched" | string;
   matches_found_count?: number;
   last_updated?: string;
   assigned_to?: string;
@@ -111,12 +153,16 @@ const recordStatusTagColor: Record<OpportunityItem["status"], string> = {
   active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200",
   on_hold: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-200",
   closed: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200",
+  // Add other statuses if needed, and a default
+  default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-200",
 };
 const opportunityStatusTagColor: Record<OpportunityItem["opportunity_status"], string> = {
   New: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200",
   Shortlisted: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200",
   Converted: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200",
   Rejected: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200",
+  // Add other statuses if needed, and a default
+  default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-200",
 };
 const matchTypeColors: Record<string, string> = {
   Exact: "text-green-600 dark:text-green-400",
@@ -128,63 +174,6 @@ const matchTypeColors: Record<string, string> = {
   National: "text-blue-600 dark:text-blue-400",
 };
 
-const allOpportunitiesData: OpportunityItem[] = [
-  {
-    id: "2", opportunity_id: "SPB-001", product_name: "Eco-Friendly Water Bottles - 1L Capacity, Stainless Steel, Various Colors",
-    status: "active", opportunity_status: "New", match_score: 75, created_date: "2024-03-01T10:00:00Z",
-    buy_listing_id: "BUY-ECO-01", sell_listing_id: "SELL-ECO-02", spb_role: "Seller",
-    product_category: "Lifestyle", product_subcategory: "Drinkware", brand: "EcoLife",
-    product_specs: "India, USA", quantity: 150, product_status_listing: "In Stock", want_to: "Sell",
-    company_name: "GreenSource Supplies Ltd.", company_id: "GS001", member_name: "Alice Green", member_id: "MEM001",
-    member_email: "alice@greensource.com", member_phone: "555-1111", member_type: "Premium",
-    price_match_type: "Range", quantity_match_listing: "Partial", location_match: "National", matches_found_count: 5,
-    last_updated: "2024-03-02T11:00:00Z", assigned_to: "Team Eco", notes: "Seller has bulk stock. Prefers long-term partnership.", listing_url: "https://example.com/ecobottle"
-  },
-  {
-    id: "2", opportunity_id: "SPB-002", product_name: "Handcrafted Leather Wallets - Bi-fold & Tri-fold",
-    status: "pending", opportunity_status: "Shortlisted", match_score: 92, created_date: "2024-03-05T14:30:00Z",
-    buy_listing_id: "BUY-LTHR-03", sell_listing_id: "SELL-LTHR-04", spb_role: "Buyer",
-    product_category: "Accessories", product_subcategory: "Wallets", brand: "Artisan Craft Co.",
-    product_specs: "China, Canada", quantity: 50, product_status_listing: "Low Stock", want_to: "Buy",
-    company_name: "Luxury Goods Incorporated", company_id: "LG002", member_name: "Robert 'Bob' Vance", member_id: "MEM002",
-    member_email: "bob.v@luxurygoods.inc", member_phone: "555-2222", member_type: "INS-PREMIUM",
-    price_match_type: "Exact", quantity_match_listing: "Sufficient", location_match: "Local", matches_found_count: 2,
-    last_updated: "2024-03-06T09:15:00Z", assigned_to: "Team Luxe", notes: "Buyer interested in long-term supply. Requires sample.", listing_url: "https://example.com/leatherwallet"
-  },
-  {
-    id: "2", opportunity_id: "SPB-003", product_name: "Smart Home Security System - Pro Kit with 4 Cameras",
-    status: "on_hold", opportunity_status: "Converted", match_score: 88, created_date: "2024-02-20T16:00:00Z",
-    buy_listing_id: "BUY-SEC-05", sell_listing_id: "SELL-SEC-06", spb_role: "Seller",
-    product_category: "Electronics", product_subcategory: "Home Security", brand: "SecureHome Plus",
-    product_specs: "Europe", quantity: 5, product_status_listing: "In Stock", want_to: "Sell",
-    company_name: "SafeTech Solutions Global", company_id: "STS003", member_name: "Carol Danvers (Captain)", member_id: "MEM003",
-    member_email: "carol.d@safetechglobal.net", member_phone: "555-3333", member_type: "Standard",
-    price_match_type: "Exact", quantity_match_listing: "Sufficient", location_match: "National", matches_found_count: 8,
-    last_updated: "2024-03-01T10:00:00Z", assigned_to: "Team Secure", notes: "Deal closed, awaiting full payment and shipment coordination.", listing_url: "https://example.com/securitysystempro"
-  },
-  {
-    id: "2", opportunity_id: "OPP-S-004", product_name: "Refurbished iPhone 13 Pro - 256GB",
-    status: "active", opportunity_status: "New", match_score: 85, created_date: "2024-03-10T12:00:00Z",
-    sell_listing_id: "SELL-IPHONE-07", spb_role: "Seller",
-    product_category: "Electronics", product_subcategory: "Mobile Phones", brand: "Apple",
-    product_specs: "New Zealand", quantity: 20, product_status_listing: "In Stock", want_to: "Sell",
-    company_name: "GadgetCycle Ltd.", company_id: "GC004", member_name: "Mike Wheeler", member_id: "MEM004",
-    member_email: "mike@gadgetcycle.com", member_phone: "555-4444", member_type: "Premium",
-    matches_found_count: 3,
-    last_updated: "2024-03-11T10:00:00Z", assigned_to: "Team Mobile", notes: "Good condition, competitive price.", listing_url: "https://example.com/iphone13pro"
-  },
-  {
-    id: "2", opportunity_id: "OPP-B-005", product_name: "Bulk Order - Organic Coffee Beans",
-    status: "pending", opportunity_status: "Shortlisted", match_score: 70, created_date: "2024-03-12T09:30:00Z",
-    buy_listing_id: "BUY-COFFEE-08", spb_role: "Buyer",
-    product_category: "Groceries", product_subcategory: "Coffee", brand: "Any (Organic)",
-    product_specs: "Africa", quantity: 100, want_to: "Buy",
-    company_name: "The Daily Grind Cafe", company_id: "DGC005", member_name: "Eleven Hopper", member_id: "MEM005",
-    member_email: "el@dailygrind.coffee", member_phone: "555-5555", member_type: "INS-PREMIUM",
-    matches_found_count: 4,
-    last_updated: "2024-03-12T17:00:00Z", assigned_to: "Team Cafe", notes: "Urgent requirement for new blend.", listing_url: "https://example.com/organiccoffeebeans"
-  }
-];
 
 const TABS = {
   ALL: "all",
@@ -194,6 +183,7 @@ const TABS = {
 };
 
 // --- DataTable1 (Your Custom DataTable Component) ---
+// ... (DataTableComponent remains unchanged from your provided code) ...
 export type OnSortParamTanstack = { order: 'asc' | 'desc' | ''; key: string | number }
 
 type DataTable1Props<T> = {
@@ -218,11 +208,10 @@ type DataTable1Props<T> = {
     pageSize: number
   }
   checkboxChecked?: (row: T) => boolean
-  // indeterminateCheckboxChecked?: (rows: Row<T>[]) => boolean; 
   getRowCanExpand?: (row: Row<T>) => boolean
   renderRowSubComponent?: (props: { row: Row<T> }) => React.ReactNode
-  state?: { expanded?: ExpandedState } // For externally controlled expansion
-  onExpandedChange?: (updater: React.SetStateAction<ExpandedState>) => void // For externally controlled expansion
+  state?: { expanded?: ExpandedState } 
+  onExpandedChange?: (updater: React.SetStateAction<ExpandedState>) => void 
   ref?: Ref<DataTableResetHandle | HTMLTableElement>
 } & TableProps
 
@@ -299,8 +288,8 @@ const DataTableComponent = React.forwardRef(<T extends object>(props: DataTable1
     checkboxChecked,
     getRowCanExpand,
     renderRowSubComponent,
-    state: controlledState, // Renamed to avoid conflict with internal state
-    onExpandedChange: onControlledExpandedChange, // Renamed
+    state: controlledState, 
+    onExpandedChange: onControlledExpandedChange, 
     instanceId = 'data-table',
     ...rest
   } = props
@@ -308,7 +297,6 @@ const DataTableComponent = React.forwardRef(<T extends object>(props: DataTable1
   const { pageSize, pageIndex, total } = pagingData
 
   const [sorting, setSorting] = useState<ColumnSort[] | []>([]);
-  // Use controlled expansion if `state.expanded` and `onExpandedChange` are provided
   const isManuallyExpanded = controlledState?.expanded !== undefined && onControlledExpandedChange !== undefined;
   const [internalExpanded, setInternalExpanded] = useState<ExpandedState>({})
 
@@ -390,10 +378,10 @@ const DataTableComponent = React.forwardRef(<T extends object>(props: DataTable1
     columns: finalColumns,
     state: {
       sorting: sorting as ColumnSort[],
-      expanded, // Use the determined expanded state
+      expanded, 
     },
     onSortingChange: setSorting,
-    onExpandedChange: onExpandedChange, // Use the determined handler
+    onExpandedChange: onExpandedChange, 
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -407,10 +395,6 @@ const DataTableComponent = React.forwardRef(<T extends object>(props: DataTable1
   const resetSorting = () => table.resetSorting()
   const resetSelected = () => table.toggleAllRowsSelected(false)
 
-  // useImperativeHandle(ref, () => ({
-  //     resetSorting,
-  //     resetSelected,
-  // }))
 
   const handlePaginationChangeInternal = (page: number) => {
     if (!loading) {
@@ -567,14 +551,16 @@ const DataTableComponent = React.forwardRef(<T extends object>(props: DataTable1
   )
 });
 DataTableComponent.displayName = 'DataTableComponent';
-// --- End DataTable1 ---
-
 
 // --- Helper Components ---
 const FormattedDate: React.FC<{ dateString?: string; label?: string }> = ({ dateString, label }) => {
   if (!dateString) return <span className="text-xs text-gray-500 dark:text-gray-400">{label ? `${label}: N/A` : "N/A"}</span>;
   try {
     const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+        return <span className="text-xs text-red-500">{label ? `${label}: Invalid Date` : "Invalid Date"}</span>;
+    }
     return (
       <div className="text-xs">
         {label && <span className="font-semibold text-gray-700 dark:text-gray-300">{label}:<br /> </span>}
@@ -620,7 +606,17 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const openDrawer = () => setIsDrawerOpen(true)
   const closeDrawer = () => setIsDrawerOpen(false)
-  const { control } = useForm() // Assuming filter form state is managed elsewhere or not fully implemented here
+  const { control, handleSubmit } = useForm() // Use handleSubmit from RHF
+  // Dummy options, replace with actual data source or props
+  const allOpportunitiesForFilter = useSelector(masterSelector).opportunitiesData?.data || [];
+
+
+  const onSubmitFilter = (data: any) => {
+    console.log("Filter data:", data); // Handle filter submission
+    // Here you would typically dispatch an action or set filter state
+    closeDrawer();
+  };
+
 
   return (
     <>
@@ -633,41 +629,42 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
         width={480}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2">Clear</Button>
+            <Button size="sm" className="mr-2" onClick={() => { /* Clear logic */ closeDrawer(); }}>Clear</Button>
             <Button
               size="sm"
               variant="solid"
-              form="filterOpportunityForm"
-              type="submit" // This will submit the form inside the drawer
-              onClick={closeDrawer} // Close drawer on apply for now
+              form="filterOpportunityForm" // Ensure this ID matches the Form ID
+              type="submit"
             >
               Apply
             </Button>
           </div>
         }
       >
-        {/* Filter form content is extensive, shown as is, ensure form state is handled */}
-        <Form id="filterOpportunityForm">
+        <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmitFilter)}>
           <div className="md:grid grid-cols-2 gap-2">
             <FormItem label="Member Type">
               <Controller
                 name="member-type"
                 control={control}
-                render={({ field }) => ( // Pass field for RHF integration
+                render={({ field }) => ( 
                   <Select
-                    {...field} // Spread field props
+                    {...field} 
                     placeholder="Select Type"
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
                       { label: "INS - Premium", value: "INS - Premium" },
                       { label: "INS - Super", value: "INS - Super" },
+                      { label: "Premium", value: "Premium" },
+                      { label: "Standard", value: "Standard" },
                     ]}
                   />
                 )}
               />
             </FormItem>
-            <FormItem label="Continent">
+            {/* ... other filter fields, similar to your existing code ... */}
+             <FormItem label="Continent">
               <Controller
                 name="continent"
                 control={control}
@@ -679,13 +676,11 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     isMulti
                     options={[
                       { label: "Asia", value: "Asia" },
-                      // Add other continents
                     ]}
                   />
                 )}
               />
             </FormItem>
-             {/* Add more FormItem and Controller for other filters */}
             <FormItem label="Country">
               <Controller
                 name="country"
@@ -799,9 +794,10 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     placeholder="Select Product Spec"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={[
-                      { label: "India", value: "India" },
-                    ]}
+                    options={
+                        [...new Set(allOpportunitiesForFilter.map((op: ApiOpportunityItem) => op.product_specs).filter(Boolean))]
+                        .map(spec => ({label: spec, value: spec}))
+                    }
                   />
                 )}
               />
@@ -817,10 +813,10 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
-                      { label: "Pending", value: "Pending" },
-                      { label: "Active", value: "Active" },
-                      { label: "On Hold", value: "On Hold" },
-                      { label: "Closed", value: "Closed" },
+                      { label: "Pending", value: "Pending" }, // API status
+                      { label: "Active", value: "active" },   // UI status
+                      { label: "On Hold", value: "on_hold" },
+                      { label: "Closed", value: "closed" },
                     ]}
                   />
                 )}
@@ -836,12 +832,10 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     placeholder="Select Category"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={[
-                      { label: "Food", value: "Food" },
-                      { label: "Electronics", value: "Electronics" },
-                      { label: "Lifestyle", value: "Lifestyle"},
-                      { label: "Accessories", value: "Accessories"}
-                    ]}
+                    options={
+                        [...new Set(allOpportunitiesForFilter.map((op: ApiOpportunityItem) => op.product_category).filter(Boolean))]
+                        .map(cat => ({label: cat, value: cat}))
+                    }
                   />
                 )}
               />
@@ -856,12 +850,10 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     placeholder="Select Sub Category"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={[
-                      { label: "Mobile", value: "Mobile" },
-                      { label: "TV", value: "TV" },
-                      { label: "Drinkware", value: "Drinkware"},
-                      { label: "Wallets", value: "Wallets"},
-                    ]}
+                     options={
+                        [...new Set(allOpportunitiesForFilter.map((op: ApiOpportunityItem) => op.product_subcategory).filter(Boolean))]
+                        .map(subcat => ({label: subcat, value: subcat}))
+                    }
                   />
                 )}
               />
@@ -876,11 +868,10 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     placeholder="Select Brand"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={[
-                      { label: "Apple", value: "Apple" },
-                      { label: "EcoLife", value: "EcoLife" },
-                      { label: "Artisan Craft Co.", value: "Artisan Craft Co." },
-                    ]}
+                    options={
+                        [...new Set(allOpportunitiesForFilter.map((op: ApiOpportunityItem) => op.brand).filter(Boolean))]
+                        .map(brand => ({label: brand, value: brand}))
+                    }
                   />
                 )}
               />
@@ -895,11 +886,10 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     placeholder="Select Product"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={[
-                      { label: "Iphone 15", value: "Iphone 15" },
-                      { label: "Eco-Friendly Water Bottles", value: "Eco-Friendly Water Bottles" },
-                      { label: "Handcrafted Leather Wallets", value: "Handcrafted Leather Wallets" },
-                    ]}
+                    options={
+                        [...new Set(allOpportunitiesForFilter.map((op: ApiOpportunityItem) => op.product_name).filter(Boolean))]
+                        .map(name => ({label: name, value: name}))
+                    }
                   />
                 )}
               />
@@ -915,10 +905,9 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     className="text-nowrap text-ellipsis"
                     isMulti
                     options={[
-                      { label: "Active", value: "Active" },
-                      { label: "Inactive", value: "Inactive" },
                       { label: "In Stock", value: "In Stock"},
                       { label: "Low Stock", value: "Low Stock"},
+                      // Add other known product statuses from API if different
                     ]}
                   />
                 )}
@@ -926,7 +915,7 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
             </FormItem>
             <FormItem label="Seller">
               <Controller
-                name="seller" // Represents seller company/member for filtering
+                name="seller" 
                 control={control}
                 render={({ field }) => (
                   <Select
@@ -934,10 +923,10 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     placeholder="Select Seller"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={allOpportunitiesData
-                        .filter(op => op.spb_role === "Seller" || op.want_to === "Sell")
-                        .map(op => ({label: op.company_name, value: op.company_id || op.company_name}))
-                        .filter((v,i,a)=>a.findIndex(t=>(t.value === v.value))===i) // Unique sellers
+                    options={allOpportunitiesForFilter
+                        .filter((op: ApiOpportunityItem) => op.spb_role === "Seller" || op.want_to === "Sell")
+                        .map((op: ApiOpportunityItem) => ({label: op.company_name || op.member_name || `ID: ${op.id}`, value: op.company_id || op.member_id || op.id}))
+                        .filter((v: any,i: number,a: any[])=>a.findIndex((t: any)=>(t.value === v.value))===i) 
                     }
                   />
                 )}
@@ -945,7 +934,7 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
             </FormItem>
             <FormItem label="Buyer">
               <Controller
-                name="buyer" // Represents buyer company/member for filtering
+                name="buyer" 
                 control={control}
                 render={({ field }) => (
                   <Select
@@ -953,10 +942,10 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                     placeholder="Select Buyer"
                     className="text-nowrap text-ellipsis"
                     isMulti
-                    options={allOpportunitiesData
-                        .filter(op => op.spb_role === "Buyer" || op.want_to === "Buy")
-                        .map(op => ({label: op.company_name, value: op.company_id || op.company_name}))
-                        .filter((v,i,a)=>a.findIndex(t=>(t.value === v.value))===i) // Unique buyers
+                    options={allOpportunitiesForFilter
+                        .filter((op: ApiOpportunityItem) => op.spb_role === "Buyer" || op.want_to === "Buy")
+                        .map((op: ApiOpportunityItem) => ({label: op.company_name || op.member_name || `ID: ${op.id}`, value: op.company_id || op.member_id || op.id}))
+                        .filter((v: any,i: number,a: any[])=>a.findIndex((t: any)=>(t.value === v.value))===i)
                     }
                   />
                 )}
@@ -1002,7 +991,8 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
                 control={control}
                 render={({ field }) => (
                   <DatePicker.DatePickerRange
-                    {...field} // Pass field for RHF integration for DatePickerRange
+                    value={field.value}
+                    onChange={field.onChange}
                     placeholder="Pick Date Range"
                     className="text-nowrap text-ellipsis"
                   />
@@ -1027,27 +1017,21 @@ const OpportunityTableTools = ({ onSearchChange }: { onSearchChange: (query: str
 const OpportunityActionTools = ({ activeTab }: { activeTab: string; }) => {
   const navigate = useNavigate();
   const handleAddItem = () => {
-    let path = '/sales-leads/opportunities/'; // Default prefix
+    let path = '/sales-leads/opportunities/'; 
     if (activeTab === TABS.SELLER) {
       path += 'seller/create';
     } else if (activeTab === TABS.BUYER) {
       path += 'buyer/create';
     } else if (activeTab === TABS.AUTO_MATCH) {
-      // For auto-match, maybe a generic create or a modal? For now, let's point to a generic create or disable.
-      // path += 'match/create'; // Or show a different button/modal for auto-match
       toast.push(<Notification title="Info" type="info">"Add New" is not specific for Auto Match. Select Buyer/Seller tab.</Notification>);
-      return; // Or navigate to a generic create page if applicable
-    } else { // TABS.ALL or other
-      // For 'All' tab, decide if it should default to Seller, Buyer, or a generic create form
-      // For simplicity, let's default to a generic seller create or prompt user
-      path += 'seller/create'; // Example: default to seller create
+      return; 
+    } else { 
+      path += 'seller/create'; 
       toast.push(<Notification title="Info" type="info">Defaulting to Add New Seller. Select a specific tab for Buyer.</Notification>);
     }
     navigate(path);
-    // toast.push(<Notification title="Navigation" type="info">Redirecting...</Notification>);
   };
 
-  // Conditionally render the "Add New" button or disable it for "Auto Match"
   const showAddButton = activeTab !== TABS.AUTO_MATCH; 
 
   return (
@@ -1057,7 +1041,6 @@ const OpportunityActionTools = ({ activeTab }: { activeTab: string; }) => {
           Add New
         </Button>
       )}
-      {/* You can add other action tools here if needed */}
     </div>
   );
 };
@@ -1103,22 +1086,19 @@ const OpportunitySelectedFooter = ({ selectedItems, onDeleteSelected, activeTab 
 const MainRowActionColumn = ({ onEdit, item, currentTab }: { onEdit: () => void; item: OpportunityItem, currentTab: string }) => {
   const navigate = useNavigate();
   const handleDelete = () => {
-    // Implement single item delete logic, perhaps by calling a parent handler
     toast.push(<Notification title="Delete" type="info">Simulating delete for {item.opportunity_id}</Notification>);
-    // Example: props.onDeleteItem(item.id);
   };
   
   const handleViewDetails = () => {
      let path = `/sales-leads/opportunities/`;
      if (item.spb_role === "Seller" || (currentTab === TABS.SELLER && !item.spb_role) ) {
-        path += `seller/detail/${item.id}`; // Assuming generic detail page for now
+        path += `seller/detail/${item.id}`; 
      } else if (item.spb_role === "Buyer" || (currentTab === TABS.BUYER && !item.spb_role)) {
         path += `buyer/detail/${item.id}`;
      } else if (currentTab === TABS.AUTO_MATCH) {
-        // For auto-match, it could be a combined detail view or link to both listings
-        path += `match/detail/${item.id}`; // Example
-     } else { // TABS.ALL or other
-        path += `detail/${item.id}`; // Fallback generic detail
+        path += `match/detail/${item.id}`; 
+     } else { 
+        path += `detail/${item.id}`; 
      }
      navigate(path);
   }
@@ -1138,7 +1118,7 @@ const MainRowActionColumn = ({ onEdit, item, currentTab }: { onEdit: () => void;
           <div
             className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
             role="button"
-            onClick={onEdit} // onEdit is passed from parent, already handles navigation
+            onClick={onEdit} 
           >
             <TbPencil />
           </div>
@@ -1207,20 +1187,16 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
         } else if (item.spb_role === "Buyer" || (currentTab === TABS.BUYER && !item.spb_role)) {
             path += `buyer/edit/${id}`;
         } else if (currentTab === TABS.AUTO_MATCH) {
-            // For auto-match, decide if edit should go to seller, buyer, or a combined edit
-            // This might need more specific logic based on your requirements
-            path += `seller/edit/${id}`; // Example: default to seller edit
+            path += `seller/edit/${id}`; 
             toast.push(<Notification title="Info" type="info">Editing Seller aspect of match.</Notification>)
-        } else { // TABS.ALL or other (determine type from item if possible)
+        } else { 
             if(item.spb_role === "Seller" || item.want_to === "Sell") path += `seller/edit/${id}`;
             else if(item.spb_role === "Buyer" || item.want_to === "Buy") path += `buyer/edit/${id}`;
-            else path += `detail/${id}`; // Fallback if type can't be determined
+            else path += `detail/${id}`; 
         }
         if (path.includes("/edit/")) navigate(path);
         else toast.push(<Notification title="Info" type="warning">Cannot determine edit type for this item from current view.</Notification>)
-
     }
-    // Handle other actions like Delete, Clone, etc.
   };
   const opportunityType = item.spb_role ? `${item.spb_role} in SPB` : (item.want_to || "General");
   return (
@@ -1263,7 +1239,7 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
             <InfoLine icon={<TbTargetArrow size={14} />} label="Match Score" text={`${item.match_score}%`} />
             <div className="flex items-center gap-2">
               <InfoLine icon={<TbProgressCheck size={14} />} label="Opp. Status" />
-              <Tag className={`${opportunityStatusTagColor[item.opportunity_status]} capitalize`}>{item.opportunity_status}</Tag>
+              <Tag className={`${opportunityStatusTagColor[item.opportunity_status] || opportunityStatusTagColor.default} capitalize`}>{item.opportunity_status}</Tag>
             </div>
             <FormattedDate label="Created" dateString={item.created_date} />
             <div className="pt-2 mt-2 border-t dark:border-gray-600">
@@ -1282,7 +1258,6 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
                    <div
                     className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
                     role="button"
-                    // onClick={() => handleExpandedAction('View', item.id)} // You might want a detail view for expanded items too
                   >
                     <TbEye />
                   </div>
@@ -1291,7 +1266,6 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
                   <div
                     className="text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400"
                     role="button"
-                    // onClick={() => handleExpandedAction('Offer', item.id)}
                   >
                     <TbSend2 />
                   </div>
@@ -1338,11 +1312,9 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </Card>
-      {/* Remove the second static demo Card from here as it was for demonstration */}
     </>
   );
 };
@@ -1350,13 +1322,84 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
 // --- Main Opportunities Component ---
 const Opportunities = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [opportunities, setOpportunities] = useState<OpportunityItem[]>(allOpportunitiesData);
-
+  const dispatch = useAppDispatch();
+  const { 
+    Opportunities = [], // Expected: { data: ApiOpportunityItem[], total?: number }
+    status: masterLoadingStatus = "idle", 
+  } = useSelector(masterSelector);
+  
+  const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
   const [tableQueries, setTableQueries] = useState<Record<string, TableQueries>>({});
   const [selectedItems, setSelectedItems] = useState<Record<string, OpportunityItem[]>>({});
   const [currentTab, setCurrentTab] = useState<string>(TABS.ALL);
-  const [expanded, setExpanded] = useState<ExpandedState>({}) // For DataTableComponent
+  const [expanded, setExpanded] = useState<ExpandedState>({}) 
+
+  useEffect(() => {
+    dispatch(getOpportunitiesAction());
+  }, [dispatch]);
+
+  // const Opportunities = useMemo(() => reduxOpportunities?.data || [], [reduxOpportunities?.data]);
+
+  useEffect(() => {
+    if (Array.isArray(Opportunities)) {
+        const mappedOpportunities = Opportunities.map((apiItem: ApiOpportunityItem): OpportunityItem => {
+            let uiStatus: OpportunityItem["status"] = "pending"; // Default UI status
+            if (apiItem.status?.toLowerCase() === "pending") uiStatus = "pending";
+            else if (apiItem.status?.toLowerCase() === "active") uiStatus = "active";
+            else if (apiItem.status?.toLowerCase() === "on hold" || apiItem.status?.toLowerCase() === "on_hold") uiStatus = "on_hold";
+            else if (apiItem.status?.toLowerCase() === "closed") uiStatus = "closed";
+            else if (apiItem.status) uiStatus = apiItem.status.toLowerCase();
+
+
+            let uiOppStatus: OpportunityItem["opportunity_status"] = "New"; // Default
+            if (apiItem.opportunity_status?.toLowerCase() === "new") uiOppStatus = "New";
+            else if (apiItem.opportunity_status?.toLowerCase() === "shortlisted") uiOppStatus = "Shortlisted";
+            else if (apiItem.opportunity_status?.toLowerCase() === "converted") uiOppStatus = "Converted";
+            else if (apiItem.opportunity_status?.toLowerCase() === "rejected") uiOppStatus = "Rejected";
+            else if (apiItem.opportunity_status) uiOppStatus = apiItem.opportunity_status;
+
+
+            return {
+                id: apiItem.id,
+                opportunity_id: apiItem.opportunity_id || `OPP-${apiItem.id}`,
+                product_name: apiItem.product_name || "N/A",
+                status: uiStatus,
+                opportunity_status: uiOppStatus,
+                match_score: apiItem.match_score ?? 0,
+                created_date: apiItem.created_date || new Date().toISOString(),
+                buy_listing_id: apiItem.buy_listing_id || undefined,
+                sell_listing_id: apiItem.sell_listing_id || undefined,
+                spb_role: apiItem.spb_role || undefined,
+                product_category: apiItem.product_category || undefined,
+                product_subcategory: apiItem.product_subcategory || undefined,
+                brand: apiItem.brand || undefined,
+                product_specs: apiItem.product_specs || undefined,
+                quantity: (typeof apiItem.quantity === 'string' ? parseInt(apiItem.quantity, 10) : apiItem.quantity) ?? undefined,
+                product_status_listing: apiItem.product_status_listing || undefined,
+                want_to: apiItem.want_to || undefined,
+                company_name: apiItem.company_name || "N/A",
+                company_id: apiItem.company_id || undefined,
+                member_name: apiItem.member_name || "N/A",
+                member_id: apiItem.member_id || undefined,
+                member_email: apiItem.member_email || undefined,
+                member_phone: apiItem.member_phone || undefined,
+                member_type: apiItem.member_type || "Standard",
+                price_match_type: apiItem.price_match_type || undefined,
+                quantity_match_listing: apiItem.quantity_match_listing || undefined, // Use API's value, may need interpretation
+                location_match: apiItem.location_match || undefined,
+                matches_found_count: apiItem.matches_found_count ?? undefined,
+                last_updated: apiItem.last_updated || undefined,
+                assigned_to: String(apiItem.assigned_to || ""),
+                notes: apiItem.notes || undefined,
+                listing_url: apiItem.listing_url || undefined,
+            };
+        });
+        setOpportunities(mappedOpportunities);
+    } else {
+        setOpportunities([]);
+    }
+  }, [Opportunities]);
+
 
   useEffect(() => {
     const initialTableQuery = { pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_date" } as ColumnSort, query: "" };
@@ -1380,7 +1423,7 @@ const Opportunities = () => {
   const currentSelectedItems = selectedItems[currentTab] || [];
 
   const filteredOpportunities = useMemo(() => {
-    let data = [...opportunities];
+    let data = [...opportunities]; // Use Redux-driven and mapped opportunities
     if (currentTab === TABS.SELLER) {
       data = data.filter(op => op.spb_role === "Seller" || op.want_to === "Sell" || (op.sell_listing_id && !op.buy_listing_id));
     } else if (currentTab === TABS.BUYER) {
@@ -1403,7 +1446,7 @@ const Opportunities = () => {
 
   const { pageData, total } = useMemo(() => {
     let processedData = [...filteredOpportunities];
-    const { order, key } = currentTableData.sort as unknown as OnSortParamTanstack; // Use renamed type
+    const { order, key } = currentTableData.sort as unknown as OnSortParamTanstack; 
 
     if (order && key && processedData.length > 0) {
       const sampleItem = processedData[0];
@@ -1412,6 +1455,7 @@ const Opportunities = () => {
           const aVal = a[key as keyof OpportunityItem];
           const bVal = b[key as keyof OpportunityItem];
           if (key === "created_date" || key === "last_updated") {
+            if (!aVal || !bVal) return 0; // Handle null/undefined dates
             return order === "asc"
               ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime()
               : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
@@ -1440,40 +1484,42 @@ const Opportunities = () => {
   const handleSetCurrentTableData = useCallback((data: Partial<TableQueries>) => { setTableQueries(prev => ({ ...prev, [currentTab]: { ...prev[currentTab], ...data } })); }, [currentTab]);
   const handlePaginationChange = useCallback((page: number) => handleSetCurrentTableData({ pageIndex: page }), [handleSetCurrentTableData]);
   const handleSelectChange = useCallback((value: number) => { handleSetCurrentTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems(prev => ({ ...prev, [currentTab]: [] })); }, [handleSetCurrentTableData, currentTab]);
-  const handleSort = useCallback((sort: OnSortParamTanstack) => handleSetCurrentTableData({ sort: sort as any, pageIndex: 1 }), [handleSetCurrentTableData]); // Cast sort
+  const handleSort = useCallback((sort: OnSortParamTanstack) => handleSetCurrentTableData({ sort: sort as any, pageIndex: 1 }), [handleSetCurrentTableData]); 
   const handleSearchChange = useCallback((query: string) => handleSetCurrentTableData({ query: query, pageIndex: 1 }), [handleSetCurrentTableData]);
   const handleRowSelect = useCallback((checked: boolean, row: OpportunityItem) => { setSelectedItems(prev => ({ ...prev, [currentTab]: checked ? [...(prev[currentTab] || []), row] : (prev[currentTab] || []).filter((i) => i.id !== row.id) })); }, [currentTab]);
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<OpportunityItem>[]) => { setSelectedItems(prev => ({ ...prev, [currentTab]: checked ? rows.map((r) => r.original) : [] })); }, [currentTab]);
   
   const handleEdit = useCallback((item: OpportunityItem) => {
-    let path = '/sales-leads/opportunities/'; // Base path
+    let path = '/sales-leads/opportunities/'; 
     if (item.spb_role === "Seller" || (currentTab === TABS.SELLER && !item.spb_role)) {
         path += `seller/edit/${item.id}`;
     } else if (item.spb_role === "Buyer" || (currentTab === TABS.BUYER && !item.spb_role)) {
         path += `buyer/edit/${item.id}`;
     } else if (currentTab === TABS.AUTO_MATCH) {
-        // For auto-match, you need to decide which part to edit or if it's a combined edit.
-        // Example: Default to editing the seller part of the match or provide a choice.
-        // For now, let's assume it edits the seller aspect, or you might want a specific "match/edit/:id" route.
-        path += `seller/edit/${item.id}`; // Or buyer/edit or match/edit
+        path += `seller/edit/${item.id}`; 
         toast.push(<Notification title="Info" type="info">Editing Seller aspect of this match.</Notification>);
-    } else { // TABS.ALL or other scenarios
-        // Try to infer from item's properties, or provide a generic edit/detail page
+    } else { 
         if(item.spb_role === "Seller" || item.want_to === "Sell") path += `seller/edit/${item.id}`;
         else if(item.spb_role === "Buyer" || item.want_to === "Buy") path += `buyer/edit/${item.id}`;
         else {
-            // If type cannot be determined, maybe navigate to a generic detail page or show an error
             toast.push(<Notification title="Warning" type="warning">Cannot determine specific edit type for this item from 'All' tab. Please select Buyer/Seller tab or implement specific logic.</Notification>);
-            path += `detail/${item.id}`; // Fallback to a detail view if edit type is ambiguous
-            // return; // Or simply don't navigate if no clear edit path
+            path += `detail/${item.id}`; 
         }
     }
     if (path.includes("/edit/")) navigate(path);
-    else if (path.includes("/detail/")) navigate(path); // Allow navigation to detail if edit fails
-
+    else if (path.includes("/detail/")) navigate(path); 
   }, [navigate, currentTab]);
   
-  const handleDeleteSelected = useCallback(() => { const selectedIds = new Set(currentSelectedItems.map((i) => i.id)); setOpportunities((prevAll) => prevAll.filter((i) => !selectedIds.has(i.id))); setSelectedItems(prev => ({ ...prev, [currentTab]: [] })); toast.push(<Notification title="Records Deleted" type="success">{`${selectedIds.size} record(s) deleted.`}</Notification>); }, [currentSelectedItems, currentTab, setOpportunities]);
+  const handleDeleteSelected = useCallback(() => { 
+    const selectedIds = new Set(currentSelectedItems.map((i) => i.id)); 
+    // Here you would typically dispatch a Redux action to delete items from the backend
+    // For now, just filtering local state
+    setOpportunities((prevAll) => prevAll.filter((i) => !selectedIds.has(i.id))); 
+    setSelectedItems(prev => ({ ...prev, [currentTab]: [] })); 
+    toast.push(<Notification title="Records Deleted" type="success">{`${selectedIds.size} record(s) deleted.`}</Notification>); 
+    // dispatch(deleteOpportunitiesAction({ids: Array.from(selectedIds)})).then(() => dispatch(getOpportunitiesAction())); // Example Redux flow
+  }, [currentSelectedItems, currentTab, dispatch]); // Added dispatch
+
   const handleTabChange = (tabKey: string) => { if (tabKey === currentTab) return; setCurrentTab(tabKey); };
 
   const getColumnsForStandardView = useCallback((): ColumnDef<OpportunityItem>[] => [
@@ -1497,7 +1543,7 @@ const Opportunities = () => {
                   {item.product_name?.slice(0, 25) + (item.product_name && item.product_name.length > 25 ? "…" : "")}
                 </span>
               </Tooltip>
-              <Tag className={`${recordStatusTagColor[item.status]} capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}>{item.status}</Tag>
+              <Tag className={`${recordStatusTagColor[item.status] || recordStatusTagColor.default} capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}>{item.status}</Tag>
             </div>
           </div>
         )
@@ -1569,7 +1615,7 @@ const Opportunities = () => {
             <FormattedDate label="Created" dateString={item.created_date} />
             <div className="flex items-center gap-1">
               <InfoLine icon={<TbProgressCheck size={14} />} label="Opp." />
-              <Tag className={`${opportunityStatusTagColor[item.opportunity_status]} capitalize text-[10px] px-1.5 py-0.5 whitespace-nowrap`}>{item.opportunity_status}</Tag>
+              <Tag className={`${opportunityStatusTagColor[item.opportunity_status] || opportunityStatusTagColor.default} capitalize text-[10px] px-1.5 py-0.5 whitespace-nowrap`}>{item.opportunity_status}</Tag>
             </div>
           </div>
         )
@@ -1625,7 +1671,7 @@ const Opportunities = () => {
                   {item.product_name && item.product_name.length > 25 ? "…" : ""}
                 </span>
               </Tooltip>
-              <Tag className={`${recordStatusTagColor[item.status]} capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}>{item.status}</Tag>
+              <Tag className={`${recordStatusTagColor[item.status] || recordStatusTagColor.default} capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}>{item.status}</Tag>
             </div>
           </div>
         )
@@ -1702,7 +1748,7 @@ const Opportunities = () => {
             <FormattedDate label="Created" dateString={item.created_date} />
             <div className="flex items-center gap-1">
               <InfoLine icon={<TbProgressCheck size={14} />} label="Opp." />
-              <Tag className={`${opportunityStatusTagColor[item.opportunity_status]} capitalize text-[10px] px-1.5 py-0.5 whitespace-nowrap`}>{item.opportunity_status}</Tag>
+              <Tag className={`${opportunityStatusTagColor[item.opportunity_status] || opportunityStatusTagColor.default} capitalize text-[10px] px-1.5 py-0.5 whitespace-nowrap`}>{item.opportunity_status}</Tag>
             </div>
           </div>
         )
@@ -1718,7 +1764,7 @@ const Opportunities = () => {
         currentTab={currentTab}
       />
     },
-  ], [expanded, handleEdit, currentTab]); // Use `expanded` from DataTable state for expander icon
+  ], [expanded, handleEdit, currentTab]); 
 
   const columns = useMemo(() => {
     if (currentTab === TABS.AUTO_MATCH) {
@@ -1763,7 +1809,7 @@ const Opportunities = () => {
             selectable
             columns={columns}
             data={pageData}
-            loading={isLoading}
+            loading={masterLoadingStatus === 'idle'}
             pagingData={{ total, pageIndex: currentTableData.pageIndex as number, pageSize: currentTableData.pageSize as number }}
             onPaginationChange={handlePaginationChange}
             onSelectChange={handleSelectChange}
@@ -1777,7 +1823,7 @@ const Opportunities = () => {
             renderRowSubComponent={currentTab === TABS.AUTO_MATCH ? (({ row }: { row: Row<OpportunityItem> }) =>
               <ExpandedOpportunityDetails row={row} currentTab={currentTab} />
             ) : undefined}
-            noData={!isLoading && pageData.length === 0}
+            noData={masterLoadingStatus !== 'loading' && pageData.length === 0}
           />
         </div>
       </AdaptiveCard>

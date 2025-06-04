@@ -801,36 +801,6 @@ const OffersDemands = () => {
           </div>
         ),
       },
-      // {
-      //   header: "Assigned",
-      //   accessorKey: "",
-      //   enableSorting: true,
-      //   cell: (props) => (
-      //     <div className="flex items-center gap-2">
-      //       <Avatar size={28} shape="circle" icon={<TbUserCircle />} />{" "}
-      //       {/* Simple avatar */}
-      //       <span>Mukesh Patel</span>
-      //     </div>
-      //   ),
-      // },
-      // {
-      //   header: "Created Date",
-      //   accessorKey: "createdDate",
-      //   enableSorting: true,
-      //   cell: (props) => {
-      //     const date = props.row.original.createdDate;
-      //     return (
-      //       <span>
-      //         {date.toLocaleDateString()}{" "}
-      //         {date.toLocaleTimeString([], {
-      //           hour: "2-digit",
-      //           minute: "2-digit",
-      //         })}
-      //       </span>
-      //     );
-      //   },
-      // },
-      // In columns definition
       {
         header: "Actions",
         id: "action",

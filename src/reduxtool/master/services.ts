@@ -2030,17 +2030,17 @@ export const getSubcategoriesByIdAsync = async (categoryId: string) => {
 
 export const getcompanyAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/setting/company_profile_setting`)
+    const response = await axiosInstance.get(`${config.apiURL}/company`)
     return response
   } catch (err) {
     return isAxiosError(err)
   }
 }
 
-export const addcompanyAsync = async (unitData: any) => {
+export const addCompanyAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(
-      `${config.apiURL}/setting/company_profile_setting`,
+      `${config.apiURL}/company`,
       unitData,
       {
         headers: {
@@ -2299,6 +2299,24 @@ export const cloneFormBuilderAsync = async (formData: any) => {
 export const getActivityLogAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/activity-logs`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addWallItemAsync = async (unitData: FormData) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/wall/enquiry`, unitData);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const getOpportunitiesAsync = async () => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity`)
     return response
   } catch (err) {
     return isAxiosError(err)
