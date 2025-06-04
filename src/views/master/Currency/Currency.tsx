@@ -977,8 +977,8 @@ const Currency = () => {
             <CurrencyTable
               columns={columns}
               data={pageData}
-              // loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting /* isDeleting commented */}
-              loading={masterLoadingStatus === "idle" || isSubmitting}
+              // loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented */}
+              loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,

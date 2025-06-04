@@ -358,7 +358,7 @@ const SubscribersListing = () => {
         []
     );
 
-    const tableIsLoading = masterLoadingStatus === "idle";
+    const tableIsLoading = masterLoadingStatus === "loading";
 
     return (
         <>

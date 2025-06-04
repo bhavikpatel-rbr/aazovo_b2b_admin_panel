@@ -583,14 +583,14 @@ const TrendingImages = () => {
                                     Assigned to Task
                                 </Button>
                             </Link>
-                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "idle" || isSubmitting}>Add New</Button>
+                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "loading" || isSubmitting}>Add New</Button>
                         </div>
                     </div>
                     <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} searchPlaceholder="Quick Search..." />
                     <div className="mt-4">
                         <DataTable
                             columns={columns} data={pageData}
-                            loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting}
+                            loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting}
                             pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             selectable checkboxChecked={(row) => selectedItems.some(selected => selected.id === row.id)}
                             onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}

@@ -869,7 +869,7 @@ const Brands = () => {
     [openImageViewer, openEditDrawer, openViewDetailModal, handleDeleteClick] // Removed mappedBrands, added dependencies
   );
 
-  const tableLoading = masterLoadingStatus === "idle" || isSubmitting || isProcessing;
+  const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isProcessing;
 // Place this helper component inside your Brands.tsx file,
 // or in a separate utility file and import it.
 

@@ -788,7 +788,7 @@ const Departments = () => {
               data={pageData}
               // Combined loading state: Redux loading OR form submitting/deleting
               loading={
-                masterLoadingStatus === "idle" || isSubmitting || isDeleting
+                masterLoadingStatus === "loading" || isSubmitting || isDeleting
               }
               pagingData={{
                 total,

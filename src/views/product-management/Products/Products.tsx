@@ -562,7 +562,7 @@ const Products = () => {
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<ProductItem, any>) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDetailModal(props.row.original)} onDelete={() => handleDeleteProductClick(props.row.original)} onChangeStatus={() => handleChangeStatusClick(props.row.original)} />) },
   ], [openImageViewer, openEditDrawer, openViewDetailModal, handleDeleteProductClick, handleChangeStatusClick]); // REFACTOR: Dependencies should be stable
 
-  const isLoadingData = masterLoadingStatus === 'pending' || masterLoadingStatus === 'idle'; // REFACTOR: More accurate overall data loading
+  const isLoadingData = masterLoadingStatus === 'pending' || masterLoadingStatus === "loading"; // REFACTOR: More accurate overall data loading
   const tableIsProcessing = isSubmittingForm; // REFACTOR: Use for operations affecting table immediately
 
   // REFACTOR: Conditional rendering for loading state

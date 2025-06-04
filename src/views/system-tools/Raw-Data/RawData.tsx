@@ -605,7 +605,7 @@ const RowDataListing = () => {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { if (file.type === "text/csv" || file.name.endsWith(".csv") || file.type === "application/vnd.ms-excel" || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") { setSelectedFile(file); } else { toast.push(<Notification title="Invalid File Type" type="danger" duration={3000}>Please upload a CSV or Excel file.</Notification>); setSelectedFile(null); if (e.target) e.target.value = ""; } } else { setSelectedFile(null); } };
   const handleImportSubmit = async () => { if (!selectedFile) { toast.push(<Notification title="No File Selected" type="warning" duration={2000}>Please select a file to import.</Notification>); return; } setIsImporting(true); const formData = new FormData(); formData.append('file', selectedFile); try { await dispatch(importRowDataAction(formData)).unwrap(); toast.push(<Notification title="Import Initiated" type="success" duration={2000}>File uploaded. Processing will continue.</Notification>); dispatch(getRowDataAction()); closeImportModal(); } catch (apiError: any) { toast.push(<Notification title="Import Failed" type="danger" duration={3000}>{apiError.message || "Failed to import data."}</Notification>); } finally { setIsImporting(false); } };
 
-  const tableLoading = masterLoadingStatus === "idle" || isSubmitting || isDeleting || isBlacklisting || isImporting;
+  const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isDeleting || isBlacklisting || isImporting;
 
   return (
     <>
