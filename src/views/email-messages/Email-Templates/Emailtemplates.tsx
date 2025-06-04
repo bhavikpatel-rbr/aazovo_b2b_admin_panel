@@ -449,7 +449,7 @@ const EmailTemplatesListing = () => {
         <Controller name="category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find(o => o.value === field.value)} onChange={(opt) => { field.onChange(opt?.value);}} prefix={<TbCategory2/>} />)} />
       </FormItem>
       <FormItem label="SubCategory (Optional)" invalid={!!currentErrors.sub_category_id} errorMessage={currentErrors.sub_category_id?.message}>
-        <Controller name="sub_category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select SubCategory" options={subCategoryOptionsForForm} value={subCategoryOptionsForForm.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbApps/>} isDisabled={!watchedCategoryIdInForm || subCategoryOptionsForForm.length === 0} loading={masterLoadingStatus === "idle" /* && specific subcategory loading status */} />)} />
+        <Controller name="sub_category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select SubCategory" options={subCategoryOptionsForForm} value={subCategoryOptionsForForm.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbApps/>} isDisabled={!watchedCategoryIdInForm || subCategoryOptionsForForm.length === 0} loading={masterLoadingStatus === "loading" /* && specific subcategory loading status */} />)} />
       </FormItem>
       <FormItem label="Brand (Optional)" invalid={!!currentErrors.brand_id} errorMessage={currentErrors.brand_id?.message}>
         <Controller name="brand_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Brand" options={brandOptions} value={brandOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBuildingArch/>} />)} />
@@ -492,7 +492,7 @@ const EmailTemplatesListing = () => {
           </div>
           <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters}/>
           <div className="mt-4">
-            <EmailTemplatesTable columns={columns} data={pageData} loading={masterLoadingStatus === "idle" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
+            <EmailTemplatesTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>

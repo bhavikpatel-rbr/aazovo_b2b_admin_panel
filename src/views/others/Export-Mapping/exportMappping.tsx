@@ -641,7 +641,7 @@ const ExportMapping = () => {
     console.log("masterLoadingStatus", masterLoadingStatus);
 
     // Handle data transformation and processing state
-    if (masterLoadingStatus === "idle") {
+    if (masterLoadingStatus === "loading") {
       if (!Array.isArray(apiExportMappings)) {
         console.error(
           "API Error: exportMappingData is not an array:",
@@ -662,8 +662,8 @@ const ExportMapping = () => {
       setExportMappings(transformedData);
       setIsProcessingData(false);
     } else if (
-      masterLoadingStatus === "idle" ||
-      masterLoadingStatus === "idle"
+      masterLoadingStatus === "loading" ||
+      masterLoadingStatus === "loading"
     ) {
       setIsProcessingData(true);
     }
@@ -989,7 +989,7 @@ const ExportMapping = () => {
     []
   );
 
-  const tableLoading = isProcessingData || masterLoadingStatus === "idle";
+  const tableLoading = isProcessingData || masterLoadingStatus === "loading";
 
   return (
     <Container className="h-auto">
@@ -1071,7 +1071,7 @@ const ExportMapping = () => {
       <ExportMappingSelected
         selectedMappings={selectedMappings}
         onDeleteSelected={handleDeleteSelected}
-        disabled={isProcessingData || masterLoadingStatus === "idle"}
+        disabled={isProcessingData || masterLoadingStatus === "loading"}
       />
     </Container>
   );

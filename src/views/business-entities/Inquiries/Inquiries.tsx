@@ -236,7 +236,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
     console.log("masterLoadingStatus", masterLoadingStatus);
 
-    if (masterLoadingStatus === 'idle') {
+    if (masterLoadingStatus === "loading") {
       console.log("inquiryList1", inquiryList1);
 
       // Ensure inquiryList1 is an array before processing

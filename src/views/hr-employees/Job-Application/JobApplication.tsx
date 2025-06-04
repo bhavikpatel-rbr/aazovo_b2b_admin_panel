@@ -454,7 +454,7 @@ const JobApplicationListing = () => {
           <ApplicationTable
             columns={columns}
             data={pageData}
-            loading={masterLoadingStatus === "idle" || masterLoadingStatus === "idle"} // Show loading if idle (initial) or loading
+            loading={masterLoadingStatus === "loading" || masterLoadingStatus === "loading"} // Show loading if idle (initial) or loading
             pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
             selectedApplications={selectedApplications} // Corrected prop name
             onPaginationChange={handlePaginationChange}
