@@ -56,6 +56,7 @@ import {
   getDepartmentsAction, // Action to fetch departments for templates
 } from "@/reduxtool/master/middleware"; // Adjust path
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path
+import dayjs from "dayjs";
 
 
 // --- Define Types ---
@@ -280,7 +281,8 @@ const AutoEmailTemplatesListing = () => {
     { header: "Department", accessorKey: "department_id", size: 180, enableSorting: true, cell: props => props.row.original.department?.name || departmentOptions.find(d => d.value === String(props.getValue()))?.label || (props.getValue() ? String(props.getValue()) : "N/A") },
     { header: "Created At", accessorKey: "created_at", size: 150, 
       cell: props => 
-      props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' 
+      // props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' 
+      props.getValue() ? <span className="text-xs"> {dayjs(props.getValue()).format("D MMM YYYY, h:mm A")}</span> : '-' 
     },
     { header: "Actions", id: "actions", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onViewDetail={() => { /* Implement if needed */ }} /> },
   ], [categoryOptions, departmentOptions, openEditDrawer, handleDeleteClick]);
