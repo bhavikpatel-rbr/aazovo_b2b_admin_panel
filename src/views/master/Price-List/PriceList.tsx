@@ -44,6 +44,8 @@ import {
   TbPencilDollar,
   TbDiscount,
   TbDiscountOff,
+  TbEyeDollar,
+  TbBell,
 } from "react-icons/tb";
 
 // Types
@@ -955,6 +957,36 @@ const PriceList = () => {
                   Assigned to Task
                 </Button>
               </Link>
+              <Button
+                className="mr-2"
+                icon={<TbEyeDollar />}
+                clickFeedback={false}
+                customColorClass={({ active, unclickable }) =>
+                  classNames(
+                    "hover:text-green-800 dark:hover:bg-green-600 border-0 hover:ring-0",
+                    active ? "bg-green-200" : "bg-green-100",
+                    unclickable && "opacity-50 cursor-not-allowed",
+                    !active && !unclickable && "hover:bg-green-200"
+                  )
+                }
+              >
+                View Today Price
+              </Button>
+              <Button
+                className="mr-2"
+                icon={<TbBell />}
+                clickFeedback={false}
+                customColorClass={({ active, unclickable }) =>
+                  classNames(
+                    "hover:text-blue-800 dark:hover:bg-blue-600 border-0 hover:ring-0",
+                    active ? "bg-blue-200" : "bg-blue-100",
+                    unclickable && "opacity-50 cursor-not-allowed",
+                    !active && !unclickable && "hover:bg-blue-200"
+                  )
+                }
+              >
+                Add to Notifications
+              </Button>
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
                 Add New
               </Button>
