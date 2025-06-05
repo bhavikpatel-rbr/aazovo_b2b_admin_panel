@@ -37,7 +37,10 @@ import {
   TbBuildingArch,
   TbReload,
   TbCopy,
-  TbMailSearch, // For Department
+  TbMailSearch,
+  TbMailForward,
+  TbMailOpened,
+  TbAlignBoxCenterBottom, // For Department
 } from "react-icons/tb";
 
 // Types
@@ -128,29 +131,25 @@ function exportAutoEmailTemplatesToCsv(filename: string, rows: AutoEmailTemplate
 // --- ActionColumn, Search, TableTools, SelectedFooter (UI remains same) ---
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => { // Removed onViewDetail if not used for now
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center justify-center gap-2">
       <Tooltip title="Edit">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 
-        dark:text-gray-400 dark:hover:text-emerald-400`}
+          dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Clone Template">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 
-        dark:text-gray-400 dark:hover:text-blue-400`}
-          role="button"
-        >
-          <TbCopy size={16} />
+      <Tooltip title="Send test email">
+        <div className="text-xl cursor-pointer text-gray-500 hover:text-orange-600" role="button">
+          <TbMailForward size={18} />
         </div>
       </Tooltip>
-      <Tooltip title="Email Preview">
-        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button">
-          <TbMailSearch size={18} />
+      <Tooltip title="View Template">
+        <div className="text-xl cursor-pointer text-gray-500 hover:text-blue-600" role="button">
+          <TbAlignBoxCenterBottom size={18} />
         </div>
       </Tooltip>
       {/* <Tooltip title="Delete"> 
@@ -170,7 +169,7 @@ ItemSearch.displayName = "ItemSearch";
 type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; };
 const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => (<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"><Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button></Tooltip> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div>);
 type AutoEmailTemplatesTableProps = { columns: ColumnDef<AutoEmailTemplateItem>[]; data: AutoEmailTemplateItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: AutoEmailTemplateItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: AutoEmailTemplateItem) => void; onAllRowSelect: (checked: boolean, rows: Row<AutoEmailTemplateItem>[]) => void; };
-const AutoEmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: AutoEmailTemplatesTableProps) => (<DataTable selectable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />);
+const AutoEmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: AutoEmailTemplatesTableProps) => (<DataTable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />);
 type AutoEmailTemplatesSelectedFooterProps = { selectedItems: AutoEmailTemplateItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
 const AutoEmailTemplatesSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: AutoEmailTemplatesSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; return (<> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Template{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Template(s)`} onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false); }}> <p>Are you sure you want to delete the selected template(s)?</p> </ConfirmDialog> </>); };
 
@@ -311,7 +310,8 @@ const AutoEmailTemplatesListing = () => {
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AutoEmailTemplateItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
   const columns: ColumnDef<AutoEmailTemplateItem>[] = useMemo(() => [
-    { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
+    // { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
+
     { header: "Email Type", accessorKey: "email_type", size: 250, enableSorting: true },
     // { header: "Template Key", accessorKey: "template_key", size: 250, enableSorting: true },
     { header: "Category", accessorKey: "category_id", size: 180, enableSorting: true, cell: props => props.row.original.category?.name || categoryOptions.find(c => c.value === String(props.getValue()))?.label || String(props.getValue()) },

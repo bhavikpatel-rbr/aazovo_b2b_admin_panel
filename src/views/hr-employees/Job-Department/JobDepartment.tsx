@@ -753,7 +753,7 @@ const JobDepartment = () => {
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectable
+              // selectable
               checkboxChecked={(row) =>
                 selectedItems.some((selected) => selected.id === row.id)
               }

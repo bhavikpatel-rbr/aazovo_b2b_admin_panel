@@ -251,7 +251,7 @@ const DepartmentsTable = ({
   onAllRowSelect,
 }: DepartmentsTableProps) => (
   <DataTable
-    selectable
+    // selectable
     columns={columns}
     data={data}
     loading={loading}

@@ -166,7 +166,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
@@ -175,7 +175,7 @@ const ActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       
     </div>
   );
@@ -778,7 +778,7 @@ const DesignationListing = () => {
 
   const columns: ColumnDef<DesignationItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
       { header: "Designation Name", accessorKey: "name", enableSorting: true },
 
       {
@@ -834,7 +834,7 @@ const DesignationListing = () => {
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectable
+              // selectable
               checkboxChecked={(row) =>
                 selectedItems.some((selected) => selected.id === row.id)
               }

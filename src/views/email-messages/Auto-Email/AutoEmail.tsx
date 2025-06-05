@@ -38,6 +38,10 @@ import {
   TbReload,
   TbMailOpened,
   TbMailCode,
+  TbMailShare,
+  TbSend,
+  TbMailbox,
+  TbAlignBoxCenterBottom,
 } from "react-icons/tb";
 
 // Types
@@ -159,19 +163,24 @@ const ActionColumn = ({ onEdit, onDelete, onChangeStatus }: { onEdit: () => void
   return (<div className="flex items-center justify-center gap-1.5"> 
     <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> 
     {/* <Tooltip title="Toggle Status"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400`} role="button" onClick={onChangeStatus}><TbToggleRight /></div></Tooltip> */}
-    <Tooltip title="Send test email">
+    <Tooltip title="Send Test Email">
       <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600" role="button">
         <TbMailForward size={18} />
       </div>
     </Tooltip>
     <Tooltip title="View Template">
       <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600" role="button">
-        <TbMailOpened size={18} />
+        <TbAlignBoxCenterBottom size={17} />
       </div>
     </Tooltip>    
     <Tooltip title="Email Log">
       <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button">
-        <TbMailCode size={18} />
+        <TbMailbox size={18} />
+      </div>
+    </Tooltip>    
+    <Tooltip title="Send Now">
+      <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button">
+        <TbSend size={18} />
       </div>
     </Tooltip>    
     {/* <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>  */}
@@ -184,7 +193,7 @@ ItemSearch.displayName = "ItemSearch";
 type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; };
 const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => (<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"><Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button></Tooltip> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div>);
 type AutoEmailsTableProps = { columns: ColumnDef<AutoEmailItem>[]; data: AutoEmailItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: AutoEmailItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: AutoEmailItem) => void; onAllRowSelect: (checked: boolean, rows: Row<AutoEmailItem>[]) => void; };
-const AutoEmailsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: AutoEmailsTableProps) => (<DataTable selectable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />);
+const AutoEmailsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: AutoEmailsTableProps) => (<DataTable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />);
 type AutoEmailsSelectedFooterProps = { selectedItems: AutoEmailItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
 const AutoEmailsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: AutoEmailsSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; return (<> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Auto Email{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Auto Email(s)`} onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false); }}> <p>Are you sure you want to delete the selected auto email configuration(s)?</p> </ConfirmDialog> </>); };
 
@@ -386,7 +395,7 @@ const AutoEmailListing = () => {
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AutoEmailItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
   const columns: ColumnDef<AutoEmailItem>[] = useMemo(() => [
-    { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
+    // { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
     {
       header: "Email Type",
       accessorKey: "email_type", // Sorts by this raw value

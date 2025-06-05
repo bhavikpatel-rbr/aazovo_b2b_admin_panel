@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag, Dialog } from "@/components/ui";
+import { Drawer, Form, FormItem, Input, Tag, Dialog, Dropdown } from "@/components/ui";
 
 // Icons
 import {
@@ -42,6 +42,12 @@ import {
   TbToggleRight,
   TbReload,
   TbUsersPlus,
+  TbUser,
+  TbMailShare,
+  TbBrandWhatsapp,
+  TbBell,
+  TbTagStarred,
+  TbCalendarClock,
 } from "react-icons/tb";
 
 // Types
@@ -64,6 +70,7 @@ import {
 } from "@/reduxtool/master/middleware"; // Adjust path
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path
 import { Link } from "react-router-dom";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- Define Types ---
 export type SelectOption = { value: string; label: string };
@@ -117,12 +124,12 @@ const STATUS_OPTIONS_FORM: {
   value: RequestFeedbackFormStatus;
   label: string;
 }[] = [
-  { value: "unread", label: "Unread" },
-  { value: "read", label: "Read" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "resolved", label: "Resolved" },
-  { value: "closed", label: "Closed" },
-];
+    { value: "unread", label: "Unread" },
+    { value: "read", label: "Read" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "resolved", label: "Resolved" },
+    { value: "closed", label: "Closed" },
+  ];
 const statusFormValues = STATUS_OPTIONS_FORM.map((s) => s.value) as [
   RequestFeedbackFormStatus,
   ...RequestFeedbackFormStatus[]
@@ -216,19 +223,19 @@ const CSV_KEYS_RF: (keyof Pick<
   | "attachment"
   | "created_at"
 >)[] = [
-  "id",
-  "name",
-  "email",
-  "mobile_no",
-  "company_name",
-  "type",
-  "subject",
-  "feedback_details",
-  "rating",
-  "status",
-  "attachment",
-  "created_at",
-];
+    "id",
+    "name",
+    "email",
+    "mobile_no",
+    "company_name",
+    "type",
+    "subject",
+    "feedback_details",
+    "rating",
+    "status",
+    "attachment",
+    "created_at",
+  ];
 function exportRequestFeedbacksToCsv(
   filename: string,
   rows: RequestFeedbackItem[]
@@ -319,16 +326,15 @@ const ItemActionColumn = ({
         <TbEye />
       </div>
     </Tooltip>{" "}
-    <Tooltip title="Assign Task">
-      <Link
-        to="/task/task-list/create"
-        className="text-xl cursor-pointer text-gray-500 hover:text-red-600"
-        role="button"
-      >
-        <TbUsersPlus size={18} />
-      </Link>
-    </Tooltip>{" "}
-    <Tooltip title="Delete">
+    <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+      <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assigned to Task</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active </span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
+    </Dropdown>
+    {/* <Tooltip title="Delete">
       <div
         className="text-xl cursor-pointer text-gray-500 hover:text-red-600"
         role="button"
@@ -336,7 +342,7 @@ const ItemActionColumn = ({
       >
         <TbTrash />
       </div>
-    </Tooltip>{" "}
+    </Tooltip>{" "} */}
   </div>
 );
 type ItemSearchProps = {
@@ -423,7 +429,7 @@ const RequestFeedbacksTable = ({
   onAllRowSelect,
 }: RequestFeedbacksTableProps) => (
   <DataTable
-    selectable
+    // selectable
     columns={columns}
     data={data}
     noData={!loading && data.length === 0}
@@ -781,9 +787,9 @@ const RequestAndFeedbackListing = () => {
         if (key === "created_at" || key === "updated_at") {
           return order === "asc"
             ? new Date(aVal as string).getTime() -
-                new Date(bVal as string).getTime()
+            new Date(bVal as string).getTime()
             : new Date(bVal as string).getTime() -
-                new Date(aVal as string).getTime();
+            new Date(aVal as string).getTime();
         }
         const aStr = String(aVal ?? "").toLowerCase();
         const bStr = String(bVal ?? "").toLowerCase();

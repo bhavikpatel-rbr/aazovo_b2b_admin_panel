@@ -46,6 +46,7 @@ import {
   TbMailForward,
   TbMailOpened,
   TbMailSearch,
+  TbAlignBoxCenterBottom,
 } from "react-icons/tb";
 
 // Types
@@ -185,12 +186,7 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
       </Tooltip>
       <Tooltip title="View Template">
         <div className="text-xl cursor-pointer text-gray-500 hover:text-blue-600" role="button">
-          <TbMailOpened size={18} />
-        </div>
-      </Tooltip>
-      <Tooltip title="Email Preview">
-        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button">
-          <TbMailSearch size={18} />
+          <TbAlignBoxCenterBottom size={18} />
         </div>
       </Tooltip>
       {/* <Tooltip title="Delete">
@@ -217,7 +213,7 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: 
 );
 
 type EmailTemplatesTableProps = { columns: ColumnDef<EmailTemplateItem>[]; data: EmailTemplateItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: EmailTemplateItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: EmailTemplateItem) => void; onAllRowSelect: (checked: boolean, rows: Row<EmailTemplateItem>[]) => void; };
-const EmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: EmailTemplatesTableProps) => (<DataTable selectable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} />);
+const EmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: EmailTemplatesTableProps) => (<DataTable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} />);
 type EmailTemplatesSelectedFooterProps = { selectedItems: EmailTemplateItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
 const EmailTemplatesSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: EmailTemplatesSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; return (<> <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"> <div className="flex items-center justify-between w-full px-4 sm:px-8"> <span className="flex items-center gap-2"> <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span> <span className="font-semibold"> {selectedItems.length} Template{selectedItems.length > 1 ? "s" : ""} selected </span> </span> <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmOpen(true)} loading={isDeleting}>Delete Selected</Button> </div> </StickyFooter> <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Template(s)`} onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false); }}> <p>Are you sure you want to delete selected template(s)?</p> </ConfirmDialog> </>); };
 

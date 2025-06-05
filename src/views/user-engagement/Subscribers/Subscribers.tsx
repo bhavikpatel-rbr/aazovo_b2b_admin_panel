@@ -341,7 +341,7 @@ const SubscribersListing = () => {
 
     const columns: ColumnDef<SubscriberItem>[] = useMemo(
         () => [
-            { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
+            // { header: 'ID', accessorKey: 'id', enableSorting: true, size: 100 },
             { header: 'Email', accessorKey: 'email', enableSorting: true, size: 350 }, // Increased size for email
             {
                 header: 'Subscribed Date',
