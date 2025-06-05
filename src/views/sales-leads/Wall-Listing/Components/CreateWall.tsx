@@ -88,7 +88,7 @@ const wallItemFormSchema = z.object({
 
   // Optional relationship IDs (if needed for backend)
   productId: z.number().nullable().optional(), // Linked when product_name is selected
-  customerId: z.number().nullable().optional(), // Linked when company_name is selected
+  companyId: z.number().nullable().optional(), // Linked when company_name is selected
 });
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
@@ -198,7 +198,7 @@ const WallItemAdd = () => {
       warrantyInfo: "",
       returnPolicy: "",
       productId: null, // Will be set by UiSelect's onChange for product_name
-      customerId: null, // Will be set by UiSelect's onChange for company_name
+      companyId: null, // Will be set by UiSelect's onChange for company_name
     },
   });
 
@@ -226,7 +226,6 @@ const WallItemAdd = () => {
 
   // --- Prepare options for Select components ---
   const productOptions: ProductOptionType[] = useMemo(() => {
-    console.log(productsMasterData);
     if (!Array.isArray(productsMasterData)) return [];
     return productsMasterData.map((product: any) => ({
       value: product.name,
@@ -237,10 +236,10 @@ const WallItemAdd = () => {
   
 
   const companyOptions: CompanyOptionType[] = useMemo(() => {
-    if (!CompanyData || !Array.isArray(CompanyData.data)) return [];
-    return CompanyData.data.map((company: any) => ({
-      value: company.company_name || company.name,
-      label: company.company_name || company.name,
+    if (!CompanyData || !Array.isArray(CompanyData)) return [];
+    return CompanyData.map((company: any) => ({
+      value: company.name || company.name,
+      label: company.name || company.name,
       id: company.id,
     }));
   }, [CompanyData]);
@@ -276,73 +275,40 @@ const WallItemAdd = () => {
         : null;
 
       const payload = {
-        id: null,
-        opportunity_id: null,
-        opportunity_status: null,
-        match_score: null,
-        buy_listing_id: null,
-        sell_listing_id: null,
-        spb_role: null,
-        product_category: null,
-        product_subcategory: null,
-        brand: formData.brand ?? null,
-        product_specs: productSpecDetails?.label ?? null,
-        product_status_listing: null,
-        price_match_type: null,
-        quantity_match_listing: String(formData.qty),
-        location_match: null,
-        matches_found_count: null,
-        last_updated: null,
-        notes: formData.internalRemarks,
-        priority: formData.priority,
-        visibility: formData.visibility,
-        warranty: formData.warrantyInfo,
-        listing_url: formData.productUrl,
-        shipping_options: formData.dispatchMode,
-        payment_method: null,
-        interaction_type: null,
         product_id: formData.productId ? String(formData.productId) : null,
-        customer_id: formData.companyId ? String(formData.companyId) : null,
-        status: formData.adminStatus,
-        created_from: "FormUI-Add",
-        want_to: formData.intent,
+        company_id: formData.companyId ? String(formData.companyId) : null,
         qty: String(formData.qty),
+        price: formData.price ? String(formData.price) : "0",
+        want_to: formData.intent,
         product_status: formData.productStatus,
-        source: "in",
+        product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null,
+        device_condition: formData.deviceCondition,
+        color: formData.color,
+        cartoon_type: cartoonTypeDetails?.name ?? String(formData.cartoonTypeId),
+        dispatch_status: formData.dispatchStatus,
+        dispatch_mode: formData.dispatchMode,
+        payment_term: formData.paymentTermId ? String(formData.paymentTermId) : "0",
         delivery_at: formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null,
-        delivery_details: null,
-        created_by: "1",
+        location: formData.location,
+        listing_type: formData.listingType,
+        visibility: formData.visibility,
+        priority: formData.priority,
+        admin_status: formData.adminStatus,
+        assigned_to: formData.assignedTeamId ? String(formData.assignedTeamId) : null,
+        assigned_team: formData.assignedTeamId ?? null,
         active_hrs: String(formData.activeHours),
-        expired_date: null,
+        product_url: formData.productUrl,
+        warranty: formData.warrantyInfo,
         internal_remarks: formData.internalRemarks,
+        created_from: "FormUI-Add",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null,
-        device_type: null,
-        price: formData.price ? String(formData.price) : "0",
-        color: formData.color,
-        master_cartoon: null,
-        dispatch_status: formData.dispatchStatus,
-        payment_term: formData.paymentTermId ? String(formData.paymentTermId) : "0",
-        device_condition: formData.deviceCondition,
-        eta_details: null,
-        location: formData.location,
+        status: formData.adminStatus,
+        source: "in",
         is_wall_manual: "0",
-        wall_link_token: null,
-        wall_link_datetime: null,
-        cartoon_type: cartoonTypeDetails?.name ?? String(formData.cartoonTypeId),
-        inquiries: "0",
-        share: "0",
-        bookmark: "0",
-        assigned_to: formData.assignedTeamId ? String(formData.assignedTeamId) : null,
-        company_id: formData.companyId ?? null,
-        member_type: null,
-        brands_id: formData.brands_id ?? null,
-        dispatch_mode: formData.dispatchMode,
-        listing_type: formData.listingType,
-        admin_status: formData.adminStatus,
-        assigned_team: formData.assignedTeamId ?? null,
+        return_policy: formData.returnPolicy,
       };
+
 
       await dispatch(addWallItemAction(payload)).unwrap();
 
@@ -369,7 +335,7 @@ const WallItemAdd = () => {
     navigate("/sales-leads/wall-listing");
   };
   
-  const isLoadingOptions = isLoadingDropdownData || masterDataAccessStatus === "idle";
+  const isLoadingOptions = isLoadingDropdownData || masterDataAccessStatus === "loading";
 
   return (
     <>
@@ -398,7 +364,7 @@ const WallItemAdd = () => {
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            // isLoading={isLoadingOptions}
+                            isLoading={isLoadingOptions}
                             options={productOptions}
                             value={productOptions.find(opt => opt.value === field.value) || null}
                             onChange={option => {
@@ -428,13 +394,14 @@ const WallItemAdd = () => {
                     <UiSelect
                         options={companyOptions} // { value: "Company X Name", label: "Company X Name", id: 1 }
                         value={companyOptions.find(opt => opt.value === field.value) || null}
+                        isLoading={isLoadingOptions}
                         onChange={option => {
                             if (option) {
                                 field.onChange(option.value); // Sets formData.company_name to option.value (the name)
-                                formMethods.setValue('customerId', option.id, { shouldValidate: true, shouldDirty: true }); // Sets formData.customerId to option.id
+                                formMethods.setValue('companyId', option.id, { shouldValidate: true, shouldDirty: true }); // Sets formData.companyId to option.id
                             } else {
                                 field.onChange("");
-                                formMethods.setValue('customerId', null, { shouldValidate: true, shouldDirty: true });
+                                formMethods.setValue('companyId', null, { shouldValidate: true, shouldDirty: true });
                             }
                         }}
                         // ...
