@@ -28,6 +28,7 @@ import Notification from "@/components/ui/Notification";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
+import axiosInstance, { isAxiosError } from '@/services/api/api';
 
 // Icons
 import {
@@ -196,13 +197,12 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const { partnerData = [] } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  const [partnerList, setPartnerList] = useState<PartnerListItem[]>(partnerData);
+  const [partnerList, setPartnerList] = useState<PartnerListItem[]>(partnerData.data);
   const [selectedPartners, setSelectedPartners] = useState<PartnerListItem[]>([]);
-  const [partnerListTotal, setPartnerListTotal] = useState(partnerData.length);
-  console.log(partnerList, partnerData)
+  const [partnerListTotal, setPartnerListTotal] = useState(partnerData.total);
   useEffect(() => {
-    setPartnerList(partnerData)
-    setPartnerListTotal(partnerData.length)
+    setPartnerList(partnerData.data)
+    setPartnerListTotal(partnerData.total)
   }, [partnerData])
 
   useEffect(() => {
@@ -340,11 +340,11 @@ const PartnerActionColumn = ({
 const PartnerListTable = () => {
   const navigate = useNavigate();
   const {
-    partnerList,
+    partnerList = [],
     setPartnerList,
     selectedPartners,
     setSelectedPartners,
-    // partnerListTotal, // This will be derived by `total` from useMemo
+    partnerListTotal, // This will be derived by `total` from useMemo
     setPartnerListTotal,
   } = usePartnerList();
 
@@ -379,30 +379,29 @@ const PartnerListTable = () => {
     handleSetTableData({ pageIndex: 1 }); // Reset to first page on new filter
     closeFilterDrawer();
   };
-
   const onClearFilters = () => {
     const defaultFilters: PartnerFilterFormData = {};
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 }); // Reset to first page
-    // closeFilterDrawer(); // Optional: keep drawer open or close
+    closeFilterDrawer(); // Optional: keep drawer open or close
   };
 
   const { pageData, total } = useMemo(() => {
+    
     let filteredData = [...partnerList];
 
     if (tableData.query) {
       const query = tableData.query.toLowerCase();
       filteredData = filteredData.filter(
         (partner) =>
-          partner.id.toLowerCase().includes(query) ||
-          partner.partner_name.toLowerCase().includes(query) ||
-          partner.partner_email_id.toLowerCase().includes(query) ||
-          partner.partner_contact_number.toLowerCase().includes(query) ||
-          partner.partner_business_type.toLowerCase().includes(query) ||
+          partner?.partner_name?.toLowerCase().includes(query) ||
+          partner.partner_email_id?.toLowerCase().includes(query) ||
+          partner.partner_contact_number?.toLowerCase().includes(query) ||
+          partner.partner_business_type?.toLowerCase().includes(query) ||
           (partner.partner_reference_id && partner.partner_reference_id.toLowerCase().includes(query)) ||
-          partner.business_category.some(cat => cat.toLowerCase().includes(query)) ||
-          partner.partner_location.toLowerCase().includes(query)
+          partner.business_category?.some(cat => cat.toLowerCase().includes(query)) ||
+          partner.partner_location?.toLowerCase().includes(query)
       );
     }
 
@@ -458,17 +457,11 @@ const PartnerListTable = () => {
       });
     }
 
-    const pageIndex = tableData.pageIndex as number;
-    const pageSize = tableData.pageSize as number;
-    const dataTotal = filteredData.length;
-    const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = filteredData.slice(startIndex, startIndex + pageSize);
+    return { pageData: filteredData, total: partnerListTotal };
+  }, [partnerList, tableData, filterCriteria, partnerListTotal]);
 
-    return { pageData: dataForPage, total: dataTotal };
-  }, [partnerList, tableData, filterCriteria]);
-
-  const handleEditPartner = (id: string) => { console.log("Edit Partner:", id); navigate(`/business-entities/create-partner`, {state:id}) };
-  const handleViewPartnerDetails = (id: string) => { console.log("View Partner Details:", id); navigate(`/business-entities/create-partner`, {state:id}) };
+  const handleEditPartner = (id: string) => {  navigate(`/business-entities/create-partner`, {state:id}) };
+  const handleViewPartnerDetails = (id: string) => {  navigate(`/business-entities/create-partner`, {state:id}) };
   const handleSharePartner = (id: string) => { console.log("Share Partner:", id); };
 
   // More actions (from dropdown)
@@ -692,6 +685,60 @@ const PartnerListTable = () => {
     setTableData((prev) => ({ ...prev, ...data }));
   }, []);
 
+  // API fetching logic
+  const fetchPageData = useCallback(async (
+    pageIdx: number,
+    limit: number,
+    currentSort?: OnSortParam,
+    // Add other server-side filter/query params here if API supports
+  ) => {
+    setIsLoading(true);
+    const params = new URLSearchParams();
+    params.append('page', String(pageIdx));
+    params.append('limit', String(limit)); // Assuming API uses 'limit' for page size
+
+    // Example for server-side sort (if your API supports it)
+    // if (currentSort?.key && currentSort.order) {
+    //   params.append('sortBy', currentSort.key);
+    //   params.append('sortOrder', currentSort.order);
+    // }
+    // Example for server-side search (if your API supports it)
+    // if (tableData.query) { // Assuming tableData.query is for server-side search
+    //    params.append('search', tableData.query)
+    // }
+    // Example for server-side advanced filters
+    // Object.entries(filterCriteria).forEach(([key, value]) => {
+    //   if (value && value.length > 0) {
+    //      value.forEach(item => params.append(key.replace('filter', '').toLowerCase(), item.value));
+    //   }
+    // });
+
+
+    try {
+      const response = await axiosInstance.get(`/partner?${params.toString()}`);
+      
+      setPartnerList(response.data?.data?.data ?? []);
+      setPartnerListTotal(response.data?.data?.total ?? 0);
+    } catch (error) {
+      console.error("Failed to fetch member data:", error);
+      toast.push(<Notification title="Error" type="danger" duration={3000}>Failed to load members.</Notification>);
+      // Potentially set empty data or keep stale data on error
+      // setMemberList([]);
+      // setMemberListTotal(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setPartnerList, setPartnerListTotal /* include tableData.query, filterCriteria if they are sent to server */]);
+
+  // Effect to fetch data when server-relevant parameters change
+  useEffect(() => {
+    fetchPageData(
+      tableData.pageIndex as number,
+      tableData.pageSize as number,
+      tableData.sort as OnSortParam
+      // Pass other server-side params from tableData/filterCriteria if needed
+    );
+  }, [tableData.pageIndex, tableData.pageSize, tableData.sort, fetchPageData]);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
   const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
