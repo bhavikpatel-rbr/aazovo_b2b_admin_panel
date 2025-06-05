@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import Select from "@/components/ui/Select";
 import DebounceInput from "@/components/shared/DebouceInput";
-import { Drawer, Form, FormItem, Input, Tag, Dialog, Card } from "@/components/ui"; // Removed Upload as not directly used in this pattern
+import { Drawer, Form, FormItem, Input, Tag, Dialog, Card, Dropdown } from "@/components/ui"; // Removed Upload as not directly used in this pattern
 
 // Icons
 import {
@@ -75,6 +75,7 @@ import {
 } from '@/reduxtool/master/middleware';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 import { Link } from "react-router-dom";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 
 // --- Define Types ---
@@ -215,17 +216,24 @@ const ActionColumn = ({ onEdit, onViewDetail, onDelete, onBlacklist, item }: { o
       <Tooltip title="View Details">
         <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div>
       </Tooltip>
-      <Tooltip title="Convert to Member">
+      {/* <Tooltip title="Convert to Member">
         <Link to={`/business-entities/member-create?rowDataId=${item.id}`} state={{ rowData: item }} className={`text-xl cursor-pointer select-none text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400`} role="button"><TbUserShare /></Link>
-      </Tooltip>
-      {item.status !== "Blacklist" && (
+      </Tooltip> */}
+      {/* {item.status !== "Blacklist" && (
         <Tooltip title="Blacklist">
           <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`} role="button" onClick={onBlacklist}><TbCancel size={16} /></div>
         </Tooltip>
-      )}
-      <Tooltip title="Delete">
+      )} */}
+      {/* <Tooltip title="Delete">
         <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div>
-      </Tooltip>
+      </Tooltip> */}
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item className="flex items-center gap-2"><TbTrash size={18} onClick={onDelete} /> <span className="text-xs">Delete</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUserShare size={18} /><Link to={`/business-entities/member-create?rowDataId=${item.id}`} state={{ rowData: item }}> <span className="text-xs">Convert to Member</span></Link></Dropdown.Item>
+        {item.status !== "Blacklist" && (
+          <Dropdown.Item className="flex items-center gap-2"><TbCancel size={18} onClick={onBlacklist} /> <span className="text-xs">Add As Blacklist</span></Dropdown.Item>
+        )}
+      </Dropdown>
     </div>
   );
 };

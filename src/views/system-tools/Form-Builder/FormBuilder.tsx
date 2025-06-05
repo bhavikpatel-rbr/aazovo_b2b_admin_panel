@@ -28,6 +28,7 @@ import {
   Tag,
   Dialog,
   Card,
+  Dropdown,
 } from "@/components/ui";
 import { Controller, useForm } from "react-hook-form"; // Re-add for filter form
 
@@ -47,6 +48,7 @@ import {
   TbCategory2,
   TbBuildingCommunity,
   TbFileSymlink,
+  TbUser,
 } from "react-icons/tb";
 
 // Types
@@ -56,7 +58,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store"; // Added
@@ -73,6 +75,7 @@ import {
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware"; // Adjust path as needed, or create a new form builder middleware
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Placeholder: Define this selector
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 // Store (for local simulation - some functions will be replaced by Redux)
 // import {
@@ -373,38 +376,11 @@ const ActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Change Status">
-        <div
-          className={classNames(
-            "text-xl cursor-pointer select-none text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
-          )}
-          role="button"
-          onClick={() => onChangeStatus(item)}
-        >
-          <TbSwitchHorizontal />
-        </div>
-      </Tooltip>
-      <Tooltip title="Clone Form">
-        <div
-          className={classNames(
-            "text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-          )}
-          role="button"
-          onClick={() => onClone(item)}
-        >
-          <TbCopy />
-        </div>
-      </Tooltip>
-      <Tooltip title="Publish Link">
-        {" "}
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-800 dark:text-gray-400 dark:hover:text-red-400`}
-          role="button"
-          // onClick={() => onDelete(item)}
-        >
-          <TbFileSymlink />
-        </div>
-      </Tooltip>
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item className="flex items-center gap-2"><TbCopy size={18} onClick={() => onClone(item)} /> <span className="text-xs">Clone Form</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbFileSymlink size={18} onClick={() => onClone(item)} /> <span className="text-xs">Publish Link</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <Link to="/task/task-list/create" ><span className="text-xs">Assigned to Task</span></Link></Dropdown.Item>
+      </Dropdown>
     </div>
   );
 };
