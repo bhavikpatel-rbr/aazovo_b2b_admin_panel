@@ -229,6 +229,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Dispatch actions to fetch initial data
     dispatch(getDepartmentsAction());
+   
   }, [dispatch]);
 
   // This useEffect handles updates from Redux store
@@ -236,7 +237,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
     console.log("masterLoadingStatus", masterLoadingStatus);
 
-    if (masterLoadingStatus === "loading") {
+    if (masterLoadingStatus === "idle") {
       console.log("inquiryList1", inquiryList1);
 
       // Ensure inquiryList1 is an array before processing
