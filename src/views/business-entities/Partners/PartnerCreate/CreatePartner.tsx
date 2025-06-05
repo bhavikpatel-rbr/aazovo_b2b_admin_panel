@@ -153,8 +153,10 @@ const CreatePartner = () => {
       .min(1, { message: "Partner name is Required !" }),
     partner_interested_in: z.object({ value: z.string(), label: z.string() })
       .optional(),
-       partner_status: z.object({ value: z.string(), label: z.string() })
+    partner_kyc_status: z.object({ value: z.string(), label: z.string() })
       .optional(),
+    // partner_status: z.object({ value: z.string(), label: z.string() })
+    //   .optional(),
     partner_website: z.string()
       .trim()
       .min(1, { message: "Website is Required !" }),
