@@ -37,6 +37,7 @@ import {
   TbToggleRight,
   TbReload,
   TbMailOpened,
+  TbMailCode,
 } from "react-icons/tb";
 
 // Types
@@ -156,19 +157,26 @@ function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[], userOpti
 // --- ActionColumn, Search, TableTools, Table, SelectedFooter (UI remains same) ---
 const ActionColumn = ({ onEdit, onDelete, onChangeStatus }: { onEdit: () => void; onDelete: () => void; onChangeStatus: () => void; }) => {
   return (<div className="flex items-center justify-center gap-1.5"> 
-  <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> 
-  <Tooltip title="Toggle Status"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400`} role="button" onClick={onChangeStatus}><TbToggleRight /></div></Tooltip>
-  <Tooltip title="Send test email">
-    <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600" role="button">
-      <TbMailForward size={18} />
-    </div>
-  </Tooltip>
+    <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> 
+    {/* <Tooltip title="Toggle Status"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400`} role="button" onClick={onChangeStatus}><TbToggleRight /></div></Tooltip> */}
+    <Tooltip title="Send test email">
+      <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600" role="button">
+        <TbMailForward size={18} />
+      </div>
+    </Tooltip>
     <Tooltip title="View Template">
       <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600" role="button">
         <TbMailOpened size={18} />
       </div>
-    </Tooltip>  
-    <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div>);
+    </Tooltip>    
+    <Tooltip title="Email Log">
+      <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button">
+        <TbMailCode size={18} />
+      </div>
+    </Tooltip>    
+    {/* <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip>  */}
+  </div>
+  );
 };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));

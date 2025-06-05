@@ -35,7 +35,9 @@ import {
   TbTrash,
   TbCategory2, // For Category
   TbBuildingArch,
-  TbReload, // For Department
+  TbReload,
+  TbCopy,
+  TbMailSearch, // For Department
 } from "react-icons/tb";
 
 // Types
@@ -125,7 +127,42 @@ function exportAutoEmailTemplatesToCsv(filename: string, rows: AutoEmailTemplate
 
 // --- ActionColumn, Search, TableTools, SelectedFooter (UI remains same) ---
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => { // Removed onViewDetail if not used for now
-  return (<div className="flex items-center justify-center gap-1"> <Tooltip title="Edit"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip> <Tooltip title="Delete"> <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} role="button" onClick={onDelete}><TbTrash /></div></Tooltip> </div>);
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 
+        dark:text-gray-400 dark:hover:text-emerald-400`}
+          role="button"
+          onClick={onEdit}
+        >
+          <TbPencil />
+        </div>
+      </Tooltip>
+      <Tooltip title="Clone Template">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 
+        dark:text-gray-400 dark:hover:text-blue-400`}
+          role="button"
+        >
+          <TbCopy size={16} />
+        </div>
+      </Tooltip>
+      <Tooltip title="Email Preview">
+        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button">
+          <TbMailSearch size={18} />
+        </div>
+      </Tooltip>
+      {/* <Tooltip title="Delete"> 
+      <div 
+        className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} 
+        role="button" 
+        onClick={onDelete}
+      >
+        <TbTrash />
+      </div>
+    </Tooltip>  */}
+    </div>);
 };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
@@ -279,10 +316,11 @@ const AutoEmailTemplatesListing = () => {
     // { header: "Template Key", accessorKey: "template_key", size: 250, enableSorting: true },
     { header: "Category", accessorKey: "category_id", size: 180, enableSorting: true, cell: props => props.row.original.category?.name || categoryOptions.find(c => c.value === String(props.getValue()))?.label || String(props.getValue()) },
     { header: "Department", accessorKey: "department_id", size: 180, enableSorting: true, cell: props => props.row.original.department?.name || departmentOptions.find(d => d.value === String(props.getValue()))?.label || (props.getValue() ? String(props.getValue()) : "N/A") },
-    { header: "Created At", accessorKey: "created_at", size: 150, 
-      cell: props => 
-      // props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' 
-      props.getValue() ? <span className="text-xs"> {dayjs(props.getValue()).format("D MMM YYYY, h:mm A")}</span> : '-' 
+    {
+      header: "Created At", accessorKey: "created_at", size: 150,
+      cell: props =>
+        // props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' 
+        props.getValue() ? <span className="text-xs"> {dayjs(props.getValue()).format("D MMM YYYY, h:mm A")}</span> : '-'
     },
     { header: "Actions", id: "actions", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onViewDetail={() => { /* Implement if needed */ }} /> },
   ], [categoryOptions, departmentOptions, openEditDrawer, handleDeleteClick]);
@@ -319,12 +357,12 @@ const AutoEmailTemplatesListing = () => {
         </AdaptiveCard>
       </Container>
       <AutoEmailTemplatesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
-      <Drawer title={editingItem ? "Edit Auto Email Template" : "Add New Auto Email Template"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700}
+      <Drawer title={editingItem ? "Edit Auto Email Template" : "Add New Auto Email Template"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={480}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="autoEmailTemplateForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div>} >
         <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4"> {renderDrawerForm(formMethods)} </Form>
       </Drawer>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400}
-        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button> <Button size="sm" variant="solid" form="filterAutoEmailTemplateForm" type="submit">Apply Filters</Button> </div>}
+        footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterAutoEmailTemplateForm" type="submit">Apply</Button> </div>}
       >
         <Form id="filterAutoEmailTemplateForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Email Type"><Controller name="filterEmailTypes" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Email Type" options={autoEmailTemplatesData.map(t => ({ value: t.email_type, label: t.email_type })).filter((v, i, a) => a.findIndex(item => item.value === v.value) === i)} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>

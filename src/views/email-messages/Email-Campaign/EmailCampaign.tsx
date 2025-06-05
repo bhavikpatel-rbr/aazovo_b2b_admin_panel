@@ -46,7 +46,9 @@ import {
   TbMail, // For email list
   TbFileImport,
   TbMailOpened,
-  TbMailForward, // For file import
+  TbMailForward,
+  TbMailCode,
+  TbReload, // For file import
 } from "react-icons/tb";
 
 // Types
@@ -230,18 +232,23 @@ const ActionColumn = ({ onViewDetails, onEdit, onDelete }: { onViewDetails: () =
       <div className="text-xl cursor-pointer text-gray-500 hover:text-blue-600" role="button">
         <TbMailOpened size={18}/>
       </div>
+    </Tooltip>
+    <Tooltip title="Email Log">
+      <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button">
+        <TbMailCode size={18} />
+      </div>
     </Tooltip> 
-    <Tooltip title="Delete Campaign">
+    {/* <Tooltip title="Delete Campaign">
       <div className="text-xl cursor-pointer text-gray-500 hover:text-red-600" role="button" onClick={onDelete}>
         <TbTrash/>
       </div>
-    </Tooltip> 
+    </Tooltip>  */}
   </div> ); };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>( ({ onInputChange }, ref) => ( <DebounceInput ref={ref} className="w-full" placeholder="Search by Template Name, ID..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> ));
 ItemSearch.displayName = "ItemSearch";
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; };
-const ItemTableTools = ({ onSearchChange, onFilter, onExport }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => ( <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full"> <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div> <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip><div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button> <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button> </div> </div> );
 type EmailCampaignsTableProps = { columns: ColumnDef<EmailCampaignItem>[]; data: EmailCampaignItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; /* selectedItems and row selection removed as not in UI */ };
 const EmailCampaignsTable = ({ columns, data, loading, pagingData, onPaginationChange, onSelectChange, onSort }: EmailCampaignsTableProps) => ( <DataTable columns={columns} data={data} loading={loading} pagingData={pagingData} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} noData={!loading && data.length === 0} />);
 
@@ -728,7 +735,7 @@ const EmailCampaignListing = () => {
             <h5 className="mb-2 sm:mb-0">Email Campaigns</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={() => openCreateDrawer()}>Create New Campaign</Button>
           </div>
-          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
             <EmailCampaignsTable 
                 columns={columns} 
@@ -754,12 +761,12 @@ const EmailCampaignListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Campaigns"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         width={400}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button> <Button size="sm" variant="solid" form="campaignFilterForm" type="submit">Apply Filters</Button> </div> }
+        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-1" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="campaignFilterForm" type="submit">Apply</Button> </div> }
       >
         <Form id="campaignFilterForm" onSubmit={filterFormMethods.handleSubmit(onFilterFormSubmit)} className="flex flex-col gap-y-6 p-1">
             <FormItem label="Status" invalid={!!filterFormMethods.formState.errors.status} errorMessage={filterFormMethods.formState.errors.status?.message}>
