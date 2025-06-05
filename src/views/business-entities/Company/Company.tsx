@@ -144,11 +144,14 @@ const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
 // --- End Status Colors ---
 
 // --- Company List Store ---
+// ... other imports
+
+// --- CompanyListStore ---
 interface CompanyListStore {
   companyList: CompanyItem[];
   selectedCompanies: CompanyItem[];
-  CountriesData: [];
-  ContinentsData:[];
+  CountriesData: any[]; // Or a more specific type if available
+  ContinentsData: any[]; // Or a more specific type if available
   companyListTotal: number;
   setCompanyList: React.Dispatch<React.SetStateAction<CompanyItem[]>>;
   setSelectedCompanies: React.Dispatch<React.SetStateAction<CompanyItem[]>>;
@@ -164,41 +167,57 @@ const useCompanyList = (): CompanyListStore => {
   }
   return context;
 };
-const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
-  const { CompanyData = [], CountriesData = [],
-    ContinentsData = [], } = useSelector(masterSelector);
+const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // The destructuring default `[]` applies if the property is undefined in masterSelector's return.
+  // However, if masterSelector returns e.g. { CompanyData: null }, then CompanyData here will be null.
+  const { CompanyData, CountriesData, ContinentsData } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  const [companyList, setCompanyList] = useState<CompanyItem[]>(CompanyData);
+
+  // Ensure initial state is always an array.
+  const [companyList, setCompanyList] = useState<CompanyItem[]>(
+    Array.isArray(CompanyData) ? CompanyData : []
+  );
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
-  const [companyListTotal, setCompanyListTotal] = useState(CompanyData.length);
+  const [companyListTotal, setCompanyListTotal] = useState(
+    Array.isArray(CompanyData) ? CompanyData.length : 0
+  );
 
   useEffect(() => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
-  }, [])
-  useEffect(() => {
-    setCompanyList(CompanyData)
-    setCompanyListTotal(CompanyData.length)
-  }, [CompanyData])
+  }, [dispatch]); // Added dispatch to dependency array
 
   useEffect(() => {
-    dispatch(getCompanyAction()); // Fetch continents for select dropdown
-  }, [dispatch]);
+    // Ensure CompanyData is treated as an array before setting state
+    const currentCompanyData = Array.isArray(CompanyData) ? CompanyData : [];
+    setCompanyList(currentCompanyData);
+    setCompanyListTotal(currentCompanyData.length);
+  }, [CompanyData]); // CompanyData from useSelector
+
+  useEffect(() => {
+    dispatch(getCompanyAction());
+  }, [dispatch]); // dispatch is already in dependency array, which is good
 
   return (
     <CompanyListContext.Provider value={{
-      companyList, setCompanyList,
-      selectedCompanies, setSelectedCompanies,
-      companyListTotal, setCompanyListTotal,
-      ContinentsData: ContinentsData,
-      CountriesData:CountriesData,
-
+      companyList, // Now guaranteed to be an array
+      setCompanyList,
+      selectedCompanies,
+      setSelectedCompanies,
+      companyListTotal,
+      setCompanyListTotal,
+      // Ensure context values for ContinentsData and CountriesData are also always arrays
+      ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [],
+      CountriesData: Array.isArray(CountriesData) ? CountriesData : [],
     }}>
       {children}
     </CompanyListContext.Provider>
   );
 };
+// --- End Company List Store ---
+
+// ... rest of the file
 // --- End Company List Store ---
 
 
