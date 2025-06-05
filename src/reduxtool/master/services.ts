@@ -32,7 +32,7 @@ export const editLeadAsync = async (leadData: any) => {
 
 export const deleteLeadAsync = async (leadData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/lead/lead/${leadData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/lead/lead/${leadData}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2405,6 +2405,16 @@ export const editDemandAsync = async (demandData: any) => {
 export const getDemandByIdAsync = async (id: string | number) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/demand/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+
+export const getLeadByIdAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/lead/lead/${id}`);
     return response;
   } catch (err) {
     return isAxiosError(err);
