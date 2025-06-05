@@ -584,18 +584,18 @@ const RowDataListing = () => {
   ], [openEditDrawer, openViewDialog, handleDeleteClick, handleBlacklistClick, countryOptions, categoryOptions, brandOptions]); // Added dependencies
 
   const renderDrawerForm = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2">
+      <FormItem label="Contact Name" invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbUser />} placeholder="Contact Name / Lead Name" />)} /></FormItem>
+      <FormItem label="Company Name"  invalid={!!formMethods.formState.errors.company_name} errorMessage={formMethods.formState.errors.company_name?.message}><Controller name="company_name" control={formMethods.control} render={({ field }) => <Input {...field} prefix={<TbBuilding />} placeholder="ABC Corp" />} /></FormItem>
       <FormItem label="Country" invalid={!!formMethods.formState.errors.country_id} errorMessage={formMethods.formState.errors.country_id?.message}><Controller name="country_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select country" options={countryOptions} value={countryOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbWorld />} />)} /></FormItem>
       <FormItem label="Category" invalid={!!formMethods.formState.errors.category_id} errorMessage={formMethods.formState.errors.category_id?.message}><Controller name="category_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select category" options={categoryOptions} value={categoryOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory2 />} />)} /></FormItem>
       <FormItem label="Brand" invalid={!!formMethods.formState.errors.brand_id} errorMessage={formMethods.formState.errors.brand_id?.message}><Controller name="brand_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select brand" options={brandOptions} value={brandOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingArch />} />)} /></FormItem>
       <FormItem label="Mobile No." invalid={!!formMethods.formState.errors.mobile_no} errorMessage={formMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbPhone />} placeholder="+XX-XXXXXXXXXX" />)} /></FormItem>
-      <FormItem label="Email (Optional)" invalid={!!formMethods.formState.errors.email} errorMessage={formMethods.formState.errors.email?.message}><Controller name="email" control={formMethods.control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail />} placeholder="name@example.com" />)} /></FormItem>
-      <FormItem label="Name" invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbUser />} placeholder="Contact Name / Lead Name" />)} /></FormItem>
-      <FormItem label="Company Name (Optional)" invalid={!!formMethods.formState.errors.company_name} errorMessage={formMethods.formState.errors.company_name?.message}><Controller name="company_name" control={formMethods.control} render={({ field }) => <Input {...field} prefix={<TbBuilding />} placeholder="ABC Corp" />} /></FormItem>
+      <FormItem label="Email" invalid={!!formMethods.formState.errors.email} errorMessage={formMethods.formState.errors.email?.message}><Controller name="email" control={formMethods.control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail />} placeholder="name@example.com" />)} /></FormItem>
       <FormItem label="Quality" invalid={!!formMethods.formState.errors.quality} errorMessage={formMethods.formState.errors.quality?.message}><Controller name="quality" control={formMethods.control} render={({ field }) => (<Select placeholder="Select quality" options={QUALITY_LEVELS_UI} value={QUALITY_LEVELS_UI.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem>
-      <FormItem label="City (Optional)" invalid={!!formMethods.formState.errors.city} errorMessage={formMethods.formState.errors.city?.message}><Controller name="city" control={formMethods.control} render={({ field }) => <Input {...field} prefix={<TbMapPin />} placeholder="City Name" />} /></FormItem>
+      <FormItem label="City" invalid={!!formMethods.formState.errors.city} errorMessage={formMethods.formState.errors.city?.message}><Controller name="city" control={formMethods.control} render={({ field }) => <Input {...field} prefix={<TbMapPin />} placeholder="City Name" />} /></FormItem>
       <FormItem label="Status" invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select status" options={editingItem?.status === "Blacklist" ? STATUS_OPTIONS_UI : STATUS_OPTIONS_UI.filter(s => s.value !== "Blacklist")} value={STATUS_OPTIONS_UI.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} disabled={editingItem?.status === "Blacklist"} />)} /></FormItem>
-      <FormItem label="Remarks (Optional)" className="md:col-span-2 lg:col-span-3" invalid={!!formMethods.formState.errors.remarks} errorMessage={formMethods.formState.errors.remarks?.message}><Controller name="remarks" control={formMethods.control} render={({ field }) => <Input textArea {...field} rows={3} placeholder="Add any relevant notes or comments..." />} /></FormItem>
+      <FormItem label="Remarks" className="md:col-span-2 lg:col-span-2" invalid={!!formMethods.formState.errors.remarks} errorMessage={formMethods.formState.errors.remarks?.message}><Controller name="remarks" control={formMethods.control} render={({ field }) => <Input textArea {...field} rows={3} placeholder="Add any relevant notes or comments..." />} /></FormItem>
     </div>
   );
 
@@ -692,7 +692,7 @@ const RowDataListing = () => {
 
       <RowDataSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting && selectedItems.length > 0} />
 
-      <Drawer title={editingItem ? "Edit Raw Data" : "Add New Raw Data"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={940}
+      <Drawer title={editingItem ? "Edit Raw Data" : "Add New Raw Data"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
@@ -703,14 +703,14 @@ const RowDataListing = () => {
         <Form id="rowDataForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28">
           {renderDrawerForm()}
           {editingItem && (
-            <div className="absolute bottom-[4%] w-full left-1/2 transform -translate-x-1/2">
+            <div className="absolute bottom-0 w-full">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update By:</b><br />
                   <p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p>
                   <p>{editingItem.updated_by_role || "N/A"}</p>
                 </div>
-                <div>
+                <div className="text-right">
                   <br />
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>

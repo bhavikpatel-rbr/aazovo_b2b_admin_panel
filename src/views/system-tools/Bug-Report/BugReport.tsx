@@ -1080,7 +1080,7 @@ const BugReportListing = () => {
   );
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
       <FormItem
         label="Name"
         className="md:col-span-1"
@@ -1119,7 +1119,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Mobile No. (Optional)"
+        label="Mobile No."
         className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.mobile_no}
         errorMessage={currentFormMethods.formState.errors.mobile_no?.message}
@@ -1159,7 +1159,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Report / Description"
+        label="Report Description"
         className="md:col-span-2"
         invalid={!!currentFormMethods.formState.errors.report}
         errorMessage={currentFormMethods.formState.errors.report?.message}
@@ -1179,7 +1179,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Attachment (Optional)"
+        label="Attachment"
         className="md:col-span-2"
         invalid={!!currentFormMethods.formState.errors.attachment}
         errorMessage={
@@ -1511,7 +1511,7 @@ const BugReportListing = () => {
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        width={700}
+        width={520}
         footer={
           <div className="text-right w-full">
             {" "}
