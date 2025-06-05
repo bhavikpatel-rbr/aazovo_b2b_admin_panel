@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Dropdown, Form, FormItem, Input, Tag } from "@/components/ui";
 // import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Ensure this path is correct, seems unused in this file for Input prefix
 
 // Icons
@@ -41,6 +41,12 @@ import {
   TbFileExcel,
   TbFileSmile,
   TbFileLike,
+  TbCalendarEvent,
+  TbLink,
+  TbUser,
+  TbMailShare,
+  TbBrandWhatsapp,
+  TbBell,
 } from "react-icons/tb";
 
 // Types
@@ -63,6 +69,7 @@ import {
   getJobDepartmentsAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- Define Types ---
 export type JobDepartmentListItem = {
@@ -277,7 +284,7 @@ const ActionColumn = ({
           <TbSwitchHorizontal />
         </div>
       </Tooltip> */}
-      <Tooltip title="Delete Job Post">
+      {/* <Tooltip title="Delete Job Post">
         <div
           className={classNames(
             iconButtonClass,
@@ -289,7 +296,14 @@ const ActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Shared Link</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assigned to Task</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
+      </Dropdown>
     </div>
   );
 };
@@ -375,7 +389,7 @@ const JobPostsTable = ({
   onAllRowSelect,
 }: JobPostsTableProps) => (
   <DataTable
-    selectable
+    // selectable
     columns={columns}
     data={data}
     loading={loading}
@@ -909,7 +923,7 @@ const JobPostsListing = () => {
       {
         header: "Status",
         accessorKey: "status",
-        size: 120,
+        size: 100,
         enableSorting: true,
         cell: (props) => {
           const statusVal = props.getValue<JobPostStatusApi>();
@@ -938,35 +952,35 @@ const JobPostsListing = () => {
           return department ? department.label : `ID: ${deptId}`;
         },
       },
-      {
-        header: "Description",
-        accessorKey: "description",
-        enableSorting: false,
-        size: 200, // Adjusted size
-        cell: (props) => (
-          <Tooltip title={props.getValue<string>()} placement="top-start">
-            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">
-              {props.getValue<string>()}
-            </span>
-          </Tooltip>
-        ),
-      },
+      // {
+      //   header: "Description",
+      //   accessorKey: "description",
+      //   enableSorting: false,
+      //   size: 200, // Adjusted size
+      //   cell: (props) => (
+      //     // <Tooltip title={props.getValue<string>()} placement="top-start">
+      //       <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">
+      //         {props.getValue<string>()}
+      //       </span>
+      //     // </Tooltip>
+      //   ),
+      // },
       {
         header: "Location",
         accessorKey: "location",
-        size: 150,
+        size: 140,
         enableSorting: true,
       },
       {
         header: "Experience",
         accessorKey: "experience",
-        size: 130,
+        size: 100,
         enableSorting: true,
       },
       {
         header: "Vacancies",
         accessorKey: "vacancies",
-        size: 100, // Adjusted size
+        size: 120, // Adjusted size
         enableSorting: true,
         meta: { cellClass: "text-center", headerClass: "text-center" },
       },
@@ -974,7 +988,7 @@ const JobPostsListing = () => {
         header: "Actions",
         id: "actions",
         meta: { headerClass: "text-center", cellClass: "text-center" },
-        size: 120, // Adjusted size
+        size: 80, // Adjusted size
         cell: (props) => (
           <ActionColumn
             item={props.row.original}
@@ -1316,7 +1330,7 @@ const JobPostsListing = () => {
                   : "Adding..."
                 : editingItem
                   ? "Save"
-                  : "Save Job Post"}
+                  : "Save"}
             </Button>
           </div>
         }
@@ -1324,7 +1338,7 @@ const JobPostsListing = () => {
         <Form
           id="jobPostForm" // This ID is targeted by the footer submit button
           onSubmit={formMethods.handleSubmit(onSubmitHandler)}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-2"
         >
           {renderDrawerForm(formMethods)}
         </Form>

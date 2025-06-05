@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -60,6 +60,10 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 export type DepartmentItem = {
   id: string | number;
   name: string;
+  status: "Active" | "Inactive" | string; // API returns 'Active', allow string for flexibility
+  totalemployee?:string;
+  totaljobpost?:string;
+  totalapplication?:string;
   created_by?: string;
   created_at?: string;
   updated_at?: string;
@@ -151,16 +155,15 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
-          // IMPORTANT: You have onClick={onViewDetail} here. It should be onClick={onDelete}
-          onClick={onDelete} // Corrected: This should call the onDelete prop
+          onClick={onDelete}
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
@@ -248,7 +251,7 @@ const DepartmentsTable = ({
   onAllRowSelect,
 }: DepartmentsTableProps) => (
   <DataTable
-    selectable
+    // selectable
     columns={columns}
     data={data}
     loading={loading}
@@ -746,12 +749,40 @@ const Departments = () => {
 
   const columns: ColumnDef<DepartmentItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
-      { header: "Department Name", accessorKey: "name", enableSorting: true },
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      { header: "Department Name", accessorKey: "name", enableSorting: true, size:140 },
+      { header: "Status", accessorKey: "status", enableSorting: true, size: 80, meta : {HeaderClass: "text-red-500"},
+        cell : ()=>{
+          return  (
+            <Tag className="bg-green-200 text-green-500">Active</Tag>
+          )
+        }
+      },
+      { header: "Total Employee", accessorKey: "totalemployee", enableSorting: true, size: 140, meta : {HeaderClass: "text-red-500"},
+        cell : ()=>{
+          return  (
+            <span>120</span>
+          )
+        }
+      },
+      { header: "Total Job Post", accessorKey: "totaljobpost", enableSorting: true, size: 140, meta : {HeaderClass: "text-red-500"},
+        cell : ()=>{
+          return  (
+            <span>20</span>
+          )
+        }
+      },
+      { header: "Total Application", accessorKey: "totalapplication", enableSorting: true, size: 140, meta : {HeaderClass: "text-red-500"},
+        cell : ()=>{
+          return  (
+            <span>20</span>
+          )
+        }
+      },
       {
         header: "Actions",
         id: "action",
-        size: 120,
+        size: 80,
         meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn

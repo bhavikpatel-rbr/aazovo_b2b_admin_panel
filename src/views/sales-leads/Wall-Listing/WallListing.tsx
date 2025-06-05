@@ -53,6 +53,7 @@ import {
   TbPencil,
   TbPhoto,
   TbPlus,
+  TbReload,
   TbSearch,
   TbShare,
   TbStack2
@@ -385,13 +386,15 @@ interface WallTableToolsProps {
   onExport: () => void;
   onAddNew: () => void;
   onImport: () => void;
+  onClearFilters: () => void;
 }
-const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport }: WallTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters }: WallTableToolsProps) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <WallSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip>
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
       <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
       <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
@@ -952,12 +955,14 @@ const WallListing = () => {
           return (
             <div className="flex flex-col gap-1 text-xs">
               {recordStatus && (
-                <Tag
-                  onClick={() => handleChangeStatus(row.original)}
-                  className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize cursor-pointer`}
-                >
-                  {recordStatus}
-                </Tag>
+                <div>
+                  <Tag
+                    onClick={() => handleChangeStatus(row.original)}
+                    className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize cursor-pointer`}
+                    >
+                    {recordStatus}
+                  </Tag>
+                </div>
               )}
               {visibility && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Visibility:</span> <span className="text-gray-600 dark:text-gray-400">{visibility}</span></span>)}
               {priority && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Priority:</span> <span className="text-gray-600 dark:text-gray-400">{priority}</span></span>)}
@@ -999,6 +1004,7 @@ const WallListing = () => {
             onExport={handleExportData}
             onAddNew={openAddDrawer}
             onImport={handleImportData}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <WallTable
@@ -1092,7 +1098,7 @@ const WallListing = () => {
         }
       >
         <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-2 h-full">
-          <div className="md:grid grid-cols-2 gap-2 overflow-y-auto p-1">
+          <div className="md:grid grid-cols-2 gap-2 overflow-y-auto">
             <FormItem label="Status">
               <Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Status..." options={recordStatusOptions} {...field} />)} />
             </FormItem>

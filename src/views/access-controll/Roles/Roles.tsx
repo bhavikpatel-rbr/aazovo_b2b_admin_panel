@@ -818,7 +818,7 @@ const RolesListing = () => {
         isOpen={isAddDrawerOpen}
         onClose={closeAddDrawer}
         onRequestClose={closeAddDrawer}
-        width={600}
+        width={520}
         footer={
           <div className="text-right w-full">
             {" "}
@@ -846,7 +846,7 @@ const RolesListing = () => {
         <Form
           id="addRoleForm"
           onSubmit={addFormMethods.handleSubmit(onAddRoleSubmit)}
-          className="flex flex-col gap-4 p-1"
+          className="flex flex-col gap-2"
         >
           <FormItem
             label="Display Name"
@@ -894,7 +894,6 @@ const RolesListing = () => {
                 <Input
                   textArea
                   {...field}
-                  rows={4}
                   prefix={<TbFileDescription />}
                   placeholder="Briefly describe what this role can do."
                 />
@@ -967,7 +966,7 @@ const RolesListing = () => {
         isOpen={isEditDrawerOpen}
         onClose={closeEditDrawer}
         onRequestClose={closeEditDrawer}
-        width={600}
+        width={520}
         footer={
           <div className="text-right w-full">
             {" "}
@@ -995,7 +994,7 @@ const RolesListing = () => {
         <Form
           id="editRoleForm"
           onSubmit={editFormMethods.handleSubmit(onEditRoleSubmit)}
-          className="flex flex-col gap-4 p-1"
+          className="flex flex-col gap-2"
         >
           <FormItem
             label="Display Name"
@@ -1041,7 +1040,6 @@ const RolesListing = () => {
                 <Input
                   textArea
                   {...field}
-                  rows={4}
                   prefix={<TbFileDescription />}
                 />
               )}

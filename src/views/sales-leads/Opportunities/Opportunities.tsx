@@ -41,7 +41,8 @@ import {
   TbLinkPlus,
   TbLock,
   TbClipboardCheck,
-  TbSend2
+  TbSend2,
+  TbReload
 } from "react-icons/tb";
 
 // Types
@@ -1625,6 +1626,7 @@ const Opportunities = () => {
       header: "Actions",
       id: "action_std",
       size: 90,
+      meta : { HeaderClass : "text-center" },
       cell: (props) => <MainRowActionColumn
         onEdit={() => handleEdit(props.row.original)}
         item={props.row.original}
@@ -1757,6 +1759,7 @@ const Opportunities = () => {
     {
       header: "Quick Actions",
       id: "action_spb",
+      meta : { HeaderClass : "text-center" },
       size: 90,
       cell: (props) => <MainRowActionColumn
         onEdit={() => handleEdit(props.row.original)}

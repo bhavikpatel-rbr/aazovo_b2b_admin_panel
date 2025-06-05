@@ -165,7 +165,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Job Department">
+      {/* <Tooltip title="Delete Job Department">
         <div
           className={classNames(
             iconButtonClass,
@@ -177,7 +177,7 @@ const ActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
@@ -753,7 +753,7 @@ const JobDepartment = () => {
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectable
+              // selectable
               checkboxChecked={(row) =>
                 selectedItems.some((selected) => selected.id === row.id)
               }

@@ -38,7 +38,8 @@ import {
   TbPencil, TbTrash,  TbAlertTriangle,
   TbCalendarTime, TbSubtask , TbSearch, TbCloudUpload, TbFilter, TbPlus,
   TbDotsVertical, TbEye, TbUserPlus, TbArrowsExchange, TbRocket, TbInfoCircle,
-  TbBulb
+  TbBulb,
+  TbReload
 } from "react-icons/tb";
 
 // Types
@@ -160,10 +161,11 @@ const LeadActionColumn = ({
 
       <Dropdown
         placement="bottom-end"
+        style={{padding: "0px"}}
         renderTitle={
           <div
             className={classNames(
-              "ml-0.5 mr-2 p-1 rounded-md cursor-pointer",
+              "ml-0.5 mr-2 rounded-md cursor-pointer",
               hoverBgClass,
               "text-gray-500 dark:text-gray-400"
             )}
@@ -206,10 +208,14 @@ const LeadActionColumn = ({
 
 const LeadSearch = React.forwardRef<HTMLInputElement, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
 LeadSearch.displayName = "LeadSearch";
-const LeadTableTools = ({ onSearchChange, onFilter, onExport }: any) => ( /* ... (Keep your original) ... */
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+const LeadTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: any) => ( /* ... (Keep your original) ... */
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
         <div className="flex-grow"><LeadSearch onInputChange={onSearchChange} placeholder="Search leads..." /></div>
-        <div className="flex gap-2"><Button icon={<TbFilter />} onClick={onFilter}>Filter</Button><Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button></div>
+        <div className="flex gap-1">
+          <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip>
+          <Button icon={<TbFilter />} onClick={onFilter}>Filter</Button>
+          <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+        </div>
     </div>
 );
 const LeadTable = (props: any) => <DataTable {...props} />;
@@ -426,7 +432,7 @@ const LeadsListing = () => {
             <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={handleOpenAddLeadPage}>Add New</Button> {/* Updated */}
           </div>
-          <LeadTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <LeadTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4 flex-grow overflow-y-auto">
             <LeadTable columns={columns} data={pageData} loading={tableIsLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
@@ -514,8 +520,8 @@ const LeadsListing = () => {
       </Drawer>
 
       {/* Filter Drawer (Keep) */}
-      <Drawer title="Filter Leads" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} footer={<div className="text-right p-4 border-t"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button></div>}>
-        <Form id="filterLeadForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 p-4 h-full">
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button></div>}>
+        <Form id="filterLeadForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 h-full">
             <FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti options={leadStatusOptionsConst} value={leadStatusOptionsConst.filter(o=>field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />} /></FormItem>
             <FormItem label="Enquiry Type"><Controller name="filterEnquiryTypes" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti options={enquiryTypeOptionsConst} value={enquiryTypeOptionsConst.filter(o=>field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />} /></FormItem>
             <FormItem label="Intent"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti options={leadIntentOptionsConst} value={leadIntentOptionsConst.filter(o=>field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />} /></FormItem>

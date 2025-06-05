@@ -1250,7 +1250,7 @@ const ProductSpecification = () => {
             onSubmit={drawerProps.formMethods.handleSubmit(
               drawerProps.onSubmit as any
             )}
-            className="flex flex-col gap-y-6 relative"
+            className="flex flex-col gap-y-0 relative"
           >
             <FormItem
               label="Flag Icon (Image File)"

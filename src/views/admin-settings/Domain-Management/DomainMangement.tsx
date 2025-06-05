@@ -565,35 +565,35 @@ const DomainManagementListing = () => {
 
   const renderDrawerForm = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem label="Domain Name" className="md:col-span-2" invalid={!!formMethods.formState.errors.domain} errorMessage={formMethods.formState.errors.domain?.message}>
+      <FormItem label="Domain Name" invalid={!!formMethods.formState.errors.domain} errorMessage={formMethods.formState.errors.domain?.message}>
         <Controller name="domain" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbWorldWww className="text-lg" />} placeholder="e.g., example.com" />)} />
       </FormItem>
-      <FormItem label="Currency" invalid={!!formMethods.formState.errors.currency_id} errorMessage={formMethods.formState.errors.currency_id?.message} className="col-span-2">
+      <FormItem label="Currency" invalid={!!formMethods.formState.errors.currency_id} errorMessage={formMethods.formState.errors.currency_id?.message}>
         <Controller name="currency_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select currency" options={currencyFormOptions} value={currencyFormOptions.find((c) => c.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
-      <div className="md:col-span-2 border-t pt-4 mt-2"><h6 className="text-sm font-semibold mb-2 flex items-center gap-2"><TbSettingsCog /> Numbering System For KYC Member</h6></div>
+      <div className="md:col-span-2"><h6 className="text-sm font-semibold flex items-center gap-2">Numbering System For KYC Member</h6></div>
       <div className="col-span-2 md:grid md:grid-cols-3 gap-2">
         <FormItem label="Prefix For KYC" invalid={!!formMethods.formState.errors.kycPrefix} errorMessage={formMethods.formState.errors.kycPrefix?.message}>
           <Controller name="kycPrefix" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., EU-K-" />} />
         </FormItem>
-        <FormItem label="Member ID Starting Number" invalid={!!formMethods.formState.errors.kycStartNumber} errorMessage={formMethods.formState.errors.kycStartNumber?.message}>
+        <FormItem label="Starting Number" invalid={!!formMethods.formState.errors.kycStartNumber} errorMessage={formMethods.formState.errors.kycStartNumber?.message}>
           <Controller name="kycStartNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 10001" />)} />
         </FormItem>
-        <FormItem label="Member ID Current Number" invalid={!!formMethods.formState.errors.kycCurrentNumber} errorMessage={formMethods.formState.errors.kycCurrentNumber?.message}>
+        <FormItem label="Current Number" invalid={!!formMethods.formState.errors.kycCurrentNumber} errorMessage={formMethods.formState.errors.kycCurrentNumber?.message}>
           <Controller name="kycCurrentNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 10500" />)} />
         </FormItem>
       </div>
-      <div className="md:col-span-2 border-t pt-4 mt-2"><h6 className="text-sm font-semibold mb-2 flex items-center gap-2"><TbSettingsCog /> Numbering System For Temporary Member</h6></div>
-      <FormItem label="Member ID Starting Number" invalid={!!formMethods.formState.errors.tempStartNumber} errorMessage={formMethods.formState.errors.tempStartNumber?.message}>
+      <div className="md:col-span-2"><h6 className="text-sm font-semibold flex items-center gap-2">Numbering System For Temporary Member</h6></div>
+      <FormItem label="Starting Number" invalid={!!formMethods.formState.errors.tempStartNumber} errorMessage={formMethods.formState.errors.tempStartNumber?.message}>
         <Controller name="tempStartNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 5001" />)} />
       </FormItem>
-      <FormItem label="Member ID Current Number" invalid={!!formMethods.formState.errors.tempCurrentNumber} errorMessage={formMethods.formState.errors.tempCurrentNumber?.message}>
+      <FormItem label="Current Number" invalid={!!formMethods.formState.errors.tempCurrentNumber} errorMessage={formMethods.formState.errors.tempCurrentNumber?.message}>
         <Controller name="tempCurrentNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 5250" />)} />
       </FormItem>
-      <FormItem label="Countries (Multi-select)" className="md:col-span-2" invalid={!!formMethods.formState.errors.countries} errorMessage={formMethods.formState.errors.countries?.message as string}>
+      <FormItem label="Countries" className="md:col-span-2" invalid={!!formMethods.formState.errors.countries} errorMessage={formMethods.formState.errors.countries?.message as string}>
         <Controller name="countries" control={formMethods.control} render={({ field }) => (<Select isMulti placeholder="Select countries..." options={allCountryOptions} value={allCountryOptions.filter((opt) => field.value?.includes(opt.value))} onChange={(opts) => field.onChange(opts ? opts.map((o: any) => o.value) : [])} />)} />
       </FormItem>
-      <FormItem label="Analytics Script (Optional)" className="md:col-span-2" invalid={!!formMethods.formState.errors.analyticsScript} errorMessage={formMethods.formState.errors.analyticsScript?.message}>
+      <FormItem label="Analytics Script" className="md:col-span-2" invalid={!!formMethods.formState.errors.analyticsScript} errorMessage={formMethods.formState.errors.analyticsScript?.message}>
         <Controller name="analyticsScript" control={formMethods.control} render={({ field }) => (<Input {...field} rows={4} placeholder="Paste your analytics script here (e.g., Google Analytics, Hotjar)" textArea />)} />
       </FormItem>
     </div>
@@ -624,7 +624,7 @@ const DomainManagementListing = () => {
 
       <DomainsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-      <Drawer title={editingItem ? "Edit Domain Configuration" : "Add New Domain"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700}
+      <Drawer title={editingItem ? "Edit Domain" : "Add New Domain"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
@@ -632,7 +632,7 @@ const DomainManagementListing = () => {
           </div>
         }
       >
-        <Form id="domainForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28"> {/* Added relative pb-28 */}
+        <Form id="domainForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col relative pb-28"> {/* Added relative pb-28 */}
           {renderDrawerForm()}
         
           {editingItem && (
