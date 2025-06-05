@@ -691,7 +691,7 @@ const TrendingCarousel = () => {
       >
         <Form id="editCarouselItemForm" onSubmit={formMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-y-6 relative pb-28"> {/* Added relative pb-28 */}
           <FormItem label="Current Image">
-            {editingItem?.images_full_path ? (<Avatar src={editingItem.images_full_path} size={100} shape="square" className="mt-1 border border-gray-200 dark:border-gray-600" />)
+            {editingItem?.images_full_path ? (<Avatar src={editingItem.images_full_path} className="w-[420px] h-[auto] border p-1 rounded-md mt-2" shape="square" />)
             : (<p className="text-sm text-gray-500 dark:text-gray-400"> No current image. </p>)}
           </FormItem>
           <FormItem label="New Image (Optional to replace)" invalid={!!formMethods.formState.errors.imageFile} errorMessage={formMethods.formState.errors.imageFile?.message}>

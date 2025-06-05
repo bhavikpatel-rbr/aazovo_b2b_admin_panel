@@ -1043,7 +1043,7 @@ const PriceList = () => {
 
       {[
         {
-          title: "Add Price List Item",
+          title: "Add Price List",
           isOpen: isAddDrawerOpen,
           closeFn: closeAddDrawer,
           formId: "addPriceListForm",
@@ -1054,7 +1054,7 @@ const PriceList = () => {
           isEdit: false,
         },
         {
-          title: "Edit Price List Item",
+          title: "Edit Price List",
           isOpen: isEditDrawerOpen,
           closeFn: closeEditDrawer,
           formId: "editPriceListForm",
@@ -1071,7 +1071,7 @@ const PriceList = () => {
           isOpen={drawerProps.isOpen}
           onClose={drawerProps.closeFn}
           onRequestClose={drawerProps.closeFn}
-          width={520}
+          width={480}
           footer={
             <div className="text-right w-full">
               <Button

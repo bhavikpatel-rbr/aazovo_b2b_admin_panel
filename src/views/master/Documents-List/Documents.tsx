@@ -705,7 +705,7 @@ const Documents = () => {
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
               ).toLocaleString("en-US", {
-                month: "short",
+                month: "short"
               })} ${new Date(updated_at).getFullYear()}, ${new Date(
                 updated_at
               ).toLocaleTimeString("en-US", {

@@ -1125,10 +1125,7 @@ const PaymentTerms = () => {
                   </p>
                 </div>
                 <div className="sm:col-span-2">
-                   <p className="text-gray-500 dark:text-gray-400 font-semibold">Last Updated By:</p>
-                   <p className="font-medium">
-                    {editingPaymentTerm.updated_by_name || "Tushar Joshi"} {editingPaymentTerm.updated_by_role && ` (${editingPaymentTerm.updated_by_role})` || "(System Admin)"}
-                  </p>
+                   <p className="text-gray-500 dark:text-gray-400 font-semibold">Last Updated By: <span className="text-xs font-normal">{editingPaymentTerm.updated_by_name || "Tushar Joshi"} {editingPaymentTerm.updated_by_role && ` (${editingPaymentTerm.updated_by_role})` || "(System Admin)"}</span></p>
                 </div>
               </div>
             </div>
