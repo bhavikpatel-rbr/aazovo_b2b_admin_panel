@@ -165,7 +165,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Job Department">
+      {/* <Tooltip title="Delete Job Department">
         <div
           className={classNames(
             iconButtonClass,
@@ -177,7 +177,7 @@ const ActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
