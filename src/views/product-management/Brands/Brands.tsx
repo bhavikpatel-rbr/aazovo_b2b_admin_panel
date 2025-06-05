@@ -335,11 +335,11 @@ const BrandTableTools = ({
   onImport: () => void;
   onClearFilters: () => void;
 }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <BrandSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
       <Tooltip title="Clear Filters">
         <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
       </Tooltip>
@@ -946,6 +946,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
       {/* Add Brand Drawer */}
       <Drawer
         title="Add Brand" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer}
+        width={480}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button>
@@ -955,23 +956,31 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
           </div>
         }
       >
-        <Form id="addBrandForm" onSubmit={addFormMethods.handleSubmit(onAddBrandSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Brand Icon (250 X 250)" invalid={!!addFormMethods.formState.errors.icon} errorMessage={addFormMethods.formState.errors.icon?.message as string}>
-            <Controller name="icon" control={addFormMethods.control}
-              render={({ field: { onChange, onBlur, name, ref } }) => (
-                <Input type="file" name={name} ref={ref} onBlur={onBlur}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
-                    onChange(file);
-                    if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl);
-                    setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null);
-                  }}
-                  accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
-                />
-              )}
-            />
-            {addFormPreviewUrl && <div className="mt-2"><Avatar src={addFormPreviewUrl} size={80} shape="circle" /></div>}
-          </FormItem>
+        <Form id="addBrandForm" onSubmit={addFormMethods.handleSubmit(onAddBrandSubmit)} className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <FormItem 
+              label="Brand Icon (250 X 250)" 
+              invalid={!!addFormMethods.formState.errors.icon} 
+              errorMessage={addFormMethods.formState.errors.icon?.message as string}
+              className="w-full"
+            >
+              <Controller name="icon" control={addFormMethods.control}
+                render={({ field: { onChange, onBlur, name, ref } }) => (
+                  <Input type="file" name={name} ref={ref} onBlur={onBlur}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
+                      onChange(file);
+                      if (addFormPreviewUrl) URL.revokeObjectURL(addFormPreviewUrl);
+                      setAddFormPreviewUrl(file ? URL.createObjectURL(file) : null);
+                    }}
+                    accept="image/png, image/jpeg, image/gif, image/svg+xml, image/webp"
+                  />
+                )}
+              />
+            </FormItem>
+            {addFormPreviewUrl && <div className="mt-2 text-right"><Avatar src={addFormPreviewUrl} size={70} shape="circle" /></div>}
+
+          </div>
           <FormItem label="Brand Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired>
             <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Brand Name" />} />
           </FormItem>
@@ -981,20 +990,22 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
           <FormItem label="Mobile No." invalid={!!addFormMethods.formState.errors.mobile_no} errorMessage={addFormMethods.formState.errors.mobile_no?.message}>
             <Controller name="mobile_no" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Enter Mobile Number" />} />
           </FormItem>
-          <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired>
-            <Controller name="show_header" control={addFormMethods.control}
-              render={({ field }) => (
-                <UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired>
-            <Controller name="status" control={addFormMethods.control}
-              render={({ field }) => (
-                <UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
-              )}
-            />
-          </FormItem>
+          <div className="grid grid-cols-2 gap-2">
+            <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired>
+              <Controller name="show_header" control={addFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired>
+              <Controller name="status" control={addFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
+                )}
+              />
+            </FormItem>
+          </div>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
           <FormItem label="Meta Title" invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}>
             <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} />
@@ -1003,7 +1014,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} />
           </FormItem>
           <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}>
-            <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" textArea/>} />
+            <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)"/>} />
           </FormItem>
         </Form>
       </Drawer>
@@ -1011,6 +1022,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
       {/* Edit Brand Drawer */}
       <Drawer
         title="Edit Brand" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer}
+        width={480}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button>
@@ -1020,12 +1032,11 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
           </div>
         }
       >
-        <Form id="editBrandForm" onSubmit={editFormMethods.handleSubmit(onEditBrandSubmit)} className="flex flex-col gap-4">
+        <Form id="editBrandForm" onSubmit={editFormMethods.handleSubmit(onEditBrandSubmit)} className="flex flex-col gap-2">
           {editingBrand?.icon_full_path && !editFormPreviewUrl && (
             <FormItem label="Current Icon" ><div className="border border-gray-200 rounded-sm bg-gray-200 h-22 flex items-center justify-center w-22"><Avatar size={80} src={editingBrand.icon_full_path} icon={<TbBuildingStore />} shape="square" /></div></FormItem>
           )}
           <div className="flex items-center gap-2">
-              {editFormPreviewUrl && <div className="border border-gray-200 rounded-sm bg-gray-200 p-1 flex items-center justify-center "><Avatar src={editFormPreviewUrl} size={80} shape="square" className=""/></div>}
               <FormItem label="New Icon (Optional)" invalid={!!editFormMethods.formState.errors.icon} errorMessage={editFormMethods.formState.errors.icon?.message as string}>
                   <Controller name="icon" control={editFormMethods.control}
                     render={({ field: { onChange, onBlur, name, ref } }) => (
@@ -1041,6 +1052,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
                     />
                 <p className="text-xs text-gray-500 mt-1">Leave blank to keep current icon. Selecting a new file will replace it.</p>
               </FormItem>
+              {editFormPreviewUrl && <div className="border border-gray-200 rounded-sm bg-gray-200 p-1 flex items-center justify-center "><Avatar src={editFormPreviewUrl} size={80} shape="square" className=""/></div>}
           </div>
           <FormItem label="Brand Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message} isRequired>
             <Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} />} />
@@ -1052,20 +1064,22 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             <Controller name="mobile_no" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} />
           </FormItem>
           
-          <FormItem label="Show in Header?" invalid={!!editFormMethods.formState.errors.show_header} errorMessage={editFormMethods.formState.errors.show_header?.message} isRequired>
-            <Controller name="show_header" control={editFormMethods.control}
-              render={({ field }) => (
-                <UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Status" invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message} isRequired>
-            <Controller name="status" control={editFormMethods.control}
-              render={({ field }) => (
-                <UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
-              )}
-            />
-          </FormItem>
+          <div className="grid grid-cols-2 gap-2">
+            <FormItem label="Show in Header?" invalid={!!editFormMethods.formState.errors.show_header} errorMessage={editFormMethods.formState.errors.show_header?.message} isRequired>
+              <Controller name="show_header" control={editFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Status" invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message} isRequired>
+              <Controller name="status" control={editFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
+                )}
+              />
+            </FormItem>
+          </div>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
           <FormItem label="Meta Title" invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}>
             <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} />

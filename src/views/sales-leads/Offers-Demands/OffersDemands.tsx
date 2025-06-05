@@ -234,7 +234,7 @@ const transformApiDemand = (
 // --- Reusable ActionColumn Component (Memoized for performance) ---
 const ActionColumn = React.memo(
   ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center justify-center">
       <Tooltip title="Edit / View">
         <div
           role="button"
@@ -899,6 +899,7 @@ const OffersDemands = () => {
       {
         header: "Actions",
         id: "action",
+        meta : { HeaderClass : "text-center" },
         size: 120,
         cell: (props: CellContext<OfferDemandItem, any>) => (
           <ActionColumn

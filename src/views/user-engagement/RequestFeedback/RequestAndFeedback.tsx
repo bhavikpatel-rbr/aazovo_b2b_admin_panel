@@ -880,7 +880,7 @@ const RequestAndFeedbackListing = () => {
       // { header: "Email", accessorKey: "email", size: 180, cell: props => props.getValue() || "N/A" },
       // { header: "Mobile No", accessorKey: "mobile_no", size: 120, cell: props => props.getValue() || "N/A" },
       {
-        header: "Type",
+        header: "From",
         accessorKey: "type",
         size: 100,
         cell: (props) => (
@@ -1240,11 +1240,11 @@ const RequestAndFeedbackListing = () => {
         isDeleting={isDeleting}
       />
       <Drawer
-        title={editingItem ? "Edit Entry" : "Add New Entry"}
+        title={editingItem ? "Edit Entry" : "Add New"}
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        width={700}
+        width={520}
         footer={
           <div className="text-right w-full">
             {" "}
