@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { RootState } from "../store"
-import { addcompanyAction, addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addInquiriesAction, addMemberAction, addpartnerAction, addPaymentTermAction, addUnitAction, deletAllUnitAction, deleteAllcompanyAction, deleteAllMemberAction, deleteAllpartnerAction, deletecompanyAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deleteMemberAction, deletepartnerAction, deletePaymentTermAction, deletUnitAction, editcompanyAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editInquiriesAction, editMemberAction, editpartnerAction, editPaymentTermAction, editUnitAction, getActivityLogAction, getAllProductAction, getAutoEmailsAction, getAutoEmailTemplatesAction, getAutoMatchDataAction, getBlogsAction, getBrandAction, getBugReportsAction, getBuyerListingsAction, getCategoriesAction, getCompanyAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDemandById, getDemandsAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getEmailCampaignsAction, getEmailTemplatesAction, getExportMappingsAction, getFormBuilderAction, getHomeCategoryAction, getInquiriesAction, getJobApplicationsAction, getJobDepartmentsAction, getJobPostsAction, getLeadAction, getLeadById, getMailTemplatesAction, getMemberAction, getMembersAction, getNumberSystemsAction, getOfferById, getOffersAction, getOpportunitiesAction, getpartnerAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getRequestFeedbacksAction, getRolesAction, getRowDataAction, getSellerListingsAction, getSlidersAction, getSubcategoriesByCategoryIdAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getUsersAction, getWallItemsAction, getWallListingAction } from "./middleware"
+import { addcompanyAction, addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addInquiriesAction, addMemberAction, addpartnerAction, addPaymentTermAction, addUnitAction, deleteAllUnitAction, deleteAllcompanyAction, deleteAllMemberAction, deleteAllpartnerAction, deletecompanyAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deleteMemberAction, deletepartnerAction, deletePaymentTermAction, deleteUnitAction, editCompanyAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editInquiriesAction, editMemberAction, editpartnerAction, editPaymentTermAction, editUnitAction, getActivityLogAction, getAllProductAction, getAutoEmailsAction, getAutoEmailTemplatesAction, getAutoMatchDataAction, getBlogsAction, getBrandAction, getBugReportsAction, getBuyerListingsAction, getCategoriesAction, getCompanyAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDemandById, getDemandsAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getEmailCampaignsAction, getEmailTemplatesAction, getExportMappingsAction, getFormBuilderAction, getHomeCategoryAction, getInquiriesAction, getJobApplicationsAction, getJobDepartmentsAction, getJobPostsAction, getLeadAction, getLeadById, getMailTemplatesAction, getMemberAction, getMembersAction, getNumberSystemsAction, getOfferById, getOffersAction, getOpportunitiesAction, getpartnerAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getRequestFeedbacksAction, getRolesAction, getRowDataAction, getSellerListingsAction, getSlidersAction, getSubcategoriesByCategoryIdAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getUsersAction, getWallItemsAction, getWallListingAction } from "./middleware"
 import Opportunities from "@/views/sales-Leads/Opportunities"
 
 const INITIAL_STATE: any = {
@@ -74,7 +74,7 @@ const masterSlice = createSlice({
     builder.addCase(addUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
     }))
-    builder.addCase(deletUnitAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(deleteUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
     }))
     builder.addCase(editUnitAction.fulfilled, (state, { payload }) => ({
@@ -85,7 +85,7 @@ const masterSlice = createSlice({
       LeadsData: payload
     }))
     // ...
-    builder.addCase(deletAllUnitAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(deleteAllUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
     }))
     builder.addCase(getDocumentTypeAction.fulfilled, (state, { payload }) => ({
@@ -349,7 +349,7 @@ const masterSlice = createSlice({
     builder.addCase(deletecompanyAction.fulfilled, (state, { payload }) => ({
       ...state,
     }))
-    builder.addCase(editcompanyAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(editCompanyAction.fulfilled, (state, { payload }) => ({
       ...state,
     }))
 

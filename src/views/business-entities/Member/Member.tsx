@@ -66,7 +66,7 @@ export type FormItem = {
   member_contact_number: string;
   member_email_id: string;
   member_photo: string;
-  member_photo_upload: string;
+  member_photo_upload: string; // This seems unused in the table, ensure it's needed or remove
   member_role: string;
   member_status: "active" | "inactive";
   member_join_date: string;
@@ -152,13 +152,11 @@ const stateOptions = [
   { value: "NY", label: "New York" },
   { value: "CA", label: "California" },
   { value: "KA", label: "Karnataka" },
-  // Add more states based on your data
 ];
 const cityOptions = [
   { value: "New York City", label: "New York City" },
   { value: "Los Angeles", label: "Los Angeles" },
   { value: "Bengaluru", label: "Bengaluru" },
-  // Add more cities
 ];
 const interestedForOptions = [
   { value: "Buy", label: "Buy" },
@@ -172,7 +170,7 @@ const kycStatusOptions = [
 ];
 // --- END MOCK FILTER OPTIONS ---
 
-// --- Simplified Member List Store (Replaces useCustomerList for this context) ---
+// --- Simplified Member List Store ---
 interface MemberListStore {
   memberList: FormItem[];
   selectedMembers: FormItem[];
@@ -180,7 +178,6 @@ interface MemberListStore {
   setMemberList: React.Dispatch<React.SetStateAction<FormItem[]>>;
   setSelectedMembers: React.Dispatch<React.SetStateAction<FormItem[]>>;
   setMemberListTotal: React.Dispatch<React.SetStateAction<number>>;
-  // Derived/helper functions could be added here
 }
 
 const MemberListContext = React.createContext<MemberListStore | undefined>(undefined);
@@ -194,32 +191,23 @@ const useMemberList = (): MemberListStore => {
 };
 
 const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // debugger
-
-
-
-  const { MemberData = [] } = useSelector(masterSelector);
+  const { MemberData } = useSelector(masterSelector); // Removed = [] default here, handle undefined below
   const dispatch = useAppDispatch();
+
+  // Initialize with guaranteed valid types
   const [memberList, setMemberList] = useState<FormItem[]>(MemberData?.data ?? []);
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
-  const [memberListTotal, setMemberListTotal] = useState(MemberData?.total ?? 0);
-console.log(MemberData, 'MemberData')
-  useEffect(() => {
-    setMemberList(MemberData?.data)
-    setMemberListTotal(MemberData?.total)
-  }, [MemberData])
+  const [memberListTotal, setMemberListTotal] = useState<number>(MemberData?.total ?? 0);
 
   useEffect(() => {
-    dispatch(getMemberAction()); // Fetch continents for select dropdown
+    // Ensure MemberData and its properties are valid before setting state
+    setMemberList(MemberData?.data ?? []);
+    setMemberListTotal(MemberData?.total ?? 0);
+  }, [MemberData]);
+
+  useEffect(() => {
+    dispatch(getMemberAction()); // Fetch initial members
   }, [dispatch]);
-
-
-
-
-
-
-
-
 
   return (
     <MemberListContext.Provider value={{
@@ -234,27 +222,24 @@ console.log(MemberData, 'MemberData')
 // --- End Member List Store ---
 
 
-// --- FormListSearch Component (Simple Inline Version) ---
+// --- FormListSearch Component ---
 interface FormListSearchProps {
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onInputChange: (value: string) => void; // Changed to pass value directly
 }
 const FormListSearch: React.FC<FormListSearchProps> = ({ onInputChange }) => {
   return (
     <UiInput
       placeholder="Quick Search..."
-      onChange={onInputChange}
-    // className="max-w-xs"
-    // Add any other props like prefix icon if needed
+      onChange={(e) => onInputChange(e.target.value)}
     />
   );
 };
 // --- End FormListSearch ---
 
 
-// --- FormListActionTools Component (for Page Header) ---
+// --- FormListActionTools Component ---
 const FormListActionTools = () => {
   const navigate = useNavigate();
-
   return (
     <div className="flex flex-col md:flex-row gap-3">
       <Button
@@ -270,55 +255,37 @@ const FormListActionTools = () => {
 // --- End FormListActionTools ---
 
 
-// --- ActionColumn Component (for DataTable) ---
+// --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
   onViewDetail,
-  // onChangeStatus, // This was not used in the original ActionColumn, so removed for now
   onShare,
   onMore,
 }: {
   onEdit: () => void;
   onViewDetail: () => void;
-  // onChangeStatus: () => void;
   onShare: () => void;
   onMore: () => void;
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit">
-        <div
-          className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-          role="button"
-          onClick={onEdit}
-        >
+        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400" role="button" onClick={onEdit}>
           <TbPencil />
         </div>
       </Tooltip>
       <Tooltip title="View">
-        <div
-          className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-          role="button"
-          onClick={onViewDetail}
-        >
+        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400" role="button" onClick={onViewDetail}>
           <TbEye />
         </div>
       </Tooltip>
       <Tooltip title="Share">
-        <div
-          className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
-          role="button"
-          onClick={onShare}
-        >
+        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400" role="button" onClick={onShare}>
           <TbShare />
         </div>
       </Tooltip>
       <Tooltip title="More">
-        <div
-          className="text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400"
-          role="button"
-          onClick={onMore} // This onClick might be redundant if Dropdown handles its own open
-        >
+        <div> {/* Removed onClick here as Dropdown handles its own trigger */}
           <Dropdown renderTitle={<TbDotsVertical />} style={{ fontSize: "10px" }}>
             <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Assign to company</Dropdown.Item>
             <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Assign to RM/GM</Dropdown.Item>
@@ -342,15 +309,15 @@ const ActionColumn = ({
 const FormListTable = () => {
   const navigate = useNavigate();
   const {
-    memberList: forms, // Renaming for consistency with original 'forms' variable
+    memberList: forms,
     setMemberList,
     selectedMembers,
     setSelectedMembers,
-    memberListTotal, // This is the total before client-side filtering if data isn't from server
+    memberListTotal,
     setMemberListTotal
   } = useMemberList();
 
-  const [isLoading, setIsLoading] = useState(false); // For API loading simulation
+  const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
@@ -358,28 +325,90 @@ const FormListTable = () => {
     query: "",
   });
 
-  // Filter Drawer State and Logic
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
 
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
-    defaultValues: filterCriteria,
+    defaultValues: filterCriteria, // Will be updated by useEffect below
   });
 
   useEffect(() => {
     filterFormMethods.reset(filterCriteria);
-  }, [filterCriteria, filterFormMethods]);
+  }, [filterCriteria, filterFormMethods.reset]);
 
   const openFilterDrawer = () => {
-    filterFormMethods.reset(filterCriteria);
+    // filterFormMethods.reset(filterCriteria); // Not needed here, useEffect handles it
     setFilterDrawerOpen(true);
   };
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
+  // API fetching logic
+  const fetchPageData = useCallback(async (
+    pageIdx: number,
+    limit: number,
+    currentSort?: OnSortParam,
+    // Add other server-side filter/query params here if API supports
+  ) => {
+    setIsLoading(true);
+    const params = new URLSearchParams();
+    params.append('page', String(pageIdx));
+    params.append('limit', String(limit)); // Assuming API uses 'limit' for page size
+
+    // Example for server-side sort (if your API supports it)
+    // if (currentSort?.key && currentSort.order) {
+    //   params.append('sortBy', currentSort.key);
+    //   params.append('sortOrder', currentSort.order);
+    // }
+    // Example for server-side search (if your API supports it)
+    // if (tableData.query) { // Assuming tableData.query is for server-side search
+    //    params.append('search', tableData.query)
+    // }
+    // Example for server-side advanced filters
+    // Object.entries(filterCriteria).forEach(([key, value]) => {
+    //   if (value && value.length > 0) {
+    //      value.forEach(item => params.append(key.replace('filter', '').toLowerCase(), item.value));
+    //   }
+    // });
+
+
+    try {
+      const response = await axiosInstance.get(`/customer?${params.toString()}`);
+      setMemberList(response.data?.data?.data ?? []);
+      setMemberListTotal(response.data?.data?.total ?? 0);
+    } catch (error) {
+      console.error("Failed to fetch member data:", error);
+      toast.push(<Notification title="Error" type="danger" duration={3000}>Failed to load members.</Notification>);
+      // Potentially set empty data or keep stale data on error
+      // setMemberList([]);
+      // setMemberListTotal(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setMemberList, setMemberListTotal /* include tableData.query, filterCriteria if they are sent to server */]);
+
+  // Effect to fetch data when server-relevant parameters change
+  useEffect(() => {
+    fetchPageData(
+      tableData.pageIndex as number,
+      tableData.pageSize as number,
+      tableData.sort as OnSortParam
+      // Pass other server-side params from tableData/filterCriteria if needed
+    );
+  }, [tableData.pageIndex, tableData.pageSize, tableData.sort, fetchPageData]);
+  // Removed tableData.query and filterCriteria from deps, assuming they are client-side for now
+  // If they become server-side, add them back and pass to fetchPageData.
+
+  // Client-side quick search handler
+  const handleQueryChange = (newQuery: string) => {
+    setTableData(prev => ({ ...prev, query: newQuery, pageIndex: 1 }));
+    // No API call here if query is client-side. Page reset might trigger fetchPageData for page 1.
+  };
+
+  // Client-side filter application
   const onApplyFiltersSubmit = (data: FilterFormData) => {
     setFilterCriteria(data);
-    handleSetTableData({ pageIndex: 1 });
+    setTableData(prev => ({ ...prev, pageIndex: 1 })); // Reset to page 1 for new filters
     closeFilterDrawer();
   };
 
@@ -387,85 +416,87 @@ const FormListTable = () => {
     const defaultFilters: FilterFormData = {};
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    handleSetTableData({ pageIndex: 1 });
+    setTableData(prev => ({ ...prev, pageIndex: 1 })); // Reset to page 1
   };
 
   const { pageData, total } = useMemo(() => {
-    let filteredData = [...forms];
+    if (!forms) { // Guard against forms being null/undefined, though provider should prevent this
+      return { pageData: [], total: 0 };
+    }
+
+    let processedData = [...forms]; // `forms` is the data for the current page from server
+
+    // Apply client-side quick search (on current page data)
     if (tableData.query) {
-      const query = tableData.query?.toLowerCase();
-      filteredData = filteredData.filter(
+      const query = tableData.query.toLowerCase();
+      processedData = processedData.filter(
         (form) =>
-          form?.member_name?.toLowerCase()?.includes(query) ||
-          form?.member_email_id?.toLowerCase()?.includes(query) ||
-          form?.company_name?.toLowerCase()?.includes(query)
+          form.member_name?.toLowerCase().includes(query) ||
+          form.member_email_id?.toLowerCase().includes(query) ||
+          form.company_name?.toLowerCase().includes(query)
       );
     }
 
+    // Apply client-side advanced filters (on current page data)
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
       const selectedStatuses = filterCriteria.filterStatus.map((opt) => opt.value);
-      filteredData = filteredData.filter((form) => selectedStatuses.includes(form.member_status));
+      processedData = processedData.filter((form) => selectedStatuses.includes(form.member_status));
     }
     if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) {
       const selectedContinents = filterCriteria.filterContinent.map((opt) => opt.value.toLowerCase());
-      filteredData = filteredData.filter((form) =>
+      processedData = processedData.filter((form) =>
         selectedContinents.some((continent) => form.member_location?.toLowerCase().includes(continent))
       );
     }
     if (filterCriteria.filterBusinessType && filterCriteria.filterBusinessType.length > 0) {
       const selectedTypes = filterCriteria.filterBusinessType.map((opt) => opt.value.toLowerCase());
-      filteredData = filteredData.filter((form) =>
+      processedData = processedData.filter((form) =>
         form.business_category.some((cat) => selectedTypes.includes(cat.toLowerCase()))
       );
     }
     if (filterCriteria.filterState && filterCriteria.filterState.length > 0) {
       const selectedStates = filterCriteria.filterState.map(opt => opt.value.toLowerCase());
-      filteredData = filteredData.filter(form =>
+      processedData = processedData.filter(form =>
         selectedStates.some(state => {
           const locationParts = form.member_location?.toLowerCase().split(' / ');
-          // Assuming state is the 3rd part if continent is present, or 2nd if not.
-          // This needs robust parsing based on your member_location format.
-          // Example: "USA / New York / NY / North America" -> state is NY
-          // Example: "India / Bengaluru / KA" -> state is KA
           return locationParts && locationParts.length >= 3 && locationParts[2] === state;
         })
       );
     }
     if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) {
       const selectedCities = filterCriteria.filterCity.map(opt => opt.value.toLowerCase());
-      filteredData = filteredData.filter(form =>
+      processedData = processedData.filter(form =>
         selectedCities.some(city => {
           const locationParts = form.member_location?.toLowerCase().split(' / ');
-          // Example: "USA / New York / NY / North America" -> city is New York
-          // Example: "India / Bengaluru / KA" -> city is Bengaluru
           return locationParts && locationParts.length >= 2 && locationParts[1] === city;
         })
       );
     }
     if (filterCriteria.filterInterestedFor && filterCriteria.filterInterestedFor.length > 0) {
       const selectedInterests = filterCriteria.filterInterestedFor.map((opt) => opt.value);
-      filteredData = filteredData.filter((form) => selectedInterests.includes(form.interested_in));
+      processedData = processedData.filter((form) => selectedInterests.includes(form.interested_in));
     }
     if (filterCriteria.filterInterestedCategory && filterCriteria.filterInterestedCategory.length > 0) {
       const selectedCategories = filterCriteria.filterInterestedCategory.map((opt) => opt.value.toLowerCase());
-      filteredData = filteredData.filter((form) =>
+      processedData = processedData.filter((form) =>
         form.business_category.some((cat) => selectedCategories.includes(cat.toLowerCase()))
       );
     }
     if (filterCriteria.filterBrand && filterCriteria.filterBrand.length > 0) {
       const selectedBrands = filterCriteria.filterBrand.map((opt) => opt.value.toLowerCase());
-      filteredData = filteredData.filter((form) =>
+      processedData = processedData.filter((form) =>
         form.associated_brands.some((brand) => selectedBrands.includes(brand.toLowerCase()))
       );
     }
     if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) {
       const selectedKyc = filterCriteria.filterKycVerified.map((opt) => opt.value);
-      filteredData = filteredData.filter((form) => selectedKyc.includes(form.kyc_status));
+      processedData = processedData.filter((form) => selectedKyc.includes(form.kyc_status));
     }
 
+    // Apply client-side sort (on current page data after filters)
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
-      filteredData.sort((a, b) => {
+      processedData.sort((a, b) => {
         const aValue = a[key as keyof FormItem] ?? "";
         const bValue = b[key as keyof FormItem] ?? "";
         if (typeof aValue === "string" && typeof bValue === "string") {
@@ -478,23 +509,15 @@ const FormListTable = () => {
       });
     }
 
-    const pageIndex = tableData.pageIndex as number;
-    const pageSize = tableData.pageSize as number;
-    // const dataTotal = filteredData.length;
-    const dataTotal = memberListTotal;
-    const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = filteredData;
+    return { pageData: processedData, total: memberListTotal };
+  }, [forms, tableData, filterCriteria, memberListTotal]);
 
-    return { pageData: dataForPage, total: dataTotal };
-  }, [forms, tableData, filterCriteria]);
 
-  const handleEdit = (form: FormItem) => { navigate("/business-entities/member-create", {state:form}); console.log("Edit:", form.id); };
-  const handleViewDetails = (form: FormItem) => { console.log("View Details:", form.id); navigate("/business-entities/member-create", {state:form}) };
-  const handleChangeStatus = (form: FormItem) => { console.log("Change Status:", form.id); /* Implement status change */ };
+  const handleEdit = (form: FormItem) => { navigate(`/business-entities/member-edit/${form.id}`); };
+  const handleViewDetails = (form: FormItem) => { navigate("/business-entities/member-create", { state: form }); };
+  // const handleChangeStatus = (form: FormItem) => { console.log("Change Status:", form.id); /* Implement status change */ };
   const handleShare = (form: FormItem) => { console.log("Share:", form.id); };
   const handleMore = (form: FormItem) => { console.log("More options for:", form.id); };
-
-  console.log(pageData, 'pageData');
   
   const columns: ColumnDef<FormItem>[] = useMemo(
     () => [
@@ -541,7 +564,7 @@ const FormListTable = () => {
               <Tag className={`${statusColor[member_status]} inline capitalize`}>{member_status}</Tag>
               <span className="mt-0.5">
                 <div className="text-[10px] text-gray-500 mt-0.5">
-                  Joined Date:    {" "}
+                  Joined Date:     {/* Using   for spacing */}
                   {new Date(member_join_date).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "short",
@@ -577,7 +600,7 @@ const FormListTable = () => {
       },
       {
         header: "Preferences",
-        accessorKey: "associated_brands",
+        accessorKey: "associated_brands", // This key might not be ideal if you display multiple fields
         size: 300,
         cell: (props) => (
           <div className="flex flex-col gap-1">
@@ -597,7 +620,7 @@ const FormListTable = () => {
       },
       {
         header: "Ratio",
-        accessorKey: "trust_score",
+        accessorKey: "trust_score", // Similarly, this key might not be ideal
         size: 110,
         cell: (props) => (
           <div className="flex flex-col gap-1">
@@ -611,10 +634,9 @@ const FormListTable = () => {
         header: "Actions",
         id: "action",
         size: 130,
-        meta: { HeaderClass: "text-center" },
+        meta: { HeaderClass: "text-center" }, // This might need specific DataTable support
         cell: (props) => (
           <ActionColumn
-            // onChangeStatus={() => handleChangeStatus(props.row.original)}
             onEdit={() => handleEdit(props.row.original)}
             onViewDetail={() => handleViewDetails(props.row.original)}
             onShare={() => handleShare(props.row.original)}
@@ -623,26 +645,19 @@ const FormListTable = () => {
         ),
       },
     ],
-    []
+    [] // Removed navigate from deps as it's stable
   );
 
-  const handleSetTableData = useCallback(async (data: Partial<TableQueries>) => {
-    setTableData((prev) => ({ ...prev, ...data }));
-    
-    const response = await axiosInstance.get(`/customer?page=${data.pageIndex}`);
-    console.log(response,response.data.data.data, 'response')
-    setMemberList(response.data.data.data)
-    setMemberListTotal(response.data.data.total)
-    // If not a page change, and selection exists, you might want to clear selection
-    // This depends on desired UX, for now, selection is managed by MemberListContext globally
-    // if (selectedMembers.length > 0 && !data.pageIndex) {
-    //   setSelectedMembers([]);
-    // }
-  }, [/* setSelectedMembers, selectedMembers.length */]); // Dependencies if clearing selection
-
-  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
-  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+  const handlePaginationChange = useCallback((page: number) => {
+    setTableData(prev => ({ ...prev, pageIndex: page }));
+  }, []);
+  const handleSelectChange = useCallback((value: number) => {
+    setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 }));
+  }, []);
+  const handleSort = useCallback((sort: OnSortParam) => {
+    // This sort is client-side as per useMemo. If server-side, logic here and in fetchPageData changes.
+    setTableData(prev => ({ ...prev, sort: sort, pageIndex: 1 }));
+  }, []);
 
   const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
     setSelectedMembers((prevSelected) => {
@@ -654,42 +669,54 @@ const FormListTable = () => {
     });
   }, [setSelectedMembers]);
 
-  const handleAllRowSelect = useCallback((checked: boolean, rows: Row<FormItem>[]) => {
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<FormItem>[]) => {
+    // currentRows are the rows *visible* on the current page of the DataTable
+    // This selects/deselects all original items corresponding to the visible rows
+    const originalItemsOnPage = currentRows.map(r => r.original);
     if (checked) {
-      // Select all items currently visible on the page / in 'pageData'
-      // Or, if you want to select ALL items from 'forms' that match current filters:
-      // For simplicity, let's select from `pageData` as DataTable typically shows.
-      const allOriginalRows = rows.map(r => r.original);
-      setSelectedMembers(allOriginalRows);
+      // Add only those not already selected to avoid duplicates,
+      // though DataTable usually handles single selection on its end
+      setSelectedMembers(prevSelected => {
+        const newSelections = originalItemsOnPage.filter(
+          pageItem => !prevSelected.some(selItem => selItem.id === pageItem.id)
+        );
+        return [...prevSelected, ...newSelections];
+      });
     } else {
-      setSelectedMembers([]);
+      // Remove only those items that are on the current page from selection
+      setSelectedMembers(prevSelected =>
+        prevSelected.filter(selItem =>
+          !originalItemsOnPage.some(pageItem => pageItem.id === selItem.id)
+        )
+      );
     }
-  }, [setSelectedMembers /* pageData */]); // pageData if selecting only visible
+  }, [setSelectedMembers]);
+
 
   const handleImport = () => { console.log("Import clicked"); /* Implement import */ };
 
   const csvData = useMemo(() => {
-    if (forms.length === 0) return [];
-    // Basic CSV export, customize headers and data as needed
-    const headers = Object.keys(forms[0]).map(key => ({ label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), key: key }));
+    if (!forms || forms.length === 0) return [];
+    const headers = Object.keys(forms[0] as FormItem)
+      .map(key => ({ label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), key: key }));
+    
     return forms.map(form => {
-      const newForm: any = { ...form };
-      // Convert arrays to strings for CSV
+      const newForm: Record<string, any> = { ...form };
       Object.keys(newForm).forEach(key => {
-        if (Array.isArray(newForm[key as keyof FormItem])) {
-          newForm[key] = (newForm[key as keyof FormItem] as string[]).join(', ');
+        if (Array.isArray(newForm[key])) {
+          newForm[key] = (newForm[key] as string[]).join(', ');
         }
       });
       return newForm;
     });
-
   }, [forms]);
 
 
   const getBrandOptions = useMemo(() => {
+    if (!forms) return [];
     return forms
       .flatMap((f) => f.associated_brands)
-      .filter((v, i, a) => a.indexOf(v) === i) // Unique brands
+      .filter((v, i, a) => a.indexOf(v) === i && v) // Unique and non-empty brands
       .map((b) => ({ value: b, label: b }));
   }, [forms]);
 
@@ -697,11 +724,11 @@ const FormListTable = () => {
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <FormListSearch onInputChange={(e) => handleSetTableData({ query: e.target.value, pageIndex: 1 })} />
+        <FormListSearch onInputChange={handleQueryChange} />
         <div className="flex gap-2">
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
           <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
-          {forms.length > 0 ? (
+          {(forms && forms.length > 0) ? (
             <CSVLink data={csvData} filename="members_export.csv">
               <Button icon={<TbCloudUpload />}>Export</Button>
             </CSVLink>
@@ -713,19 +740,19 @@ const FormListTable = () => {
       <DataTable
         selectable
         columns={columns}
-        data={pageData} // Data for the current page
-        noData={!isLoading && forms.length === 0}
+        data={pageData} // Data for the current page (client-side filtered/sorted)
+        noData={!isLoading && (!pageData || pageData.length === 0)}
         loading={isLoading}
         pagingData={{
-          total: total, // Total items after filtering
+          total: total, // Total items from server
           pageIndex: tableData.pageIndex as number,
           pageSize: tableData.pageSize as number,
         }}
-        checkboxChecked={(row) => selectedMembers.some((selected) => selected.id === row.id)}
+        checkboxChecked={(row) => selectedMembers.some((selected) => selected.id === row.original.id)} // Use row.original.id
         onPaginationChange={handlePaginationChange}
         onSelectChange={handleSelectChange}
         onSort={handleSort}
-        onCheckBoxChange={handleRowSelect}
+        onCheckBoxChange={(checked, row) => handleRowSelect(checked, row.original)} // Pass row.original
         onIndeterminateCheckBoxChange={handleAllRowSelect}
       />
       <Drawer
@@ -788,7 +815,7 @@ const FormListTable = () => {
             <UiFormItem label="Interested Category">
               <Controller name="filterInterestedCategory" control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Category" options={businessTypeOptions}
+                  <UiSelect isMulti placeholder="Select Category" options={businessTypeOptions} /* Should this be different options? */
                     value={field.value || []} onChange={(val) => field.onChange(val || [])} />
                 )} />
             </UiFormItem>
@@ -820,65 +847,70 @@ const FormListSelected = () => {
   const {
     selectedMembers,
     setSelectedMembers,
-    memberList,
-    setMemberList,
-    memberListTotal,
-    setMemberListTotal
+    // memberList, // Not directly used for actions here
+    // setMemberList,
+    // memberListTotal,
+    // setMemberListTotal
   } = useMemberList();
 
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [sendMessageDialogOpen, setSendMessageDialogOpen] = useState(false);
   const [sendMessageLoading, setSendMessageLoading] = useState(false);
+  const [messageContent, setMessageContent] = useState(""); // For RichTextEditor
 
   const handleDelete = () => setDeleteConfirmationOpen(true);
   const handleCancelDelete = () => setDeleteConfirmationOpen(false);
   const dispatch = useAppDispatch();
 
   const handleConfirmDelete = async () => {
-    if (
-      !selectedMembers
-    ) {
+    if (!selectedMembers || selectedMembers.length === 0) {
       toast.push(
         <Notification title="Error" type="danger">
-          Cannot delete: Member ID is missing.
+          No members selected for deletion.
         </Notification>
       );
-      setSelectedMembers([]);
       setDeleteConfirmationOpen(false);
       return;
     }
-    setDeleteConfirmationOpen(false);
+    
+    setDeleteConfirmationOpen(false); // Close dialog first
     try {
       const ids = selectedMembers.map((data) => data.id);
-      await dispatch(deleteAllMemberAction({ ids: ids.toString() })).unwrap();
+      // Assuming deleteAllMemberAction can handle an array of IDs or a comma-separated string
+      await dispatch(deleteAllMemberAction({ ids: ids.join(',') })).unwrap(); // Use unwrap if it's an RTK thunk
       toast.push(
-        <Notification title="Country Deleted" type="success" duration={2000}>
-          Member "{selectedMembers.name}" deleted.
+        <Notification title="Members Deleted" type="success" duration={2000}>
+          {selectedMembers.length} member(s) deleted.
         </Notification>
       );
-      dispatch(getMemberAction());
+      dispatch(getMemberAction()); // Refresh list after deletion
+      setSelectedMembers([]); // Clear selection
     } catch (error: any) {
+      const errorMessage = isAxiosError(error) ? error.response?.data?.message || error.message : error.message;
       toast.push(
         <Notification title="Failed to Delete" type="danger" duration={3000}>
-          {error.message || `Could not delete parters.`}
+          {errorMessage || `Could not delete members.`}
         </Notification>
       );
-      console.error("Delete parters Error:", error);
-    } finally {
-      setSelectedMembers([]);
-    }
+      console.error("Delete members Error:", error);
+    } 
+    // setSelectedMembers([]) is now inside try/catch to ensure it's cleared on success.
+    // If deletion fails, you might want to keep them selected for retry.
   };
 
   const handleSend = () => {
     setSendMessageLoading(true);
+    // console.log("Sending message:", messageContent, "to:", selectedMembers.map(m => m.member_name));
+    // Simulate API call
     setTimeout(() => {
-      toast.push(<Notification type="success" title="Message Sent">Message sent to selected members!</Notification>, {
+      toast.push(<Notification type="success" title="Message Sent">Message sent to {selectedMembers.length} member(s)!</Notification>, {
         placement: "top-center",
       });
       setSendMessageLoading(false);
       setSendMessageDialogOpen(false);
       setSelectedMembers([]); // Clear selection after sending
-    }, 500);
+      setMessageContent(""); // Clear message content
+    }, 1000);
   };
 
   if (selectedMembers.length === 0) {
@@ -890,9 +922,8 @@ const FormListSelected = () => {
       <StickyFooter
         className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
         stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      // defaultClass="container mx-auto px-8 rounded-xl border border-gray-200 dark:border-gray-600 mt-4" // defaultClass seems to be for non-sticky state, might not be needed here
       >
-        <div className="container mx-auto"> {/* Ensure content is centered */}
+        <div className="container mx-auto">
           <div className="flex items-center justify-between">
             <span>
               <span className="flex items-center gap-2">
@@ -908,7 +939,11 @@ const FormListSelected = () => {
                 size="sm"
                 className="ltr:mr-3 rtl:ml-3"
                 type="button"
-                // Custom color directly in Tailwind classes for error state
+                // Using customColorClass prop if your Button supports it, or direct Tailwind
+                // This example assumes Button does not have customColorClass, so apply classes directly if possible or use variant="danger" if exists
+                // For a generic button, you might need to style it or use a specific 'danger' variant if available from your UI kit.
+                // For now, relying on standard button styling or assuming a danger variant would be used.
+                // If customColorClass is a function as in your original code:
                 customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
                 onClick={handleDelete}
               >
@@ -924,32 +959,34 @@ const FormListSelected = () => {
       <ConfirmDialog
         isOpen={deleteConfirmationOpen}
         type="danger"
-        title="Remove Members"
+        title={`Remove ${selectedMembers.length} Member(s)`}
         onClose={handleCancelDelete}
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+        confirmButtonColor="red-600"
       >
-        <p>Are you sure you want to remove these members? This action can't be undone.</p>
+        <p>Are you sure you want to remove {selectedMembers.length} selected member(s)? This action can't be undone.</p>
       </ConfirmDialog>
       <Dialog
         isOpen={sendMessageDialogOpen}
         onRequestClose={() => setSendMessageDialogOpen(false)}
         onClose={() => setSendMessageDialogOpen(false)}
+        width={600} // Adjusted width for RichTextEditor
       >
         <h5 className="mb-2">Send Message</h5>
-        <p>Send message to the following members:</p>
-        <Avatar.Group chained omittedAvatarTooltip className="mt-4" maxCount={4} omittedAvatarProps={{ size: 30 }}>
+        <p>Send message to the following {selectedMembers.length} member(s):</p>
+        <Avatar.Group chained omittedAvatarTooltip className="my-4" maxCount={6} omittedAvatarProps={{ size: 30 }}>
           {selectedMembers.map((member) => (
             <Tooltip key={member.id} title={member.member_name}>
-              <Avatar size={30} src={member.member_photo} alt={member.member_name} />
+              <Avatar size={30} src={member.member_photo || undefined} icon={!member.member_photo ? <TbUserCircle/> : null} alt={member.member_name} />
             </Tooltip>
           ))}
         </Avatar.Group>
         <div className="my-4">
-          <RichTextEditor content={""} /> {/* Assuming content state will be managed if needed */}
+          <RichTextEditor value={messageContent} onChange={setMessageContent} />
         </div>
-        <div className="ltr:justify-end flex items-center gap-2">
+        <div className="ltr:justify-end flex items-center gap-2 mt-4">
           <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button>
           <Button size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button>
         </div>
@@ -963,7 +1000,7 @@ const FormListSelected = () => {
 // --- Main Member Page Component ---
 const Member = () => {
   return (
-    <MemberListProvider> {/* Wrap components needing shared state with the Provider */}
+    <MemberListProvider>
       <>
         <Container>
           <AdaptiveCard>

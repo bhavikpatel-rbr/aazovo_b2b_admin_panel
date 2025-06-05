@@ -486,7 +486,9 @@ const CompanyListTable = () => {
   }, [companyList, tableData, filterCriteria]);
 
 
-  const handleEditCompany = (id: string) => { console.log("Edit Company:", id); navigate("/business-entities/company-create", { state: id }) };
+  const handleEditCompany = (id: string) => {
+    navigate(`/business-entities/company-edit/${id}`);
+  };
   const handleViewCompanyDetails = (id: string) => { console.log("View Company Details:", id); navigate("/business-entities/company-create", { state: id }) };
   const handleShareCompany = (id: string) => { console.log("Share Company:", id); };
   const handleChangeCompanyStatus = (id: string, currentStatus: CompanyItem["status"]) => {

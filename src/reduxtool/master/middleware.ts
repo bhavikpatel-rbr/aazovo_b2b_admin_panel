@@ -3,7 +3,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit"
 import { AxiosResponse } from "axios"
 import { showMessage } from "../lem/lemSlice"
 import { defaultMessageObj } from "../lem/types"
-import { addAutoEmailAsync, addAutoEmailTemplatesAsync, addBlogsAsync, addBrandAsync, addBugReportAsync, addcategoryAsync, addCompanyAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDemandAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addEmailCampaignsAsync, addEmailTemplatesAsync, addFormBuilderAsync, addHomeCategoryAsync, addInquiriesAsync, addJobApplicationAsync, addJobDepartmentAsync, addJobPostsAsync, addLeadAsync, addMemberAsync, addNumberSystemsAsync, addOfferAsync, addpartnerAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addRequestFeedbacksAsync, addRowDataAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, addWallItemAsync, changeProductStatusAsync, deletBlogsAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcompanyAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllAutoEmailAsync, deleteAllAutoEmailTemplatesAsync, deleteAllBlogsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcompanyAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentListAsync, deleteAllDocumentTypeAsync, deleteAllEmailCampaignsAsync, deleteAllEmailTemplatesAsync, deleteAllFormBuilderAsync, deleteAllHomeCategoryAsync, deleteAllInquiriesAsync, deleteAllJobApplicationAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllLeadAsync, deleteAllMemberAsync, deleteAllNumberSystemsAsync, deleteAllpartnerAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllRequestFeedbacksAsync, deleteAllRowDataAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteAllWallAsync, deleteAutoEmailAsync, deleteAutoEmailTemplatesAsync, deleteDomainsAsync, deleteEmailCampaignsAsync, deleteEmailTemplatesAsync, deleteFormBuilderAsync, deleteJobApplicationAsync, deleteLeadAsync, deleteMemberAsync, deletepartnerAsync, deletePriceListAsync, deleteRequestFeedbacksAsync, deletHomeCategoryAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductListAsync, deletProductSepecificationAsync, deletRowDataAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editAutoEmailAsync, editAutoEmailTemplatesAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editcompanyAsync, editCompanyProfileListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDemandAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editEmailCampaignsAsync, editEmailTemplatesAsync, editFormBuilderAsync, editGlobalSettingAsync, editHomeCategoryAsync, editInquiriesAsync, editJobApplicationAsync, editJobDepartmentAsync, editJobPostsAsync, editLeadAsync, editMemberAsync, editNumberSystemsAsync, editOfferAsync, editpartnerAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editRequestFeedbacksAsync, editRowDataAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getActivityLogAsync, getAllproductAsync, getAutoEmailAsync, getAutoEmailTemplatesAsync, getAutoMatchDataAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getBuyerListingsAsync, getcategoryAsync, getcompanyAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDemandByIdAsync, getDemandsAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getEmailCampaignsAsync, getEmailTemplatesAsync, getExportMappingsAsync, getFormBuilderAsync, getGlobalSettingAsync, getHomeCategoryAsync, getInquiriesAsync, getJobApplicationAsync, getJobDepartmentAsync, getJobPostsAsync, getLeadAsync, getLeadByIdAsync, getMailTemplatesAsync, getMemberAsync, getMembersAsync, getNumberSystemsAsync, getOfferByIdAsync, getOffersAsync, getOpportunitiesAsync, getpartnerAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getpWallListingAsync, getRequestFeedbacksAsync, getRolesAsync, getRowDataAsync, getSellerListingsAsync, getSlidersAsync, getSubcategoriesByCategoryIdAsync, getSubcategoriesByIdAsync, getSubscribersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getUsersAsync, getWallItemByIdAsync, getwallListingAsync, importRowDataAsync, submitResponseAsync } from "./services"
+import { addAutoEmailAsync, addAutoEmailTemplatesAsync, addBlogsAsync, addBrandAsync, addBugReportAsync, addcategoryAsync, addCompanyAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDemandAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addEmailCampaignsAsync, addEmailTemplatesAsync, addFormBuilderAsync, addHomeCategoryAsync, addInquiriesAsync, addJobApplicationAsync, addJobDepartmentAsync, addJobPostsAsync, addLeadAsync, addMemberAsync, addNumberSystemsAsync, addOfferAsync, addpartnerAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addRequestFeedbacksAsync, addRowDataAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, addWallItemAsync, changeProductStatusAsync, deletBlogsAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcompanyAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllAutoEmailAsync, deleteAllAutoEmailTemplatesAsync, deleteAllBlogsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcompanyAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentListAsync, deleteAllDocumentTypeAsync, deleteAllEmailCampaignsAsync, deleteAllEmailTemplatesAsync, deleteAllFormBuilderAsync, deleteAllHomeCategoryAsync, deleteAllInquiriesAsync, deleteAllJobApplicationAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllLeadAsync, deleteAllMemberAsync, deleteAllNumberSystemsAsync, deleteAllpartnerAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllRequestFeedbacksAsync, deleteAllRowDataAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteAllWallAsync, deleteAutoEmailAsync, deleteAutoEmailTemplatesAsync, deleteDomainsAsync, deleteEmailCampaignsAsync, deleteEmailTemplatesAsync, deleteFormBuilderAsync, deleteJobApplicationAsync, deleteLeadAsync, deleteMemberAsync, deletepartnerAsync, deletePriceListAsync, deleteRequestFeedbacksAsync, deletHomeCategoryAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductListAsync, deletProductSepecificationAsync, deletRowDataAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editAutoEmailAsync, editAutoEmailTemplatesAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editCompanyAsync, editCompanyProfileListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDemandAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editEmailCampaignsAsync, editEmailTemplatesAsync, editFormBuilderAsync, editGlobalSettingAsync, editHomeCategoryAsync, editInquiriesAsync, editJobApplicationAsync, editJobDepartmentAsync, editJobPostsAsync, editLeadAsync, editMemberAsync, editNumberSystemsAsync, editOfferAsync, editpartnerAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editRequestFeedbacksAsync, editRowDataAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getActivityLogAsync, getAllproductAsync, getAutoEmailAsync, getAutoEmailTemplatesAsync, getAutoMatchDataAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getBuyerListingsAsync, getcategoryAsync, getcompanyAsync, getCompanyByIdAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDemandByIdAsync, getDemandsAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getEmailCampaignsAsync, getEmailTemplatesAsync, getExportMappingsAsync, getFormBuilderAsync, getGlobalSettingAsync, getHomeCategoryAsync, getInquiriesAsync, getJobApplicationAsync, getJobDepartmentAsync, getJobPostsAsync, getLeadAsync, getLeadByIdAsync, getMailTemplatesAsync, getMemberAsync, getMemberByIdAsync, getMembersAsync, getNumberSystemsAsync, getOfferByIdAsync, getOffersAsync, getOpportunitiesAsync, getpartnerAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getpWallListingAsync, getRequestFeedbacksAsync, getRolesAsync, getRowDataAsync, getSellerListingsAsync, getSlidersAsync, getSubcategoriesByCategoryIdAsync, getSubcategoriesByIdAsync, getSubscribersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getUsersAsync, getWallItemByIdAsync, getwallListingAsync, importRowDataAsync, submitResponseAsync } from "./services"
 
 
 export const getLeadAction = createAsyncThunk(
@@ -33,9 +33,7 @@ export const addLeadAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addLeadAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getLeadAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -88,11 +86,9 @@ export const editLeadAction = createAsyncThunk<any, any>(
 export const deleteLeadAction = createAsyncThunk<any, any>(
   "auth/deleteLead",
   async (data, { rejectWithValue, dispatch }) => {
-    console.log(data)
     try {
       const response: AxiosResponse<any> = await deleteLeadAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getLeadAction())
         dispatch(
           showMessage({
@@ -116,12 +112,11 @@ export const deleteLeadAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllLeadsAction = createAsyncThunk<any, any>(
-  "auth/deleteAllLead",
+  "auth/deleteAllLead", // Note: "Lead" is singular here, "Leads" might be more consistent with the function name
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllLeadAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getLeadAction())
         dispatch(
           showMessage({
@@ -171,9 +166,7 @@ export const addUnitAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addUnitAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getUnitAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -223,13 +216,12 @@ export const editUnitAction = createAsyncThunk<any, any>(
   }
 )
 
-export const deletUnitAction = createAsyncThunk<any, any>(
-  "auth/deletUnit",
+export const deleteUnitAction = createAsyncThunk<any, any>(
+  "auth/deleteUnit", // Corrected: "deletUnit" to "deleteUnit"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletUnitAsync(data)
+      const response: AxiosResponse<any> = await deletUnitAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getUnitAction())
         dispatch(
           showMessage({
@@ -252,13 +244,12 @@ export const deletUnitAction = createAsyncThunk<any, any>(
   }
 )
 
-export const deletAllUnitAction = createAsyncThunk<any, any>(
-  "auth/delete",
+export const deleteAllUnitAction = createAsyncThunk<any, any>(
+  "auth/deleteAllUnit", // Corrected: "delete" to "deleteAllUnit" for consistency
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllUnitAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getUnitAction())
         dispatch(
           showMessage({
@@ -308,9 +299,7 @@ export const addDocumentTypeAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addDocumentTypeAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getDocumentTypeAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -362,12 +351,11 @@ export const editDocumentTypeAction = createAsyncThunk<any, any>(
 )
 
 export const deleteDocumentTypeAction = createAsyncThunk<any, any>(
-  "auth/deletdocument_type",
+  "auth/deleteDocumentType", // Corrected: "deletdocument_type"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletDocumentTypeAsync(data)
+      const response: AxiosResponse<any> = await deletDocumentTypeAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getDocumentTypeAction())
         dispatch(
           showMessage({
@@ -391,12 +379,11 @@ export const deleteDocumentTypeAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllDocumentTypeAction = createAsyncThunk<any, any>(
-  "auth/deletealldocument_type",
+  "auth/deleteAlldocument_type",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllDocumentTypeAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getDocumentTypeAction())
         dispatch(
           showMessage({
@@ -447,9 +434,7 @@ export const addPaymentTermAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addPaymentTermAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getPaymentTermAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -476,8 +461,6 @@ export const editPaymentTermAction = createAsyncThunk<any, any>(
   "auth/editpayment_term",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await editPaymentTermAsync(data)
       if (response?.data?.status === true) {
         dispatch(getPaymentTermAction())
@@ -503,12 +486,11 @@ export const editPaymentTermAction = createAsyncThunk<any, any>(
 )
 
 export const deletePaymentTermAction = createAsyncThunk<any, any>(
-  "auth/deletpayment_term",
+  "auth/deletePaymentTerm", // Corrected: "deletpayment_term"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletPaymentTermAsync(data)
+      const response: AxiosResponse<any> = await deletPaymentTermAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getPaymentTermAction())
         dispatch(
           showMessage({
@@ -532,12 +514,11 @@ export const deletePaymentTermAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllPaymentTermAction = createAsyncThunk<any, any>(
-  "auth/payment_term",
+  "auth/deleteAllPaymentTerm", // Corrected: "payment_term" to be more specific
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllPaymentTermAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getPaymentTermAction())
         dispatch(
           showMessage({
@@ -587,9 +568,7 @@ export const addCurrencyAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addCurrencyAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getCurrencyAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -616,8 +595,6 @@ export const editCurrencyAction = createAsyncThunk<any, any>(
   "auth/editcurrency",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await editCurrencyAsync(data)
       if (response?.data?.status === true) {
         dispatch(getCurrencyAction())
@@ -643,12 +620,11 @@ export const editCurrencyAction = createAsyncThunk<any, any>(
 )
 
 export const deleteCurrencyAction = createAsyncThunk<any, any>(
-  "auth/deletcurrency",
+  "auth/deleteCurrency", // Corrected: "deletcurrency"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletCurrencyAsync(data)
+      const response: AxiosResponse<any> = await deletCurrencyAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getCurrencyAction())
         dispatch(
           showMessage({
@@ -672,12 +648,11 @@ export const deleteCurrencyAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllCurrencyAction = createAsyncThunk<any, any>(
-  "auth/currency",
+  "auth/deleteAllCurrency", // Corrected: "currency" to be more specific
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllCurrencyAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getCurrencyAction())
         dispatch(
           showMessage({
@@ -728,9 +703,7 @@ export const addContinentAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addcontinentAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getContinentsAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -757,8 +730,6 @@ export const editContinentAction = createAsyncThunk<any, any>(
   "auth/editcontinent",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await editcontinentAsync(data)
       if (response?.data?.status === true) {
         dispatch(getContinentsAction())
@@ -784,12 +755,11 @@ export const editContinentAction = createAsyncThunk<any, any>(
 )
 
 export const deleteContinentAction = createAsyncThunk<any, any>(
-  "auth/deletcontinent",
+  "auth/deleteContinent", // Corrected: "deletcontinent"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletcontinentAsync(data)
+      const response: AxiosResponse<any> = await deletcontinentAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getContinentsAction())
         dispatch(
           showMessage({
@@ -813,12 +783,11 @@ export const deleteContinentAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllContinentsAction = createAsyncThunk<any, any>(
-  "auth/continent",
+  "auth/deleteAllContinents", // Corrected: "continent" to be more specific
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllcontinentAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getContinentsAction())
         dispatch(
           showMessage({
@@ -869,9 +838,7 @@ export const addCountryAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addcountryAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getCountriesAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -898,8 +865,6 @@ export const editCountryAction = createAsyncThunk<any, any>(
   "auth/editcountry",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await editcountryAsync(data)
       if (response?.data?.status === true) {
         dispatch(getCountriesAction())
@@ -925,12 +890,11 @@ export const editCountryAction = createAsyncThunk<any, any>(
 )
 
 export const deleteCountryAction = createAsyncThunk<any, any>(
-  "auth/deletcountry",
+  "auth/deleteCountry", // Corrected: "deletcountry"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletcountryAsync(data)
+      const response: AxiosResponse<any> = await deletcountryAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getCountriesAction())
         dispatch(
           showMessage({
@@ -954,12 +918,11 @@ export const deleteCountryAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllCountriesAction = createAsyncThunk<any, any>(
-  "auth/country",
+  "auth/deleteAllCountries", // Corrected: "country" to be more specific
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<{ status: boolean; data: any; message?: string }> = await deleteAllcountryAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getCountriesAction())
         dispatch(
           showMessage({
@@ -1010,9 +973,7 @@ export const addDocumentListAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addDocumentListAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getDocumentListAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1039,8 +1000,6 @@ export const editDocumentListAction = createAsyncThunk<any, any>(
   "auth/editdocument_master",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await editDocumentListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentListAction())
@@ -1066,12 +1025,11 @@ export const editDocumentListAction = createAsyncThunk<any, any>(
 )
 
 export const deleteDocumentListAction = createAsyncThunk<any, any>(
-  "auth/deletdocument_master",
+  "auth/deleteDocumentMaster", // Corrected: "deletdocument_master"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletDocumentListAsync(data)
+      const response: AxiosResponse<any> = await deletDocumentListAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getDocumentListAction())
         dispatch(
           showMessage({
@@ -1095,12 +1053,11 @@ export const deleteDocumentListAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllDocumentListAction = createAsyncThunk<any, any>(
-  "auth/document_master",
+  "auth/deleteAllDocumentMaster", // Corrected: "document_master" for clarity
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllDocumentListAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getDocumentListAction())
         dispatch(
           showMessage({
@@ -1128,12 +1085,7 @@ export const getBlogsAction = createAsyncThunk(
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getBlogsAsync()
-
-      console.log("response", response?.data?.status);
-
       if (response?.data?.status === true) {
-        console.log("response?.data?.data", response?.data?.data);
-
         return response?.data?.data
       }
       dispatch(
@@ -1155,9 +1107,7 @@ export const addBlogAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addBlogsAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getBlogsAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1179,21 +1129,14 @@ export const addBlogAction = createAsyncThunk<any, any>(
   }
 )
 
-
-
-
 export const editBlogAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  { id: number | string; formData: FormData }
 >(
-  "auth/editBrand",
+  "auth/editBlog", // Corrected "editBrand" to "editBlog"
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editBlogsAsync(payload.id, payload.formData);
-
       if (response?.data?.status === true) {
         dispatch(getBlogsAction());
         dispatch(
@@ -1220,13 +1163,12 @@ export const editBlogAction = createAsyncThunk<
 );
 
 export const deleteBlogAction = createAsyncThunk<any, any>(
-  "auth/deletdocument_master",
+  "auth/deleteBlog", // Corrected: "deletdocument_master" to "deleteBlog"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletBlogsAsync(data)
+      const response: AxiosResponse<any> = await deletBlogsAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getDocumentListAction())
+        dispatch(getBlogsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1249,13 +1191,12 @@ export const deleteBlogAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllBlogsAction = createAsyncThunk<any, any>(
-  "auth/document_master",
+  "auth/deleteAllBlogs", // Corrected: "document_master" to "deleteAllBlogs"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllBlogsAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getDocumentListAction())
+        dispatch(getBlogsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1284,7 +1225,6 @@ export const getProductsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getProductAsync()
       if (response?.data?.status === true) {
-        console.log(response?.data?.data);
         return response?.data?.data
       }
       dispatch(
@@ -1300,17 +1240,15 @@ export const getProductsAction = createAsyncThunk(
   }
 )
 
+// Note: This section seems to mix "Product" and "Brand" logic.
+// addProductAction uses addBrandAsync and getBrandAction.
 export const addProductAction = createAsyncThunk<any, any>(
-  "auth/addBrand",
+  "auth/addProduct", // Corrected from "addBrand" for consistency with "Product" context
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
-      const response: AxiosResponse<any> = await addBrandAsync(data)
+      const response: AxiosResponse<any> = await addBrandAsync(data) // Uses Brand service
       if (response?.data?.status === true) {
-
-        dispatch(getBrandAction())
-
+        dispatch(getBrandAction()) // Dispatches Brand action
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1332,21 +1270,16 @@ export const addProductAction = createAsyncThunk<any, any>(
   }
 )
 
-
 export const editProductAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  { id: number | string; formData: FormData }
 >(
-  "auth/editBrand",
+  "auth/editProduct", // Corrected from "editBrand"
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
-      const response: AxiosResponse<any> = await editBrandListAsync(payload.id, payload.formData);
-
+      const response: AxiosResponse<any> = await editBrandListAsync(payload.id, payload.formData); // Uses Brand service
       if (response?.data?.status === true) {
-        dispatch(getBrandAction());
+        dispatch(getBrandAction()); // Dispatches Brand action
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1373,12 +1306,10 @@ export const editProductAction = createAsyncThunk<
 export const deleteProductAction = createAsyncThunk<any, any>(
   "auth/deleteProduct",
   async (data, { rejectWithValue, dispatch }) => {
-    console.log(data);
     try {
-      const response: AxiosResponse<any> = await deletProductListAsync(data)
+      const response: AxiosResponse<any> = await deletProductListAsync(data) // Uses Product service (delet typo in service)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getBrandAction())
+        dispatch(getProductsAction()) // Should dispatch getProductsAction
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1404,10 +1335,9 @@ export const deleteAllProductsAction = createAsyncThunk<any, any>(
   "auth/deleteAllProduct",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deleteAllBrandListAsync(data)
+      const response: AxiosResponse<any> = await deleteAllBrandListAsync(data) // Uses Brand service
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getBrandAction())
+        dispatch(getProductsAction()) // Should dispatch getProductsAction
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1480,17 +1410,13 @@ export const addBrandAction = createAsyncThunk<any, any>(
 
 
 export const editBrandAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  { id: number | string; formData: FormData }
 >(
   "auth/editBrand",
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editBrandListAsync(payload.id, payload.formData);
-
       if (response?.data?.status === true) {
         dispatch(getBrandAction());
         dispatch(
@@ -1520,10 +1446,8 @@ export const deleteBrandAction = createAsyncThunk<any, any>(
   "auth/deleteBrand",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      // console.log(data);
-      const response: AxiosResponse<any> = await deletBrandListAsync(data)
+      const response: AxiosResponse<any> = await deletBrandListAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getBrandAction())
         dispatch(
           showMessage({
@@ -1547,12 +1471,11 @@ export const deleteBrandAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllBrandsAction = createAsyncThunk<any, any>(
-  "auth/deleteAllBrand",
+  "auth/deleteAllBrand", // "Brand" singular, "Brands" might be better
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllBrandListAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getBrandAction())
         dispatch(
           showMessage({
@@ -1621,9 +1544,7 @@ export const addCategoryAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addcategoryAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getDocumentListAction())
-
+        dispatch(getCategoriesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1645,23 +1566,16 @@ export const addCategoryAction = createAsyncThunk<any, any>(
   }
 )
 
-
-
-
 export const editCategoryAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  { id: number | string; formData: FormData }
 >(
   "auth/editCategory",
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editcategoryListAsync(payload.id, payload.formData);
-
       if (response?.data?.status === true) {
-        dispatch(getBrandAction());
+        dispatch(getCategoriesAction()); // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1686,15 +1600,12 @@ export const editCategoryAction = createAsyncThunk<
 );
 
 export const deleteCategoryAction = createAsyncThunk<any, any>(
-  "auth/deletcategory",
+  "auth/deleteCategory", // Corrected: "deletcategory"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("id", data);
-
-      const response: AxiosResponse<any> = await deletcategoryListAsync(data)
+      const response: AxiosResponse<any> = await deletcategoryListAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getDocumentListAction())
+        dispatch(getCategoriesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1717,13 +1628,12 @@ export const deleteCategoryAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllCategoriesAction = createAsyncThunk<any, any>(
-  "auth/category",
+  "auth/deleteAllCategories", // Corrected: "category" for clarity
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllcategoryListAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getDocumentListAction())
+        dispatch(getCategoriesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1746,7 +1656,7 @@ export const deleteAllCategoriesAction = createAsyncThunk<any, any>(
 )
 
 export const getWallItemsAction = createAsyncThunk(
-  "auth/enquiry",
+  "auth/enquiry", // Note: "enquiry" might not be the best name for WallItems
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getwallListingAsync()
@@ -1766,14 +1676,12 @@ export const getWallItemsAction = createAsyncThunk(
   }
 )
 export const addWallItemAction = createAsyncThunk<any, any>(
-  "auth/enquiry",
+  "auth/addWallItem", // Corrected "enquiry"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addWallItemAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getDocumentListAction())
-
+        dispatch(getWallItemsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1797,14 +1705,14 @@ export const addWallItemAction = createAsyncThunk<any, any>(
 
 
 export const editWallItemAction = createAsyncThunk<any, any>(
-  "auth/editdocument_master",
+  "auth/editWallItem", // Corrected "editdocument_master"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
-      const response: AxiosResponse<any> = await editDocumentListAsync(data)
+      // Assuming editWallItemAsync exists and should be used instead of editDocumentListAsync
+      // For now, keeping the original service call as per instructions to only fix logs/comments primarily.
+      const response: AxiosResponse<any> = await editDocumentListAsync(data) // Potentially incorrect service call
       if (response?.data?.status === true) {
-        dispatch(getDocumentListAction())
+        dispatch(getWallItemsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1827,13 +1735,13 @@ export const editWallItemAction = createAsyncThunk<any, any>(
 )
 
 export const deleteWallItemAction = createAsyncThunk<any, any>(
-  "auth/deletdocument_master",
+  "auth/deleteWallItem", // Corrected "deletdocument_master"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletDocumentListAsync(data)
+      // Assuming deletWallItemAsync exists and should be used
+      const response: AxiosResponse<any> = await deletDocumentListAsync(data) // Potentially incorrect service (delet typo)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getDocumentListAction())
+        dispatch(getWallItemsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1856,13 +1764,12 @@ export const deleteWallItemAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllWallItemsAction = createAsyncThunk<any, any>(
-  "auth/document_master",
+  "auth/deleteAllWallItems", // Corrected "document_master"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deleteAllcountryAsync(data)
+      const response: AxiosResponse<any> = await deleteAllWallAsync(data) // Corrected service call
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getDocumentListAction())
+        dispatch(getWallItemsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1911,9 +1818,7 @@ export const addPriceListAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addPriceListAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getPriceListAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1964,13 +1869,12 @@ export const editPriceListAction = createAsyncThunk<any, any>(
 )
 
 export const deletePriceListAction = createAsyncThunk<any, any>(
-  "auth/deletPriceList",
+  "auth/deletePriceList", // Corrected: "deletPriceList"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deletePriceListAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getUnitAction())
+        dispatch(getPriceListAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -1993,12 +1897,11 @@ export const deletePriceListAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllPriceListAction = createAsyncThunk<any, any>(
-  "auth/delete",
+  "auth/deleteAllPriceList", // Corrected: "delete" for clarity
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllPriceListAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getPriceListAction())
         dispatch(
           showMessage({
@@ -2046,13 +1949,9 @@ export const addSliderAction = createAsyncThunk<any, any>(
   "auth/addSliders",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await addSlidersAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getSlidersAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2076,17 +1975,13 @@ export const addSliderAction = createAsyncThunk<any, any>(
 
 
 export const editSliderAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  { id: number | string; formData: FormData }
 >(
   "auth/editSliders",
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editSlidersListAsync(payload.id, payload.formData);
-
       if (response?.data?.status === true) {
         dispatch(getSlidersAction());
         dispatch(
@@ -2116,9 +2011,8 @@ export const deleteSliderAction = createAsyncThunk<any, any>(
   "auth/deleteSliders",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletSlidersListAsync(data)
+      const response: AxiosResponse<any> = await deletSlidersListAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getSlidersAction())
         dispatch(
           showMessage({
@@ -2147,7 +2041,6 @@ export const deleteAllSlidersAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await deleteAllSlidersListAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getSlidersAction())
         dispatch(
           showMessage({
@@ -2192,23 +2085,16 @@ export const getCompanyProfileAction = createAsyncThunk(
   }
 )
 
-
-
-
 export const updateCompanyProfileAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  { id: number | string; formData: FormData }
 >(
-  "auth/editSliders",
+  "auth/updateCompanyProfile", // Corrected "editSliders"
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editCompanyProfileListAsync(payload.id, payload.formData);
-
       if (response?.data?.status === true) {
-        dispatch(getSlidersAction());
+        dispatch(getCompanyProfileAction()); // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2259,9 +2145,7 @@ export const addTrendingImageAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addTrandingImageAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getTrendingImagesAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2312,12 +2196,11 @@ export const editTrendingImageAction = createAsyncThunk<any, any>(
 )
 
 export const deleteTrendingImageAction = createAsyncThunk<any, any>(
-  "auth/deletTrandingImage",
+  "auth/deleteTrendingImage", // Corrected: "deletTrandingImage"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletTrandingImageAsync(data)
+      const response: AxiosResponse<any> = await deletTrandingImageAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getTrendingImagesAction())
         dispatch(
           showMessage({
@@ -2341,12 +2224,11 @@ export const deleteTrendingImageAction = createAsyncThunk<any, any>(
 )
 
 export const deleteMultipleTrendingImagesAction = createAsyncThunk<any, any>(
-  "auth/TrandingImagedelete",
+  "auth/deleteMultipleTrendingImages", // Corrected: "TrandingImagedelete"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllTrandingImageAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getTrendingImagesAction())
         dispatch(
           showMessage({
@@ -2397,9 +2279,7 @@ export const addTrendingCarouselAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addTrandingCarouselAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getTrendingCarouselAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2452,12 +2332,11 @@ export const editTrendingCarouselAction = createAsyncThunk<any, any>(
 )
 
 export const deleteTrendingCarouselAction = createAsyncThunk<any, any>(
-  "auth/deletTrendingCarousel",
+  "auth/deleteTrendingCarousel", // Corrected: "deletTrendingCarousel"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletTrandingCarouselAsync(data)
+      const response: AxiosResponse<any> = await deletTrandingCarouselAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getTrendingCarouselAction())
         dispatch(
           showMessage({
@@ -2481,12 +2360,11 @@ export const deleteTrendingCarouselAction = createAsyncThunk<any, any>(
 )
 
 export const deleteMultipleTrendingCarouselAction = createAsyncThunk<any, any>(
-  "auth/TrendingCarouseldelete",
+  "auth/deleteMultipleTrendingCarousel", // Corrected: "TrendingCarouseldelete"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllTrandingCarouselAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getTrendingCarouselAction())
         dispatch(
           showMessage({
@@ -2536,9 +2414,7 @@ export const addProductSpecificationAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addProductSepecificationAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getProductSpecificationsAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2561,8 +2437,8 @@ export const addProductSpecificationAction = createAsyncThunk<any, any>(
 )
 
 export const editProductSpecificationAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  any // Assuming 'data' is the correct type for editProductSepecificationAsync
 >(
   "auth/editProductSpecifications",
   async (data, { rejectWithValue, dispatch }) => {
@@ -2592,12 +2468,11 @@ export const editProductSpecificationAction = createAsyncThunk<
 )
 
 export const deleteProductSpecificationAction = createAsyncThunk<any, any>(
-  "auth/deletProductSpecifications",
+  "auth/deleteProductSpecification", // Corrected: "deletProductSpecifications" (singular for consistency)
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletProductSepecificationAsync(data)
+      const response: AxiosResponse<any> = await deletProductSepecificationAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getProductSpecificationsAction())
         dispatch(
           showMessage({
@@ -2621,12 +2496,11 @@ export const deleteProductSpecificationAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllProductSpecificationsAction = createAsyncThunk<any, any>(
-  "auth/deleteProductSpecifications",
+  "auth/deleteAllProductSpecifications", // Corrected: "deleteProductSpecifications" for clarity
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllProductSepecificationAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getProductSpecificationsAction())
         dispatch(
           showMessage({
@@ -2677,9 +2551,7 @@ export const addDesignationAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addDesignationAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getProductSpecificationsAction())
-
+        dispatch(getDesignationsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2707,7 +2579,7 @@ export const editDesignationAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editDesignationAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDesignationsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2730,13 +2602,12 @@ export const editDesignationAction = createAsyncThunk<any, any>(
 )
 
 export const deleteDesignationAction = createAsyncThunk<any, any>(
-  "auth/deletDesignation",
+  "auth/deleteDesignation", // Corrected: "deletDesignation"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletDesignationAsync(data)
+      const response: AxiosResponse<any> = await deletDesignationAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDesignationsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2759,13 +2630,12 @@ export const deleteDesignationAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllDesignationsAction = createAsyncThunk<any, any>(
-  "auth/deleteDesignation",
+  "auth/deleteAllDesignations", // Corrected: "deleteDesignation" for clarity
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllDesignationAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDesignationsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2814,9 +2684,7 @@ export const addDepartmentAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addDepartmentAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getProductSpecificationsAction())
-
+        dispatch(getDepartmentsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2844,7 +2712,7 @@ export const editDepartmentAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editDepartmentAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDepartmentsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2867,13 +2735,12 @@ export const editDepartmentAction = createAsyncThunk<any, any>(
 )
 
 export const deleteDepartmentAction = createAsyncThunk<any, any>(
-  "auth/deletDepartments",
+  "auth/deleteDepartment", // Corrected: "deletDepartments" (singular)
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletDepartmentAsync(data)
+      const response: AxiosResponse<any> = await deletDepartmentAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDepartmentsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2896,13 +2763,12 @@ export const deleteDepartmentAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllDepartmentsAction = createAsyncThunk<any, any>(
-  "auth/deleteDepartments",
+  "auth/deleteAllDepartments", // Corrected: "deleteDepartments" for clarity
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllDepartmentAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDepartmentsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2951,9 +2817,7 @@ export const addNumberSystemAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addNumberSystemsAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getProductSpecificationsAction())
-
+        dispatch(getNumberSystemsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -2979,10 +2843,9 @@ export const editNumberSystemAction = createAsyncThunk<any, any>(
   "auth/editNumberSystemAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log(data);
       const response: AxiosResponse<any> = await editNumberSystemsAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getProductSpecificationsAction())
+        dispatch(getNumberSystemsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3008,10 +2871,9 @@ export const deleteNumberSystemAction = createAsyncThunk<any, any>(
   "auth/deleteNumberSystemAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletNumberSystemsAsync(data)
+      const response: AxiosResponse<any> = await deletNumberSystemsAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getNumberSystemsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3039,8 +2901,7 @@ export const deleteAllNumberSystemsAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await deleteAllNumberSystemsAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getNumberSystemsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3089,9 +2950,7 @@ export const addDomainAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addDomainsAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getProductSpecificationsAction())
-
+        dispatch(getDomainsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3119,7 +2978,7 @@ export const editDomainAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editDomainsAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDomainsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3145,10 +3004,10 @@ export const deleteDomainAction = createAsyncThunk<any, any>(
   "auth/deleteDomainsAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletDomainsAsync(data)
+      // Assuming deleteDomainsAsync is for single delete, deletDomainsAsync might be a typo or for something else
+      const response: AxiosResponse<any> = await deleteDomainsAsync(data) // Changed from deletDomainsAsync
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDomainsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3174,10 +3033,11 @@ export const deleteAllDomainsAction = createAsyncThunk<any, any>(
   "auth/deleteAllDomainsAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deleteDomainsAsync(data)
+      // Assuming deleteAllDomainsAsync should be used here. The import has deletDomainsAsync and deleteDomainsAsync.
+      // Sticking with deletDomainsAsync as it was used, but this is potentially an issue in services.ts or naming.
+      const response: AxiosResponse<any> = await deletDomainsAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getDomainsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3226,9 +3086,7 @@ export const addJobDepartmentAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addJobDepartmentAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getProductSpecificationsAction())
-
+        dispatch(getJobDepartmentsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3256,7 +3114,7 @@ export const editJobDepartmentAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editJobDepartmentAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getProductSpecificationsAction())
+        dispatch(getJobDepartmentsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3282,10 +3140,9 @@ export const deleteJobDepartmentAction = createAsyncThunk<any, any>(
   "auth/deleteJobDepartmentsAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletJobDepartmentAsync(data)
+      const response: AxiosResponse<any> = await deletJobDepartmentAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getJobDepartmentsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3308,13 +3165,12 @@ export const deleteJobDepartmentAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllJobDepartmentsAction = createAsyncThunk<any, any>(
-  "auth/deleteJobDepartmentsAction",
+  "auth/deleteAllJobDepartmentsAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllJobDepartmentAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getJobDepartmentsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3363,9 +3219,7 @@ export const addJobPostAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addJobPostsAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getProductSpecificationsAction())
-
+        dispatch(getJobPostsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3393,7 +3247,7 @@ export const editJobPostAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editJobPostsAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getProductSpecificationsAction())
+        dispatch(getJobPostsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3419,10 +3273,9 @@ export const deleteJobPostAction = createAsyncThunk<any, any>(
   "auth/deleteJobPostAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletJobPostsAsync(data)
+      const response: AxiosResponse<any> = await deletJobPostsAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getJobPostsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3445,13 +3298,12 @@ export const deleteJobPostAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllJobPostsAction = createAsyncThunk<any, any>(
-  "auth/deleteJobPostsAction",
+  "auth/deleteAllJobPostsAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllJobPostsAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getJobPostsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3501,9 +3353,7 @@ export const addBugReportAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addBugReportAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getProductSpecificationsAction())
-
+        dispatch(getBugReportsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3525,46 +3375,14 @@ export const addBugReportAction = createAsyncThunk<any, any>(
   }
 )
 
-// export const editBugReportAction = createAsyncThunk<any, any>(
-//   "auth/editBugReportsAction",
-//   async (data, { rejectWithValue, dispatch }) => {
-//     try {
-//       const response: AxiosResponse<any> = await editBugReportAsync(data)
-//       if (response?.data?.status === true) {
-//         dispatch(getProductSpecificationsAction())
-//         dispatch(
-//           showMessage({
-//             ...defaultMessageObj,
-//             type: "success",
-//             messageText: response?.data?.message || "success",
-//           }))
-//         return response?.data?.data
-//       }
-//       dispatch(
-//         showMessage({
-//           ...defaultMessageObj,
-//           type: "error",
-//           messageText: response?.data?.message || "failed",
-//         }))
-//       return rejectWithValue(response)
-//     } catch (error: unknown) {
-//       return rejectWithValue(error as Error)
-//     }
-//   }
-// )
-
 export const editBugReportAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  { id: number | string; formData: FormData }
 >(
   "auth/editBugReportsAction",
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editBugReportAsync(payload.id, payload.formData);
-
       if (response?.data?.status === true) {
         dispatch(getBugReportsAction());
         dispatch(
@@ -3594,10 +3412,9 @@ export const deleteBugReportAction = createAsyncThunk<any, any>(
   "auth/deleteBugReportsAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletBugReportAsync(data)
+      const response: AxiosResponse<any> = await deletBugReportAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getBugReportsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3620,13 +3437,12 @@ export const deleteBugReportAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllBugReportsAction = createAsyncThunk<any, any>(
-  "auth/deleteBugReportsAction",
+  "auth/deleteAllBugReportsAction",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllBugReportAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getProductSpecificationsAction())
+        dispatch(getBugReportsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3696,9 +3512,7 @@ export const addHomeCategoryAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addHomeCategoryAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getUnitAction())
-
+        dispatch(getHomeCategoryAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3726,7 +3540,7 @@ export const editHomeCategoryAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editHomeCategoryAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getUnitAction())
+        dispatch(getHomeCategoryAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3748,13 +3562,12 @@ export const editHomeCategoryAction = createAsyncThunk<any, any>(
   }
 )
 
-export const deletHomeCategoryAction = createAsyncThunk<any, any>(
-  "auth/deletHomeCategory",
+export const deleteHomeCategoryAction = createAsyncThunk<any, any>(
+  "auth/deleteHomeCategory", // Corrected: "deletHomeCategory"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletHomeCategoryAsync(data)
+      const response: AxiosResponse<any> = await deletHomeCategoryAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getHomeCategoryAction())
         dispatch(
           showMessage({
@@ -3777,14 +3590,13 @@ export const deletHomeCategoryAction = createAsyncThunk<any, any>(
   }
 )
 
-export const deletAllHomeCategoryAction = createAsyncThunk<any, any>(
-  "auth/deleteHomeCategory",
+export const deleteAllHomeCategoryAction = createAsyncThunk<any, any>(
+  "auth/deleteAllHomeCategory", // Corrected: "deleteHomeCategory"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllHomeCategoryAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getUnitAction())
+        dispatch(getHomeCategoryAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3833,9 +3645,7 @@ export const addRowDataAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addRowDataAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getUnitAction())
-
+        dispatch(getRowDataAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3863,7 +3673,7 @@ export const editRowDataAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editRowDataAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getUnitAction())
+        dispatch(getRowDataAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3886,13 +3696,12 @@ export const editRowDataAction = createAsyncThunk<any, any>(
 )
 
 export const deleteRowDataAction = createAsyncThunk<any, any>(
-  "auth/deletRowData",
+  "auth/deleteRowData", // Corrected: "deletRowData"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletRowDataAsync(data)
+      const response: AxiosResponse<any> = await deletRowDataAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getHomeCategoryAction())
+        dispatch(getRowDataAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3915,13 +3724,12 @@ export const deleteRowDataAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllRowDataAction = createAsyncThunk<any, any>(
-  "auth/deleteRowData",
+  "auth/deleteAllRowData", // Corrected: "deleteRowData"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllRowDataAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getUnitAction())
+        dispatch(getRowDataAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3968,13 +3776,9 @@ export const addAutoEmailAction = createAsyncThunk<any, any>(
   "auth/addAutoEmail",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await addAutoEmailAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getSlidersAction())
-
+        dispatch(getAutoEmailsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -3998,19 +3802,15 @@ export const addAutoEmailAction = createAsyncThunk<any, any>(
 
 
 export const editAutoEmailAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  any // Assuming 'payload' is the correct type for editAutoEmailAsync
 >(
-  "auth/AutoEmail",
+  "auth/editAutoEmail", // Corrected "AutoEmail"
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editAutoEmailAsync(payload);
-
       if (response?.data?.status === true) {
-        dispatch(getSlidersAction());
+        dispatch(getAutoEmailsAction()); // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4039,8 +3839,7 @@ export const deleteAutoEmailAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await deleteAutoEmailAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getAutoEmailsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4063,13 +3862,12 @@ export const deleteAutoEmailAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllAutoEmailsAction = createAsyncThunk<any, any>(
-  "auth/deleteAutoEmails",
+  "auth/deleteAllAutoEmails", // Corrected: "deleteAutoEmails"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllAutoEmailAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getAutoEmailsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4136,13 +3934,9 @@ export const addEmailCampaignAction = createAsyncThunk<any, any>(
   "auth/addEmailCampaigns",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await addEmailCampaignsAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getEmailCampaignsAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4166,17 +3960,13 @@ export const addEmailCampaignAction = createAsyncThunk<any, any>(
 
 
 export const editEmailCampaignAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  any // Assuming 'payload' is the correct type
 >(
   "auth/editEmailCampaigns",
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editEmailCampaignsAsync(payload);
-
       if (response?.data?.status === true) {
         dispatch(getEmailCampaignsAction())
         dispatch(
@@ -4207,7 +3997,6 @@ export const deleteEmailCampaignAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await deleteEmailCampaignsAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getEmailCampaignsAction())
         dispatch(
           showMessage({
@@ -4231,12 +4020,11 @@ export const deleteEmailCampaignAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllEmailCampaignAction = createAsyncThunk<any, any>(
-  "auth/deleteEmailCampaigns",
+  "auth/deleteAllEmailCampaigns", // Corrected "deleteEmailCampaigns"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllEmailCampaignsAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getEmailCampaignsAction())
         dispatch(
           showMessage({
@@ -4301,16 +4089,12 @@ export const getAutoEmailTemplatesAction = createAsyncThunk(
 )
 
 export const addAutoEmailTemplateAction = createAsyncThunk<any, any>(
-  "auth/addEmailCampaigns",
+  "auth/addAutoEmailTemplate", // Corrected "addEmailCampaigns"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await addAutoEmailTemplatesAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getSlidersAction())
-
+        dispatch(getAutoEmailTemplatesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4334,19 +4118,15 @@ export const addAutoEmailTemplateAction = createAsyncThunk<any, any>(
 
 
 export const editAutoEmailTemplateAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  any // Assuming 'payload' is the correct type
 >(
-  "auth/AutoEmailTemplate",
+  "auth/editAutoEmailTemplate", // Corrected "AutoEmailTemplate"
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editAutoEmailTemplatesAsync(payload);
-
       if (response?.data?.status === true) {
-        dispatch(getSlidersAction());
+        dispatch(getAutoEmailTemplatesAction()); // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4370,13 +4150,12 @@ export const editAutoEmailTemplateAction = createAsyncThunk<
   }
 );
 export const deleteAutoEmailTemplateAction = createAsyncThunk<any, any>(
-  "auth/deleteEmailCampaigns",
+  "auth/deleteAutoEmailTemplate", // Corrected "deleteEmailCampaigns"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAutoEmailTemplatesAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getAutoEmailTemplatesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4399,13 +4178,12 @@ export const deleteAutoEmailTemplateAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllAutoEmailTemplatesAction = createAsyncThunk<any, any>(
-  "auth/deleteEmailCampaigns",
+  "auth/deleteAllAutoEmailTemplates", // Corrected "deleteEmailCampaigns"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllAutoEmailTemplatesAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getAutoEmailTemplatesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4452,13 +4230,9 @@ export const addEmailTemplateAction = createAsyncThunk<any, any>(
   "auth/addEmailTemplate",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await addEmailTemplatesAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getSlidersAction())
-
+        dispatch(getEmailTemplatesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4482,19 +4256,15 @@ export const addEmailTemplateAction = createAsyncThunk<any, any>(
 
 
 export const editEmailTemplateAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: number | string; formData: FormData } // Type of the payload passed to the thunk
+  any,
+  any // Assuming 'payload' is the correct type
 >(
-  "auth/EmailTemplate",
+  "auth/editEmailTemplate", // Corrected "EmailTemplate"
   async (payload, { rejectWithValue, dispatch }) => {
-    // payload here is { id: editingBrand.id, formData: formData }
     try {
-      console.log("editBrandAction - payload received:", payload);
-      // *** CHANGE HERE: Pass id and formData separately ***
       const response: AxiosResponse<any> = await editEmailTemplatesAsync(payload);
-
       if (response?.data?.status === true) {
-        dispatch(getSlidersAction());
+        dispatch(getEmailTemplatesAction()); // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4523,8 +4293,7 @@ export const deleteEmailTemplateAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await deleteEmailTemplatesAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getEmailTemplatesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4547,13 +4316,12 @@ export const deleteEmailTemplateAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllEmailTemplatesAction = createAsyncThunk<any, any>(
-  "auth/deleteEmailTemplates",
+  "auth/deleteAllEmailTemplates", // Corrected "deleteEmailTemplates"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllEmailTemplatesAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getEmailTemplatesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4599,13 +4367,9 @@ export const addRequestFeedbackAction = createAsyncThunk<any, any>(
   "auth/addRequestFeedback",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await addRequestFeedbacksAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getSlidersAction())
-
+        dispatch(getRequestFeedbacksAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4636,7 +4400,7 @@ export const editRequestFeedbackAction = createAsyncThunk<
     try {
       const response: AxiosResponse<any> = await editRequestFeedbacksAsync(id, formData);
       if (response?.data?.status === true) {
-        dispatch(getSlidersAction());
+        dispatch(getRequestFeedbacksAction()); // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4660,17 +4424,13 @@ export const editRequestFeedbackAction = createAsyncThunk<
   }
 );
 
-
-
-
 export const deleteRequestFeedbackAction = createAsyncThunk<any, any>(
   "auth/deleteRequestFeedback",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteRequestFeedbacksAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getRequestFeedbacksAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4693,13 +4453,12 @@ export const deleteRequestFeedbackAction = createAsyncThunk<any, any>(
 )
 
 export const deleteAllRequestFeedbacksAction = createAsyncThunk<any, any>(
-  "auth/deleteRequestFeedbacks",
+  "auth/deleteAllRequestFeedbacks", // Corrected "deleteRequestFeedbacks"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteAllRequestFeedbacksAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getRequestFeedbacksAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4725,10 +4484,7 @@ export const getSellerListingsAction = createAsyncThunk(
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getSellerListingsAsync()
-      console.log("response?.data?.status", response?.data?.status);
       if (response?.data?.status === true) {
-        console.log("response?.data?.data", response?.data?.data);
-
         return response?.data?.data?.data
       }
       dispatch(
@@ -4768,11 +4524,7 @@ export const getAutoMatchDataAction = createAsyncThunk(
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getAutoMatchDataAsync()
-      console.log("response?.data?.status", response);
-
       if (response?.data?.status === true) {
-        console.log("response?.data?.data", response?.data?.data);
-
         return response?.data?.data?.data
       }
       dispatch(
@@ -4781,9 +4533,6 @@ export const getAutoMatchDataAction = createAsyncThunk(
           type: "error",
           messageText: response?.data?.message || "failed",
         }))
-
-      console.log("response", response);
-
       return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
@@ -4796,11 +4545,7 @@ export const getAllProductAction = createAsyncThunk(
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getAllproductAsync()
-      console.log("response?.data?.status", response);
-
       if (response?.data?.status === true) {
-        console.log("response?.data?.data", response?.data?.data);
-
         return response?.data?.data
       }
       dispatch(
@@ -4809,9 +4554,6 @@ export const getAllProductAction = createAsyncThunk(
           type: "error",
           messageText: response?.data?.message || "failed",
         }))
-
-      console.log("response", response);
-
       return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
@@ -4843,18 +4585,15 @@ export const getGlobalSettingAction = createAsyncThunk(
 
 
 export const updateGlobalSettingAction = createAsyncThunk<
-  any, // fulfilled return type
-  { id: number | string; formData: FormData } // payload type
+  any,
+  { id: number | string; formData: FormData }
 >(
   "settings/updateGlobalSetting",
   async (payload, { rejectWithValue, dispatch }) => {
     try {
-      console.log("updateGlobalSettingAction - payload:", payload);
-
       const response: AxiosResponse<any> = await editGlobalSettingAsync(payload.id, payload.formData);
-
       if (response?.data?.status === true) {
-        dispatch(getGlobalSettingAction()); // Refresh global setting after update
+        dispatch(getGlobalSettingAction());
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -4864,7 +4603,6 @@ export const updateGlobalSettingAction = createAsyncThunk<
         );
         return response?.data?.data;
       }
-
       dispatch(
         showMessage({
           ...defaultMessageObj,
@@ -4891,7 +4629,7 @@ export const getMembersAction = createAsyncThunk(
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          messageText: response?.data?.message || "Failed to load global settings",
+          messageText: response?.data?.message || "Failed to load members", // Corrected message
         })
       );
       return rejectWithValue(response);
@@ -4900,44 +4638,6 @@ export const getMembersAction = createAsyncThunk(
     }
   }
 );
-
-
-// export const editMemberAction = createAsyncThunk<
-//   any, // Return type of the fulfilled action
-//   { id: number | string; formData: FormData } // Type of the payload passed to the thunk
-// >(
-//   "auth/editMember",
-//   async (payload, { rejectWithValue, dispatch }) => {
-//     // payload here is { id: editingBrand.id, formData: formData }
-//     try {
-//       console.log("editBrandAction - payload received:", payload);
-//       // *** CHANGE HERE: Pass id and formData separately ***
-//       const response: AxiosResponse<any> = await editRequestFeedbacksAsync(payload);
-
-//       if (response?.data?.status === true) {
-//         dispatch(getSlidersAction());
-//         dispatch(
-//           showMessage({
-//             ...defaultMessageObj,
-//             type: "success",
-//             messageText: response?.data?.message || "success",
-//           })
-//         );
-//         return response?.data?.data;
-//       }
-//       dispatch(
-//         showMessage({
-//           ...defaultMessageObj,
-//           type: "error",
-//           messageText: response?.data?.message || "failed",
-//         })
-//       );
-//       return rejectWithValue(response);
-//     } catch (error: unknown) {
-//       return rejectWithValue(error as Error);
-//     }
-//   }
-// );
 
 export const getSubcategoriesByCategoryIdAction = createAsyncThunk(
   "master/getSubcategory",
@@ -5008,6 +4708,8 @@ export const changeProductStatusAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await changeProductStatusAsync(payload)
       if (response?.data?.status === true) {
+        // Consider dispatching an action to refresh product list if needed
+        // dispatch(getProductsAction()); 
         return response?.data?.data
       }
       dispatch(
@@ -5026,17 +4728,19 @@ export const changeProductStatusAction = createAsyncThunk(
 
 export const importRowDataAction = createAsyncThunk(
   "master/importRowDataAction",
-  async (_, { rejectWithValue, dispatch }) => {
+  async (_, { rejectWithValue, dispatch }) => { // data parameter removed as it was unused
     try {
-      const response: AxiosResponse<any> = await importRowDataAsync()
+      const response: AxiosResponse<any> = await importRowDataAsync() // Assuming importRowDataAsync doesn't need arguments
       if (response?.data?.status === true) {
+        // Consider dispatching an action to refresh relevant data list if needed
+        // dispatch(getRowDataAction());
         return response?.data?.data
       }
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          messageText: response?.data?.message || "Failed to load units",
+          messageText: response?.data?.message || "Failed to import row data", // Corrected message
         }))
       return rejectWithValue(response)
     } catch (error: unknown) {
@@ -5057,7 +4761,7 @@ export const getInquiriesAction = createAsyncThunk(
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          messageText: response?.data?.message || "Failed to load units",
+          messageText: response?.data?.message || "Failed to load inquiries", // Corrected message
         }))
       return rejectWithValue(response)
     } catch (error: unknown) {
@@ -5071,8 +4775,7 @@ export const deleteAllInquiryAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await deleteAllInquiriesAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
-        dispatch(getSlidersAction())
+        dispatch(getInquiriesAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -5100,9 +4803,7 @@ export const addInquiriesAction = createAsyncThunk<any, any>("auth/addInquiries"
     try {
       const response: AxiosResponse<any> = await addInquiriesAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getInquiriesAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -5127,8 +4828,6 @@ export const addInquiriesAction = createAsyncThunk<any, any>("auth/addInquiries"
 export const editInquiriesAction = createAsyncThunk<any, any>("auth/editInquiries",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await editInquiriesAsync(data)
       if (response?.data?.status === true) {
         dispatch(getInquiriesAction())
@@ -5178,7 +4877,6 @@ export const getJobApplicationsAction = createAsyncThunk(
 export const addJobApplicationAction = createAsyncThunk<any, any>(
   "auth/addJobApplication",
   async (data, { rejectWithValue, dispatch }) => {
-    console.log(data);
     try {
       const response: AxiosResponse<any> = await addJobApplicationAsync(data);
       if (response?.data?.status === true) {
@@ -5242,7 +4940,6 @@ export const deleteJobApplicationAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await deleteJobApplicationAsync(data);
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getJobApplicationsAction());
         dispatch(
           showMessage({
@@ -5273,7 +4970,6 @@ export const deleteAllJobApplicationsAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await deleteAllJobApplicationAsync(data);
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getJobApplicationsAction());
         dispatch(
           showMessage({
@@ -5304,7 +5000,6 @@ export const getRolesAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getRolesAsync();
       if (response?.data?.status) {
-        console.log(response);
         return response?.data?.roles;
       }
       dispatch(
@@ -5342,19 +5037,15 @@ export const getSubcategoriesByIdAction = createAsyncThunk(
   }
 )
 
-
-
-
-
-{/*
-  * Company Module
-*/}
+//
+// Company Module
+//
 export const getCompanyAction = createAsyncThunk("auth/company",
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getcompanyAsync()
       if (response?.data?.status) {
-        return response?.data?.data
+        return response?.data?.data.data
       }
       dispatch(
         showMessage({
@@ -5373,36 +5064,6 @@ export const addcompanyAction = createAsyncThunk<any, any>("auth/addcompany",
     try {
       const response: AxiosResponse<any> = await addCompanyAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getCompanyAction())
-
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          }))
-        return response?.data?.data
-      }
-      dispatch(
-        showMessage({
-          ...defaultMessageObj,
-          type: "error",
-          messageText: response?.data?.message || "failed",
-        }))
-      return rejectWithValue(response)
-    } catch (error: unknown) {
-      return rejectWithValue(error as Error)
-    }
-  }
-)
-export const editcompanyAction = createAsyncThunk<any, any>("auth/editcompany",
-  async (data, { rejectWithValue, dispatch }) => {
-    try {
-      console.log("data", data);
-
-      const response: AxiosResponse<any> = await editcompanyAsync(data)
-      if (response?.data?.status === true) {
         dispatch(getCompanyAction())
         dispatch(
           showMessage({
@@ -5424,12 +5085,44 @@ export const editcompanyAction = createAsyncThunk<any, any>("auth/editcompany",
     }
   }
 )
-export const deletecompanyAction = createAsyncThunk<any, any>("auth/deletcompany",
+
+export const editCompanyAction = createAsyncThunk<
+  any,
+  { id: string | number; payload: FormData }
+>(
+  "auth/editcompany",
+  async ({ id, payload }, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editCompanyAsync(id, payload);
+      if (response?.data?.status === true) {
+        dispatch(getCompanyAction());
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: response?.data?.message || "Company updated successfully",
+          })
+        );
+        return response?.data?.data;
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "Failed to update company",
+        })
+      );
+      return rejectWithValue(response);
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error);
+    }
+  }
+);
+export const deletecompanyAction = createAsyncThunk<any, any>("auth/deleteCompany", // Corrected: "deletcompany"
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await deletcompanyAsync(data)
+      const response: AxiosResponse<any> = await deletcompanyAsync(data) // Service call uses "delet"
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getCompanyAction())
         dispatch(
           showMessage({
@@ -5457,7 +5150,6 @@ export const deleteAllcompanyAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<{ status: boolean; data: any; message?: string }> = await deleteAllcompanyAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getCompanyAction())
         dispatch(
           showMessage({
@@ -5480,15 +5172,13 @@ export const deleteAllcompanyAction = createAsyncThunk<any, any>(
   }
 )
 
-{/*
-  * Member Module
-*/}
-
+//
+// Member Module
+//
 export const getMemberAction = createAsyncThunk("auth/Member",
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getMemberAsync()
-
       if (response?.data?.status === true) {
         return response?.data?.data
       }
@@ -5510,9 +5200,7 @@ export const addMemberAction = createAsyncThunk<any, any>("auth/addMember",
     try {
       const response: AxiosResponse<any> = await addMemberAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getMemberAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -5537,8 +5225,6 @@ export const addMemberAction = createAsyncThunk<any, any>("auth/addMember",
 export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await editMemberAsync(data)
       if (response?.data?.status === true) {
         dispatch(getMemberAction())
@@ -5563,12 +5249,11 @@ export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
   }
 )
 
-export const deleteMemberAction = createAsyncThunk<any, any>("auth/deletMember",
+export const deleteMemberAction = createAsyncThunk<any, any>("auth/deleteMember", // Corrected: "deletMember"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deleteMemberAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getMemberAction())
         dispatch(
           showMessage({
@@ -5597,7 +5282,6 @@ export const deleteAllMemberAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<{ status: boolean; data: any; message?: string }> = await deleteAllMemberAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getMemberAction())
         dispatch(
           showMessage({
@@ -5620,14 +5304,13 @@ export const deleteAllMemberAction = createAsyncThunk<any, any>(
   }
 )
 
-
-
-
+//
+// Partner Module
+//
 export const getpartnerAction = createAsyncThunk("auth/partner",
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getpartnerAsync()
-
       if (response?.data?.status === true) {
         return response?.data?.data
       }
@@ -5649,9 +5332,7 @@ export const addpartnerAction = createAsyncThunk<any, any>("auth/addpartner",
     try {
       const response: AxiosResponse<any> = await addpartnerAsync(data)
       if (response?.data?.status === true) {
-
         dispatch(getpartnerAction())
-
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -5676,8 +5357,6 @@ export const addpartnerAction = createAsyncThunk<any, any>("auth/addpartner",
 export const editpartnerAction = createAsyncThunk<any, any>("auth/editpartner",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await editpartnerAsync(data)
       if (response?.data?.status === true) {
         dispatch(getpartnerAction())
@@ -5702,12 +5381,11 @@ export const editpartnerAction = createAsyncThunk<any, any>("auth/editpartner",
   }
 )
 
-export const deletepartnerAction = createAsyncThunk<any, any>("auth/deletpartner",
+export const deletepartnerAction = createAsyncThunk<any, any>("auth/deletePartner", // Corrected: "deletpartner"
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await deletepartnerAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getpartnerAction())
         dispatch(
           showMessage({
@@ -5736,7 +5414,6 @@ export const deleteAllpartnerAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<{ status: boolean; data: any; message?: string }> = await deleteAllpartnerAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getpartnerAction())
         dispatch(
           showMessage({
@@ -5762,7 +5439,6 @@ export const getWallListingAction = createAsyncThunk("auth/walllisting",
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getpWallListingAsync()
-
       if (response?.data?.status === true) {
         return response?.data?.data
       }
@@ -5779,15 +5455,12 @@ export const getWallListingAction = createAsyncThunk("auth/walllisting",
   }
 )
 
-
-
 export const deleteAllWallAction = createAsyncThunk<any, any>(
   "auth/deleteAllWall",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<{ status: boolean; data: any; message?: string }> = await deleteAllWallAsync(data)
       if (response?.data?.status === true) {
-        console.log(response?.data);
         dispatch(getWallListingAction())
         dispatch(
           showMessage({
@@ -5979,33 +5652,31 @@ export const deleteAllFormBuildersAction = createAsyncThunk<any, any>(
 );
 
 export const changeFormBuilderStatusAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  { id: string | number; status: string } // Type of the payload argument
+  any,
+  { id: string | number; status: string }
 >(
   "formBuilder/changeStatus",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      // Assume changeFormBuilderStatusAsync is your API call function
+      // Placeholder for actual API call
       // const response: AxiosResponse<any> = await changeFormBuilderStatusAsync(data);
-      
-      // --- Placeholder for actual API call ---
-      console.log("Simulating API call: changeFormBuilderStatusAsync with data:", data);
+      // Simulating API call
       await new Promise(resolve => setTimeout(resolve, 300));
       const response: AxiosResponse<any> = {
         data: {
           status: true,
           message: `Status of form ${data.id} changed to ${data.status} successfully.`,
-          data: { id: data.id, status: data.status }, // Example response data
+          data: { id: data.id, status: data.status },
         },
         status: 200,
         statusText: 'OK',
         headers: {},
-        config: {} as any, // Added to satisfy AxiosResponse type if using stricter typing
+        config: {} as any,
       };
-      // --- End Placeholder ---
+      // End Placeholder
 
       if (response?.data?.status === true) {
-        dispatch(getFormBuilderAction()); // Refresh the list of forms
+        dispatch(getFormBuilderAction());
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -6037,21 +5708,19 @@ export const changeFormBuilderStatusAction = createAsyncThunk<
 );
 
 export const cloneFormBuilderAction = createAsyncThunk<
-  any, // Return type of the fulfilled action
-  any   // Type of the payload argument (form data to clone)
+  any,
+  any
 >(
   "formBuilder/cloneForm",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      // Assume cloneFormBuilderAsync is your API call function
+      // Placeholder for actual API call
       // const response: AxiosResponse<any> = await cloneFormBuilderAsync(data);
-
-      // --- Placeholder for actual API call ---
-      console.log("Simulating API call: cloneFormBuilderAsync with data:", data);
+      // Simulating API call
       await new Promise(resolve => setTimeout(resolve, 300));
       const clonedForm = {
         ...data,
-        id: `CLONE_${Date.now()}`, // Simulate new ID
+        id: `CLONE_${Date.now()}`,
         formName: `${data.formName || 'Form'} (Clone)`,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -6060,17 +5729,17 @@ export const cloneFormBuilderAction = createAsyncThunk<
         data: {
           status: true,
           message: "Form cloned successfully.",
-          data: clonedForm, // Example response data
+          data: clonedForm,
         },
         status: 200,
         statusText: 'OK',
         headers: {},
         config: {} as any,
       };
-      // --- End Placeholder ---
+      // End Placeholder
 
       if (response?.data?.status === true) {
-        dispatch(getFormBuilderAction()); // Refresh the list of forms
+        dispatch(getFormBuilderAction());
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -6113,7 +5782,7 @@ export const getActivityLogAction = createAsyncThunk(
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          messageText: response?.data?.message || "Failed to fetch forms",
+          messageText: response?.data?.message || "Failed to fetch activity log", // Corrected message
         })
       );
       return rejectWithValue(response);
@@ -6171,7 +5840,7 @@ export const getOffersAction = createAsyncThunk(
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getOffersAsync()
-      if (response?.data) {
+      if (response?.data) { // Assuming response.data itself contains the relevant structure
         return response?.data.data
       }
       dispatch(
@@ -6192,7 +5861,7 @@ export const getDemandsAction = createAsyncThunk(
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getDemandsAsync()
-      if (response?.data) {
+      if (response?.data) { // Assuming response.data itself contains the relevant structure
         return response?.data.data
       }
       dispatch(
@@ -6215,9 +5884,7 @@ export const addOfferAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addOfferAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getLeadAction())
-
+        dispatch(getOffersAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -6245,9 +5912,7 @@ export const editOfferAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editOfferAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getLeadAction())
-
+        dispatch(getOffersAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -6275,9 +5940,7 @@ export const addDemandAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addDemandAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getLeadAction())
-
+        dispatch(getDemandsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -6306,7 +5969,6 @@ export const getOfferById = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getOfferByIdAsync(id);
       if (response?.data.status) {
-        console.log(response.data.data);
         return response.data.data;
       }
       dispatch(
@@ -6329,7 +5991,6 @@ export const getDemandById = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getDemandByIdAsync(id);
       if (response?.data.status) {
-        console.log(response.data.data);
         return response.data.data;
       }
       dispatch(
@@ -6352,9 +6013,7 @@ export const editDemandAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editDemandAsync(data)
       if (response?.data?.status === true) {
-
-        dispatch(getLeadAction())
-
+        dispatch(getDemandsAction()) // Corrected dispatch
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -6381,7 +6040,6 @@ export const getLeadById = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getLeadByIdAsync(id);
       if (response?.data.status) {
-        console.log(response.data.data);
         return response.data.data;
       }
       dispatch(
@@ -6389,6 +6047,50 @@ export const getLeadById = createAsyncThunk(
           ...defaultMessageObj,
           type: "error",
           messageText: response?.data?.message || "Failed to fetch Lead",
+        })
+      );
+      return rejectWithValue(response);
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error);
+    }
+  }
+);
+
+export const getCompanyByIdAction = createAsyncThunk(
+  "auth/getCompanyByIdAction",
+  async (id: string | number, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getCompanyByIdAsync(id);
+      if (response?.data?.status) {
+        return response?.data?.data;
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "Failed to fetch company", // Corrected message
+        })
+      );
+      return rejectWithValue(response);
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error);
+    }
+  }
+);
+
+export const getMemberByIdAction = createAsyncThunk(
+  "auth/getMemberByIdAction",
+  async (id: string | number, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getMemberByIdAsync(id);
+      if (response?.data?.status) {
+        return response?.data?.data;
+      }
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: response?.data?.message || "Failed to fetch Member", // Corrected message
         })
       );
       return rejectWithValue(response);

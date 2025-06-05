@@ -534,8 +534,6 @@ export const deleteAllProductListAsync = async (unitData: any) => {
 export const getBlogsAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/blog`)
-    console.log("response", response);
-
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -1820,8 +1818,6 @@ export const deleteAllRequestFeedbacksAsync = async (leadData: any) => {
 export const getSellerListingsAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/opportunity/seller`)
-    console.log("response", response);
-
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -1881,7 +1877,7 @@ export const editGlobalSettingAsync = async (settingId: number | string, formDat
 
 export const getMembersAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/customer?page=1`);
+    const response = await axiosInstance.get(`${config.apiURL}/customer`);
     return response;
   } catch (err) {
     return isAxiosError(err);
@@ -2054,18 +2050,18 @@ export const addCompanyAsync = async (unitData: any) => {
   }
 }
 
-export const editcompanyAsync = async (unitData: any) => {
-  try {
-    const response = await axiosInstance.post(`${config.apiURL}/setting/company_profile_setting/${unitData?.id}`, { _method: "PUT", ...unitData })
-    return response
-  } catch (err) {
-    return isAxiosError(err)
-  }
-}
+// export const editcompanyAsync = async (unitData: any) => {
+//   try {
+//     const response = await axiosInstance.post(`${config.apiURL}/company/${unitData?.id}`, { _method: "PUT", ...unitData })
+//     return response
+//   } catch (err) {
+//     return isAxiosError(err)
+//   }
+// }
 
 export const deletcompanyAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/setting/company_profile_setting/${unitData.id}`)
+    const response = await axiosInstance.delete(`${config.apiURL}/company/${unitData.id}`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2130,14 +2126,6 @@ export const deleteAllMemberAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
-
-
-
-
-
-
-
-
 
 export const getpartnerAsync = async () => {
   try {
@@ -2415,6 +2403,43 @@ export const getDemandByIdAsync = async (id: string | number) => {
 export const getLeadByIdAsync = async (id: string | number) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/lead/lead/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const getCompanyByIdAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/company/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const editCompanyAsync = async (id: string | number, formData: FormData) => {
+  try {
+    formData.append("_method", "PUT");
+    const response = await axiosInstance.post(
+      `${config.apiURL}/company/${id}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      }
+    );
+
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const getMemberByIdAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/customer/${id}`);
     return response;
   } catch (err) {
     return isAxiosError(err);
