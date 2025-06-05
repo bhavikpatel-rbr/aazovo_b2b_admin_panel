@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected spelling
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Dropdown, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -44,6 +44,11 @@ import {
   TbLoader,
   TbCircleCheck,
   TbCircleX,
+  TbLink,
+  TbUser,
+  TbMailShare,
+  TbBrandWhatsapp,
+  TbBell,
   // TbTrash, // Already imported, no need to re-declare if ActionColumn handles it
 } from "react-icons/tb";
 
@@ -70,6 +75,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import classNames from "@/utils/classNames";
 import { Link } from "react-router-dom";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- Define Types ---
 export type BugReportStatusApi = "Read" | "Unread" | string;
@@ -263,7 +269,7 @@ const ActionColumn = ({
           <TbEye />
         </button>
       </Tooltip>{" "}
-      <Tooltip title="Assign to task">
+      {/* <Tooltip title="Assign to task">
         {" "}
         <button
           className={`text-xl cursor-pointer mr-0.5 select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
@@ -273,7 +279,14 @@ const ActionColumn = ({
             <TbUserPlus size={18} />
           </Link>
         </button>
-      </Tooltip>{" "}
+      </Tooltip>{" "} */}
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        {/* <Dropdown.Item className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Shared Linked</span></Dropdown.Item> */}
+        <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <Link to="/task/task-list/create" ><span className="text-xs">Assigned to Task</span></Link></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+      </Dropdown>
     </div>
   );
 };
