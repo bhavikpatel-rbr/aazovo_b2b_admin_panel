@@ -87,31 +87,50 @@ const CreateInquiry = () => {
     "assigned_to_name": '',
     "inquiry_department_name": ''
   });
-
+  // Only email, mobile_no, and company_name are required. Others are optional or nullable.
+  // Update the zod schema accordingly:
   const inquirySchema = z.object({
-    name: z
-      .string()
-      .trim()
-      .min(1, { message: "Name is Required!" }),
-    company_name: z
-      .string()
-      .trim()
-      .min(1, { message: "Company Name is Required!" }),
-    inquiry_id: z
-      .string()
-      .trim()
-      .min(1, { message: "Inquiry ID is required!" }),
+    id: z.any().optional().nullable(),
+    inquiry_type: z.string().optional().nullable(),
+    inquiry_subject: z.string().optional().nullable(),
+    inquiry_description: z.string().optional().nullable(),
+    inquiry_priority: z.string().optional().nullable(),
+    inquiry_status: z.string().optional().nullable(),
+    assigned_to: z.string().optional().nullable(),
+    inquiry_date: z.string().optional().nullable(),
+    response_date: z.string().optional().nullable(),
+    resolution_date: z.string().optional().nullable(),
+    follow_up_date: z.string().optional().nullable(),
+    feedback_status: z.string().optional().nullable(),
+    inquiry_resolution: z.string().optional().nullable(),
+    inquiry_attachments: z.any().optional().nullable(),
+    name: z.string().optional().nullable(),
     email: z.string()
       .trim()
       .min(1, { message: "Email is required!" })
       .email({ message: "Invalid email address" }),
-    mobile_no: z.string().regex(/^\+?[1-9]\d{1,14}$/, {
-      message: "Invalid international mobile number",
-    }),
+    mobile_no: z.string()
+      .trim()
+      .min(1, { message: "Mobile number is required!" })
+      .regex(/^\+?[1-9]\d{1,14}$/, {
+        message: "Invalid international mobile number",
+      }),
+    company_name: z
+      .string()
+      .trim()
+      .min(1, { message: "Company Name is Required!" }),
+    requirements: z.string().optional().nullable(),
+    created_at: z.string().optional().nullable(),
+    updated_at: z.string().optional().nullable(),
+    deleted_at: z.string().optional().nullable(),
+    inquiry_id: z.string().optional().nullable(),
+    inquiry_department: z.string().optional().nullable(),
+    inquiry_from: z.string().optional().nullable(),
+    inquiry_attachments_array: z.any().optional().nullable(),
+    assigned_to_name: z.string().optional().nullable(),
+    inquiry_department_name: z.string().optional().nullable(),
+    department: z.string().optional().nullable(),
   });
-
-
-
   const {
     control,
     handleSubmit,
@@ -121,8 +140,6 @@ const CreateInquiry = () => {
     defaultValues: formdata,
     resolver: zodResolver(inquirySchema)
   });
-
-  console.log(errors, "errors");
 
   const dispatch = useAppDispatch(); // Initialize dispatch
   const location = useLocation();
@@ -161,32 +178,61 @@ const CreateInquiry = () => {
   }, [inquiryID, isEditMode, navigate]);
 
   const onSubmit = async (data: any) => {
-    // debugger
+    // Ensure all fields are included, including files
+    const payload = {
+      ...formdata,
+      ...data,
+      inquiry_attachments: Array.isArray(data.inquiry_attachments)
+        ? data.inquiry_attachments.map((file: File) => file.name)
+        : [],
+      inquiry_status: typeof data.inquiry_status === "object" && data.inquiry_status?.value
+        ? data.inquiry_status.value
+        : data.inquiry_status,
+      assigned_to: typeof data.assigned_to === "object" && data.assigned_to?.value
+        ? data.assigned_to.value
+        : data.assigned_to,
+      department:
+        data.department && typeof data.department === "object" && "value" in data.department
+          ? data.department.value
+          : data.department || "",
+      inquiry_type: typeof data.inquiry_type === "object" && data.inquiry_type?.value
+        ? data.inquiry_type.value
+        : data.inquiry_type,
+      inquiry_priority: typeof data.inquiry_priority === "object" && data.inquiry_priority?.value
+        ? data.inquiry_priority.value
+        : data.inquiry_priority,
+      feedback_status: typeof data.feedback_status === "object" && data.feedback_status?.value
+        ? data.feedback_status.value
+        : data.feedback_status,
+      inquiry_from: typeof data.inquiry_from === "object" && data.inquiry_from?.value
+        ? data.inquiry_from.value
+        : data.inquiry_from,
+    };
+
     try {
       if (isEditMode && inquiryID) {
-        await dispatch(editInquiriesAction({ ...formdata, ...data, inquiry_attachments: attachments?.map((file) => file?.name), inquiry_status: data?.inquiry_status?.value, assigned_to: data?.assigned_to?.value, })).unwrap();
+        await dispatch(editInquiriesAction(payload)).unwrap();
         toast.push(
-          <Notification type="success" title="Inquery Update">
-            Inquery updated successfully.
+          <Notification type="success" title="Inquiry Updated">
+            Inquiry updated successfully.
           </Notification>
         );
-        reset({}); // Reset form after successful creation to clear fields
-        navigate("/business-entities/inquiries"); // Or to the Inquery's detail page
+        reset({});
+        navigate("/business-entities/inquiries");
       } else {
-        await dispatch(addInquiriesAction({ ...formdata, ...data, inquiry_attachments: attachments.map((file) => file.name), })).unwrap();
+        await dispatch(addInquiriesAction(payload)).unwrap();
         toast.push(
-          <Notification type="success" title="Inquery Created">
-            New Inquery created successfully.
+          <Notification type="success" title="Inquiry Created">
+            New Inquiry created successfully.
           </Notification>
         );
-        reset({}); // Reset form after successful creation to clear fields;
-        navigate("/business-entities/inquiries", { replace: true }); // Or to the Inquery's detail page
+        reset({});
+        navigate("/business-entities/inquiries", { replace: true });
       }
-
-    } catch (error) {
+    } catch (error: any) {
       const errorMessage =
         error?.message ||
-        `Failed to ${isEditMode ? "update" : "create"} member.`;
+        `Failed to ${isEditMode ? "update" : "create"} inquiry.`;
       toast.push(
         <Notification
           type="danger"
@@ -195,10 +241,8 @@ const CreateInquiry = () => {
           {errorMessage}
         </Notification>
       );
-      console.error("Submit Member Error:", error);
+      console.error("Submit Inquiry Error:", error);
     }
-
-    reset();
     setAttachments([]);
   };
 
@@ -387,13 +431,20 @@ const CreateInquiry = () => {
                   control={control}
                   render={({ field }) => (
                     <Select
-                      {...field}
                       options={[
                         { value: "Low", label: "Low" },
                         { value: "Medium", label: "Medium" },
                         { value: "High", label: "High" },
                       ]}
                       placeholder="Select priority"
+                      value={
+                        [
+                          { value: "Low", label: "Low" },
+                          { value: "Medium", label: "Medium" },
+                          { value: "High", label: "High" },
+                        ].find((option) => option.value === field.value) || null
+                      }
+                      onChange={(option) => field.onChange(option ? option.value : "")}
                     />
                   )}
                 />
@@ -488,7 +539,6 @@ const CreateInquiry = () => {
                   control={control}
                   render={({ field }) => (
                     <Select
-                      {...field}
                       options={[
                         { value: "Sales", label: "Sales" },
                         { value: "Support", label: "Support" },
@@ -497,6 +547,16 @@ const CreateInquiry = () => {
                         { value: "Finance", label: "Finance" },
                       ]}
                       placeholder="Select department"
+                      value={
+                        [
+                          { value: "Sales", label: "Sales" },
+                          { value: "Support", label: "Support" },
+                          { value: "HR", label: "HR" },
+                          { value: "IT", label: "IT" },
+                          { value: "Finance", label: "Finance" },
+                        ].find((option) => option.value === field.value) || null
+                      }
+                      onChange={(option) => field.onChange(option ? option.value : "")}
                     />
                   )}
                 />
