@@ -51,6 +51,12 @@ const CreateInquiry = () => {
       "inquiry_department_name": apiData.inquiry_department_name
     }
   };
+  const optionsType = [
+    { value: "General", label: "General" },
+    { value: "Product", label: "Product" },
+    { value: "Service", label: "Service" },
+    { value: "Support", label: "Support" },
+  ]
   const [formdata, setformdata] = useState({
     "id": 1,
     "inquiry_type": '',
@@ -99,6 +105,9 @@ const CreateInquiry = () => {
       .trim()
       .min(1, { message: "Email is required!" })
       .email({ message: "Invalid email address" }),
+    mobile_no: z.string().regex(/^\+?[1-9]\d{1,14}$/, {
+      message: "Invalid international mobile number",
+    }),
   });
 
 
@@ -230,7 +239,7 @@ const CreateInquiry = () => {
                   name="inquiry_id"
                   control={control}
                   render={({ field }) => (
-                    <Input placeholder="Enter Inquiry ID" {...field} />
+                    <Input {...field} placeholder="Enter Inquiry ID" />
                   )}
                 />
               </FormItem>
@@ -248,7 +257,7 @@ const CreateInquiry = () => {
                   name="company_name"
                   control={control}
                   render={({ field }) => (
-                    <Input placeholder="Company Name" {...field} />
+                    <Input {...field} placeholder="Company Name" />
                   )}
                 />
               </FormItem>
@@ -268,7 +277,7 @@ const CreateInquiry = () => {
                   name="name"
                   control={control}
                   render={({ field }) => (
-                    <Input placeholder="Full Name" {...field} />
+                    <Input  {...field} placeholder="Full Name" />
                   )}
                 />
               </FormItem>
@@ -289,9 +298,9 @@ const CreateInquiry = () => {
                   control={control}
                   render={({ field }) => (
                     <Input
+                      {...field}
                       type="email"
                       placeholder="Email Address"
-                      {...field}
                     />
                   )}
                 />
@@ -312,7 +321,7 @@ const CreateInquiry = () => {
                   name="mobile_no"
                   control={control}
                   render={({ field }) => (
-                    <Input placeholder="Phone Number" {...field} />
+                    <Input  {...field} placeholder="Phone Number" />
                   )}
                 />
               </FormItem>
@@ -332,13 +341,12 @@ const CreateInquiry = () => {
                   render={({ field }) => (
                     <Select
                       {...field}
-                      options={[
-                        { value: "General", label: "General" },
-                        { value: "Product", label: "Product" },
-                        { value: "Service", label: "Service" },
-                        { value: "Support", label: "Support" },
-                      ]}
+                      options={optionsType}
                       placeholder="Select Inquiry Type"
+                      value={optionsType.filter((option) => option?.value === field?.value)}
+                      onChange={(value) => {
+                        field.onChange(value?.value)
+                      }}
                     />
                   )}
                 />
@@ -359,7 +367,7 @@ const CreateInquiry = () => {
                   name="inquiry_subject"
                   control={control}
                   render={({ field }) => (
-                    <Input placeholder="Subject" {...field} />
+                    <Input {...field} placeholder="Subject" />
                   )}
                 />
               </FormItem>
