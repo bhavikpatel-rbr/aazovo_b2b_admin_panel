@@ -4,6 +4,9 @@ import React, { useState, useMemo, useCallback, Fragment, useEffect, Ref, useRef
 import { Link, useNavigate } from "react-router-dom";
 import cloneDeep from "lodash/cloneDeep";
 import classNames from "classnames";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -66,13 +69,12 @@ import type { SkeletonProps } from '@/components/ui/Skeleton';
 import type { ChangeEvent, ReactNode } from 'react';
 import type { CheckboxProps } from '@/components/ui/Checkbox';
 import { DatePicker, Drawer, Dropdown, Form, FormItem, Input } from "@/components/ui";
-import { Controller, useForm } from "react-hook-form";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store"; // Assuming this exists
-import { useSelector } from "react-redux"; // Assuming this exists
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming this exists
-import { getOpportunitiesAction } from "@/reduxtool/master/middleware"; // Assuming this action exists
+import { useAppDispatch } from "@/reduxtool/store";
+import { useSelector } from "react-redux";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { getOpportunitiesAction, submitExportReasonAction } from "@/reduxtool/master/middleware";
 
 
 // --- Define API Item Type (Matches API Response Structure) ---
@@ -105,10 +107,12 @@ export type ApiOpportunityItem = {
   quantity_match_listing: string | null; // API example has "1", might need interpretation
   location_match: string | null; // "Local" | "National" | "Not Matched"
   matches_found_count: number | null;
-  last_updated: string | null; // ISO string
+  updated_at: string | null; // ISO string
   assigned_to: number | string | null; // API example shows number `1`
   notes: string | null;
   listing_url: string | null;
+  updated_by_name?: string;
+  updated_by_role?: string;
 };
 
 
@@ -142,11 +146,23 @@ export type OpportunityItem = {
   quantity_match_listing?: "Sufficient" | "Partial" | "Not Matched" | string; // Mapped from API
   location_match?: "Local" | "National" | "Not Matched" | string;
   matches_found_count?: number;
-  last_updated?: string;
+  updated_at?: string;
   assigned_to?: string;
   notes?: string;
   listing_url?: string;
+  updated_by_name?: string;
+  updated_by_role?: string;
 };
+
+// --- Form Schemas ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
 
 // --- Constants & Color Mappings ---
 const recordStatusTagColor: Record<OpportunityItem["status"], string> = {
@@ -154,7 +170,6 @@ const recordStatusTagColor: Record<OpportunityItem["status"], string> = {
   active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200",
   on_hold: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-200",
   closed: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200",
-  // Add other statuses if needed, and a default
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-200",
 };
 const opportunityStatusTagColor: Record<OpportunityItem["opportunity_status"], string> = {
@@ -162,7 +177,6 @@ const opportunityStatusTagColor: Record<OpportunityItem["opportunity_status"], s
   Shortlisted: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200",
   Converted: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200",
   Rejected: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200",
-  // Add other statuses if needed, and a default
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-200",
 };
 const matchTypeColors: Record<string, string> = {
@@ -183,8 +197,75 @@ const TABS = {
   AUTO_MATCH: "auto_match",
 };
 
+// --- CSV Export Helpers ---
+type OpportunityExportItem = Omit<OpportunityItem, 'created_date' | 'updated_at'> & {
+  created_date_formatted: string;
+  updated_at_formatted: string;
+}
+
+const CSV_HEADERS_OPPORTUNITIES = [
+  "ID", "Opportunity ID", "Product Name", "Status", "Opportunity Status",
+  "Match Score", "SPB Role", "Want To", "Company Name", "Company ID",
+  "Member Name", "Member ID", "Member Email", "Member Phone", "Member Type",
+  "Quantity", "Product Category", "Product Subcategory", "Brand", "Product Specs",
+  "Updated By", "Updated Role", "Last Updated", "Created At"
+];
+
+const CSV_KEYS_OPPORTUNITIES_EXPORT: (keyof OpportunityExportItem)[] = [
+  "id", "opportunity_id", "product_name", "status", "opportunity_status",
+  "match_score", "spb_role", "want_to", "company_name", "company_id",
+  "member_name", "member_id", "member_email", "member_phone", "member_type",
+  "quantity", "product_category", "product_subcategory", "brand", "product_specs",
+  "updated_by_name", "updated_by_role", "updated_at_formatted", "created_date_formatted"
+];
+
+
+function exportToCsvOpportunities(filename: string, rows: OpportunityItem[]) {
+  if (!rows || !rows.length) {
+    toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+    return false;
+  }
+  const transformedRows: OpportunityExportItem[] = rows.map((row) => ({
+    ...row,
+    created_date_formatted: row.created_date ? new Date(row.created_date).toLocaleString() : 'N/A',
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : 'N/A',
+  }));
+
+  const separator = ",";
+  const csvContent = CSV_HEADERS_OPPORTUNITIES.join(separator) + "\n" +
+    transformedRows.map((row) => {
+      return CSV_KEYS_OPPORTUNITIES_EXPORT.map((k) => {
+        let cell = row[k as keyof OpportunityExportItem];
+        if (cell === null || cell === undefined) {
+          cell = "";
+        } else {
+          cell = String(cell).replace(/"/g, '""');
+        }
+        if (String(cell).search(/("|,|\n)/g) >= 0) {
+          cell = `"${cell}"`;
+        }
+        return cell;
+      }).join(separator);
+    }).join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  }
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+  return false;
+}
+
 // --- DataTable1 (Your Custom DataTable Component) ---
-// ... (DataTableComponent remains unchanged from your provided code) ...
 export type OnSortParamTanstack = { order: 'asc' | 'desc' | ''; key: string | number }
 
 type DataTable1Props<T> = {
@@ -614,7 +695,6 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
 
   const onSubmitFilter = (data: any) => {
     console.log("Filter data:", data); // Handle filter submission
-    // Here you would typically dispatch an action or set filter state
     closeDrawer();
   };
 
@@ -1007,43 +1087,16 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
   )
 }
 
-const OpportunityTableTools = ({ onSearchChange }: { onSearchChange: (query: string) => void; }) => (
+const OpportunityTableTools = ({ onSearchChange, onExport }: { onSearchChange: (query: string) => void; onExport: () => void; }) => (
   <div className="flex-grow flex gap-2">
     <OpportunitySearch onInputChange={onSearchChange} />
     <OpportunityFilterDrawer />
-    <Button icon={<TbCloudUpload />}>Export</Button>
+    <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
   </div>
 );
 
-const OpportunityActionTools = ({ activeTab }: { activeTab: string; }) => {
+export const OpportunityActionTools = ({ activeTab }: { activeTab: string; }) => {
   const navigate = useNavigate();
-  const handleAddItem = () => {
-    let path = '/sales-leads/opportunities/'; 
-    if (activeTab === TABS.SELLER) {
-      path += 'seller/create';
-    } else if (activeTab === TABS.BUYER) {
-      path += 'buyer/create';
-    } else if (activeTab === TABS.AUTO_MATCH) {
-      toast.push(<Notification title="Info" type="info">"Add New" is not specific for Auto Match. Select Buyer/Seller tab.</Notification>);
-      return; 
-    } else { 
-      path += 'seller/create'; 
-      toast.push(<Notification title="Info" type="info">Defaulting to Add New Seller. Select a specific tab for Buyer.</Notification>);
-    }
-    navigate(path);
-  };
-
-  const showAddButton = activeTab !== TABS.AUTO_MATCH; 
-
-  return (
-    <div className="flex flex-col md:flex-row gap-3">
-      {showAddButton && (
-        <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={handleAddItem}>
-          Add New
-        </Button>
-      )}
-    </div>
-  );
 };
 
 const OpportunitySelectedFooter = ({ selectedItems, onDeleteSelected, activeTab }: {
@@ -1325,7 +1378,7 @@ const Opportunities = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { 
-    Opportunities = [], // Expected: { data: ApiOpportunityItem[], total?: number }
+    Opportunities = [],
     status: masterLoadingStatus = "idle", 
   } = useSelector(masterSelector);
   
@@ -1333,32 +1386,37 @@ const Opportunities = () => {
   const [tableQueries, setTableQueries] = useState<Record<string, TableQueries>>({});
   const [selectedItems, setSelectedItems] = useState<Record<string, OpportunityItem[]>>({});
   const [currentTab, setCurrentTab] = useState<string>(TABS.ALL);
-  const [expanded, setExpanded] = useState<ExpandedState>({}) 
+  const [expanded, setExpanded] = useState<ExpandedState>({});
+
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   useEffect(() => {
     dispatch(getOpportunitiesAction());
   }, [dispatch]);
 
-  // const Opportunities = useMemo(() => reduxOpportunities?.data || [], [reduxOpportunities?.data]);
-
   useEffect(() => {
     if (Array.isArray(Opportunities)) {
         const mappedOpportunities = Opportunities.map((apiItem: ApiOpportunityItem): OpportunityItem => {
-            let uiStatus: OpportunityItem["status"] = "pending"; // Default UI status
+            let uiStatus: OpportunityItem["status"] = "pending";
             if (apiItem.status?.toLowerCase() === "pending") uiStatus = "pending";
             else if (apiItem.status?.toLowerCase() === "active") uiStatus = "active";
             else if (apiItem.status?.toLowerCase() === "on hold" || apiItem.status?.toLowerCase() === "on_hold") uiStatus = "on_hold";
             else if (apiItem.status?.toLowerCase() === "closed") uiStatus = "closed";
             else if (apiItem.status) uiStatus = apiItem.status.toLowerCase();
 
-
-            let uiOppStatus: OpportunityItem["opportunity_status"] = "New"; // Default
+            let uiOppStatus: OpportunityItem["opportunity_status"] = "New";
             if (apiItem.opportunity_status?.toLowerCase() === "new") uiOppStatus = "New";
             else if (apiItem.opportunity_status?.toLowerCase() === "shortlisted") uiOppStatus = "Shortlisted";
             else if (apiItem.opportunity_status?.toLowerCase() === "converted") uiOppStatus = "Converted";
             else if (apiItem.opportunity_status?.toLowerCase() === "rejected") uiOppStatus = "Rejected";
             else if (apiItem.opportunity_status) uiOppStatus = apiItem.opportunity_status;
-
 
             return {
                 id: apiItem.id,
@@ -1386,13 +1444,15 @@ const Opportunities = () => {
                 member_phone: apiItem.member_phone || undefined,
                 member_type: apiItem.member_type || "Standard",
                 price_match_type: apiItem.price_match_type || undefined,
-                quantity_match_listing: apiItem.quantity_match_listing || undefined, // Use API's value, may need interpretation
+                quantity_match_listing: apiItem.quantity_match_listing || undefined,
                 location_match: apiItem.location_match || undefined,
                 matches_found_count: apiItem.matches_found_count ?? undefined,
-                last_updated: apiItem.last_updated || undefined,
+                updated_at: apiItem.updated_at || undefined,
                 assigned_to: String(apiItem.assigned_to || ""),
                 notes: apiItem.notes || undefined,
                 listing_url: apiItem.listing_url || undefined,
+                updated_by_name: apiItem.updated_by_name || 'System',
+                updated_by_role: apiItem.updated_by_role || 'Auto-Update'
             };
         });
         setOpportunities(mappedOpportunities);
@@ -1424,7 +1484,7 @@ const Opportunities = () => {
   const currentSelectedItems = selectedItems[currentTab] || [];
 
   const filteredOpportunities = useMemo(() => {
-    let data = [...opportunities]; // Use Redux-driven and mapped opportunities
+    let data = [...opportunities];
     if (currentTab === TABS.SELLER) {
       data = data.filter(op => op.spb_role === "Seller" || op.want_to === "Sell" || (op.sell_listing_id && !op.buy_listing_id));
     } else if (currentTab === TABS.BUYER) {
@@ -1445,7 +1505,7 @@ const Opportunities = () => {
     return data;
   }, [currentTab, opportunities, currentTableData.query]);
 
-  const { pageData, total } = useMemo(() => {
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData = [...filteredOpportunities];
     const { order, key } = currentTableData.sort as unknown as OnSortParamTanstack; 
 
@@ -1455,8 +1515,8 @@ const Opportunities = () => {
         processedData.sort((a, b) => {
           const aVal = a[key as keyof OpportunityItem];
           const bVal = b[key as keyof OpportunityItem];
-          if (key === "created_date" || key === "last_updated") {
-            if (!aVal || !bVal) return 0; // Handle null/undefined dates
+          if (key === "created_date" || key === "updated_at") {
+            if (!aVal || !bVal) return 0;
             return order === "asc"
               ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime()
               : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
@@ -1469,18 +1529,48 @@ const Opportunities = () => {
             : String(bVal ?? '').localeCompare(String(aVal ?? ''));
         });
       } else {
-        console.warn(`Sort key "${key}" not found in opportunity items. Available keys:`, sampleItem ? Object.keys(sampleItem) : 'No items to sample');
+        console.warn(`Sort key "${key}" not found in opportunity items.`);
       }
     }
+    
+    const allData = processedData;
+    const dataTotal = allData.length;
     const pageIndex = currentTableData.pageIndex as number;
     const pageSize = currentTableData.pageSize as number;
-    const dataTotal = processedData.length;
     const startIndex = (pageIndex - 1) * pageSize;
+    
     return {
-      pageData: processedData.slice(startIndex, startIndex + pageSize),
+      pageData: allData.slice(startIndex, startIndex + pageSize),
       total: dataTotal,
+      allFilteredAndSortedData: allData,
     };
   }, [filteredOpportunities, currentTableData]);
+
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Opportunities";
+    try {
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })).unwrap();
+    } catch (error: any) {
+      // Optional: Handle error for reason submission, but proceed with export anyway
+    }
+
+    const success = exportToCsvOpportunities("opportunities_export.csv", allFilteredAndSortedData);
+    if (success) {
+      toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
+    }
+    setIsSubmittingExportReason(false);
+    setIsExportReasonModalOpen(false);
+  };
 
   const handleSetCurrentTableData = useCallback((data: Partial<TableQueries>) => { setTableQueries(prev => ({ ...prev, [currentTab]: { ...prev[currentTab], ...data } })); }, [currentTab]);
   const handlePaginationChange = useCallback((page: number) => handleSetCurrentTableData({ pageIndex: page }), [handleSetCurrentTableData]);
@@ -1503,7 +1593,7 @@ const Opportunities = () => {
         if(item.spb_role === "Seller" || item.want_to === "Sell") path += `seller/edit/${item.id}`;
         else if(item.spb_role === "Buyer" || item.want_to === "Buy") path += `buyer/edit/${item.id}`;
         else {
-            toast.push(<Notification title="Warning" type="warning">Cannot determine specific edit type for this item from 'All' tab. Please select Buyer/Seller tab or implement specific logic.</Notification>);
+            toast.push(<Notification title="Warning" type="warning">Cannot determine specific edit type for this item from 'All' tab.</Notification>);
             path += `detail/${item.id}`; 
         }
     }
@@ -1513,13 +1603,10 @@ const Opportunities = () => {
   
   const handleDeleteSelected = useCallback(() => { 
     const selectedIds = new Set(currentSelectedItems.map((i) => i.id)); 
-    // Here you would typically dispatch a Redux action to delete items from the backend
-    // For now, just filtering local state
     setOpportunities((prevAll) => prevAll.filter((i) => !selectedIds.has(i.id))); 
     setSelectedItems(prev => ({ ...prev, [currentTab]: [] })); 
     toast.push(<Notification title="Records Deleted" type="success">{`${selectedIds.size} record(s) deleted.`}</Notification>); 
-    // dispatch(deleteOpportunitiesAction({ids: Array.from(selectedIds)})).then(() => dispatch(getOpportunitiesAction())); // Example Redux flow
-  }, [currentSelectedItems, currentTab, dispatch]); // Added dispatch
+  }, [currentSelectedItems, currentTab, dispatch]);
 
   const handleTabChange = (tabKey: string) => { if (tabKey === currentTab) return; setCurrentTab(tabKey); };
 
@@ -1527,7 +1614,7 @@ const Opportunities = () => {
     {
       header: "Products",
       accessorKey: "opportunity_id",
-      size: 300,
+      size: 280,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -1540,7 +1627,7 @@ const Opportunities = () => {
                 {item.opportunity_id}
               </Link>
               <Tooltip title={item.product_name}>
-                <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[240px]">
+                <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[220px]">
                   {item.product_name?.slice(0, 25) + (item.product_name && item.product_name.length > 25 ? "…" : "")}
                 </span>
               </Tooltip>
@@ -1553,7 +1640,7 @@ const Opportunities = () => {
     {
       header: "Company & Member",
       accessorKey: "company_name",
-      size: 260,
+      size: 240,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -1582,9 +1669,9 @@ const Opportunities = () => {
       }
     },
     {
-      header: "Key Details & Matching",
+      header: "Key Details",
       accessorKey: "match_score",
-      size: 260,
+      size: 240,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -1593,11 +1680,9 @@ const Opportunities = () => {
             <InfoLine icon={<TbMail size={13} />} text={item.member_email ? <a href={`mailto:${item.member_email}`} className="text-blue-500 hover:underline">{item.member_email}</a> : 'N/A'} />
             <div className="pt-1 mt-1 border-t dark:border-gray-600">
               <InfoLine icon={<TbChecklist size={13} />} label="Qty" text={item.quantity ?? 'N/A'} />
-              <InfoLine icon={<TbProgressCheck size={13} />} label="Stock" text={item.product_status_listing ?? 'N/A'} />
               <InfoLine icon={<TbExchange size={13} />} label="Want To" text={item.want_to ?? 'N/A'} />
             </div>
             <div className="pt-1 mt-1 border-t dark:border-gray-600">
-              <InfoLine icon={<TbWorld size={13} />} label="Specs" text={item.product_specs ? (item.product_specs.length > 20 ? item.product_specs.substring(0, 17) + "..." : item.product_specs) : 'N/A'} title={item.product_specs} />
               <InfoLine icon={<TbRadar2 size={13} />} label="Matches" text={item.matches_found_count ?? 'N/A'} />
               <InfoLine icon={<TbTargetArrow size={13} />} label="Score" text={`${item.match_score}%`} />
             </div>
@@ -1608,7 +1693,7 @@ const Opportunities = () => {
     {
       header: "Timestamps",
       accessorKey: "created_date",
-      size: 170,
+      size: 150,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -1622,6 +1707,45 @@ const Opportunities = () => {
         )
       }
     },
+    {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        meta: { HeaderClass: "text-red-500" },
+        size: 180,
+        cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } =
+            props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", {
+                month: "short",
+              })} ${new Date(updated_at).getFullYear()}, ${new Date(
+                updated_at
+              ).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_name || "N/A"}
+                {updated_by_role && (
+                  <>
+                    <br />
+                    <b>{updated_by_role}</b>
+                  </>
+                )}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
+      },
     {
       header: "Actions",
       id: "action_std",
@@ -1644,7 +1768,6 @@ const Opportunities = () => {
         <Tooltip title={row.getIsExpanded() ? "Collapse" : "Expand Details"}>
           <Button
             shape="circle"
-            variant="subtle"
             size="xs"
             icon={row.getIsExpanded() ? <TbMinus /> : <TbPlus />}
             onClick={row.getToggleExpandedHandler()}
@@ -1655,7 +1778,7 @@ const Opportunities = () => {
     {
       header: "Products",
       accessorKey: "opportunity_id",
-      size: 300,
+      size: 280,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -1668,7 +1791,7 @@ const Opportunities = () => {
                 {item.opportunity_id}
               </Link>
               <Tooltip title={item.product_name}>
-                <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[240px]">
+                <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[220px]">
                   {item.product_name?.slice(0, 25)}
                   {item.product_name && item.product_name.length > 25 ? "…" : ""}
                 </span>
@@ -1682,7 +1805,7 @@ const Opportunities = () => {
     {
       header: "Company, Member & Role",
       accessorKey: "company_name",
-      size: 280,
+      size: 260,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -1716,9 +1839,9 @@ const Opportunities = () => {
       }
     },
     {
-      header: "Key Details & Matching",
+      header: "Key Details",
       accessorKey: "match_score",
-      size: 260,
+      size: 240,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -1726,12 +1849,10 @@ const Opportunities = () => {
             <InfoLine icon={<TbPhone size={13} />} text={item.member_phone || 'N/A'} />
             <InfoLine icon={<TbMail size={13} />} text={item.member_email ? <a href={`mailto:${item.member_email}`} className="text-blue-500 hover:underline">{item.member_email}</a> : 'N/A'} />
             <div className="pt-1 mt-1 border-t dark:border-gray-600">
-              <InfoLine icon={<TbChecklist size={13} />} label="Qty" text={item.quantity ?? 'N/A'} />
-              <InfoLine icon={<TbProgressCheck size={13} />} label="Stock" text={item.product_status_listing ?? 'N/A'} />
-              <InfoLine icon={<TbExchange size={13} />} label="Want To" text={item.want_to ?? 'N/A'} />
+                <InfoLine icon={<TbChecklist size={13} />} label="Qty" text={item.quantity ?? 'N/A'} />
+                <InfoLine icon={<TbExchange size={13} />} label="Want To" text={item.want_to ?? 'N/A'} />
             </div>
             <div className="pt-1 mt-1 border-t dark:border-gray-600">
-              <InfoLine icon={<TbWorld size={13} />} label="Specs" text={item.product_specs ? (item.product_specs.length > 20 ? item.product_specs.substring(0, 17) + "..." : item.product_specs) : 'N/A'} title={item.product_specs} />
               <InfoLine icon={<TbRadar2 size={13} />} label="Matches" text={item.matches_found_count ?? 'N/A'} />
               <InfoLine icon={<TbTargetArrow size={13} />} label="Score" text={`${item.match_score}%`} />
             </div>
@@ -1740,9 +1861,36 @@ const Opportunities = () => {
       }
     },
     {
-      header: "Timestamps & Status",
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        size: 160,
+        cell: ({ row }: CellContext<OpportunityItem, unknown>) => {
+            const { updated_at, updated_by_name, updated_by_role } = row.original;
+            const formattedDate = updated_at
+                ? new Date(updated_at).toLocaleString('en-US', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: 'numeric', minute: '2-digit', hour12: true
+                })
+                : "N/A";
+            return (
+                <div className="text-xs leading-tight">
+                    <span className="font-semibold text-gray-800 dark:text-gray-100">
+                        {updated_by_name || "N/A"}
+                    </span>
+                    {updated_by_role && (
+                        <span className="block text-gray-500 dark:text-gray-400">
+                            {updated_by_role}
+                        </span>
+                    )}
+                    <span className="block text-gray-500 dark:text-gray-400">{formattedDate}</span>
+                </div>
+            );
+        },
+    },
+    {
+      header: "Timestamps",
       accessorKey: "created_date",
-      size: 170,
+      size: 150,
       cell: ({ row }) => {
         const item = row.original;
         return (
@@ -1777,65 +1925,107 @@ const Opportunities = () => {
   }, [currentTab, getColumnsForStandardView, getColumnsForExpandableView]);
 
   return (
-    <Container className="h-auto">
-      <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-        <div className="lg:flex items-center justify-between mb-4">
-          <h5 className="mb-4 lg:mb-0">Opportunities</h5>
-          <OpportunityActionTools activeTab={currentTab} />
-        </div>
+    <>
+      <Container className="h-auto">
+        <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+          <div className="lg:flex items-center justify-between mb-4">
+            <h5 className="mb-4 lg:mb-0">Opportunities</h5>
+          </div>
 
-        <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
-            {[TABS.ALL, TABS.SELLER, TABS.BUYER, TABS.AUTO_MATCH].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                className={classNames(
-                  "whitespace-nowrap pb-2 mt-2 px-1 border-b-2 font-medium text-sm capitalize",
-                  currentTab === tab
-                    ? "border-primary-500 text-primary-600 dark:border-primary-400 dark:text-primary-400"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
-                )}
-              >
-                {tab.replace("_opportunities", "").replace("_", " ")}
-              </button>
-            ))}
-          </nav>
-        </div>
+          <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
+            <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
+              {[TABS.ALL, TABS.SELLER, TABS.BUYER, TABS.AUTO_MATCH].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={classNames(
+                    "whitespace-nowrap pb-2 mt-2 px-1 border-b-2 font-medium text-sm capitalize",
+                    currentTab === tab
+                      ? "border-primary-500 text-primary-600 dark:border-primary-400 dark:text-primary-400"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
+                  )}
+                >
+                  {tab.replace("_opportunities", "").replace("_", " ")}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-        <div className="mb-4">
-          <OpportunityTableTools onSearchChange={handleSearchChange} />
-        </div>
+          <div className="mb-4">
+            <OpportunityTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} />
+          </div>
 
-        <div className="flex-grow overflow-auto">
-          <DataTableComponent
-            selectable
-            columns={columns}
-            data={pageData}
-            loading={masterLoadingStatus === "loading"}
-            pagingData={{ total, pageIndex: currentTableData.pageIndex as number, pageSize: currentTableData.pageSize as number }}
-            onPaginationChange={handlePaginationChange}
-            onSelectChange={handleSelectChange}
-            onSort={handleSort}
-            onCheckBoxChange={handleRowSelect}
-            onIndeterminateCheckBoxChange={handleAllRowSelect}
-            checkboxChecked={(row: OpportunityItem) => currentSelectedItems.some((selected: OpportunityItem) => selected.id === row.id)}
-            state={currentTab === TABS.AUTO_MATCH ? { expanded } : undefined}
-            onExpandedChange={currentTab === TABS.AUTO_MATCH ? setExpanded : undefined}
-            getRowCanExpand={currentTab === TABS.AUTO_MATCH ? () => true : undefined}
-            renderRowSubComponent={currentTab === TABS.AUTO_MATCH ? (({ row }: { row: Row<OpportunityItem> }) =>
-              <ExpandedOpportunityDetails row={row} currentTab={currentTab} />
-            ) : undefined}
-            noData={masterLoadingStatus !== 'loading' && pageData.length === 0}
-          />
-        </div>
-      </AdaptiveCard>
-      <OpportunitySelectedFooter
-        selectedItems={currentSelectedItems}
-        onDeleteSelected={handleDeleteSelected}
-        activeTab={currentTab}
-      />
-    </Container>
+          <div className="flex-grow overflow-auto">
+            <DataTableComponent
+              selectable
+              columns={columns}
+              data={pageData}
+              loading={masterLoadingStatus === "loading"}
+              pagingData={{ total, pageIndex: currentTableData.pageIndex as number, pageSize: currentTableData.pageSize as number }}
+              onPaginationChange={handlePaginationChange}
+              onSelectChange={handleSelectChange}
+              onSort={handleSort}
+              onCheckBoxChange={handleRowSelect}
+              onIndeterminateCheckBoxChange={handleAllRowSelect}
+              checkboxChecked={(row: OpportunityItem) => currentSelectedItems.some((selected: OpportunityItem) => selected.id === row.id)}
+              state={currentTab === TABS.AUTO_MATCH ? { expanded } : undefined}
+              onExpandedChange={currentTab === TABS.AUTO_MATCH ? setExpanded : undefined}
+              getRowCanExpand={currentTab === TABS.AUTO_MATCH ? () => true : undefined}
+              renderRowSubComponent={currentTab === TABS.AUTO_MATCH ? (({ row }: { row: Row<OpportunityItem> }) =>
+                <ExpandedOpportunityDetails row={row} currentTab={currentTab} />
+              ) : undefined}
+              noData={masterLoadingStatus !== 'loading' && pageData.length === 0}
+            />
+          </div>
+        </AdaptiveCard>
+        <OpportunitySelectedFooter
+          selectedItems={currentSelectedItems}
+          onDeleteSelected={handleDeleteSelected}
+          activeTab={currentTab}
+        />
+      </Container>
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason,
+        }}
+      >
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => e.preventDefault()}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            isRequired
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
+    </>
   );
 };
 

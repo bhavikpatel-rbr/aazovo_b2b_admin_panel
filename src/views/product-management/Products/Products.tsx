@@ -49,7 +49,7 @@ import { useAppDispatch } from "@/reduxtool/store";
 import {
   getProductsAction, addProductAction, editProductAction, deleteProductAction,
   deleteAllProductsAction, getDomainsAction, getCategoriesAction,
-  getSubcategoriesByCategoryIdAction, getBrandsAction, getUnitsAction, getCountriesAction,
+  getSubcategoriesByCategoryIdAction, getBrandAction, getUnitsAction, getCountriesAction,
   changeProductStatusAction
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -192,7 +192,7 @@ const Products = () => {
     dispatch(getProductsAction());
     dispatch(getDomainsAction());
     dispatch(getCategoriesAction());
-    dispatch(getBrandsAction());
+    dispatch(getBrandAction());
     dispatch(getUnitsAction());
     dispatch(getCountriesAction());
   }, [dispatch]);

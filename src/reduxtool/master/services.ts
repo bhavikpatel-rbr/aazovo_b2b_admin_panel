@@ -395,7 +395,7 @@ export const deleteAllDocumentListAsync = async (unitData: any) => {
 
 export const getBrandAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/master/brand/get`)
+    const response = await axiosInstance.post(`${config.apiURL}/master/brand/get`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2443,5 +2443,69 @@ export const getMemberByIdAsync = async (id: string | number) => {
     return response;
   } catch (err) {
     return isAxiosError(err);
+  }
+}
+
+export const deleteOfferAsync = async (OfferData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/offer/${OfferData}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllOfferAsync = async (OfferData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/offer/delete`, OfferData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const deleteDemandAsync = async (DemandData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/demand/${DemandData}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllDemandAsync = async (DemandData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/demand/delete`, DemandData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getLeadMemberAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/lead/lead-member`)
+    return response.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getSalesPersonAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/sales-person`)
+    return response.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getSuppliersAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/suppliers`)
+    return response.data
+  } catch (err) {
+    return isAxiosError(err)
   }
 }
