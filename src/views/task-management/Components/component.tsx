@@ -26,7 +26,7 @@ import DebouceInput from "@/components/shared/DebouceInput";
 import Checkbox from "@/components/ui/Checkbox";
 import { Form, FormItem as UiFormItem } from "@/components/ui/Form";
 import Badge from "@/components/ui/Badge";
-import { TbClipboardText, TbFilter, TbX, TbUserCircle, TbEye, TbDotsVertical } from "react-icons/tb";
+import { TbClipboardText, TbFilter, TbX, TbUserCircle, TbEye, TbDotsVertical, TbMail, TbBrandWhatsapp, TbBell, TbUser, TbTagStarred, TbCalendarEvent, TbActivity, TbDownload } from "react-icons/tb";
 
 // Icons
 import {
@@ -48,7 +48,8 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import { DatePicker, Drawer, Select } from "@/components/ui";
+import { DatePicker, Drawer, Dropdown, Select } from "@/components/ui";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- Define Task Item Type ---
 export type TaskItemStatus =
@@ -130,31 +131,16 @@ export const ActionColumn = ({
         </div>
       </Tooltip>
 
-      <Tooltip title="Delete Task">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
-          role="button"
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip>
-      <Tooltip title="More">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-400"
-          )}
-          role="button"
-        >
-          <TbDotsVertical />
-        </div>
-      </Tooltip>
+
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs"> Send Email</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbActivity size={18} /> <span className="text-xs">Add Activity</span></Dropdown.Item>
+      </Dropdown>
     </div>
   );
 };
@@ -302,8 +288,8 @@ export const TaskFilter = ({
           <Select
             placeholder="Select Created by"
             options={[
-              {label:"Ajay Patel", value: "Ajay Patel"},
-              {label:"Rohan Shah", value: "Rohan Shah"},
+              { label: "Ajay Patel", value: "Ajay Patel" },
+              { label: "Rohan Shah", value: "Rohan Shah" },
             ]}
             isMulti
           />
@@ -312,8 +298,8 @@ export const TaskFilter = ({
           <Select
             placeholder="Select Assigned To"
             options={[
-              {label:"Ajay Patel", value: "Ajay Patel"},
-              {label:"Rohan Shah", value: "Rohan Shah"},
+              { label: "Ajay Patel", value: "Ajay Patel" },
+              { label: "Rohan Shah", value: "Rohan Shah" },
             ]}
             isMulti
           />
@@ -322,9 +308,9 @@ export const TaskFilter = ({
           <Select
             placeholder="Select Priority"
             options={[
-              {label:"High", value: "High"},
-              {label:"Low", value: "Low"},
-              {label:"Urgent", value: "Urgent"},
+              { label: "High", value: "High" },
+              { label: "Low", value: "Low" },
+              { label: "Urgent", value: "Urgent" },
             ]}
             isMulti
           />
@@ -333,8 +319,8 @@ export const TaskFilter = ({
           <Select
             placeholder="Select Status"
             options={[
-              {label:"Pending", value: "Pending"},
-              {label:"Completed", value: "Completed"},
+              { label: "Pending", value: "Pending" },
+              { label: "Completed", value: "Completed" },
             ]}
             isMulti
           />
@@ -708,12 +694,12 @@ export const useTaskListingLogic = (initialData: TaskItem[]) => {
     },
     [setSelectedTasks]
   );
-    const handleEdit = useCallback(
-      (task: TaskItem) => {
-        navigate(`/task/task-list/edit/${task.id}`);
-      },
-      [navigate]
-    );
+  const handleEdit = useCallback(
+    (task: TaskItem) => {
+      navigate(`/task/task-list/edit/${task.id}`);
+    },
+    [navigate]
+  );
 
   const handleClone = useCallback(
     (taskToClone: TaskItem) => {

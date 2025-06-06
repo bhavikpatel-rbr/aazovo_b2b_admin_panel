@@ -29,7 +29,7 @@ import Button from '@/components/ui/Button';
 import Notification from '@/components/ui/Notification';
 import toast from '@/components/ui/toast';
 import DebouceInput from '@/components/shared/DebouceInput';
-import { Drawer, Form, FormItem, Input, DatePicker, Tooltip, Tag, Select } from '@/components/ui'; // Removed Select and Tag as status/source are removed
+import { Drawer, Form, FormItem, Input, DatePicker, Tooltip, Tag, Select, Card } from '@/components/ui'; // Removed Select and Tag as status/source are removed
 
 // Icons
 import {
@@ -44,6 +44,10 @@ import {
     TbAlignBoxCenterBottom,
     TbMailbox,
     TbSend,
+    TbCaravan,
+    TbPencilCheck,
+    TbCalendarCancel,
+    TbUserStar,
 } from 'react-icons/tb';
 
 // Types
@@ -406,7 +410,7 @@ const SubscribersListing = () => {
                 meta: { HeaderClass: "text-center" },
                 cell: (props) => (
                     <div className='flex gap-1 items-center pr-1.5'>
-                        <Tooltip title="Edit Campaign">
+                        <Tooltip title="Edit Subscriber">
                             <div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" role="button"><TbPencil /></div>
                         </Tooltip>
                         <Tooltip title="Send Test Email">
@@ -456,6 +460,46 @@ const SubscribersListing = () => {
                             Add New
                         </Button>
                     </div>
+
+                    <div className="grid grid-cols-4 mb-4 gap-2">
+                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+                            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                                <TbCaravan size={24} />
+                            </div>
+                            <div>
+                                <h6 className="text-blue-500">12</h6>
+                                <span className="font-semibold text-xs">Total</span>
+                            </div>
+                        </Card>
+                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+                            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                                <TbUserStar size={24} />
+                            </div>
+                            <div>
+                                <h6 className="text-violet-500">4</h6>
+                                <span className="font-semibold text-xs">New</span>
+                            </div>
+                        </Card>
+                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+                            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                                <TbMailForward size={24} />
+                            </div>
+                            <div>
+                                <h6 className="text-green-500">34</h6>
+                                <span className="font-semibold text-xs">Active</span>
+                            </div>
+                        </Card>
+                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+                            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                                <TbCalendarCancel size={24} />
+                            </div>
+                            <div>
+                                <h6 className="text-red-500">34</h6>
+                                <span className="font-semibold text-xs">Unsubscribed</span>
+                            </div>
+                        </Card>
+                    </div>
+
                     <SubscriberTableTools
                         onClearFilters={onClearFilters}
                         onSearchChange={handleSearchChange}
@@ -502,14 +546,14 @@ const SubscribersListing = () => {
                 }
             >
                 <FormItem label="Email">
-                    <Input type='email' placeholder='Enter Email Address'/>
+                    <Input type='email' placeholder='Enter Email Address' />
                 </FormItem>
                 <FormItem label="Name">
-                    <Input type='name' placeholder='Enter Name'/>
+                    <Input type='name' placeholder='Enter Name' />
                 </FormItem>
                 <div className='md:grid grid-cols-2 gap-3'>
                     <FormItem label="Mobile No">
-                        <Input type='phone' placeholder='Enter Mobile No.'/>
+                        <Input type='phone' placeholder='Enter Mobile No.' />
                     </FormItem>
                     <FormItem label="Subscription Date">
                         <DatePicker placeholder='Pick Subscription Date' />
@@ -521,15 +565,15 @@ const SubscribersListing = () => {
                             placeholder="Select Susbscription Type"
                             className='text-nowrap text-ellipsis'
                             options={[
-                                {label: "Newsletter", value:"Newsletter"},
-                                {label: "Promotions", value:"Promotions"},
-                                {label: "Product Updates", value:"Product Updates"},
-                                {label: "Others", value:"Others"},
+                                { label: "Newsletter", value: "Newsletter" },
+                                { label: "Promotions", value: "Promotions" },
+                                { label: "Product Updates", value: "Product Updates" },
+                                { label: "Others", value: "Others" },
                             ]}
                         />
                     </FormItem>
                     <FormItem label="Source">
-                        <Input type="text" placeholder='Enter Source'/>
+                        <Input type="text" placeholder='Enter Source' />
                     </FormItem>
                 </div>
                 <div className='md:grid grid-cols-2 gap-3'>
@@ -537,23 +581,23 @@ const SubscribersListing = () => {
                         <Select
                             placeholder="Select Status"
                             options={[
-                                {label: "Active", value:"Active"},
-                                {label: "Unsubscribed", value:"Unsubscribed"},
-                                {label: "Bounced", value:"Bounced"},
+                                { label: "Active", value: "Active" },
+                                { label: "Unsubscribed", value: "Unsubscribed" },
+                                { label: "Bounced", value: "Bounced" },
                             ]}
                         />
                     </FormItem>
                     <FormItem label="Rating">
-                        <Input type="number" placeholder='Enter Unsubscribe reason'/>
+                        <Input type="number" placeholder='Enter Unsubscribe reason' />
                     </FormItem>
                 </div>
                 <FormItem label="Unsubscribe Reason">
-                    <Input type="text" placeholder='Describe unsubscribe reason' textArea/>
+                    <Input type="text" placeholder='Describe unsubscribe reason' textArea />
                 </FormItem>
                 <FormItem label="Notes">
-                    <Input type="number" placeholder='Write a note' textArea/>
+                    <Input type="number" placeholder='Write a note' textArea />
                 </FormItem>
-                
+
             </Drawer>
 
             <Drawer

@@ -20,6 +20,7 @@ import DatePicker from '@/components/ui/DatePicker'; // Assuming you have a Date
 // import NoMedia from '@/components/shared/NoMedia'; // Assuming you have this
 import { TbPaperclip } from 'react-icons/tb'
 import Tooltip from '@/components/ui/Tooltip'
+import TabNav from '@/components/ui/Tabs/TabNav';
 // Define the types for this page
 // You might share some types with TaskList.tsx if applicable (e.g., TaskStatus)
 type User = { id: string; name: string; img: string; };
@@ -62,15 +63,15 @@ const DUMMY_BOARD_MEMBERS: User[] = [
   { id: 'user4', name: 'David Brown', img: '/img/avatars/thumb-4.jpg' },
 ];
 const DUMMY_LABEL_LIST: TaskStatusLabel[] = ["New", "On Hold", "In Progress", "Pending", "Completed", "Cancelled"]; // Should match your definitions
-const DUMMY_PRIORITY_OPTIONS = [ {label: "Low", value: "Low"}, {label: "Medium", value: "Medium"}, {label: "High", value: "High"}, {label: "Urgent", value: "Urgent"} ];
-const DUMMY_CATEGORY_OPTIONS = [ {label: "General", value: "General"}, {label: "Development", value: "Development"}, {label: "Marketing", value: "Marketing"}, {label: "Sales", value: "Sales"} ];
-const DUMMY_LINK_SELECT_OPTIONS: Record<LinkToOption, {label: string, value: string}[]> = {
-    "Company": [{label: "Company A", value: "compA"}, {label: "Company B", value: "compB"}],
-    "Member": [{label: "Member X", value: "memX"}, {label: "Member Y", value: "memY"}],
-    // ... populate for other LinkToOption types
-    "Partner": [], "Inquiries": [], "Brand": [], "Categories": [], "Products": [],
-    "Wall Listing": [], "Opportunity": [], "Offer & Demand": [], "Leads": [],
-    "Request & Feedback": [], "campaign": [], "Teams": [], "CMS": [], "Others": [],
+const DUMMY_PRIORITY_OPTIONS = [{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }, { label: "Urgent", value: "Urgent" }];
+const DUMMY_CATEGORY_OPTIONS = [{ label: "General", value: "General" }, { label: "Development", value: "Development" }, { label: "Marketing", value: "Marketing" }, { label: "Sales", value: "Sales" }];
+const DUMMY_LINK_SELECT_OPTIONS: Record<LinkToOption, { label: string, value: string }[]> = {
+  "Company": [{ label: "Company A", value: "compA" }, { label: "Company B", value: "compB" }],
+  "Member": [{ label: "Member X", value: "memX" }, { label: "Member Y", value: "memY" }],
+  // ... populate for other LinkToOption types
+  "Partner": [], "Inquiries": [], "Brand": [], "Categories": [], "Products": [],
+  "Wall Listing": [], "Opportunity": [], "Offer & Demand": [], "Leads": [],
+  "Request & Feedback": [], "campaign": [], "Teams": [], "CMS": [], "Others": [],
 };
 
 // Mock task label colors
@@ -84,9 +85,9 @@ const taskLabelColors: Record<string, string> = {
 
 
 const AddMoreMember = () => (
-    <div className="flex items-center justify-center w-8 h-8 text-2xl text-gray-600 bg-gray-100 rounded-full dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
-        <HiOutlinePlus />
-    </div>
+  <div className="flex items-center justify-center w-8 h-8 text-2xl text-gray-600 bg-gray-100 rounded-full dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+    <HiOutlinePlus />
+  </div>
 )
 
 
@@ -96,19 +97,19 @@ const CreateTaskPage = () => {
     resolver: zodResolver(createTaskSchema),
     mode: "onChange",
     defaultValues: {
-        linkedToTypes: [],
-        assignedToIds: [],
-        statusLabels: [],
-        priority: "Medium",
-        category: DUMMY_CATEGORY_OPTIONS[0]?.value,
-        dueDate: new Date(),
-        note: "",
-        activity_type: "",
+      linkedToTypes: [],
+      assignedToIds: [],
+      statusLabels: [],
+      priority: "Medium",
+      category: DUMMY_CATEGORY_OPTIONS[0]?.value,
+      dueDate: new Date(),
+      note: "",
+      activity_type: "",
     }
   });
 
   const [selectedLinkedToTypes, setSelectedLinkedToTypes] = useState<LinkToOption[]>([]);
-  const [linkSelectOptions, setLinkSelectOptions] = useState<{label: string, value: string}[]>([]);
+  const [linkSelectOptions, setLinkSelectOptions] = useState<{ label: string, value: string }[]>([]);
   const [assignedMembers, setAssignedMembers] = useState<User[]>([]);
   const [currentStatusLabels, setCurrentStatusLabels] = useState<TaskStatusLabel[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -121,14 +122,14 @@ const CreateTaskPage = () => {
     // Update local state for UI and dynamic select options
     setSelectedLinkedToTypes(watchedLinkedToTypes || []);
     if (watchedLinkedToTypes && watchedLinkedToTypes.length > 0) {
-        // For simplicity, let's just use the options for the *first* selected type
-        // A more complex UI might allow selecting entities from multiple types
-        const firstSelectedType = watchedLinkedToTypes[0];
-        setLinkSelectOptions(DUMMY_LINK_SELECT_OPTIONS[firstSelectedType] || []);
-        setValue("selectedLinkEntityId", null); // Reset selected entity when type changes
+      // For simplicity, let's just use the options for the *first* selected type
+      // A more complex UI might allow selecting entities from multiple types
+      const firstSelectedType = watchedLinkedToTypes[0];
+      setLinkSelectOptions(DUMMY_LINK_SELECT_OPTIONS[firstSelectedType] || []);
+      setValue("selectedLinkEntityId", null); // Reset selected entity when type changes
     } else {
-        setLinkSelectOptions([]);
-        setValue("selectedLinkEntityId", null);
+      setLinkSelectOptions([]);
+      setValue("selectedLinkEntityId", null);
     }
   }, [watchedLinkedToTypes, setValue]);
 
@@ -145,11 +146,11 @@ const CreateTaskPage = () => {
       setValue("assignedToIds", newAssignedMembers.map(m => m.id), { shouldValidate: true });
     }
   };
-   const handleRemoveMember = (memberId: string) => {
-        const newAssignedMembers = assignedMembers.filter(m => m.id !== memberId);
-        setAssignedMembers(newAssignedMembers);
-        setValue("assignedToIds", newAssignedMembers.map(m => m.id), { shouldValidate: true });
-    };
+  const handleRemoveMember = (memberId: string) => {
+    const newAssignedMembers = assignedMembers.filter(m => m.id !== memberId);
+    setAssignedMembers(newAssignedMembers);
+    setValue("assignedToIds", newAssignedMembers.map(m => m.id), { shouldValidate: true });
+  };
 
 
   const handleAddLabel = (label: TaskStatusLabel) => {
@@ -162,7 +163,7 @@ const CreateTaskPage = () => {
   const handleRemoveLabel = (labelToRemove: TaskStatusLabel) => {
     const newLabels = currentStatusLabels.filter(label => label !== labelToRemove);
     setCurrentStatusLabels(newLabels);
-    setValue("statusLabels", newLabels, {shouldValidate: true});
+    setValue("statusLabels", newLabels, { shouldValidate: true });
   }
 
 
@@ -193,7 +194,7 @@ const CreateTaskPage = () => {
   const handleRemoveAttachment = (fileId: string) => {
     const attachmentToRemove = attachments.find(att => att.id === fileId);
     if (attachmentToRemove?.src.startsWith('blob:')) {
-        URL.revokeObjectURL(attachmentToRemove.src); // Clean up blob URL
+      URL.revokeObjectURL(attachmentToRemove.src); // Clean up blob URL
     }
     setAttachments(prev => prev.filter(att => att.id !== fileId));
   };
@@ -213,37 +214,74 @@ const CreateTaskPage = () => {
 
   return (
     <Container>
-        <div className="flex gap-1 items-end mb-3 ">
-          <NavLink to="/task/task-list">
-            <h6 className="font-semibold hover:text-primary">Task</h6>
-          </NavLink>
-          <BiChevronRight size={22} color="black" />
-          <h6 className="font-semibold text-primary">Add New Task</h6>
-        </div>
+      <div className="flex gap-1 items-end mb-3 ">
+        <NavLink to="/task/task-list">
+          <h6 className="font-semibold hover:text-primary">Task</h6>
+        </NavLink>
+        <BiChevronRight size={22} color="black" />
+        <h6 className="font-semibold text-primary">Add New Task</h6>
+      </div>
       <AdaptiveCard>
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* <div className="flex justify-between items-center mb-6">
             <h4 className="text-lg font-semibold">Create New Task</h4>
           </div> */}
 
-            <div className="flex flex-col gap-3 p-1">
-                {/* Link to Section */}
-                <div className="flex items-center">
-                    <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                      Task Title / Name: <span className="text-red-500">*</span>
-                    </label>
-                    <div className="w-full">
-                      <Controller
-                      name="activity_type"
-                      control={control}
-                      render={({ field }) => (
-                        <Input {...field} placeholder="Enter taks name or title..." />
+          {/* <div className="flex flex-col gap-3 p-1"> */}
+          <div className="lg:grid grid-cols-2 gap-3 p-1">
+            {/* Link to Section */}
+            <div className="flex items-center">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
+                Task Title / Name: <span className="text-red-500">*</span>
+              </label>
+              <div className="w-full">
+                <Controller
+                  name="activity_type"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} placeholder="Enter taks name or title..." />
+                  )}
+                />
+                {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
+              </div>
+            </div>
+            {/* Assigned to Section */}
+            <div className="flex items-start">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 mt-2">
+                Assigned to: <span className="text-red-500">*</span>
+              </label>
+              <div className="w-full">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <UsersAvatarGroup
+                    className="gap-1"
+                    avatarProps={{ className: 'cursor-pointer' }}
+                    avatarGroupProps={{ maxCount: 4 }}
+                    nameKey="name" // Ensure UsersAvatarGroup uses 'name'
+                    imgKey="img"   // Ensure UsersAvatarGroup uses 'img'
+                    users={assignedMembers}
+                    onAvatarClick={(member: User) => handleRemoveMember(member.id)} // Optional: remove on click
+                  />
+                  {DUMMY_BOARD_MEMBERS.length !== assignedMembers.length && (
+                    <Dropdown renderTitle={<AddMoreMember />}>
+                      {DUMMY_BOARD_MEMBERS.map(member =>
+                        !assignedMembers.some(m => m.id === member.id) && (
+                          <Dropdown.Item key={member.id} eventKey={member.id} onSelect={() => handleAddMember(member.id)}>
+                            <div className="flex items-center">
+                              <Avatar shape="circle" size={22} src={member.img} />
+                              <span className="ml-2 rtl:mr-2">{member.name}</span>
+                            </div>
+                          </Dropdown.Item>
+                        )
                       )}
-                      />
-                      {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
-                    </div>
+                    </Dropdown>
+                  )}
                 </div>
-                <div>
+                {errors.assignedToIds && <p className="text-red-500 text-xs mt-1">{errors.assignedToIds.message}</p>}
+              </div>
+            </div>
+
+            <div className='col-span-2'>
+              <div>
                 <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 block">
                   Link to: <span className="text-red-500">*</span>
                 </label>
@@ -251,235 +289,202 @@ const CreateTaskPage = () => {
                   name="linkedToTypes"
                   control={control}
                   render={({ field }) => (
-                  <Select
-                    {...field}
-                    isMulti
-                    options={LINK_TO_OPTIONS.map(option => ({ label: option, value: option }))}
-                    value={LINK_TO_OPTIONS.filter(option => field.value?.includes(option)).map(option => ({ label: option, value: option }))}
-                    onChange={options => field.onChange(options ? options.map(opt => opt.value) : [])}
-                    placeholder="Select link types..."
-                  />
+                    <Select
+                      {...field}
+                      isMulti
+                      options={LINK_TO_OPTIONS.map(option => ({ label: option, value: option }))}
+                      value={LINK_TO_OPTIONS.filter(option => field.value?.includes(option)).map(option => ({ label: option, value: option }))}
+                      onChange={options => field.onChange(options ? options.map(opt => opt.value) : [])}
+                      placeholder="Select link types..."
+                    />
                   )}
                 />
                 {errors.linkedToTypes && <p className="text-red-500 text-xs mt-1">{errors.linkedToTypes.message}</p>}
-                </div>
-
+              </div>
               {/* Select Link Section (Dynamic) */}
               {selectedLinkedToTypes.length > 0 && (
-                <div className="flex items-center">
+                <div className="flex items-center my-3">
                   <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
                     Select {selectedLinkedToTypes.join(' / ')}:
                   </label>
                   <div className="w-full">
                     <Controller
-                        name="selectedLinkEntityId"
-                        control={control}
-                        render={({ field }) => (
-                            <Select
-                                {...field}
-                                placeholder={`Select a ${selectedLinkedToTypes[0]}...`} // Example placeholder
-                                options={linkSelectOptions}
-                                value={linkSelectOptions.find(opt => opt.value === field.value)}
-                                onChange={option => field.onChange(option?.value)}
-                                isClearable
-                            />
-                        )}
+                      name="selectedLinkEntityId"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          placeholder={`Select a ${selectedLinkedToTypes[0]}...`} // Example placeholder
+                          options={linkSelectOptions}
+                          value={linkSelectOptions.find(opt => opt.value === field.value)}
+                          onChange={option => field.onChange(option?.value)}
+                          isClearable
+                        />
+                      )}
                     />
                     {/* Add error display if needed for selectedLinkEntityId */}
                   </div>
                 </div>
               )}
-
-              {/* Assigned to Section */}
-               <div className="flex items-start">
-                <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 mt-2">
-                    Assigned to: <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full">
-                    <div className="flex items-center gap-1 flex-wrap">
-                        <UsersAvatarGroup
-                            className="gap-1"
-                            avatarProps={{ className: 'cursor-pointer' }}
-                            avatarGroupProps={{ maxCount: 4 }}
-                            nameKey="name" // Ensure UsersAvatarGroup uses 'name'
-                            imgKey="img"   // Ensure UsersAvatarGroup uses 'img'
-                            users={assignedMembers}
-                            onAvatarClick={(member: User) => handleRemoveMember(member.id)} // Optional: remove on click
-                        />
-                        {DUMMY_BOARD_MEMBERS.length !== assignedMembers.length && (
-                            <Dropdown renderTitle={<AddMoreMember />}>
-                                {DUMMY_BOARD_MEMBERS.map(member =>
-                                    !assignedMembers.some(m => m.id === member.id) && (
-                                        <Dropdown.Item key={member.id} eventKey={member.id} onSelect={() => handleAddMember(member.id)}>
-                                            <div className="flex items-center">
-                                                <Avatar shape="circle" size={22} src={member.img} />
-                                                <span className="ml-2 rtl:mr-2">{member.name}</span>
-                                            </div>
-                                        </Dropdown.Item>
-                                    )
-                                )}
-                            </Dropdown>
-                        )}
-                    </div>
-                    {errors.assignedToIds && <p className="text-red-500 text-xs mt-1">{errors.assignedToIds.message}</p>}
-                </div>
             </div>
 
 
-              {/* Status Labels Section */}
-              <div className="flex items-start">
-                <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 mt-1">
-                    Status: <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full">
-                    <div className="flex items-center gap-1 flex-wrap">
-                        {currentStatusLabels.map(label => (
-                            <Tag key={label} className={`${taskLabelColors[label] || 'bg-gray-200'} cursor-pointer`} onClick={() => handleRemoveLabel(label)}>
-                                {label}
-                            </Tag>
-                        ))}
-                        <Dropdown
-                            renderTitle={ <Tag className="border-dashed cursor-pointer border-2 bg-transparent dark:bg-transparent border-gray-300 dark:border-gray-500 hover:border-primary-500 hover:text-primary-500" prefix={<TbPlus />}> Add Label </Tag> }
-                            placement="bottom-end" >
-                            {DUMMY_LABEL_LIST.map(label =>
-                                !currentStatusLabels.includes(label) && (
-                                    <Dropdown.Item key={label} eventKey={label} onSelect={() => handleAddLabel(label)}>
-                                        <div className="flex items-center">
-                                            <span className={`inline-block w-3 h-3 rounded-full mr-2 ${taskLabelColors[label] || 'bg-gray-200'}`}></span>
-                                            {label}
-                                        </div>
-                                    </Dropdown.Item>
-                                )
-                            )}
-                        </Dropdown>
-                    </div>
-                    {errors.statusLabels && <p className="text-red-500 text-xs mt-1">{errors.statusLabels.message}</p>}
+
+
+            {/* Status Labels Section */}
+            <div className="flex items-start">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 mt-1">
+                Status: <span className="text-red-500">*</span>
+              </label>
+              <div className="w-full">
+                <div className="flex items-center gap-1 flex-wrap">
+                  {currentStatusLabels.map(label => (
+                    <Tag key={label} className={`${taskLabelColors[label] || 'bg-gray-200'} cursor-pointer`} onClick={() => handleRemoveLabel(label)}>
+                      {label}
+                    </Tag>
+                  ))}
+                  <Dropdown
+                    renderTitle={<Tag className="border-dashed cursor-pointer border-2 bg-transparent dark:bg-transparent border-gray-300 dark:border-gray-500 hover:border-primary-500 hover:text-primary-500" prefix={<TbPlus />}> Add Status </Tag>}
+                    placement="bottom-end" >
+                    {DUMMY_LABEL_LIST.map(label =>
+                      !currentStatusLabels.includes(label) && (
+                        <Dropdown.Item key={label} eventKey={label} onSelect={() => handleAddLabel(label)}>
+                          <div className="flex items-center">
+                            <span className={`inline-block w-3 h-3 rounded-full mr-2 ${taskLabelColors[label] || 'bg-gray-200'}`}></span>
+                            {label}
+                          </div>
+                        </Dropdown.Item>
+                      )
+                    )}
+                  </Dropdown>
                 </div>
+                {errors.statusLabels && <p className="text-red-500 text-xs mt-1">{errors.statusLabels.message}</p>}
+              </div>
             </div>
 
 
-              {/* Priority Section */}
-              <div className="flex items-center">
-                <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                  Priority: <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full">
-                  <Controller
-                    name="priority"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        options={DUMMY_PRIORITY_OPTIONS}
-                        value={DUMMY_PRIORITY_OPTIONS.find(opt => opt.value === field.value)}
-                        onChange={option => field.onChange(option?.value)}
-                      />
-                    )}
-                  />
-                  {errors.priority && <p className="text-red-500 text-xs mt-1">{errors.priority.message}</p>}
-                </div>
-              </div>
-
-              {/* Category Section */}
-              <div className="flex items-center">
-                <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                  Department: <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full">
-                  <Controller
-                    name="category"
-                    control={control}
-                    render={({ field }) => (
-                        <Select
-                            {...field}
-                            options={DUMMY_CATEGORY_OPTIONS}
-                            value={DUMMY_CATEGORY_OPTIONS.find(opt => opt.value === field.value)}
-                            onChange={option => field.onChange(option?.value)}
-                        />
-                    )}
-                  />
-                  {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
-                </div>
-              </div>
-
-              {/* Due Date Section */}
-              <div className="flex items-center">
-                <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                  Due date: <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full">
-                    <Controller
-                        name="dueDate"
-                        control={control}
-                        render={({ field }) => (
-                            <DatePicker
-                                value={field.value}
-                                onChange={date => field.onChange(date)}
-                                inputFormat="MMMM DD, YYYY" // Example format
-                            />
-                        )}
+            {/* Priority Section */}
+            <div className="flex items-center">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
+                Priority: <span className="text-red-500">*</span>
+              </label>
+              <div className="w-full">
+                <Controller
+                  name="priority"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={DUMMY_PRIORITY_OPTIONS}
+                      value={DUMMY_PRIORITY_OPTIONS.find(opt => opt.value === field.value)}
+                      onChange={option => field.onChange(option?.value)}
                     />
-                    {errors.dueDate && <p className="text-red-500 text-xs mt-1">{errors.dueDate.message}</p>}
-                </div>
+                  )}
+                />
+                {errors.priority && <p className="text-red-500 text-xs mt-1">{errors.priority.message}</p>}
               </div>
+            </div>
 
-                {/* Activity Type Section */}
-              {/* Note (Task Title/Main Description) Section */}
-              <div className="flex flex-col"> {/* Changed to flex-col for better label placement */}
-                <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                  Task Note / Remark: <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full">
-                    <Controller
-                        name="note"
-                        control={control}
-                        render={({ field }) => (
-                            <Input {...field} textArea rows={3} placeholder="Enter the main task details or remark..."/>
-                        )}
+            {/* Category Section */}
+            <div className="flex items-center">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
+                Department: <span className="text-red-500">*</span>
+              </label>
+              <div className="w-full">
+                <Controller
+                  name="category"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={DUMMY_CATEGORY_OPTIONS}
+                      value={DUMMY_CATEGORY_OPTIONS.find(opt => opt.value === field.value)}
+                      onChange={option => field.onChange(option?.value)}
                     />
-                    {errors.note && <p className="text-red-500 text-xs mt-1">{errors.note.message}</p>}
-                </div>
+                  )}
+                />
+                {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
               </div>
+            </div>
 
-              {/* Additional Description Section (Optional) */}
-              <div className="flex flex-col">
-                <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                    Additional Description (Optional):
-                </label>
-                <div className="w-full">
-                    <Controller
-                        name="description"
-                        control={control}
-                        render={({ field }) => (
-                            <Input {...field} textArea rows={5} placeholder="Enter any additional details..."/>
-                        )}
+            {/* Due Date Section */}
+            <div className="flex items-center">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
+                Due date: <span className="text-red-500">*</span>
+              </label>
+              <div className="w-full">
+                <Controller
+                  name="dueDate"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      value={field.value}
+                      onChange={date => field.onChange(date)}
+                      inputFormat="MMMM DD, YYYY" // Example format
                     />
-                </div>
+                  )}
+                />
+                {errors.dueDate && <p className="text-red-500 text-xs mt-1">{errors.dueDate.message}</p>}
               </div>
+            </div>
+
+            {/* Activity Type Section */}
+            {/* Note (Task Title/Main Description) Section */}
+            <div className="flex flex-col"> {/* Changed to flex-col for better label placement */}
+              <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                Task Note / Remark: <span className="text-red-500">*</span>
+              </label>
+              <div className="w-full">
+                <Controller
+                  name="note"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} textArea rows={5} placeholder="Enter the main task details or remark..." />
+                  )}
+                />
+                {errors.note && <p className="text-red-500 text-xs mt-1">{errors.note.message}</p>}
+              </div>
+            </div>
+
+            {/* Additional Description Section (Optional) */}
+            <div className="flex flex-col">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                Additional Description (Optional):
+              </label>
+              <div className="w-full">
+                <Controller
+                  name="description"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} textArea rows={5} placeholder="Enter any additional details..." />
+                  )}
+                />
+              </div>
+            </div>
 
 
             {/* Tabs for Activity and Attachments */}
-            <Tabs className="mt-3" defaultValue="activity">
+            <Tabs className="mt-3 col-span-2" defaultValue="activity">
               <Tabs.TabList>
-                <Tabs value="activity" className='text-base'><b>Activity Notes</b></Tabs>
-                <Tabs value="attachments"></Tabs>
+                <TabNav value="activity" className='text-base'><b>Activity Notes</b></TabNav>
+                <TabNav value="attachments">Attachments</TabNav>
               </Tabs.TabList>
-              <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-b-md">
+              <div className="p-4 rounded-b-md">
                 <Tabs.TabContent value="activity">
                   <div className="flex items-center mb-5">
-                      <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                        Activity Type: <span className="text-red-500">*</span>
-                      </label>
-                      <div className="w-full">
-                        <Controller
+                    <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
+                      Activity Type: <span className="text-red-500">*</span>
+                    </label>
+                    <div className="w-full">
+                      <Controller
                         name="activity_type"
                         control={control}
                         render={({ field }) => (
                           <Input {...field} placeholder="Enter activity type..." />
                         )}
-                        />
-                        {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
-                      </div>
+                      />
+                      {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
+                    </div>
                   </div>
                   <div className="w-full">
                     {comments.length > 0 && (
@@ -522,7 +527,7 @@ const CreateTaskPage = () => {
                             <img className="max-w-full h-24 object-contain rounded-md mx-auto mb-2" alt={file.name} src={file.src} />
                           ) : (
                             <div className="h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-600 rounded-md mb-2 text-4xl text-gray-400 dark:text-gray-500">
-                                
+
                             </div>
                           )}
                           <div className="text-xs">
@@ -553,7 +558,7 @@ const CreateTaskPage = () => {
             </Tabs>
 
 
-            </div>
+          </div>
 
 
           <div className="text-right mt-8 pt-4 border-t border-gray-200 dark:border-gray-600">
