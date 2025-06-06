@@ -353,6 +353,134 @@ const toBeProcessCards = [
     },
 ]
 
+const onHoldCards = [
+    {
+        id: 'zb7zxtjctd',
+        name: 'Unable to upload file',
+        description:
+            'Scenester hashtag sustainable art party 3 wolf moon live-edge portland offal master cleanse disrupt viral palo santo tacos. Offal sriracha you probably havent heard of them vaporware glossier.',
+        cover: '/img/others/img-13.jpg',
+        members: [
+            {
+                id: '1',
+                name: 'Angelina Gotelli',
+                email: 'eileen_h@hotmail.com',
+                img: '/img/avatars/thumb-1.jpg',
+            },
+            {
+                id: '2',
+                name: 'Jeremiah Minsk',
+                email: '',
+                img: '/img/avatars/thumb-2.jpg',
+            },
+            {
+                id: '3',
+                name: 'Max Alexander',
+                email: 'ronnie_vergas@infotech.io',
+                img: '/img/avatars/thumb-3.jpg',
+            },
+        ],
+        labels: ['Task', 'Live issue'],
+        attachments: [
+            {
+                id: 'jubuK7XGp3',
+                name: 'mail.jpg',
+                src: '/img/others/img-13.jpg',
+                size: '36.1kb',
+            },
+            {
+                id: 'xsb3HCejCM',
+                name: 'mail.jpg',
+                src: '/img/others/img-14.jpg',
+                size: '55.9kb',
+            },
+        ],
+        comments: [
+            {
+                id: 'R22TqMkACm',
+                name: 'Camila Simmmons',
+                src: '/img/avatars/thumb-9.jpg',
+                message:
+                    'I am baby kitsch plaid mustache, williamsburg butcher gluten-free 3 wolf moon authentic quinoa selvage knausgaard unicorn. Palo santo viral everyday carry, heirloom tumblr raw denim yr iceland wayfarers single-origin coffee tote bag shoreditch cloud bread poke.',
+                date: new Date(y, 4, 20),
+            },
+        ],
+        dueDate: new Date(y, 7, 5),
+        checked: false,
+    },
+    {
+        id: '7qgsduurxt',
+        name: 'Table data incorrect',
+        description:
+            'Extra  breve french press organic milk lungo bar. At, carajillo, saucer latte americano and shop rich french press. And barista mazagran, black, cup extraction ristretto plunger pot cinnamon café au lait.',
+        cover: '',
+        members: [
+            {
+                id: '8',
+                name: 'Jessica Wells',
+                email: 'iamfred@imaze.infotech.io',
+                img: '/img/avatars/thumb-8.jpg',
+            },
+        ],
+        labels: ['Bug'],
+        attachments: [],
+        comments: [
+            {
+                id: 'Wx8FDSsVTg',
+                name: 'Arlene Pierce',
+                src: '/img/avatars/thumb-6.jpg',
+                message:
+                    'Helvetica 8-bit photo booth tumblr food truck. Enamel pin wolf tousled sartorial, brunch shoreditch skateboard beard helvetica. Plaid typewriter gastropub bespoke.',
+                date: new Date(y, 4, 20),
+            },
+            {
+                id: '3AhkqqSFFr',
+                name: 'Max Alexander',
+                src: '/img/avatars/thumb-3.jpg',
+                message:
+                    'Af trust fund meggings, meditation chicharrones brunch wolf narwhal shoreditch whatever bicycle rights ramps. ',
+                date: new Date(y, 4, 20),
+            },
+        ],
+        dueDate: new Date(y, 6, 11),
+    },
+    {
+        id: 'wtwgpz6csc',
+        name: 'Fix broken UI',
+        description:
+            'Air plant subway tile four loko ramps. Microdosing offal tote bag, single-origin coffee biodiesel before they sold out swag pok pok gastropub tacos letterpress.',
+        cover: '',
+        members: [
+            {
+                id: '13',
+                name: 'Cassandra Murray',
+                email: 'leeWheeler@infotech.io',
+                img: '/img/avatars/thumb-13.jpg',
+            },
+            {
+                id: '5',
+                name: 'Eugene Stewart',
+                email: 'joyce991@infotech.io',
+                img: '/img/avatars/thumb-5.jpg',
+            },
+        ],
+        labels: ['Low priority'],
+        attachments: [],
+        comments: [
+            {
+                id: 'bAvBdtKHNC',
+                name: 'Steve Sutton',
+                src: '/img/avatars/thumb-11.jpg',
+                message:
+                    'Helvetica 8-bit photo booth tumblr food truck. Enamel pin wolf tousled sartorial, brunch shoreditch skateboard beard helvetica. Plaid typewriter gastropub bespoke.',
+                date: new Date(y, 4, 20),
+            },
+        ],
+        dueDate: new Date(y, 7, 5),
+        checked: false,
+    },
+]
+
 const processingCards = [
     {
         id: 'ywejrdr3rn',
@@ -767,10 +895,12 @@ export const issueData = {
 }
 
 export const scrumboardData = {
-    'To Do': toBeProcessCards,
+    'New': toBeProcessCards,
+    'On Hold': onHoldCards,
+    'Pending': submittedCards,
     'In Progress': processingCards,
-    'To Review': submittedCards,
     Completed: completedCards,
+    'Cancelled': processingCards,
 }
 
 export const taskBugFix = [
