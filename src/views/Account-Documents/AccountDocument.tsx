@@ -25,7 +25,7 @@ import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import { Drawer, Form, Input, Select as UiSelect, DatePicker, FormItem, Select } from "@/components/ui";
+import { Drawer, Form, Input, Select as UiSelect, DatePicker, FormItem, Select, Card } from "@/components/ui";
 import Dropdown from "@/components/ui/Dropdown";
 
 // Icons
@@ -33,7 +33,21 @@ import {
   TbPencil, TbTrash, TbChecks, TbSearch, TbCloudUpload, TbFilter, TbPlus,
   TbDotsVertical, TbEye, TbUserPlus, TbArrowsExchange, TbRocket, TbInfoCircle,
   TbBulb,
-  TbReload
+  TbReload,
+  TbUser,
+  TbMailShare,
+  TbBrandWhatsapp,
+  TbTagStarred,
+  TbCalendarClock,
+  TbBell,
+  TbChecklist,
+  TbCloudDownload,
+  TbBrandGoogleDrive,
+  TbFileAlert,
+  TbFileCertificate,
+  TbFileDislike,
+  TbFileCheck,
+  TbFileExcel
 } from "react-icons/tb";
 
 // Types
@@ -45,6 +59,7 @@ import { AccountDocumentStatusOptions as accountDocumentStatusOptionsConst, enqu
 // Redux
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from "@/reduxtool/store";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 
 const dummyAccountDocumentData: AccountDocumentListItem[] = [
@@ -121,11 +136,17 @@ const enquiryTypeColor: Record<EnquiryType | 'default', string> = { /* ... (same
 // --- Helper Components (AccountDocumentActionColumn, AccountDocumentSearch, etc. - Keep your existing complex ones) ---
 const AccountDocumentActionColumn = ({ onDelete }: any) => (
   <div className="flex items-center justify-center gap-1"> {/* Reduced gap for tighter look */}
+    <Tooltip title="Fillup Form"><div className="text-xl"><TbPencil /></div> </Tooltip>
     <Tooltip title="View"><div className="text-xl"  ><TbEye /></div></Tooltip>
-    <Tooltip title="Edit"><div className="text-xl"><TbPencil /></div> </Tooltip>
-    <Tooltip title="Delete"><div className="text-xl" onClick={onDelete} > <TbTrash /></div></Tooltip>
-    <Dropdown placement="bottom-end" className="" renderTitle={<Tooltip title="More Actions"><div className="text-xl"><TbDotsVertical /></div></Tooltip>}>
-      <Dropdown.Item className="flex items-center gap-2 text-xs"><TbUserPlus />Assign</Dropdown.Item>
+    <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+      <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active </span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbChecklist size={18} /> <span className="text-xs">Verify Document </span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbCloudDownload size={18} /> <span className="text-xs">Download Document </span></Dropdown.Item>
     </Dropdown>
   </div>
 );
@@ -136,7 +157,7 @@ const AccountDocumentTableTools = ({ onSearchChange, onFilter }: any) => ( /* ..
     <div className="flex-grow"><AccountDocumentSearch onInputChange={onSearchChange} placeholder="Quick Search..." /></div>
     <div className="flex gap-1">
       <Button icon={<TbReload />}></Button>
-      <Button icon={<TbFilter />} onClick={()=>onFilter()}>Filter</Button>
+      <Button icon={<TbFilter />} onClick={() => onFilter()}>Filter</Button>
       <Button icon={<TbCloudUpload />} >Export</Button>
     </div>
   </div>
@@ -164,8 +185,8 @@ const AccountDocument = () => {
   // States for table and delete operations
   const filterForm = useForm()
   const addNewDocumentForm = useForm()
-  const [ isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
-  const [ isAddNewDocumentDrawerOpen, setIsAddNewDocumentDrawerOpen] = useState<boolean>(false)
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
+  const [isAddNewDocumentDrawerOpen, setIsAddNewDocumentDrawerOpen] = useState<boolean>(false)
   const [isProcessingDelete, setIsProcessingDelete] = useState(false);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<AccountDocumentListItem | null>(null);
@@ -177,19 +198,19 @@ const AccountDocument = () => {
   const { pageData, total, allFilteredAndSortedData } = useMemo((): { pageData: AccountDocumentListItem[]; total: number; allFilteredAndSortedData: AccountDocumentListItem[] } => {
     // ... (Keep your existing data processing logic) ...
     let processedData: AccountDocumentListItem[] = cloneDeep(mappedAccountDocument);
-     if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(query))); }
+    if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(query))); }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { processedData.sort((a, b) => { let aVal = a[key as keyof AccountDocumentListItem] as any; let bVal = b[key as keyof AccountDocumentListItem] as any; if (key === 'createdAt' || key === 'updatedAt') return order === 'asc' ? dayjs(aVal).valueOf() - dayjs(bVal).valueOf() : dayjs(bVal).valueOf() - dayjs(aVal).valueOf(); if (typeof aVal === 'number') return order === 'asc' ? aVal - bVal : bVal - aVal; return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? '')); }); }
     const currentTotal = processedData.length; const { pageIndex = 1, pageSize = 10 } = tableData; const startIndex = (pageIndex - 1) * pageSize;
     return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
-  }, [mappedAccountDocument, tableData ]);
+  }, [mappedAccountDocument, tableData]);
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
   // --- End Navigation Handlers ---
 
   // Delete Handlers (Single and Selected)
   const handleDeleteClick = useCallback((item: AccountDocumentListItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-  
+
   // Other Handlers (View Dialog, Export, Pagination, Sort, Search, Filter - remain the same)
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handlePageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
@@ -265,8 +286,68 @@ const AccountDocument = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Account Document</h5>
-            <Button variant="solid" icon={<TbPlus />} className="px-5" onClick={()=>openAddNewDocumentDrawer()}>Set New Document</Button> {/* Updated */}
+            <Button variant="solid" icon={<TbPlus />} className="px-5" onClick={() => openAddNewDocumentDrawer()}>Set New Document</Button> {/* Updated */}
           </div>
+
+          <div className="grid grid-cols-6 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbBrandGoogleDrive size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">879</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbFileAlert size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">3</h6>
+                <span className="font-semibold text-xs">Pending</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbFileCertificate size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">23</h6>
+                <span className="font-semibold text-xs">Approved</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbFileDislike size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">34</h6>
+                <span className="font-semibold text-xs">Rejected</span>
+              </div>
+            </Card>
+            
+
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbFileCheck size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">9</h6>
+                <span className="font-semibold text-xs">Uploaded</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbFileExcel size={24} />
+              </div>
+              <div>
+                <h6 className="text-pink-500">42</h6>
+                <span className="font-semibold text-xs">Not Uploaded</span>
+              </div>
+            </Card>
+          </div>
+
           <AccountDocumentTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} />
           <div className="mt-4 flex-grow overflow-y-auto">
             <AccountDocumentTable selectable columns={columns} data={dummyAccountDocumentData} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
@@ -282,7 +363,7 @@ const AccountDocument = () => {
         isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2"  type="button">Clear</Button>
+            <Button size="sm" className="mr-2" type="button">Clear</Button>
             <Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button>
           </div>
         }
@@ -292,16 +373,16 @@ const AccountDocument = () => {
             <Controller
               control={filterForm.control}
               name="status"
-              render={({field})=>(
-                <Select 
+              render={({ field }) => (
+                <Select
                   {...field}
                   placeholder="Select Status"
                   isMulti
                   options={[
-                    {label:"Active", value:"Active"},
-                    {label:"Pending", value:"Pending"},
-                    {label:"Completed", value:"Completed"},
-                    {label:"Force Completed", value:"Force Completed"},
+                    { label: "Active", value: "Active" },
+                    { label: "Pending", value: "Pending" },
+                    { label: "Completed", value: "Completed" },
+                    { label: "Force Completed", value: "Force Completed" },
                   ]}
                 />
               )}
@@ -311,16 +392,16 @@ const AccountDocument = () => {
             <Controller
               control={filterForm.control}
               name="doc_type"
-              render={({field})=>(
-                <Select 
+              render={({ field }) => (
+                <Select
                   {...field}
                   placeholder="Select Document Type"
                   isMulti
                   options={[
-                    {label:"Sales Order", value:"Sales Order"},
-                    {label:"Purchase Order", value:"Purchase Order"},
-                    {label:"Credit Note", value:"Credit Note"},
-                    {label:"Debit Note", value:"Debit Note"},
+                    { label: "Sales Order", value: "Sales Order" },
+                    { label: "Purchase Order", value: "Purchase Order" },
+                    { label: "Credit Note", value: "Credit Note" },
+                    { label: "Debit Note", value: "Debit Note" },
                   ]}
                 />
               )}
@@ -330,14 +411,14 @@ const AccountDocument = () => {
             <Controller
               control={filterForm.control}
               name="comp_doc"
-              render={({field})=>(
-                <Select 
+              render={({ field }) => (
+                <Select
                   {...field}
                   placeholder="Select Company Document"
                   isMulti
                   options={[
-                    {label:"Aazovo", value:"Aazovo"},
-                    {label:"OMC", value:"OMC"},
+                    { label: "Aazovo", value: "Aazovo" },
+                    { label: "OMC", value: "OMC" },
                   ]}
                 />
               )}
@@ -349,10 +430,11 @@ const AccountDocument = () => {
       {/* Add new document Drawer  */}
       <Drawer
         title="Add New Document"
+        width={520}
         isOpen={isAddNewDocumentDrawerOpen} onClose={closeAddNewDocumentDrawer} onRequestClose={closeAddNewDocumentDrawer}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2"  type="button">Cancel</Button>
+            <Button size="sm" className="mr-2" type="button">Cancel</Button>
             <Button size="sm" variant="solid" form="filterLeadForm" type="submit">Save</Button>
           </div>
         }
@@ -362,13 +444,13 @@ const AccountDocument = () => {
             <Controller
               control={addNewDocumentForm.control}
               name="comp_doc"
-              render={({field})=>(
-                <Select 
+              render={({ field }) => (
+                <Select
                   {...field}
                   placeholder="Select Company Document"
                   options={[
-                    {label:"Aazovo", value:"Aazovo"},
-                    {label:"OMC", value:"OMC"},
+                    { label: "Aazovo", value: "Aazovo" },
+                    { label: "OMC", value: "OMC" },
                   ]}
                 />
               )}
@@ -378,98 +460,105 @@ const AccountDocument = () => {
             <Controller
               control={addNewDocumentForm.control}
               name="doc_type"
-              render={({field})=>(
-                <Select 
+              render={({ field }) => (
+                <Select
                   {...field}
                   placeholder="Select Document Type"
                   options={[
-                    {label:"Sales Order", value:"Sales Order"},
-                    {label:"Purchase Order", value:"Purchase Order"},
-                    {label:"Credit Note", value:"Credit Note"},
-                    {label:"Debit Note", value:"Debit Note"},
+                    { label: "Sales Order", value: "Sales Order" },
+                    { label: "Purchase Order", value: "Purchase Order" },
+                    { label: "Credit Note", value: "Credit Note" },
+                    { label: "Debit Note", value: "Debit Note" },
                   ]}
                 />
               )}
             />
           </FormItem>
-          <FormItem label="Document Number">
-            <Controller
-              control={addNewDocumentForm.control}
-              name="doc_number"
-              render={({field})=>(
-                <Input type="text"  placeholder="Enter Document Number" {...field} />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Invoice Number">
-            <Controller
-              control={addNewDocumentForm.control}
-              name="invoice_number"
-              render={({field})=>(
-                <Input type="text"  placeholder="Enter Invoice Number" {...field} />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Token Form">
-            <Controller
-              control={addNewDocumentForm.control}
-              name="token_form"
-              render={({field})=>(
-                <Select 
-                  {...field}
-                  placeholder="Select Form Type"
-                  options={[
-                    {label:"CRM PI 1.0.2", value:"CRM PI 1.0.2"},
-                    {label:"Debit Note", value:"Debit Note"},
-                    {label:"Credit Note", value:"Credit Note"},
-                    {label:"CRM PO 1.0.3", value:"CRM PO 1.0.3"},
-                  ]}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Employee">
-            <Controller
-              control={addNewDocumentForm.control}
-              name="employee"
-              render={({field})=>(
-                <Select 
-                  {...field}
-                  placeholder="Select Employee"
-                  options={[
-                    {label:"Hevin Patel", value:"Hevin Patel"},
-                    {label:"Vinit Chauhan", value:"Vinit Chauhan"},
-                  ]}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Member">
-            <Controller
-              control={addNewDocumentForm.control}
-              name="member"
-              render={({field})=>(
-                <Select 
-                  {...field}
-                  placeholder="Select Member"
-                  options={[
-                    {label:"Ajay Patel - 703549", value:"Ajay Patel - 703549"},
-                    {label:"Krishnan Iyer - 703752", value:"Krishnan Iyer - 703752"},
-                  ]}
-                />
-              )}
-            />
-            {/* If member is not associated with any company then Show this */}
-            <span className="text-xs mt-2">Member is not associated with any company.</span>
 
+          <div className="md:grid grid-cols-2 gap-3">
+            <FormItem label="Document Number">
+              <Controller
+                control={addNewDocumentForm.control}
+                name="doc_number"
+                render={({ field }) => (
+                  <Input type="text" placeholder="Enter Document Number" {...field} />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Invoice Number">
+              <Controller
+                control={addNewDocumentForm.control}
+                name="invoice_number"
+                render={({ field }) => (
+                  <Input type="text" placeholder="Enter Invoice Number" {...field} />
+                )}
+              />
+            </FormItem>
+          </div>
+          <div className="md:grid grid-cols-2 gap-3">
+            <FormItem label="Token Form">
+              <Controller
+                control={addNewDocumentForm.control}
+                name="token_form"
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    placeholder="Select Form Type"
+                    options={[
+                      { label: "CRM PI 1.0.2", value: "CRM PI 1.0.2" },
+                      { label: "Debit Note", value: "Debit Note" },
+                      { label: "Credit Note", value: "Credit Note" },
+                      { label: "CRM PO 1.0.3", value: "CRM PO 1.0.3" },
+                    ]}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Employee">
+              <Controller
+                control={addNewDocumentForm.control}
+                name="employee"
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    placeholder="Select Employee"
+                    options={[
+                      { label: "Hevin Patel", value: "Hevin Patel" },
+                      { label: "Vinit Chauhan", value: "Vinit Chauhan" },
+                    ]}
+                  />
+                )}
+              />
+            </FormItem>
+          </div>
+          <div className="md:grid grid-cols-2 gap-3 items-center">
+            <FormItem label="Member">
+              <Controller
+                control={addNewDocumentForm.control}
+                name="member"
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    placeholder="Select Member"
+                    options={[
+                      { label: "Ajay Patel - 703549", value: "Ajay Patel - 703549" },
+                      { label: "Krishnan Iyer - 703752", value: "Krishnan Iyer - 703752" },
+                    ]}
+                  />
+                )}
+              />
+              {/* If member is not associated with any company then Show this */}
+
+            </FormItem>
             {/* If member is associated with any company then Show this */}
-            <div className="text-xs mt-2">
+            <div className="text-xs mt-4">
               <b>5039522</b> <br />
               <span>XYZ Enterprise</span>
             </div>
-          </FormItem>
-          
-          
+          </div>
+          <span className="text-xs">Member is not associated with any company.</span>
+
+
         </Form>
       </Drawer>
     </>
