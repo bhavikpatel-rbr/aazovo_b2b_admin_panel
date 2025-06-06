@@ -13,7 +13,6 @@ dist-ssr
 build
 *.local
 .env
-config.ts
 
 # Editor directories and files
 .vscode/*
