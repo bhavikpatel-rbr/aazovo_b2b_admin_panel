@@ -49,7 +49,7 @@ export const initialTaskListData: TaskItem[] = [
   },
   {
     id: "TL002",
-    status: "on_hold",
+    status: "pending",
     note: "Research new marketing automation tools",
     assignTo: "Marketing Lead Grace",
     createdBy: "Director Heidi",

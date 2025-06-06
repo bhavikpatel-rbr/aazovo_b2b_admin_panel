@@ -1084,7 +1084,7 @@ const EmployeesListing = () => {
             {props.row.original.roles.map((role) => (
               <Tag
                 key={role}
-                className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
+                className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]"
               >
                 {role}
               </Tag>

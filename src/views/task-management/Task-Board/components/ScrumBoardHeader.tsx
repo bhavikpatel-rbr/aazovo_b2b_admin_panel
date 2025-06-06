@@ -50,13 +50,13 @@ const ScrumBoardHeader = ({
                                 navigate('/app/account/settings/profile')
                             }
                         /> */}
-                        <Button
+                        {/* <Button
                             size="sm"
                             icon={<TbPlus />}
                             onClick={handleAddNewColumn}
                         >
                             <span>Add Status</span>
-                        </Button>
+                        </Button> */}
                     </div>
                 </div>
             </div>
