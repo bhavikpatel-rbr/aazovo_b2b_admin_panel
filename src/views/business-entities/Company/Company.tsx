@@ -15,6 +15,7 @@ import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
+  Card,
   DatePicker,
   Drawer,
   Dropdown,
@@ -32,17 +33,32 @@ import Tooltip from "@/components/ui/Tooltip";
 // Icons
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
+  TbActivity,
+  TbAlarm,
+  TbBell,
+  TbBrandWhatsapp,
+  TbBuilding,
+  TbBuildingArch,
+  TbBuildingBank,
+  TbBuildingCarousel,
+  TbBuildingCommunity,
+  TbBuildingMinus,
+  TbCalendarEvent,
   TbChecks,
   TbCloudDownload,
   TbCloudUpload,
   TbDotsVertical,
   TbEye,
   TbFilter,
+  TbMail,
   TbPencil,
   TbPlus,
   TbSearch, // For Avatar fallback
   TbShare,
-  TbUserCircle, // For Avatar fallback
+  TbTagStarred,
+  TbUser,
+  TbUserCircle,
+  TbUsersGroup, // For Avatar fallback
 } from "react-icons/tb";
 
 
@@ -62,6 +78,7 @@ import {
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 
 // --- CompanyItem Type (Data Structure) ---
@@ -290,7 +307,17 @@ const CompanyActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs"> Send Email</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUsersGroup size={18} /> <span className="text-xs">View Members</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
+      </Dropdown>
+      {/* <Tooltip title="Share">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
           role="button"
@@ -305,14 +332,14 @@ const CompanyActionColumn = ({
             Toggle Status
           </Dropdown.Item>
           {/* <Dropdown.Separator /> */}
-          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Request For</Dropdown.Item>
+          {/* <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Request For</Dropdown.Item>
           <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add in Active</Dropdown.Item>
           <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Schedule</Dropdown.Item>
           <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Task</Dropdown.Item>
           <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Documents</Dropdown.Item>
           <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Alert</Dropdown.Item>
         </Dropdown>
-      </Tooltip>
+      </Tooltip> */} 
     </div>
   );
 };
@@ -931,6 +958,63 @@ const Company = () => {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <h5>Company</h5>
                 <CompanyListActionTools />
+              </div>
+              <div className="grid grid-cols-6 mb-4 gap-2">
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                    <TbBuilding size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-blue-500">8</h6>
+                    <span className="font-semibold text-xs">Total</span>
+                  </div>
+                </Card>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                    <TbBuildingBank size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-green-500">2</h6>
+                    <span className="font-semibold text-xs">Registered</span>
+                  </div>
+                </Card>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                    <TbBuildingCarousel size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-pink-500">34</h6>
+                    <span className="font-semibold text-xs">Unregistered</span>
+                  </div>
+                </Card>
+
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300" >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                    <TbBuildingArch size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-violet-500">4</h6>
+                    <span className="font-semibold text-xs">Verified</span>
+                  </div>
+                </Card>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                    <TbBuildingMinus size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-orange-500">4</h6>
+                    <span className="font-semibold text-xs">Unverified</span>
+                  </div>
+                </Card>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                    <TbBuildingCommunity size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-red-500">20</h6>
+                    <span className="font-semibold text-xs">Members</span>
+                  </div>
+                </Card>
               </div>
               <CompanyListTable />
             </div>
