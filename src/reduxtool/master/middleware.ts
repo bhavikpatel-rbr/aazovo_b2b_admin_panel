@@ -1364,7 +1364,7 @@ export const getBrandAction = createAsyncThunk(
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await getBrandAsync()
-      if (response?.data?.status === true) {
+      if (response?.data?.status) {
         return response?.data?.data
       }
       dispatch(

@@ -47,7 +47,7 @@ import { shallowEqual, useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addHomeCategoryAction,
-  deletAllHomeCategoryAction,
+  deleteAllHomeCategoryAction,
   editHomeCategoryAction,
   getHomeCategoryAction,
   getCategoriesAction,
@@ -444,7 +444,7 @@ const HomeCategoriesListing = () => {
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      await dispatch(deletAllHomeCategoryAction({ ids: String(itemToDelete.id) })).unwrap();
+      await dispatch(deleteAllHomeCategoryAction({ ids: String(itemToDelete.id) })).unwrap();
       const catName = CategoriesData.find((opt: GeneralCategoryListItem) => String(opt.id) === String(itemToDelete.category_id))?.name || String(itemToDelete.id);
       toast.push(<Notification title="Entry Deleted" type="success" duration={2000}>{`Entry for "${catName}" deleted.`}</Notification>);
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
@@ -464,7 +464,7 @@ const HomeCategoriesListing = () => {
     if (validItems.length === 0) { setIsDeleting(false); return; }
     const idsToDelete = validItems.map(item => String(item.id));
     try {
-      await dispatch(deletAllHomeCategoryAction({ ids: idsToDelete.join(',') })).unwrap();
+      await dispatch(deleteAllHomeCategoryAction({ ids: idsToDelete.join(',') })).unwrap();
       toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${validItems.length} entr(ies) deleted.`}</Notification>);
       setSelectedItems([]);
       dispatch(getHomeCategoryAction());
