@@ -34,7 +34,8 @@ import {
     getProductSpecificationsAction,
     getPaymentTermAction,
     getAllProductAction,
-    getWallItemById, // Used in WallItemAdd, assuming it's for product names
+    getWallItemById,
+    editWallItemAction, // Used in WallItemAdd, assuming it's for product names
     // getWallItemByIdAction, // << YOU WOULD ADD AN ACTION LIKE THIS FOR REAL API
 } from '@/reduxtool/master/middleware'; // VERIFY PATH
 import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
@@ -46,33 +47,31 @@ export type WallIntent = "Buy" | "Sell" | "Exchange";
 // API data structure for fetching an item
 export type ApiFetchedWallItem = {
   id: number;
-  product_name: string;
-  company_name: string;
-  quantity: number;
+  qty: number;
   price: number | null;
-  intent: WallIntent;
-  product_status_from_api: string;
-  cartoon_type_id: number | null;
+  want_to: WallIntent;
+  product_status: string;
+  cartoon_type: number | null;
   internal_remarks: string | null;
-  active_hours: string | null;
+  active_hrs: string | null;
   product_spec_id: number | null;
   color: string | null;
   dispatch_status: string | null;
-  dispatch_mode_from_api: string | null;
-  payment_term_id: number | null;
-  eta_from_api: string | null;
-  device_condition_from_api: string | null;
+  dispatch_mode: string | null;
+  payment_term: number | null;
+  delivery_at: string | null;
+  device_condition: string | null;
   location: string | null;
-  listing_type_from_api: string | null;
+  listing_type : string | null;
   visibility: string;
-  priority_from_api: string | null;
-  admin_status_from_api: string | null;
-  assigned_team_id_from_api: number | null;
-  product_url_from_api: string | null;
-  warranty_info_from_api: string | null;
+  priority: string | null;
+  admin_status: string | null;
+  assigned_team: number | null;
+  listing_url: string | null;
+  warranty: string | null;
   return_policy_from_api: string | null;
-  product_id_from_api?: number | null;
-  customer_id_from_api?: number | null;
+  product_id?: number | null;
+  company_id?: number | null;
   source?: string;
   created_by?: string;
   is_wall_manual?: string;
@@ -81,8 +80,8 @@ export type ApiFetchedWallItem = {
 
 // Zod Schema for Edit Wall Item Form (Identical to Add Form's schema)
 const wallItemFormSchema = z.object({
-  product_name: z.string().min(1, "Product Name is required."),
-  company_name: z.string().min(1, "Company Name is required."),
+  product_id: z.number().min(1, "Product Name is required."),
+  company_id: z.number().min(1, "Company Name is required."),
   qty: z
     .number({ required_error: "Quantity is required." })
     .min(0, "Quantity cannot be negative."),
@@ -94,7 +93,7 @@ const wallItemFormSchema = z.object({
   productSpecId: z.number().nullable().optional(),
   deviceCondition: z.string().min(1, "Device condition is required.").nullable(),
   color: z.string().max(50, "Color too long.").nullable().optional(),
-  cartoonTypeId: z.number().nullable().optional(),
+  cartoonType: z.string().nullable().optional(),
   dispatchStatus: z.string().max(100, "Dispatch status too long.").nullable().optional(),
   dispatchMode: z.string().optional().nullable(),
   paymentTermId: z.number().nullable().optional(),
@@ -104,22 +103,22 @@ const wallItemFormSchema = z.object({
   visibility: z.string().min(1, "Visibility is required."),
   priority: z.string().min(1, "Priority is required.").optional().nullable(),
   adminStatus: z.string().min(1, "Admin Status is required.").optional().nullable(),
-  assignedTeamId: z.number().nullable().optional(),
+  assignedTeamId: z.string().nullable().optional(),
   activeHours: z.string().optional().nullable(),
   productUrl: z.string().url("Invalid URL format.").or(z.literal("")).optional().nullable(),
   warrantyInfo: z.string().optional().nullable(),
   returnPolicy: z.string().optional().nullable(),
   internalRemarks: z.string().nullable().optional(),
   productId: z.number().nullable().optional(),
-  customerId: z.number().nullable().optional(),
+  companyId: z.number().nullable().optional(),
 });
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
 // Define option types
-type ProductOptionType = { value: string; label: string; id: number };
+type ProductOptionType = { value: number; label: string; id: number };
 type CompanyOptionType = { value: string; label: string; id: number };
 type ProductSpecOptionType = { value: number; label: string };
-type PaymentTermType = { value: string; label: string; id: number };
+type PaymentTermType = { value: number; label: string; id: number};
 
 
 // --- Form Options (Static options remain) ---
@@ -133,8 +132,8 @@ const productStatusOptions: { value: string; label: string }[] = [
     { value: "Active", label: "Active" },
     { value: "In-Active", label: "In-Active" },
 ];
-const dummyCartoonTypes: { id: number; name: string }[] = [
-  { id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }, { id: 3, name: "Pallet" }
+const dummyCartoonTypes: { value: string; label: string }[] = [
+  { value: "Master Carton", label: "Master Carton" }, { value: "Inner Carton", label: "Inner Carton" }, { value: "Pallet", label: "Pallet" }
 ];
 const deviceConditionRadioOptions: { value: string; label: string }[] = [
   { value: "New", label: "New" }, { value: "Old", label: "Old" }
@@ -145,8 +144,8 @@ const visibilityOptions: { value: string; label: string }[] = [
 const priorityOptions: { value: string; label: string }[] = [
   { value: 'High', label: 'High' }, { value: 'Medium', label: 'Medium' }, { value: 'Low', label: 'Low' }
 ];
-const assignedTeamOptions: { value: number; label: string }[] = [
-  { value: 1, label: 'Sales Team Alpha' }, { value: 2, label: 'Sales Team Beta' }, { value: 3, label: 'Support Team' }
+const assignedTeamOptions: { value: string; label: string }[] = [
+  { value: 'Sales Team Alpha', label: 'Sales Team Alpha' }, { value: 'Sales Team Beta', label: 'Sales Team Beta' }, { value: 'Support Team', label: 'Support Team' }
 ];
 const listingTypeOptions: { value: string; label: string }[] = [
   { value: 'Featured', label: 'Featured' }, { value: 'Regular', label: 'Regular' }
@@ -174,8 +173,6 @@ const WallItemEdit = () => {
     ProductSpecificationsData = [],
     PaymentTermsData = [],
     status: masterDataAccessStatus = 'idle',
-    // currentWallItem, // << YOU WOULD USE A SELECTOR LIKE THIS
-    // currentWallItemStatus, // << AND ITS STATUS
   } = useSelector(masterSelector);
 
   const formMethods = useForm<WallItemFormData>({
@@ -185,7 +182,7 @@ const WallItemEdit = () => {
   const paymentTermsOption: PaymentTermType[] = useMemo(() => {
     if (!Array.isArray(PaymentTermsData)) return [];
     return PaymentTermsData.map((payment: any) => ({
-      value: payment.term_name || payment.term_name, // Adjust if payment name field is different
+      value: payment.id,
       label: payment.term_name || payment.term_name,
       id: payment.id,
     }));
@@ -193,13 +190,9 @@ const WallItemEdit = () => {
 
    const productOptions: ProductOptionType[] = useMemo(() => {
     if (!Array.isArray(productsMasterData)) return [];
-    // For simulation to work, ensure the names used in `fetchWallItemFromApi`
-    // can be generated by this mapping or exist in `productsMasterData`.
-    // Example: if `fetchWallItemFromApi` returns `product_name: "Electric Drill XT5000"`,
-    // one of the `productsMasterData` items should have `name: "Electric Drill XT5000"`.
     return productsMasterData.map((product: any) => ({
-      value: product.name,
-      label: `${product.name}${product.sku_code ? ` (${product.sku_code})` : ''}`.trim(),
+      value: product.id,
+      label: product.name,
       id: product.id,
     }));
   }, [productsMasterData]);
@@ -207,10 +200,9 @@ const WallItemEdit = () => {
 
   const companyOptions: CompanyOptionType[] = useMemo(() => {
     if (!Array.isArray(CompanyData)) return [];
-    // Similar to productOptions, ensure names match for pre-selection.
     return CompanyData.map((company: any) => ({
-      value: company.company_name || company.name,
-      label: company.company_name || company.name,
+      value: company.id,
+      label: company.company_id || company.name,
       id: company.id,
     }));
   }, [CompanyData]);
@@ -285,137 +277,125 @@ const WallItemEdit = () => {
     if (itemToEditApiData && (!isLoadingDropdownData || ['succeeded', 'failed'].includes(masterDataAccessStatus))) {
       const matchedProductStatusOption = productStatusOptions.find(opt =>
         opt.label.toLowerCase().replace(/[^a-z0-9]/gi, '') ===
-        itemToEditApiData?.product_status_from_api ||
+        itemToEditApiData?.product_status ||
         opt.value.toLowerCase().replace(/[^a-z0-9]/gi, '') ===
-        itemToEditApiData?.product_status_from_api
+        itemToEditApiData?.product_status
       );
 
       formMethods.reset({
-        product_name: itemToEditApiData.product_name,
-        company_name: itemToEditApiData.company_name,
-        qty: itemToEditApiData.quantity,
-        price: itemToEditApiData.price,
-        intent: itemToEditApiData.intent,
-        productStatus: matchedProductStatusOption?.value || productStatusOptions[0]?.value || '',
-        productSpecId: itemToEditApiData.product_spec_id,
-        deviceCondition: itemToEditApiData.device_condition_from_api,
+        product_id: Number(itemToEditApiData.product_id),
+        company_id: Number(itemToEditApiData.company_id),
+        qty: Number(itemToEditApiData.qty),
+        price: itemToEditApiData.price !== null ? Number(itemToEditApiData.price) : null,
+        intent: itemToEditApiData.want_to,
+        productStatus: itemToEditApiData.product_status,
+        productSpecId: itemToEditApiData.product_spec_id !== null ? Number(itemToEditApiData.product_spec_id) : null,
+        deviceCondition: itemToEditApiData.device_condition,
         color: itemToEditApiData.color,
-        cartoonTypeId: itemToEditApiData.cartoon_type_id,
+        cartoonType: itemToEditApiData.cartoon_type !== null ? String(itemToEditApiData.cartoon_type) : null,
         dispatchStatus: itemToEditApiData.dispatch_status,
-        dispatchMode: itemToEditApiData.dispatch_mode_from_api,
-        paymentTermId: itemToEditApiData.payment_term_id,
-        eta: itemToEditApiData.eta_from_api ? dayjs(itemToEditApiData.eta_from_api).toDate() : null,
+        dispatchMode: itemToEditApiData.dispatch_mode,
+        paymentTermId: itemToEditApiData.payment_term !== null ? Number(itemToEditApiData.payment_term) : null,
+        eta: itemToEditApiData.delivery_at ? dayjs(itemToEditApiData.delivery_at).toDate() : null,
         location: itemToEditApiData.location,
-        listingType: itemToEditApiData.listing_type_from_api,
+        listingType: itemToEditApiData.listing_type,
         visibility: itemToEditApiData.visibility,
-        priority: itemToEditApiData.priority_from_api,
-        adminStatus: itemToEditApiData.admin_status_from_api,
-        assignedTeamId: itemToEditApiData.assigned_team_id_from_api,
-        activeHours: itemToEditApiData.active_hours,
-        productUrl: itemToEditApiData.product_url_from_api,
-        warrantyInfo: itemToEditApiData.warranty_info_from_api,
+        priority: itemToEditApiData.priority,
+        adminStatus: itemToEditApiData.admin_status,
+        assignedTeamId: itemToEditApiData.assigned_team !== null ? Number(itemToEditApiData.assigned_team) : null,
+        activeHours: itemToEditApiData.active_hrs,
+        productUrl: itemToEditApiData.listing_url,
+        warrantyInfo: itemToEditApiData.warranty,
         returnPolicy: itemToEditApiData.return_policy_from_api,
         internalRemarks: itemToEditApiData.internal_remarks,
-        productId: itemToEditApiData.product_id_from_api,
-        customerId: itemToEditApiData.customer_id_from_api,
+        productId: Number(itemToEditApiData.product_id),
+        companyId: Number(itemToEditApiData.company_id),
       });
     }
   }, [itemToEditApiData, formMethods, isLoadingDropdownData, masterDataAccessStatus, productOptions, companyOptions, productSpecOptionsForSelect]);
 
 
-  const onFormSubmit = useCallback(
-    async (formData: WallItemFormData) => {
-      if (!itemIdFromParams) {
-        toast.push(<Notification title="Error" type="danger">Item ID is missing.</Notification>);
-        return;
-      }
-      setIsSubmitting(true);
+const onFormSubmit = useCallback(
+  async (formData: WallItemFormData) => {
+    if (!itemIdFromParams) {
+      toast.push(<Notification title="Error" type="danger">Item ID is missing.</Notification>);
+      return;
+    }
 
-      const productSpecDetails = formData.productSpecId
-        ? productSpecOptionsForSelect.find(spec => spec.value === formData.productSpecId)
-        : null;
-      
-      const cartoonTypeDetails = formData.cartoonTypeId
-        ? dummyCartoonTypes.find(ct => ct.id === formData.cartoonTypeId)
-        : null;
+    setIsSubmitting(true);
 
-      const loggedPayload: any = { ...formData }; 
+    const cartoonTypeDetails = formData.cartoonType;
+    const productSpecDetails = formData.productSpecId
+      ? productSpecOptionsForSelect.find(spec => spec.value === formData.productSpecId)
+      : null;
 
-      loggedPayload.id = parseInt(itemIdFromParams, 10);
-      loggedPayload.product_id = String(formData.productId);
-      loggedPayload.customer_id = String(formData.customerId);
-      loggedPayload.product_spec_id = formData.productSpecId ? String(formData.productSpecId) : null;
-      loggedPayload.assigned_to = formData.assignedTeamId ? String(formData.assignedTeamId) : null;
-      
-      loggedPayload.want_to = formData.intent;
-      loggedPayload.qty = String(formData.qty);
-      loggedPayload.price = (formData.price !== null && formData.price !== undefined) ? String(formData.price) : "0";
-      
-      loggedPayload.status = formData.adminStatus;
-      loggedPayload.product_status = formData.productStatus;
-      loggedPayload.product_status_listing = null; 
-      loggedPayload.dispatch_status = formData.dispatchStatus;
+    const payload: any = {
+      id: parseInt(itemIdFromParams, 10),
+      product_id: formData.productId ? String(formData.productId) : null,
+      company_id: formData.companyId ? String(formData.companyId) : null,
+      qty: String(formData.qty),
+      price: formData.price ? String(formData.price) : "0",
+      want_to: formData.intent,
+      product_status: formData.productStatus,
+      product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null,
+      device_condition: formData.deviceCondition,
+      color: formData.color,
+      cartoon_type: formData.cartoonType ?? "",
+      dispatch_status: formData.dispatchStatus,
+      dispatch_mode: formData.dispatchMode,
+      payment_term: formData.paymentTermId ? String(formData.paymentTermId) : "0",
+      delivery_at: formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null,
+      location: formData.location,
+      listing_type: formData.listingType,
+      visibility: formData.visibility,
+      priority: formData.priority,
+      admin_status: formData.adminStatus,
+      assigned_to: formData.assignedTeamId ?? null,
+      assigned_team: formData.assignedTeamId ?? null,
+      active_hrs: String(formData.activeHours),
+      product_url: formData.productUrl,
+      warranty: formData.warrantyInfo,
+      internal_remarks: formData.internalRemarks,
+      return_policy: formData.returnPolicy,
 
-      loggedPayload.color = formData.color;
-      loggedPayload.device_condition = formData.deviceCondition;
-      loggedPayload.product_specs = productSpecDetails ? productSpecDetails.label : null;
+      // Meta fields
+      created_from: "FormUI-Edit",
+      created_at: itemToEditApiData?.created_at_from_api || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      status: formData.adminStatus,
+      source: itemToEditApiData?.source || "in_edit",
+      is_wall_manual: itemToEditApiData?.is_wall_manual || "0",
+    };
 
-      loggedPayload.cartoon_type = cartoonTypeDetails ? cartoonTypeDetails.name : (formData.cartoonTypeId ? String(formData.cartoonTypeId) : null);
-      loggedPayload.delivery_at = formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null;
-      loggedPayload.location = formData.location;
-      loggedPayload.shipping_options = formData.dispatchMode;
+    // Optional structured fields for internal usage or relational joins
+    payload.product = {
+      id: formData.productId,
+      name: formData.product_id,
+      description: null,
+      status: formData.productStatus,
+    };
 
-      loggedPayload.payment_term = formData.paymentTermId ? String(formData.paymentTermId) : "0";
-      loggedPayload.visibility = formData.visibility;
-      loggedPayload.priority = formData.priority;
-      loggedPayload.active_hrs = formData.activeHours;
-      loggedPayload.listing_url = formData.productUrl;
-      
-      loggedPayload.warranty = formData.warrantyInfo;
+    payload.product_spec = productSpecDetails
+      ? { id: productSpecDetails.value, name: productSpecDetails.label }
+      : null;
 
-      loggedPayload.internal_remarks = formData.internalRemarks;
-      loggedPayload.notes = formData.internalRemarks;
+    payload.customer = {
+      id: formData.companyId,
+      name: formData.company_id,
+    };
 
-      loggedPayload.created_from = "FormUI-Edit"; 
-      loggedPayload.source = itemToEditApiData?.source || "in_edit"; // Use fetched source or a default for edit
-      loggedPayload.delivery_details = null;
-      loggedPayload.created_by = itemToEditApiData?.created_by || "1"; // Use fetched creator or default
-      loggedPayload.expired_date = null;
-      
-      loggedPayload.created_at = itemToEditApiData?.created_at_from_api || new Date().toISOString();
-      loggedPayload.updated_at = new Date().toISOString(); 
-      
-      loggedPayload.is_wall_manual = itemToEditApiData?.is_wall_manual || "0"; // Use fetched value or default
+    payload.company = null;
 
-      loggedPayload.product = {
-          id: formData.productId,
-          name: formData.product_name,
-          description: null, 
-          status: formData.productStatus, 
-      };
-      loggedPayload.product_spec = productSpecDetails ? { id: productSpecDetails.value, name: productSpecDetails.label } : null;
-      loggedPayload.customer = {
-          id: formData.customerId,
-          name: formData.company_name,
-      };
-      loggedPayload.company = null;
+    // Simulated API call
+    await dispatch(editWallItemAction(payload)).unwrap();
 
-      console.log("--- WallItemEdit Form Submission Log ---");
-      console.log("1. Original formData (from react-hook-form):", formData);
-      console.log("2. Item to Edit (API data used for form population):", itemToEditApiData);
-      console.log("3. Constructed Payload (for API/logging - matches target structure, includes all form data):", loggedPayload);
-      console.log("--- End WallItemEdit Form Submission Log ---");
-      
-      // Simulate API call for update
-      // In a real app: await dispatch(updateWallItemAction(loggedPayload));
-      await new Promise(res => setTimeout(res, 1000));
+    toast.push(<Notification title="Success" type="success">Wall item updated. (Simulated)</Notification>);
+    setIsSubmitting(false);
+    navigate("/sales-leads/wall-listing");
+  },
+  [navigate, itemIdFromParams, itemToEditApiData, productSpecOptionsForSelect]
+);
 
-      toast.push(<Notification title="Success" type="success">Wall item updated. (Simulated)</Notification>);
-      setIsSubmitting(false);
-      navigate("/sales-leads/wall-listing");
-    },
-    [navigate, itemIdFromParams, itemToEditApiData, productSpecOptionsForSelect]
-  );
 
   const handleCancel = () => {
     navigate("/sales-leads/wall-listing");
@@ -440,7 +420,7 @@ const WallItemEdit = () => {
   };
 
   // Combined loading state: true if initial item data is loading OR dropdown data is loading (either via its own state or Redux status)
-  const isLoadingCombined = isLoadingInitialData || isLoadingDropdownData || masterDataAccessStatus === "idle" || masterDataAccessStatus === "idle";
+  const isLoadingCombined = isLoadingInitialData || isLoadingDropdownData || masterDataAccessStatus === "loading";
 
 
   if (isLoadingCombined) {
@@ -486,15 +466,15 @@ const WallItemEdit = () => {
             {/* Row 1 */}
             <FormItem
                 label="Product Name"
-                invalid={!!formMethods.formState.errors.product_name}
-                errorMessage={formMethods.formState.errors.product_name?.message}
+                invalid={!!formMethods.formState.errors.product_id}
+                errorMessage={formMethods.formState.errors.product_id?.message}
             >
                 <Controller
-                    name="product_name"
+                    name="product_id"
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading" || masterDataAccessStatus === "idle"}
+                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading"}
                             options={productOptions}
                             value={productOptions.find(opt => opt.value === field.value) || null }
                             onChange={option => {
@@ -514,24 +494,24 @@ const WallItemEdit = () => {
             </FormItem>
             <FormItem
                 label="Company Name"
-                invalid={!!formMethods.formState.errors.company_name}
-                errorMessage={formMethods.formState.errors.company_name?.message}
+                invalid={!!formMethods.formState.errors.company_id}
+                errorMessage={formMethods.formState.errors.company_id?.message}
             >
                 <Controller
-                    name="company_name"
+                    name="company_id"
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading" || masterDataAccessStatus === "idle"}
+                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading"}
                             options={companyOptions}
                             value={companyOptions.find(opt => opt.value === field.value) || null}
                             onChange={option => {
                                  if (option) {
                                     field.onChange(option.value);
-                                    formMethods.setValue('customerId', option.id, { shouldValidate: true, shouldDirty: true });
+                                    formMethods.setValue('companyId', option.id, { shouldValidate: true, shouldDirty: true });
                                 } else {
                                     field.onChange("");
-                                    formMethods.setValue('customerId', null, { shouldValidate: true, shouldDirty: true });
+                                    formMethods.setValue('companyId', null, { shouldValidate: true, shouldDirty: true });
                                 }
                             }}
                             placeholder="Select Company Name"
@@ -593,7 +573,7 @@ const WallItemEdit = () => {
             >
               <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
                   <UiSelect 
-                    isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading" || masterDataAccessStatus === "idle"}
+                    isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading"}
                     options={productSpecOptionsForSelect} 
                     value={productSpecOptionsForSelect.find(opt => opt.value === field.value) || null} 
                     onChange={(option) => field.onChange(option ? option.value : null)} 
@@ -621,12 +601,12 @@ const WallItemEdit = () => {
             
             <FormItem
               label="Cartoon Type"
-              invalid={!!formMethods.formState.errors.cartoonTypeId}
-              errorMessage={formMethods.formState.errors.cartoonTypeId?.message}
+              invalid={!!formMethods.formState.errors.cartoonType}
+              errorMessage={formMethods.formState.errors.cartoonType?.message}
             >
-              <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name, }))} 
-                  value={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name })).find((opt) => opt.value === field.value) || null} 
+              <Controller name="cartoonType" control={formMethods.control} render={({ field }) => (
+                  <UiSelect options={dummyCartoonTypes}
+                  value={dummyCartoonTypes.find(opt => opt.value === field.value || null)} 
                   onChange={(option) => field.onChange(option ? option.value : null)} 
                   placeholder="Select Cartoon Type (Optional)" 
                   isClearable/>
@@ -800,13 +780,13 @@ const WallItemEdit = () => {
       
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
         <Button type="button" onClick={handleCancel} disabled={isSubmitting || isLoadingCombined} > Cancel </Button>
-        <Button type="button" onClick={handleSaveAsDraft} disabled={isSubmitting || isLoadingCombined} variant="twoTone"> Draft </Button>
+        <Button type="button" onClick={handleSaveAsDraft} disabled={isSubmitting || isLoadingCombined}> Draft </Button>
         <Button 
             type="submit" 
             form="wallItemEditForm" 
             variant="solid" 
             loading={isSubmitting} 
-            disabled={isSubmitting || isLoadingCombined || !formMethods.formState.isDirty || !formMethods.formState.isValid} >
+            disabled={isSubmitting || isLoadingCombined} >
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </Card>

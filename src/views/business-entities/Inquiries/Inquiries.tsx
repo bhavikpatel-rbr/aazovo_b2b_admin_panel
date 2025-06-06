@@ -1,59 +1,59 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { CSVLink } from "react-csv";
 import cloneDeep from "lodash/cloneDeep";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { CSVLink } from "react-csv";
+import { Controller, useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
-import Tag from "@/components/ui/Tag";
-import Tooltip from "@/components/ui/Tooltip";
 import DataTable from "@/components/shared/DataTable";
+import DebouceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from "@/components/shared/RichTextEditor";
+import StickyFooter from "@/components/shared/StickyFooter";
 import {
+  Button,
+  DatePicker,
   Drawer,
+  Dropdown,
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
-  Button,
-  Dropdown,
-  DatePicker,
 } from "@/components/ui";
-import StickyFooter from "@/components/shared/StickyFooter";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
+import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
-import RichTextEditor from "@/components/shared/RichTextEditor";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import DebouceInput from "@/components/shared/DebouceInput";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbPencil,
-  TbEye,
-  TbShare,
+  TbChecks,
   TbCloudUpload,
   TbDotsVertical,
+  TbEye,
   // TbCloudDownload, // Import if CSV import is re-added
   TbFilter,
+  TbPencil,
   TbPlus,
-  TbChecks,
-  TbSearch,
   TbReload,
+  TbSearch,
+  TbShare,
   TbTrash,
 } from "react-icons/tb";
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 
 // Redux imports
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { deleteAllInquiryAction, getDepartmentsAction, getInquiriesAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-import { deleteAllInquiryAction, getContinentsAction, getDepartmentsAction, getInquiriesAction } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 
 // --- API Inquiry Item Type (from API response) ---
@@ -234,14 +234,10 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // This useEffect handles updates from Redux store
   useEffect(() => {
     setIsLoading(false);
-    console.log("masterLoadingStatus", masterLoadingStatus);
 
-    if (masterLoadingStatus === "loading") {
-      console.log("inquiryList1", inquiryList1);
-
+    if (masterLoadingStatus === "idle") {
       // Ensure inquiryList1 is an array before processing
-      const inquiryDataFromApi = Array.isArray(inquiryList1) ? inquiryList1 : [];
-      console.log(inquiryDataFromApi, "inquiryDataFromApi");
+      const inquiryDataFromApi = Array.isArray(inquiryList1?.data) ? inquiryList1?.data : [];
 
       setInquiryList(processApiDataToInquiryItems(inquiryDataFromApi as ApiInquiryItem[]));
 

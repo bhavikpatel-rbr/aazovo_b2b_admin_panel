@@ -32,8 +32,19 @@ const CreatePartner = () => {
   const isEditMode = Boolean(location.state ? true : false);
 
   const dispatch = useAppDispatch(); // Initialize dispatch
-
+  const getVal = (fieldValue: any): string | undefined => {
+    if (fieldValue === null || fieldValue === undefined) return undefined;
+    if (typeof fieldValue === 'object' && 'value' in fieldValue) {
+      return String(fieldValue.value ?? '');
+    }
+    return String(fieldValue ?? '');
+  };
   const transformApiToFormSchema = (apiData) => {
+    const createSelectOption = (value?: string | null, labelPrefix?: string): { label: string; value: string } | undefined => {
+      if (value === null || value === undefined || String(value).trim() === '') return undefined;
+      const strValue = String(value);
+      return { label: labelPrefix ? `${labelPrefix} ${strValue}` : strValue, value: strValue };
+    };
     // ... (same as your previous definition, ensure it's complete) ...
     return {
       "id": apiData.id,
@@ -41,15 +52,50 @@ const CreatePartner = () => {
       "partner_contact_number": apiData.partner_contact_number,
       "partner_email_id": apiData.partner_email_id,
       "partner_logo": apiData.partner_logo,
-      "partner_status": apiData.partner_status,
+      "partner_status": createSelectOption(apiData.partner_status),
       "partner_join_date": apiData.partner_join_date,
       "partner_location": apiData.partner_location,
       "partner_profile_completion": apiData.partner_profile_completion,
       "partner_trust_score": apiData.partner_trust_score,
       "partner_activity_score": apiData.partner_activity_score,
-      "partner_kyc_status": apiData.partner_kyc_status,
+      "partner_kyc_status": createSelectOption(apiData.partner_kyc_status),
       "business_category": apiData.business_category,
-      "partner_interested_in": apiData.partner_interested_in,
+      "partner_interested_in": createSelectOption(apiData.partner_interested_in),
+      "partner_business_type": apiData.partner_business_type,
+      "partner_profile_link": apiData.partner_profile_link,
+      "partner_certifications": apiData.partner_certifications,
+      "partner_service_offerings": apiData.partner_service_offerings,
+      "partner_website": apiData.partner_website,
+      "partner_payment_terms": apiData.partner_payment_terms,
+      "partner_reference_id": apiData.partner_reference_id,
+      "partner_document_upload": apiData.partner_document_upload,
+      "partner_lead_time": apiData.partner_lead_time,
+      "created_at": apiData.created_at,
+      "updated_at": apiData.updated_at,
+      "deleted_at": apiData.deleted_at,
+      "partner_reference_name": apiData.partner_reference_name,
+      "partner_doctument": apiData.partner_doctument,
+      "partner_logo_url": apiData.partner_logo_url,
+      "partner_document_array": apiData.partner_document_array
+    }
+  };
+  const transformdataToAPISchema = (apiData) => {
+    // ... (same as your previous definition, ensure it's complete) ...
+    return {
+      "id": apiData.id,
+      "partner_name": apiData.partner_name,
+      "partner_contact_number": apiData.partner_contact_number,
+      "partner_email_id": apiData.partner_email_id,
+      "partner_logo": apiData.partner_logo,
+      "partner_status": getVal(apiData.partner_status),
+      "partner_join_date": apiData.partner_join_date,
+      "partner_location": apiData.partner_location,
+      "partner_profile_completion": apiData.partner_profile_completion,
+      "partner_trust_score": apiData.partner_trust_score,
+      "partner_activity_score": apiData.partner_activity_score,
+      "partner_kyc_status": getVal(apiData.partner_kyc_status),
+      "business_category": apiData.business_category,
+      "partner_interested_in": getVal(apiData.partner_interested_in),
       "partner_business_type": apiData.partner_business_type,
       "partner_profile_link": apiData.partner_profile_link,
       "partner_certifications": apiData.partner_certifications,
@@ -105,7 +151,25 @@ const CreatePartner = () => {
       .string()
       .trim()
       .min(1, { message: "Partner name is Required !" }),
+    partner_interested_in: z.object({ value: z.string(), label: z.string() })
+      .optional(),
+    partner_kyc_status: z.object({ value: z.string(), label: z.string() })
+      .optional(),
+    // partner_status: z.object({ value: z.string(), label: z.string() })
+    //   .optional(),
+    partner_website: z.string()
+      .trim()
+      .min(1, { message: "Website is Required !" }),
+    partner_payment_terms: z.string()
+      .trim()
+      .min(1, { message: "Payment Term is Required !" }),
+
+    partner_lead_time: z.string()
+      .min(1, { message: "Lead Time is Required !" }),
+    partner_reference_id: z.string().regex(phoneRegex, "Invalid Number!"),
     partner_contact_number: z.string().regex(phoneRegex, "Invalid Number!"),
+    partner_reference_name: z.string()
+      .min(1, { message: "Ref Name is Required !" }),
     partner_email_id: z
       .string()
       .min(1, { message: "This field has to be filled." })
@@ -165,7 +229,6 @@ const CreatePartner = () => {
     formState: { errors },
   } = addFormMethods;
 
-
   useEffect(() => {
     if (isEditMode && memberId) {
       const fetchMemberData = async () => {
@@ -173,7 +236,6 @@ const CreatePartner = () => {
           const response = await axiosInstance.get(`/partner/${memberId}`);
           if (response.data && response.data.status === true && response.data.data) {
             const transformed = transformApiToFormSchema(response.data.data);
-            console.log(transformed, 'transformed')
             reset(transformed)
             setformdata(transformed)
           } else {
@@ -194,13 +256,11 @@ const CreatePartner = () => {
   }, [memberId, isEditMode, navigate]);
 
 
-
-
   const onSubmit = async (data: any) => {
-    console.log("Partner submitted",data,formdata, { ...formdata, ...data });
+    console.log("Partner submitted", data, formdata, { ...formdata, ...data });
     try {
       if (isEditMode && memberId) {
-        await dispatch(editpartnerAction({ ...formdata, ...data })).unwrap();
+        await dispatch(editpartnerAction(transformdataToAPISchema({ ...formdata, ...data }))).unwrap();
         toast.push(
           <Notification type="success" title="Partner Created">
             Partner updated successfully.
@@ -360,7 +420,8 @@ const CreatePartner = () => {
                 <Controller
                   name="partner_status"
                   control={control}
-                  render={() => (
+                  render={({ ...field }
+                  ) => (
                     <Select
                       placeholder="Select status"
                       options={[
@@ -368,6 +429,8 @@ const CreatePartner = () => {
                         { value: "Inactive", label: "Inactive" },
                         { value: "Pending", label: "Pending" },
                       ]}
+                      {...field}
+
                     />
                   )}
                 />
@@ -560,7 +623,7 @@ const CreatePartner = () => {
                 <Controller
                   name="partner_interested_in"
                   control={addFormMethods.control}
-                  render={() => (
+                  render={({ ...field }) => (
                     <Select
                       placeholder="Select interested in"
                       options={[
@@ -569,6 +632,8 @@ const CreatePartner = () => {
                         { value: "Both", label: "Both" },
                         { value: "Other", label: "Other" },
                       ]}
+                      {...field}
+
                     />
                   )}
                 />
@@ -625,16 +690,16 @@ const CreatePartner = () => {
               <FormItem
                 label="Referenced Name"
                 invalid={
-                  !!addFormMethods?.formState?.errors?.partner_referenced_name
+                  !!addFormMethods?.formState?.errors?.partner_reference_name
                     ?.message
                 }
                 errorMessage={
-                  addFormMethods?.formState?.errors?.partner_referenced_name
+                  addFormMethods?.formState?.errors?.partner_reference_name
                     ?.message
                 }
               >
                 <Controller
-                  name="partner_referenced_name"
+                  name="partner_reference_name"
                   control={addFormMethods.control}
                   render={({ field }) => (
                     <Input

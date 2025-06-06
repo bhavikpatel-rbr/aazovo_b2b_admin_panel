@@ -708,7 +708,7 @@ const Continents = () => {
             isOpen={drawerProps.isOpen}
             onClose={drawerProps.closeFn}
             onRequestClose={drawerProps.closeFn}
-            width={520}
+            width={480}
             footer={
                 <div className="text-right w-full">
                 <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button>

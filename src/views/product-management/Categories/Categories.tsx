@@ -807,36 +807,40 @@ const Categories = () => {
       <CategorySelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelectedCategories} />
 
       {/* Add Category Drawer */}
-      <Drawer title="Add Category" isOpen={isAddDrawerOpen} onClose={closeAddCategoryDrawer} onRequestClose={closeAddCategoryDrawer}
+      <Drawer title="Add Category" width={480} isOpen={isAddDrawerOpen} onClose={closeAddCategoryDrawer} onRequestClose={closeAddCategoryDrawer}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeAddCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="addCategoryForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Adding..." : "Save"} </Button> </div>}
       >
-        <Form id="addCategoryForm" onSubmit={addFormMethods.handleSubmit(onAddCategorySubmit)} className="flex flex-col gap-4">
+        <Form id="addCategoryForm" onSubmit={addFormMethods.handleSubmit(onAddCategorySubmit)} className="flex flex-col gap-3">
           <FormItem label="Category Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired> <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Category Name" />} /> </FormItem>
           <FormItem label="Slug" invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired> <Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter category-slug" />} /> </FormItem>
           <FormItem label="Parent Category" invalid={!!addFormMethods.formState.errors.parent_category} errorMessage={addFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={addFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
           
-          <FormItem label="Web Icon (467 X 250)" invalid={!!addFormMethods.formState.errors.web_icon} errorMessage={addFormMethods.formState.errors.web_icon?.message as string}> 
-            <Controller name="web_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
-              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
-                const file = e.target.files?.[0] || null; 
-                onChange(file); 
-                if (addWebIconPreview) URL.revokeObjectURL(addWebIconPreview); 
-                setAddWebIconPreview(file ? URL.createObjectURL(file) : null); 
-              }} accept="image/*" />} /> 
-            {addWebIconPreview && <div className="mt-2"><Avatar src={addWebIconPreview} size={80} shape="rounded" icon={<TbPhoto />} /></div>}
-          </FormItem>
-
-          <FormItem label="Mobile Icon (500 X 500)" invalid={!!addFormMethods.formState.errors.mobile_icon} errorMessage={addFormMethods.formState.errors.mobile_icon?.message as string}> 
-            <Controller name="mobile_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
-              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
-                const file = e.target.files?.[0] || null; 
-                onChange(file); 
-                if (addMobileIconPreview) URL.revokeObjectURL(addMobileIconPreview); 
-                setAddMobileIconPreview(file ? URL.createObjectURL(file) : null); 
-              }} accept="image/*" />} /> 
-            {addMobileIconPreview && <div className="mt-2"><Avatar src={addMobileIconPreview} size={80} shape="rounded" icon={<TbPhoto />} /></div>}
-          </FormItem>
-
+          <div className="flex gap-2">
+            <FormItem className="w-full" label="Web Icon (467 X 250)" invalid={!!addFormMethods.formState.errors.web_icon} errorMessage={addFormMethods.formState.errors.web_icon?.message as string}> 
+              <Controller name="web_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+                <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                  const file = e.target.files?.[0] || null; 
+                  onChange(file); 
+                  if (addWebIconPreview) URL.revokeObjectURL(addWebIconPreview); 
+                  setAddWebIconPreview(file ? URL.createObjectURL(file) : null); 
+                }} accept="image/*" />} /> 
+            </FormItem>
+            {addWebIconPreview && <div className="mt-2"><Avatar src={addWebIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
+          </div>
+          
+          <div className="flex gap-2">
+            <FormItem className="w-full" label="Mobile Icon (500 X 500)" invalid={!!addFormMethods.formState.errors.mobile_icon} errorMessage={addFormMethods.formState.errors.mobile_icon?.message as string}> 
+              <Controller name="mobile_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+                <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                  const file = e.target.files?.[0] || null; 
+                  onChange(file); 
+                  if (addMobileIconPreview) URL.revokeObjectURL(addMobileIconPreview); 
+                  setAddMobileIconPreview(file ? URL.createObjectURL(file) : null); 
+                }} accept="image/*" />} /> 
+            </FormItem>
+            {addMobileIconPreview && <div className="mt-2"><Avatar src={addMobileIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
+          </div>
+          
           <FormItem label="Category Banner (Recommended: 1920x400 or similar aspect ratio)" invalid={!!addFormMethods.formState.errors.category_icon} errorMessage={addFormMethods.formState.errors.category_icon?.message as string}> 
             <Controller name="category_icon" control={addFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
               <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
@@ -845,22 +849,26 @@ const Categories = () => {
                 if (addBannerPreview) URL.revokeObjectURL(addBannerPreview); 
                 setAddBannerPreview(file ? URL.createObjectURL(file) : null); 
               }} accept="image/*" />} /> 
-            {addBannerPreview && <div className="mt-2"><img src={addBannerPreview} alt="Banner Preview" style={{width: '100%', maxHeight: '150px', objectFit: 'contain', borderRadius: '4px'}} /></div>}
+              {addBannerPreview && <div className="mt-2 border border-gray-200 rounded-md"><img src={addBannerPreview} alt="Banner Preview" style={{width: '100%', maxHeight: '150px', objectFit: 'contain', borderRadius: '4px'}} /></div>}
           </FormItem>
-
-          <FormItem label="Show on Home Page?" invalid={!!addFormMethods.formState.errors.show_home_page} errorMessage={addFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-          <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-          <FormItem label="Coming Soon?" invalid={!!addFormMethods.formState.errors.comingsoon} errorMessage={addFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-          <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={addFormMethods.control} render={({ field }) => <UiSelect options={apiCategoryStatusOptions} value={apiCategoryStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <FormItem label="Show on Home Page?" invalid={!!addFormMethods.formState.errors.show_home_page} errorMessage={addFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+            <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <FormItem label="Coming Soon?" invalid={!!addFormMethods.formState.errors.comingsoon} errorMessage={addFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={addFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+            <FormItem label="Status" invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={addFormMethods.control} render={({ field }) => <UiSelect options={apiCategoryStatusOptions} value={apiCategoryStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+          </div>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
           <FormItem label="Meta Title" invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} /> </FormItem>
           <FormItem label="Meta Description" invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} /> </FormItem>
-          <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)" textArea/>} /> </FormItem>
+          <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}> <Controller name="meta_keyword" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Keywords (comma-separated)"/>} /> </FormItem>
         </Form>
       </Drawer>
 
       {/* Edit Category Drawer */}
-      <Drawer title="Edit Category" isOpen={isEditDrawerOpen} onClose={closeEditCategoryDrawer} onRequestClose={closeEditCategoryDrawer}
+      <Drawer title="Edit Category" width={480} isOpen={isEditDrawerOpen} onClose={closeEditCategoryDrawer} onRequestClose={closeEditCategoryDrawer}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={closeEditCategoryDrawer} disabled={isSubmitting}>Cancel</Button> <Button size="sm" variant="solid" form="editCategoryForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}> {isSubmitting ? "Saving..." : "Save"} </Button> </div>}
       >
         <Form id="editCategoryForm" onSubmit={editFormMethods.handleSubmit(onEditCategorySubmit)} className="flex flex-col gap-4">
@@ -868,32 +876,36 @@ const Categories = () => {
           <FormItem label="Slug" invalid={!!editFormMethods.formState.errors.slug} errorMessage={editFormMethods.formState.errors.slug?.message} isRequired> <Controller name="slug" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /> </FormItem>
           <FormItem label="Parent Category" invalid={!!editFormMethods.formState.errors.parent_category} errorMessage={editFormMethods.formState.errors.parent_category?.message as string}> <Controller name="parent_category" control={editFormMethods.control} render={({ field }) => <UiSelect placeholder="Select Parent or None" options={parentCategoryOptions} value={parentCategoryOptions.find(opt => opt.value === field.value)} onChange={option => field.onChange(option ? option.value : null)} isClearable />} /> </FormItem>
           
-          <FormItem label="Web Icon (467 X 250)" invalid={!!editFormMethods.formState.errors.web_icon} errorMessage={editFormMethods.formState.errors.web_icon?.message as string}> 
-            {editWebIconPreview && <div className="mb-2"><Avatar src={editWebIconPreview} size={80} shape="rounded" icon={<TbPhoto />} /></div>}
-            <Controller name="web_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
-              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
-                const file = e.target.files?.[0] || null; 
-                onChange(file); 
-                if (editWebIconPreview && !editingCategory?.webIconFullPath?.includes(editWebIconPreview)) URL.revokeObjectURL(editWebIconPreview); // Revoke only if it's a blob URL
-                setEditWebIconPreview(file ? URL.createObjectURL(file) : (editingCategory?.webIconFullPath || null)); 
-              }} accept="image/*" />} /> 
-            {!editWebIconPreview && editingCategory?.webIconFullPath && <small className="text-xs text-gray-500">Current icon will be kept if no new file is uploaded.</small>}
-          </FormItem>
+          <div className="flex gap-2">
+            <FormItem className="w-full" label="Web Icon (467 X 250)" invalid={!!editFormMethods.formState.errors.web_icon} errorMessage={editFormMethods.formState.errors.web_icon?.message as string}> 
+              <Controller name="web_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+                <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                  const file = e.target.files?.[0] || null; 
+                  onChange(file); 
+                  if (editWebIconPreview && !editingCategory?.webIconFullPath?.includes(editWebIconPreview)) URL.revokeObjectURL(editWebIconPreview); // Revoke only if it's a blob URL
+                  setEditWebIconPreview(file ? URL.createObjectURL(file) : (editingCategory?.webIconFullPath || null)); 
+                }} accept="image/*" />} /> 
+              {!editWebIconPreview && editingCategory?.webIconFullPath && <small className="text-xs text-gray-500">Current icon will be kept if no new file is uploaded.</small>}
+            </FormItem>
+            {editWebIconPreview && <div className="mb-2"><Avatar src={editWebIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
+          </div>
+          <div className="flex gap-2">
+            <FormItem className="w-full" label="Mobile Icon (500 X 500)" invalid={!!editFormMethods.formState.errors.mobile_icon} errorMessage={editFormMethods.formState.errors.mobile_icon?.message as string}> 
+              <Controller name="mobile_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
+                <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
+                  const file = e.target.files?.[0] || null; 
+                  onChange(file); 
+                  if (editMobileIconPreview && !editingCategory?.mobileIconFullPath?.includes(editMobileIconPreview)) URL.revokeObjectURL(editMobileIconPreview);
+                  setEditMobileIconPreview(file ? URL.createObjectURL(file) : (editingCategory?.mobileIconFullPath || null)); 
+                }} accept="image/*" />} /> 
+              {!editMobileIconPreview && editingCategory?.mobileIconFullPath && <small className="text-xs text-gray-500">Current icon will be kept if no new file is uploaded.</small>}
+            </FormItem>
+            {editMobileIconPreview && <div className="mb-2"><Avatar src={editMobileIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
+          </div>
 
-          <FormItem label="Mobile Icon (500 X 500)" invalid={!!editFormMethods.formState.errors.mobile_icon} errorMessage={editFormMethods.formState.errors.mobile_icon?.message as string}> 
-            {editMobileIconPreview && <div className="mb-2"><Avatar src={editMobileIconPreview} size={80} shape="rounded" icon={<TbPhoto />} /></div>}
-            <Controller name="mobile_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
-              <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
-                const file = e.target.files?.[0] || null; 
-                onChange(file); 
-                if (editMobileIconPreview && !editingCategory?.mobileIconFullPath?.includes(editMobileIconPreview)) URL.revokeObjectURL(editMobileIconPreview);
-                setEditMobileIconPreview(file ? URL.createObjectURL(file) : (editingCategory?.mobileIconFullPath || null)); 
-              }} accept="image/*" />} /> 
-            {!editMobileIconPreview && editingCategory?.mobileIconFullPath && <small className="text-xs text-gray-500">Current icon will be kept if no new file is uploaded.</small>}
-          </FormItem>
 
           <FormItem label="Category Banner (Recommended: 1920x400 or similar)" invalid={!!editFormMethods.formState.errors.category_icon} errorMessage={editFormMethods.formState.errors.category_icon?.message as string}> 
-            {editBannerPreview && <div className="mb-2"><img src={editBannerPreview} alt="Banner Preview" style={{width: '100%', maxHeight: '150px', objectFit: 'contain', borderRadius: '4px'}} /></div>}
+            {editBannerPreview && <div className="mb-2 border border-gray-200 rounded-md"><img src={editBannerPreview} alt="Banner Preview" style={{width: '100%', maxHeight: '150px', objectFit: 'contain', borderRadius: '4px'}} /></div>}
             <Controller name="category_icon" control={editFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => 
               <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
                 const file = e.target.files?.[0] || null; 
@@ -903,11 +915,14 @@ const Categories = () => {
               }} accept="image/*" />} /> 
             {!editBannerPreview && editingCategory?.bannerIconFullPath && <small className="text-xs text-gray-500">Current banner will be kept if no new file is uploaded.</small>}
           </FormItem>
-
-          <FormItem label="Show on Home Page?" invalid={!!editFormMethods.formState.errors.show_home_page} errorMessage={editFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-          <FormItem label="Show in Header?" invalid={!!editFormMethods.formState.errors.show_header} errorMessage={editFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-          <FormItem label="Coming Soon?" invalid={!!editFormMethods.formState.errors.comingsoon} errorMessage={editFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
-          <FormItem label="Status" invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={editFormMethods.control} render={({ field }) => <UiSelect options={apiCategoryStatusOptions} value={apiCategoryStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+          <div className="grid grid-cols-2 gap-2">
+            <FormItem label="Show on Home Page?" invalid={!!editFormMethods.formState.errors.show_home_page} errorMessage={editFormMethods.formState.errors.show_home_page?.message} isRequired> <Controller name="show_home_page" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+            <FormItem label="Show in Header?" invalid={!!editFormMethods.formState.errors.show_header} errorMessage={editFormMethods.formState.errors.show_header?.message} isRequired> <Controller name="show_header" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <FormItem label="Coming Soon?" invalid={!!editFormMethods.formState.errors.comingsoon} errorMessage={editFormMethods.formState.errors.comingsoon?.message} isRequired> <Controller name="comingsoon" control={editFormMethods.control} render={({ field }) => <UiSelect options={yesNoOptions} value={yesNoOptions.find(opt => opt.value === String(field.value))} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+            <FormItem label="Status" invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message} isRequired> <Controller name="status" control={editFormMethods.control} render={({ field }) => <UiSelect options={apiCategoryStatusOptions} value={apiCategoryStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : undefined)} />} /> </FormItem>
+          </div>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
           <FormItem label="Meta Title" invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}> <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} /> </FormItem>
           <FormItem label="Meta Description" invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}> <Controller name="meta_descr" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea />} /> </FormItem>

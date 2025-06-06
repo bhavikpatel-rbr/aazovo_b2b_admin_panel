@@ -34,7 +34,7 @@ import {
   TbX,
   TbCategory2,
   TbReload,
-  TbUser, // Kept for "Assigned to Task" button
+  TbUser, // Kept for "Assign to Task" button
 } from "react-icons/tb";
 
 // Types
@@ -671,7 +671,7 @@ const HomeCategoriesListing = () => {
                         icon={<TbUser />}
                         clickFeedback={false}
                         customColorClass={({ active, unclickable }) => classNames('hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0', active ? 'bg-gray-200' : 'bg-gray-100', unclickable && 'opacity-50 cursor-not-allowed', !active && !unclickable && 'hover:bg-gray-200')}
-                        >Assigned to Task</Button>
+                        >Assign to Task</Button>
                     </Link>
                 <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "loading" || isSubmitting}>Add New</Button>
                </div>         

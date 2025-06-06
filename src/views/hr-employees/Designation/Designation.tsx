@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -36,6 +36,12 @@ import {
   TbUserCircle,
   TbTrash,
   TbReload,
+  TbUsers,
+  TbPresentation,
+  TbPresentationAnalytics,
+  TbPresentationOff,
+  TbUserX,
+  TbUser,
 } from "react-icons/tb";
 
 // Types
@@ -166,7 +172,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
@@ -175,7 +181,7 @@ const ActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       
     </div>
   );
@@ -778,9 +784,19 @@ const DesignationListing = () => {
 
   const columns: ColumnDef<DesignationItem>[] = useMemo(
     () => [
-      { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
-      { header: "Designation Name", accessorKey: "name", enableSorting: true },
-
+      // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
+      { header: "Designation", accessorKey: "name", enableSorting: true },
+      { header: "Department", accessorKey: "department", enableSorting: true, cell : props => <div>-</div> },
+      { header: "Reporting to", accessorKey: "reporting", enableSorting: true, cell : props => <div>-</div> },
+      { header: "Total Employees", accessorKey: "employees", enableSorting: true, cell : props => <div>-</div> },
+      {
+        header: "Status", accessorKey: "status", enableSorting: true, size: 80, meta: { HeaderClass: "text-red-500" },
+        cell: () => {
+          return (
+            <Tag className="bg-green-100 text-green-500">Active</Tag>
+          )
+        }
+      },
       {
         header: "Actions",
         id: "action",
@@ -818,6 +834,64 @@ const DesignationListing = () => {
               Add New
             </Button>
           </div>
+
+          <div className="grid grid-cols-6 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbPresentation size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">12</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbPresentationAnalytics size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">4</h6>
+                <span className="font-semibold text-xs">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbPresentationOff size={24} />
+              </div>
+              <div>
+                <h6 className="text-pink-500">8</h6>
+                <span className="font-semibold text-xs">Inactive</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbUsers size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">34</h6>
+                <span className="font-semibold text-xs">Total Emp.</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbUser size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">34</h6>
+                <span className="font-semibold text-xs">Active Emp.</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbUserX size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">34</h6>
+                <span className="font-semibold text-xs">Inactive Emp.</span>
+              </div>
+            </Card>
+          </div>
+
           <DesignationsTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
@@ -834,7 +908,7 @@ const DesignationListing = () => {
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectable
+              // selectable
               checkboxChecked={(row) =>
                 selectedItems.some((selected) => selected.id === row.id)
               }
@@ -902,6 +976,54 @@ const DesignationListing = () => {
               )}
             />
           </FormItem>
+          <FormItem
+            label="Department"
+          >
+            <Controller
+              name="department"
+              control={addFormMethods.control}
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Department" 
+                  options={[
+                    {label:"IT" , value:"IT"},
+                    {label:"Sales" , value:"Sales"},
+                  ]}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Reporting To"
+          >
+            <Controller
+              name="Reporting To"
+              control={addFormMethods.control}
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Reporting Person" 
+                  options={[
+                    {label:"Tushar Joshi" , value:"Tushar Joshi"},
+                    {label:"Rahul Bayad" , value:"Rahul Bayad"},
+                  ]}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Status"
+          >
+            <Controller
+              name="Status"
+              control={addFormMethods.control}
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Status" 
+                  options={[
+                    {label:"Active" , value:"Active"},
+                    {label:"Inactive", value:"Inactive"},
+                  ]}
+                />
+              )}
+            />
+          </FormItem>
         </Form>
       </Drawer>
 
@@ -953,6 +1075,54 @@ const DesignationListing = () => {
               control={editFormMethods.control}
               render={({ field }) => (
                 <Input {...field} placeholder="Enter Designation Name" />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Department"
+          >
+            <Controller
+              name="department"
+              control={addFormMethods.control}
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Department" 
+                  options={[
+                    {label:"IT" , value:"IT"},
+                    {label:"Sales" , value:"Sales"},
+                  ]}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Reporting To"
+          >
+            <Controller
+              name="Reporting To"
+              control={addFormMethods.control}
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Reporting Person" 
+                  options={[
+                    {label:"Tushar Joshi" , value:"Tushar Joshi"},
+                    {label:"Rahul Bayad" , value:"Rahul Bayad"},
+                  ]}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Status"
+          >
+            <Controller
+              name="Status"
+              control={addFormMethods.control}
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Status" 
+                  options={[
+                    {label:"Active" , value:"Active"},
+                    {label:"Inactive", value:"Inactive"},
+                  ]}
+                />
               )}
             />
           </FormItem>

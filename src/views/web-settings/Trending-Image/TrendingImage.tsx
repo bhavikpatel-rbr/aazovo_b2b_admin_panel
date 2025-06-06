@@ -536,7 +536,7 @@ const TrendingImages = () => {
                 if (!dateVal) return 'N/A';
                 try {
                     return (
-                        `${new Date(dateVal).getDate()} ${new Date(dateVal).toLocaleString("en-US", { month: "short" })}, ${new Date(dateVal).getFullYear()}, ${new Date(dateVal).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                        `${new Date(dateVal).getDate()} ${new Date(dateVal).toLocaleString("en-US", { month: "short" })} ${new Date(dateVal).getFullYear()}, ${new Date(dateVal).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
                     )
                 } catch (e) { return 'Invalid Date'; }
             }
@@ -580,7 +580,7 @@ const TrendingImages = () => {
                         <div>
                             <Link to='/task/task-list/create'>
                                 <Button className="mr-2" icon={<TbUser />} clickFeedback={false} customColorClass={({ active, unclickable }) => classNames('hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0', active ? 'bg-gray-200' : 'bg-gray-100', unclickable && 'opacity-50 cursor-not-allowed', !active && !unclickable && 'hover:bg-gray-200')}>
-                                    Assigned to Task
+                                    Assign to Task
                                 </Button>
                             </Link>
                             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "loading" || isSubmitting}>Add New</Button>
@@ -602,7 +602,7 @@ const TrendingImages = () => {
 
             <TrendingImagesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-            <Drawer title="Add Trending Image" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={600} // Matched width
+            <Drawer title="Add Trending Image" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={460} // Matched width
                 footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="addPageImageForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Adding...' : 'Save'}</Button></div>}>
                 <Form id="addPageImageForm" onSubmit={addFormMethods.handleSubmit(onAddItemSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Page Name" invalid={!!addFormMethods.formState.errors.page_name} errorMessage={addFormMethods.formState.errors.page_name?.message}>
@@ -614,7 +614,7 @@ const TrendingImages = () => {
                 </Form>
             </Drawer>
 
-            <Drawer title="Edit Trending Image" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={600} // Matched width
+            <Drawer title="Edit Trending Image" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={480} // Matched width
                 footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="editPageImageForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</Button></div>}>
                 <Form id="editPageImageForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-4 relative pb-28"> {/* Added relative pb-28 */}
                     <FormItem label="Page Name" invalid={!!editFormMethods.formState.errors.page_name} errorMessage={editFormMethods.formState.errors.page_name?.message}>

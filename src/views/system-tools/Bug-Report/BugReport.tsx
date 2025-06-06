@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected spelling
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Dropdown, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -44,6 +44,13 @@ import {
   TbLoader,
   TbCircleCheck,
   TbCircleX,
+  TbLink,
+  TbUser,
+  TbMailShare,
+  TbBrandWhatsapp,
+  TbBell,
+  TbTagStarred,
+  TbCalendarClock,
   // TbTrash, // Already imported, no need to re-declare if ActionColumn handles it
 } from "react-icons/tb";
 
@@ -70,6 +77,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import classNames from "@/utils/classNames";
 import { Link } from "react-router-dom";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- Define Types ---
 export type BugReportStatusApi = "Read" | "Unread" | string;
@@ -263,7 +271,7 @@ const ActionColumn = ({
           <TbEye />
         </button>
       </Tooltip>{" "}
-      <Tooltip title="Assign to task">
+      {/* <Tooltip title="Assign to task">
         {" "}
         <button
           className={`text-xl cursor-pointer mr-0.5 select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
@@ -273,7 +281,16 @@ const ActionColumn = ({
             <TbUserPlus size={18} />
           </Link>
         </button>
-      </Tooltip>{" "}
+      </Tooltip>{" "} */}
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        {/* <Dropdown.Item className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Shared Linked</span></Dropdown.Item> */}
+        <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <Link to="/task/task-list/create" ><span className="text-xs">Assign to Task</span></Link></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active </span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
+      </Dropdown>
     </div>
   );
 };
@@ -1080,7 +1097,7 @@ const BugReportListing = () => {
   );
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
       <FormItem
         label="Name"
         className="md:col-span-1"
@@ -1119,7 +1136,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Mobile No. (Optional)"
+        label="Mobile No."
         className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.mobile_no}
         errorMessage={currentFormMethods.formState.errors.mobile_no?.message}
@@ -1159,7 +1176,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Report / Description"
+        label="Report Description"
         className="md:col-span-2"
         invalid={!!currentFormMethods.formState.errors.report}
         errorMessage={currentFormMethods.formState.errors.report?.message}
@@ -1179,7 +1196,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Attachment (Optional)"
+        label="Attachment"
         className="md:col-span-2"
         invalid={!!currentFormMethods.formState.errors.attachment}
         errorMessage={
@@ -1511,7 +1528,7 @@ const BugReportListing = () => {
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        width={700}
+        width={520}
         footer={
           <div className="text-right w-full">
             {" "}

@@ -25,6 +25,7 @@ import DebouceInput from "@/components/shared/DebouceInput";
 import {
   Card,
   Drawer,
+  Dropdown,
   Form,
   FormItem,
   Input,
@@ -56,7 +57,14 @@ import {
   TbUserBolt,
   TbUserExclamation,
   TbUserScreen,
-  TbUserShare, // Additional icons for form
+  TbUserShare,
+  TbBrandWhatsapp,
+  TbUser,
+  TbBell,
+  TbActivity,
+  TbCalendarEvent,
+  TbDownload,
+  TbTagStarred, // Additional icons for form
 } from "react-icons/tb";
 import DatePicker from "@/components/ui/DatePicker"; // Added DatePicker for date selection
 import { Select } from "@/components/ui/Select"; // Added Select for dropdowns
@@ -67,6 +75,8 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import { BsThreeDotsVertical } from "react-icons/bs";
+import dayjs from "dayjs";
 
 // --- Define Item Type ---
 export type EmployeeStatus = "active" | "inactive" | "on_leave" | "terminated";
@@ -237,15 +247,16 @@ const ActionColumn = ({
           <TbKey />
         </div>
       </Tooltip>
-      <Tooltip title="Change Password">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-          role="button"
-        >
-          <TbTrash />
-        </div>
-      </Tooltip>
-
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs"> Send Email</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Schedule Meeting</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbActivity size={18} /> <span className="text-xs">View Activity Log</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Documents</span></Dropdown.Item>
+      </Dropdown>
     </div>
   );
 };
@@ -1043,7 +1054,7 @@ const EmployeesListing = () => {
         header: "Name",
         accessorKey: "name",
         /* ... (keep original cell) ... */ cell: (props) => {
-          const { name, email, avatar } = props.row.original;
+          const { name, email, mobile, avatar } = props.row.original;
           return (
             <div className="flex items-center">
               <Avatar
@@ -1057,23 +1068,19 @@ const EmployeesListing = () => {
               <div className="ml-2 rtl:mr-2">
                 <span className="font-semibold">{name}</span>
                 <div className="text-xs text-gray-500">{email}</div>
+                <div className="text-xs text-gray-500">{mobile}</div>
               </div>
             </div>
           );
         },
       },
-      {
-        header: "Mobile",
-        accessorKey: "mobile",
-        cell: (props) => <span>{props.row.original.mobile ?? "-"}</span>,
-      },
-      { header: "Department", accessorKey: "department" },
       { header: "Designation", accessorKey: "designation" },
+      { header: "Department", accessorKey: "department", size: 200 },
       {
         header: "Roles",
         accessorKey: "roles",
         cell: (props) => (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 text-xs">
             {props.row.original.roles.map((role) => (
               <Tag
                 key={role}
@@ -1088,15 +1095,14 @@ const EmployeesListing = () => {
       {
         header: "Joined At",
         accessorKey: "joiningDate",
+        size:200,
         cell: (props) =>
-          props.getValue<Date>()
-            ? new Date(props.getValue<Date>()).toLocaleDateString()
-            : "-",
+          props.getValue() ? <span className="text-xs"> {dayjs(props.getValue()).format("D MMM YYYY, h:mm A")}</span> : '-'
       }, // Added Joining Date
       {
         header: "Action",
         id: "action",
-        size: 200,
+        size: 120,
         meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn

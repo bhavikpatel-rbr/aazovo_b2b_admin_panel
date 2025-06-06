@@ -53,6 +53,7 @@ import {
   TbPencil,
   TbPhoto,
   TbPlus,
+  TbReload,
   TbSearch,
   TbShare,
   TbStack2
@@ -93,7 +94,7 @@ export type WallProductCondition = "New" | "Used" | "Refurbished" | string;
 
 export type ApiWallItem = {
   id: number;
-  listing_id: string | null;
+  id: string | null;
   product_name: string;
   company_name: string | null;
   company_id_from_api?: string | null;
@@ -134,7 +135,7 @@ export type ApiWallItem = {
 
 export type WallItem = {
   id: number;
-  listing_id: string; // Non-nullable in WallItem, default to "" if API is null
+  id: string; // Non-nullable in WallItem, default to "" if API is null
   product_name: string;
   company_name: string; // Non-nullable
   companyId?: string;
@@ -271,7 +272,7 @@ const CSV_WALL_HEADERS = [
   "Cartoon Type ID", "Device Condition", "Inquiry Count", "Share Count", "Bookmarked",
 ];
 const CSV_WALL_KEYS: (keyof WallItem)[] = [
-  "id", "listing_id", "product_name", "company_name", "companyId", "member_name", "memberId",
+  "id", "id", "product_name", "company_name", "companyId", "member_name", "memberId",
   "member_email", "member_phone", "product_category", "product_subcategory", "product_description",
   "product_specs", "product_status", "quantity", "price", "want_to", "listing_type",
   "shipping_options", "payment_method", "warranty", "return_policy", "listing_url", "brand",
@@ -385,13 +386,15 @@ interface WallTableToolsProps {
   onExport: () => void;
   onAddNew: () => void;
   onImport: () => void;
+  onClearFilters: () => void;
 }
-const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport }: WallTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters }: WallTableToolsProps) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <WallSearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip>
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
       <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
       <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
@@ -509,7 +512,6 @@ const WallListing = () => {
       const mapped = wallListing.map(
         (apiItem: ApiWallItem): WallItem => ({
           id: apiItem.id,
-          listing_id: apiItem.listing_id || "",
           product_name: apiItem.product_name,
           company_name: apiItem.company_name || "",
           companyId: apiItem.company_id_from_api || undefined,
@@ -836,7 +838,7 @@ const WallListing = () => {
         accessorKey: "product_name",
         size: 280,
         cell: ({ row }) => {
-          const { product_images, product_name, listing_id, want_to } = row.original;
+          const { product_images, product_name, id, want_to } = row.original;
           const intent = want_to as WallIntent;
           return (
             <div className="flex flex-col">
@@ -851,7 +853,7 @@ const WallListing = () => {
                   {product_name}
                 </div>
               </div>
-              <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {listing_id || "N/A"}</span>
+              <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span>
               <span className="text-xs">
                 {want_to && (
                   <span><b>Want To: </b><Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>{want_to}</Tag></span>
@@ -952,12 +954,14 @@ const WallListing = () => {
           return (
             <div className="flex flex-col gap-1 text-xs">
               {recordStatus && (
-                <Tag
-                  onClick={() => handleChangeStatus(row.original)}
-                  className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize cursor-pointer`}
-                >
-                  {recordStatus}
-                </Tag>
+                <div>
+                  <Tag
+                    onClick={() => handleChangeStatus(row.original)}
+                    className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize cursor-pointer`}
+                    >
+                    {recordStatus}
+                  </Tag>
+                </div>
               )}
               {visibility && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Visibility:</span> <span className="text-gray-600 dark:text-gray-400">{visibility}</span></span>)}
               {priority && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Priority:</span> <span className="text-gray-600 dark:text-gray-400">{priority}</span></span>)}
@@ -999,6 +1003,7 @@ const WallListing = () => {
             onExport={handleExportData}
             onAddNew={openAddDrawer}
             onImport={handleImportData}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <WallTable
@@ -1040,12 +1045,12 @@ const WallListing = () => {
               )}
               <div>
                 <h5 className="font-semibold text-xl text-gray-800 dark:text-gray-100">{editingItem.product_name}</h5>
-                <p className="text-gray-500 dark:text-gray-400">ID: {editingItem.listing_id || "N/A"}</p>
+                <p className="text-gray-500 dark:text-gray-400">ID: {editingItem.id || "N/A"}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
               {Object.entries(editingItem)
-                .filter(([key]) => !["product_images", "product_name", "listing_id", "id", "productId", "productSpecId", "customerId"].includes(key))
+                .filter(([key]) => !["product_images", "product_name", "id", "id", "productId", "productSpecId", "customerId"].includes(key))
                 .map(([key, value]) => {
                   let displayValue = value;
                   if (key === "cartoonTypeId" && typeof value === "number") {
@@ -1092,7 +1097,7 @@ const WallListing = () => {
         }
       >
         <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-2 h-full">
-          <div className="md:grid grid-cols-2 gap-2 overflow-y-auto p-1">
+          <div className="md:grid grid-cols-2 gap-2 overflow-y-auto">
             <FormItem label="Status">
               <Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Status..." options={recordStatusOptions} {...field} />)} />
             </FormItem>
