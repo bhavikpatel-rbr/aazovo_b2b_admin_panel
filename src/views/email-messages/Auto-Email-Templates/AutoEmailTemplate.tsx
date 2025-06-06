@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Tag might be used if status is added
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Tag might be used if status is added
 
 // Icons
 import {
@@ -40,7 +40,9 @@ import {
   TbMailSearch,
   TbMailForward,
   TbMailOpened,
-  TbAlignBoxCenterBottom, // For Department
+  TbAlignBoxCenterBottom,
+  TbBuildingCog,
+  TbBuildingOff, // For Department
 } from "react-icons/tb";
 
 // Types
@@ -316,6 +318,13 @@ const AutoEmailTemplatesListing = () => {
     // { header: "Template Key", accessorKey: "template_key", size: 250, enableSorting: true },
     { header: "Category", accessorKey: "category_id", size: 180, enableSorting: true, cell: props => props.row.original.category?.name || categoryOptions.find(c => c.value === String(props.getValue()))?.label || String(props.getValue()) },
     { header: "Department", accessorKey: "department_id", size: 180, enableSorting: true, cell: props => props.row.original.department?.name || departmentOptions.find(d => d.value === String(props.getValue()))?.label || (props.getValue() ? String(props.getValue()) : "N/A") },
+    { header: "Status", accessorKey: "status", enableSorting: true, size: 100, meta : {HeaderClass: "text-red-500"},
+      cell : ()=>{
+        return  (
+          <Tag className="bg-green-200 text-green-500">Active</Tag>
+        )
+      }
+    },
     {
       header: "Created At", accessorKey: "created_at", size: 150,
       cell: props =>
@@ -349,6 +358,44 @@ const AutoEmailTemplatesListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Auto Email Templates</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Template</Button>
+          </div>
+          <div className="grid grid-cols-4 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbAlignBoxCenterBottom size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">12</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbBuildingCog size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">4</h6>
+                <span className="font-semibold text-xs">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbBuildingOff size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">8</h6>
+                <span className="font-semibold text-xs">Inactive</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbMailForward size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">34</h6>
+                <span className="font-semibold text-xs">Count Used</span>
+              </div>
+            </Card>
           </div>
           <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">

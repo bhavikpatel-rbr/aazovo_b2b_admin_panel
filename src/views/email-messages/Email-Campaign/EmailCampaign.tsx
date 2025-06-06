@@ -50,7 +50,14 @@ import {
   TbMailCode,
   TbReload,
   TbAlignBoxCenterBottom,
-  TbMailbox, // For file import
+  TbMailbox,
+  TbBuildingCog,
+  TbBuildingOff,
+  TbCaravan,
+  TbCalendarUser,
+  TbPencilCheck,
+  TbCalendarClock,
+  TbCalendarCancel, // For file import
 } from "react-icons/tb";
 
 // Types
@@ -569,9 +576,25 @@ const EmailCampaignListing = () => {
   const columns: ColumnDef<EmailCampaignItem>[] = useMemo(() => [
     // { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
     { header: "Campaign Name", accessorKey: "campaign_name", size: 220, enableSorting: true, cell: props => props.row.original.campaign_name || <span className="italic text-gray-400">N/A</span> },
-    { header: "Template Used", accessorKey: "mail_template.name", size: 200, enableSorting: true, cell: props => props.row.original.mail_template?.name || `ID: ${props.row.original.template_id}` },
+    { header: "Template", accessorKey: "mail_template.name", size: 200, enableSorting: true, cell: props => props.row.original.mail_template?.name || `ID: ${props.row.original.template_id}` },
     {
       header: "Date & Time", accessorKey: "dateTimeDisplay", size: 180, enableSorting: true,
+      cell: props => {
+        const d = props.getValue<Date>();
+        return d ? (
+          <span className="text-xs">
+            {
+              <span>{`${new Date(d.toLocaleDateString()).getDate()} 
+                  ${new Date(d.toLocaleDateString()).toLocaleString("en-US", { month: "short" })} 
+                  ${new Date(d.toLocaleDateString()).getFullYear()}, 
+                  ${new Date(d.toLocaleDateString()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+              }</span>
+            }
+          </span>
+        ) : '-'
+      }
+    },
+    { header: "Scheduled For", accessorKey: "dateTimeDisplay", size: 200, enableSorting: true, 
       cell: props => {
         const d = props.getValue<Date>();
         return d ? (
@@ -740,6 +763,62 @@ const EmailCampaignListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Email Campaigns</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={() => openCreateDrawer()}>Create New Campaign</Button>
+          </div>
+          <div className="grid grid-cols-6 mb-4 gap-2">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                  <TbCaravan size={24} />
+                </div>
+                <div>
+                  <h6 className="text-blue-500">12</h6>
+                  <span className="font-semibold text-xs">Total</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-gray-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                  <TbCalendarUser size={24} />
+                </div>
+                <div>
+                  <h6 className="text-blue-500">12</h6>
+                  <span className="font-semibold text-xs">Subscribers</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                  <TbPencilCheck size={24} />
+                </div>
+                <div>
+                  <h6 className="text-violet-500">4</h6>
+                  <span className="font-semibold text-xs">Draft</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbCalendarClock size={24} />
+                </div>
+                <div>
+                  <h6 className="text-red-500">8</h6>
+                  <span className="font-semibold text-xs">Scheduled</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                  <TbMailForward size={24} />
+                </div>
+                <div>
+                  <h6 className="text-green-500">34</h6>
+                  <span className="font-semibold text-xs">Sent</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                  <TbCalendarCancel size={24} />
+                </div>
+                <div>
+                  <h6 className="text-green-500">34</h6>
+                  <span className="font-semibold text-xs">Cancelled</span>
+                </div>
+              </Card>
           </div>
           <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">

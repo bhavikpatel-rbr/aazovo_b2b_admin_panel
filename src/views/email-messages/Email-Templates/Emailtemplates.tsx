@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -47,6 +47,10 @@ import {
   TbMailOpened,
   TbMailSearch,
   TbAlignBoxCenterBottom,
+  TbBuilding,
+  TbBuildingCog,
+  TbBuildingOff,
+  TbUsers,
 } from "react-icons/tb";
 
 // Types
@@ -71,6 +75,7 @@ import {
   getDesignationsAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+import dayjs from "dayjs";
 
 
 // --- Define Types ---
@@ -447,7 +452,16 @@ const EmailTemplatesListing = () => {
     // { header: "Role", accessorKey: "role_id", cell: props => <Tooltip title={props.row.original.roleName || (props.getValue() ? String(props.getValue()) : "N/A")}><span className="truncate block max-w-[100px]">{props.row.original.roleName || (props.getValue() ? String(props.getValue()) : "N/A")}</span></Tooltip> },
     { header: "Department", accessorKey: "department_id", cell: props => <Tooltip title={props.row.original.departmentName || (props.getValue() ? String(props.getValue()) : "N/A")}><span className="truncate block max-w-[120px]">{props.row.original.departmentName || (props.getValue() ? String(props.getValue()) : "N/A")}</span></Tooltip> },
     // { header: "Designation", accessorKey: "designation_id", cell: props => <Tooltip title={props.row.original.designationName || (props.getValue() ? String(props.getValue()) : "N/A")}><span className="truncate block max-w-[100px]">{props.row.original.designationName || (props.getValue() ? String(props.getValue()) : "N/A")}</span></Tooltip> },
-    { header: "Created At", accessorKey: "created_at", size: 120, cell: props => new Date(props.getValue<string>()).toLocaleDateString() },
+    { header: "Status", accessorKey: "status", enableSorting: true, size: 100, meta : {HeaderClass: "text-red-500"},
+      cell : ()=>{
+        return  (
+          <Tag className="bg-green-200 text-green-500">Active</Tag>
+        )
+      }
+    },
+    { header: "Created At", accessorKey: "created_at", size: 120, 
+       cell: props => props.getValue() ? <span className="text-xs"> {dayjs(props.getValue()).format("D MMM YYYY, h:mm A")}</span> : '-'
+    },
     { header: "Actions", id: "actions", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /* onViewDetail={() => {}} */ /> },
   ], [categoryOptions, allSubCategoryOptionsForFilter, brandOptions, roleOptions, departmentOptions, designationOptions, openEditDrawer, handleDeleteClick]);
 
@@ -517,6 +531,44 @@ const EmailTemplatesListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Email Templates</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Template</Button>
+          </div>
+          <div className="grid grid-cols-4 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbAlignBoxCenterBottom size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">12</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbBuildingCog size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">4</h6>
+                <span className="font-semibold text-xs">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbBuildingOff size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">8</h6>
+                <span className="font-semibold text-xs">Inactive</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbMailForward size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">34</h6>
+                <span className="font-semibold text-xs">Count Used</span>
+              </div>
+            </Card>
           </div>
           <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} onClearFilters={onClearFilters} />
           <div className="mt-4">
