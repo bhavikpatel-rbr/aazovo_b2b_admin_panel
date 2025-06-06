@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -31,9 +31,15 @@ import {
   TbSearch,
   TbFilter,
   TbPlus,
-  TbCloudUpload,    
+  TbCloudUpload,
   TbBuildingCommunity,
-  TbReload, // Icon for Departments
+  TbReload,
+  TbUsers,
+  TbBuildingOff,
+  TbBuildingCog,
+  TbBuilding,
+  TbInbox,
+  TbUserScan, // Icon for Departments
 } from "react-icons/tb";
 
 // Types
@@ -61,9 +67,9 @@ export type DepartmentItem = {
   id: string | number;
   name: string;
   status: "Active" | "Inactive" | string; // API returns 'Active', allow string for flexibility
-  totalemployee?:string;
-  totaljobpost?:string;
-  totalapplication?:string;
+  totalemployee?: string;
+  totaljobpost?: string;
+  totalapplication?: string;
   created_by?: string;
   created_at?: string;
   updated_at?: string;
@@ -321,14 +327,13 @@ const DepartmentsSelectedFooter = ({
       <ConfirmDialog
         isOpen={deleteConfirmationOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Department${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
+        title={`Delete ${selectedItems.length} Department${selectedItems.length > 1 ? "s" : ""
+          }`}
         onClose={handleCancelDelete}
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        // The loading prop on ConfirmDialog itself might not be needed if the button above shows loading
+      // The loading prop on ConfirmDialog itself might not be needed if the button above shows loading
       >
         <p>
           Are you sure you want to delete the selected department
@@ -750,31 +755,35 @@ const Departments = () => {
   const columns: ColumnDef<DepartmentItem>[] = useMemo(
     () => [
       // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
-      { header: "Department Name", accessorKey: "name", enableSorting: true, size:140 },
-      { header: "Status", accessorKey: "status", enableSorting: true, size: 80, meta : {HeaderClass: "text-red-500"},
-        cell : ()=>{
-          return  (
+      { header: "Department Name", accessorKey: "name", enableSorting: true, size: 140 },
+      {
+        header: "Status", accessorKey: "status", enableSorting: true, size: 80, meta: { HeaderClass: "text-red-500" },
+        cell: () => {
+          return (
             <Tag className="bg-green-200 text-green-500">Active</Tag>
           )
         }
       },
-      { header: "Total Employee", accessorKey: "totalemployee", enableSorting: true, size: 140, meta : {HeaderClass: "text-red-500"},
-        cell : ()=>{
-          return  (
+      {
+        header: "Total Employee", accessorKey: "totalemployee", enableSorting: true, size: 140, meta: { HeaderClass: "text-red-500" },
+        cell: () => {
+          return (
             <span>120</span>
           )
         }
       },
-      { header: "Total Job Post", accessorKey: "totaljobpost", enableSorting: true, size: 140, meta : {HeaderClass: "text-red-500"},
-        cell : ()=>{
-          return  (
+      {
+        header: "Total Job Post", accessorKey: "totaljobpost", enableSorting: true, size: 140, meta: { HeaderClass: "text-red-500" },
+        cell: () => {
+          return (
             <span>20</span>
           )
         }
       },
-      { header: "Total Application", accessorKey: "totalapplication", enableSorting: true, size: 140, meta : {HeaderClass: "text-red-500"},
-        cell : ()=>{
-          return  (
+      {
+        header: "Total Application", accessorKey: "totalapplication", enableSorting: true, size: 140, meta: { HeaderClass: "text-red-500" },
+        cell: () => {
+          return (
             <span>20</span>
           )
         }
@@ -801,12 +810,52 @@ const Departments = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">
-                Departments
+              Departments
             </h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New
             </Button>
           </div>
+
+          <div className="grid grid-cols-4 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbBuilding size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">12</h6>
+                <span className="font-semibold text-xs">Total Departments</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbUserScan size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">4</h6>
+                <span className="font-semibold text-xs">Total Employees</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbInbox size={24} />
+              </div>
+              <div>
+                <h6 className="text-pink-500">8</h6>
+                <span className="font-semibold text-xs">Jobs Posted</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbUsers size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">34</h6>
+                <span className="font-semibold text-xs">Total Applicants</span>
+              </div>
+            </Card>
+          </div>
+
           <DepartmentsTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
@@ -944,12 +993,12 @@ const Departments = () => {
         <div className="absolute bottom-[14%] w-[88%]">
           <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
             <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br/>
+              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
               <p className="text-sm font-semibold">Tushar Joshi</p>
               <p>System Admin</p>
             </div>
-            <div className="w-[210px]"><br/>
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br/>
+            <div className="w-[210px]"><br />
+              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
               <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
             </div>
           </div>

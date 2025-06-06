@@ -662,6 +662,9 @@ const JobDepartment = () => {
   const columns: ColumnDef<JobDepartmentItem>[] = useMemo(
     () => [
       { header: "Department Name", accessorKey: "name", enableSorting: true },
+      { header: "No. of Jobs", accessorKey: "name", enableSorting: true, cell : props => <div className="">12</div> },
+      { header: "No. of Post", accessorKey: "name", enableSorting: true, cell : props => <div className="">18</div> },
+      { header: "No. of Applicants", accessorKey: "name", enableSorting: true, cell : props => <div className="">67</div> },
       { header: "Status", accessorKey: "status", enableSorting: true, size: 100, meta : {HeaderClass: "text-red-500"},
         cell : ()=>{
           return  (

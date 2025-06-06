@@ -379,7 +379,7 @@ const ActionColumn = ({
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         <Dropdown.Item className="flex items-center gap-2"><TbCopy size={18} onClick={() => onClone(item)} /> <span className="text-xs">Clone Form</span></Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2"><TbFileSymlink size={18} onClick={() => onClone(item)} /> <span className="text-xs">Publish Link</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <Link to="/task/task-list/create" ><span className="text-xs">Assigned to Task</span></Link></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <Link to="/task/task-list/create" ><span className="text-xs">Assign to Task</span></Link></Dropdown.Item>
       </Dropdown>
     </div>
   );

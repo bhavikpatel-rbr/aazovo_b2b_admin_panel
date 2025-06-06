@@ -954,7 +954,7 @@ const PriceList = () => {
                     )
                   }
                 >
-                  Assigned to Task
+                  Assign to Task
                 </Button>
               </Link>
               <Button

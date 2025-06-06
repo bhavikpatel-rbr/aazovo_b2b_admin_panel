@@ -49,6 +49,8 @@ import {
   TbMailShare,
   TbBrandWhatsapp,
   TbBell,
+  TbTagStarred,
+  TbCalendarClock,
   // TbTrash, // Already imported, no need to re-declare if ActionColumn handles it
 } from "react-icons/tb";
 
@@ -283,9 +285,11 @@ const ActionColumn = ({
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         {/* <Dropdown.Item className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Shared Linked</span></Dropdown.Item> */}
         <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <Link to="/task/task-list/create" ><span className="text-xs">Assigned to Task</span></Link></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <Link to="/task/task-list/create" ><span className="text-xs">Assign to Task</span></Link></Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active </span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
       </Dropdown>
     </div>
   );
