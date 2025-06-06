@@ -100,7 +100,7 @@ export const ActionColumn = ({
   onClone?: () => void;
 }) => {
   const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+    "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
     <div className="flex items-center justify-center">
@@ -844,8 +844,13 @@ export const useTaskListingLogic = (initialData: TaskItem[]) => {
         enableSorting: true,
         size: 120,
         cell: (props) => (
-          <div className="flex flex-col gap-2">
-            <figure className="flex gap-1 flex-wrap">
+          <div className="flex flex-col gap-1.5">
+            <Avatar.Group 
+              chained   
+              maxCount={4}  
+              omittedAvatarProps={{ shape: 'circle', size: 30 }}
+              omittedAvatarTooltip
+            >
               <Tooltip
                 title={
                   <div className="flex flex-col items-center gap-2 text-xs ">
@@ -918,7 +923,7 @@ export const useTaskListingLogic = (initialData: TaskItem[]) => {
               >
                 <Avatar size={28} shape="circle" icon={<TbUserCircle />} src="/img/avatars/thumb-7.jpg" />
               </Tooltip>
-            </figure>
+            </Avatar.Group>
             <span>
               <Tag className={`${taskStatusColor[props.row.original.status]} text-white capitalize`}>
                 {props.row.original.status}
