@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form"; // Import useFieldArray
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -14,86 +14,99 @@ import toast from "@/components/ui/toast";
 import { TbCopy, TbPlus, TbTrash } from "react-icons/tb";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store"; // Added
-import { addDemandAction } from "@/reduxtool/master/middleware"; // Added - VERIFY PATH
+import { useAppDispatch } from "@/reduxtool/store";
+import { addDemandAction, getUsersAction } from "@/reduxtool/master/middleware";
+import { useSelector } from "react-redux";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-// --- Zod Schema for Create Demand Form ---
+// --- Zod Schema for Create Demand Form (Updated for multiple fields) ---
 const demandFormSchema = z.object({
   name: z.string().min(1, "Demand Name is required."),
-  assignedUserId: z.string().min(1, "Assigned User is required.").nullable(),
+  assignedUserId: z.number().min(1, "Assigned User is required.").nullable(),
 
-  buyerSection: z.object({
+  // Use z.array for multiple buyers
+  buyers: z.array(z.object({
     buyerId: z.string().optional().nullable(),
-  }).optional(),
+  })).min(1, "At least one buyer is required."),
+
   groupA_notes: z.string().optional().nullable(),
 
-  sellerSection: z.object({
+  // Use z.array for multiple sellers
+  sellers: z.array(z.object({
     sellerId: z.string().optional().nullable(),
-  }).optional(),
+  })).min(1, "At least one seller is required."),
+
   groupB_notes: z.string().optional().nullable(),
 });
 
 type DemandFormData = z.infer<typeof demandFormSchema>;
-
-// --- Dummy Options (Ensure values are the IDs your backend expects) ---
-const employeeOptions = [
-  { label: "Rahul (ID: 1)", value: "1" },
-  { label: "Ishan (ID: 2)", value: "2" },
-  { label: "Priya (ID: 3)", value: "3" },
-];
+export type UserOptionType = { value: string; label: string; id: number; name: string };
 
 const CreateDemand = () => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch(); // Added
+  const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    dispatch(getUsersAction());
+  }, [dispatch]);
+
+  const { usersData = [] } = useSelector(masterSelector);
+
+  const userOptions = useMemo(() => {
+    if (!Array.isArray(usersData)) return [];
+    return usersData.map((u: UserOptionType) => ({
+      value: u.id,
+      label: u.name,
+    }));
+  }, [usersData]);
 
   const formMethods = useForm<DemandFormData>({
     resolver: zodResolver(demandFormSchema),
     defaultValues: {
       name: "",
       assignedUserId: null,
-      buyerSection: { // Initialize even if optional
-        buyerId: "",
-      },
+      // Initialize with one empty buyer and seller
+      buyers: [{ buyerId: "" }],
       groupA_notes: "",
-      sellerSection: {
-        sellerId: "",
-      },
+      sellers: [{ sellerId: "" }],
       groupB_notes: "",
     },
   });
 
-  const { control, handleSubmit, reset, getValues, setValue, formState: { errors, isDirty, isValid } } = formMethods;
+  const { control, handleSubmit, reset, getValues, formState: { errors } } = formMethods;
+
+  // --- Field Array Hooks ---
+  const { fields: buyerFields, append: appendBuyer, remove: removeBuyer } = useFieldArray({
+    control,
+    name: "buyers",
+  });
+
+  const { fields: sellerFields, append: appendSeller, remove: removeSeller } = useFieldArray({
+    control,
+    name: "sellers",
+  });
 
   const onFormSubmit = useCallback(
     async (data: DemandFormData) => {
       setIsSubmitting(true);
 
       // --- Construct the payload for the API ---
-      // CRITICAL: This must match your backend 'addDemandAction' API requirements.
-      const apiPayload: {
-        name: string;
-        assign_user?: string | null; // Or number, match API
-        buyer_id?: string | null;       // Example: flattened structure
-        // buyer_section?: { buyer_id: string | null }; // Example: nested
-        groupA?: string | null;         // Assuming API expects 'groupA' for buyer notes
-        seller_id?: string | null;
-        groupB?: string | null;         // Assuming API expects 'groupB' for seller notes
-        status?: string;                // Optional: if you set a default status
-      } = {
+      // IMPORTANT: This now sends arrays of IDs. Ensure your addDemandAction and backend API
+      // expect a format like `buyer_section: ["id1", "id2"]`.
+      const apiPayload = {
         name: data.name,
         assign_user: data.assignedUserId,
-        groupA: data.groupA_notes,
-        groupB: data.groupB_notes,
-        // status: "Pending", // Example: Set a default status if needed by API
+        groupA: data.groupA_notes, // For Buyers
+        groupB: data.groupB_notes, // For Sellers
+        // Filter out any empty/null IDs before sending
+        buyer_section: data.buyers
+            .map(buyer => buyer.buyerId)
+            .filter(id => id && id.trim() !== ''),
+        seller_section: data.sellers
+            .map(seller => seller.sellerId)
+            .filter(id => id && id.trim() !== ''),
       };
-
-      if (data.buyerSection && data.buyerSection.buyerId) {
-        apiPayload.buyer_id = data.buyerSection.buyerId;
-      }
-      if (data.sellerSection && data.sellerSection.sellerId) {
-        apiPayload.seller_id = data.sellerSection.sellerId;
-      }
       
       console.log("--- CreateDemand API Payload ---", apiPayload);
 
@@ -110,7 +123,7 @@ const CreateDemand = () => {
 
       } catch (error: any) {
         console.error("Failed to create demand:", error);
-        const errorMessage = error?.message || error?.data?.message || "Could not create demand. Please try again.";
+        const errorMessage = error?.message || "Could not create demand.";
         toast.push(
           <Notification title="Creation Failed" type="danger" duration={4000}>
             {errorMessage}
@@ -127,55 +140,6 @@ const CreateDemand = () => {
     reset();
     navigate("/sales-leads/offers-demands");
     toast.push(<Notification title="Cancelled" type="info">Demand creation cancelled.</Notification>);
-  };
-  
-  const handleSaveAsDraft = async () => { // Make async if you intend to call an API
-    const currentValues = getValues();
-    
-    // --- Construct payload for DRAFT ---
-    // This might be the same as apiPayload, or it might specifically include a "status": "Draft"
-    const draftPayload: any = {
-        name: currentValues.name,
-        assign_user: currentValues.assignedUserId,
-        groupA: currentValues.groupA_notes,
-        groupB: currentValues.groupB_notes,
-        status: "Draft", // Explicitly set status for draft
-    };
-     if (currentValues.buyerSection && currentValues.buyerSection.buyerId) {
-        draftPayload.buyer_id = currentValues.buyerSection.buyerId;
-      }
-      if (currentValues.sellerSection && currentValues.sellerSection.sellerId) {
-        draftPayload.seller_id = currentValues.sellerSection.sellerId;
-      }
-
-    console.log("Saving as draft (Create Demand):", draftPayload);
-    setIsSubmitting(true); // Indicate activity
-    try {
-        // If you have a separate draft action or if addDemandAction handles status:
-        // await dispatch(addDemandAction(draftPayload)).unwrap(); // Or a specific saveDraftDemandAction
-        
-        // Simulate API call for draft
-        await new Promise(resolve => setTimeout(resolve, 700));
-
-        toast.push(
-            <Notification title="Draft Saved" type="info" duration={2000}>
-                Demand saved as draft.
-            </Notification>
-        );
-        // navigate("/sales-leads/offers-demands"); // Optional: Navigate or stay on page
-    } catch (error: any) {
-        const errorMessage = error?.message || "Could not save draft.";
-        toast.push(<Notification title="Draft Save Failed" type="danger">{errorMessage}</Notification>);
-    } finally {
-        setIsSubmitting(false);
-    }
-  };
-
-  const handleAddBuyer = () => {
-    toast.push(<Notification title="Action" type="info">Add Buyer (useFieldArray) to be implemented.</Notification>);
-  };
-  const handleAddSeller = () => {
-    toast.push(<Notification title="Action" type="info">Add Seller (useFieldArray) to be implemented.</Notification>);
   };
 
   return (
@@ -196,85 +160,57 @@ const CreateDemand = () => {
           <h4 className="mb-6">Add Demand</h4>
           <div className="grid md:grid-cols-2 gap-4">
             {/* Top Level Fields */}
-            <FormItem
-              label="Name"
-              invalid={!!errors.name}
-              errorMessage={errors.name?.message}
-            >
-              <Controller
-                name="name"
-                control={control}
-                render={({ field }) => <Input {...field} placeholder="Enter Demand Name" />}
-              />
+            <FormItem label="Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
+              <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Demand Name" />} />
             </FormItem>
-            <FormItem
-              label="Assign User"
-              invalid={!!errors.assignedUserId}
-              errorMessage={errors.assignedUserId?.message}
-            >
-              <Controller
-                name="assignedUserId"
-                control={control}
-                render={({ field }) => (
-                  <UiSelect
-                    placeholder="Select Employee"
-                    options={employeeOptions}
-                    value={employeeOptions.find(opt => opt.value === field.value)}
+            <FormItem label="Assign User" invalid={!!errors.assignedUserId} errorMessage={errors.assignedUserId?.message}>
+              <Controller name="assignedUserId" control={control} render={({ field }) => (
+                  <UiSelect placeholder="Select Employee" options={userOptions}
+                    value={userOptions.find(opt => opt.value === field.value)}
                     onChange={option => field.onChange(option ? option.value : null)}
-                    isClearable
-                  />
-                )}
-              />
+                    isClearable />
+                )} />
             </FormItem>
 
             {/* Buyer Column (Primary for Demand) */}
             <div className="flex flex-col gap-4">
               <Card>
                 <h5>Buyer Section</h5>
-                <div className="mt-4 flex items-center gap-1">
-                  <FormItem 
-                    label="Buyer ID" 
-                    className="w-full"
-                    invalid={!!errors.buyerSection?.buyerId}
-                    errorMessage={errors.buyerSection?.buyerId?.message}
-                  >
-                    <Controller
-                      name="buyerSection.buyerId"
-                      control={control}
-                      render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Buyer ID (Optional)" />}
-                    />
-                  </FormItem>
-                  <Button type="button" icon={<TbTrash size={20} />} className="min-h-10 min-w-10 self-end mb-1"
-                    onClick={() => setValue('buyerSection.buyerId', '', { shouldValidate: true, shouldDirty: true })}
-                  />
+                <div className="flex flex-col gap-4 mt-4">
+                  {buyerFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <FormItem 
+                        label={index === 0 ? "Buyer ID" : ""}
+                        className="w-full"
+                        invalid={!!errors.buyers?.[index]?.buyerId}
+                        errorMessage={errors.buyers?.[index]?.buyerId?.message}
+                      >
+                        <Controller
+                          name={`buyers.${index}.buyerId`}
+                          control={control}
+                          render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Buyer ID" />}
+                        />
+                      </FormItem>
+                      {buyerFields.length > 1 && (
+                        <Button type="button" shape="circle" size="sm" icon={<TbTrash size={18} />} className="self-end mb-1" onClick={() => removeBuyer(index)} />
+                      )}
+                    </div>
+                  ))}
                 </div>
                 <div className="text-right mt-2">
-                  <Button type="button" icon={<TbPlus />} onClick={handleAddBuyer}>Add Another Buyer</Button>
+                  <Button type="button" icon={<TbPlus />} onClick={() => appendBuyer({ buyerId: '' })}>
+                    Add Another Buyer
+                  </Button>
                 </div>
               </Card>
-
               <Card>
-                <h5>Group A Notes</h5> {/* Or "Buyer Group Notes" */}
+                <h5>Group A Notes (Buyer Notes)</h5>
                 <div className="mt-4 ">
-                  <FormItem
-                    invalid={!!errors.groupA_notes}
-                    errorMessage={errors.groupA_notes?.message}
-                  >
-                    <Controller
-                      name="groupA_notes"
-                      control={control}
-                      render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Enter notes for Group A (Optional)" rows={3}/>}
-                    />
+                  <FormItem invalid={!!errors.groupA_notes} errorMessage={errors.groupA_notes?.message}>
+                    <Controller name="groupA_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Enter notes for Group A (Optional)" rows={3}/>} />
                   </FormItem>
                   <div className="text-right mt-1">
-                    <Button 
-                        type="button" 
-                        icon={<TbCopy />} 
-                        onClick={() => {
-                            navigator.clipboard.writeText(getValues('groupA_notes') || '');
-                            toast.push(<Notification title="Copied" type="info">Group A notes copied.</Notification>)
-                        }}
-                    />
+                    <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues('groupA_notes') || ''); toast.push(<Notification title="Copied" type="info">Group A notes copied.</Notification>) }}/>
                   </div>
                 </div>
               </Card>
@@ -284,50 +220,41 @@ const CreateDemand = () => {
             <div className="flex flex-col gap-4">
               <Card>
                 <h5>Seller Section</h5>
-                <div className="mt-4 flex items-center gap-1">
-                  <FormItem 
-                    label="Seller ID" 
-                    className="w-full"
-                    invalid={!!errors.sellerSection?.sellerId}
-                    errorMessage={errors.sellerSection?.sellerId?.message}
-                  >
-                    <Controller
-                      name="sellerSection.sellerId"
-                      control={control}
-                      render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Seller ID (Optional)" />}
-                    />
-                  </FormItem>
-                  <Button type="button" icon={<TbTrash size={20} />} className="min-h-10 min-w-10 self-end mb-1"
-                    onClick={() => setValue('sellerSection.sellerId', '', { shouldValidate: true, shouldDirty: true })} 
-                  />
+                <div className="flex flex-col gap-4 mt-4">
+                  {sellerFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <FormItem 
+                        label={index === 0 ? "Seller ID" : ""}
+                        className="w-full"
+                        invalid={!!errors.sellers?.[index]?.sellerId}
+                        errorMessage={errors.sellers?.[index]?.sellerId?.message}
+                      >
+                        <Controller
+                          name={`sellers.${index}.sellerId`}
+                          control={control}
+                          render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Seller ID" />}
+                        />
+                      </FormItem>
+                      {sellerFields.length > 1 && (
+                        <Button type="button" shape="circle" size="sm" icon={<TbTrash size={18} />} className="self-end mb-1" onClick={() => removeSeller(index)} />
+                      )}
+                    </div>
+                  ))}
                 </div>
                 <div className="text-right mt-2">
-                  <Button type="button" icon={<TbPlus />} onClick={handleAddSeller}>Add Another Seller</Button>
+                  <Button type="button" icon={<TbPlus />} onClick={() => appendSeller({ sellerId: '' })}>
+                    Add Another Seller
+                  </Button>
                 </div>
               </Card>
-
               <Card>
-                <h5>Group B Notes</h5> {/* Or "Seller Group Notes" */}
+                <h5>Group B Notes (Seller Notes)</h5>
                 <div className="mt-4 ">
-                  <FormItem
-                    invalid={!!errors.groupB_notes}
-                    errorMessage={errors.groupB_notes?.message}
-                  >
-                    <Controller
-                      name="groupB_notes"
-                      control={control}
-                      render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Enter notes for Group B (Optional)" rows={3}/>}
-                    />
+                  <FormItem invalid={!!errors.groupB_notes} errorMessage={errors.groupB_notes?.message}>
+                    <Controller name="groupB_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Enter notes for Group B (Optional)" rows={3}/>} />
                   </FormItem>
                   <div className="text-right mt-1">
-                     <Button 
-                        type="button" 
-                        icon={<TbCopy />} 
-                        onClick={() => {
-                            navigator.clipboard.writeText(getValues('groupB_notes') || '');
-                            toast.push(<Notification title="Copied" type="info">Group B notes copied.</Notification>)
-                        }}
-                    />
+                     <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues('groupB_notes') || ''); toast.push(<Notification title="Copied" type="info">Group B notes copied.</Notification>) }}/>
                   </div>
                 </div>
               </Card>
@@ -339,15 +266,12 @@ const CreateDemand = () => {
           <Button type="button" onClick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSaveAsDraft} variant="twoTone" disabled={isSubmitting}>
-            Draft
-          </Button>
           <Button
             type="submit"
             form="createDemandForm"
             variant="solid"
             loading={isSubmitting}
-            disabled={isSubmitting || !isDirty || !isValid}
+            disabled={isSubmitting}
           >
             {isSubmitting ? "Saving..." : "Save Demand"}
           </Button>

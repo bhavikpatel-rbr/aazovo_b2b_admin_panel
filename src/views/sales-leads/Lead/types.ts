@@ -52,7 +52,7 @@ export type LeadListItem = {
 
 // Zod Schema for Add/Edit Lead Form (UPDATED)
 export const leadFormSchemaObject = {
-    member_id: z.string().min(1, "Member is required"),
+    member_id: z.string().nullable(),
     enquiry_type: z.string().min(1, "Enquiry type is required"),
     lead_intent: z.string().optional().nullable(),
     

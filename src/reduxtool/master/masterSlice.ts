@@ -1,7 +1,102 @@
-import { createSlice } from "@reduxjs/toolkit"
-import { RootState } from "../store"
-import { addcompanyAction, addContinentAction, addCountryAction, addCurrencyAction, addDocumentTypeAction, addInquiriesAction, addMemberAction, addpartnerAction, addPaymentTermAction, addUnitAction, deleteAllUnitAction, deleteAllcompanyAction, deleteAllMemberAction, deleteAllpartnerAction, deletecompanyAction, deleteContinentAction, deleteCountryAction, deleteCurrencyAction, deleteDocumentTypeAction, deleteMemberAction, deletepartnerAction, deletePaymentTermAction, deleteUnitAction, editCompanyAction, editContinentAction, editCountryAction, editCurrencyAction, editDocumentTypeAction, editInquiriesAction, editMemberAction, editpartnerAction, editPaymentTermAction, editUnitAction, getActivityLogAction, getAllProductAction, getAutoEmailsAction, getAutoEmailTemplatesAction, getAutoMatchDataAction, getBlogsAction, getBrandAction, getBugReportsAction, getBuyerListingsAction, getCategoriesAction, getCompanyAction, getCompanyProfileAction, getContinentsAction, getCountriesAction, getCurrencyAction, getDemandById, getDemandsAction, getDepartmentsAction, getDesignationsAction, getDocumentListAction, getDocumentTypeAction, getDomainsAction, getEmailCampaignsAction, getEmailTemplatesAction, getExportMappingsAction, getFormBuilderAction, getHomeCategoryAction, getInquiriesAction, getJobApplicationsAction, getJobDepartmentsAction, getJobPostsAction, getLeadAction, getLeadById, getMailTemplatesAction, getMemberAction, getMembersAction, getNumberSystemsAction, getOfferById, getOffersAction, getOpportunitiesAction, getpartnerAction, getPaymentTermAction, getPriceListAction, getProductsAction, getProductSpecificationsAction, getRequestFeedbacksAction, getRolesAction, getRowDataAction, getSellerListingsAction, getSlidersAction, getSubcategoriesByCategoryIdAction, getSubscribersAction, getTrendingCarouselAction, getTrendingImagesAction, getUnitAction, getUsersAction, getWallItemsAction, getWallListingAction } from "./middleware"
-import Opportunities from "@/views/sales-Leads/Opportunities"
+import { createSlice } from "@reduxjs/toolkit";
+import { RootState } from "../store";
+import {
+  addcompanyAction,
+  addContinentAction,
+  addCountryAction,
+  addCurrencyAction,
+  addDocumentTypeAction,
+  addInquiriesAction,
+  addMemberAction,
+  addpartnerAction,
+  addPaymentTermAction,
+  addUnitAction,
+  deleteAllUnitAction,
+  deleteAllcompanyAction,
+  deleteAllMemberAction,
+  deleteAllpartnerAction,
+  deletecompanyAction,
+  deleteContinentAction,
+  deleteCountryAction,
+  deleteCurrencyAction,
+  deleteDocumentTypeAction,
+  deleteMemberAction,
+  deletepartnerAction,
+  deletePaymentTermAction,
+  deleteUnitAction,
+  editCompanyAction,
+  editContinentAction,
+  editCountryAction,
+  editCurrencyAction,
+  editDocumentTypeAction,
+  editInquiriesAction,
+  editMemberAction,
+  editpartnerAction,
+  editPaymentTermAction,
+  editUnitAction,
+  getActivityLogAction,
+  getAllProductAction,
+  getAutoEmailsAction,
+  getAutoEmailTemplatesAction,
+  getAutoMatchDataAction,
+  getBlogsAction,
+  getBrandAction,
+  getBugReportsAction,
+  getBuyerListingsAction,
+  getCategoriesAction,
+  getCompanyAction,
+  getCompanyProfileAction,
+  getContinentsAction,
+  getCountriesAction,
+  getCurrencyAction,
+  getDemandById,
+  getDemandsAction,
+  getDepartmentsAction,
+  getDesignationsAction,
+  getDocumentListAction,
+  getDocumentTypeAction,
+  getDomainsAction,
+  getEmailCampaignsAction,
+  getEmailTemplatesAction,
+  getExportMappingsAction,
+  getFormBuilderAction,
+  getHomeCategoryAction,
+  getInquiriesAction,
+  getJobApplicationsAction,
+  getJobDepartmentsAction,
+  getJobPostsAction,
+  getLeadAction,
+  getLeadById,
+  getMailTemplatesAction,
+  getMemberAction,
+  getMembersAction,
+  getNumberSystemsAction,
+  getOfferById,
+  getOffersAction,
+  getOpportunitiesAction,
+  getpartnerAction,
+  getPaymentTermAction,
+  getPriceListAction,
+  getProductsAction,
+  getProductSpecificationsAction,
+  getRequestFeedbacksAction,
+  getRolesAction,
+  getRowDataAction,
+  getSellerListingsAction,
+  getSlidersAction,
+  getSubcategoriesByCategoryIdAction,
+  getSubscribersAction,
+  getTrendingCarouselAction,
+  getTrendingImagesAction,
+  getUnitAction,
+  getUsersAction,
+  getWallItemsAction,
+  getWallListingAction,
+  getLeadMemberAction,
+  getSalesPersonAction,
+  getSuppliersAction,
+} from "./middleware";
+import Opportunities from "@/views/sales-Leads/Opportunities";
 
 const INITIAL_STATE: any = {
   unitData: "",
@@ -52,15 +147,18 @@ const INITIAL_STATE: any = {
   partnerData: [],
   jobApplicationsData: [],
   wallListing: [],
-  formsData:"",
-  activityLogsData:[],
+  formsData: "",
+  activityLogsData: [],
   Opportunities: [],
   Offers: [],
   Demands: [],
   currentOffer: [],
   currentDemand: [],
   currentLead: [],
-}
+  leadMember: [],
+  salesPerson: [],
+  suppliers: [],
+};
 
 const masterSlice = createSlice({
   name: "master",
@@ -69,131 +167,140 @@ const masterSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(getUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
-      unitData: payload
-    }))
+      unitData: payload,
+    }));
     builder.addCase(addUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deleteUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(editUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(getLeadAction.fulfilled, (state, { payload }) => ({
       ...state,
-      LeadsData: payload
-    }))
+      LeadsData: payload,
+    }));
     // ...
     builder.addCase(deleteAllUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(getDocumentTypeAction.fulfilled, (state, { payload }) => ({
       ...state,
-      DocumentTypeData: payload
-    }))
+      DocumentTypeData: payload,
+    }));
     builder.addCase(addDocumentTypeAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
-    builder.addCase(deleteDocumentTypeAction.fulfilled, (state, { payload }) => ({
-      ...state,
-    }))
+    }));
+    builder.addCase(
+      deleteDocumentTypeAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+      })
+    );
     builder.addCase(editDocumentTypeAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     // builder.addCase(deleteAllDocumentTypeAction.fulfilled, (state, { payload }) => ({
     //   ...state,
     // }))
     builder.addCase(getPaymentTermAction.fulfilled, (state, { payload }) => ({
       ...state,
-      PaymentTermsData: payload
-    }))
+      PaymentTermsData: payload,
+    }));
     builder.addCase(addPaymentTermAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
-    builder.addCase(deletePaymentTermAction.fulfilled, (state, { payload }) => ({
-      ...state,
-    }))
+    }));
+    builder.addCase(
+      deletePaymentTermAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+      })
+    );
     builder.addCase(editPaymentTermAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     // builder.addCase(deleteAllDocumentTypeAction.fulfilled, (state, { payload }) => ({
     //   ...state,
     // }))
     builder.addCase(getCurrencyAction.fulfilled, (state, { payload }) => ({
       ...state,
-      CurrencyData: payload
-    }))
+      CurrencyData: payload,
+    }));
     builder.addCase(addCurrencyAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deleteCurrencyAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(editCurrencyAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(getContinentsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      ContinentsData: payload
-    }))
+      ContinentsData: payload,
+    }));
     builder.addCase(addContinentAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deleteContinentAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(editContinentAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
 
     builder.addCase(getCountriesAction.fulfilled, (state, { payload }) => ({
       ...state,
-      CountriesData: payload
-    }))
+      CountriesData: payload,
+    }));
     builder.addCase(addCountryAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deleteCountryAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(editCountryAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
 
     builder.addCase(getDocumentListAction.fulfilled, (state, { payload }) => ({
       ...state,
-      DocumentListData: payload
-    }))
+      DocumentListData: payload,
+    }));
     builder.addCase(getBrandAction.fulfilled, (state, { payload }) => ({
       ...state,
-      BrandData: payload
-    }))
+      BrandData: payload,
+    }));
     builder.addCase(getBlogsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      BlogsData: payload
-    }))
-    builder.addCase(getExportMappingsAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      apiExportMappings: payload
-    }))
+      BlogsData: payload,
+    }));
+    builder.addCase(
+      getExportMappingsAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        apiExportMappings: payload,
+      })
+    );
     builder.addCase(getCategoriesAction.fulfilled, (state, { payload }) => ({
       ...state,
-      CategoriesData: payload
-    }))
+      CategoriesData: payload,
+    }));
     builder.addCase(getWallItemsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      wallItemsData: payload
-    }))
+      wallItemsData: payload,
+    }));
     builder.addCase(getPriceListAction.fulfilled, (state, { payload }) => ({
       ...state,
-      priceListData: payload
-    }))
+      priceListData: payload,
+    }));
 
     builder.addCase(getProductsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      ProductsData: payload
-    }))
+      ProductsData: payload,
+    }));
     // builder.addCase(addPriceListAction.fulfilled, (state, { payload }) => ({
     //   ...state,
     // }))
@@ -205,246 +312,278 @@ const masterSlice = createSlice({
     // }))
     builder.addCase(getSlidersAction.fulfilled, (state, { payload }) => ({
       ...state,
-      slidersData: payload
-    }))
-    builder.addCase(getCompanyProfileAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      rawProfileArrayFromState: payload
-    }))
-    builder.addCase(getTrendingImagesAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      trendingImagesData: payload
-    }))
+      slidersData: payload,
+    }));
+    builder.addCase(
+      getCompanyProfileAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        rawProfileArrayFromState: payload,
+      })
+    );
+    builder.addCase(
+      getTrendingImagesAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        trendingImagesData: payload,
+      })
+    );
 
-    builder.addCase(getTrendingCarouselAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      trendingCarouselData: payload
-    }))
-    builder.addCase(getProductSpecificationsAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      ProductSpecificationsData: payload
-    }))
+    builder.addCase(
+      getTrendingCarouselAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        trendingCarouselData: payload,
+      })
+    );
+    builder.addCase(
+      getProductSpecificationsAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        ProductSpecificationsData: payload,
+      })
+    );
     builder.addCase(getDesignationsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      designationsData: payload
-    }))
+      designationsData: payload,
+    }));
     builder.addCase(getDepartmentsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      departmentsData: payload
-    }))
+      departmentsData: payload,
+    }));
     builder.addCase(getNumberSystemsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      numberSystemsData: payload
-    }))
+      numberSystemsData: payload,
+    }));
     builder.addCase(getDomainsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      domainsData: payload
-    }))
-    builder.addCase(getJobDepartmentsAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      jobDepartmentsData: payload
-    }))
+      domainsData: payload,
+    }));
+    builder.addCase(
+      getJobDepartmentsAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        jobDepartmentsData: payload,
+      })
+    );
     builder.addCase(getJobPostsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      jobPostsData: payload
-    }))
+      jobPostsData: payload,
+    }));
 
     builder.addCase(getBugReportsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      bugReportsData: payload
-    }))
+      bugReportsData: payload,
+    }));
     builder.addCase(getSubscribersAction.fulfilled, (state, { payload }) => ({
       ...state,
-      rawApiSubscribers: payload
-    }))
+      rawApiSubscribers: payload,
+    }));
     builder.addCase(getHomeCategoryAction.fulfilled, (state, { payload }) => ({
       ...state,
-      categoryData: payload
-    }))
+      categoryData: payload,
+    }));
     builder.addCase(getRowDataAction.fulfilled, (state, { payload }) => ({
       ...state,
-      rowData: payload
-    }))
+      rowData: payload,
+    }));
     builder.addCase(getAutoEmailsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      autoEmailsData: payload
-    }))
+      autoEmailsData: payload,
+    }));
     builder.addCase(getUsersAction.fulfilled, (state, { payload }) => ({
       ...state,
-      usersData: payload
-    }))
-    builder.addCase(getEmailCampaignsAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      emailCampaignsData: payload
-    }))
+      usersData: payload,
+    }));
+    builder.addCase(
+      getEmailCampaignsAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        emailCampaignsData: payload,
+      })
+    );
     builder.addCase(getMailTemplatesAction.fulfilled, (state, { payload }) => ({
       ...state,
-      mailTemplatesData: payload
-    }))
-    builder.addCase(getAutoEmailTemplatesAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      autoEmailTemplatesData: payload
-    }))
-    builder.addCase(getEmailTemplatesAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      emailTemplatesData: payload
-    }))
-    builder.addCase(getRequestFeedbacksAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      requestFeedbacksData: payload
-    }))
-    builder.addCase(getSellerListingsAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      sellerListings: payload
-    }))
+      mailTemplatesData: payload,
+    }));
+    builder.addCase(
+      getAutoEmailTemplatesAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        autoEmailTemplatesData: payload,
+      })
+    );
+    builder.addCase(
+      getEmailTemplatesAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        emailTemplatesData: payload,
+      })
+    );
+    builder.addCase(
+      getRequestFeedbacksAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        requestFeedbacksData: payload,
+      })
+    );
+    builder.addCase(
+      getSellerListingsAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        sellerListings: payload,
+      })
+    );
     builder.addCase(getBuyerListingsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      buyerListings: payload
-    }))
-    builder.addCase(getAutoMatchDataAction.fulfilled, (state, { payload }) => (
+      buyerListings: payload,
+    }));
+    builder.addCase(getAutoMatchDataAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      autoMatchData: payload,
+    }));
+    builder.addCase(getAllProductAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      productsMasterData: payload,
+    }));
+    builder.addCase(getMembersAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      memberData: payload,
+    }));
+    builder.addCase(getInquiriesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      inquiryList1: payload,
+    }));
 
-      {
+    builder.addCase(
+      getSubcategoriesByCategoryIdAction.fulfilled,
+      (state, { payload }) => ({
         ...state,
-        autoMatchData: payload
-      }))
-    builder.addCase(getAllProductAction.fulfilled, (state, { payload }) => (
-
-      {
-        ...state,
-        productsMasterData: payload
-      }))
-    builder.addCase(getMembersAction.fulfilled, (state, { payload }) => (
-
-      {
-        ...state,
-        memberData: payload
-      }))
-    builder.addCase(getInquiriesAction.fulfilled, (state, { payload }) => (
-
-      {
-        ...state,
-        inquiryList1: payload
-      }))
-
-    builder.addCase(getSubcategoriesByCategoryIdAction.fulfilled, (state, { payload }) => (
-
-      {
-        ...state,
-        subCategoriesForSelectedCategoryData: payload
-      }))
-    builder.addCase(getRolesAction.fulfilled, (state, { payload }) => (
-      {
-        ...state,
-        Roles: payload
-      }))
-
+        subCategoriesForSelectedCategoryData: payload,
+      })
+    );
+    builder.addCase(getRolesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      Roles: payload,
+    }));
 
     builder.addCase(getCompanyAction.fulfilled, (state, { payload }) => ({
       ...state,
-      CompanyData: payload
-    }))
+      CompanyData: payload,
+    }));
     builder.addCase(addcompanyAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deletecompanyAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(editCompanyAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
 
     builder.addCase(deleteAllcompanyAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
-
+    }));
 
     builder.addCase(getMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
-      MemberData: payload
-    }))
+      MemberData: payload,
+    }));
     builder.addCase(addMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(editMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deleteMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deleteAllMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
 
-     builder.addCase(addInquiriesAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(addInquiriesAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(editInquiriesAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
 
     builder.addCase(getpartnerAction.fulfilled, (state, { payload }) => ({
       ...state,
-      partnerData: payload
-    }))
+      partnerData: payload,
+    }));
     builder.addCase(addpartnerAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(editpartnerAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deletepartnerAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
+    }));
     builder.addCase(deleteAllpartnerAction.fulfilled, (state, { payload }) => ({
       ...state,
-    }))
-    builder.addCase(getJobApplicationsAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      jobApplicationsData: payload
-    }))
-
-
+    }));
+    builder.addCase(
+      getJobApplicationsAction.fulfilled,
+      (state, { payload }) => ({
+        ...state,
+        jobApplicationsData: payload,
+      })
+    );
 
     builder.addCase(getWallListingAction.fulfilled, (state, { payload }) => ({
       ...state,
-      wallListing: payload
-    }))
+      wallListing: payload,
+    }));
     builder.addCase(getFormBuilderAction.fulfilled, (state, { payload }) => ({
       ...state,
-      formsData: payload
-    }))
+      formsData: payload,
+    }));
     builder.addCase(getActivityLogAction.fulfilled, (state, { payload }) => ({
       ...state,
-      activityLogsData: payload
-    }))
+      activityLogsData: payload,
+    }));
     builder.addCase(getOpportunitiesAction.fulfilled, (state, { payload }) => ({
       ...state,
-      Opportunities: payload
-    }))
-        builder.addCase(getOffersAction.fulfilled, (state, { payload }) => ({
+      Opportunities: payload,
+    }));
+    builder.addCase(getOffersAction.fulfilled, (state, { payload }) => ({
       ...state,
-      Offers: payload
-    }))
+      Offers: payload,
+    }));
     builder.addCase(getDemandsAction.fulfilled, (state, { payload }) => ({
       ...state,
-      Demands: payload
-    }))
+      Demands: payload,
+    }));
     builder.addCase(getOfferById.fulfilled, (state, { payload }) => ({
       ...state,
-      currentOffer: payload
-    }))
+      currentOffer: payload,
+    }));
     builder.addCase(getDemandById.fulfilled, (state, { payload }) => ({
       ...state,
-      currentDemand: payload
-    }))
+      currentDemand: payload,
+    }));
     builder.addCase(getLeadById.fulfilled, (state, { payload }) => ({
       ...state,
-      currentLead: payload
-    }))
-    
+      currentLead: payload,
+    }));
+    builder.addCase(getLeadMemberAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      leadMember: payload,
+    }));
+    builder.addCase(getSalesPersonAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      salesPerson: payload,
+    }));
+    builder.addCase(getSuppliersAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      suppliers: payload,
+    }));
   },
-})
+});
 
-export const masterSelector = (state: RootState) => state?.Master
+export const masterSelector = (state: RootState) => state?.Master;
 
-export default masterSlice.reducer
+export default masterSlice.reducer;

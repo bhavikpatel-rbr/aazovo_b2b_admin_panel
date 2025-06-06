@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams, NavLink } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form"; // Import useFieldArray
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -21,9 +21,9 @@ import Container from "@/components/shared/Container";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from 'react-redux';
 import {
-    getOfferById,    // Action to fetch a single offer
-    editOfferAction,       // Action to update an offer
-    getUsersAction,        // Assuming this fetches users for dropdown
+    getOfferById,
+    editOfferAction,
+    getUsersAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 
@@ -33,38 +33,38 @@ export type ApiUserObject = {
     name: string;
 };
 
+// **IMPORTANT**: Updated to reflect the new data structure with arrays of IDs
 export type ApiFetchedOffer = {
   id: number;
   generate_id: string;
   name: string;
-  seller_section: string | null;
-  buyer_section: string | null;
+  seller_section: string[] | null; // Assuming API now returns an array of string IDs
+  buyer_ids: string[] | null;  // Assuming API now returns an array of string IDs
   groupA: string | null;
   groupB: string | null;
   assign_user: ApiUserObject | null;
   created_by: ApiUserObject;
   created_at: string;
   updated_at: string;
-  // Potential direct IDs if API sends them in addition to section strings
-  // seller_id?: string | number | null;
-  // buyer_id?: string | number | null;
 };
 
+// **IMPORTANT**: Updated Zod schema to handle arrays
 const offerFormSchema = z.object({
   name: z.string().min(1, "Offer Name is required."),
-  assignedUserId: z.string().min(1, "Assigned User is required.").nullable(),
-  sellerSection: z.object({
+  assignedUserId: z.number().min(1, "Assigned User is required.").nullable(), // Use number for consistency
+  sellers: z.array(z.object({
     sellerId: z.string().optional().nullable(),
-  }).optional(),
+  })).min(1, "At least one seller is required."),
   groupA_notes: z.string().optional().nullable(),
-  buyerSection: z.object({
+  buyers: z.array(z.object({
     buyerId: z.string().optional().nullable(),
-  }).optional(),
+  })).min(1, "At least one buyer is required."),
   groupB_notes: z.string().optional().nullable(),
 });
 type OfferEditFormData = z.infer<typeof offerFormSchema>;
 
-type UserOptionType = { value: string; label: string; id: string | number };
+type UserOptionType = { value: string; label: string; id: number; name: string };
+
 
 const EditOffer = () => {
   const navigate = useNavigate();
@@ -72,233 +72,167 @@ const EditOffer = () => {
   const { id: offerIdFromParams } = useParams<{ id: string }>();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // isLoadingOfferData is now effectively currentOfferStatus === 'loading' or 'idle'
-  const [isLoadingDropdownData, setIsLoadingDropdownData] = useState(true);
 
   const {
     currentOffer,
-    currentOfferStatus = 'idle', // Default to 'idle'
-    // Assuming users for dropdown are in rawProfileArrayFromState or fetched by getUsersAction
-    rawProfileArrayFromState = [],
-    // status: masterDataAccessStatus, // Use for other general master data if needed
+    currentOfferStatus = 'idle',
+    usersData = [],
   } = useSelector(masterSelector);
 
   const formMethods = useForm<OfferEditFormData>({
     resolver: zodResolver(offerFormSchema),
-  });
-  const { control, handleSubmit, reset, getValues, setValue, formState: { errors, isDirty, isValid } } = formMethods;
-
-  const employeeOptions: UserOptionType[] = useMemo(() => {
-    if (!Array.isArray(rawProfileArrayFromState)) return [];
-    return rawProfileArrayFromState.map((user: any) => ({
-      value: String(user.id),
-      label: user.name || `User ${user.id}`,
-      id: user.id,
-    }));
-  }, [rawProfileArrayFromState]);
-
-
-  // --- Fetch Dropdown Data ---
-  useEffect(() => {
-    const fetchUIData = async () => {
-        setIsLoadingDropdownData(true);
-        try {
-            // If users are not part of a global fetch or rawProfileArrayFromState isn't sufficient:
-            // await dispatch(getUsersAction()).unwrap(); // Or your specific user fetching action
-            // For now, assuming users are available or fetched by a broader mechanism.
-        } catch (error) {
-            console.error("Failed to fetch dropdown data for EditOffer:", error);
-            toast.push(<Notification type="danger" title="Dropdown Error">Could not load options.</Notification>);
-        } finally {
-            setIsLoadingDropdownData(false);
-        }
-    };
-    fetchUIData();
-  }, [dispatch]);
-
-
-  // --- Fetch The Specific Offer to Edit ---
-  useEffect(() => {
-    if (!offerIdFromParams) {
-      toast.push(<Notification title="Error" type="danger">Offer ID is missing from URL.</Notification>);
-      navigate("/sales-leads/offers-demands");
-      return;
+    defaultValues: {
+      name: "",
+      assignedUserId: null,
+      sellers: [{ sellerId: "" }], // Default to one empty field
+      groupA_notes: "",
+      buyers: [{ buyerId: "" }], // Default to one empty field
+      groupB_notes: "",
     }
+  });
+  const { control, handleSubmit, reset, getValues, formState: { errors, isDirty } } = formMethods;
+  
+  // --- Field Array Hooks ---
+  const { fields: sellerFields, append: appendSeller, remove: removeSeller } = useFieldArray({
+    control,
+    name: "sellers",
+  });
 
-    // The ID from params is likely the `generate_id` (string) or numeric `id`.
-    // Your `getOfferById` should handle the ID type passed in the URL.
-    // If `offerIdFromParams` is `generate_id` but API needs numeric `id`, your thunk must handle this.
-    dispatch(getOfferById(offerIdFromParams));
+  const { fields: buyerFields, append: appendBuyer, remove: removeBuyer } = useFieldArray({
+    control,
+    name: "buyers",
+  });
 
-    // return () => {
-    //   dispatch(clearCurrentOffer()); // Clear the specific offer from Redux state on unmount
-    // };
+  const userOptions = useMemo(() => {
+    if (!Array.isArray(usersData)) return [];
+    return usersData.map((u: UserOptionType) => ({
+      value: u.id,
+      label: u.name,
+    }));
+  }, [usersData]);
+
+  // --- Fetch Initial Data (Users and Offer) ---
+  useEffect(() => {
+    dispatch(getUsersAction());
+    if (offerIdFromParams) {
+      dispatch(getOfferById(offerIdFromParams));
+    } else {
+        toast.push(<Notification title="Error" type="danger">Offer ID is missing.</Notification>);
+        navigate("/sales-leads/offers-demands");
+    }
   }, [dispatch, offerIdFromParams, navigate]);
 
-
-  // --- Populate Form When Data is Ready ---
   useEffect(() => {
-    // Only populate if offer data is successfully loaded AND dropdowns are ready (or not in a loading state)
-    if (currentOfferStatus === 'idle' && currentOffer && !isLoadingDropdownData) {
-      console.log("Populating EditOffer form with:", currentOffer);
+    if (currentOfferStatus === 'idle' && currentOffer) {
+      // Parse seller_section and buyer_section from JSON strings
+      let sellerIds: string[] = [];
+      let buyerIds: string[] = [];
 
-      const parseSectionId = (sectionData: string | null): string | null => {
-        if (!sectionData || sectionData.toLowerCase() === "null" || sectionData.trim() === "") return null;
-        // This assumes sectionData, if not "null", is the ID itself.
-        // If it could be JSON like "{'id':'val'}", you'd need JSON.parse here.
-        return sectionData;
-      };
+      try {
+        sellerIds = currentOffer.seller_section ? JSON.parse(currentOffer.seller_section) : [];
+      } catch (e) {
+        console.warn("Failed to parse seller_section:", e);
+      }
+
+      try {
+        buyerIds = currentOffer.buyer_section ? JSON.parse(currentOffer.buyer_section) : [];
+      } catch (e) {
+        console.warn("Failed to parse buyer_section:", e);
+      }
+
+      // Transform IDs into field array objects
+      const sellersToSet = sellerIds.length > 0
+        ? sellerIds.map((id: string) => ({ sellerId: id }))
+        : [{ sellerId: "" }];
+
+      const buyersToSet = buyerIds.length > 0
+        ? buyerIds.map((id: string) => ({ buyerId: id }))
+        : [{ buyerId: "" }];
 
       reset({
-        name: currentOffer.name || "", // Fallback to empty string
-        assignedUserId: currentOffer.assign_user ? String(currentOffer.assign_user.id) : null,
-        sellerSection: {
-          // If your API response `currentOffer` has a direct `seller_id` field:
-          // sellerId: currentOffer.seller_id ? String(currentOffer.seller_id) : "",
-          // Based on your provided JSON which has `seller_section` as a string:
-          sellerId: parseSectionId(currentOffer.seller_section) || "",
-        },
-        groupA_notes: currentOffer.groupA || "", // API uses 'groupA'
-        buyerSection: {
-          // buyerId: currentOffer.buyer_id ? String(currentOffer.buyer_id) : "",
-          buyerId: parseSectionId(currentOffer.buyer_section) || "",
-        },
-        groupB_notes: currentOffer.groupB || "", // API uses 'groupB'
+        name: currentOffer.name || "",
+        assignedUserId: Number(currentOffer.assign_user || null), // Directly a string
+        sellers: sellersToSet,
+        buyers: buyersToSet,
+        groupA_notes: currentOffer.groupA || "",
+        groupB_notes: currentOffer.groupB || "",
       });
-    } else if (currentOfferStatus === 'failed' && currentOfferStatus !== 'loading') {
-        toast.push(<Notification title="Load Error" type="danger">Failed to load offer details for editing.</Notification>);
-        // Consider navigating back or showing an inline error message
-        // navigate("/sales-leads/offers-demands");
+    } else if (currentOfferStatus === 'failed') {
+      toast.push(
+        <Notification title="Load Error" type="danger">
+          Failed to load offer details.
+        </Notification>
+      );
     }
-  }, [currentOffer, currentOfferStatus, isLoadingDropdownData, reset, navigate]);
+  }, [currentOffer, currentOfferStatus, reset]);
 
 
   const onFormSubmit = useCallback(
     async (formData: OfferEditFormData) => {
-      if (!offerIdFromParams || !currentOffer) { // currentOffer for its numeric ID
-          toast.push(<Notification title="Error" type="danger">Cannot submit: Offer data not fully loaded.</Notification>);
+      if (!currentOffer?.id) {
+          toast.push(<Notification title="Error" type="danger">Cannot submit: Offer ID is missing.</Notification>);
           return;
       }
       setIsSubmitting(true);
 
-      const apiPayload: {
-        id: number; // API expects numeric ID for the offer item itself
-        name: string;
-        assign_user_id?: string | null; // String of numeric ID
-        seller_section?: string | null; // Or `seller_id` depending on API
-        groupA?: string | null;
-        buyer_section?: string | null;  // Or `buyer_id`
-        groupB?: string | null;
-        // Include ALL other fields your API endpoint for editing an offer expects
-      } = {
-        id: currentOffer.id, // Use the numeric ID from the fetched offer
+      const apiPayload = {
+        id: currentOffer.id, // The numeric ID of the offer to update
         name: formData.name,
-        assign_user_id: formData.assignedUserId, // Already string ID
+        assign_user: formData.assignedUserId,
         groupA: formData.groupA_notes,
         groupB: formData.groupB_notes,
-        // How to send back seller/buyer sections depends on your API for EDIT:
-        seller_section: formData.sellerSection?.sellerId || null,
-        buyer_section: formData.buyerSection?.buyerId || null,
+        // Filter out empty IDs before sending
+        seller_section: formData.sellers
+            .map(seller => seller.sellerId)
+            .filter(id => id && id.trim() !== ''),
+        buyer_ids: formData.buyers
+            .map(buyer => buyer.buyerId)
+            .filter(id => id && id.trim() !== ''),
       };
 
       console.log("--- EditOffer API Payload for Update ---", apiPayload);
 
       try {
         await dispatch(editOfferAction(apiPayload)).unwrap();
-        toast.push(
-          <Notification title="Offer Updated" type="success" duration={2500}>
-            Offer "{formData.name}" has been successfully updated.
-          </Notification>
-        );
+        toast.push(<Notification title="Offer Updated" type="success">Offer "{formData.name}" updated.</Notification>);
         navigate("/sales-leads/offers-demands");
       } catch (error: any) {
-        console.error("Failed to update offer:", error);
-        const errorMessage = error?.message || error?.data?.message || "Could not update offer.";
-        toast.push(
-          <Notification title="Update Failed" type="danger" duration={4000}>
-            {errorMessage}
-          </Notification>
-        );
+        const errorMessage = error?.message || "Could not update offer.";
+        toast.push(<Notification title="Update Failed" type="danger">{errorMessage}</Notification>);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [dispatch, navigate, offerIdFromParams, currentOffer]
+    [dispatch, navigate, currentOffer]
   );
 
   const handleCancel = () => {
     navigate("/sales-leads/offers-demands");
   };
 
-  const handleSaveAsDraft = () => {
-    if (!currentOffer) return;
-    const currentValues = getValues();
-    const draftPayload = {
-        id: currentOffer.id, // Use existing ID
-        ...currentValues,    // Form values
-        status: "Draft"      // Example: if your API supports a status field for drafts
-    };
-    console.log("Saving as draft (Edit Offer):", draftPayload);
-    toast.push(<Notification title="Draft Saved" type="info">Changes saved as draft. (Simulated)</Notification>);
-    // Potentially dispatch `editOfferAction` with the draft payload (including status: "Draft")
-    // e.g., dispatch(editOfferAction({ ...apiPayloadFromForm, status: 'Draft' }))...
-  };
+  const isLoadingPage = currentOfferStatus === 'loading';
 
-  // Combined loading state
-  const isLoadingPage = currentOfferStatus === 'loading' || currentOfferStatus === 'idle' || isLoadingDropdownData;
-
-//   if (isLoadingPage && currentOfferStatus !== 'failed') {
-//     return (
-//       <Container>
-//         <div className="flex justify-center items-center h-screen">
-//           <Spinner size={40} /> <span className="ml-2">Loading Offer Details...</span>
-//         </div>
-//       </Container>
-//     );
-//   }
-
-  if (currentOfferStatus === 'failed') {
-     return (
-      <Container>
-        <div className="text-center p-8">
-          <h4 className="text-lg font-semibold mb-2">Error Loading Offer</h4>
-          <p>There was an issue fetching the offer details. Please check the console or try again.</p>
-          <Button className="mt-4" variant="solid" onClick={() => navigate("/sales-leads/offers-demands")}>
-            Back to Offers & Demands
-          </Button>
-        </div>
+  if (isLoadingPage) {
+    return (
+      <Container className="flex justify-center items-center h-full">
+        <Spinner size={40} />
+        <span className="ml-2">Loading Offer Details...</span>
       </Container>
     );
   }
-  
-  // If successfully fetched but currentOffer is null (API returned no data for ID)
+
   if (currentOfferStatus === 'succeeded' && !currentOffer) {
     return (
-      <Container>
-        <div className="text-center p-8">
-          <h4 className="text-lg font-semibold mb-2">Offer Not Found</h4>
-          <p>The offer with ID "{offerIdFromParams}" could not be found.</p>
-          <Button className="mt-4" variant="solid" onClick={() => navigate("/sales-leads/offers-demands")}>
+      <Container className="text-center p-8">
+        <h4 className="text-lg font-semibold mb-2">Offer Not Found</h4>
+        <p>The offer with ID "{offerIdFromParams}" could not be found.</p>
+        <Button className="mt-4" variant="solid" onClick={() => navigate("/sales-leads/offers-demands")}>
             Back to Offers & Demands
-          </Button>
-        </div>
+        </Button>
       </Container>
     );
   }
   
-  // Fallback: If form fields aren't populated yet but data seems to be there.
-  // This can happen if reset() hasn't finished due to timing.
-  if (currentOffer && !getValues("name") && !isDirty && currentOfferStatus === 'succeeded') {
-     return (
-      <Container>
-        <div className="flex justify-center items-center h-screen">
-          <Spinner size={40} /> <span className="ml-2">Finalizing Form...</span>
-        </div>
-      </Container>
-    );
-  }
-
-
   return (
     <>
       <div className='flex gap-1 items-end mb-3 '>
@@ -320,54 +254,78 @@ const EditOffer = () => {
             </FormItem>
             <FormItem label="Assign User" invalid={!!errors.assignedUserId} errorMessage={errors.assignedUserId?.message}>
               <Controller name="assignedUserId" control={control} render={({ field }) => (
-                  <UiSelect placeholder="Select Employee" options={employeeOptions}
-                    value={employeeOptions.find(opt => opt.value === field.value)}
+                  <UiSelect placeholder="Select Employee" options={userOptions}
+                    value={userOptions.find(opt => opt.value === field.value)}
                     onChange={option => field.onChange(option ? option.value : null)}
-                    isClearable isLoading={isLoadingDropdownData} />
+                    isClearable />
                 )} />
             </FormItem>
 
+            {/* Seller Column */}
             <div className="flex flex-col gap-4">
               <Card>
                 <h5>Seller Section</h5>
-                <div className="mt-4 flex items-center gap-1">
-                  <FormItem label="Seller ID/Details" className="w-full" invalid={!!errors.sellerSection?.sellerId} errorMessage={errors.sellerSection?.sellerId?.message}>
-                    <Controller name="sellerSection.sellerId" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Enter Seller ID or Details" />} />
-                  </FormItem>
-                  <Button type="button" icon={<TbTrash size={20} />} className="min-h-10 min-w-10 self-end mb-1" onClick={() => setValue('sellerSection.sellerId', '', { shouldValidate: true, shouldDirty: true })} />
+                <div className="flex flex-col gap-4 mt-4">
+                  {sellerFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <FormItem label={index === 0 ? "Seller ID" : ""} className="w-full" invalid={!!errors.sellers?.[index]?.sellerId} errorMessage={errors.sellers?.[index]?.sellerId?.message}>
+                        <Controller name={`sellers.${index}.sellerId`} control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Seller ID" />} />
+                      </FormItem>
+                      {sellerFields.length > 1 && (
+                        <Button type="button" shape="circle" size="sm" icon={<TbTrash size={18} />} className="self-end mb-1" onClick={() => removeSeller(index)} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-right mt-2">
+                  <Button type="button" icon={<TbPlus />} onClick={() => appendSeller({ sellerId: '' })}>
+                    Add Another Seller
+                  </Button>
                 </div>
               </Card>
               <Card>
-                <h5>Group A Notes (Seller Notes)</h5>
+                <h5>Group A Notes</h5>
                 <div className="mt-4">
                   <FormItem invalid={!!errors.groupA_notes} errorMessage={errors.groupA_notes?.message}>
-                    <Controller name="groupA_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Notes for Seller Section (Optional)" rows={3}/>} />
+                    <Controller name="groupA_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Notes for Seller Section" rows={3}/>} />
                   </FormItem>
                   <div className="text-right mt-1">
-                    <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues('groupA_notes') || ''); toast.push(<Notification title="Copied" type="info">Group A notes copied.</Notification>) }} />
+                    <Button type="button" icon={<TbCopy />} onClick={() => navigator.clipboard.writeText(getValues('groupA_notes') || '')} />
                   </div>
                 </div>
               </Card>
             </div>
 
+            {/* Buyer Column */}
             <div className="flex flex-col gap-4">
               <Card>
                 <h5>Buyer Section</h5>
-                <div className="mt-4 flex items-center gap-1">
-                  <FormItem label="Buyer ID/Details" className="w-full" invalid={!!errors.buyerSection?.buyerId} errorMessage={errors.buyerSection?.buyerId?.message}>
-                    <Controller name="buyerSection.buyerId" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Enter Buyer ID or Details" />} />
-                  </FormItem>
-                  <Button type="button" icon={<TbTrash size={20} />} className="min-h-10 min-w-10 self-end mb-1" onClick={() => setValue('buyerSection.buyerId', '', { shouldValidate: true, shouldDirty: true })} />
+                <div className="flex flex-col gap-4 mt-4">
+                  {buyerFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <FormItem label={index === 0 ? "Buyer ID" : ""} className="w-full" invalid={!!errors.buyers?.[index]?.buyerId} errorMessage={errors.buyers?.[index]?.buyerId?.message}>
+                        <Controller name={`buyers.${index}.buyerId`} control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Buyer ID" />} />
+                      </FormItem>
+                      {buyerFields.length > 1 && (
+                        <Button type="button" shape="circle" size="sm" icon={<TbTrash size={18} />} className="self-end mb-1" onClick={() => removeBuyer(index)} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-right mt-2">
+                  <Button type="button" icon={<TbPlus />} onClick={() => appendBuyer({ buyerId: '' })}>
+                    Add Another Buyer
+                  </Button>
                 </div>
               </Card>
               <Card>
-                <h5>Group B Notes (Buyer Notes)</h5>
+                <h5>Group B Notes</h5>
                 <div className="mt-4">
                   <FormItem invalid={!!errors.groupB_notes} errorMessage={errors.groupB_notes?.message}>
-                    <Controller name="groupB_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Notes for Buyer Section (Optional)" rows={3}/>} />
+                    <Controller name="groupB_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Notes for Buyer Section" rows={3}/>} />
                   </FormItem>
                   <div className="text-right mt-1">
-                     <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues('groupB_notes') || ''); toast.push(<Notification title="Copied" type="info">Group B notes copied.</Notification>) }} />
+                     <Button type="button" icon={<TbCopy />} onClick={() => navigator.clipboard.writeText(getValues('groupB_notes') || '')} />
                   </div>
                 </div>
               </Card>
@@ -376,9 +334,8 @@ const EditOffer = () => {
         </Card>
         
         <Card bodyClass="flex justify-end gap-2" className='mt-4'>
-          <Button type="button" onClick={handleCancel} disabled={isSubmitting || isLoadingPage}>Cancel</Button>
-          <Button type="button" onClick={handleSaveAsDraft} variant="twoTone" disabled={isSubmitting || isLoadingPage}>Draft</Button>
-          <Button type="submit" form="editOfferForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoadingPage || !isDirty || !isValid}>
+          <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" form="editOfferForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !isDirty}>
             {isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
         </Card>

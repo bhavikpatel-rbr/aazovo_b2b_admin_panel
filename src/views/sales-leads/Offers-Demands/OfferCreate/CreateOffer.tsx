@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form"; // Import useFieldArray
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -14,121 +14,119 @@ import toast from "@/components/ui/toast";
 import { TbCopy, TbPlus, TbTrash } from "react-icons/tb";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store"; // Added
-import { addOfferAction } from "@/reduxtool/master/middleware"; // Added - VERIFY PATH
+import { useAppDispatch } from "@/reduxtool/store";
+import { addOfferAction, getUsersAction} from "@/reduxtool/master/middleware";
+import { useSelector } from "react-redux";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Zod Schema for Create Offer Form ---
-// This schema should reflect the data you want to collect in the form.
-// The transformation to the API payload will happen in onFormSubmit.
+// Updated to handle multiple sellers and buyers
 const offerFormSchema = z.object({
   name: z.string().min(1, "Offer Name is required."),
-  // Assuming assignedUserId in the form will hold the ID (string or number)
-  assignedUserId: z.string().min(1, "Assigned User is required.").nullable(), 
+  assignedUserId: z.number().min(1, "Assigned User is required.").nullable(),
 
-  // Seller Section
-  // If you allow multiple sellers, this would be z.array(z.object(...))
-  // For a single seller concept on the form:
-  sellerSection: z.object({
-    sellerId: z.string().optional().nullable(), 
-    // Add other seller-specific fields the form collects
-  }).optional(),
+  // Use z.array for multiple sellers
+  sellers: z.array(z.object({
+    sellerId: z.string().optional().nullable(),
+  })).min(1, "At least one seller is required."), // Ensures the array is not empty
 
   groupA_notes: z.string().optional().nullable(),
 
-  // Buyer Section
-  buyerSection: z.object({
+  // Use z.array for multiple buyers
+  buyers: z.array(z.object({
     buyerId: z.string().optional().nullable(),
-    // Add other buyer-specific fields
-  }).optional(),
+  })).min(1, "At least one buyer is required."), // Ensures the array is not empty
 
   groupB_notes: z.string().optional().nullable(),
 });
 
 type OfferFormData = z.infer<typeof offerFormSchema>;
-
-// --- Dummy Options (Replace with API data if needed) ---
-// These options should provide the ID that the backend expects for 'assignedUserId'
-const employeeOptions = [
-  { label: "Rahul (ID: 1)", value: "1" }, // Assuming value is the user's ID
-  { label: "Ishan (ID: 2)", value: "2" },
-  { label: "Priya (ID: 3)", value: "3" },
-];
+export type UserOptionType = { value: string; label: string; id: string | number; name: string };
 
 
 const CreateOffer = () => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch(); // Added
+  const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    dispatch(getUsersAction());
+  }, [dispatch]);
+
+  const {
+    usersData = [],
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector);
+
+  const userOptions = useMemo(() => {
+    if (!Array.isArray(usersData)) return [];
+    return usersData.map((u: UserOptionType) => ({
+      value: u.id,
+      label: u.name,
+    }));
+  }, [usersData]);
 
   const formMethods = useForm<OfferFormData>({
     resolver: zodResolver(offerFormSchema),
     defaultValues: {
       name: "",
       assignedUserId: null,
-      sellerSection: { // Initialize even if optional, if fields inside are always present
-        sellerId: "",
-      },
+      // Initialize with one empty seller and buyer
+      sellers: [{ sellerId: "" }],
       groupA_notes: "",
-      buyerSection: {
-        buyerId: "",
-      },
+      buyers: [{ buyerId: "" }],
       groupB_notes: "",
     },
   });
 
-  const { control, handleSubmit, reset, getValues, setValue, formState: { errors, isDirty, isValid } } = formMethods;
+  const { control, handleSubmit, reset, getValues, formState: { errors } } = formMethods;
+
+  // --- Field Array Hooks ---
+  const { fields: sellerFields, append: appendSeller, remove: removeSeller } = useFieldArray({
+    control,
+    name: "sellers",
+  });
+
+  const { fields: buyerFields, append: appendBuyer, remove: removeBuyer } = useFieldArray({
+    control,
+    name: "buyers",
+  });
+
 
   const onFormSubmit = useCallback(
     async (data: OfferFormData) => {
       setIsSubmitting(true);
 
       // --- Construct the payload for the API ---
-      // This is CRITICAL and must match what your backend 'addOfferAction' expects.
-      // Adjust field names and structure as needed.
-      const apiPayload: {
-        name: string;
-        assign_user?: string | null; // Or number, match API
-        seller_section?: string | null;     // Example of flattened structure
-        // seller_section?: { seller_section: string | null }; // Example of nested
-        groupA?: string | null;       // Assuming API uses 'groupA' not 'groupA_notes'
-        buyer_section?: string | null;
-        groupB?: string | null;
-        // Add any other fields your API expects for creating an offer
-      } = {
+      // IMPORTANT: This now sends arrays of IDs. Ensure your backend API
+      // expects a format like `seller_section: ["id1", "id2"]`.
+      const apiPayload = {
         name: data.name,
-        assign_user: data.assignedUserId, // Ensure this is the ID
-        groupA: data.groupA_notes,          // Renaming example
-        groupB: data.groupB_notes,          // Renaming example
+        assign_user: data.assignedUserId,
+        groupA: data.groupA_notes,
+        groupB: data.groupB_notes,
+        // Filter out any empty/null IDs before sending
+        seller_section: data.sellers
+            .map(seller => seller.sellerId)
+            .filter(id => id && id.trim() !== ''),
+        buyer_section: data.buyers
+            .map(buyer => buyer.buyerId)
+            .filter(id => id && id.trim() !== ''),
       };
 
-      // Handle optional sections:
-      if (data.sellerSection && data.sellerSection.sellerId) {
-        apiPayload.seller_section = data.sellerSection.sellerId;
-        // If API expects a nested object:
-        // apiPayload.seller_section = { seller_section: data.sellerSection.sellerId };
-      }
-
-      if (data.buyerSection && data.buyerSection.buyerId) {
-        apiPayload.buyer_section = data.buyerSection.buyerId;
-      }
-      
-      console.log("--- CreateOffer API Payload ---", apiPayload);
-
       try {
-        // Dispatch the action
-        await dispatch(addOfferAction(apiPayload)).unwrap(); // .unwrap() handles promise
+        await dispatch(addOfferAction(apiPayload)).unwrap();
 
         toast.push(
           <Notification title="Offer Created" type="success" duration={2500}>
             Offer "{data.name}" has been successfully created.
           </Notification>
         );
-        reset(); // Reset form after successful submission
-        navigate("/sales-leads/offers-demands"); // Navigate to offers list
+        reset();
+        navigate("/sales-leads/offers-demands");
 
       } catch (error: any) {
         console.error("Failed to create offer:", error);
-        // error might contain response data from API if thunk is set up for it
         const errorMessage = error?.message || error?.data?.message || "Could not create offer. Please try again.";
         toast.push(
           <Notification title="Creation Failed" type="danger" duration={4000}>
@@ -139,21 +137,13 @@ const CreateOffer = () => {
         setIsSubmitting(false);
       }
     },
-    [dispatch, navigate, reset] // Added dependencies
+    [dispatch, navigate, reset]
   );
 
   const handleCancel = () => {
     reset();
     navigate("/sales-leads/offers-demands");
     toast.push(<Notification title="Cancelled" type="info">Offer creation cancelled.</Notification>);
-  };
-
-  // Placeholder for dynamic add/remove seller/buyer logic
-  const handleAddSeller = () => {
-    toast.push(<Notification title="Action" type="info">Add Seller functionality (useFieldArray) to be implemented.</Notification>);
-  };
-  const handleAddBuyer = () => {
-    toast.push(<Notification title="Action" type="info">Add Buyer functionality (useFieldArray) to be implemented.</Notification>);
   };
 
 
@@ -168,7 +158,7 @@ const CreateOffer = () => {
       </div>
       <Form
         id="createOfferForm"
-        onSubmit={handleSubmit(onFormSubmit)} // Use handleSubmit from RHF
+        onSubmit={handleSubmit(onFormSubmit)}
       >
         <Card>
           <h4 className="mb-6">Add Offer</h4>
@@ -195,10 +185,9 @@ const CreateOffer = () => {
                 control={control}
                 render={({ field }) => (
                   <UiSelect
-                    // {...field} // Spreading field might cause issues with how value is handled by some UiSelect components
                     placeholder="Select Employee"
-                    options={employeeOptions}
-                    value={employeeOptions.find(opt => opt.value === field.value)}
+                    options={userOptions}
+                    value={userOptions.find(opt => opt.value === field.value)}
                     onChange={option => field.onChange(option ? option.value : null)}
                     isClearable
                   />
@@ -210,25 +199,39 @@ const CreateOffer = () => {
             <div className="flex flex-col gap-4">
               <Card>
                 <h5>Seller Section</h5>
-                <div className="mt-4 flex items-center gap-1">
-                  <FormItem 
-                    label="Seller ID" 
-                    className="w-full"
-                    invalid={!!errors.sellerSection?.sellerId}
-                    errorMessage={errors.sellerSection?.sellerId?.message}
-                  >
-                    <Controller
-                      name="sellerSection.sellerId"
-                      control={control}
-                      render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Seller ID (Optional)" />}
-                    />
-                  </FormItem>
-                  <Button type="button" icon={<TbTrash size={20} />} className="min-h-10 min-w-10 self-end mb-1" 
-                    onClick={() => setValue('sellerSection.sellerId', '', { shouldValidate: true, shouldDirty: true })} 
-                  />
+                <div className="flex flex-col gap-4 mt-4">
+                  {sellerFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <FormItem 
+                        label={index === 0 ? "Seller ID" : ""}
+                        className="w-full"
+                        invalid={!!errors.sellers?.[index]?.sellerId}
+                        errorMessage={errors.sellers?.[index]?.sellerId?.message}
+                      >
+                        <Controller
+                          name={`sellers.${index}.sellerId`}
+                          control={control}
+                          render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Seller ID" />}
+                        />
+                      </FormItem>
+                      {/* Show remove button only if there is more than one seller */}
+                      {sellerFields.length > 1 && (
+                        <Button
+                          type="button"
+                          shape="circle"
+                          size="sm"
+                          icon={<TbTrash size={18} />}
+                          className="self-end mb-1"
+                          onClick={() => removeSeller(index)}
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
                 <div className="text-right mt-2">
-                  <Button type="button" icon={<TbPlus />} onClick={handleAddSeller}>Add Another Seller</Button>
+                  <Button type="button" icon={<TbPlus />} onClick={() => appendSeller({ sellerId: '' })}>
+                    Add Another Seller
+                  </Button>
                 </div>
               </Card>
 
@@ -263,25 +266,39 @@ const CreateOffer = () => {
             <div className="flex flex-col gap-4">
               <Card>
                 <h5>Buyer Section</h5>
-                <div className="mt-4 flex items-center gap-1">
-                  <FormItem 
-                    label="Buyer ID" 
-                    className="w-full"
-                    invalid={!!errors.buyerSection?.buyerId}
-                    errorMessage={errors.buyerSection?.buyerId?.message}
-                  >
-                    <Controller
-                      name="buyerSection.buyerId"
-                      control={control}
-                      render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Buyer ID (Optional)" />}
-                    />
-                  </FormItem>
-                  <Button type="button" icon={<TbTrash size={20} />} className="min-h-10 min-w-10 self-end mb-1" 
-                    onClick={() => setValue('buyerSection.buyerId', '', { shouldValidate: true, shouldDirty: true })}
-                  />
+                <div className="flex flex-col gap-4 mt-4">
+                  {buyerFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <FormItem 
+                        label={index === 0 ? "Buyer ID" : ""}
+                        className="w-full"
+                        invalid={!!errors.buyers?.[index]?.buyerId}
+                        errorMessage={errors.buyers?.[index]?.buyerId?.message}
+                      >
+                        <Controller
+                          name={`buyers.${index}.buyerId`}
+                          control={control}
+                          render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Buyer ID" />}
+                        />
+                      </FormItem>
+                      {/* Show remove button only if there is more than one buyer */}
+                      {buyerFields.length > 1 && (
+                        <Button
+                          type="button"
+                          shape="circle"
+                          size="sm"
+                          icon={<TbTrash size={18} />}
+                          className="self-end mb-1"
+                          onClick={() => removeBuyer(index)}
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
-                 <div className="text-right mt-2">
-                  <Button type="button" icon={<TbPlus />} onClick={handleAddBuyer}>Add Another Buyer</Button>
+                <div className="text-right mt-2">
+                  <Button type="button" icon={<TbPlus />} onClick={() => appendBuyer({ buyerId: '' })}>
+                    Add Another Buyer
+                  </Button>
                 </div>
               </Card>
 
@@ -323,7 +340,7 @@ const CreateOffer = () => {
             form="createOfferForm"
             variant="solid"
             loading={isSubmitting}
-            disabled={isSubmitting || !isDirty || !isValid} // Use RHF formState
+            disabled={isSubmitting}
           >
             {isSubmitting ? "Saving..." : "Save Offer"}
           </Button>
