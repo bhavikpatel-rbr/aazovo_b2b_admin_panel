@@ -774,12 +774,12 @@ const EmailCampaignListing = () => {
                   <span className="font-semibold text-xs">Total</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-gray-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
                   <TbCalendarUser size={24} />
                 </div>
                 <div>
-                  <h6 className="text-blue-500">12</h6>
+                  <h6 className="text-orange-500">12</h6>
                   <span className="font-semibold text-xs">Subscribers</span>
                 </div>
               </Card>
@@ -792,12 +792,12 @@ const EmailCampaignListing = () => {
                   <span className="font-semibold text-xs">Draft</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
                   <TbCalendarClock size={24} />
                 </div>
                 <div>
-                  <h6 className="text-red-500">8</h6>
+                  <h6 className="text-pink-500">8</h6>
                   <span className="font-semibold text-xs">Scheduled</span>
                 </div>
               </Card>
@@ -810,12 +810,12 @@ const EmailCampaignListing = () => {
                   <span className="font-semibold text-xs">Sent</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
                   <TbCalendarCancel size={24} />
                 </div>
                 <div>
-                  <h6 className="text-green-500">34</h6>
+                  <h6 className="text-red-500">34</h6>
                   <span className="font-semibold text-xs">Cancelled</span>
                 </div>
               </Card>

@@ -20,7 +20,7 @@ import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected component name
 import Select from "@/components/ui/Select";
 import Tag from "@/components/ui/Tag";
-import { Drawer, Form, FormItem, Input } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input } from "@/components/ui";
 
 // Icons
 import {
@@ -42,6 +42,9 @@ import {
   TbSend,
   TbMailbox,
   TbAlignBoxCenterBottom,
+  TbCaravan,
+  TbCalendarUser,
+  TbCalendarCancel,
 } from "react-icons/tb";
 
 // Types
@@ -457,6 +460,62 @@ const AutoEmailListing = () => {
             <h5 className="mb-2 sm:mb-0">Automation Email</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
+          <div className="grid grid-cols-4 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbCaravan size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">12</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbCalendarUser size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">12</h6>
+                <span className="font-semibold text-xs">Total Users</span>
+              </div>
+            </Card>
+            {/* <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbPencilCheck size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">4</h6>
+                <span className="font-semibold text-xs">Draft</span>
+              </div>
+            </Card> */}
+            {/* <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbCalendarClock size={24} />
+              </div>
+              <div>
+                <h6 className="text-pink-500">8</h6>
+                <span className="font-semibold text-xs">Scheduled</span>
+              </div>
+            </Card> */}
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbMailForward size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">34</h6>
+                <span className="font-semibold text-xs">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbCalendarCancel size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">34</h6>
+                <span className="font-semibold text-xs">Inactive</span>
+              </div>
+            </Card>
+        </div>
           <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
           <div className="mt-4">
             <AutoEmailsTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting || isChangingStatus} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />

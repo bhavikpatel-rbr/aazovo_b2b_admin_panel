@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag, Dialog, Dropdown } from "@/components/ui";
+import { Drawer, Form, FormItem, Input, Tag, Dialog, Dropdown, Card } from "@/components/ui";
 
 // Icons
 import {
@@ -48,6 +48,12 @@ import {
   TbBell,
   TbTagStarred,
   TbCalendarClock,
+  TbUserQuestion,
+  TbEyeClosed,
+  TbBellMinus,
+  TbPencilPin,
+  TbFileTime,
+  TbStars,
 } from "react-icons/tb";
 
 // Types
@@ -1210,7 +1216,66 @@ const RequestAndFeedbackListing = () => {
               Add New
             </Button>{" "}
           </div>
+          <div className="grid grid-cols-6 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbUserQuestion size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">879</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbEyeClosed size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">23</h6>
+                <span className="font-semibold text-xs">Unread</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbBellMinus size={24} />
+              </div>
+              <div>
+                <h6 className="text-pink-500">34</h6>
+                <span className="font-semibold text-xs">Resolved</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbPencilPin size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">3</h6>
+                <span className="font-semibold text-xs">Pending</span>
+              </div>
+            </Card>
 
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbFileTime size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">9 Hrs</h6>
+                <span className="font-semibold text-xs">Avg Time</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbStars size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">4.2</h6>
+                <span className="font-semibold text-xs">Avg Rating </span>
+              </div>
+            </Card>
+
+
+            
+          </div>
           <ItemTableTools
             onClearFilters={onClearFilters}
             onSearchChange={handleSearchInputChange}
