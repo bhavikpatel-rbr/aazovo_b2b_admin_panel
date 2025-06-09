@@ -878,7 +878,7 @@ const Countries = () => {
               {
                 <div className="grid grid-cols-2 gap-2">
                 <FormItem
-                    label="Continent"
+                    label={<div>Continent<span className="text-red-500"> * </span></div>}
                     invalid={!!drawerProps.formMethods.formState.errors.continent_id}
                     errorMessage={drawerProps.formMethods.formState.errors.continent_id?.message as string | undefined}
                 >
@@ -896,28 +896,28 @@ const Countries = () => {
                     />
                 </FormItem>
                 <FormItem
-                    label="Country Name"
+                    label={<div>Country Name<span className="text-red-500"> * </span></div>}
                     invalid={!!drawerProps.formMethods.formState.errors.name}
                     errorMessage={drawerProps.formMethods.formState.errors.name?.message as string | undefined}
                 >
                     <Controller name="name" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Country Name" />)} />
                 </FormItem>
                 <FormItem
-                    label="ISO Code"
+                    label={<div>ISO Code<span className="text-red-500"> * </span></div>}
                     invalid={!!drawerProps.formMethods.formState.errors.iso}
                     errorMessage={drawerProps.formMethods.formState.errors.iso?.message as string | undefined}
                 >
                     <Controller name="iso" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter ISO Code (e.g., US)" />)} />
                 </FormItem>
                 <FormItem
-                    label="Phone Code"
+                    label={<div>Phone Code<span className="text-red-500"> * </span></div>}
                     invalid={!!drawerProps.formMethods.formState.errors.phonecode}
                     errorMessage={drawerProps.formMethods.formState.errors.phonecode?.message as string | undefined}
                 >
                     <Controller name="phonecode" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Phone Code (e.g., +1)" />)} />
                 </FormItem>
                 <FormItem // Added Status Field
-                    label="Status"
+                   label={<div>Status<span className="text-red-500"> * </span></div>}
                     className="col-span-2"
                     invalid={!!drawerProps.formMethods.formState.errors.status}
                     errorMessage={drawerProps.formMethods.formState.errors.status?.message as string | undefined}

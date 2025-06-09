@@ -500,39 +500,39 @@ const NumberSystems = () => {
 
   const renderDrawerForm = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-      <FormItem label="System Name" invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}>
+      <FormItem label={<div>System Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}>
         <Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., European System" />)} />
       </FormItem>
       <FormItem label="Prefix" invalid={!!formMethods.formState.errors.prefix} errorMessage={formMethods.formState.errors.prefix?.message}>
-        <Controller name="prefix" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., EU (Optional)" />)} />
+        <Controller name="prefix" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., EU" />)} />
       </FormItem>
       <div className="md:col-span-2"><h6 className="text-sm font-semibold mb-2">Numbering System For Member As Per (Old Admin)</h6></div>
       <FormItem label="Member ID Starting No." invalid={!!formMethods.formState.errors.customer_code_starting} errorMessage={formMethods.formState.errors.customer_code_starting?.message}>
         <Controller name="customer_code_starting" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 10001" />)} />
       </FormItem>
       <FormItem label="Member ID Current No." invalid={!!formMethods.formState.errors.current_customer_code} errorMessage={formMethods.formState.errors.current_customer_code?.message}>
-        <Controller name="current_customer_code" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 10500" />)} />
+        <Controller name="current_customer_code" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 10500" readOnly/>)} />
       </FormItem>
       <div className="md:col-span-2"><h6 className="text-sm font-semibold mb-2">Numbering System For Temporary Member As Per (Old Admin)</h6></div>
       <FormItem label="Member ID Starting No." invalid={!!formMethods.formState.errors.non_kyc_customer_code_starting} errorMessage={formMethods.formState.errors.non_kyc_customer_code_starting?.message}>
         <Controller name="non_kyc_customer_code_starting" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 5001" />)} />
       </FormItem>
       <FormItem label="Member ID Current No." invalid={!!formMethods.formState.errors.non_kyc_current_customer_code} errorMessage={formMethods.formState.errors.non_kyc_current_customer_code?.message}>
-        <Controller name="non_kyc_current_customer_code" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 5250" />)} />
+        <Controller name="non_kyc_current_customer_code" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 5250" readOnly/>)} />
       </FormItem>
       <div className="md:col-span-2 border-t-3 border-gray-400 pt-3 mt-1"><h6 className="text-sm font-semibold mb-2">Numbering System For Verified Company As Per (New Admin)</h6></div>
       <FormItem label="Company ID Starting No." invalid={!!formMethods.formState.errors.company_code_starting} errorMessage={formMethods.formState.errors.company_code_starting?.message}>
         <Controller name="company_code_starting" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 70001" />)} />
       </FormItem>
       <FormItem label="Company ID Current No." invalid={!!formMethods.formState.errors.current_company_code} errorMessage={formMethods.formState.errors.current_company_code?.message}>
-        <Controller name="current_company_code" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 70100" />)} />
+        <Controller name="current_company_code" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 70100" readOnly/>)} />
       </FormItem>
       <div className="md:col-span-2"><h6 className="text-sm font-semibold mb-2">Numbering System For Temporary Company As Per (New Admin)</h6></div>
       <FormItem label="Company ID Starting No." invalid={!!formMethods.formState.errors.non_kyc_company_code_starting} errorMessage={formMethods.formState.errors.non_kyc_company_code_starting?.message}>
         <Controller name="non_kyc_company_code_starting" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 80001" />)} />
       </FormItem>
       <FormItem label="Company ID Current No." invalid={!!formMethods.formState.errors.non_kyc_current_company_code} errorMessage={formMethods.formState.errors.non_kyc_current_company_code?.message}>
-        <Controller name="non_kyc_current_company_code" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 80050" />)} />
+        <Controller name="non_kyc_current_company_code" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 80050" readOnly/>)} />
       </FormItem>
       <FormItem label="Applicable Countries" className="md:col-span-2" invalid={!!formMethods.formState.errors.country_ids} errorMessage={formMethods.formState.errors.country_ids?.message as string}>
         <Controller name="country_ids" control={formMethods.control} render={({ field }) => (<Select isMulti placeholder="Select countries..." options={countryOptions} value={countryOptions.filter((option) => field.value?.includes(option.value))} onChange={(selectedOpts) => field.onChange(selectedOpts ? selectedOpts.map((opt) => opt.value) : [])} />)} />

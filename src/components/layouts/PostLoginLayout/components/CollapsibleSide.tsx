@@ -17,6 +17,7 @@ import { LAYOUT_COLLAPSIBLE_SIDE } from '@/constants/theme.constant'
 import type { CommonProps } from '@/@types/common'
 import ActiveItems from '@/components/template/Notification/ActiveItems'
 import Calender from '@/components/template/Notification/Calender'
+import { TbPower } from 'react-icons/tb'
 
 const CollapsibleSide = ({ children }: CommonProps) => {
     const { larger, smaller } = useResponsive()
@@ -47,9 +48,17 @@ const CollapsibleSide = ({ children }: CommonProps) => {
                         }
                         headerEnd={
                             <>
+                                {/* Puch in and out button */}
+                                <div className='text-xs bg-gray-100 dark:bg-gray-700 dark:text-white 
+                                    hover:bg-green-200 hover:text-black 
+                                    dark:hover:bg-green-200 dark:hover:text-black 
+                                    cursor-pointer rounded-full py-2 px-3 flex gap-1 items-center'>
+                                    <TbPower size={20} />
+                                    <span>Punch in</span>
+                                </div>
                                 <Notification />
-                                <ActiveItems/>
-                                <Calender/>
+                                <ActiveItems />
+                                <Calender />
                                 <div className='text-2xl header-action-item header-action-item-hoverable'>
                                     <BiTask />
                                 </div>

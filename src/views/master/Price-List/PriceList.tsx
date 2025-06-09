@@ -873,6 +873,7 @@ const PriceList = () => {
     label: string;
     type?: "text" | "number" | "select";
     options?: SelectOption[];
+    isRequired? : boolean;
   }[] = useMemo(
     () => [
       {
@@ -880,8 +881,9 @@ const PriceList = () => {
         label: "Product Name",
         type: "select",
         options: productSelectOptions,
+        isRequired : true,
       },
-      { name: "price", label: "Price", type: "text" },
+      { name: "price", label: "Price", type: "text", isRequired : true },
       { name: "usd_rate", label: "USD Rate", type: "text" },
       { name: "expance", label: "Expenses", type: "text" },
       { name: "margin", label: "Margin", type: "text" },
@@ -890,6 +892,7 @@ const PriceList = () => {
         label: "Status",
         type: "select",
         options: statusOptions,
+        isRequired : true,
       },
     ],
     [productSelectOptions]
@@ -1140,7 +1143,7 @@ const PriceList = () => {
             {formFieldsConfig.map((fConfig) => (
               <FormItem
                 key={fConfig.name}
-                label={fConfig.label}
+                label={<div>{fConfig.label}  {fConfig.isRequired && <span className="text-red-500">*</span>}</div>}
                 invalid={!!drawerProps.methods.formState.errors[fConfig.name]}
                 errorMessage={
                   drawerProps.methods.formState.errors[fConfig.name]

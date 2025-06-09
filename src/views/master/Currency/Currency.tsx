@@ -1061,7 +1061,7 @@ const Currency = () => {
             className="flex flex-col relative"
           >
             <FormItem
-              label="Currency Code"
+              label={<div>Currency Code<span className="text-red-500"> * </span></div>}
               invalid={!!drawerProps.formMethods.formState.errors.currency_code}
               errorMessage={
                 drawerProps.formMethods.formState.errors.currency_code
@@ -1080,7 +1080,7 @@ const Currency = () => {
               />
             </FormItem>
             <FormItem
-              label="Currency Symbol"
+              label={<div>Currency Symbol<span className="text-red-500"> * </span></div>}
               invalid={
                 !!drawerProps.formMethods.formState.errors.currency_symbol
               }
@@ -1101,7 +1101,7 @@ const Currency = () => {
               />
             </FormItem>
             <FormItem
-              label="Status"
+              label={<div>Status<span className="text-red-500"> * </span></div>}
               invalid={!!drawerProps.formMethods.formState.errors.status}
               errorMessage={
                 drawerProps.formMethods.formState.errors.status?.message as

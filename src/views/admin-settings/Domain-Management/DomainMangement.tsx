@@ -565,7 +565,7 @@ const DomainManagementListing = () => {
 
   const renderDrawerForm = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem label="Domain Name" invalid={!!formMethods.formState.errors.domain} errorMessage={formMethods.formState.errors.domain?.message}>
+      <FormItem label={<div>Domain Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.domain} errorMessage={formMethods.formState.errors.domain?.message}>
         <Controller name="domain" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbWorldWww className="text-lg" />} placeholder="e.g., example.com" />)} />
       </FormItem>
       <FormItem label="Currency" invalid={!!formMethods.formState.errors.currency_id} errorMessage={formMethods.formState.errors.currency_id?.message}>
@@ -580,7 +580,7 @@ const DomainManagementListing = () => {
           <Controller name="kycStartNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 10001" />)} />
         </FormItem>
         <FormItem label="Current Number" invalid={!!formMethods.formState.errors.kycCurrentNumber} errorMessage={formMethods.formState.errors.kycCurrentNumber?.message}>
-          <Controller name="kycCurrentNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 10500" />)} />
+          <Controller name="kycCurrentNumber" control={formMethods.control} render={({ field }) => (<Input {...field} readOnly type="number" placeholder="e.g., 10500" />)} />
         </FormItem>
       </div>
       <div className="md:col-span-2"><h6 className="text-sm font-semibold flex items-center gap-2">Numbering System For Temporary Member</h6></div>
@@ -588,7 +588,7 @@ const DomainManagementListing = () => {
         <Controller name="tempStartNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 5001" />)} />
       </FormItem>
       <FormItem label="Current Number" invalid={!!formMethods.formState.errors.tempCurrentNumber} errorMessage={formMethods.formState.errors.tempCurrentNumber?.message}>
-        <Controller name="tempCurrentNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 5250" />)} />
+        <Controller name="tempCurrentNumber" control={formMethods.control} render={({ field }) => (<Input {...field} readOnly type="number" placeholder="e.g., 5250" />)} />
       </FormItem>
       <FormItem label="Countries" className="md:col-span-2" invalid={!!formMethods.formState.errors.countries} errorMessage={formMethods.formState.errors.countries?.message as string}>
         <Controller name="countries" control={formMethods.control} render={({ field }) => (<Select isMulti placeholder="Select countries..." options={allCountryOptions} value={allCountryOptions.filter((opt) => field.value?.includes(opt.value))} onChange={(opts) => field.onChange(opts ? opts.map((o: any) => o.value) : [])} />)} />

@@ -752,25 +752,27 @@ const Sliders = () => {
 
   const renderFormFields = (formMethodsInstance: typeof addFormMethods | typeof editFormMethods, isEditMode: boolean, currentSlider?: SliderItem | null) => (
     <>
-      <FormItem label="Title" invalid={!!formMethodsInstance.formState.errors.title} errorMessage={formMethodsInstance.formState.errors.title?.message} isRequired>
+      <FormItem label={<div>Title<span className="text-red-500"> * </span></div>} invalid={!!formMethodsInstance.formState.errors.title} errorMessage={formMethodsInstance.formState.errors.title?.message} isRequired>
         <Controller name="title" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} placeholder="Enter Slider Title" />)} />
       </FormItem>
-      <FormItem label="Subtitle (Optional)" invalid={!!formMethodsInstance.formState.errors.subtitle} errorMessage={formMethodsInstance.formState.errors.subtitle?.message}>
+      <FormItem label="Subtitle" invalid={!!formMethodsInstance.formState.errors.subtitle} errorMessage={formMethodsInstance.formState.errors.subtitle?.message}>
         <Controller name="subtitle" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="Enter Subtitle" />)} />
       </FormItem>
       {
         <div className="grid grid-cols-2 gap-2">
-          <FormItem label="Button Text (Optional)" invalid={!!formMethodsInstance.formState.errors.button_text} errorMessage={formMethodsInstance.formState.errors.button_text?.message}>
+          <FormItem label="Button Text" invalid={!!formMethodsInstance.formState.errors.button_text} errorMessage={formMethodsInstance.formState.errors.button_text?.message}>
             <Controller name="button_text" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., Shop Now" />)} />
           </FormItem>    
-          <FormItem label="Index Position (Optional)" invalid={!!formMethodsInstance.formState.errors.index_position} errorMessage={formMethodsInstance.formState.errors.index_position?.message}>
+          <FormItem label="Index Position" invalid={!!formMethodsInstance.formState.errors.index_position} errorMessage={formMethodsInstance.formState.errors.index_position?.message}>
             <Controller name="index_position" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} type="number" placeholder="Enter position (e.g., 1)" value={field.value === null ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} />)} />
           </FormItem>
         </div>
       }
       
       {isEditMode && currentSlider?.imageFullPath && !editFormPreviewUrl && (<FormItem label="Current Image"><Avatar className="w-[452px] h-[auto] border p-1 rounded-md" src={currentSlider.imageFullPath} shape="square" icon={<TbPhoto />} /></FormItem>)}
-      <FormItem label={isEditMode ? "New Image (Optional)" : "Image"} invalid={!!formMethodsInstance.formState.errors.image} errorMessage={formMethodsInstance.formState.errors.image?.message as string} isRequired={!isEditMode}>
+      <FormItem 
+        label={<div>{isEditMode ? "New Image" : "Image"}<span className="text-red-500"> * </span></div>}
+        invalid={!!formMethodsInstance.formState.errors.image} errorMessage={formMethodsInstance.formState.errors.image?.message as string} isRequired={!isEditMode}>
         <Controller name="image" control={formMethodsInstance.control}
           render={({ field: { onChange, onBlur, name, ref } }) => (
             <Input type="file" name={name} ref={ref} onBlur={onBlur}
@@ -795,22 +797,22 @@ const Sliders = () => {
       </FormItem>
       {
         <div className="grid grid-cols-2 gap-2">
-          <FormItem label="Display Page" invalid={!!formMethodsInstance.formState.errors.display_page} errorMessage={formMethodsInstance.formState.errors.display_page?.message} isRequired>
+          <FormItem label={<div>Display Page<span className="text-red-500"> * </span></div>} invalid={!!formMethodsInstance.formState.errors.display_page} errorMessage={formMethodsInstance.formState.errors.display_page?.message} isRequired>
             <Controller name="display_page" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={displayPageOptionsConst} value={displayPageOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select display page" />)} />
           </FormItem>
-          <FormItem label="Link (Optional)" invalid={!!formMethodsInstance.formState.errors.link} errorMessage={formMethodsInstance.formState.errors.link?.message}>
+          <FormItem label="Link" invalid={!!formMethodsInstance.formState.errors.link} errorMessage={formMethodsInstance.formState.errors.link?.message}>
             <Controller name="link" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/target-page" />)} />
           </FormItem>
           <FormItem label="Source" invalid={!!formMethodsInstance.formState.errors.source} errorMessage={formMethodsInstance.formState.errors.source?.message} isRequired>
             <Controller name="source" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={sourceOptionsConst} value={sourceOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select source" />)} />
           </FormItem>
-          <FormItem label="Status" invalid={!!formMethodsInstance.formState.errors.status} errorMessage={formMethodsInstance.formState.errors.status?.message} isRequired>
+          <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} invalid={!!formMethodsInstance.formState.errors.status} errorMessage={formMethodsInstance.formState.errors.status?.message} isRequired>
             <Controller name="status" control={formMethodsInstance.control} render={({ field }) => (<UiSelect options={apiStatusOptions} value={apiStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} placeholder="Select status" />)} />
           </FormItem>
           <FormItem label="Domain IDs (Select)" invalid={!!formMethodsInstance.formState.errors.domain_ids} errorMessage={formMethodsInstance.formState.errors.domain_ids?.message}>
             <Controller name="domain_ids" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., 1,2,3" />)} />
           </FormItem>
-          <FormItem label="Slider Color (Optional)" invalid={!!formMethodsInstance.formState.errors.slider_color} errorMessage={formMethodsInstance.formState.errors.slider_color?.message}>
+          <FormItem label="Slider Color" invalid={!!formMethodsInstance.formState.errors.slider_color} errorMessage={formMethodsInstance.formState.errors.slider_color?.message}>
             <div className="flex items-center gap-2">
               <Controller name="slider_color" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? "#FFFFFF"} type="color" className="w-12 h-10 p-1" />)} />
               <Controller name="slider_color" control={formMethodsInstance.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="text" placeholder="#RRGGBB or color name" className="flex-grow" />)} />
