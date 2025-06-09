@@ -1300,11 +1300,7 @@ const CompanyDetailsSection = ({
             name="state"
             control={control}
             render={({ field }) => (
-              <Select
-                placeholder="Select State"
-                options={stateOptions}
-                {...field}
-              />
+              <Input placeholder="Enter state" {...field} />
             )}
           />
         </FormItem>{" "}
@@ -1318,11 +1314,7 @@ const CompanyDetailsSection = ({
             name="city"
             control={control}
             render={({ field }) => (
-              <Select
-                placeholder="Select City"
-                options={cityOptions}
-                {...field}
-              />
+              <Input placeholder="Enter city" {...field} />
             )}
           />
         </FormItem>{" "}
@@ -1763,11 +1755,7 @@ const CompanyDetailsSection = ({
                 name={`company_branches.${index}.branch_state`}
                 control={control}
                 render={({ field }) => (
-                  <Select
-                    placeholder="Select State"
-                    options={stateOptions}
-                    {...field}
-                  />
+                  <Input placeholder="Enter state" {...field} />
                 )}
               />
             </FormItem>
@@ -2383,7 +2371,7 @@ const AccessibilitySection = ({
         {" "}
         <div className="flex items-center gap-x-8">
           {" "}
-          <FormItem label="KYC Verified">
+          <FormItem>
             <Controller
               name="KYC_FIELD"
               control={control}
@@ -2394,7 +2382,7 @@ const AccessibilitySection = ({
               )}
             />
           </FormItem>{" "}
-          <FormItem label="Enable Billing">
+          <FormItem>
             <Controller
               name="BILLING_FIELD"
               control={control}
