@@ -5,9 +5,9 @@ import { NotificationPlacement } from '../@types/placement'
 import type { ReactNode } from 'react'
 
 export const toastDefaultProps = {
-    placement: PLACEMENT.TOP_END,
-    offsetX: 30,
-    offsetY: 30,
+    placement: PLACEMENT.TOP_CENTER,
+    offsetX: 0,
+    offsetY: "30%",
     transitionType: 'scale',
     block: false,
 }
