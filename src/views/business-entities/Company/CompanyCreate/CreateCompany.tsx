@@ -1,4 +1,3 @@
-// src/views/companies/CompanyFormPage.tsx (or your chosen path)
 import classNames from "classnames";
 import isEmpty from "lodash/isEmpty";
 import { useEffect, useState, useMemo } from "react";
@@ -88,6 +87,13 @@ interface BranchItemFE {
 interface BillingDocItemFE {
   document_name?: string;
   document_file?: File | string;
+}
+
+interface ReferenceItemFE {
+  person_name?: string;
+  company_name?: string;
+  contact_number?: string;
+  remark?: string;
 }
 
 export interface CompanyFormSchema {
@@ -189,6 +195,7 @@ export interface CompanyFormSchema {
 
   notification_email?: string;
   company_spot_verification_data?: SpotVerificationItemFE[];
+  references?: ReferenceItemFE[];
 }
 
 export interface FormSectionBaseProps {
@@ -289,6 +296,7 @@ interface ApiSingleCompanyItem {
   company_bank_details?: any[];
   company_branches?: any[];
   company_certificate?: any[];
+  company_references?: any[];
 }
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
@@ -507,6 +515,12 @@ const transformApiToFormSchema = (
         photo_upload: (item as any).photo_upload_url || item.photo_upload,
       })
     ),
+    references: apiData.company_references?.map((ref) => ({
+      person_name: ref.person_name,
+      company_name: ref.company_name,
+      contact_number: ref.contact_number,
+      remark: ref.remark,
+    })),
   };
 };
 
@@ -815,6 +829,27 @@ const preparePayloadForApi = (
       }
     );
   }
+  if (
+    dataToProcess.references &&
+    Array.isArray(dataToProcess.references) &&
+    dataToProcess.references.length > 0
+  ) {
+    dataToProcess.references.forEach((ref: ReferenceItemFE) => {
+      apiPayload.append(
+        `company_references[person_name][]`,
+        ref.person_name || ""
+      );
+      apiPayload.append(
+        `company_references[company_name][]`,
+        ref.company_name || ""
+      );
+      apiPayload.append(
+        `company_references[contact_number][]`,
+        ref.contact_number || ""
+      );
+      apiPayload.append(`company_references[remark][]`, ref.remark || "");
+    });
+  }
   const kycDocsConfig = [
     {
       feFile: "declaration_206ab",
@@ -952,6 +987,7 @@ const companyNavigationList = [
   { label: "KYC Documents", link: "kycDocuments" },
   { label: "Bank Details", link: "bankDetails" },
   { label: "Spot Verification", link: "spotVerification" },
+  { label: "Reference", link: "reference" },
   { label: "Accessibility", link: "accessibility" },
   { label: "Member Management", link: "memberManagement" },
 ];
@@ -1331,7 +1367,7 @@ const CompanyDetailsSection = ({
         </FormItem>{" "}
       </div>{" "}
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>{" "}
-      <div className="grid md:grid-cols-2 gap-3">
+      <div className="grid md:grid-cols-4 gap-3">
         {" "}
         <FormItem
           label="GST Number"
@@ -1705,7 +1741,7 @@ const CompanyDetailsSection = ({
       </div>{" "}
       {branchFields.map((item, index) => (
         <Card key={item.id} className="mb-4 p-4 border">
-          <div className="grid md:grid-cols-2 gap-3">
+          <div className="grid md:grid-cols-3 gap-3">
             <FormItem label="Office Type">
               <Controller
                 name={`company_branches.${index}.office_type`}
@@ -1725,15 +1761,6 @@ const CompanyDetailsSection = ({
                 control={control}
                 render={({ field }) => (
                   <Input placeholder="e.g. Main Office" {...field} />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Address" className="md:col-span-2">
-              <Controller
-                name={`company_branches.${index}.branch_address`}
-                control={control}
-                render={({ field }) => (
-                  <Input textArea placeholder="Full Address" {...field} />
                 )}
               />
             </FormItem>
@@ -1777,7 +1804,16 @@ const CompanyDetailsSection = ({
                 )}
               />
             </FormItem>
-            <div className="md:col-span-2 flex justify-end">
+            <FormItem label="Address" className="md:col-span-3">
+              <Controller
+                name={`company_branches.${index}.branch_address`}
+                control={control}
+                render={({ field }) => (
+                  <Input textArea placeholder="Full Address" {...field} />
+                )}
+              />
+            </FormItem>
+            <div className="md:col-span-3 flex justify-end">
               <Button
                 type="button"
                 shape="circle"
@@ -2348,6 +2384,97 @@ const SpotVerificationSection = ({
   );
 };
 
+// --- ReferenceSection ---
+const ReferenceSection = ({
+  control,
+  errors,
+  formMethods,
+}: FormSectionBaseProps) => {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "references",
+  });
+
+  return (
+    <Card id="reference">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="mb-0">References</h4>
+        <Button
+          type="button"
+          icon={<TbPlus />}
+          size="sm"
+          onClick={() =>
+            append({
+              person_name: "",
+              company_name: "",
+              contact_number: "",
+              remark: "",
+            })
+          }
+        >
+          Add Reference
+        </Button>
+      </div>
+      {fields.map((item, index) => (
+        <Card key={item.id} className="mb-4 p-4 border">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+            <FormItem label="Person Name">
+              <Controller
+                name={`references.${index}.person_name`}
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="Person's Name" {...field} />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Company Name">
+              <Controller
+                name={`references.${index}.company_name`}
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="Company Name" {...field} />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Contact Number">
+              <Controller
+                name={`references.${index}.contact_number`}
+                control={control}
+                render={({ field }) => (
+                  <Input placeholder="Contact Number" {...field} />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Remark" className="sm:col-span-3">
+              <Controller
+                name={`references.${index}.remark`}
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    textArea
+                    placeholder="Add remarks here..."
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+          </div>
+          <div className="flex justify-end mt-2">
+            <Button
+              type="button"
+              shape="circle"
+              size="sm"
+              icon={<TbTrash />}
+              onClick={() => remove(index)}
+              danger
+            />
+          </div>
+        </Card>
+      ))}
+    </Card>
+  );
+};
+
 // --- AccessibilitySection ---
 const AccessibilitySection = ({
   control,
@@ -2728,6 +2855,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       members: [],
       additional_bank_details: [],
       company_spot_verification_data: [],
+      references: [],
       company_certificates: [],
       company_branches: [],
       billing_documents: [],
@@ -2759,6 +2887,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         return <BankDetailsSection {...sectionProps} />;
       case "spotVerification":
         return <SpotVerificationSection {...sectionProps} />;
+      case "reference":
+        return <ReferenceSection {...sectionProps} />;
       case "accessibility":
         return <AccessibilitySection {...sectionProps} />;
       case "memberManagement":
@@ -2946,6 +3076,7 @@ const CompanyCreate = () => {
     twitter: "",
     notification_email: "",
     company_spot_verification_data: [],
+    references: [],
   });
 
   useEffect(() => {

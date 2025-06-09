@@ -1749,7 +1749,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
   return (
     <Card id="memberProfile">
       <h4 className="mb-6">Additional Member Profile</h4>
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <FormItem
           label="Favourite Product(s)"
           invalid={!!errors.favourite_product_ids}
@@ -1900,7 +1900,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
         </FormItem>
         <FormItem
           label="Remarks"
-          className="md:col-span-2"
+          className="md:col-span-3"
           invalid={!!errors.remarks}
           errorMessage={errors.remarks?.message}
         >
@@ -1941,7 +1941,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               />
               {/* <Button size="sm" type="button" shape="circle" variant="plain" icon={<HiTrash className="text-red-500" />} onClick={() => remove(index)} /> */}
             </div>
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
+            <div className="grid md:grid-cols-3 gap-4 mt-4">
               <FormItem
                 label={`Member Type ${index + 1}`}
                 invalid={!!errors.member_profiles?.[index]?.member_type}
@@ -1986,7 +1986,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               </FormItem>
               <FormItem
                 label="Select Sub Category(s)"
-                className="md:col-span-2"
+                // className="md:col-span-2"
                 invalid={!!errors.member_profiles?.[index]?.sub_categories}
                 errorMessage={
                   errors.member_profiles?.[index]?.sub_categories
@@ -2114,11 +2114,12 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
+        
         <FormItem
           label="Password (leave blank to keep current)"
           invalid={!!errors.password}
           errorMessage={errors.password?.message}
-          className="md:col-span-3"
+        //   className="md:col-span-3"
         >
           <Controller
             name="password"
@@ -2136,7 +2137,7 @@ const PersonalDetailsComponent = ({
           label="Company Name (Temp)"
           invalid={!!errors.company_name_temp}
           errorMessage={(errors.company_name_temp as any)?.message}
-          className="md:col-span-3"
+        //   className="md:col-span-3"
         >
           <Controller
             name="company_name_temp"
@@ -2155,7 +2156,7 @@ const PersonalDetailsComponent = ({
           label="Company Name (Actual)"
           invalid={!!errors.company_name}
           errorMessage={(errors.company_name as any)?.message}
-          className="md:col-span-3"
+        //   className="md:col-span-3"
         >
           <Controller
             name="company_name"
@@ -2170,20 +2171,7 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
-        <FormItem
-          label="Address"
-          invalid={!!errors.address}
-          errorMessage={errors.address?.message}
-          className="md:col-span-3"
-        >
-          <Controller
-            name="address"
-            control={control}
-            render={({ field }) => (
-              <Input textArea placeholder="Full Address" {...field} />
-            )}
-          />
-        </FormItem>
+
         <FormItem
           label="Status"
           invalid={!!errors.status}
@@ -2273,6 +2261,20 @@ const PersonalDetailsComponent = ({
             control={control}
             render={({ field }) => (
               <Input placeholder="Enter pincode" {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Address"
+          invalid={!!errors.address}
+          errorMessage={errors.address?.message}
+          className="md:col-span-3"
+        >
+          <Controller
+            name="address"
+            control={control}
+            render={({ field }) => (
+              <Input textArea placeholder="Full Address" {...field} />
             )}
           />
         </FormItem>
@@ -2610,7 +2612,7 @@ const RequestAndFeedbacksComponent = ({
   return (
     <div id="requestAndFeedbacks" className="flex flex-col gap-4">
       <RequestAndFeedbackListing />
-      <Card>
+      {/* <Card>
         <h4 className="mb-6">Add New Feedback / Request to this Member</h4>
         <FormItem
           label="Your Message"
@@ -2630,7 +2632,7 @@ const RequestAndFeedbacksComponent = ({
             )}
           />
         </FormItem>
-      </Card>
+      </Card> */}
     </div>
   );
 };
