@@ -3,11 +3,18 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, NavLink, useParams } from "react-router-dom";
 import dayjs from "dayjs";
+import classNames from "classnames";
 
 // UI Components
 import Input from "@/components/ui/Input";
 import { FormItem, FormContainer } from "@/components/ui/Form";
-import { Select as UiSelect, DatePicker, Button } from "@/components/ui";
+import {
+  Select as UiSelect,
+  DatePicker,
+  Button,
+  Table,
+  Tooltip,
+} from "@/components/ui";
 import InputNumber from "@/components/ui/Input/InputNumber";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
@@ -18,7 +25,7 @@ import Spinner from "@/components/ui/Spinner";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
-import { TbInfoCircle } from "react-icons/tb";
+import { TbInfoCircle, TbPencil, TbTrash } from "react-icons/tb";
 
 // Types and Schema
 import type { LeadFormData } from "../types";
@@ -27,7 +34,7 @@ import {
   leadStatusOptions,
   enquiryTypeOptions,
   leadIntentOptions,
-  deviceConditionOptions,
+  deviceConditionOptions as baseDeviceConditionOptions,
 } from "../types";
 
 // Redux
@@ -59,17 +66,23 @@ type ApiLookupItem = {
   [key: string]: any;
 };
 
-const dummyProductStatuses = [
-  "In Stock",
-  "Available on Order",
-  "Low Stock",
-  "Discontinued",
-].map((s) => ({ value: s, label: s }));
+// --- Updated options, same as AddLeadPage ---
+const productStatusOptions = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
 
-const dummyCartoonTypes = [
+const cartoonTypeOptions = [
   { value: 1, label: "Master Carton" },
   { value: 2, label: "Inner Carton" },
   { value: 3, label: "Pallet" },
+  { value: 4, label: "Box" },
+  { value: 5, label: "Unit" },
+];
+
+const deviceConditionOptions = [
+  ...baseDeviceConditionOptions,
+  { value: "Old", label: "Old" },
 ];
 
 const EditLeadPage = () => {
@@ -80,6 +93,24 @@ const EditLeadPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+
+  // Dummy data for the new Matched Opportunity table
+  const [matchedOpportunities] = useState([
+    {
+      id: 1,
+      company: "TechSource Inc.",
+      member: "John Doe",
+      details: "Have 500 units, A-Grade, ready to ship.",
+      timestamp: "2023-10-27 10:00 AM",
+    },
+    {
+      id: 2,
+      company: "Global Gadgets LLC",
+      member: "Jane Smith",
+      details: "Looking to buy 1000 units, flexible on price.",
+      timestamp: "2023-10-27 09:45 AM",
+    },
+  ]);
 
   const {
     productsMasterData = [],
@@ -97,13 +128,30 @@ const EditLeadPage = () => {
     control,
     handleSubmit,
     reset,
+    watch, // Watch for dynamic field changes
     formState: { errors, isDirty },
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
     mode: "onChange",
   });
 
-  // --- 1. Fetch ALL data (Dropdowns and the specific Lead) ---
+  // Watch lead_intent to dynamically update labels
+  const leadIntentValue = watch("lead_intent");
+
+  // --- Dynamic labels based on lead_intent ---
+  const leadMemberLabel = useMemo(() => {
+    if (leadIntentValue === "Buy") return "Lead Member (Buyer) *";
+    if (leadIntentValue === "Sell") return "Lead Member (Supplier) *";
+    return "Lead Member (Supplier/Buyer) *";
+  }, [leadIntentValue]);
+
+  const sourceMemberLabel = useMemo(() => {
+    if (leadIntentValue === "Buy") return "Source Member (Supplier)";
+    if (leadIntentValue === "Sell") return "Source Member (Buyer)";
+    return "Source Member (Supplier)";
+  }, [leadIntentValue]);
+
+  // Fetch all dropdown and specific lead data
   useEffect(() => {
     const fetchAllData = async () => {
       if (!id) {
@@ -139,13 +187,9 @@ const EditLeadPage = () => {
     fetchAllData();
   }, [dispatch, id, navigate]);
 
-  // --- 2. Populate Form When Data is Ready ---
+  // Populate form when data is ready
   useEffect(() => {
     if (currentLeadStatus === "succeeded" && currentLead && initialDataLoaded) {
-      console.log("Populating EditLead form with:", currentLead);
-
-      // Directly map the API response to the form fields.
-      // Using `?? null` ensures that if a field is undefined/null from the API, it becomes null in the form, which is type-safe for Zod.
       reset({
         member_id: currentLead.member_id ?? null,
         enquiry_type: currentLead.enquiry_type ?? "",
@@ -156,7 +200,6 @@ const EditLeadPage = () => {
         target_price: currentLead.target_price ?? null,
         lead_status: currentLead.lead_status ?? "New",
         assigned_sales_person_id: currentLead.assigned_sales_person_id ?? null,
-
         source_supplier_id: currentLead.source_supplier_id ?? null,
         source_qty: currentLead.source_qty ?? null,
         source_price: currentLead.source_price ?? null,
@@ -169,8 +212,6 @@ const EditLeadPage = () => {
         source_payment_term_id: currentLead.source_payment_term_id ?? null,
         source_location: currentLead.source_location ?? null,
         source_internal_remarks: currentLead.source_internal_remarks ?? null,
-
-        // Handle date conversion carefully
         source_eta:
           currentLead.source_eta && dayjs(currentLead.source_eta).isValid()
             ? dayjs(currentLead.source_eta).toDate()
@@ -179,8 +220,8 @@ const EditLeadPage = () => {
     }
   }, [currentLead, currentLeadStatus, initialDataLoaded, reset]);
 
-  // --- Dynamic Options from Redux Store ---
-  const productOptions: SelectOption[] = useMemo(
+  // Memoized options from Redux store
+  const productOptions = useMemo(
     () =>
       productsMasterData.map((p: ApiLookupItem) => ({
         value: p.id,
@@ -188,7 +229,7 @@ const EditLeadPage = () => {
       })),
     [productsMasterData]
   );
-  const productSpecOptions: SelectOption[] = useMemo(
+  const productSpecOptions = useMemo(
     () =>
       ProductSpecificationsData.map((s: ApiLookupItem) => ({
         value: s.id,
@@ -196,7 +237,7 @@ const EditLeadPage = () => {
       })),
     [ProductSpecificationsData]
   );
-  const paymentTermOptions: SelectOption[] = useMemo(
+  const paymentTermOptions = useMemo(
     () =>
       PaymentTermsData.map((pt: ApiLookupItem) => ({
         value: pt.id,
@@ -204,12 +245,12 @@ const EditLeadPage = () => {
       })),
     [PaymentTermsData]
   );
-  const leadMemberOptions: SelectOption[] = useMemo(
+  const leadMemberOptions = useMemo(
     () =>
       leadMember.map((m: ApiLookupItem) => ({ value: m.id, label: m.name })),
     [leadMember]
   );
-  const salesPersonOptions: SelectOption[] = useMemo(
+  const salesPersonOptions = useMemo(
     () =>
       salesPerson.map((sp: ApiLookupItem) => ({
         value: sp.id,
@@ -217,7 +258,7 @@ const EditLeadPage = () => {
       })),
     [salesPerson]
   );
-  const suppliersOptions: SelectOption[] = useMemo(
+  const suppliersOptions = useMemo(
     () => suppliers.map((s: ApiLookupItem) => ({ value: s.id, label: s.name })),
     [suppliers]
   );
@@ -234,10 +275,9 @@ const EditLeadPage = () => {
     setIsSubmitting(true);
     const payload = {
       ...data,
-      id: currentLead.id, // Ensure the lead's own ID is in the payload for the update action
+      id: currentLead.id,
       source_eta: data.source_eta ? dayjs(data.source_eta).toISOString() : null,
     };
-    console.log("Submitting Updated Lead:", payload);
     try {
       await dispatch(editLeadAction(payload)).unwrap();
       toast.push(
@@ -287,23 +327,22 @@ const EditLeadPage = () => {
 
   return (
     <Container className="h-full">
+      <div className="flex gap-1 items-end mb-3 ">
+        <NavLink to="/sales/leads">
+          <h6 className="font-semibold hover:text-primary">Leads</h6>
+        </NavLink>
+        <BiChevronRight size={22} color="black" />
+        <h6 className="font-semibold text-primary">
+          Edit Lead (ID: {currentLead?.lead_number || id})
+        </h6>
+      </div>
       <FormContainer>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="flex gap-1 items-center mb-4">
-            <NavLink to="/sales/leads">
-              <h6 className="font-semibold hover:text-primary-600">Leads</h6>
-            </NavLink>
-            <BiChevronRight size={18} />
-            <h5 className="font-semibold text-primary-600">
-              Edit Lead (ID: {currentLead?.lead_number || id})
-            </h5>
-          </div>
-
           <AdaptableCard className="mb-4">
             <h5 className="mb-6 font-semibold">Lead Information</h5>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
               <FormItem
-                label="Lead Member *"
+                label={leadMemberLabel}
                 invalid={!!errors.member_id}
                 errorMessage={errors.member_id?.message}
               >
@@ -490,11 +529,11 @@ const EditLeadPage = () => {
             </div>
           </AdaptableCard>
 
-          <AdaptableCard className="mt-4">
-            <h5 className="mb-6 font-semibold">Sourcing Details (Optional)</h5>
+          <AdaptableCard className="mt-4 mb-4">
+            <h5 className="mb-6 font-semibold">Sourcing Details</h5>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
               <FormItem
-                label="Source Member (Supplier)"
+                label={sourceMemberLabel}
                 invalid={!!errors.source_supplier_id}
                 errorMessage={errors.source_supplier_id?.message}
               >
@@ -563,8 +602,8 @@ const EditLeadPage = () => {
                   render={({ field }) => (
                     <UiSelect
                       placeholder="Select Product Status"
-                      options={dummyProductStatuses}
-                      value={dummyProductStatuses.find(
+                      options={productStatusOptions}
+                      value={productStatusOptions.find(
                         (o) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
@@ -639,8 +678,8 @@ const EditLeadPage = () => {
                   render={({ field }) => (
                     <UiSelect
                       placeholder="Select Cartoon Type"
-                      options={dummyCartoonTypes}
-                      value={dummyCartoonTypes.find(
+                      options={cartoonTypeOptions}
+                      value={cartoonTypeOptions.find(
                         (o) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
@@ -751,6 +790,68 @@ const EditLeadPage = () => {
             </div>
           </AdaptableCard>
 
+          <AdaptableCard>
+            <h5 className="mb-6 font-semibold">Matched Opportunity</h5>
+            <Table>
+              <Table.THead>
+                <Table.Tr>
+                  <Table.Th>Company & Member</Table.Th>
+                  <Table.Th>Key Details</Table.Th>
+                  <Table.Th>Timestamp</Table.Th>
+                  <Table.Th>Action</Table.Th>
+                </Table.Tr>
+              </Table.THead>
+              <Table.TBody>
+                {matchedOpportunities.map((op) => {
+                  const iconButtonClass =
+                    "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+                  const hoverBgClass =
+                    "hover:bg-gray-100 dark:hover:bg-gray-700";
+                  return (
+                    <Table.Tr key={op.id}>
+                      <Table.Td>
+                        <div className="font-semibold">{op.company}</div>
+                        <div className="text-xs text-gray-500">{op.member}</div>
+                      </Table.Td>
+                      <Table.Td>{op.details}</Table.Td>
+                      <Table.Td>{op.timestamp}</Table.Td>
+                      <Table.Td>
+                        <div className="flex items-center justify-start gap-2">
+                          <Tooltip title="Edit">
+                            <div
+                              className={classNames(
+                                iconButtonClass,
+                                hoverBgClass,
+                                "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+                              )}
+                              role="button"
+                              onClick={() => alert(`Editing item ${op.id}`)}
+                            >
+                              <TbPencil />
+                            </div>
+                          </Tooltip>
+                          <Tooltip title="Remove">
+                            <div
+                              className={classNames(
+                                iconButtonClass,
+                                hoverBgClass,
+                                "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                              )}
+                              role="button"
+                              onClick={() => alert(`Removing item ${op.id}`)}
+                            >
+                              <TbTrash />
+                            </div>
+                          </Tooltip>
+                        </div>
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.TBody>
+            </Table>
+          </AdaptableCard>
+
           <div className="mt-6 flex justify-end gap-2">
             <Button
               type="button"
@@ -781,7 +882,7 @@ const EditLeadPage = () => {
         }}
         onCancel={() => setCancelConfirmOpen(false)}
       >
-        <p>Unsaved changes will be lost.</p>
+        <p>You have unsaved changes. Are you sure you want to discard them?</p>
       </ConfirmDialog>
     </Container>
   );

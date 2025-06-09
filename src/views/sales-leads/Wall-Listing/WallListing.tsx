@@ -20,6 +20,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   DatePicker,
@@ -29,34 +30,53 @@ import {
   FormItem,
   Input,
   Select as UiSelect,
+  Table,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
+import Select from "@/components/ui/Select";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
+  TbAlarm,
+  TbAlertTriangle,
+  TbBell,
   TbBookmark,
+  TbBrandWhatsapp,
   TbCalendarEvent,
   TbChecks,
+  TbClipboardText,
   TbCloudDownload,
   TbCloudUpload,
+  TbCopy,
   TbCurrencyDollar,
   TbDotsVertical,
+  TbDownload,
   TbEye,
+  TbFileSearch,
+  TbFileText,
+  TbFileZip,
   TbFilter,
+  TbMail,
   TbMessageCircle,
   TbPencil,
   TbPhoto,
   TbPlus,
+  TbReceipt,
   TbReload,
   TbSearch,
   TbShare,
   TbStack2,
+  TbTagStarred,
+  TbUser,
+  TbUserSearch,
+  TbUsersGroup,
 } from "react-icons/tb";
 
 // Types
@@ -265,6 +285,592 @@ export const dummyCartoonTypes = [
   { id: 2, name: "Inner Carton" },
 ];
 
+// ============================================================================
+// --- MODALS SECTION ---
+// All modal components for Wall Listing are defined here.
+// ============================================================================
+
+// --- Type Definitions for Modals ---
+export type WallModalType =
+  | "email"
+  | "whatsapp"
+  | "notification"
+  | "task"
+  | "active"
+  | "calendar"
+  | "alert"
+  | "share";
+
+export interface WallModalState {
+  isOpen: boolean;
+  type: WallModalType | null;
+  data: WallItem | null;
+}
+interface WallModalsProps {
+  modalState: WallModalState;
+  onClose: () => void;
+}
+
+// --- Helper Data for Modal Demos (Reused from other modules) ---
+const dummyUsers = [
+  { value: "user1", label: "Alice Johnson" },
+  { value: "user2", label: "Bob Williams" },
+  { value: "user3", label: "Charlie Brown" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Project Deadline" },
+];
+const dummyAlerts = [
+  {
+    id: 1,
+    severity: "warning",
+    message: "Listing will expire in 3 days.",
+    time: "4 days ago",
+  },
+  {
+    id: 2,
+    severity: "info",
+    message: "New inquiry received from John Doe.",
+    time: "2 hours ago",
+  },
+];
+
+const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose }) => {
+  const { type, data: wallItem, isOpen } = modalState;
+  if (!isOpen || !wallItem) return null;
+
+  const renderModalContent = () => {
+    switch (type) {
+      case "email":
+        return <SendEmailDialog wallItem={wallItem} onClose={onClose} />;
+      case "whatsapp":
+        return <SendWhatsAppDialog wallItem={wallItem} onClose={onClose} />;
+      case "notification":
+        return <AddNotificationDialog wallItem={wallItem} onClose={onClose} />;
+      case "task":
+        return <AssignTaskDialog wallItem={wallItem} onClose={onClose} />;
+      case "calendar":
+        return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
+      case "alert":
+        return <ViewAlertDialog wallItem={wallItem} onClose={onClose} />;
+      case "share":
+        return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
+      default:
+        return (
+          <GenericActionDialog
+            type={type}
+            wallItem={wallItem}
+            onClose={onClose}
+          />
+        );
+    }
+  };
+  return <>{renderModalContent()}</>;
+};
+
+const SendEmailDialog: React.FC<{ wallItem: WallItem; onClose: () => void }> =
+  ({ wallItem, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit } = useForm({
+      defaultValues: { subject: "", message: "" },
+    });
+    const onSendEmail = (data: { subject: string; message: string }) => {
+      setIsLoading(true);
+      console.log(
+        "Sending email to",
+        wallItem.member_email,
+        "with data:",
+        data
+      );
+      setTimeout(() => {
+        toast.push(
+          <Notification type="success" title="Email Sent Successfully" />
+        );
+        setIsLoading(false);
+        onClose();
+      }, 1000);
+    };
+    return (
+      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Send Email to {wallItem.member_name}</h5>
+        <form onSubmit={handleSubmit(onSendEmail)}>
+          <FormItem label="Subject">
+            <Controller
+              name="subject"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder={`Regarding: ${wallItem.product_name}`}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Message">
+            <Controller
+              name="message"
+              control={control}
+              render={({ field }) => (
+                <RichTextEditor value={field.value} onChange={field.onChange} />
+              )}
+            />
+          </FormItem>
+          <div className="text-right mt-6">
+            <Button className="mr-2" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="solid" type="submit" loading={isLoading}>
+              Send
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+    );
+  };
+
+const SendWhatsAppDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      message: `Hi ${wallItem.member_name}, I'm interested in your listing for "${wallItem.product_name}".`,
+    },
+  });
+  const onSendMessage = (data: { message: string }) => {
+    const phone = wallItem.member_phone?.replace(/\D/g, "");
+    if (!phone) {
+      toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+      return;
+    }
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
+      data.message
+    )}`;
+    window.open(url, "_blank");
+    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+    onClose();
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send WhatsApp to {wallItem.member_name}</h5>
+      <form onSubmit={handleSubmit(onSendMessage)}>
+        <FormItem label="Message Template">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit">
+            Open WhatsApp
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddNotificationDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", users: [], message: "" },
+  });
+  const onSend = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      "Sending in-app notification for",
+      wallItem.product_name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Notification Sent" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">
+        Add Notification for "{wallItem.product_name}"
+      </h5>
+      <form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Send to Users">
+          <Controller
+            name="users"
+            control={control}
+            render={({ field }) => (
+              <Select
+                isMulti
+                placeholder="Select Users"
+                options={dummyUsers}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AssignTaskDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: "",
+      assignee: null,
+      dueDate: null,
+      priority: null,
+      description: "",
+    },
+  });
+  const onAssignTask = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      "Assigning task for",
+      wallItem.product_name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Task Assigned" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
+      <form onSubmit={handleSubmit(onAssignTask)}>
+        <FormItem label="Task Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., Follow up on listing" />
+            )}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Assign To">
+            <Controller
+              name="assignee"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select User"
+                  options={dummyUsers}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Priority">
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Priority"
+                  options={priorityOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Due Date">
+          <Controller
+            name="dueDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                placeholder="Select date"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Description">
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Assign Task
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddScheduleDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", eventType: null, startDate: null, notes: "" },
+  });
+  const onAddEvent = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      "Adding event for",
+      wallItem.product_name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Event Scheduled" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for "{wallItem.product_name}"</h5>
+      <form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., Call about listing" />
+            )}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Event Type">
+            <Controller
+              name="eventType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Type"
+                  options={eventTypeOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Date & Time">
+            <Controller
+              name="startDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker.DateTimepicker
+                  placeholder="Select date and time"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Notes">
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Save Event
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const ViewAlertDialog: React.FC<{ wallItem: WallItem; onClose: () => void }> =
+  ({ wallItem, onClose }) => {
+    const alertColors: Record<string, string> = {
+      danger: "red",
+      warning: "amber",
+      info: "blue",
+    };
+    return (
+      <Dialog
+        isOpen={true}
+        onClose={onClose}
+        onRequestClose={onClose}
+        width={600}
+      >
+        <h5 className="mb-4">Alerts for "{wallItem.product_name}"</h5>
+        <div className="mt-4 flex flex-col gap-3">
+          {dummyAlerts.length > 0 ? (
+            dummyAlerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`p-3 rounded-lg border-l-4 border-${
+                  alertColors[alert.severity]
+                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
+                  alertColors[alert.severity]
+                }-500/10`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex items-start gap-2">
+                    <TbAlertTriangle
+                      className={`text-${
+                        alertColors[alert.severity]
+                      }-500 mt-1`}
+                      size={20}
+                    />
+                    <p className="text-sm">{alert.message}</p>
+                  </div>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">
+                    {alert.time}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p>No active alerts for this item.</p>
+          )}
+        </div>
+        <div className="text-right mt-6">
+          <Button variant="solid" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </Dialog>
+    );
+  };
+
+const ShareWallLinkDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
+  const linkToShare = wallItem.listing_url || "No URL available for this item.";
+
+  const handleCopy = () => {
+    if (wallItem.listing_url) {
+      navigator.clipboard.writeText(linkToShare).then(() => {
+        toast.push(
+          <Notification title="Copied to Clipboard" type="success" />
+        );
+      });
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Share Link for "{wallItem.product_name}"</h5>
+      <p className="mb-2 text-sm">Use the link below to share this listing:</p>
+      <div className="flex items-center gap-2">
+        <Input readOnly value={linkToShare} />
+        <Tooltip title="Copy Link">
+          <Button
+            shape="circle"
+            icon={<TbCopy />}
+            onClick={handleCopy}
+            disabled={!wallItem.listing_url}
+          />
+        </Tooltip>
+      </div>
+      <div className="text-right mt-6">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const GenericActionDialog: React.FC<{
+  type: WallModalType | null;
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ type, wallItem, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type
+    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+    : "Confirm Action";
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(
+      `Performing action '${type}' for wall item ${wallItem.product_name}`
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>
+        Are you sure you want to perform this action for{" "}
+        <span className="font-semibold">{wallItem.product_name}</span>?
+      </p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+          Confirm
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+// ============================================================================
+// --- END MODALS SECTION ---
+// ============================================================================
+
 // --- CSV Export ---
 const CSV_WALL_HEADERS = [
   "ID",
@@ -408,9 +1014,13 @@ function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
 const StyledActionColumn = ({
   onEdit,
   onViewDetail,
+  onOpenModal,
+  rowData,
 }: {
   onEdit: () => void;
   onViewDetail: () => void;
+  onOpenModal: (type: WallModalType, data: WallItem) => void;
+  rowData: WallItem;
 }) => (
   <div className="flex items-center justify-center">
     <Tooltip title="Edit">
@@ -431,41 +1041,64 @@ const StyledActionColumn = ({
         <TbEye />
       </div>
     </Tooltip>
-    <Tooltip title="Share">
-      <div
-        className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
-        role="button"
+    <Dropdown
+      renderTitle={
+        <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+      }
+    >
+      <Dropdown.Item
+        onClick={() => onOpenModal("email", rowData)}
+        className="flex items-center gap-2"
       >
-        <TbShare />
-      </div>
-    </Tooltip>
-    <Tooltip title="More">
-      <div
-        className="text-xl cursor-pointer select-none text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-400"
-        role="button"
+        <TbMail size={18} /> <span className="text-xs">Send Email</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("whatsapp", rowData)}
+        className="flex items-center gap-2"
       >
-        <Dropdown renderTitle={<TbDotsVertical />}>
-          <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">
-            Request For
-          </Dropdown.Item>
-          <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">
-            Add in Active
-          </Dropdown.Item>
-          <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">
-            Add Schedule
-          </Dropdown.Item>
-          <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">
-            Add Task
-          </Dropdown.Item>
-          <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">
-            View Documents
-          </Dropdown.Item>
-          <Dropdown.Item style={{ height: "auto" }} className="py-2 text-xs">
-            View Alert
-          </Dropdown.Item>
-        </Dropdown>
-      </div>
-    </Tooltip>
+        <TbBrandWhatsapp size={18} />{" "}
+        <span className="text-xs">Send on Whatsapp</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("notification", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbBell size={18} />{" "}
+        <span className="text-xs">Add as Notification</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("task", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("active", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbTagStarred size={18} />{" "}
+        <span className="text-xs">Add to Active</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("calendar", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbCalendarEvent size={18} />{" "}
+        <span className="text-xs">Add to Calendar</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("alert", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("share", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbShare size={18} /> <span className="text-xs">Share Wall Link</span>
+      </Dropdown.Item>
+    </Dropdown>
   </div>
 );
 
@@ -609,7 +1242,7 @@ const WallSelectedFooter = ({
         onRequestClose={() => setDeleteConfirmOpen(false)}
         onCancel={() => setDeleteConfirmOpen(false)}
         onConfirm={onConfirmDelete}
-        // loading={isDeleting}
+        loading={isDeleting}
       >
         <p>
           Are you sure you want to delete {selectedItems.length} selected item
@@ -636,7 +1269,7 @@ const WallListing = () => {
     if (Array.isArray(wallListing)) {
       const mapped = wallListing.map(
         (apiItem: ApiWallItem): WallItem => ({
-          id: apiItem.id,
+          id: apiItem.id as number,
           product_name: apiItem.product_name,
           company_name: apiItem.company_name || "",
           companyId: apiItem.company_id_from_api || undefined,
@@ -692,7 +1325,6 @@ const WallListing = () => {
   const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] =
     useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
@@ -707,6 +1339,17 @@ const WallListing = () => {
     query: "",
   });
   const [selectedItems, setSelectedItems] = useState<WallItem[]>([]);
+
+  // --- MODAL STATE AND HANDLERS ---
+  const [modalState, setModalState] = useState<WallModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+  const handleOpenModal = (type: WallModalType, wallItem: WallItem) =>
+    setModalState({ isOpen: true, type, data: wallItem });
+  const handleCloseModal = () =>
+    setModalState({ isOpen: false, type: null, data: null });
 
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
@@ -1448,11 +2091,19 @@ const WallListing = () => {
           <StyledActionColumn
             onViewDetail={() => openViewDrawer(props.row.original)}
             onEdit={() => openEditDrawer(props.row.original)}
+            onOpenModal={handleOpenModal}
+            rowData={props.row.original}
           />
         ),
       },
     ],
-    [openViewDrawer, openEditDrawer, handleToggleBookmark, handleChangeStatus]
+    [
+      openViewDrawer,
+      openEditDrawer,
+      handleToggleBookmark,
+      handleChangeStatus,
+      handleOpenModal,
+    ]
   );
 
   return (
@@ -1507,6 +2158,7 @@ const WallListing = () => {
         onConfirmDelete={onConfirmDeleteSelectedItems}
         isDeleting={isDeleting}
       />
+      <WallModals modalState={modalState} onClose={handleCloseModal} />
       <Drawer
         title="View Wall Item Details"
         isOpen={isViewDrawerOpen}
@@ -1546,7 +2198,6 @@ const WallListing = () => {
                     ![
                       "product_images",
                       "product_name",
-                      "id",
                       "id",
                       "productId",
                       "productSpecId",
@@ -1790,12 +2441,7 @@ const WallListing = () => {
                 control={filterFormMethods.control}
                 render={({ field }) => (
                   <DatePicker.DatePickerRange
-                    value={
-                      field.value as
-                        | [Date | null, Date | null]
-                        | null
-                        | undefined
-                    }
+                    value={field.value as [Date | null, Date | null] | null}
                     onChange={field.onChange}
                     placeholder="Select date range"
                   />

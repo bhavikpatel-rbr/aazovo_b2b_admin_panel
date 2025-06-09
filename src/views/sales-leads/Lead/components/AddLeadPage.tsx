@@ -3,11 +3,19 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, NavLink } from "react-router-dom";
 import dayjs from "dayjs";
+import classNames from "classnames"; // FIX: Correct classnames import
 
 // UI Components
 import Input from "@/components/ui/Input";
 import { FormItem, FormContainer } from "@/components/ui/Form";
-import { Select as UiSelect, DatePicker, Button } from "@/components/ui";
+// FIX: Import Table and Tooltip from the correct internal UI library
+import {
+  Select as UiSelect,
+  DatePicker,
+  Button,
+  Table,
+  Tooltip,
+} from "@/components/ui";
 import InputNumber from "@/components/ui/Input/InputNumber";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
@@ -18,6 +26,7 @@ import Spinner from "@/components/ui/Spinner";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
+import { TbPencil, TbTrash } from "react-icons/tb"; // FIX: Cleaned up icon imports
 
 // Types and Schema
 import type { LeadFormData } from "../types"; // Ensure this path is correct
@@ -26,7 +35,7 @@ import {
   leadStatusOptions,
   enquiryTypeOptions,
   leadIntentOptions,
-  deviceConditionOptions,
+  deviceConditionOptions as baseDeviceConditionOptions,
 } from "../types"; // Ensure this path is correct
 
 // Redux
@@ -57,17 +66,22 @@ type ApiLookupItem = {
   [key: string]: any;
 };
 
-const dummyProductStatuses = [
-  "In Stock",
-  "Available on Order",
-  "Low Stock",
-  "Discontinued",
-].map((s) => ({ value: s, label: s }));
+const productStatusOptions = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
 
-const dummyCartoonTypes = [
+const cartoonTypeOptions = [
   { value: 1, label: "Master Carton" },
   { value: 2, label: "Inner Carton" },
   { value: 3, label: "Pallet" },
+  { value: 4, label: "Box" },
+  { value: 5, label: "Unit" },
+];
+
+const deviceConditionOptions = [
+  ...baseDeviceConditionOptions,
+  { value: "Old", label: "Old" },
 ];
 
 const AddLeadPage = () => {
@@ -76,6 +90,23 @@ const AddLeadPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [initialDataFetched, setInitialDataFetched] = useState(false);
+
+  const [matchedOpportunities] = useState([
+    {
+      id: 1,
+      company: "TechSource Inc.",
+      member: "John Doe",
+      details: "Have 500 units, A-Grade, ready to ship.",
+      timestamp: "2023-10-27 10:00 AM",
+    },
+    {
+      id: 2,
+      company: "Global Gadgets LLC",
+      member: "Jane Smith",
+      details: "Looking to buy 1000 units, flexible on price.",
+      timestamp: "2023-10-27 09:45 AM",
+    },
+  ]);
 
   const {
     productsMasterData = [],
@@ -91,12 +122,12 @@ const AddLeadPage = () => {
     control,
     handleSubmit,
     reset,
-    formState: { errors, isDirty, isValid },
+    watch,
+    formState: { errors, isDirty },
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
-    // --- THIS IS THE FIX ---
     defaultValues: {
-      member_id: "", // CORRECTED: Use null for unselected required number fields
+      member_id: "",
       enquiry_type: "",
       lead_intent: null,
       product_id: null,
@@ -122,10 +153,23 @@ const AddLeadPage = () => {
     mode: "onChange",
   });
 
-  // Log errors to the console for easy debugging
+  const leadIntentValue = watch("lead_intent");
+
+  const leadMemberLabel = useMemo(() => {
+    if (leadIntentValue === "Buy") return "Lead Member (Buyer) *";
+    if (leadIntentValue === "Sell") return "Lead Member (Supplier) *";
+    return "Lead Member (Supplier/Buyer) *";
+  }, [leadIntentValue]);
+
+  const sourceMemberLabel = useMemo(() => {
+    if (leadIntentValue === "Buy") return "Source Member (Supplier)";
+    if (leadIntentValue === "Sell") return "Source Member (Buyer)";
+    return "Source Member (Supplier)";
+  }, [leadIntentValue]);
+
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
-        console.log("Form Validation Errors: ", errors);
+      console.log("Form Validation Errors: ", errors);
     }
   }, [errors]);
 
@@ -157,8 +201,7 @@ const AddLeadPage = () => {
     fetchDropdownData();
   }, [dispatch]);
 
-  // All your useMemo hooks are correct and do not need changes
-  const productOptions: SelectOption[] = useMemo(() => {
+  const productOptions = useMemo(() => {
     if (!Array.isArray(productsMasterData)) return [];
     return productsMasterData.map((product: ApiLookupItem) => ({
       value: product.id,
@@ -166,7 +209,7 @@ const AddLeadPage = () => {
     }));
   }, [productsMasterData]);
 
-  const productSpecOptions: SelectOption[] = useMemo(() => {
+  const productSpecOptions = useMemo(() => {
     if (!Array.isArray(ProductSpecificationsData)) return [];
     return ProductSpecificationsData.map((spec: ApiLookupItem) => ({
       value: spec.id,
@@ -174,37 +217,37 @@ const AddLeadPage = () => {
     }));
   }, [ProductSpecificationsData]);
 
-  const paymentTermOptions: SelectOption[] = useMemo(() => {
+  const paymentTermOptions = useMemo(() => {
     if (!Array.isArray(PaymentTermsData)) return [];
     return PaymentTermsData.map((pt: ApiLookupItem) => ({
       value: pt.id,
-      label: pt.term_name || pt.name, 
+      label: pt.term_name || pt.name,
     }));
   }, [PaymentTermsData]);
 
-    const leadMemberOptions: SelectOption[] = useMemo(() => {
+  const leadMemberOptions = useMemo(() => {
     if (!Array.isArray(leadMember)) return [];
     return leadMember.map((product: ApiLookupItem) => ({
-        value: product.id,
-        label: product.name,
+      value: product.id,
+      label: product.name,
     }));
-    }, [leadMember]);
+  }, [leadMember]);
 
-    const salesPersonOption: SelectOption[] = useMemo(() => {
+  const salesPersonOption = useMemo(() => {
     if (!Array.isArray(salesPerson)) return [];
     return salesPerson.map((product: ApiLookupItem) => ({
-    value: product.id,
-    label: product.name,
+      value: product.id,
+      label: product.name,
     }));
-    }, [salesPerson]);
+  }, [salesPerson]);
 
-    const suppliersOption: SelectOption[] = useMemo(() => {
+  const suppliersOption = useMemo(() => {
     if (!Array.isArray(suppliers)) return [];
     return suppliers.map((product: ApiLookupItem) => ({
-    value: product.id,
-    label: product.name,
+      value: product.id,
+      label: product.name,
     }));
-    }, [suppliers]);
+  }, [suppliers]);
 
   const onSubmit = async (data: LeadFormData) => {
     setIsSubmitting(true);
@@ -248,28 +291,22 @@ const AddLeadPage = () => {
     );
   }
 
-  // The rest of your JSX remains unchanged
   return (
     <Container className="h-full">
+      <div className="flex gap-1 items-end mb-3 ">
+        <NavLink to="/sales/leads">
+          <h6 className="font-semibold hover:text-primary">Leads</h6>
+        </NavLink>
+        <BiChevronRight size={22} color="black" />
+        <h6 className="font-semibold text-primary">Add New Lead</h6>
+      </div>
       <FormContainer>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="flex gap-1 items-center mb-4">
-            <NavLink to="/sales/leads">
-              <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">
-                Leads
-              </h6>
-            </NavLink>
-            <BiChevronRight size={18} className="text-gray-500" />
-            <h5 className="font-semibold text-primary-600 dark:text-primary-400">
-              Add New Lead
-            </h5>
-          </div>
-
           <AdaptableCard className="mb-4">
             <h5 className="mb-6 font-semibold">Lead Information</h5>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
               <FormItem
-                label="Lead Member (Supplier/Buyer) *"
+                label={leadMemberLabel}
                 invalid={!!errors.member_id}
                 errorMessage={errors.member_id?.message}
               >
@@ -280,7 +317,9 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Member"
                       options={leadMemberOptions}
-                      value={leadMemberOptions.find((o) => o.value === field.value)}
+                      value={leadMemberOptions.find(
+                        (o) => o.value === field.value
+                      )}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isLoading={false}
                     />
@@ -307,7 +346,11 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-              <FormItem label="Lead Intent" invalid={!!errors.lead_intent} errorMessage={errors.lead_intent?.message}>
+              <FormItem
+                label="Lead Intent"
+                invalid={!!errors.lead_intent}
+                errorMessage={errors.lead_intent?.message}
+              >
                 <Controller
                   name="lead_intent"
                   control={control}
@@ -324,7 +367,6 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-
               <FormItem
                 label="Product Name (Interest)*"
                 invalid={!!errors.product_id}
@@ -350,8 +392,11 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-
-              <FormItem label="Quantity" invalid={!!errors.qty} errorMessage={errors.qty?.message}>
+              <FormItem
+                label="Quantity"
+                invalid={!!errors.qty}
+                errorMessage={errors.qty?.message}
+              >
                 <Controller
                   name="qty"
                   control={control}
@@ -426,7 +471,6 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-
               <FormItem
                 label="Product Spec"
                 invalid={!!errors.product_spec_id}
@@ -455,11 +499,11 @@ const AddLeadPage = () => {
             </div>
           </AdaptableCard>
 
-          <AdaptableCard>
-            <h5 className="mb-6 font-semibold">Sourcing Details (Optional)</h5>
+          <AdaptableCard className="mb-4">
+            <h5 className="mb-6 font-semibold">Sourcing Details</h5>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
               <FormItem
-                label="Source Member (Supplier)"
+                label={sourceMemberLabel}
                 invalid={!!errors.source_supplier_id}
                 errorMessage={errors.source_supplier_id?.message}
               >
@@ -528,8 +572,8 @@ const AddLeadPage = () => {
                   render={({ field }) => (
                     <UiSelect
                       placeholder="Select Product Status"
-                      options={dummyProductStatuses}
-                      value={dummyProductStatuses.find(
+                      options={productStatusOptions}
+                      value={productStatusOptions.find(
                         (o) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
@@ -576,7 +620,11 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-              <FormItem label="Color" invalid={!!errors.source_color} errorMessage={errors.source_color?.message}>
+              <FormItem
+                label="Color"
+                invalid={!!errors.source_color}
+                errorMessage={errors.source_color?.message}
+              >
                 <Controller
                   name="source_color"
                   control={control}
@@ -589,7 +637,6 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-
               <FormItem
                 label="Cartoon Type"
                 invalid={!!errors.source_cartoon_type_id}
@@ -601,21 +648,17 @@ const AddLeadPage = () => {
                   render={({ field }) => (
                     <UiSelect
                       placeholder="Select Cartoon Type"
-                      options={dummyCartoonTypes}
-                      value={dummyCartoonTypes.find(
+                      options={cartoonTypeOptions}
+                      value={cartoonTypeOptions.find(
                         (o) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={
-                        masterLoadingStatus === "loading" &&
-                        dummyCartoonTypes.length === 0
-                      }
+                      isLoading={false}
                       isClearable
                     />
                   )}
                 />
               </FormItem>
-
               <FormItem
                 label="Dispatch Status"
                 invalid={!!errors.source_dispatch_status}
@@ -633,7 +676,6 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-
               <FormItem
                 label="Payment Term"
                 invalid={!!errors.source_payment_term_id}
@@ -659,7 +701,6 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-
               <FormItem
                 label="ETA"
                 invalid={!!errors.source_eta}
@@ -721,6 +762,69 @@ const AddLeadPage = () => {
                 />
               </FormItem>
             </div>
+          </AdaptableCard>
+
+          <AdaptableCard>
+            <h5 className="mb-6 font-semibold">Matched Opportunity</h5>
+            <Table>
+              <Table.THead>
+                <Table.Tr>
+                  <Table.Th>Company & Member</Table.Th>
+                  <Table.Th>Key Details</Table.Th>
+                  <Table.Th>Timestamp</Table.Th>
+                  <Table.Th>Action</Table.Th>
+                </Table.Tr>
+              </Table.THead>
+              <Table.TBody>
+                {matchedOpportunities.map((op) => {
+                  const iconButtonClass =
+                    "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+                  const hoverBgClass =
+                    "hover:bg-gray-100 dark:hover:bg-gray-700";
+
+                  return (
+                    <Table.Tr key={op.id}>
+                      <Table.Td>
+                        <div className="font-semibold">{op.company}</div>
+                        <div className="text-xs text-gray-500">{op.member}</div>
+                      </Table.Td>
+                      <Table.Td>{op.details}</Table.Td>
+                      <Table.Td>{op.timestamp}</Table.Td>
+                      <Table.Td>
+                        <div className="flex items-center justify-start gap-2">
+                          <Tooltip title="Edit">
+                            <div
+                              className={classNames(
+                                iconButtonClass,
+                                hoverBgClass,
+                                "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+                              )}
+                              role="button"
+                              onClick={() => alert(`Editing item ${op.id}`)}
+                            >
+                              <TbPencil />
+                            </div>
+                          </Tooltip>
+                          <Tooltip title="Remove">
+                            <div
+                              className={classNames(
+                                iconButtonClass,
+                                hoverBgClass,
+                                "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                              )}
+                              role="button"
+                              onClick={() => alert(`Removing item ${op.id}`)}
+                            >
+                              <TbTrash />
+                            </div>
+                          </Tooltip>
+                        </div>
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.TBody>
+            </Table>
           </AdaptableCard>
 
           <div className="mt-6 flex justify-end gap-2">

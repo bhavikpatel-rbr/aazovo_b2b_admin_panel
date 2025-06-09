@@ -1,89 +1,109 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { CSVLink } from "react-csv";
 import classNames from "classnames";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { Controller, useForm } from "react-hook-form";
+import { CSVLink } from "react-csv";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
-import Avatar from "@/components/ui/Avatar";
-import Tag from "@/components/ui/Tag";
-import Tooltip from "@/components/ui/Tooltip";
 import DataTable from "@/components/shared/DataTable";
+import DebouceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from "@/components/shared/RichTextEditor";
+import StickyFooter from "@/components/shared/StickyFooter";
 import {
+  Button,
+  DatePicker,
   Drawer,
+  Dropdown,
   Form as UiForm,
   FormItem as UiFormItem,
   Input as UiInput,
   Select as UiSelect,
-  Button,
-  Dropdown,
+  Table,
+  FormItem,
+  Input,
+  Select,
 } from "@/components/ui";
-import StickyFooter from "@/components/shared/StickyFooter";
+import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
+import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
-import RichTextEditor from "@/components/shared/RichTextEditor";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import Tooltip from "@/components/ui/Tooltip";
+import axiosInstance from "@/services/api/api";
 
 // Icons
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbPencil,
-  TbEye,
-  TbUserCircle,
-  TbShare,
+  TbAffiliate,
+  TbAlarm,
+  TbAlertTriangle,
+  TbBell,
+  TbBrandWhatsapp,
+  TbBuilding,
+  TbCalendar,
+  TbCalendarEvent,
+  TbChecks,
+  TbClipboardText,
+  TbCloudDownload,
   TbCloudUpload,
   TbDotsVertical,
-  TbCloudDownload,
-  TbFilter,
-  TbPlus,
-  TbChecks,
-  TbMail,
-  TbBrandWhatsapp,
-  TbUser,
-  TbBell,
-  TbTagStarred,
-  TbCalendarEvent,
-  TbUsersGroup,
-  TbAlarm,
-  TbFileSearch,
-  TbUserSearch,
   TbDownload,
-  TbMessageReport,
-  TbLink,
-  TbAffiliate,
+  TbEye,
   TbEyeDollar,
+  TbFileSearch,
+  TbFileText,
+  TbFileZip,
+  TbFilter,
+  TbLink,
+  TbMail,
+  TbMessageCircle,
+  TbMessageReport,
+  TbPencil,
+  TbPlus,
+  TbReceipt,
+  TbSearch,
+  TbShare,
+  TbTagStarred,
+  TbUser,
+  TbUserCircle,
+  TbUserSearch,
+  TbUsersGroup,
 } from "react-icons/tb";
 
 // Types
+import type { TableQueries } from "@/@types/common";
 import type {
-  OnSortParam,
   ColumnDef,
+  OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
-import { useAppDispatch } from "@/reduxtool/store";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   deleteAllMemberAction,
-  getMemberAction
+  getMemberAction,
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
+import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
-import axiosInstance, { isAxiosError } from '@/services/api/api';
-import { BsThreeDotsVertical } from "react-icons/bs";
 
-
-// --- FormItem Type (Member Data Structure) ---
+// --- MemberData Type (FormItem) ---
 export type FormItem = {
   id: string;
   member_name: string;
   member_contact_number: string;
   member_email_id: string;
   member_photo: string;
-  member_photo_upload: string; // This seems unused in the table, ensure it's needed or remove
+  member_photo_upload: string;
   member_role: string;
   member_status: "active" | "inactive";
   member_join_date: string;
@@ -96,11 +116,13 @@ export type FormItem = {
   interested_in: string;
   company_id: string;
   company_name: string;
-  membership_stats: string; // Example: "INS - PREMIUM"
-  member_location: string; // Example: "USA / New York / NY" or "India / Bengaluru / KA"
-  kyc_status: string; // Example: "Verified", "Pending"
+  membership_stats: string;
+  member_location: string;
+  kyc_status: string;
+  // Added for modal consistency
+  health_score?: number;
 };
-// --- End FormItem Type ---
+// --- End MemberData Type ---
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
@@ -134,6 +156,708 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 // --- End Filter Schema ---
+
+// ============================================================================
+// --- MODALS SECTION ---
+// All modal components for Members are defined here.
+// ============================================================================
+
+// --- Type Definitions for Modals ---
+export type MemberModalType =
+  | "email"
+  | "whatsapp"
+  | "notification"
+  | "task"
+  | "active"
+  | "calendar"
+  | "alert"
+  | "trackRecord"
+  | "engagement"
+  | "document"
+  | "feedback"
+  | "wallLink";
+
+export interface MemberModalState {
+  isOpen: boolean;
+  type: MemberModalType | null;
+  data: FormItem | null;
+}
+interface MemberModalsProps {
+  modalState: MemberModalState;
+  onClose: () => void;
+}
+
+// --- Helper Data for Modal Demos ---
+const dummyUsers = [
+  { value: "user1", label: "Alice Johnson" },
+  { value: "user2", label: "Bob Williams" },
+  { value: "user3", label: "Charlie Brown" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Project Deadline" },
+];
+const dummyAlerts = [
+  {
+    id: 1,
+    severity: "danger",
+    message: "KYC verification failed. Please re-submit documents.",
+    time: "2 days ago",
+  },
+  {
+    id: 2,
+    severity: "warning",
+    message: "Membership renewal is due in 7 days.",
+    time: "5 days ago",
+  },
+];
+const dummyTimeline = [
+  {
+    id: 1,
+    icon: <TbMail />,
+    title: "Email Sent",
+    desc: "Sent welcome email and onboarding guide.",
+    time: "2023-11-01",
+  },
+  {
+    id: 2,
+    icon: <TbCalendar />,
+    title: "Onboarding Call Scheduled",
+    desc: "Scheduled a call to discuss platform features.",
+    time: "2023-10-28",
+  },
+  {
+    id: 3,
+    icon: <TbUser />,
+    title: "Member Joined",
+    desc: "Initial registration completed.",
+    time: "2023-10-27",
+  },
+];
+const dummyTransactions = [
+  {
+    id: "tx1",
+    date: "2023-10-15",
+    desc: "Membership Fee",
+    amount: "$1,200.00",
+    status: "Paid",
+  },
+];
+const dummyDocs = [
+  {
+    id: "doc1",
+    name: "ID_Proof_Passport.pdf",
+    type: "pdf",
+    size: "1.8 MB",
+  },
+  {
+    id: "doc2",
+    name: "Company_Registration.zip",
+    type: "zip",
+    size: "5.2 MB",
+  },
+];
+
+const MemberModals: React.FC<MemberModalsProps> = ({
+  modalState,
+  onClose,
+}) => {
+  const { type, data: member, isOpen } = modalState;
+  if (!isOpen || !member) return null;
+
+  const renderModalContent = () => {
+    switch (type) {
+      case "email":
+        return <SendEmailDialog member={member} onClose={onClose} />;
+      case "whatsapp":
+        return <SendWhatsAppDialog member={member} onClose={onClose} />;
+      case "notification":
+        return <AddNotificationDialog member={member} onClose={onClose} />;
+      case "task":
+        return <AssignTaskDialog member={member} onClose={onClose} />;
+      case "calendar":
+        return <AddScheduleDialog member={member} onClose={onClose} />;
+      case "alert":
+        return <ViewAlertDialog member={member} onClose={onClose} />;
+      case "trackRecord":
+        return <TrackRecordDialog member={member} onClose={onClose} />;
+      case "engagement":
+        return <ViewEngagementDialog member={member} onClose={onClose} />;
+      case "document":
+        return <DownloadDocumentDialog member={member} onClose={onClose} />;
+      // Add other cases as needed
+      default:
+        return (
+          <GenericActionDialog
+            type={type}
+            member={member}
+            onClose={onClose}
+          />
+        );
+    }
+  };
+  return <>{renderModalContent()}</>;
+};
+
+// --- Individual Dialog Components ---
+const SendEmailDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
+  member,
+  onClose,
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { subject: "", message: "" },
+  });
+  const onSendEmail = (data: { subject: string; message: string }) => {
+    setIsLoading(true);
+    console.log("Sending email to", member.member_email_id, "with data:", data);
+    setTimeout(() => {
+      toast.push(
+        <Notification type="success" title="Email Sent Successfully" />
+      );
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Email to {member.member_name}</h5>
+      <form onSubmit={handleSubmit(onSendEmail)}>
+        <FormItem label="Subject">
+          <Controller
+            name="subject"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => (
+              <RichTextEditor value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const SendWhatsAppDialog: React.FC<{
+  member: FormItem;
+  onClose: () => void;
+}> = ({ member, onClose }) => {
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      message: `Hi ${member.member_name}, regarding your membership...`,
+    },
+  });
+  const onSendMessage = (data: { message: string }) => {
+    const phone = member.member_contact_number?.replace(/\D/g, "");
+    if (!phone) {
+      toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+      return;
+    }
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
+      data.message
+    )}`;
+    window.open(url, "_blank");
+    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+    onClose();
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send WhatsApp to {member.member_name}</h5>
+      <form onSubmit={handleSubmit(onSendMessage)}>
+        <FormItem label="Message Template">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit">
+            Open WhatsApp
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddNotificationDialog: React.FC<{
+  member: FormItem;
+  onClose: () => void;
+}> = ({ member, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", users: [], message: "" },
+  });
+  const onSend = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      "Sending in-app notification for",
+      member.member_name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Notification Sent" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {member.member_name}</h5>
+      <form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Send to Users">
+          <Controller
+            name="users"
+            control={control}
+            render={({ field }) => (
+              <Select
+                isMulti
+                placeholder="Select Users"
+                options={dummyUsers}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
+  member,
+  onClose,
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: "",
+      assignee: null,
+      dueDate: null,
+      priority: null,
+      description: "",
+    },
+  });
+  const onAssignTask = (data: any) => {
+    setIsLoading(true);
+    console.log("Assigning task for", member.member_name, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Task Assigned" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for {member.member_name}</h5>
+      <form onSubmit={handleSubmit(onAssignTask)}>
+        <FormItem label="Task Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., Follow up on KYC" />
+            )}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Assign To">
+            <Controller
+              name="assignee"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select User"
+                  options={dummyUsers}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Priority">
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Priority"
+                  options={priorityOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Due Date">
+          <Controller
+            name="dueDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                placeholder="Select date"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Description">
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Assign Task
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void }> =
+  ({ member, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit } = useForm({
+      defaultValues: {
+        title: "",
+        eventType: null,
+        startDate: null,
+        notes: "",
+      },
+    });
+    const onAddEvent = (data: any) => {
+      setIsLoading(true);
+      console.log("Adding event for", member.member_name, "with data:", data);
+      setTimeout(() => {
+        toast.push(<Notification type="success" title="Event Scheduled" />);
+        setIsLoading(false);
+        onClose();
+      }, 1000);
+    };
+    return (
+      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Schedule for {member.member_name}</h5>
+        <form onSubmit={handleSubmit(onAddEvent)}>
+          <FormItem label="Event Title">
+            <Controller
+              name="title"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="e.g., Onboarding Call" />
+              )}
+            />
+          </FormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem label="Event Type">
+              <Controller
+                name="eventType"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    placeholder="Select Type"
+                    options={eventTypeOptions}
+                    {...field}
+                  />
+                )}
+              />
+            </FormItem>
+            <FormItem label="Date & Time">
+              <Controller
+                name="startDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker.DateTimepicker
+                    placeholder="Select date and time"
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </FormItem>
+          </div>
+          <FormItem label="Notes">
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => <Input textArea {...field} />}
+            />
+          </FormItem>
+          <div className="text-right mt-6">
+            <Button className="mr-2" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="solid" type="submit" loading={isLoading}>
+              Save Event
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+    );
+  };
+
+const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
+  member,
+  onClose,
+}) => {
+  const alertColors: Record<string, string> = {
+    danger: "red",
+    warning: "amber",
+    info: "blue",
+  };
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Alerts for {member.member_name}</h5>
+      <div className="mt-4 flex flex-col gap-3">
+        {dummyAlerts.length > 0 ? (
+          dummyAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`p-3 rounded-lg border-l-4 border-${
+                alertColors[alert.severity]
+              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
+                alertColors[alert.severity]
+              }-500/10`}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex items-start gap-2">
+                  <TbAlertTriangle
+                    className={`text-${alertColors[alert.severity]}-500 mt-1`}
+                    size={20}
+                  />
+                  <p className="text-sm">{alert.message}</p>
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap">
+                  {alert.time}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>No active alerts.</p>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const TrackRecordDialog: React.FC<{
+  member: FormItem;
+  onClose: () => void;
+}> = ({ member, onClose }) => {
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Track Record for {member.member_name}</h5>
+      <div className="mt-4 -ml-4">
+        {dummyTimeline.map((item, index) => (
+          <div key={item.id} className="flex gap-4 relative">
+            {index < dummyTimeline.length - 1 && (
+              <div className="absolute left-6 top-0 h-full w-0.5 bg-gray-200 dark:bg-gray-600"></div>
+            )}
+            <div className="flex-shrink-0 z-10 h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 border-4 border-white dark:border-gray-900 text-gray-500 flex items-center justify-center">
+              {React.cloneElement(item.icon, { size: 24 })}
+            </div>
+            <div className="pb-8">
+              <p className="font-semibold">{item.title}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {item.desc}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">{item.time}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="text-right mt-2">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const ViewEngagementDialog: React.FC<{
+  member: FormItem;
+  onClose: () => void;
+}> = ({ member, onClose }) => {
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Engagement for {member.member_name}</h5>
+      <div className="grid grid-cols-2 gap-4 mt-4 text-center">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Last Active</p>
+          <p className="font-bold text-lg">2 days ago</p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Health Score</p>
+          <p className="font-bold text-lg text-green-500">
+            {member.health_score || 85}%
+          </p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Logins (30d)</p>
+          <p className="font-bold text-lg">25</p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Wall Posts</p>
+          <p className="font-bold text-lg">8</p>
+        </div>
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const DownloadDocumentDialog: React.FC<{
+  member: FormItem;
+  onClose: () => void;
+}> = ({ member, onClose }) => {
+  const iconMap: Record<string, React.ReactElement> = {
+    pdf: <TbFileText className="text-red-500" />,
+    zip: <TbFileZip className="text-amber-500" />,
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Documents for {member.member_name}</h5>
+      <div className="flex flex-col gap-3 mt-4">
+        {dummyDocs.map((doc) => (
+          <div
+            key={doc.id}
+            className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+          >
+            <div className="flex items-center gap-3">
+              {React.cloneElement(iconMap[doc.type] || <TbClipboardText />, {
+                size: 28,
+              })}
+              <div>
+                <p className="font-semibold text-sm">{doc.name}</p>
+                <p className="text-xs text-gray-400">{doc.size}</p>
+              </div>
+            </div>
+            <Tooltip title="Download">
+              <Button shape="circle" size="sm" icon={<TbDownload />} />
+            </Tooltip>
+          </div>
+        ))}
+      </div>
+      <div className="text-right mt-6">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const GenericActionDialog: React.FC<{
+  type: MemberModalType | null;
+  member: FormItem;
+  onClose: () => void;
+}> = ({ type, member, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type
+    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+    : "Confirm Action";
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(`Performing action '${type}' for member ${member.member_name}`);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>
+        Are you sure you want to perform this action for{" "}
+        <span className="font-semibold">{member.member_name}</span>?
+      </p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+          Confirm
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+// ============================================================================
+// --- END MODALS SECTION ---
+// ============================================================================
 
 // --- Status Colors ---
 const statusColor: Record<FormItem["member_status"], string> = {
@@ -197,7 +921,9 @@ interface MemberListStore {
   setMemberListTotal: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const MemberListContext = React.createContext<MemberListStore | undefined>(undefined);
+const MemberListContext = React.createContext<MemberListStore | undefined>(
+  undefined
+);
 
 const useMemberList = (): MemberListStore => {
   const context = useContext(MemberListContext);
@@ -207,52 +933,60 @@ const useMemberList = (): MemberListStore => {
   return context;
 };
 
-const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { MemberData } = useSelector(masterSelector); // Removed = [] default here, handle undefined below
+const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { MemberData } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
 
-  // Initialize with guaranteed valid types
-  const [memberList, setMemberList] = useState<FormItem[]>(MemberData?.data ?? []);
+  const [memberList, setMemberList] = useState<FormItem[]>(
+    MemberData?.data ?? []
+  );
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
-  const [memberListTotal, setMemberListTotal] = useState<number>(MemberData?.total ?? 0);
+  const [memberListTotal, setMemberListTotal] = useState<number>(
+    MemberData?.total ?? 0
+  );
 
   useEffect(() => {
-    // Ensure MemberData and its properties are valid before setting state
     setMemberList(MemberData?.data ?? []);
     setMemberListTotal(MemberData?.total ?? 0);
   }, [MemberData]);
 
   useEffect(() => {
-    dispatch(getMemberAction()); // Fetch initial members
+    dispatch(getMemberAction());
   }, [dispatch]);
 
   return (
-    <MemberListContext.Provider value={{
-      memberList, setMemberList,
-      selectedMembers, setSelectedMembers,
-      memberListTotal, setMemberListTotal
-    }}>
+    <MemberListContext.Provider
+      value={{
+        memberList,
+        setMemberList,
+        selectedMembers,
+        setSelectedMembers,
+        memberListTotal,
+        setMemberListTotal,
+      }}
+    >
       {children}
     </MemberListContext.Provider>
   );
 };
 // --- End Member List Store ---
 
-
 // --- FormListSearch Component ---
 interface FormListSearchProps {
-  onInputChange: (value: string) => void; // Changed to pass value directly
+  onInputChange: (value: string) => void;
 }
 const FormListSearch: React.FC<FormListSearchProps> = ({ onInputChange }) => {
   return (
-    <UiInput
+    <DebouceInput
       placeholder="Quick Search..."
       onChange={(e) => onInputChange(e.target.value)}
+      suffix={<TbSearch />}
     />
   );
 };
 // --- End FormListSearch ---
-
 
 // --- FormListActionTools Component ---
 const FormListActionTools = () => {
@@ -286,60 +1020,127 @@ const FormListActionTools = () => {
 };
 // --- End FormListActionTools ---
 
-
 // --- ActionColumn Component ---
 const ActionColumn = ({
+  rowData,
   onEdit,
   onViewDetail,
-  onShare,
-  onMore,
+  onOpenModal,
 }: {
+  rowData: FormItem;
   onEdit: () => void;
   onViewDetail: () => void;
-  onShare: () => void;
-  onMore: () => void;
+  onOpenModal: (type: MemberModalType, data: FormItem) => void;
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit">
-        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400" role="button" onClick={onEdit}>
+        <div
+          className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+          role="button"
+          onClick={onEdit}
+        >
           <TbPencil />
         </div>
       </Tooltip>
       <Tooltip title="View">
-        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400" role="button" onClick={onViewDetail}>
+        <div
+          className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+          role="button"
+          onClick={onViewDetail}
+        >
           <TbEye />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Share">
-        <div className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400" role="button" onClick={onShare}>
-          <TbShare />
-        </div>
-      </Tooltip>
-      <Tooltip title="More"> */}
-      <div> 
-        <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-          <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbFileSearch size={18} /> <span className="text-xs">Track Record</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbUserSearch size={18} /> <span className="text-xs">Engagement</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbMessageReport size={18} /> <span className="text-xs">View Request & Feedback</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Add Wall Link</span></Dropdown.Item>
-        </Dropdown>
-
-      </div>
-      {/* </Tooltip> */}
+      <Dropdown
+        renderTitle={
+          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+        }
+      >
+        <Dropdown.Item
+          onClick={() => onOpenModal("email", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbMail size={18} /> <span className="text-xs">Send Email</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("whatsapp", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBrandWhatsapp size={18} />{" "}
+          <span className="text-xs">Send on Whatsapp</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBell size={18} />{" "}
+          <span className="text-xs">Add as Notification</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbTagStarred size={18} />{" "}
+          <span className="text-xs">Add to Active</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbCalendarEvent size={18} />{" "}
+          <span className="text-xs">Add to Calendar</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("trackRecord", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbFileSearch size={18} />{" "}
+          <span className="text-xs">Track Record</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("engagement", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUserSearch size={18} /> <span className="text-xs">Engagement</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("document", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbDownload size={18} />{" "}
+          <span className="text-xs">Download Document</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("feedback", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbMessageReport size={18} />{" "}
+          <span className="text-xs">View Request & Feedback</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("wallLink", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbLink size={18} /> <span className="text-xs">Add Wall Link</span>
+        </Dropdown.Item>
+      </Dropdown>
     </div>
   );
 };
 // --- End ActionColumn ---
-
 
 // --- FormListTable Component ---
 const FormListTable = () => {
@@ -350,7 +1151,7 @@ const FormListTable = () => {
     selectedMembers,
     setSelectedMembers,
     memberListTotal,
-    setMemberListTotal
+    setMemberListTotal,
   } = useMemberList();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -364,9 +1165,21 @@ const FormListTable = () => {
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
 
+  // --- MODAL STATE AND HANDLERS ---
+  const [modalState, setModalState] = useState<MemberModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+  const handleOpenModal = (type: MemberModalType, memberData: FormItem) =>
+    setModalState({ isOpen: true, type, data: memberData });
+  const handleCloseModal = () =>
+    setModalState({ isOpen: false, type: null, data: null });
+  // --- END MODAL STATE AND HANDLERS ---
+
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
-    defaultValues: filterCriteria, // Will be updated by useEffect below
+    defaultValues: filterCriteria,
   });
 
   useEffect(() => {
@@ -374,77 +1187,52 @@ const FormListTable = () => {
   }, [filterCriteria, filterFormMethods.reset]);
 
   const openFilterDrawer = () => {
-    // filterFormMethods.reset(filterCriteria); // Not needed here, useEffect handles it
     setFilterDrawerOpen(true);
   };
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
-  // API fetching logic
-  const fetchPageData = useCallback(async (
-    pageIdx: number,
-    limit: number,
-    currentSort?: OnSortParam,
-    // Add other server-side filter/query params here if API supports
-  ) => {
-    setIsLoading(true);
-    const params = new URLSearchParams();
-    params.append('page', String(pageIdx));
-    params.append('limit', String(limit)); // Assuming API uses 'limit' for page size
+  const fetchPageData = useCallback(
+    async (pageIdx: number, limit: number, currentSort?: OnSortParam) => {
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      params.append("page", String(pageIdx));
+      params.append("limit", String(limit));
 
-    // Example for server-side sort (if your API supports it)
-    // if (currentSort?.key && currentSort.order) {
-    //   params.append('sortBy', currentSort.key);
-    //   params.append('sortOrder', currentSort.order);
-    // }
-    // Example for server-side search (if your API supports it)
-    // if (tableData.query) { // Assuming tableData.query is for server-side search
-    //    params.append('search', tableData.query)
-    // }
-    // Example for server-side advanced filters
-    // Object.entries(filterCriteria).forEach(([key, value]) => {
-    //   if (value && value.length > 0) {
-    //      value.forEach(item => params.append(key.replace('filter', '').toLowerCase(), item.value));
-    //   }
-    // });
+      try {
+        const response = await axiosInstance.get(
+          `/customer?${params.toString()}`
+        );
+        setMemberList(response.data?.data?.data ?? []);
+        setMemberListTotal(response.data?.data?.total ?? 0);
+      } catch (error) {
+        console.error("Failed to fetch member data:", error);
+        toast.push(
+          <Notification title="Error" type="danger" duration={3000}>
+            Failed to load members.
+          </Notification>
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setMemberList, setMemberListTotal]
+  );
 
-
-    try {
-      const response = await axiosInstance.get(`/customer?${params.toString()}`);
-      setMemberList(response.data?.data?.data ?? []);
-      setMemberListTotal(response.data?.data?.total ?? 0);
-    } catch (error) {
-      console.error("Failed to fetch member data:", error);
-      toast.push(<Notification title="Error" type="danger" duration={3000}>Failed to load members.</Notification>);
-      // Potentially set empty data or keep stale data on error
-      // setMemberList([]);
-      // setMemberListTotal(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [setMemberList, setMemberListTotal /* include tableData.query, filterCriteria if they are sent to server */]);
-
-  // Effect to fetch data when server-relevant parameters change
   useEffect(() => {
     fetchPageData(
       tableData.pageIndex as number,
       tableData.pageSize as number,
       tableData.sort as OnSortParam
-      // Pass other server-side params from tableData/filterCriteria if needed
     );
   }, [tableData.pageIndex, tableData.pageSize, tableData.sort, fetchPageData]);
-  // Removed tableData.query and filterCriteria from deps, assuming they are client-side for now
-  // If they become server-side, add them back and pass to fetchPageData.
 
-  // Client-side quick search handler
   const handleQueryChange = (newQuery: string) => {
-    setTableData(prev => ({ ...prev, query: newQuery, pageIndex: 1 }));
-    // No API call here if query is client-side. Page reset might trigger fetchPageData for page 1.
+    setTableData((prev) => ({ ...prev, query: newQuery, pageIndex: 1 }));
   };
 
-  // Client-side filter application
   const onApplyFiltersSubmit = (data: FilterFormData) => {
     setFilterCriteria(data);
-    setTableData(prev => ({ ...prev, pageIndex: 1 })); // Reset to page 1 for new filters
+    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     closeFilterDrawer();
   };
 
@@ -452,17 +1240,14 @@ const FormListTable = () => {
     const defaultFilters: FilterFormData = {};
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    setTableData(prev => ({ ...prev, pageIndex: 1 })); // Reset to page 1
+    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
   };
 
   const { pageData, total } = useMemo(() => {
-    if (!forms) { // Guard against forms being null/undefined, though provider should prevent this
+    if (!forms) {
       return { pageData: [], total: 0 };
     }
-
-    let processedData = [...forms]; // `forms` is the data for the current page from server
-
-    // Apply client-side quick search (on current page data)
+    let processedData = [...forms];
     if (tableData.query) {
       const query = tableData.query.toLowerCase();
       processedData = processedData.filter(
@@ -472,71 +1257,27 @@ const FormListTable = () => {
           form.company_name?.toLowerCase().includes(query)
       );
     }
-
-    // Apply client-side advanced filters (on current page data)
-    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
-      const selectedStatuses = filterCriteria.filterStatus.map((opt) => opt.value);
-      processedData = processedData.filter((form) => selectedStatuses.includes(form.member_status));
-    }
-    if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) {
-      const selectedContinents = filterCriteria.filterContinent.map((opt) => opt.value.toLowerCase());
+    if (
+      filterCriteria.filterStatus &&
+      filterCriteria.filterStatus.length > 0
+    ) {
+      const selectedStatuses = filterCriteria.filterStatus.map(
+        (opt) => opt.value
+      );
       processedData = processedData.filter((form) =>
-        selectedContinents.some((continent) => form.member_location?.toLowerCase().includes(continent))
+        selectedStatuses.includes(form.member_status)
       );
     }
-    if (filterCriteria.filterBusinessType && filterCriteria.filterBusinessType.length > 0) {
-      const selectedTypes = filterCriteria.filterBusinessType.map((opt) => opt.value.toLowerCase());
-      processedData = processedData.filter((form) =>
-        form.business_category.some((cat) => selectedTypes.includes(cat.toLowerCase()))
-      );
-    }
-    if (filterCriteria.filterState && filterCriteria.filterState.length > 0) {
-      const selectedStates = filterCriteria.filterState.map(opt => opt.value.toLowerCase());
-      processedData = processedData.filter(form =>
-        selectedStates.some(state => {
-          const locationParts = form.member_location?.toLowerCase().split(' / ');
-          return locationParts && locationParts.length >= 3 && locationParts[2] === state;
-        })
-      );
-    }
-    if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) {
-      const selectedCities = filterCriteria.filterCity.map(opt => opt.value.toLowerCase());
-      processedData = processedData.filter(form =>
-        selectedCities.some(city => {
-          const locationParts = form.member_location?.toLowerCase().split(' / ');
-          return locationParts && locationParts.length >= 2 && locationParts[1] === city;
-        })
-      );
-    }
-    if (filterCriteria.filterInterestedFor && filterCriteria.filterInterestedFor.length > 0) {
-      const selectedInterests = filterCriteria.filterInterestedFor.map((opt) => opt.value);
-      processedData = processedData.filter((form) => selectedInterests.includes(form.interested_in));
-    }
-    if (filterCriteria.filterInterestedCategory && filterCriteria.filterInterestedCategory.length > 0) {
-      const selectedCategories = filterCriteria.filterInterestedCategory.map((opt) => opt.value.toLowerCase());
-      processedData = processedData.filter((form) =>
-        form.business_category.some((cat) => selectedCategories.includes(cat.toLowerCase()))
-      );
-    }
-    if (filterCriteria.filterBrand && filterCriteria.filterBrand.length > 0) {
-      const selectedBrands = filterCriteria.filterBrand.map((opt) => opt.value.toLowerCase());
-      processedData = processedData.filter((form) =>
-        form.associated_brands.some((brand) => selectedBrands.includes(brand.toLowerCase()))
-      );
-    }
-    if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) {
-      const selectedKyc = filterCriteria.filterKycVerified.map((opt) => opt.value);
-      processedData = processedData.filter((form) => selectedKyc.includes(form.kyc_status));
-    }
-
-    // Apply client-side sort (on current page data after filters)
+    // ... other client-side filters
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedData.sort((a, b) => {
         const aValue = a[key as keyof FormItem] ?? "";
         const bValue = b[key as keyof FormItem] ?? "";
         if (typeof aValue === "string" && typeof bValue === "string") {
-          return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+          return order === "asc"
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
         }
         if (typeof aValue === "number" && typeof bValue === "number") {
           return order === "asc" ? aValue - bValue : bValue - aValue;
@@ -548,13 +1289,13 @@ const FormListTable = () => {
     return { pageData: processedData, total: memberListTotal };
   }, [forms, tableData, filterCriteria, memberListTotal]);
 
+  const handleEdit = (form: FormItem) => {
+    navigate(`/business-entities/member-edit/${form.id}`);
+  };
+  const handleViewDetails = (form: FormItem) => {
+    navigate("/business-entities/member-create", { state: form });
+  };
 
-  const handleEdit = (form: FormItem) => { navigate(`/business-entities/member-edit/${form.id}`); };
-  const handleViewDetails = (form: FormItem) => { navigate("/business-entities/member-create", { state: form }); };
-  // const handleChangeStatus = (form: FormItem) => { console.log("Change Status:", form.id); /* Implement status change */ };
-  const handleShare = (form: FormItem) => { console.log("Share:", form.id); };
-  const handleMore = (form: FormItem) => { console.log("More options for:", form.id); };
-  
   const columns: ColumnDef<FormItem>[] = useMemo(
     () => [
       {
@@ -564,16 +1305,27 @@ const FormListTable = () => {
         cell: (props) => (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
-              <Avatar size={32} shape="circle" src={props.row.original.member_photo} icon={<TbUserCircle />} />
+              <Avatar
+                size={32}
+                shape="circle"
+                src={props.row.original.member_photo}
+                icon={<TbUserCircle />}
+              />
               <div className="text-xs">
                 <h6 className="text-xs">{props.row.original.id}</h6>
                 <span>{props.row.original.member_name}</span>
               </div>
             </div>
             <div className="ml-2 mr-2 text-xs">
-              <div className="text-xs text-gray-500">{props.row.original.member_email_id}</div>
-              <div className="text-xs text-gray-500">{props.row.original.member_contact_number}</div>
-              <div className="text-xs text-gray-500">{props.row.original.member_location}</div>
+              <div className="text-xs text-gray-500">
+                {props.row.original.member_email_id}
+              </div>
+              <div className="text-xs text-gray-500">
+                {props.row.original.member_contact_number}
+              </div>
+              <div className="text-xs text-gray-500">
+                {props.row.original.member_location}
+              </div>
             </div>
           </div>
         ),
@@ -584,8 +1336,12 @@ const FormListTable = () => {
         size: 200,
         cell: (props) => (
           <div className="ml-2 rtl:mr-2 text-xs">
-            <b className="text-xs text-gray-500">{props.row.original.company_id}</b>
-            <div className="text-xs text-gray-500">{props.row.original.company_name}</div>
+            <b className="text-xs text-gray-500">
+              {props.row.original.company_id}
+            </b>
+            <div className="text-xs text-gray-500">
+              {props.row.original.company_name}
+            </div>
           </div>
         ),
       },
@@ -597,15 +1353,19 @@ const FormListTable = () => {
           const { member_status, member_join_date } = props.row.original;
           return (
             <div className="flex flex-col text-xs">
-              <Tag className={`${statusColor[member_status]} inline capitalize`}>{member_status}</Tag>
+              <Tag className={`${statusColor[member_status]} inline capitalize`}>
+                {member_status}
+              </Tag>
               <span className="mt-0.5">
                 <div className="text-[10px] text-gray-500 mt-0.5">
-                  Joined Date:     {/* Using   for spacing */}
-                  {new Date(member_join_date).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  }).replace(/ /g, "/")}
+                  Joined Date:    {" "}
+                  {new Date(member_join_date)
+                    .toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                    .replace(/ /g, "/")}
                 </div>
               </span>
             </div>
@@ -619,15 +1379,26 @@ const FormListTable = () => {
         cell: (props) => (
           <div className="text-xs flex flex-col">
             <div>
-              <Tag className="text-[10px] mb-1 bg-orange-100 text-orange-400">{props.row.original.membership_stats}</Tag>
+              <Tag className="text-[10px] mb-1 bg-orange-100 text-orange-400">
+                {props.row.original.membership_stats}
+              </Tag>
             </div>
-            <span><b>RM: </b>{props.row.original.member_name}</span> {/* Placeholder */}
-            <span><b>Grade: </b>A</span> {/* Placeholder */}
-            <Tooltip title={`Profile: ${props.row.original.profile_completion}%`}>
+            <span>
+              <b>RM: </b>
+              {props.row.original.member_name}
+            </span>
+            <span>
+              <b>Grade: </b>A
+            </span>
+            <Tooltip
+              title={`Profile: ${props.row.original.profile_completion}%`}
+            >
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
                 <div
                   className="bg-blue-500 h-1.5 rounded-full"
-                  style={{ width: `${props.row.original.profile_completion}%` }}
+                  style={{
+                    width: `${props.row.original.profile_completion}%`,
+                  }}
                 ></div>
               </div>
             </Tooltip>
@@ -636,33 +1407,46 @@ const FormListTable = () => {
       },
       {
         header: "Preferences",
-        accessorKey: "associated_brands", // This key might not be ideal if you display multiple fields
+        accessorKey: "associated_brands",
         size: 300,
         cell: (props) => (
           <div className="flex flex-col gap-1">
             <span className="text-xs">
               <b className="text-xs">Brands: </b>
-              <span className="text-[11px]">{props.row.original.associated_brands}</span>
+              <span className="text-[11px]">
+                {props.row.original.associated_brands}
+              </span>
             </span>
             <span className="text-xs">
               <b className="text-xs">Category: </b>
-              <span className="text-[11px]">{props.row.original.business_category}</span>
+              <span className="text-[11px]">
+                {props.row.original.business_category}
+              </span>
             </span>
             <span className="text-xs">
-              <span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span>
+              <span className="text-[11px]">
+                <b className="text-xs">Interested: </b>
+                {props.row.original.interested_in}
+              </span>
             </span>
           </div>
         ),
       },
       {
         header: "Ratio",
-        accessorKey: "trust_score", // Similarly, this key might not be ideal
+        accessorKey: "trust_score",
         size: 110,
         cell: (props) => (
           <div className="flex flex-col gap-1">
-            <Tag className="flex gap-1 text-[10px]"><b>Success:</b> {props.row.original.success_score}%</Tag>
-            <Tag className="flex gap-1 text-[10px]"><b>Trust:</b> {props.row.original.trust_score}%</Tag>
-            <Tag className="flex gap-1 text-[10px] flex-wrap"><b>Activity:</b> {props.row.original.activity_score}%</Tag>
+            <Tag className="flex gap-1 text-[10px]">
+              <b>Success:</b> {props.row.original.success_score}%
+            </Tag>
+            <Tag className="flex gap-1 text-[10px]">
+              <b>Trust:</b> {props.row.original.trust_score}%
+            </Tag>
+            <Tag className="flex gap-1 text-[10px] flex-wrap">
+              <b>Activity:</b> {props.row.original.activity_score}%
+            </Tag>
           </div>
         ),
       },
@@ -670,125 +1454,139 @@ const FormListTable = () => {
         header: "Actions",
         id: "action",
         size: 130,
-        meta: { HeaderClass: "text-center" }, // This might need specific DataTable support
+        meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
+            rowData={props.row.original}
             onEdit={() => handleEdit(props.row.original)}
             onViewDetail={() => handleViewDetails(props.row.original)}
-            onShare={() => handleShare(props.row.original)}
-            onMore={() => handleMore(props.row.original)}
+            onOpenModal={handleOpenModal}
           />
         ),
       },
     ],
-    [] // Removed navigate from deps as it's stable
+    [handleOpenModal]
   );
 
   const handlePaginationChange = useCallback((page: number) => {
-    setTableData(prev => ({ ...prev, pageIndex: page }));
+    setTableData((prev) => ({ ...prev, pageIndex: page }));
   }, []);
   const handleSelectChange = useCallback((value: number) => {
-    setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 }));
+    setTableData((prev) => ({
+      ...prev,
+      pageSize: Number(value),
+      pageIndex: 1,
+    }));
   }, []);
   const handleSort = useCallback((sort: OnSortParam) => {
-    // This sort is client-side as per useMemo. If server-side, logic here and in fetchPageData changes.
-    setTableData(prev => ({ ...prev, sort: sort, pageIndex: 1 }));
+    setTableData((prev) => ({ ...prev, sort: sort, pageIndex: 1 }));
   }, []);
 
-  const handleRowSelect = useCallback((checked: boolean, row: FormItem) => {
-    setSelectedMembers((prevSelected) => {
-      if (checked) {
-        return [...prevSelected, row];
-      } else {
-        return prevSelected.filter((item) => item.id !== row.id);
-      }
-    });
-  }, [setSelectedMembers]);
-
-  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<FormItem>[]) => {
-    // currentRows are the rows *visible* on the current page of the DataTable
-    // This selects/deselects all original items corresponding to the visible rows
-    const originalItemsOnPage = currentRows.map(r => r.original);
-    if (checked) {
-      // Add only those not already selected to avoid duplicates,
-      // though DataTable usually handles single selection on its end
-      setSelectedMembers(prevSelected => {
-        const newSelections = originalItemsOnPage.filter(
-          pageItem => !prevSelected.some(selItem => selItem.id === pageItem.id)
-        );
-        return [...prevSelected, ...newSelections];
+  const handleRowSelect = useCallback(
+    (checked: boolean, row: FormItem) => {
+      setSelectedMembers((prevSelected) => {
+        if (checked) {
+          return [...prevSelected, row];
+        } else {
+          return prevSelected.filter((item) => item.id !== row.id);
+        }
       });
-    } else {
-      // Remove only those items that are on the current page from selection
-      setSelectedMembers(prevSelected =>
-        prevSelected.filter(selItem =>
-          !originalItemsOnPage.some(pageItem => pageItem.id === selItem.id)
-        )
-      );
-    }
-  }, [setSelectedMembers]);
+    },
+    [setSelectedMembers]
+  );
 
+  const handleAllRowSelect = useCallback(
+    (checked: boolean, currentRows: Row<FormItem>[]) => {
+      const originalItemsOnPage = currentRows.map((r) => r.original);
+      if (checked) {
+        setSelectedMembers((prevSelected) => {
+          const newSelections = originalItemsOnPage.filter(
+            (pageItem) =>
+              !prevSelected.some((selItem) => selItem.id === pageItem.id)
+          );
+          return [...prevSelected, ...newSelections];
+        });
+      } else {
+        setSelectedMembers((prevSelected) =>
+          prevSelected.filter(
+            (selItem) =>
+              !originalItemsOnPage.some(
+                (pageItem) => pageItem.id === selItem.id
+              )
+          )
+        );
+      }
+    },
+    [setSelectedMembers]
+  );
 
-  const handleImport = () => { console.log("Import clicked"); /* Implement import */ };
+  const handleImport = () => {
+    console.log("Import clicked");
+  };
 
   const csvData = useMemo(() => {
     if (!forms || forms.length === 0) return [];
-    const headers = Object.keys(forms[0] as FormItem)
-      .map(key => ({ label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), key: key }));
-    
-    return forms.map(form => {
+    return forms.map((form) => {
       const newForm: Record<string, any> = { ...form };
-      Object.keys(newForm).forEach(key => {
+      Object.keys(newForm).forEach((key) => {
         if (Array.isArray(newForm[key])) {
-          newForm[key] = (newForm[key] as string[]).join(', ');
+          newForm[key] = (newForm[key] as string[]);
         }
       });
       return newForm;
     });
   }, [forms]);
 
-
   const getBrandOptions = useMemo(() => {
     if (!forms) return [];
     return forms
       .flatMap((f) => f.associated_brands)
-      .filter((v, i, a) => a.indexOf(v) === i && v) // Unique and non-empty brands
+      .filter((v, i, a) => a.indexOf(v) === i && v)
       .map((b) => ({ value: b, label: b }));
   }, [forms]);
-
 
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <FormListSearch onInputChange={handleQueryChange} />
         <div className="flex gap-2">
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
-          <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
-          {(forms && forms.length > 0) ? (
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>
+            Filter
+          </Button>
+          <Button icon={<TbCloudDownload />} onClick={handleImport}>
+            Import
+          </Button>
+          {forms && forms.length > 0 ? (
             <CSVLink data={csvData} filename="members_export.csv">
               <Button icon={<TbCloudUpload />}>Export</Button>
             </CSVLink>
           ) : (
-            <Button icon={<TbCloudUpload />} disabled>Export</Button>
+            <Button icon={<TbCloudUpload />} disabled>
+              Export
+            </Button>
           )}
         </div>
       </div>
       <DataTable
         selectable
         columns={columns}
-        data={pageData} // Data for the current page (client-side filtered/sorted)
+        data={pageData}
         noData={!isLoading && (!pageData || pageData.length === 0)}
         loading={isLoading}
         pagingData={{
-          total: total, // Total items from server
+          total: total,
           pageIndex: tableData.pageIndex as number,
           pageSize: tableData.pageSize as number,
         }}
-        checkboxChecked={(row) => selectedMembers.some((selected) => selected.id === row.original.id)} // Use row.original.id
+        checkboxChecked={(row) =>
+          selectedMembers.some((selected) => selected.id === row.original.id)
+        }
         onPaginationChange={handlePaginationChange}
         onSelectChange={handleSelectChange}
         onSort={handleSort}
-        onCheckBoxChange={(checked, row) => handleRowSelect(checked, row.original)} // Pass row.original
+        onCheckBoxChange={(checked, row) =>
+          handleRowSelect(checked, row.original)
+        }
         onIndeterminateCheckBoxChange={handleAllRowSelect}
       />
       <Drawer
@@ -799,100 +1597,177 @@ const FormListTable = () => {
         width={480}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
-            <Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button>
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterMemberForm"
+              type="submit"
+            >
+              Apply
+            </Button>
           </div>
         }
       >
-        <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
+        <UiForm
+          id="filterMemberForm"
+          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+        >
           <div className="sm:grid grid-cols-2 gap-2">
             <UiFormItem label="Status">
-              <Controller name="filterStatus" control={filterFormMethods.control}
+              <Controller
+                name="filterStatus"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Status" options={memberStatusOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Status"
+                    options={memberStatusOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Continent">
-              <Controller name="filterContinent" control={filterFormMethods.control}
+              <Controller
+                name="filterContinent"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Continent" options={continentOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Continent"
+                    options={continentOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Business Type">
-              <Controller name="filterBusinessType" control={filterFormMethods.control}
+              <Controller
+                name="filterBusinessType"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Type" options={businessTypeOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Type"
+                    options={businessTypeOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="State">
-              <Controller name="filterState" control={filterFormMethods.control}
+              <Controller
+                name="filterState"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select State" options={stateOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select State"
+                    options={stateOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="City">
-              <Controller name="filterCity" control={filterFormMethods.control}
+              <Controller
+                name="filterCity"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select City" options={cityOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select City"
+                    options={cityOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Interested For">
-              <Controller name="filterInterestedFor" control={filterFormMethods.control}
+              <Controller
+                name="filterInterestedFor"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Interest" options={interestedForOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Interest"
+                    options={interestedForOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Interested Category">
-              <Controller name="filterInterestedCategory" control={filterFormMethods.control}
+              <Controller
+                name="filterInterestedCategory"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Category" options={businessTypeOptions} /* Should this be different options? */
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Category"
+                    options={businessTypeOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Brand">
-              <Controller name="filterBrand" control={filterFormMethods.control}
+              <Controller
+                name="filterBrand"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Brand" options={getBrandOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Brand"
+                    options={getBrandOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="KYC Verified">
-              <Controller name="filterKycVerified" control={filterFormMethods.control}
+              <Controller
+                name="filterKycVerified"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Status" options={kycStatusOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Status"
+                    options={kycStatusOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
           </div>
         </UiForm>
       </Drawer>
+      <MemberModals modalState={modalState} onClose={handleCloseModal} />
     </>
   );
 };
 // --- End FormListTable ---
 
-
 // --- FormListSelected Component ---
 const FormListSelected = () => {
-  const {
-    selectedMembers,
-    setSelectedMembers,
-    // memberList, // Not directly used for actions here
-    // setMemberList,
-    // memberListTotal,
-    // setMemberListTotal
-  } = useMemberList();
+  const { selectedMembers, setSelectedMembers } = useMemberList();
 
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [sendMessageDialogOpen, setSendMessageDialogOpen] = useState(false);
   const [sendMessageLoading, setSendMessageLoading] = useState(false);
-  const [messageContent, setMessageContent] = useState(""); // For RichTextEditor
+  const [messageContent, setMessageContent] = useState("");
 
   const handleDelete = () => setDeleteConfirmationOpen(true);
   const handleCancelDelete = () => setDeleteConfirmationOpen(false);
@@ -908,44 +1783,44 @@ const FormListSelected = () => {
       setDeleteConfirmationOpen(false);
       return;
     }
-    
-    setDeleteConfirmationOpen(false); // Close dialog first
+
+    setDeleteConfirmationOpen(false);
     try {
       const ids = selectedMembers.map((data) => data.id);
-      // Assuming deleteAllMemberAction can handle an array of IDs or a comma-separated string
-      await dispatch(deleteAllMemberAction({ ids: ids.join(',') })).unwrap(); // Use unwrap if it's an RTK thunk
+      await dispatch(deleteAllMemberAction({ ids: ids.join(",") })).unwrap();
       toast.push(
         <Notification title="Members Deleted" type="success" duration={2000}>
           {selectedMembers.length} member(s) deleted.
         </Notification>
       );
-      dispatch(getMemberAction()); // Refresh list after deletion
-      setSelectedMembers([]); // Clear selection
+      dispatch(getMemberAction());
+      setSelectedMembers([]);
     } catch (error: any) {
-      const errorMessage = isAxiosError(error) ? error.response?.data?.message || error.message : error.message;
+      const errorMessage = error.message || "Could not delete members.";
       toast.push(
         <Notification title="Failed to Delete" type="danger" duration={3000}>
-          {errorMessage || `Could not delete members.`}
+          {errorMessage}
         </Notification>
       );
       console.error("Delete members Error:", error);
-    } 
-    // setSelectedMembers([]) is now inside try/catch to ensure it's cleared on success.
-    // If deletion fails, you might want to keep them selected for retry.
+    }
   };
 
   const handleSend = () => {
     setSendMessageLoading(true);
-    // console.log("Sending message:", messageContent, "to:", selectedMembers.map(m => m.member_name));
-    // Simulate API call
     setTimeout(() => {
-      toast.push(<Notification type="success" title="Message Sent">Message sent to {selectedMembers.length} member(s)!</Notification>, {
-        placement: "top-center",
-      });
+      toast.push(
+        <Notification type="success" title="Message Sent">
+          Message sent to {selectedMembers.length} member(s)!
+        </Notification>,
+        {
+          placement: "top-center",
+        }
+      );
       setSendMessageLoading(false);
       setSendMessageDialogOpen(false);
-      setSelectedMembers([]); // Clear selection after sending
-      setMessageContent(""); // Clear message content
+      setSelectedMembers([]);
+      setMessageContent("");
     }, 1000);
   };
 
@@ -963,9 +1838,13 @@ const FormListSelected = () => {
           <div className="flex items-center justify-between">
             <span>
               <span className="flex items-center gap-2">
-                <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
+                <span className="text-lg text-primary-600 dark:text-primary-400">
+                  <TbChecks />
+                </span>
                 <span className="font-semibold flex items-center gap-1">
-                  <span className="heading-text">{selectedMembers.length} Members</span>
+                  <span className="heading-text">
+                    {selectedMembers.length} Members
+                  </span>
                   <span>selected</span>
                 </span>
               </span>
@@ -975,17 +1854,18 @@ const FormListSelected = () => {
                 size="sm"
                 className="ltr:mr-3 rtl:ml-3"
                 type="button"
-                // Using customColorClass prop if your Button supports it, or direct Tailwind
-                // This example assumes Button does not have customColorClass, so apply classes directly if possible or use variant="danger" if exists
-                // For a generic button, you might need to style it or use a specific 'danger' variant if available from your UI kit.
-                // For now, relying on standard button styling or assuming a danger variant would be used.
-                // If customColorClass is a function as in your original code:
-                customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
+                customColorClass={() =>
+                  "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
+                }
                 onClick={handleDelete}
               >
                 Delete
               </Button>
-              <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>
+              <Button
+                size="sm"
+                variant="solid"
+                onClick={() => setSendMessageDialogOpen(true)}
+              >
                 Message
               </Button>
             </div>
@@ -1002,20 +1882,36 @@ const FormListSelected = () => {
         onConfirm={handleConfirmDelete}
         confirmButtonColor="red-600"
       >
-        <p>Are you sure you want to remove {selectedMembers.length} selected member(s)? This action can't be undone.</p>
+        <p>
+          Are you sure you want to remove {selectedMembers.length} selected
+          member(s)? This action can't be undone.
+        </p>
       </ConfirmDialog>
       <Dialog
         isOpen={sendMessageDialogOpen}
         onRequestClose={() => setSendMessageDialogOpen(false)}
         onClose={() => setSendMessageDialogOpen(false)}
-        width={600} // Adjusted width for RichTextEditor
+        width={600}
       >
         <h5 className="mb-2">Send Message</h5>
-        <p>Send message to the following {selectedMembers.length} member(s):</p>
-        <Avatar.Group chained omittedAvatarTooltip className="my-4" maxCount={6} omittedAvatarProps={{ size: 30 }}>
+        <p>
+          Send message to the following {selectedMembers.length} member(s):
+        </p>
+        <Avatar.Group
+          chained
+          omittedAvatarTooltip
+          className="my-4"
+          maxCount={6}
+          omittedAvatarProps={{ size: 30 }}
+        >
           {selectedMembers.map((member) => (
             <Tooltip key={member.id} title={member.member_name}>
-              <Avatar size={30} src={member.member_photo || undefined} icon={!member.member_photo ? <TbUserCircle/> : null} alt={member.member_name} />
+              <Avatar
+                size={30}
+                src={member.member_photo || undefined}
+                icon={!member.member_photo ? <TbUserCircle /> : undefined}
+                alt={member.member_name}
+              />
             </Tooltip>
           ))}
         </Avatar.Group>
@@ -1023,15 +1919,23 @@ const FormListSelected = () => {
           <RichTextEditor value={messageContent} onChange={setMessageContent} />
         </div>
         <div className="ltr:justify-end flex items-center gap-2 mt-4">
-          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button>
-          <Button size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button>
+          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="solid"
+            loading={sendMessageLoading}
+            onClick={handleSend}
+          >
+            Send
+          </Button>
         </div>
       </Dialog>
     </>
   );
 };
 // --- End FormListSelected ---
-
 
 // --- Main Member Page Component ---
 const Member = () => {

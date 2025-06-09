@@ -140,7 +140,7 @@ const salesLeadsRoute: Routes = [
     },
   },
 {
-    key: 'salesLeads.leadAdd', // Distinct key
+    key: 'salesLeads.lead', // Distinct key
     path: `${SALES_LEADS_PREFIX_PATH}/lead/add`,
     component: lazy(
       () =>

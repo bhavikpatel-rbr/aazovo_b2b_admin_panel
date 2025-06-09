@@ -1,6 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import cloneDeep from "lodash/cloneDeep"; // Added for partner table logic
-import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { CSVLink } from "react-csv";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -16,11 +22,17 @@ import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
+  Card,
+  DatePicker,
   Drawer,
   Dropdown,
   Form as UiForm,
   FormItem as UiFormItem,
-  Select as UiSelect
+  Input,
+  Select as UiSelect,
+  Table,
+  FormItem,
+  Select,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -28,10 +40,12 @@ import Notification from "@/components/ui/Notification";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
-import axiosInstance, { isAxiosError } from '@/services/api/api';
+import axiosInstance from "@/services/api/api";
 
 // Icons
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
+  MdCancel,
   MdCheckCircle,
   MdErrorOutline,
   MdHourglassEmpty,
@@ -39,33 +53,41 @@ import {
 } from "react-icons/md";
 import {
   TbAlarm,
+  TbAlertTriangle,
   TbBell,
   TbBrandWhatsapp,
   TbBriefcase,
   TbCalendarEvent,
   TbCertificate,
   TbChecks,
+  TbClipboardText,
   TbClockHour4,
   TbCloudDownload,
   TbCloudUpload,
   TbCreditCard,
-  TbDotsVertical, TbDownload, // For Partner Search
+  TbDownload,
   TbExternalLink,
   TbEye,
   TbFileDescription,
+  TbFileSearch,
+  TbFileText,
+  TbFileZip,
   TbFilter,
   TbMail,
   TbMapPin,
+  TbMessageCircle,
   TbMessageReport,
   TbPencil,
   TbPlus,
+  TbReceipt,
   TbSearch,
   TbShare,
   TbTagStarred,
   TbUser,
   TbUserCircle,
+  TbUserSearch,
+  TbUsersGroup,
 } from "react-icons/tb";
-
 
 // Types
 import type { TableQueries } from "@/@types/common";
@@ -77,12 +99,10 @@ import type {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   deleteAllpartnerAction,
-  getpartnerAction // Ensure these actions exist or are created
+  getpartnerAction, // Ensure these actions exist or are created
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-import { BsThreeDotsVertical } from "react-icons/bs";
-
 
 // --- PartnerListItem Type (Data Structure) ---
 export type PartnerListItem = {
@@ -114,6 +134,9 @@ export type PartnerListItem = {
   partner_payment_terms?: string;
   partner_lead_time?: number; // In days
   partner_document_upload?: string;
+
+  // Add fields that might be used by modals, similar to CompanyItem
+  health_score?: number; // Example
 };
 // --- End PartnerListItem Type ---
 
@@ -145,10 +168,13 @@ type PartnerFilterFormData = z.infer<typeof partnerFilterFormSchema>;
 const partnerDisplayStatusColors: Record<string, string> = {
   Active: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
   Inactive: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
-  Pending: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
+  Pending:
+    "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
   Verified: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
-  "Under Review": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300",
-  "Not Submitted": "bg-gray-100 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400",
+  "Under Review":
+    "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300",
+  "Not Submitted":
+    "bg-gray-100 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400",
   // For the `status` field (overall list management)
   active: "bg-green-200 text-green-600",
   inactive: "bg-red-200 text-red-600",
@@ -180,7 +206,6 @@ const partnerCountryOptions = [
 ];
 // --- END MOCK PARTNER FILTER OPTIONS ---
 
-
 // --- Partner List Store ---
 interface PartnerListStore {
   partnerList: PartnerListItem[];
@@ -191,54 +216,709 @@ interface PartnerListStore {
   setPartnerListTotal: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const PartnerListContext = React.createContext<PartnerListStore | undefined>(undefined);
+const PartnerListContext = React.createContext<PartnerListStore | undefined>(
+  undefined
+);
 
 const usePartnerList = (): PartnerListStore => {
   const context = useContext(PartnerListContext);
   if (!context) {
-    throw new Error("usePartnerList must be used within a PartnerListProvider");
+    throw new Error(
+      "usePartnerList must be used within a PartnerListProvider"
+    );
   }
   return context;
 };
 
-const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-
-
-  const { partnerData = [] } = useSelector(masterSelector);
+const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { partnerData = { data: [], total: 0 } } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  const [partnerList, setPartnerList] = useState<PartnerListItem[]>(partnerData.data);
-  const [selectedPartners, setSelectedPartners] = useState<PartnerListItem[]>([]);
+  const [partnerList, setPartnerList] = useState<PartnerListItem[]>(
+    partnerData.data
+  );
+  const [selectedPartners, setSelectedPartners] = useState<PartnerListItem[]>(
+    []
+  );
   const [partnerListTotal, setPartnerListTotal] = useState(partnerData.total);
   useEffect(() => {
-    setPartnerList(partnerData.data)
-    setPartnerListTotal(partnerData.total)
-  }, [partnerData])
+    setPartnerList(partnerData.data);
+    setPartnerListTotal(partnerData.total);
+  }, [partnerData]);
 
   useEffect(() => {
     dispatch(getpartnerAction()); // Fetch continents for select dropdown
   }, [dispatch]);
 
-
-
-
   return (
-    <PartnerListContext.Provider value={{
-      partnerList, setPartnerList,
-      selectedPartners, setSelectedPartners,
-      partnerListTotal, setPartnerListTotal
-    }}>
+    <PartnerListContext.Provider
+      value={{
+        partnerList,
+        setPartnerList,
+        selectedPartners,
+        setSelectedPartners,
+        partnerListTotal,
+        setPartnerListTotal,
+      }}
+    >
       {children}
     </PartnerListContext.Provider>
   );
 };
 // --- End Partner List Store ---
 
+// ============================================================================
+// --- MODALS SECTION ---
+// All modal components for Partners are defined here.
+// ============================================================================
+
+// --- Type Definitions for Modals ---
+export type PartnerModalType =
+  | "email"
+  | "whatsapp"
+  | "notification"
+  | "task"
+  | "active"
+  | "calendar"
+  | "alert"
+  | "document"
+  | "feedback"
+  | "engagement"
+  | "trackRecord"
+  | "transaction"
+  | "members"; // Added from company for consistency
+
+export interface PartnerModalState {
+  isOpen: boolean;
+  type: PartnerModalType | null;
+  data: PartnerListItem | null;
+}
+interface PartnerModalsProps {
+  modalState: PartnerModalState;
+  onClose: () => void;
+}
+
+// --- Helper Data for Modal Demos (Reused from Company Module) ---
+const dummyUsers = [
+  { value: "user1", label: "Alice Johnson" },
+  { value: "user2", label: "Bob Williams" },
+  { value: "user3", label: "Charlie Brown" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Project Deadline" },
+];
+const dummyAlerts = [
+  {
+    id: 1,
+    severity: "danger",
+    message: "Invoice #INV-P008 is 15 days overdue.",
+    time: "3 days ago",
+  },
+  {
+    id: 2,
+    severity: "warning",
+    message: "Partnership agreement renewal due in 10 days.",
+    time: "1 week ago",
+  },
+];
+const dummyDocs = [
+  { id: "doc1", name: "Partner_NDA.pdf", type: "pdf", size: "1.2 MB" },
+  { id: "doc2", name: "Service_Catalog.zip", type: "zip", size: "8.4 MB" },
+];
+const dummyFeedback = [
+  { id: "f1", type: "Request", subject: "API Integration Help", status: "Open" },
+  { id: "f2", type: "Feedback", subject: "Positive Onboarding Experience", status: "Closed" },
+];
+
+// --- PartnerModals Manager Component ---
+const PartnerModals: React.FC<PartnerModalsProps> = ({
+  modalState,
+  onClose,
+}) => {
+  const { type, data: partner, isOpen } = modalState;
+  if (!isOpen || !partner) return null;
+
+  const renderModalContent = () => {
+    switch (type) {
+      case "email":
+        return <SendEmailDialog partner={partner} onClose={onClose} />;
+      case "whatsapp":
+        return <SendWhatsAppDialog partner={partner} onClose={onClose} />;
+      case "notification":
+        return <AddNotificationDialog partner={partner} onClose={onClose} />;
+      case "task":
+        return <AssignTaskDialog partner={partner} onClose={onClose} />;
+      case "calendar":
+        return <AddScheduleDialog partner={partner} onClose={onClose} />;
+      case "alert":
+        return <ViewAlertDialog partner={partner} onClose={onClose} />;
+      case "document":
+        return <DownloadDocumentDialog partner={partner} onClose={onClose} />;
+      case "feedback":
+        return <ViewRequestFeedbackDialog partner={partner} onClose={onClose} />;
+      default:
+        return (
+          <GenericActionDialog
+            type={type}
+            partner={partner}
+            onClose={onClose}
+          />
+        );
+    }
+  };
+  return <>{renderModalContent()}</>;
+};
+
+// --- Individual Dialog Components for Partners ---
+const SendEmailDialog: React.FC<{
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ partner, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { subject: "", message: "" },
+  });
+  const onSendEmail = (data: { subject: string; message: string }) => {
+    setIsLoading(true);
+    console.log("Sending email to", partner.partner_email_id, "with data:", data);
+    setTimeout(() => {
+      toast.push(
+        <Notification type="success" title="Email Sent Successfully" />
+      );
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Email to {partner.partner_name}</h5>
+      <form onSubmit={handleSubmit(onSendEmail)}>
+        <FormItem label="Subject">
+          <Controller
+            name="subject"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => (
+              <RichTextEditor value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const SendWhatsAppDialog: React.FC<{
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ partner, onClose }) => {
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      message: `Hi ${partner.partner_name}, regarding our partnership...`,
+    },
+  });
+  const onSendMessage = (data: { message: string }) => {
+    const phone = partner.partner_contact_number?.replace(/\D/g, "");
+    if (!phone) {
+      toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+      return;
+    }
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
+      data.message
+    )}`;
+    window.open(url, "_blank");
+    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+    onClose();
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send WhatsApp to {partner.partner_name}</h5>
+      <form onSubmit={handleSubmit(onSendMessage)}>
+        <FormItem label="Message Template">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit">
+            Open WhatsApp
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddNotificationDialog: React.FC<{
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ partner, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", users: [], message: "" },
+  });
+  const onSend = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      "Sending in-app notification for",
+      partner.partner_name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Notification Sent" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {partner.partner_name}</h5>
+      <form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Send to Users">
+          <Controller
+            name="users"
+            control={control}
+            render={({ field }) => (
+              <Select
+                isMulti
+                placeholder="Select Users"
+                options={dummyUsers}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AssignTaskDialog: React.FC<{
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ partner, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: "",
+      assignee: null,
+      dueDate: null,
+      priority: null,
+      description: "",
+    },
+  });
+  const onAssignTask = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      "Assigning task for",
+      partner.partner_name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Task Assigned" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for {partner.partner_name}</h5>
+      <form onSubmit={handleSubmit(onAssignTask)}>
+        <FormItem label="Task Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., Follow up on partnership" />
+            )}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Assign To">
+            <Controller
+              name="assignee"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select User"
+                  options={dummyUsers}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Priority">
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Priority"
+                  options={priorityOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Due Date">
+          <Controller
+            name="dueDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                placeholder="Select date"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Description">
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Assign Task
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddScheduleDialog: React.FC<{
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ partner, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", eventType: null, startDate: null, notes: "" },
+  });
+  const onAddEvent = (data: any) => {
+    setIsLoading(true);
+    console.log("Adding event for", partner.partner_name, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Event Scheduled" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for {partner.partner_name}</h5>
+      <form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., Partnership Review" />
+            )}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Event Type">
+            <Controller
+              name="eventType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Type"
+                  options={eventTypeOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Date & Time">
+            <Controller
+              name="startDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker.DateTimepicker
+                  placeholder="Select date and time"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Notes">
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Save Event
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const ViewAlertDialog: React.FC<{
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ partner, onClose }) => {
+  const alertColors: Record<string, string> = {
+    danger: "red",
+    warning: "amber",
+    info: "blue",
+  };
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Alerts for {partner.partner_name}</h5>
+      <div className="mt-4 flex flex-col gap-3">
+        {dummyAlerts.length > 0 ? (
+          dummyAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`p-3 rounded-lg border-l-4 border-${
+                alertColors[alert.severity]
+              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
+                alertColors[alert.severity]
+              }-500/10`}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex items-start gap-2">
+                  <TbAlertTriangle
+                    className={`text-${alertColors[alert.severity]}-500 mt-1`}
+                    size={20}
+                  />
+                  <p className="text-sm">{alert.message}</p>
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap">
+                  {alert.time}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>No active alerts.</p>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const DownloadDocumentDialog: React.FC<{
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ partner, onClose }) => {
+  const iconMap: Record<string, React.ReactElement> = {
+    pdf: <TbFileText className="text-red-500" />,
+    zip: <TbFileZip className="text-amber-500" />,
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Documents for {partner.partner_name}</h5>
+      <div className="flex flex-col gap-3 mt-4">
+        {dummyDocs.map((doc) => (
+          <div
+            key={doc.id}
+            className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+          >
+            <div className="flex items-center gap-3">
+              {React.cloneElement(iconMap[doc.type] || <TbClipboardText />, {
+                size: 28,
+              })}
+              <div>
+                <p className="font-semibold text-sm">{doc.name}</p>
+                <p className="text-xs text-gray-400">{doc.size}</p>
+              </div>
+            </div>
+            <Tooltip title="Download">
+              <Button shape="circle" size="sm" icon={<TbDownload />} />
+            </Tooltip>
+          </div>
+        ))}
+      </div>
+      <div className="text-right mt-6">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const ViewRequestFeedbackDialog: React.FC<{
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ partner, onClose }) => {
+    const statusColors: Record<string, string> = {
+        Open: "bg-emerald-500",
+        Closed: "bg-red-500",
+      };
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={700}
+    >
+      <h5 className="mb-4">Requests & Feedback for {partner.partner_name}</h5>
+      <div className="max-h-[400px] overflow-y-auto">
+        <Table>
+          <Table.THead>
+            <Table.Tr>
+              <Table.Th>Type</Table.Th>
+              <Table.Th>Subject</Table.Th>
+              <Table.Th>Status</Table.Th>
+            </Table.Tr>
+          </Table.THead>
+          <Table.TBody>
+            {dummyFeedback.map((fb) => (
+              <Table.Tr key={fb.id}>
+                <Table.Td>{fb.type}</Table.Td>
+                <Table.Td>{fb.subject}</Table.Td>
+                <Table.Td>
+                  <Tag
+                    className="text-white"
+                    prefix
+                    prefixClass={statusColors[fb.status]}
+                  >
+                    {fb.status}
+                  </Tag>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.TBody>
+        </Table>
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+
+const GenericActionDialog: React.FC<{
+  type: PartnerModalType | null;
+  partner: PartnerListItem;
+  onClose: () => void;
+}> = ({ type, partner, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type
+    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+    : "Confirm Action";
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(`Performing action '${type}' for partner ${partner.partner_name}`);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>
+        Are you sure you want to perform this action for{" "}
+        <span className="font-semibold">{partner.partner_name}</span>?
+      </p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+          Confirm
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+// ============================================================================
+// --- END MODALS SECTION ---
+// ============================================================================
+
 // --- PartnerListSearch Component ---
 interface PartnerListSearchProps {
   onInputChange: (value: string) => void;
-  // ref?: Ref<HTMLInputElement>; // DebounceInput might not need explicit ref passing like this
 }
-const PartnerListSearch: React.FC<PartnerListSearchProps> = ({ onInputChange }) => {
+const PartnerListSearch: React.FC<PartnerListSearchProps> = ({
+  onInputChange,
+}) => {
   return (
     <DebouceInput
       placeholder="Quick Search..."
@@ -252,11 +932,9 @@ const PartnerListSearch: React.FC<PartnerListSearchProps> = ({ onInputChange }) 
 // --- PartnerListActionTools Component (for Page Header) ---
 const PartnerListActionTools = () => {
   const navigate = useNavigate();
-  // const { partnerList } // If CSVLink for all data was here
 
   return (
     <div className="flex flex-col md:flex-row gap-3">
-      {/* CSVLink for all data could be here if desired, or with table tools */}
       <Button
         variant="solid"
         icon={<TbPlus className="text-lg" />}
@@ -274,22 +952,15 @@ const PartnerActionColumn = ({
   rowData,
   onEdit,
   onViewDetail,
-  // onClone, // Clone was in dropdown in original, let's keep it there if more actions
-  // onChangeStatus, // Status change was also in dropdown
-  // onDelete, // Delete was also in dropdown
   onShare,
+  onOpenModal,
 }: {
   rowData: PartnerListItem;
   onEdit: (id: string) => void;
   onViewDetail: (id: string) => void;
   onShare: (id: string) => void;
-  // For actions inside dropdown:
-  onCloneItem: (id: string) => void;
-  onChangeItemStatus: (id: string, currentStatus: PartnerListItem["status"]) => void;
-  onDeleteItem: (id: string) => void;
+  onOpenModal: (type: PartnerModalType, data: PartnerListItem) => void;
 }) => {
-  // const navigate = useNavigate(); // If navigation is needed from actions
-
   return (
     <div className="flex items-center justify-center gap-1 text-gray-500 dark:text-gray-400">
       <Tooltip title="Edit">
@@ -319,19 +990,72 @@ const PartnerActionColumn = ({
           <TbShare />
         </div>
       </Tooltip>
-      <Tooltip title="More">
-                <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-                  <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-                  <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
-                  <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
-                  <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
-                  <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active</span></Dropdown.Item>
-                  <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
-                  <Dropdown.Item className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
-                  <Dropdown.Item className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
-                  <Dropdown.Item className="flex items-center gap-2"><TbMessageReport size={18} /> <span className="text-xs">View Request & Feedback</span></Dropdown.Item>
-                </Dropdown>
-      </Tooltip>
+      <Dropdown
+        renderTitle={
+          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+        }
+      >
+        <Dropdown.Item
+          onClick={() => onOpenModal("email", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbMail size={18} /> <span className="text-xs">Send Email</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("whatsapp", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBrandWhatsapp size={18} />{" "}
+          <span className="text-xs">Send on Whatsapp</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBell size={18} />{" "}
+          <span className="text-xs">Add as Notification</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbTagStarred size={18} />{" "}
+          <span className="text-xs">Add to Active</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbCalendarEvent size={18} />{" "}
+          <span className="text-xs">Add to Calendar</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("document", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbDownload size={18} />{" "}
+          <span className="text-xs">Download Document</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("feedback", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbMessageReport size={18} />{" "}
+          <span className="text-xs">View Request & Feedback</span>
+        </Dropdown.Item>
+      </Dropdown>
     </div>
   );
 };
@@ -342,10 +1066,10 @@ const PartnerListTable = () => {
   const navigate = useNavigate();
   const {
     partnerList = [],
-    setPartnerList,
     selectedPartners,
     setSelectedPartners,
-    partnerListTotal, // This will be derived by `total` from useMemo
+    partnerListTotal,
+    setPartnerList,
     setPartnerListTotal,
   } = usePartnerList();
 
@@ -358,7 +1082,21 @@ const PartnerListTable = () => {
   });
 
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>({});
+  const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>(
+    {}
+  );
+
+  // --- MODAL STATE AND HANDLERS ---
+  const [modalState, setModalState] = useState<PartnerModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+  const handleOpenModal = (type: PartnerModalType, partnerData: PartnerListItem) =>
+    setModalState({ isOpen: true, type, data: partnerData });
+  const handleCloseModal = () =>
+    setModalState({ isOpen: false, type: null, data: null });
+  // --- END MODAL STATE AND HANDLERS ---
 
   const filterFormMethods = useForm<PartnerFilterFormData>({
     resolver: zodResolver(partnerFilterFormSchema),
@@ -389,7 +1127,6 @@ const PartnerListTable = () => {
   };
 
   const { pageData, total } = useMemo(() => {
-    
     let filteredData = [...partnerList];
 
     if (tableData.query) {
@@ -400,34 +1137,70 @@ const PartnerListTable = () => {
           partner.partner_email_id?.toLowerCase().includes(query) ||
           partner.partner_contact_number?.toLowerCase().includes(query) ||
           partner.partner_business_type?.toLowerCase().includes(query) ||
-          (partner.partner_reference_id && partner.partner_reference_id.toLowerCase().includes(query)) ||
-          partner.business_category?.some(cat => cat.toLowerCase().includes(query)) ||
+          (partner.partner_reference_id &&
+            partner.partner_reference_id.toLowerCase().includes(query)) ||
+          partner.business_category?.some((cat) =>
+            cat.toLowerCase().includes(query)
+          ) ||
           partner.partner_location?.toLowerCase().includes(query)
       );
     }
 
     // Apply partner-specific filters
-    if (filterCriteria.filterPartnerStatus && filterCriteria.filterPartnerStatus.length > 0) {
-      const selectedStatuses = filterCriteria.filterPartnerStatus.map((opt) => opt.value);
-      filteredData = filteredData.filter((partner) => selectedStatuses.includes(partner.partner_status_orig));
-    }
-    if (filterCriteria.filterKycStatus && filterCriteria.filterKycStatus.length > 0) {
-      const selectedKyc = filterCriteria.filterKycStatus.map((opt) => opt.value);
-      filteredData = filteredData.filter((partner) => selectedKyc.includes(partner.partner_kyc_status));
-    }
-    if (filterCriteria.filterBusinessType && filterCriteria.filterBusinessType.length > 0) {
-      const selectedTypes = filterCriteria.filterBusinessType.map((opt) => opt.value.toLowerCase());
-      filteredData = filteredData.filter((partner) => selectedTypes.includes(partner.partner_business_type.toLowerCase()));
-    }
-    if (filterCriteria.filterCategory && filterCriteria.filterCategory.length > 0) {
-      const selectedCategories = filterCriteria.filterCategory.map((opt) => opt.value.toLowerCase());
+    if (
+      filterCriteria.filterPartnerStatus &&
+      filterCriteria.filterPartnerStatus.length > 0
+    ) {
+      const selectedStatuses = filterCriteria.filterPartnerStatus.map(
+        (opt) => opt.value
+      );
       filteredData = filteredData.filter((partner) =>
-        partner.business_category.some(cat => selectedCategories.includes(cat.toLowerCase()))
+        selectedStatuses.includes(partner.partner_status_orig)
       );
     }
-    if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) {
-      const selectedCountries = filterCriteria.filterCountry.map(opt => opt.value.toLowerCase());
-      filteredData = filteredData.filter(partner => {
+    if (
+      filterCriteria.filterKycStatus &&
+      filterCriteria.filterKycStatus.length > 0
+    ) {
+      const selectedKyc = filterCriteria.filterKycStatus.map(
+        (opt) => opt.value
+      );
+      filteredData = filteredData.filter((partner) =>
+        selectedKyc.includes(partner.partner_kyc_status)
+      );
+    }
+    if (
+      filterCriteria.filterBusinessType &&
+      filterCriteria.filterBusinessType.length > 0
+    ) {
+      const selectedTypes = filterCriteria.filterBusinessType.map((opt) =>
+        opt.value.toLowerCase()
+      );
+      filteredData = filteredData.filter((partner) =>
+        selectedTypes.includes(partner.partner_business_type.toLowerCase())
+      );
+    }
+    if (
+      filterCriteria.filterCategory &&
+      filterCriteria.filterCategory.length > 0
+    ) {
+      const selectedCategories = filterCriteria.filterCategory.map((opt) =>
+        opt.value.toLowerCase()
+      );
+      filteredData = filteredData.filter((partner) =>
+        partner.business_category.some((cat) =>
+          selectedCategories.includes(cat.toLowerCase())
+        )
+      );
+    }
+    if (
+      filterCriteria.filterCountry &&
+      filterCriteria.filterCountry.length > 0
+    ) {
+      const selectedCountries = filterCriteria.filterCountry.map((opt) =>
+        opt.value.toLowerCase()
+      );
+      filteredData = filteredData.filter((partner) => {
         // Assuming country is the last part of "City, Country" or parsable
         const locationParts = partner.partner_location.split(/,\s*|\s*\/\s*/);
         const country = locationParts.pop()?.toLowerCase();
@@ -435,16 +1208,23 @@ const PartnerListTable = () => {
       });
     }
 
-
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       filteredData.sort((a, b) => {
         const aValue = a[key as keyof PartnerListItem] ?? "";
         const bValue = b[key as keyof PartnerListItem] ?? "";
-        if (["partner_profile_completion", "partner_trust_score", "partner_activity_score", "partner_lead_time"].includes(key)) {
+        if (
+          [
+            "partner_profile_completion",
+            "partner_trust_score",
+            "partner_activity_score",
+            "partner_lead_time",
+          ].includes(key)
+        ) {
           const numA = Number(aValue);
           const numB = Number(bValue);
-          if (!isNaN(numA) && !isNaN(numB)) return order === "asc" ? numA - numB : numB - numA;
+          if (!isNaN(numA) && !isNaN(numB))
+            return order === "asc" ? numA - numB : numB - numA;
         }
         if (key === "partner_join_date") {
           const dateA = new Date(aValue as string).getTime();
@@ -452,7 +1232,9 @@ const PartnerListTable = () => {
           return order === "asc" ? dateA - dateB : dateB - dateA;
         }
         if (typeof aValue === "string" && typeof bValue === "string") {
-          return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+          return order === "asc"
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
         }
         return 0;
       });
@@ -461,45 +1243,15 @@ const PartnerListTable = () => {
     return { pageData: filteredData, total: partnerListTotal };
   }, [partnerList, tableData, filterCriteria, partnerListTotal]);
 
-  const handleEditPartner = (id: string) => {  navigate(`/business-entities/create-partner`, {state:id}) };
-  const handleViewPartnerDetails = (id: string) => {  navigate(`/business-entities/create-partner`, {state:id}) };
-  const handleSharePartner = (id: string) => { console.log("Share Partner:", id); };
-
-  // More actions (from dropdown)
-  const handleClonePartnerItem = (id: string) => {
-    const partnerToClone = partnerList.find((p) => p.id === id);
-    if (!partnerToClone) return;
-    const newId = `P-CLONE-${Date.now()}`;
-    const clonedPartner: PartnerListItem = {
-      ...cloneDeep(partnerToClone),
-      id: newId,
-      partner_name: `${partnerToClone.partner_name} (Clone)`,
-      status: "inactive", // Default status for cloned item
-      partner_status_orig: "Pending", // Default partner status for cloned item
-    };
-    setPartnerList((prev) => [clonedPartner, ...prev]);
-    setPartnerListTotal(prev => prev + 1);
-    toast.push(<Notification type="success" title="Partner Cloned">New partner created from clone.</Notification>, { placement: "top-center" });
+  const handleEditPartner = (id: string) => {
+    navigate(`/business-entities/create-partner`, { state: id });
   };
-
-  const handleChangePartnerItemStatus = (id: string, currentStatus: PartnerListItem["status"]) => {
-    const newStatus = currentStatus === "active" ? "inactive" : "active";
-    setPartnerList((current) =>
-      current.map((p) =>
-        p.id === id ? { ...p, status: newStatus, partner_status_orig: newStatus === "active" ? "Active" : "Inactive" } : p
-      )
-    );
-    toast.push(<Notification type="info" title="Partner Status Updated">{`Partner list status changed to ${newStatus}.`}</Notification>, { placement: "top-center" });
+  const handleViewPartnerDetails = (id: string) => {
+    navigate(`/business-entities/create-partner`, { state: id });
   };
-
-  const handleDeletePartnerItem = (id: string) => {
-    // This could open a confirmation dialog first
-    setPartnerList((current) => current.filter((p) => p.id !== id));
-    setPartnerListTotal(prev => prev - 1);
-    setSelectedPartners(prev => prev.filter(p => p.id !== id)); // Also remove from selection if present
-    toast.push(<Notification type="success" title="Partner Deleted">Partner removed from the list.</Notification>, { placement: "top-center" });
+  const handleSharePartner = (id: string) => {
+    console.log("Share Partner:", id);
   };
-
 
   const columns: ColumnDef<PartnerListItem>[] = useMemo(
     () => [
@@ -509,10 +1261,22 @@ const PartnerListTable = () => {
         enableSorting: true,
         size: 280,
         cell: ({ row }) => {
-          const { partner_name, partner_logo, partner_email_id, partner_contact_number, partner_reference_id, id } = row.original;
+          const {
+            partner_name,
+            partner_logo,
+            partner_email_id,
+            partner_contact_number,
+            partner_reference_id,
+            id,
+          } = row.original;
           return (
             <div className="flex items-start gap-3">
-              <Avatar src={partner_logo} size="lg" shape="circle" icon={<TbUserCircle />} />
+              <Avatar
+                src={partner_logo}
+                size="lg"
+                shape="circle"
+                icon={<TbUserCircle />}
+              />
               <div className="flex flex-col text-xs min-w-0">
                 <span
                   className="font-semibold text-sm text-gray-800 dark:text-gray-100 hover:text-blue-600 cursor-pointer truncate"
@@ -521,12 +1285,19 @@ const PartnerListTable = () => {
                 >
                   {partner_name}
                 </span>
-                <span className="text-gray-500 dark:text-gray-400 truncate" title={partner_email_id}>
+                <span
+                  className="text-gray-500 dark:text-gray-400 truncate"
+                  title={partner_email_id}
+                >
                   {partner_email_id}
                 </span>
-                <span className="text-gray-500 dark:text-gray-400">{partner_contact_number}</span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  {partner_contact_number}
+                </span>
                 {partner_reference_id && (
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500">Ref: {partner_reference_id}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                    Ref: {partner_reference_id}
+                  </span>
                 )}
               </div>
             </div>
@@ -539,13 +1310,21 @@ const PartnerListTable = () => {
         enableSorting: true,
         size: 250,
         cell: ({ row }) => {
-          const { partner_business_type, business_category, partner_interested_in, partner_service_offerings } = row.original;
+          const {
+            partner_business_type,
+            business_category,
+            partner_interested_in,
+            partner_service_offerings,
+          } = row.original;
           return (
             <div className="flex flex-col gap-1 text-xs">
               <div className="flex items-center">
                 <TbBriefcase className="inline mr-1.5 text-gray-500 flex-shrink-0" />
                 <span className="font-semibold mr-1">Type:</span>
-                <span className="text-gray-600 dark:text-gray-400 truncate" title={partner_business_type}>
+                <span
+                  className="text-gray-600 dark:text-gray-400 truncate"
+                  title={partner_business_type}
+                >
                   {partner_business_type}
                 </span>
               </div>
@@ -562,7 +1341,10 @@ const PartnerListTable = () => {
               {partner_service_offerings?.length > 0 && (
                 <div className="flex items-start">
                   <span className="font-semibold mr-1.5">Services: </span>
-                  <Tooltip placement="top" title={partner_service_offerings.join(" | ")}>
+                  <Tooltip
+                    placement="top"
+                    title={partner_service_offerings.join(" | ")}
+                  >
                     <span className="text-gray-600 dark:text-gray-400 line-clamp-2">
                       {partner_service_offerings.join(", ")}
                     </span>
@@ -587,19 +1369,52 @@ const PartnerListTable = () => {
         enableSorting: true,
         size: 220,
         cell: ({ row }) => {
-          const { partner_status_orig, partner_kyc_status, partner_profile_completion, partner_trust_score, partner_activity_score, partner_join_date } = row.original;
-          let kycIcon = <MdHourglassEmpty className="text-orange-500 inline mr-0.5" size={12} />;
-          if (partner_kyc_status === "Verified") kycIcon = <MdCheckCircle className="text-green-500 inline mr-0.5" size={12} />;
-          else if (["Not Submitted", "Rejected"].includes(partner_kyc_status)) kycIcon = <MdErrorOutline className="text-red-500 inline mr-0.5" size={12} />;
+          const {
+            partner_status_orig,
+            partner_kyc_status,
+            partner_profile_completion,
+            partner_trust_score,
+            partner_activity_score,
+            partner_join_date,
+          } = row.original;
+          let kycIcon = (
+            <MdHourglassEmpty
+              className="text-orange-500 inline mr-0.5"
+              size={12}
+            />
+          );
+          if (partner_kyc_status === "Verified")
+            kycIcon = (
+              <MdCheckCircle
+                className="text-green-500 inline mr-0.5"
+                size={12}
+              />
+            );
+          else if (["Not Submitted", "Rejected"].includes(partner_kyc_status))
+            kycIcon = (
+              <MdErrorOutline
+                className="text-red-500 inline mr-0.5"
+                size={12}
+              />
+            );
 
           return (
             <div className="flex flex-col gap-1 text-xs">
-              <Tag className={`${getPartnerDisplayStatusClass(partner_status_orig)} capitalize font-semibold border-0 self-start px-2 py-0.5 !text-[10px]`}>
+              <Tag
+                className={`${getPartnerDisplayStatusClass(
+                  partner_status_orig
+                )} capitalize font-semibold border-0 self-start px-2 py-0.5 !text-[10px]`}
+              >
                 Partner: {partner_status_orig}
               </Tag>
               <Tooltip title={`KYC: ${partner_kyc_status}`} className="text-xs mt-0.5">
-                <Tag className={`${getPartnerDisplayStatusClass(partner_kyc_status)} capitalize !text-[9px] px-1.5 py-0.5 border self-start flex items-center`}>
-                  {kycIcon}{partner_kyc_status}
+                <Tag
+                  className={`${getPartnerDisplayStatusClass(
+                    partner_kyc_status
+                  )} capitalize !text-[9px] px-1.5 py-0.5 border self-start flex items-center`}
+                >
+                  {kycIcon}
+                  {partner_kyc_status}
                 </Tag>
               </Tooltip>
               <Tooltip title={`Profile: ${partner_profile_completion}%`}>
@@ -608,20 +1423,32 @@ const PartnerListTable = () => {
                     className="bg-blue-500 h-full rounded-full flex items-center justify-end text-white pr-1 text-[8px]"
                     style={{ width: `${partner_profile_completion}%` }}
                   >
-                    {partner_profile_completion > 15 && `${partner_profile_completion}%`}
+                    {partner_profile_completion > 15 &&
+                      `${partner_profile_completion}%`}
                   </div>
                 </div>
               </Tooltip>
               <div className="flex justify-between items-center text-[10px] gap-1">
                 <Tooltip title={`Trust: ${partner_trust_score}%`}>
-                  <Tag className="flex-1 text-center !py-0.5 bg-blue-100 text-blue-700">T: {partner_trust_score}%</Tag>
+                  <Tag className="flex-1 text-center !py-0.5 bg-blue-100 text-blue-700">
+                    T: {partner_trust_score}%
+                  </Tag>
                 </Tooltip>
                 <Tooltip title={`Activity: ${partner_activity_score}%`}>
-                  <Tag className="flex-1 text-center !py-0.5 bg-purple-100 text-purple-700">A: {partner_activity_score}%</Tag>
+                  <Tag className="flex-1 text-center !py-0.5 bg-purple-100 text-purple-700">
+                    A: {partner_activity_score}%
+                  </Tag>
                 </Tooltip>
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5">
-                Joined: {new Date(partner_join_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ /g, "/")}
+                Joined:{" "}
+                {new Date(partner_join_date)
+                  .toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                  .replace(/ /g, "/")}
               </div>
             </div>
           );
@@ -633,30 +1460,91 @@ const PartnerListTable = () => {
         enableSorting: true,
         size: 220,
         cell: ({ row }) => {
-          const { partner_location, partner_website, partner_profile_link, partner_certifications, partner_document_upload, partner_payment_terms, partner_lead_time } = row.original;
-          const getShortCertificationsDisplay = (certs: string[] | undefined): string => {
+          const {
+            partner_location,
+            partner_website,
+            partner_profile_link,
+            partner_certifications,
+            partner_document_upload,
+            partner_payment_terms,
+            partner_lead_time,
+          } = row.original;
+          const getShortCertificationsDisplay = (
+            certs: string[] | undefined
+          ): string => {
             if (!certs || certs.length === 0) return "N/A";
-            if (certs.length === 1) return certs[0].length > 15 ? certs[0].substring(0, 12) + "..." : certs[0];
-            const firstFew = certs.slice(0, 1).map(cert => cert.substring(0, 8) + (cert.length > 8 ? ".." : ""));
+            if (certs.length === 1)
+              return certs[0].length > 15
+                ? certs[0].substring(0, 12) + "..."
+                : certs[0];
+            const firstFew = certs
+              .slice(0, 1)
+              .map((cert) => cert.substring(0, 8) + (cert.length > 8 ? ".." : ""));
             let display = firstFew.join(", ");
             if (certs.length > 1) display += `, +${certs.length - 1}`;
             return display;
           };
           return (
             <div className="flex flex-col gap-1 text-xs">
-              {partner_location && <div className="flex items-center"><TbMapPin className="text-gray-500 mr-1.5 flex-shrink-0" /> {partner_location}</div>}
-              {partner_website && <a href={partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><TbExternalLink className="mr-1.5 flex-shrink-0" /> Website</a>}
-              {partner_profile_link && <a href={partner_profile_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><MdLink className="mr-1.5 flex-shrink-0" size={14} /> Profile</a>}
+              {partner_location && (
+                <div className="flex items-center">
+                  <TbMapPin className="text-gray-500 mr-1.5 flex-shrink-0" />{" "}
+                  {partner_location}
+                </div>
+              )}
+              {partner_website && (
+                <a
+                  href={partner_website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline truncate flex items-center"
+                >
+                  <TbExternalLink className="mr-1.5 flex-shrink-0" /> Website
+                </a>
+              )}
+              {partner_profile_link && (
+                <a
+                  href={partner_profile_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline truncate flex items-center"
+                >
+                  <MdLink className="mr-1.5 flex-shrink-0" size={14} /> Profile
+                </a>
+              )}
               {partner_certifications && partner_certifications.length > 0 && (
-                <Tooltip placement="top" title={partner_certifications.join(" | ")}>
+                <Tooltip
+                  placement="top"
+                  title={partner_certifications.join(" | ")}
+                >
                   <div className="text-gray-600 dark:text-gray-400 truncate flex items-center">
-                    <TbCertificate className="text-gray-500 mr-1.5 flex-shrink-0" /> {getShortCertificationsDisplay(partner_certifications)}
+                    <TbCertificate className="text-gray-500 mr-1.5 flex-shrink-0" />{" "}
+                    {getShortCertificationsDisplay(partner_certifications)}
                   </div>
                 </Tooltip>
               )}
-              {partner_document_upload && <a href={partner_document_upload} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate flex items-center"><TbFileDescription className="mr-1.5 flex-shrink-0" /> Document</a>}
-              {partner_payment_terms && <div className="flex items-center"><TbCreditCard className="text-gray-500 mr-1.5 flex-shrink-0" /> {partner_payment_terms}</div>}
-              {partner_lead_time !== undefined && <div className="flex items-center"><TbClockHour4 className="text-gray-500 mr-1.5 flex-shrink-0" /> Lead: {partner_lead_time} days</div>}
+              {partner_document_upload && (
+                <a
+                  href={partner_document_upload}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline truncate flex items-center"
+                >
+                  <TbFileDescription className="mr-1.5 flex-shrink-0" /> Document
+                </a>
+              )}
+              {partner_payment_terms && (
+                <div className="flex items-center">
+                  <TbCreditCard className="text-gray-500 mr-1.5 flex-shrink-0" />{" "}
+                  {partner_payment_terms}
+                </div>
+              )}
+              {partner_lead_time !== undefined && (
+                <div className="flex items-center">
+                  <TbClockHour4 className="text-gray-500 mr-1.5 flex-shrink-0" />{" "}
+                  Lead: {partner_lead_time} days
+                </div>
+              )}
             </div>
           );
         },
@@ -672,14 +1560,12 @@ const PartnerListTable = () => {
             onEdit={handleEditPartner}
             onViewDetail={handleViewPartnerDetails}
             onShare={handleSharePartner}
-            onCloneItem={handleClonePartnerItem}
-            onChangeItemStatus={handleChangePartnerItemStatus}
-            onDeleteItem={handleDeletePartnerItem}
+            onOpenModal={handleOpenModal}
           />
         ),
       },
     ],
-    [partnerList] // Add partnerList to re-evaluate if needed for dynamic options inside columns, though not strictly necessary for these handlers
+    [handleOpenModal]
   );
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
@@ -687,49 +1573,35 @@ const PartnerListTable = () => {
   }, []);
 
   // API fetching logic
-  const fetchPageData = useCallback(async (
-    pageIdx: number,
-    limit: number,
-    currentSort?: OnSortParam,
-    // Add other server-side filter/query params here if API supports
-  ) => {
-    setIsLoading(true);
-    const params = new URLSearchParams();
-    params.append('page', String(pageIdx));
-    params.append('limit', String(limit)); // Assuming API uses 'limit' for page size
+  const fetchPageData = useCallback(
+    async (
+      pageIdx: number,
+      limit: number,
+      currentSort?: OnSortParam
+      // Add other server-side filter/query params here if API supports
+    ) => {
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      params.append("page", String(pageIdx));
+      params.append("limit", String(limit)); // Assuming API uses 'limit' for page size
 
-    // Example for server-side sort (if your API supports it)
-    // if (currentSort?.key && currentSort.order) {
-    //   params.append('sortBy', currentSort.key);
-    //   params.append('sortOrder', currentSort.order);
-    // }
-    // Example for server-side search (if your API supports it)
-    // if (tableData.query) { // Assuming tableData.query is for server-side search
-    //    params.append('search', tableData.query)
-    // }
-    // Example for server-side advanced filters
-    // Object.entries(filterCriteria).forEach(([key, value]) => {
-    //   if (value && value.length > 0) {
-    //      value.forEach(item => params.append(key.replace('filter', '').toLowerCase(), item.value));
-    //   }
-    // });
-
-
-    try {
-      const response = await axiosInstance.get(`/partner?${params.toString()}`);
-      
-      setPartnerList(response.data?.data?.data ?? []);
-      setPartnerListTotal(response.data?.data?.total ?? 0);
-    } catch (error) {
-      console.error("Failed to fetch member data:", error);
-      toast.push(<Notification title="Error" type="danger" duration={3000}>Failed to load members.</Notification>);
-      // Potentially set empty data or keep stale data on error
-      // setMemberList([]);
-      // setMemberListTotal(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [setPartnerList, setPartnerListTotal /* include tableData.query, filterCriteria if they are sent to server */]);
+      try {
+        const response = await axiosInstance.get(`/partner?${params.toString()}`);
+        setPartnerList(response.data?.data?.data ?? []);
+        setPartnerListTotal(response.data?.data?.total ?? 0);
+      } catch (error) {
+        console.error("Failed to fetch member data:", error);
+        toast.push(
+          <Notification title="Error" type="danger" duration={3000}>
+            Failed to load members.
+          </Notification>
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setPartnerList, setPartnerListTotal]
+  );
 
   // Effect to fetch data when server-relevant parameters change
   useEffect(() => {
@@ -737,46 +1609,59 @@ const PartnerListTable = () => {
       tableData.pageIndex as number,
       tableData.pageSize as number,
       tableData.sort as OnSortParam
-      // Pass other server-side params from tableData/filterCriteria if needed
     );
   }, [tableData.pageIndex, tableData.pageSize, tableData.sort, fetchPageData]);
-  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-  const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
-  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+  const handlePaginationChange = useCallback(
+    (page: number) => handleSetTableData({ pageIndex: page }),
+    [handleSetTableData]
+  );
+  const handleSelectChange = useCallback(
+    (value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }),
+    [handleSetTableData]
+  );
+  const handleSort = useCallback(
+    (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
+    [handleSetTableData]
+  );
 
-  const handleRowSelect = useCallback((checked: boolean, row: PartnerListItem) => {
-    setSelectedPartners((prevSelected) => {
+  const handleRowSelect = useCallback(
+    (checked: boolean, row: PartnerListItem) => {
+      setSelectedPartners((prevSelected) => {
+        if (checked) {
+          return [...prevSelected, row];
+        } else {
+          return prevSelected.filter((item) => item.id !== row.id);
+        }
+      });
+    },
+    [setSelectedPartners]
+  );
+
+  const handleAllRowSelect = useCallback(
+    (checked: boolean, rows: Row<PartnerListItem>[]) => {
       if (checked) {
-        return [...prevSelected, row];
+        const allOriginalRows = rows.map((r) => r.original);
+        setSelectedPartners(allOriginalRows);
       } else {
-        return prevSelected.filter((item) => item.id !== row.id);
+        setSelectedPartners([]);
       }
-    });
-  }, [setSelectedPartners]);
+    },
+    [setSelectedPartners]
+  );
 
-  const handleAllRowSelect = useCallback((checked: boolean, rows: Row<PartnerListItem>[]) => {
-    if (checked) {
-      const allOriginalRows = rows.map(r => r.original);
-      setSelectedPartners(allOriginalRows);
-    } else {
-      setSelectedPartners([]);
-    }
-  }, [setSelectedPartners]);
-
-  const handleImport = () => { console.log("Import clicked"); /* Implement import logic */ };
+  const handleImport = () => {
+    console.log("Import clicked"); /* Implement import logic */
+  };
 
   const csvData = useMemo(() => {
     if (partnerList.length === 0) return [];
-    // const headers = Object.keys(initialPartnerData[0] || {}).map(key => ({
-    //     label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    //     key: key
-    // }));
-
-    return partnerList.map(partner => {
+    return partnerList.map((partner) => {
       const newPartner: any = { ...partner };
-      Object.keys(newPartner).forEach(key => {
+      Object.keys(newPartner).forEach((key) => {
         if (Array.isArray(newPartner[key as keyof PartnerListItem])) {
-          newPartner[key] = (newPartner[key as keyof PartnerListItem] as string[]).join('; '); // Use semicolon for multi-value fields
+          newPartner[key] = (
+            newPartner[key as keyof PartnerListItem] as string[]
+          ).join("; "); // Use semicolon for multi-value fields
         }
       });
       return newPartner;
@@ -798,20 +1683,27 @@ const PartnerListTable = () => {
       .map((cat) => ({ value: cat, label: cat }));
   }, [partnerList]);
 
-
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <PartnerListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} />
+        <PartnerListSearch
+          onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })}
+        />
         <div className="flex gap-2">
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
-          <Button icon={<TbCloudDownload />} onClick={handleImport}>Import</Button>
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>
+            Filter
+          </Button>
+          <Button icon={<TbCloudDownload />} onClick={handleImport}>
+            Import
+          </Button>
           {partnerList.length > 0 ? (
             <CSVLink data={csvData} filename="partners_export.csv">
               <Button icon={<TbCloudUpload />}>Export</Button>
             </CSVLink>
           ) : (
-            <Button icon={<TbCloudUpload />} disabled>Export</Button>
+            <Button icon={<TbCloudUpload />} disabled>
+              Export
+            </Button>
           )}
         </div>
       </div>
@@ -826,7 +1718,9 @@ const PartnerListTable = () => {
           pageIndex: tableData.pageIndex as number,
           pageSize: tableData.pageSize as number,
         }}
-        checkboxChecked={(row) => selectedPartners.some((selected) => selected.id === row.id)}
+        checkboxChecked={(row) =>
+          selectedPartners.some((selected) => selected.id === row.id)
+        }
         onPaginationChange={handlePaginationChange}
         onSelectChange={handleSelectChange}
         onSort={handleSort}
@@ -841,52 +1735,104 @@ const PartnerListTable = () => {
         width={480}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
-            <Button size="sm" variant="solid" form="filterPartnerForm" type="submit">Apply</Button>
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterPartnerForm"
+              type="submit"
+            >
+              Apply
+            </Button>
           </div>
         }
       >
-        <UiForm id="filterPartnerForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
+        <UiForm
+          id="filterPartnerForm"
+          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+        >
           <div className="sm:grid grid-cols-2 gap-2">
             <UiFormItem label="Partner Status">
-              <Controller name="filterPartnerStatus" control={filterFormMethods.control}
+              <Controller
+                name="filterPartnerStatus"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Status" options={partnerStatusOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Status"
+                    options={partnerStatusOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="KYC Status">
-              <Controller name="filterKycStatus" control={filterFormMethods.control}
+              <Controller
+                name="filterKycStatus"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select KYC Status" options={partnerKycStatusOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select KYC Status"
+                    options={partnerKycStatusOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Business Type">
-              <Controller name="filterBusinessType" control={filterFormMethods.control}
+              <Controller
+                name="filterBusinessType"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Type" options={getPartnerBusinessTypeOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Type"
+                    options={getPartnerBusinessTypeOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Business Category">
-              <Controller name="filterCategory" control={filterFormMethods.control}
+              <Controller
+                name="filterCategory"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Category" options={getPartnerCategoryOptions}
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Category"
+                    options={getPartnerCategoryOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Country">
-              <Controller name="filterCountry" control={filterFormMethods.control}
+              <Controller
+                name="filterCountry"
+                control={filterFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect isMulti placeholder="Select Country" options={partnerCountryOptions} // Or derive dynamically
-                    value={field.value || []} onChange={(val) => field.onChange(val || [])} />
-                )} />
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Country"
+                    options={partnerCountryOptions} // Or derive dynamically
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
-            {/* Add more filter fields here based on PartnerFilterFormData */}
           </div>
         </UiForm>
       </Drawer>
+      <PartnerModals modalState={modalState} onClose={handleCloseModal} />
     </>
   );
 };
@@ -894,17 +1840,11 @@ const PartnerListTable = () => {
 
 // --- PartnerListSelected Component (for bulk actions) ---
 const PartnerListSelected = () => {
-  const {
-    selectedPartners,
-    setSelectedPartners,
-    partnerList,
-    setPartnerList,
-    // partnerListTotal, // Not directly used, setPartnerListTotal used instead
-    setPartnerListTotal
-  } = usePartnerList();
+  const { selectedPartners, setSelectedPartners, setPartnerList, setPartnerListTotal } =
+    usePartnerList();
 
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const [sendMessageDialogOpen, setSendMessageDialogOpen] = useState(false); // Example action
+  const [sendMessageDialogOpen, setSendMessageDialogOpen] = useState(false);
   const [sendMessageLoading, setSendMessageLoading] = useState(false);
 
   const handleDelete = () => setDeleteConfirmationOpen(true);
@@ -912,15 +1852,12 @@ const PartnerListSelected = () => {
   const dispatch = useAppDispatch();
 
   const handleConfirmDelete = async () => {
-    if (
-      !selectedPartners
-    ) {
+    if (!selectedPartners || selectedPartners.length === 0) {
       toast.push(
         <Notification title="Error" type="danger">
-          Cannot delete: Parter ID is missing.
+          No partners selected for deletion.
         </Notification>
       );
-      setSelectedPartners([]);
       setDeleteConfirmationOpen(false);
       return;
     }
@@ -929,18 +1866,18 @@ const PartnerListSelected = () => {
       const ids = selectedPartners.map((data) => data.id);
       await dispatch(deleteAllpartnerAction({ ids: ids.toString() })).unwrap();
       toast.push(
-        <Notification title="Country Deleted" type="success" duration={2000}>
-          parters "{selectedPartners.name}" deleted.
+        <Notification title="Partners Deleted" type="success" duration={2000}>
+          {selectedPartners.length} partner(s) deleted.
         </Notification>
       );
-      dispatch(getpartnerAction());
+      dispatch(getpartnerAction()); // Refresh the list from the server
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Delete" type="danger" duration={3000}>
-          {error.message || `Could not delete parters.`}
+          {error.message || `Could not delete partners.`}
         </Notification>
       );
-      console.error("Delete parters Error:", error);
+      console.error("Delete partners Error:", error);
     } finally {
       setSelectedPartners([]);
     }
@@ -950,9 +1887,14 @@ const PartnerListSelected = () => {
   const handleSend = () => {
     setSendMessageLoading(true);
     setTimeout(() => {
-      toast.push(<Notification type="success" title="Message Sent">Message sent to selected partners!</Notification>, {
-        placement: "top-center",
-      });
+      toast.push(
+        <Notification type="success" title="Message Sent">
+          Message sent to selected partners!
+        </Notification>,
+        {
+          placement: "top-center",
+        }
+      );
       setSendMessageLoading(false);
       setSendMessageDialogOpen(false);
       setSelectedPartners([]);
@@ -973,9 +1915,13 @@ const PartnerListSelected = () => {
           <div className="flex items-center justify-between">
             <span>
               <span className="flex items-center gap-2">
-                <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
+                <span className="text-lg text-primary-600 dark:text-primary-400">
+                  <TbChecks />
+                </span>
                 <span className="font-semibold flex items-center gap-1">
-                  <span className="heading-text">{selectedPartners.length} Partners</span>
+                  <span className="heading-text">
+                    {selectedPartners.length} Partners
+                  </span>
                   <span>selected</span>
                 </span>
               </span>
@@ -985,12 +1931,18 @@ const PartnerListSelected = () => {
                 size="sm"
                 className="ltr:mr-3 rtl:ml-3"
                 type="button"
-                customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
+                customColorClass={() =>
+                  "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
+                }
                 onClick={handleDelete}
               >
                 Delete
               </Button>
-              <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>
+              <Button
+                size="sm"
+                variant="solid"
+                onClick={() => setSendMessageDialogOpen(true)}
+              >
                 Message {/* Or other bulk action */}
               </Button>
             </div>
@@ -1006,7 +1958,10 @@ const PartnerListSelected = () => {
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
       >
-        <p>Are you sure you want to remove these partners? This action can't be undone.</p>
+        <p>
+          Are you sure you want to remove these partners? This action can't be
+          undone.
+        </p>
       </ConfirmDialog>
       <Dialog
         isOpen={sendMessageDialogOpen}
@@ -1015,19 +1970,39 @@ const PartnerListSelected = () => {
       >
         <h5 className="mb-2">Send Message to Partners</h5>
         <p>Send message to the following partners:</p>
-        <Avatar.Group chained omittedAvatarTooltip className="mt-4" maxCount={4} omittedAvatarProps={{ size: 30 }}>
+        <Avatar.Group
+          chained
+          omittedAvatarTooltip
+          className="mt-4"
+          maxCount={4}
+          omittedAvatarProps={{ size: 30 }}
+        >
           {selectedPartners.map((partner) => (
             <Tooltip key={partner.id} title={partner.partner_name}>
-              <Avatar size={30} src={partner.partner_logo} alt={partner.partner_name} icon={<TbUserCircle />} />
+              <Avatar
+                size={30}
+                src={partner.partner_logo}
+                alt={partner.partner_name}
+                icon={<TbUserCircle />}
+              />
             </Tooltip>
           ))}
         </Avatar.Group>
         <div className="my-4">
-          <RichTextEditor content={""} /> {/* Manage content state if needed */}
+          <RichTextEditor /> {/* Manage content state if needed */}
         </div>
         <div className="ltr:justify-end flex items-center gap-2">
-          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button>
-          <Button size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button>
+          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="solid"
+            loading={sendMessageLoading}
+            onClick={handleSend}
+          >
+            Send
+          </Button>
         </div>
       </Dialog>
     </>
@@ -1038,7 +2013,9 @@ const PartnerListSelected = () => {
 // --- Main Partner Page Component ---
 const Partner = () => {
   return (
-    <PartnerListProvider> {/* Wrap components with Provider */}
+    <PartnerListProvider>
+      {" "}
+      {/* Wrap components with Provider */}
       <>
         <Container>
           <AdaptiveCard>
