@@ -1099,7 +1099,7 @@ const BugReportListing = () => {
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
       <FormItem
-        label="Name"
+        label={<div>Name<span className="text-red-500"> * </span></div>}
         className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.name}
         errorMessage={currentFormMethods.formState.errors.name?.message}
@@ -1117,7 +1117,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Email"
+        label={<div>Email<span className="text-red-500"> * </span></div>}
         className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.email}
         errorMessage={currentFormMethods.formState.errors.email?.message}
@@ -1136,7 +1136,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Mobile No."
+        label={<div>Mobile No.<span className="text-red-500"> * </span></div>}
         className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.mobile_no}
         errorMessage={currentFormMethods.formState.errors.mobile_no?.message}

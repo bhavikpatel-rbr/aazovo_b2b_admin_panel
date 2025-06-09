@@ -1324,7 +1324,7 @@ const ProductSpecification = () => {
               )}
             </FormItem>
             <FormItem
-              label="Spec Name"
+              label={<div>Spec Name<span className="text-red-500"> * </span></div>}
               invalid={!!drawerProps.formMethods.formState.errors.name}
               errorMessage={
                 drawerProps.formMethods.formState.errors.name?.message as
@@ -1344,7 +1344,7 @@ const ProductSpecification = () => {
             {
               <div className="grid grid-cols-2 gap-2">
                   <FormItem
-                    label="Country"
+                    label={<div>Country<span className="text-red-500"> * </span></div>}
                     invalid={!!drawerProps.formMethods.formState.errors.country_id}
                     errorMessage={
                       drawerProps.formMethods.formState.errors.country_id?.message as
@@ -1375,7 +1375,7 @@ const ProductSpecification = () => {
                     />
                   </FormItem>
                   <FormItem
-                    label="Status"
+                    label={<div>Status<span className="text-red-500"> * </span></div>}
                     invalid={!!drawerProps.formMethods.formState.errors.status}
                     errorMessage={
                       drawerProps.formMethods.formState.errors.status?.message as

@@ -1,7 +1,7 @@
 @layer components {
   .input {
     @apply border
-      border-gray-100 
+      border-gray-200 
       dark:border-gray-700
       bg-gray-100 
       dark:bg-gray-700 

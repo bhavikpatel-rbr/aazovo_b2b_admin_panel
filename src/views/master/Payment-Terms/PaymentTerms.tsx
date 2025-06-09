@@ -1062,7 +1062,7 @@ const PaymentTerms = () => {
             className="flex flex-col gap-4"
           >
             <FormItem
-              label="Payment Term Name"
+              label={<div>Payment Term Name<span className="text-red-500"> * </span></div>}
               isRequired
               invalid={!!drawerProps.formMethods.formState.errors.term_name}
               errorMessage={
@@ -1078,7 +1078,7 @@ const PaymentTerms = () => {
               />
             </FormItem>
             <FormItem
-              label="Status"
+              label={<div>Status<span className="text-red-500"> * </span></div>}
               isRequired
               invalid={!!drawerProps.formMethods.formState.errors.status}
               errorMessage={

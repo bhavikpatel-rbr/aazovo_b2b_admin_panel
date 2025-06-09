@@ -627,14 +627,16 @@ const HomeCategoriesListing = () => {
     };
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-        <FormItem label="Category Name" className="md:col-span-2" invalid={!!errors.category_id} errorMessage={errors.category_id?.message} >
+        <FormItem label={<div>Category Name<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!errors.category_id} errorMessage={errors.category_id?.message} >
           <Controller name="category_id" control={control} render={({ field }) => (<Select placeholder="Select Category" options={generalCategoryOptions} value={generalCategoryOptions.find(o => o.value === field.value) || null} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory2 className="text-lg" />} />)} />
         </FormItem>
-        <FormItem label="View More Link (Optional)" className="md:col-span-2" invalid={!!errors.view_more} errorMessage={errors.view_more?.message} >
+        <FormItem label="View More Link" className="md:col-span-2" invalid={!!errors.view_more} errorMessage={errors.view_more?.message} >
           <Controller name="view_more" control={control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/category/all" />)} />
         </FormItem>
         <div className="md:col-span-2">
-          <FormItem label={`Images (Up to ${MAX_IMAGES_PER_CATEGORY})`} invalid={!!errors.images && typeof errors.images.message === 'string'} errorMessage={errors.images && typeof errors.images.message === 'string' ? errors.images.message : undefined} >
+          <FormItem 
+            label={<div>{`Images (Up to ${MAX_IMAGES_PER_CATEGORY})`}<span className="text-red-500"> * </span></div>}
+            invalid={!!errors.images && typeof errors.images.message === 'string'} errorMessage={errors.images && typeof errors.images.message === 'string' ? errors.images.message : undefined} >
             {imageFieldsInForm.map((fieldEntry, index) => {
               const currentImageValue = watchedImages?.[index];
               const previewSrc = currentImageValue?.preview || currentImageValue?.url;

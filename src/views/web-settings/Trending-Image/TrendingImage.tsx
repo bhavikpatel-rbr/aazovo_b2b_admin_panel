@@ -605,10 +605,10 @@ const TrendingImages = () => {
             <Drawer title="Add Trending Image" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={460} // Matched width
                 footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="addPageImageForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Adding...' : 'Save'}</Button></div>}>
                 <Form id="addPageImageForm" onSubmit={addFormMethods.handleSubmit(onAddItemSubmit)} className="flex flex-col gap-4">
-                    <FormItem label="Page Name" invalid={!!addFormMethods.formState.errors.page_name} errorMessage={addFormMethods.formState.errors.page_name?.message}>
+                    <FormItem label={<div>Page Name<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.page_name} errorMessage={addFormMethods.formState.errors.page_name?.message}>
                         <Controller name="page_name" control={addFormMethods.control} render={({ field }) => (<Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                     </FormItem>
-                    <FormItem label="Trending Products" invalid={!!addFormMethods.formState.errors.trendingProducts} errorMessage={addFormMethods.formState.errors.trendingProducts?.message as string | undefined}>
+                    <FormItem label={<div>Trending Products<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.trendingProducts} errorMessage={addFormMethods.formState.errors.trendingProducts?.message as string | undefined}>
                         <Controller name="trendingProducts" control={addFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select trending products..." options={productSelectOptions} value={productSelectOptions.filter(opt => field.value?.includes(opt.value))} onChange={(selectedVal) => field.onChange(selectedVal ? selectedVal.map(opt => opt.value) : [])} />)} />
                     </FormItem>
                 </Form>
@@ -617,10 +617,10 @@ const TrendingImages = () => {
             <Drawer title="Edit Trending Image" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={480} // Matched width
                 footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="editPageImageForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</Button></div>}>
                 <Form id="editPageImageForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-4 relative pb-28"> {/* Added relative pb-28 */}
-                    <FormItem label="Page Name" invalid={!!editFormMethods.formState.errors.page_name} errorMessage={editFormMethods.formState.errors.page_name?.message}>
+                    <FormItem label={<div>Page Name<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.page_name} errorMessage={editFormMethods.formState.errors.page_name?.message}>
                         <Controller name="page_name" control={editFormMethods.control} render={({ field }) => (<Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                     </FormItem>
-                    <FormItem label="Trending Products" invalid={!!editFormMethods.formState.errors.trendingProducts} errorMessage={editFormMethods.formState.errors.trendingProducts?.message  as string | undefined}>
+                    <FormItem label={<div>Trending Products<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.trendingProducts} errorMessage={editFormMethods.formState.errors.trendingProducts?.message  as string | undefined}>
                         <Controller name="trendingProducts" control={editFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select trending products..." options={productSelectOptions} value={productSelectOptions.filter(opt => field.value?.includes(opt.value))} onChange={(selectedVal) => field.onChange(selectedVal ? selectedVal.map(opt => opt.value) : [])} />)} />
                     </FormItem>
                 

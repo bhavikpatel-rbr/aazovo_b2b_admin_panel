@@ -849,7 +849,7 @@ const RolesListing = () => {
           className="flex flex-col gap-2"
         >
           <FormItem
-            label="Display Name"
+            label={<div>Display Name<span className="text-red-500"> * </span></div>}
             invalid={!!addFormMethods.formState.errors.displayName}
             errorMessage={addFormMethods.formState.errors.displayName?.message}
           >
@@ -866,7 +866,7 @@ const RolesListing = () => {
             />
           </FormItem>
           <FormItem
-            label="Role Name (System Key)"
+            label={<div>Role Name / System Key<span className="text-red-500"> * </span></div>}
             invalid={!!addFormMethods.formState.errors.roleName}
             errorMessage={addFormMethods.formState.errors.roleName?.message}
           >
@@ -900,8 +900,7 @@ const RolesListing = () => {
               )}
             />
           </FormItem>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* EMPLOYEE */}
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormItem label="Employee" className="col-span-1">
               <Controller
                 name="isEmployee"
@@ -915,7 +914,6 @@ const RolesListing = () => {
               />
             </FormItem>
 
-            {/* DESIGNATION */}
             <FormItem label="Designation" className="col-span-1">
               <Controller
                 name="isDesignation"
@@ -929,7 +927,6 @@ const RolesListing = () => {
               />
             </FormItem>
 
-            {/* DEPARTMENT */}
             <FormItem label="Department" className="col-span-1">
               <Controller
                 name="isDepartment"
@@ -943,7 +940,6 @@ const RolesListing = () => {
               />
             </FormItem>
 
-            {/* ROLE */}
             <FormItem label="Role" className="col-span-1">
               <Controller
                 name="isRole"
@@ -956,7 +952,7 @@ const RolesListing = () => {
                 )}
               />
             </FormItem>
-          </div>
+          </div> */}
         </Form>
       </Drawer>
 
@@ -997,7 +993,7 @@ const RolesListing = () => {
           className="flex flex-col gap-2"
         >
           <FormItem
-            label="Display Name"
+            label={<div>Display Name<span className="text-red-500"> * </span></div>}
             invalid={!!editFormMethods.formState.errors.displayName}
             errorMessage={editFormMethods.formState.errors.displayName?.message}
           >
@@ -1010,7 +1006,7 @@ const RolesListing = () => {
             />
           </FormItem>
           <FormItem
-            label="Role Name (System Key)"
+            label={<div>Role Name / System Key<span className="text-red-500"> * </span></div>}
             invalid={!!editFormMethods.formState.errors.roleName}
             errorMessage={editFormMethods.formState.errors.roleName?.message}
           >
@@ -1045,7 +1041,7 @@ const RolesListing = () => {
               )}
             />
           </FormItem>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormItem label="Employee Access">
               <div className="flex gap-6">
                 <Controller
@@ -1157,9 +1153,9 @@ const RolesListing = () => {
                 />
               </div>
             </FormItem>
-          </div>
+          </div> */}
         </Form>
-        <div className="relative w-full">
+        <div className="relative w-full ">
           <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
             <div className="">
               <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />

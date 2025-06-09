@@ -724,14 +724,14 @@ const Continents = () => {
                 className="flex flex-col gap-4 relative pb-28"
             >
                 <FormItem
-                    label="Continent Name"
+                    label={<div>Continent Name<span className="text-red-500"> * </span></div>}
                     invalid={!!drawerProps.formMethods.formState.errors.name}
                     errorMessage={drawerProps.formMethods.formState.errors.name?.message  as string | undefined}
                 >
                     <Controller name="name" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Continent Name" />)} />
                 </FormItem>
                 <FormItem // Added Status Field
-                    label="Status"
+                    label={<div>Status<span className="text-red-500"> * </span></div>}
                     invalid={!!drawerProps.formMethods.formState.errors.status}
                     errorMessage={drawerProps.formMethods.formState.errors.status?.message as string | undefined}
                 >

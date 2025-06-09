@@ -834,7 +834,7 @@ const Documents = () => {
           className="flex flex-col gap-4"
         >
           <FormItem
-            label="Document Name"
+            label={<div>Document Name <span className="text-red-500">*</span></div>}
             invalid={!!formMethods.formState.errors.name}
             errorMessage={formMethods.formState.errors.name?.message}
           >
@@ -847,7 +847,7 @@ const Documents = () => {
             />
           </FormItem>
           <FormItem
-            label="Document Type"
+            label={<div>Document Type <span className="text-red-500">*</span></div>}
             invalid={!!formMethods.formState.errors.document_type}
             errorMessage={formMethods.formState.errors.document_type?.message}
           >
@@ -871,7 +871,7 @@ const Documents = () => {
             />
           </FormItem>
           <FormItem
-            label="Status"
+            label={<div>Status <span className="text-red-500">*</span></div>}
             invalid={!!formMethods.formState.errors.status}
             errorMessage={formMethods.formState.errors.status?.message}
           >
@@ -931,7 +931,7 @@ const Documents = () => {
           className="flex flex-col gap-4"
         >
           <FormItem
-            label="Document Name"
+            label={<div>Document Name <span className="text-red-500">*</span></div>}
             invalid={!!formMethods.formState.errors.name}
             errorMessage={formMethods.formState.errors.name?.message}
           >
@@ -944,7 +944,7 @@ const Documents = () => {
             />
           </FormItem>
           <FormItem
-            label="Document Type"
+            label={<div>Document Type <span className="text-red-500">*</span></div>}
             invalid={!!formMethods.formState.errors.document_type}
             errorMessage={formMethods.formState.errors.document_type?.message}
           >
@@ -968,7 +968,7 @@ const Documents = () => {
             />
           </FormItem>
           <FormItem
-            label="Status"
+            label={<div>Status <span className="text-red-500">*</span></div>}
             invalid={!!formMethods.formState.errors.status}
             errorMessage={formMethods.formState.errors.status?.message}
           >

@@ -70,6 +70,7 @@ import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 // import dayjs from "dayjs"; // Not used directly, can be removed if not needed for other formatting
 import { Link } from "react-router-dom";
+import { RichTextEditor } from "@/components/shared";
 
 // --- Define Blog Type ---
 export type BlogItem = {
@@ -653,7 +654,7 @@ const Blogs = () => {
                 <span className="font-semibold text-xs">Total Views</span>
               </div>
             </Card>
-            
+
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
                 <TbMessageCheck size={24} />
@@ -672,8 +673,8 @@ const Blogs = () => {
                 <span className="font-semibold text-xs">Unpublished</span>
               </div>
             </Card>
-            
-            
+
+
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-gray-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500">
                 <TbMessagePause size={24} />
@@ -705,26 +706,36 @@ const Blogs = () => {
           }
         >
           <Form id={drawer.formId} onSubmit={drawer.methods.handleSubmit(drawer.onSubmit as any)} className="flex flex-col gap-4 relative"> {/* Added relative pb-28 */}
-            
-            <FormItem label="Title" invalid={!!drawer.methods.formState.errors.title} errorMessage={drawer.methods.formState.errors.title?.message as string | undefined} isRequired>
+
+            <FormItem label={<div>Title<span className="text-red-500"> * </span></div>} invalid={!!drawer.methods.formState.errors.title} errorMessage={drawer.methods.formState.errors.title?.message as string | undefined} isRequired>
               <Controller name="title" control={drawer.methods.control} render={({ field }) => (<Input {...field} placeholder="Enter Blog Title" />)} />
             </FormItem>
             {
               <div className="grid grid-cols-2 gap-2">
-                <FormItem label="Slug / URL (Optional)" invalid={!!drawer.methods.formState.errors.slug} errorMessage={drawer.methods.formState.errors.slug?.message as string | undefined}>
+                <FormItem label="Slug / URL" invalid={!!drawer.methods.formState.errors.slug} errorMessage={drawer.methods.formState.errors.slug?.message as string | undefined}>
                   <Controller name="slug" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., my-awesome-blog-post" />)} />
                 </FormItem>
-                <FormItem label="Status" invalid={!!drawer.methods.formState.errors.status} errorMessage={drawer.methods.formState.errors.status?.message as string | undefined} isRequired>
+                <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} invalid={!!drawer.methods.formState.errors.status} errorMessage={drawer.methods.formState.errors.status?.message as string | undefined} isRequired>
                   <Controller name="status" control={drawer.methods.control} render={({ field }) => (<Select placeholder="Select Status" options={blogStatusOptions} value={blogStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
                 </FormItem>
               </div>
             }
-            
-            <FormItem label="Description (Optional)" invalid={!!drawer.methods.formState.errors.blog_descr} errorMessage={drawer.methods.formState.errors.blog_descr?.message as string | undefined}>
-              <Controller name="blog_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="Enter main blog content..." rows={5} />)} />
+
+            <FormItem label={<div>Description<span className="text-red-500"> * </span></div>} invalid={!!drawer.methods.formState.errors.blog_descr} errorMessage={drawer.methods.formState.errors.blog_descr?.message as string | undefined}>
+              {/* <Controller name="blog_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="Enter main blog content..." rows={5} />)} /> */}
+              <Controller name="blog_descr" control={drawer.methods.control} render={({ field }) => (
+                <RichTextEditor
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={({ html }) => {
+                    field.onChange(html)
+                  }}
+                  placeholder="Enter main blog content..."
+                />
+              )} />
             </FormItem>
-            
-            {/* <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem> */}
+
+            {/* <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options "></FormItem> */}
             {
               <div className="grid grid-cols-2 gap-2">
                 <FormItem label="Meta Title" invalid={!!drawer.methods.formState.errors.meta_title} errorMessage={drawer.methods.formState.errors.meta_title?.message as string | undefined}>
@@ -733,24 +744,24 @@ const Blogs = () => {
                 <FormItem label="Meta Keywords" invalid={!!drawer.methods.formState.errors.meta_keyword} errorMessage={drawer.methods.formState.errors.meta_keyword?.message as string | undefined}>
                   <Controller name="meta_keyword" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="Comma-separated keywords" />)} />
                 </FormItem>
-            </div>
+              </div>
             }
             <FormItem label="Meta Description" invalid={!!drawer.methods.formState.errors.meta_descr} errorMessage={drawer.methods.formState.errors.meta_descr?.message as string | undefined}>
               <Controller name="meta_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="SEO Description (max 160 chars)" rows={3} />)} />
             </FormItem>
-            
+
             <FormItem
-              label={`Icon${drawer.type === "edit" && editingBlog?.icon_full_path && iconPreview === editingBlog.icon_full_path ? " Change ?" : " "}`}
+              label={`Blog Image${drawer.type === "edit" && editingBlog?.icon_full_path && iconPreview === editingBlog.icon_full_path ? " Change ?" : " "}`}
               invalid={!!drawer.methods.formState.errors.icon} errorMessage={drawer.methods.formState.errors.icon?.message as string | undefined}
             >
               {drawer.type === "edit" && iconPreview && editingBlog?.icon_full_path === iconPreview && (
                 <div className="text-right">
-                  <img src={iconPreview} alt="Current Icon"  className="w-[460px] h-[auto] border p-1 rounded-md mt-2" />
+                  <img src={iconPreview} alt="Current Icon" className="w-[460px] h-[auto] border p-1 rounded-md mt-2" />
                   <Button icon={<TbX />} size="xs" color="red" className="mt-2 mb-2" type="button" onClick={() => { if (iconPreview) URL.revokeObjectURL(iconPreview); setIconPreview(null); drawer.methods.setValue("icon", null, { shouldValidate: true }); }}>Remove Current Icon</Button>
                 </div>
               )}
               {iconPreview && (drawer.methods.watch("icon") instanceof File || (drawer.type === "edit" && editingBlog?.icon_full_path !== iconPreview)) && (
-                <img src={iconPreview} alt="Icon Preview" className="w-[460px] h-[auto] border p-1 rounded-md mt-2 mb-2"/>
+                <img src={iconPreview} alt="Icon Preview" className="w-[460px] h-[auto] border p-1 rounded-md mt-2 mb-2" />
               )}
               {!iconPreview && drawer.type === "edit" && editingBlog?.icon_full_path && !drawer.methods.watch("icon") && (<p className="text-xs text-gray-500 mb-1">Current icon will be removed as "Remove Current Icon" was clicked.</p>)}
               <Input type="file" accept="image/*" onChange={(e) => handleIconChange(e, drawer.methods)} className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />

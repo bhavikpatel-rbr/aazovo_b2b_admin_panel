@@ -654,7 +654,7 @@ const TrendingCarousel = () => {
         }
       >
         <Form id="addCarouselItemForm" onSubmit={formMethods.handleSubmit(onAddItemSubmit)} className="flex flex-col gap-y-6">
-          <FormItem label="Image" invalid={!!formMethods.formState.errors.imageFile} errorMessage={formMethods.formState.errors.imageFile?.message}>
+          <FormItem label={<div>Image<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.imageFile} errorMessage={formMethods.formState.errors.imageFile?.message}>
             <Controller name="imageFile" control={formMethods.control}
               render={({ field: { onChange, onBlur, name, ref } }) => (
                 <Input type="file" name={name} ref={ref} onBlur={onBlur}
@@ -672,7 +672,7 @@ const TrendingCarousel = () => {
             {imagePreviewUrl && (<Avatar src={imagePreviewUrl} className="w-[430px] h-[auto] border p-1 rounded-md mt-2" shape="square" />)}
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"> Max file size 5MB. Accepted: .jpg, .png, .webp, .gif </p>
           </FormItem>
-          <FormItem label="Link (Optional)" invalid={!!formMethods.formState.errors.links} errorMessage={formMethods.formState.errors.links?.message}>
+          <FormItem label={<div>Link<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.links} errorMessage={formMethods.formState.errors.links?.message}>
             <Controller name="links" control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/product-page" />)} />
           </FormItem>
         </Form>
@@ -711,7 +711,7 @@ const TrendingCarousel = () => {
             {imagePreviewUrl && (<Avatar src={imagePreviewUrl} size={100} shape="square" className="mt-2 border border-gray-200 dark:border-gray-600" />)}
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1"> Upload a new image to replace the current one. Max 5MB. </p>
           </FormItem>
-          <FormItem label="Link (Optional)" invalid={!!formMethods.formState.errors.links} errorMessage={formMethods.formState.errors.links?.message}>
+          <FormItem label={<div>Link<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.links} errorMessage={formMethods.formState.errors.links?.message}>
             <Controller name="links" control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/updated-product-page" />)} />
           </FormItem>
         

@@ -880,7 +880,7 @@ const FormBuilderManagePage = () => {
         <Form onSubmit={handleSubmit(onSubmit)}>
           <div className="md:grid grid-cols-3 gap-3">
             <FormItem
-              label="Form Name*"
+              label={<div>Form Name<span className="text-red-500"> * </span></div>}
               className="col-span-2"
               invalid={!!errors.form_name}
               errorMessage={errors.form_name?.message}
@@ -895,7 +895,7 @@ const FormBuilderManagePage = () => {
             </FormItem>
 
             <FormItem
-              label="Status*"
+              label={<div>Status<span className="text-red-500"> * </span></div>}
               invalid={!!errors.status}
               errorMessage={errors.status?.message}
             >
@@ -919,7 +919,7 @@ const FormBuilderManagePage = () => {
 
           <div className="md:grid grid-cols-2 gap-3 mt-4">
             <FormItem
-              label="Department Name*"
+              label={<div>Department Name<span className="text-red-500"> * </span></div>}
               invalid={!!errors.department_name}
               errorMessage={errors.department_name?.message}
             >
@@ -941,7 +941,7 @@ const FormBuilderManagePage = () => {
             </FormItem>
 
             <FormItem
-              label="Category Name*"
+              label={<div>Category Name<span className="text-red-500"> * </span></div>}
               invalid={!!errors.category_name}
               errorMessage={errors.category_name?.message}
             >
@@ -965,7 +965,7 @@ const FormBuilderManagePage = () => {
 
           <Card className="mt-6" bodyClass="p-4">
             <FormItem
-              label="Form Display Title*"
+              label={<div>Form Display Title<span className="text-red-500"> * </span></div>}
               invalid={!!errors.form_title}
               errorMessage={errors.form_title?.message}
             >
@@ -982,7 +982,7 @@ const FormBuilderManagePage = () => {
             </FormItem>
 
             <FormItem
-              label="Form Display Description (Optional)"
+              label="Form Display Description"
               invalid={!!errors.form_description}
               errorMessage={errors.form_description?.message}
             >

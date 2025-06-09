@@ -960,7 +960,7 @@ const Documentmaster = () => {
             className="flex flex-col gap-4 relative"
           >
             <FormItem
-              label="Document Type Name"
+              label={<div>Document Type Name<span className="text-red-500"> * </span></div>}
               invalid={!!drawerProps.formMethods.formState.errors.name}
               errorMessage={
                 drawerProps.formMethods.formState.errors.name?.message as
@@ -977,7 +977,7 @@ const Documentmaster = () => {
               />
             </FormItem>
             <FormItem
-              label="Status"
+              label={<div>Status<span className="text-red-500"> * </span></div>}
               invalid={!!drawerProps.formMethods.formState.errors.status}
               errorMessage={
                 drawerProps.formMethods.formState.errors.status?.message as
