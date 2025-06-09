@@ -4,6 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CSVLink } from "react-csv";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -54,6 +55,7 @@ import {
   TbMessageReport,
   TbLink,
   TbAffiliate,
+  TbEyeDollar,
 } from "react-icons/tb";
 
 // Types
@@ -257,6 +259,21 @@ const FormListActionTools = () => {
   const navigate = useNavigate();
   return (
     <div className="flex flex-col md:flex-row gap-3">
+      <Button
+        className="mr-2"
+        icon={<TbEye />}
+        clickFeedback={false}
+        customColorClass={({ active, unclickable }) =>
+          classNames(
+            "hover:text-green-800 dark:hover:bg-green-600 border-0 hover:ring-0",
+            active ? "bg-green-200" : "bg-green-100",
+            unclickable && "opacity-50 cursor-not-allowed",
+            !active && !unclickable && "hover:bg-green-200"
+          )
+        }
+      >
+        View Bit Route
+      </Button>
       <Button
         variant="solid"
         icon={<TbPlus className="text-lg" />}

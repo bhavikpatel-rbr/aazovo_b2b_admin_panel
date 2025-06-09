@@ -45,7 +45,6 @@ const CreatePartner = () => {
       const strValue = String(value);
       return { label: labelPrefix ? `${labelPrefix} ${strValue}` : strValue, value: strValue };
     };
-    // ... (same as your previous definition, ensure it's complete) ...
     return {
       "id": apiData.id,
       "partner_name": apiData.partner_name,
@@ -55,13 +54,10 @@ const CreatePartner = () => {
       "partner_status": createSelectOption(apiData.partner_status),
       "partner_join_date": apiData.partner_join_date,
       "partner_location": apiData.partner_location,
-      "partner_profile_completion": apiData.partner_profile_completion,
-      "partner_trust_score": apiData.partner_trust_score,
-      "partner_activity_score": apiData.partner_activity_score,
       "partner_kyc_status": createSelectOption(apiData.partner_kyc_status),
       "business_category": apiData.business_category,
       "partner_interested_in": createSelectOption(apiData.partner_interested_in),
-      "partner_business_type": apiData.partner_business_type,
+      "partner_business_type": createSelectOption(apiData.partner_business_type),
       "partner_profile_link": apiData.partner_profile_link,
       "partner_certifications": apiData.partner_certifications,
       "partner_service_offerings": apiData.partner_service_offerings,
@@ -80,7 +76,6 @@ const CreatePartner = () => {
     }
   };
   const transformdataToAPISchema = (apiData) => {
-    // ... (same as your previous definition, ensure it's complete) ...
     return {
       "id": apiData.id,
       "partner_name": apiData.partner_name,
@@ -90,13 +85,10 @@ const CreatePartner = () => {
       "partner_status": getVal(apiData.partner_status),
       "partner_join_date": apiData.partner_join_date,
       "partner_location": apiData.partner_location,
-      "partner_profile_completion": apiData.partner_profile_completion,
-      "partner_trust_score": apiData.partner_trust_score,
-      "partner_activity_score": apiData.partner_activity_score,
       "partner_kyc_status": getVal(apiData.partner_kyc_status),
       "business_category": apiData.business_category,
       "partner_interested_in": getVal(apiData.partner_interested_in),
-      "partner_business_type": apiData.partner_business_type,
+      "partner_business_type": getVal(apiData.partner_business_type),
       "partner_profile_link": apiData.partner_profile_link,
       "partner_certifications": apiData.partner_certifications,
       "partner_service_offerings": apiData.partner_service_offerings,
@@ -123,9 +115,6 @@ const CreatePartner = () => {
     "partner_status": '',
     "partner_join_date": '',
     "partner_location": '',
-    "partner_profile_completion": '',
-    "partner_trust_score": '',
-    "partner_activity_score": '',
     "partner_kyc_status": '',
     "business_category": '',
     "partner_interested_in": '',
@@ -146,6 +135,17 @@ const CreatePartner = () => {
     "partner_logo_url": '',
     "partner_document_array": '',
   })
+
+  const businessTypeOptions = [
+    { value: "Manufacturer", label: "Manufacturer" },
+    { value: "Wholesaler", label: "Wholesaler" },
+    { value: "Retailer", label: "Retailer" },
+    { value: "Service Provider", label: "Service Provider" },
+    { value: "Distributor", label: "Distributor" },
+    { value: "Trader", label: "Trader" },
+    { value: "Other", label: "Other" },
+];
+
   const partnerFromSchema = z.object({
     partner_name: z
       .string()
@@ -155,8 +155,8 @@ const CreatePartner = () => {
       .optional(),
     partner_kyc_status: z.object({ value: z.string(), label: z.string() })
       .optional(),
-    // partner_status: z.object({ value: z.string(), label: z.string() })
-    //   .optional(),
+    partner_status: z.object({ value: z.string(), label: z.string() })
+      .optional(),
     partner_website: z.string()
       .trim()
       .min(1, { message: "Website is Required !" }),
@@ -178,44 +178,10 @@ const CreatePartner = () => {
       .string()
       .trim()
       .min(1, { message: "Location is Required !" }),
-    partner_profile_completion: z
-      .union([
-        z.string().refine((val) => !isNaN(Number(val)), {
-          message: "Input must be a valid number",
-        }),
-        z.number(),
-      ])
-      .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
-      .refine((value) => value >= 1 && value <= 100, {
-        message: "Value must be between 1 and 100",
-      }),
-    partner_trust_score: z
-      .union([
-        z.string().refine((val) => !isNaN(Number(val)), {
-          message: "Input must be a valid number",
-        }),
-        z.number(),
-      ])
-      .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
-      .refine((value) => value >= 1 && value <= 100, {
-        message: "Value must be between 1 and 100",
-      }),
-    partner_activity_score: z
-      .union([
-        z.string().refine((val) => !isNaN(Number(val)), {
-          message: "Input must be a valid number",
-        }),
-        z.number(),
-      ])
-      .transform((val) => (typeof val === "string" ? parseFloat(val) : val))
-      .refine((value) => value >= 1, {
-        message: "Value must be between 1 and 100",
-      }),
-    // partner_kyc_status: z.string().trim().min(1, { message: "KYC is Required !" }),
-    partner_business_type: z
-      .string()
-      .trim()
-      .min(1, { message: "Business Type is Required !" }),
+    partner_business_type: z.object(
+        { value: z.string(), label: z.string() },
+        { required_error: "Business Type is required." }
+    ),
   });
   const addFormMethods = useForm({
     resolver: zodResolver(partnerFromSchema),
@@ -309,7 +275,7 @@ const CreatePartner = () => {
             <h6 className="font-semibold hover:text-primary">Partner</h6>
           </NavLink>
           <BiChevronRight size={22} color="black" />
-          <h6 className="font-semibold text-primary">Add New Partner</h6>
+          <h6 className="font-semibold text-primary">{isEditMode ? 'Edit Partner' : 'Add New Partner'}</h6>
         </div>
         <AdaptiveCard>
           <div className="flex flex-col gap-6">
@@ -473,89 +439,10 @@ const CreatePartner = () => {
                 />
               </FormItem>
 
-              {/* Profile Completion */}
-              <FormItem
-                label="Profile Completion %"
-                id="partner_profile_completion"
-                invalid={
-                  !!addFormMethods?.formState?.errors
-                    ?.partner_profile_completion?.message
-                }
-                errorMessage={
-                  addFormMethods?.formState?.errors?.partner_profile_completion
-                    ?.message
-                }
-              >
-                <Controller
-                  name="partner_profile_completion"
-                  control={addFormMethods.control}
-                  render={({ field }) => (
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0 - 100"
-                      {...field}
-                    />
-                  )}
-                />
-              </FormItem>
-
-              {/* Trust Score */}
-              <FormItem
-                label="Trust Score"
-                id="partner_profile_completion"
-                invalid={
-                  !!addFormMethods?.formState?.errors?.partner_trust_score
-                    ?.message
-                }
-                errorMessage={
-                  addFormMethods?.formState?.errors?.partner_trust_score
-                    ?.message
-                }
-              >
-                <Controller
-                  name="partner_trust_score"
-                  control={addFormMethods.control}
-                  render={({ field }) => (
-                    <Input
-                      type="number"
-                      placeholder="Enter trust score"
-                      {...field}
-                    />
-                  )}
-                />
-              </FormItem>
-
-              {/* Activity Score */}
-              <FormItem
-                label="Activity Score"
-                id="partner_profile_completion"
-                invalid={
-                  !!addFormMethods?.formState?.errors?.partner_activity_score
-                    ?.message
-                }
-                errorMessage={
-                  addFormMethods?.formState?.errors?.partner_activity_score
-                    ?.message
-                }
-              >
-                <Controller
-                  name="partner_activity_score"
-                  control={addFormMethods.control}
-                  render={({ field }) => (
-                    <Input
-                      type="number"
-                      placeholder="Enter activity score"
-                      {...field}
-                    />
-                  )}
-                />
-              </FormItem>
-
               {/* KYC Status */}
               <FormItem
                 label="KYC Status"
-                id="partner_profile_completion"
+                id="partner_kyc_status"
                 invalid={
                   !!addFormMethods?.formState?.errors?.partner_kyc_status
                     ?.message
@@ -591,16 +478,16 @@ const CreatePartner = () => {
                 }
                 errorMessage={
                   addFormMethods?.formState?.errors?.partner_business_type
-                    ?.message
+                    ?.message as string
                 }
               >
                 <Controller
                   name="partner_business_type"
                   control={addFormMethods.control}
                   render={({ field }) => (
-                    <Input
-                      type="text"
-                      placeholder="e.g., B2B, B2C"
+                    <Select
+                      placeholder="Select business type"
+                      options={businessTypeOptions}
                       {...field}
                     />
                   )}
@@ -610,7 +497,7 @@ const CreatePartner = () => {
               {/* Interested In */}
               <FormItem
                 label="Interested In"
-                id="partner_business_type"
+                id="partner_interested_in"
                 invalid={
                   !!addFormMethods?.formState?.errors?.partner_interested_in
                     ?.message
@@ -623,14 +510,13 @@ const CreatePartner = () => {
                 <Controller
                   name="partner_interested_in"
                   control={addFormMethods.control}
-                  render={({ ...field }) => (
+                  render={({ field }) => (
                     <Select
                       placeholder="Select interested in"
                       options={[
-                        { value: "Buy", label: "Buy" },
-                        { value: "Sell", label: "Sell" },
-                        { value: "Both", label: "Both" },
-                        { value: "Other", label: "Other" },
+                        { value: "Yes", label: "Yes" },
+                        { value: "No", label: "No" },
+                        { value: "None", label: "None" },
                       ]}
                       {...field}
 
@@ -823,7 +709,7 @@ const CreatePartner = () => {
                   ))}
                 </div>
               </FormItem>
-              <Card bodyClass="flex justify-end gap-2" className="mt-4">
+              <Card bodyClass="flex justify-end gap-2" className="mt-4 col-span-3">
                 <Button type="button" className="px-4 py-2" onClick={() => navigate("/business-entities/partner")}>
                   Cancel
                 </Button>

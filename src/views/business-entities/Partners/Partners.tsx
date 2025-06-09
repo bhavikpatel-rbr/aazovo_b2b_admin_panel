@@ -38,23 +38,31 @@ import {
   MdLink,
 } from "react-icons/md";
 import {
+  TbAlarm,
+  TbBell,
+  TbBrandWhatsapp,
   TbBriefcase,
+  TbCalendarEvent,
   TbCertificate,
   TbChecks,
   TbClockHour4,
   TbCloudDownload,
   TbCloudUpload,
   TbCreditCard,
-  TbDotsVertical, // For Partner Search
+  TbDotsVertical, TbDownload, // For Partner Search
   TbExternalLink,
   TbEye,
   TbFileDescription,
   TbFilter,
+  TbMail,
   TbMapPin,
+  TbMessageReport,
   TbPencil,
   TbPlus,
   TbSearch,
   TbShare,
+  TbTagStarred,
+  TbUser,
   TbUserCircle,
 } from "react-icons/tb";
 
@@ -73,6 +81,7 @@ import {
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 
 // --- PartnerListItem Type (Data Structure) ---
@@ -311,25 +320,17 @@ const PartnerActionColumn = ({
         </div>
       </Tooltip>
       <Tooltip title="More">
-        <Dropdown renderTitle={<TbDotsVertical />} style={{ fontSize: "10px" }}>
-          {/* Example actions from original partner code */}
-          {/* <Dropdown.Item className="text-xs py-2" style={{height:"auto"}} onClick={() => onCloneItem(rowData.id)}>
-                Clone Partner
-            </Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2" style={{height:"auto"}} onClick={() => onChangeItemStatus(rowData.id, rowData.status)}>
-                Change Status (List)
-            </Dropdown.Item>
-            <Dropdown.Item className="text-xs py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10" style={{height:"auto"}} onClick={() => onDeleteItem(rowData.id)}>
-                Delete Partner
-            </Dropdown.Item>
-            <Dropdown.Separator /> */}
-          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Request For</Dropdown.Item>
-          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add in Active</Dropdown.Item>
-          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Schedule</Dropdown.Item>
-          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>Add Task</Dropdown.Item>
-          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Documents</Dropdown.Item>
-          <Dropdown.Item className="text-xs py-2" style={{ height: "auto" }}>View Alert</Dropdown.Item>
-        </Dropdown>
+                <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+                  <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+                  <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
+                  <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
+                  <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+                  <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active</span></Dropdown.Item>
+                  <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
+                  <Dropdown.Item className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
+                  <Dropdown.Item className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
+                  <Dropdown.Item className="flex items-center gap-2"><TbMessageReport size={18} /> <span className="text-xs">View Request & Feedback</span></Dropdown.Item>
+                </Dropdown>
       </Tooltip>
     </div>
   );

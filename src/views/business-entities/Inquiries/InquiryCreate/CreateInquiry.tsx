@@ -658,7 +658,7 @@ const CreateInquiry = () => {
               </FormItem>
 
               <FormItem
-                label="Follow-Up Date"
+                label="Last Follow-Up Date"
                 invalid={!!errors.follow_up_date}
                 errorMessage={
                   typeof errors.follow_up_date === "object" &&
@@ -764,8 +764,8 @@ const CreateInquiry = () => {
               </FormItem>
 
               {/* Footer with Save and Cancel buttons */}
-              <Card bodyClass="flex justify-end gap-2" className="mt-4">
-                <Button type="button" className="px-4 py-2">
+              <Card bodyClass="flex justify-end gap-2" className="mt-4 col-span-3">
+                <Button type="button" className="px-4 py-2" onClick={() => navigate("/business-entities/inquiries")}>
                   Cancel
                 </Button>
                 <Button type="submit" className="px-4 py-2" variant="solid">
