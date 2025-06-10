@@ -11,17 +11,30 @@ import classNames from "classnames";
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import Button from "@/components/ui/Button";
-import Notification from "@/components/ui/Notification";
+import DebounceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from "@/components/shared/RichTextEditor";
+import Select from "@/components/ui/Select";
+import {
+  Drawer,
+  Form,
+  FormItem,
+  Input,
+  Tag,
+  Dialog,
+  Dropdown,
+  Card,
+  Button,
+  Tooltip,
+  Notification,
+  DatePicker,
+} from "@/components/ui";
+import Avatar from "@/components/ui/Avatar";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
-import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
-import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag, Dialog, Dropdown, Card } from "@/components/ui";
 
 // Icons
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
   TbPencil,
   TbTrash,
@@ -41,13 +54,21 @@ import {
   TbPaperclip,
   TbToggleRight,
   TbReload,
-  TbUsersPlus,
   TbUser,
-  TbMailShare,
   TbBrandWhatsapp,
   TbBell,
   TbTagStarred,
-  TbCalendarClock,
+  TbCalendarEvent,
+  TbAlarm,
+  TbFileSearch,
+  TbUserSearch,
+  TbDownload,
+  TbMessageReport,
+  TbLink,
+  TbAlertTriangle,
+  TbFileText,
+  TbFileZip,
+  TbCalendar,
   TbUserQuestion,
   TbEyeClosed,
   TbBellMinus,
@@ -73,10 +94,8 @@ import {
   editRequestFeedbackAction,
   deleteRequestFeedbackAction,
   deleteAllRequestFeedbacksAction,
-} from "@/reduxtool/master/middleware"; // Adjust path
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path
-import { Link } from "react-router-dom";
-import { BsThreeDotsVertical } from "react-icons/bs";
+} from "@/reduxtool/master/middleware";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Define Types ---
 export type SelectOption = { value: string; label: string };
@@ -117,7 +136,705 @@ export type RequestFeedbackItem = {
   rating?: number | string | null;
   deleted_at?: string | null;
   icon_full_path?: File | string;
+  // Added for modal consistency
+  health_score?: number;
 };
+
+// ============================================================================
+// --- MODALS SECTION ---
+// All modal components for Requests & Feedbacks are defined here.
+// ============================================================================
+
+// --- Type Definitions for Modals ---
+export type RequestFeedbackModalType =
+  | "email"
+  | "whatsapp"
+  | "notification"
+  | "task"
+  | "active"
+  | "calendar"
+  | "alert"
+  | "trackRecord"
+  | "engagement"
+  | "document"
+  | "feedback"
+  | "wallLink";
+
+export interface RequestFeedbackModalState {
+  isOpen: boolean;
+  type: RequestFeedbackModalType | null;
+  data: RequestFeedbackItem | null;
+}
+interface RequestFeedbackModalsProps {
+  modalState: RequestFeedbackModalState;
+  onClose: () => void;
+}
+
+// --- Helper Data for Modal Demos ---
+const dummyUsers = [
+  { value: "user1", label: "Support Team" },
+  { value: "user2", label: "Product Manager" },
+  { value: "user3", label: "Admin User" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Review Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Resolution Deadline" },
+];
+const dummyAlerts = [
+  {
+    id: 1,
+    severity: "danger",
+    message: "Complaint has been unread for more than 48 hours.",
+    time: "1 day ago",
+  },
+  {
+    id: 2,
+    severity: "warning",
+    message: "Request is 'In Progress' for over 5 days.",
+    time: "3 days ago",
+  },
+];
+const dummyTimeline = [
+  {
+    id: 1,
+    icon: <TbUser />,
+    title: "Status changed to 'In Progress'",
+    desc: "Assigned to the support team for investigation.",
+    time: "2023-11-01",
+  },
+  {
+    id: 2,
+    icon: <TbMail />,
+    title: "Acknowledgement Email Sent",
+    desc: "Sent an automated email to the user.",
+    time: "2023-10-31",
+  },
+  {
+    id: 3,
+    icon: <TbMessageDots />,
+    title: "Feedback Submitted",
+    desc: "Initial submission by the user.",
+    time: "2023-10-31",
+  },
+];
+
+const RequestFeedbackModals: React.FC<RequestFeedbackModalsProps> = ({
+  modalState,
+  onClose,
+}) => {
+  const { type, data: item, isOpen } = modalState;
+  if (!isOpen || !item) return null;
+
+  const renderModalContent = () => {
+    switch (type) {
+      case "email":
+        return <SendEmailDialog item={item} onClose={onClose} />;
+      case "whatsapp":
+        return <SendWhatsAppDialog item={item} onClose={onClose} />;
+      case "notification":
+        return <AddNotificationDialog item={item} onClose={onClose} />;
+      case "task":
+        return <AssignTaskDialog item={item} onClose={onClose} />;
+      case "calendar":
+        return <AddScheduleDialog item={item} onClose={onClose} />;
+      case "alert":
+        return <ViewAlertDialog item={item} onClose={onClose} />;
+      case "trackRecord":
+        return <TrackRecordDialog item={item} onClose={onClose} />;
+      case "engagement":
+        return <ViewEngagementDialog item={item} onClose={onClose} />;
+      case "document":
+        return <DownloadDocumentDialog item={item} onClose={onClose} />;
+      // Add other cases as needed
+      default:
+        return (
+          <GenericActionDialog type={type} item={item} onClose={onClose} />
+        );
+    }
+  };
+  return <>{renderModalContent()}</>;
+};
+
+// --- Individual Dialog Components (Adapted for RequestFeedbackItem) ---
+const SendEmailDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      subject: `Re: Your ${item.type}: ${item.subject || `(ID: ${item.id})`}`,
+      message: "",
+    },
+  });
+  const onSendEmail = (data: { subject: string; message: string }) => {
+    setIsLoading(true);
+    console.log("Sending email to", item.email, "with data:", data);
+    setTimeout(() => {
+      toast.push(
+        <Notification type="success" title="Email Sent Successfully" />
+      );
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Email to {item.name}</h5>
+      <form onSubmit={handleSubmit(onSendEmail)}>
+        <FormItem label="Subject">
+          <Controller
+            name="subject"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => (
+              <RichTextEditor value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const SendWhatsAppDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      message: `Hi ${item.name}, regarding your recent ${item.type} (ID: ${item.id})...`,
+    },
+  });
+  const onSendMessage = (data: { message: string }) => {
+    const phone = item.mobile_no.replace(/\D/g, "");
+    if (!phone) {
+      toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+      return;
+    }
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
+      data.message
+    )}`;
+    window.open(url, "_blank");
+    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+    onClose();
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send WhatsApp to {item.name}</h5>
+      <form onSubmit={handleSubmit(onSendMessage)}>
+        <FormItem label="Message Template">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit">
+            Open WhatsApp
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddNotificationDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: `Update on your ${item.type}`,
+      users: [],
+      message: "",
+    },
+  });
+  const onSend = (data: any) => {
+    setIsLoading(true);
+    console.log("Sending in-app notification for", item.id, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Notification Sent" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {item.name}</h5>
+      <form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Send to Users">
+          <Controller
+            name="users"
+            control={control}
+            render={({ field }) => (
+              <Select
+                isMulti
+                placeholder="Select Users"
+                options={dummyUsers}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AssignTaskDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: `Follow up on ${item.type} from ${item.name}`,
+      assignee: null,
+      dueDate: null,
+      priority: null,
+      description: item.feedback_details,
+    },
+  });
+  const onAssignTask = (data: any) => {
+    setIsLoading(true);
+    console.log("Assigning task for item", item.id, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Task Assigned" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for Item #{item.id}</h5>
+      <form onSubmit={handleSubmit(onAssignTask)}>
+        <FormItem label="Task Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Assign To">
+            <Controller
+              name="assignee"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select User"
+                  options={dummyUsers}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Priority">
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Priority"
+                  options={priorityOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Due Date">
+          <Controller
+            name="dueDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                placeholder="Select date"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Description">
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Assign Task
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddScheduleDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: `Review ${item.type} from ${item.name}`,
+      eventType: null,
+      startDate: null,
+      notes: "",
+    },
+  });
+  const onAddEvent = (data: any) => {
+    setIsLoading(true);
+    console.log("Adding event for item", item.id, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Event Scheduled" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for Item #{item.id}</h5>
+      <form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Event Type">
+            <Controller
+              name="eventType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Type"
+                  options={eventTypeOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Date & Time">
+            <Controller
+              name="startDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker.DateTimepicker
+                  placeholder="Select date and time"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Notes">
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Save Event
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const ViewAlertDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const alertColors: Record<string, string> = {
+    danger: "red",
+    warning: "amber",
+    info: "blue",
+  };
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Alerts for Item #{item.id}</h5>
+      <div className="mt-4 flex flex-col gap-3">
+        {dummyAlerts.length > 0 ? (
+          dummyAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`p-3 rounded-lg border-l-4 border-${
+                alertColors[alert.severity]
+              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
+                alertColors[alert.severity]
+              }-500/10`}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex items-start gap-2">
+                  <TbAlertTriangle
+                    className={`text-${alertColors[alert.severity]}-500 mt-1`}
+                    size={20}
+                  />
+                  <p className="text-sm">{alert.message}</p>
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap">
+                  {alert.time}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>No active alerts.</p>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const TrackRecordDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Track Record for Item #{item.id}</h5>
+      <div className="mt-4 -ml-4">
+        {dummyTimeline.map((timelineItem, index) => (
+          <div key={timelineItem.id} className="flex gap-4 relative">
+            {index < dummyTimeline.length - 1 && (
+              <div className="absolute left-6 top-0 h-full w-0.5 bg-gray-200 dark:bg-gray-600"></div>
+            )}
+            <div className="flex-shrink-0 z-10 h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 border-4 border-white dark:border-gray-900 text-gray-500 flex items-center justify-center">
+              {React.cloneElement(timelineItem.icon, { size: 24 })}
+            </div>
+            <div className="pb-8">
+              <p className="font-semibold">{timelineItem.title}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {timelineItem.desc}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">{timelineItem.time}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="text-right mt-2">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const ViewEngagementDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Engagement for Item #{item.id}</h5>
+      <div className="grid grid-cols-2 gap-4 mt-4 text-center">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Last Updated</p>
+          <p className="font-bold text-lg">
+            {new Date(item.updated_at).toLocaleDateString()}
+          </p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Response Time</p>
+          <p className="font-bold text-lg text-green-500">~2 Hrs</p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Interactions</p>
+          <p className="font-bold text-lg">4</p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">User Rating</p>
+          <p className="font-bold text-lg">{item.rating || "N/A"}</p>
+        </div>
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const DownloadDocumentDialog: React.FC<{
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const itemPath = (filename: any) => {
+    const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
+    return filename ? `${baseUrl}/storage/${filename}` : "#";
+  };
+
+  const getFileExtension = (filename: string) =>
+    filename.split(".").pop()?.toLowerCase() || "";
+  const iconMap: Record<string, React.ReactElement> = {
+    pdf: <TbFileText className="text-red-500" />,
+    zip: <TbFileZip className="text-amber-500" />,
+    png: <TbFileText className="text-blue-500" />,
+    jpg: <TbFileText className="text-blue-500" />,
+    jpeg: <TbFileText className="text-blue-500" />,
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Documents for Item #{item.id}</h5>
+      <div className="flex flex-col gap-3 mt-4">
+        {item.attachment ? (
+          <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+            <div className="flex items-center gap-3">
+              {React.cloneElement(
+                iconMap[getFileExtension(item.attachment)] || (
+                  <TbClipboardText />
+                ),
+                { size: 28 }
+              )}
+              <div>
+                <p className="font-semibold text-sm">
+                  {item.attachment.split("/").pop()}
+                </p>
+              </div>
+            </div>
+            <a
+              href={itemPath(item.attachment)}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+            >
+              <Tooltip title="Download">
+                <Button shape="circle" size="sm" icon={<TbDownload />} />
+              </Tooltip>
+            </a>
+          </div>
+        ) : (
+          <p>No attachment available for this item.</p>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const GenericActionDialog: React.FC<{
+  type: RequestFeedbackModalType | null;
+  item: RequestFeedbackItem;
+  onClose: () => void;
+}> = ({ type, item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type
+    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+    : "Confirm Action";
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(`Performing action '${type}' for item ${item.id}`);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>
+        Are you sure you want to perform this action for item #
+        <span className="font-semibold">{item.id}</span> from{" "}
+        <span className="font-semibold">{item.name}</span>?
+      </p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+          Confirm
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+// ============================================================================
+// --- END MODALS SECTION ---
+// ============================================================================
 
 const TYPE_OPTIONS: SelectOption[] = [
   { value: "Feedback", label: "Feedback" },
@@ -130,12 +847,12 @@ const STATUS_OPTIONS_FORM: {
   value: RequestFeedbackFormStatus;
   label: string;
 }[] = [
-    { value: "unread", label: "Unread" },
-    { value: "read", label: "Read" },
-    { value: "in_progress", label: "In Progress" },
-    { value: "resolved", label: "Resolved" },
-    { value: "closed", label: "Closed" },
-  ];
+  { value: "unread", label: "Unread" },
+  { value: "read", label: "Read" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "resolved", label: "Resolved" },
+  { value: "closed", label: "Closed" },
+];
 const statusFormValues = STATUS_OPTIONS_FORM.map((s) => s.value) as [
   RequestFeedbackFormStatus,
   ...RequestFeedbackFormStatus[]
@@ -229,19 +946,19 @@ const CSV_KEYS_RF: (keyof Pick<
   | "attachment"
   | "created_at"
 >)[] = [
-    "id",
-    "name",
-    "email",
-    "mobile_no",
-    "company_name",
-    "type",
-    "subject",
-    "feedback_details",
-    "rating",
-    "status",
-    "attachment",
-    "created_at",
-  ];
+  "id",
+  "name",
+  "email",
+  "mobile_no",
+  "company_name",
+  "type",
+  "subject",
+  "feedback_details",
+  "rating",
+  "status",
+  "attachment",
+  "created_at",
+];
 function exportRequestFeedbacksToCsv(
   filename: string,
   rows: RequestFeedbackItem[]
@@ -304,16 +1021,22 @@ function exportRequestFeedbacksToCsv(
 }
 
 const ItemActionColumn = ({
+  rowData,
   onEdit,
   onViewDetail,
   onDelete,
+  onOpenModal,
 }: {
+  rowData: RequestFeedbackItem;
   onEdit: () => void;
   onViewDetail: () => void;
   onDelete: () => void;
+  onOpenModal: (
+    type: RequestFeedbackModalType,
+    data: RequestFeedbackItem
+  ) => void;
 }) => (
   <div className="flex items-center justify-center gap-1">
-    {" "}
     <Tooltip title="Edit">
       <div
         className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600"
@@ -322,7 +1045,7 @@ const ItemActionColumn = ({
       >
         <TbPencil />
       </div>
-    </Tooltip>{" "}
+    </Tooltip>
     <Tooltip title="View">
       <div
         className="text-xl cursor-pointer text-gray-500 hover:text-blue-600"
@@ -331,24 +1054,98 @@ const ItemActionColumn = ({
       >
         <TbEye />
       </div>
-    </Tooltip>{" "}
-    <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-      <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active </span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
-    </Dropdown>
-    {/* <Tooltip title="Delete">
-      <div
-        className="text-xl cursor-pointer text-gray-500 hover:text-red-600"
-        role="button"
-        onClick={onDelete}
+    </Tooltip>
+    <Dropdown
+      renderTitle={
+        <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+      }
+    >
+      <Dropdown.Item
+        onClick={() => onOpenModal("email", rowData)}
+        className="flex items-center gap-2"
       >
-        <TbTrash />
-      </div>
-    </Tooltip>{" "} */}
+        <TbMail size={18} /> <span className="text-xs">Send Email</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("whatsapp", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbBrandWhatsapp size={18} />{" "}
+        <span className="text-xs">Send on Whatsapp</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("notification", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbBell size={18} />{" "}
+        <span className="text-xs">Add as Notification</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("task", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("active", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbTagStarred size={18} />{" "}
+        <span className="text-xs">Add to Active</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("calendar", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbCalendarEvent size={18} />{" "}
+        <span className="text-xs">Add to Calendar</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("alert", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("trackRecord", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbFileSearch size={18} /> <span className="text-xs">Track Record</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("engagement", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbUserSearch size={18} /> <span className="text-xs">Engagement</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("document", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbDownload size={18} />{" "}
+        <span className="text-xs">Download Document</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("feedback", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbMessageReport size={18} />{" "}
+        <span className="text-xs">View Request & Feedback</span>
+      </Dropdown.Item>
+      <Dropdown.Item
+        onClick={() => onOpenModal("wallLink", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbLink size={18} /> <span className="text-xs">Add Wall Link</span>
+      </Dropdown.Item>
+      {/* <Dropdown.Item separator /> */}
+      {/* <Dropdown.Item
+        onClick={onDelete}
+        className="flex items-center gap-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+      >
+        <TbTrash size={18} /> <span className="text-xs">Delete</span>
+      </Dropdown.Item> */}
+    </Dropdown>
   </div>
 );
 type ItemSearchProps = {
@@ -380,12 +1177,10 @@ const ItemTableTools = ({
   onClearFilters,
 }: ItemTableToolsProps) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    {" "}
     <div className="flex-grow">
       <ItemSearch onInputChange={onSearchChange} />
-    </div>{" "}
+    </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      {" "}
       <Tooltip title="Clear Filters">
         <Button
           icon={<TbReload />}
@@ -399,15 +1194,15 @@ const ItemTableTools = ({
         className="w-full sm:w-auto"
       >
         Filter
-      </Button>{" "}
+      </Button>
       <Button
         icon={<TbCloudUpload />}
         onClick={onExport}
         className="w-full sm:w-auto"
       >
         Export
-      </Button>{" "}
-    </div>{" "}
+      </Button>
+    </div>
   </div>
 );
 type RequestFeedbacksTableProps = {
@@ -435,7 +1230,7 @@ const RequestFeedbacksTable = ({
   onAllRowSelect,
 }: RequestFeedbacksTableProps) => (
   <DataTable
-    // selectable
+    selectable
     columns={columns}
     data={data}
     noData={!loading && data.length === 0}
@@ -465,25 +1260,20 @@ const RequestFeedbacksSelectedFooter = ({
   if (selectedItems.length === 0) return null;
   return (
     <>
-      {" "}
       <StickyFooter
         className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
         stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
       >
-        {" "}
         <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          {" "}
           <span className="flex items-center gap-2">
-            {" "}
             <span className="text-lg text-primary-600 dark:text-primary-400">
               <TbChecks />
-            </span>{" "}
+            </span>
             <span className="font-semibold">
-              {" "}
               {selectedItems.length} Item{selectedItems.length > 1 ? "s" : ""}{" "}
-              selected{" "}
-            </span>{" "}
-          </span>{" "}
+              selected
+            </span>
+          </span>
           <Button
             size="sm"
             variant="plain"
@@ -492,9 +1282,9 @@ const RequestFeedbacksSelectedFooter = ({
             loading={isDeleting}
           >
             Delete Selected
-          </Button>{" "}
-        </div>{" "}
-      </StickyFooter>{" "}
+          </Button>
+        </div>
+      </StickyFooter>
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         type="danger"
@@ -507,9 +1297,8 @@ const RequestFeedbacksSelectedFooter = ({
           setDeleteConfirmOpen(false);
         }}
       >
-        {" "}
-        <p>Are you sure you want to delete the selected item(s)?</p>{" "}
-      </ConfirmDialog>{" "}
+        <p>Are you sure you want to delete the selected item(s)?</p>
+      </ConfirmDialog>
     </>
   );
 };
@@ -546,6 +1335,20 @@ const RequestAndFeedbackListing = () => {
   const [removeExistingAttachment, setRemoveExistingAttachment] =
     useState(false);
 
+  // --- MODAL STATE AND HANDLERS ---
+  const [modalState, setModalState] = useState<RequestFeedbackModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+  const handleOpenModal = (
+    type: RequestFeedbackModalType,
+    itemData: RequestFeedbackItem
+  ) => setModalState({ isOpen: true, type, data: itemData });
+  const handleCloseModal = () =>
+    setModalState({ isOpen: false, type: null, data: null });
+  // --- END MODAL STATE AND HANDLERS ---
+
   useEffect(() => {
     dispatch(getRequestFeedbacksAction());
   }, [dispatch]);
@@ -559,7 +1362,7 @@ const RequestAndFeedbackListing = () => {
     handleSubmit,
     reset,
     formState: { errors, isValid },
-  } = formMethods; // Destructure isValid
+  } = formMethods;
 
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
@@ -747,7 +1550,7 @@ const RequestAndFeedbackListing = () => {
       closeFilterDrawer();
     },
     [closeFilterDrawer]
-  ); // Removed filterFormMethods from deps
+  );
   const onClearFilters = useCallback(() => {
     filterFormMethods.reset({});
     setFilterCriteria({});
@@ -793,9 +1596,9 @@ const RequestAndFeedbackListing = () => {
         if (key === "created_at" || key === "updated_at") {
           return order === "asc"
             ? new Date(aVal as string).getTime() -
-            new Date(bVal as string).getTime()
+                new Date(bVal as string).getTime()
             : new Date(bVal as string).getTime() -
-            new Date(aVal as string).getTime();
+                new Date(aVal as string).getTime();
         }
         const aStr = String(aVal ?? "").toLowerCase();
         const bStr = String(bVal ?? "").toLowerCase();
@@ -889,8 +1692,6 @@ const RequestAndFeedbackListing = () => {
           </div>
         ),
       },
-      // { header: "Email", accessorKey: "email", size: 180, cell: props => props.getValue() || "N/A" },
-      // { header: "Mobile No", accessorKey: "mobile_no", size: 120, cell: props => props.getValue() || "N/A" },
       {
         header: "From",
         accessorKey: "type",
@@ -956,15 +1757,17 @@ const RequestAndFeedbackListing = () => {
         size: 120,
         cell: (props) => (
           <ItemActionColumn
+            rowData={props.row.original}
             onEdit={() => openEditDrawer(props.row.original)}
             onViewDetail={() => openViewDialog(props.row.original)}
             onDelete={() => handleDeleteClick(props.row.original)}
+            onOpenModal={handleOpenModal}
           />
         ),
       },
     ],
-    [openEditDrawer, openViewDialog, handleDeleteClick]
-  ); // Ensure dependencies are stable
+    [openEditDrawer, openViewDialog, handleDeleteClick, handleOpenModal]
+  );
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
@@ -973,7 +1776,6 @@ const RequestAndFeedbackListing = () => {
         invalid={!!errors.name}
         errorMessage={errors.name?.message}
       >
-        {" "}
         <Controller
           name="name"
           control={control}
@@ -984,14 +1786,13 @@ const RequestAndFeedbackListing = () => {
               placeholder="Full Name"
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Email"
         invalid={!!errors.email}
         errorMessage={errors.email?.message}
       >
-        {" "}
         <Controller
           name="email"
           control={control}
@@ -1003,14 +1804,13 @@ const RequestAndFeedbackListing = () => {
               placeholder="example@domain.com"
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Mobile No."
         invalid={!!errors.mobile_no}
         errorMessage={errors.mobile_no?.message}
       >
-        {" "}
         <Controller
           name="mobile_no"
           control={control}
@@ -1022,14 +1822,13 @@ const RequestAndFeedbackListing = () => {
               placeholder="+XX XXXXXXXXXX"
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Company Name (Optional)"
         invalid={!!errors.company_name}
         errorMessage={errors.company_name?.message}
       >
-        {" "}
         <Controller
           name="company_name"
           control={control}
@@ -1040,14 +1839,13 @@ const RequestAndFeedbackListing = () => {
               placeholder="Your Company"
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Type"
         invalid={!!errors.type}
         errorMessage={errors.type?.message}
       >
-        {" "}
         <Controller
           name="type"
           control={control}
@@ -1060,14 +1858,13 @@ const RequestAndFeedbackListing = () => {
               prefix={<TbMessageDots />}
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Status"
         invalid={!!errors.status}
         errorMessage={errors.status?.message}
       >
-        {" "}
         <Controller
           name="status"
           control={control}
@@ -1080,7 +1877,7 @@ const RequestAndFeedbackListing = () => {
               prefix={<TbToggleRight />}
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Subject (Optional)"
@@ -1088,7 +1885,6 @@ const RequestAndFeedbackListing = () => {
         invalid={!!errors.subject}
         errorMessage={errors.subject?.message}
       >
-        {" "}
         <Controller
           name="subject"
           control={control}
@@ -1099,7 +1895,7 @@ const RequestAndFeedbackListing = () => {
               placeholder="Brief subject of your message"
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Rating (Optional, for Feedback)"
@@ -1107,7 +1903,6 @@ const RequestAndFeedbackListing = () => {
         invalid={!!errors.rating}
         errorMessage={errors.rating?.message}
       >
-        {" "}
         <Controller
           name="rating"
           control={control}
@@ -1121,7 +1916,7 @@ const RequestAndFeedbackListing = () => {
               prefix={<TbStar />}
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Feedback / Request Details"
@@ -1129,7 +1924,6 @@ const RequestAndFeedbackListing = () => {
         invalid={!!errors.feedback_details}
         errorMessage={errors.feedback_details?.message}
       >
-        {" "}
         <Controller
           name="feedback_details"
           control={control}
@@ -1141,7 +1935,7 @@ const RequestAndFeedbackListing = () => {
               placeholder="Describe your feedback or request in detail..."
             />
           )}
-        />{" "}
+        />
       </FormItem>
       <FormItem
         label="Attachment (Optional)"
@@ -1171,7 +1965,6 @@ const RequestAndFeedbackListing = () => {
         {editingItem?.attachment && !selectedFile && (
           <div className="mt-2 text-sm text-gray-500 flex items-center justify-between">
             <span>
-              {" "}
               Current:{" "}
               <a
                 href={editingItem?.icon_full_path}
@@ -1180,7 +1973,7 @@ const RequestAndFeedbackListing = () => {
                 className="text-blue-600 hover:underline"
               >
                 view current image
-              </a>{" "}
+              </a>
             </span>
             {!removeExistingAttachment && (
               <Button
@@ -1210,14 +2003,16 @@ const RequestAndFeedbackListing = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            {" "}
-            <h5 className="mb-2 sm:mb-0">Requests & Feedbacks</h5>{" "}
+            <h5 className="mb-2 sm:mb-0">Requests & Feedbacks</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New
-            </Button>{" "}
+            </Button>
           </div>
-          <div className="grid grid-cols-6 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-blue-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                 <TbUserQuestion size={24} />
               </div>
@@ -1226,7 +2021,10 @@ const RequestAndFeedbackListing = () => {
                 <span className="font-semibold text-xs">Total</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-green-300"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
                 <TbEyeClosed size={24} />
               </div>
@@ -1235,7 +2033,10 @@ const RequestAndFeedbackListing = () => {
                 <span className="font-semibold text-xs">Unread</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-pink-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
                 <TbBellMinus size={24} />
               </div>
@@ -1244,7 +2045,10 @@ const RequestAndFeedbackListing = () => {
                 <span className="font-semibold text-xs">Resolved</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-red-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
                 <TbPencilPin size={24} />
               </div>
@@ -1253,8 +2057,10 @@ const RequestAndFeedbackListing = () => {
                 <span className="font-semibold text-xs">Pending</span>
               </div>
             </Card>
-
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300" >
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-violet-300"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
                 <TbFileTime size={24} />
               </div>
@@ -1263,7 +2069,10 @@ const RequestAndFeedbackListing = () => {
                 <span className="font-semibold text-xs">Avg Time</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-orange-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
                 <TbStars size={24} />
               </div>
@@ -1272,9 +2081,6 @@ const RequestAndFeedbackListing = () => {
                 <span className="font-semibold text-xs">Avg Rating </span>
               </div>
             </Card>
-
-
-            
           </div>
           <ItemTableTools
             onClearFilters={onClearFilters}
@@ -1283,7 +2089,6 @@ const RequestAndFeedbackListing = () => {
             onExport={handleExportData}
           />
           <div className="mt-4">
-            {" "}
             <RequestFeedbacksTable
               columns={columns}
               data={pageData}
@@ -1301,7 +2106,7 @@ const RequestAndFeedbackListing = () => {
               onSort={handleSort}
               onRowSelect={handleRowSelect}
               onAllRowSelect={handleAllRowSelect}
-            />{" "}
+            />
           </div>
         </AdaptiveCard>
       </Container>
@@ -1318,7 +2123,6 @@ const RequestAndFeedbackListing = () => {
         width={520}
         footer={
           <div className="text-right w-full">
-            {" "}
             <Button
               size="sm"
               className="mr-2"
@@ -1327,7 +2131,7 @@ const RequestAndFeedbackListing = () => {
               type="button"
             >
               Cancel
-            </Button>{" "}
+            </Button>
             <Button
               size="sm"
               variant="solid"
@@ -1337,7 +2141,7 @@ const RequestAndFeedbackListing = () => {
               disabled={!isValid || isSubmitting}
             >
               {isSubmitting ? "Saving..." : "Save"}
-            </Button>{" "}
+            </Button>
           </div>
         }
       >
@@ -1346,8 +2150,7 @@ const RequestAndFeedbackListing = () => {
           onSubmit={handleSubmit(onSubmitHandler)}
           className="flex flex-col gap-4"
         >
-          {" "}
-          {renderDrawerForm(formMethods)}{" "}
+          {renderDrawerForm(formMethods)}
         </Form>
       </Drawer>
       <Dialog
@@ -1357,19 +2160,17 @@ const RequestAndFeedbackListing = () => {
         width={600}
       >
         <div className="p-1">
-          {" "}
           <h5 className="mb-6 border-b pb-4 dark:border-gray-600">
             Details: {viewingItem?.subject || viewingItem?.name}
-          </h5>{" "}
+          </h5>
           {viewingItem && (
             <div className="space-y-3 text-sm">
-              {" "}
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   ID:
                 </span>
                 <span className="w-2/3">{viewingItem.id}</span>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Customer ID:
@@ -1379,25 +2180,25 @@ const RequestAndFeedbackListing = () => {
                     ? "N/A (Guest)"
                     : viewingItem.customer_id}
                 </span>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Name:
                 </span>
                 <span className="w-2/3">{viewingItem.name}</span>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Email:
                 </span>
                 <span className="w-2/3">{viewingItem.email}</span>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Mobile No:
                 </span>
                 <span className="w-2/3">{viewingItem.mobile_no || "N/A"}</span>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Company:
@@ -1405,7 +2206,7 @@ const RequestAndFeedbackListing = () => {
                 <span className="w-2/3">
                   {viewingItem.company_name || "N/A"}
                 </span>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Type:
@@ -1414,13 +2215,13 @@ const RequestAndFeedbackListing = () => {
                   {TYPE_OPTIONS.find((t) => t.value === viewingItem.type)
                     ?.label || viewingItem.type}
                 </Tag>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Subject:
                 </span>
                 <span className="w-2/3">{viewingItem.subject || "N/A"}</span>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Status:
@@ -1435,7 +2236,7 @@ const RequestAndFeedbackListing = () => {
                     (s) => s.value === viewingItem.status
                   )?.label || viewingItem.status}
                 </Tag>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Rating:
@@ -1448,7 +2249,7 @@ const RequestAndFeedbackListing = () => {
                       ? `${viewingItem.rating} Stars`
                       : "N/A")}
                 </span>
-              </div>{" "}
+              </div>
               {viewingItem.attachment && (
                 <div className="flex items-start">
                   <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200 pt-1">
@@ -1465,7 +2266,7 @@ const RequestAndFeedbackListing = () => {
                     </a>
                   </span>
                 </div>
-              )}{" "}
+              )}
               <div className="flex flex-col">
                 <span className="font-semibold text-gray-700 dark:text-gray-200 mb-1">
                   Details:
@@ -1473,7 +2274,7 @@ const RequestAndFeedbackListing = () => {
                 <p className="w-full bg-gray-50 dark:bg-gray-700 p-2 rounded whitespace-pre-wrap break-words">
                   {viewingItem.feedback_details}
                 </p>
-              </div>{" "}
+              </div>
               <div className="flex">
                 <span className="font-semibold w-1/3 text-gray-700 dark:text-gray-200">
                   Reported On:
@@ -1481,14 +2282,14 @@ const RequestAndFeedbackListing = () => {
                 <span className="w-2/3">
                   {new Date(viewingItem.created_at).toLocaleString()}
                 </span>
-              </div>{" "}
+              </div>
             </div>
-          )}{" "}
+          )}
           <div className="text-right mt-6">
             <Button variant="solid" onClick={closeViewDialog}>
               Close
             </Button>
-          </div>{" "}
+          </div>
         </div>
       </Dialog>
       <Drawer
@@ -1499,7 +2300,6 @@ const RequestAndFeedbackListing = () => {
         width={400}
         footer={
           <div className="text-right w-full">
-            {" "}
             <Button
               size="sm"
               className="mr-2"
@@ -1507,7 +2307,7 @@ const RequestAndFeedbackListing = () => {
               type="button"
             >
               Clear
-            </Button>{" "}
+            </Button>
             <Button
               size="sm"
               variant="solid"
@@ -1515,17 +2315,15 @@ const RequestAndFeedbackListing = () => {
               type="submit"
             >
               Apply
-            </Button>{" "}
+            </Button>
           </div>
         }
       >
-        {" "}
         <Form
           id="filterReqFeedbackForm"
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
         >
-          {" "}
           <FormItem label="Type">
             <Controller
               name="filterType"
@@ -1540,7 +2338,7 @@ const RequestAndFeedbackListing = () => {
                 />
               )}
             />
-          </FormItem>{" "}
+          </FormItem>
           <FormItem label="Status">
             <Controller
               name="filterStatus"
@@ -1555,7 +2353,7 @@ const RequestAndFeedbackListing = () => {
                 />
               )}
             />
-          </FormItem>{" "}
+          </FormItem>
           <FormItem label="Rating">
             <Controller
               name="filterRating"
@@ -1570,7 +2368,7 @@ const RequestAndFeedbackListing = () => {
                 />
               )}
             />
-          </FormItem>{" "}
+          </FormItem>
         </Form>
       </Drawer>
       <ConfirmDialog
@@ -1592,12 +2390,17 @@ const RequestAndFeedbackListing = () => {
           setItemToDelete(null);
         }}
       >
-        {" "}
         <p>
           Are you sure you want to delete entry from "
           <strong>{itemToDelete?.name}</strong>"?
-        </p>{" "}
+        </p>
       </ConfirmDialog>
+
+      {/* Render the main modal component */}
+      <RequestFeedbackModals
+        modalState={modalState}
+        onClose={handleCloseModal}
+      />
     </>
   );
 };

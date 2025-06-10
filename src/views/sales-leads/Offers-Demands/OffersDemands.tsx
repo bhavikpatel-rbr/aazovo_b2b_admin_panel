@@ -1,6 +1,12 @@
 // src/views/your-path/OffersDemands.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  Ref,
+  useEffect,
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import classNames from "classnames";
 import { useForm, Controller } from "react-hook-form";
@@ -11,37 +17,67 @@ import { z } from "zod";
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import Button from "@/components/ui/Button";
-import Avatar from "@/components/ui/Avatar";
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import { Dropdown, Form, FormItem, Input } from "@/components/ui";
+import RichTextEditor from "@/components/shared/RichTextEditor";
+import StickyFooter from "@/components/shared/StickyFooter";
+import {
+  Button,
+  DatePicker,
+  Drawer,
+  Dropdown,
+  Form,
+  FormItem,
+  Input,
+  Select,
+} from "@/components/ui";
+import Avatar from "@/components/ui/Avatar";
+import Dialog from "@/components/ui/Dialog";
+import Notification from "@/components/ui/Notification";
+import Tag from "@/components/ui/Tag";
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Spinner from "@/components/ui/Spinner";
 
 // Icons
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbPencil,
-  TbShare,
-  TbDotsVertical,
-  TbChecks,
-  TbSearch,
-  TbPlus,
-  TbFilter,
-  TbUserCircle,
-  TbRefresh,
-  TbTrash,
-  TbCloudUpload,
-  TbMail,
-  TbBrandWhatsapp,
-  TbBell,
-  TbUser,
-  TbTagStarred,
-  TbCalendarEvent,
+  TbAffiliate,
   TbAlarm,
+  TbAlertTriangle,
+  TbBell,
+  TbBrandWhatsapp,
+  TbBuilding,
+  TbCalendar,
+  TbCalendarEvent,
+  TbChecks,
+  TbClipboardText,
+  TbCloudDownload,
+  TbCloudUpload,
+  TbDotsVertical,
+  TbDownload,
+  TbEye,
+  TbEyeDollar,
+  TbFileSearch,
+  TbFileText,
+  TbFileZip,
+  TbFilter,
+  TbLink,
+  TbMail,
+  TbMessageCircle,
+  TbMessageReport,
+  TbPencil,
+  TbPlus,
+  TbReceipt,
+  TbRefresh,
+  TbSearch,
+  TbShare,
+  TbTagStarred,
+  TbTrash,
+  TbUser,
+  TbUserCircle,
+  TbUserSearch,
+  TbUsersGroup,
 } from "react-icons/tb";
 
 // Redux
@@ -52,8 +88,8 @@ import {
   submitExportReasonAction,
   deleteOfferAction,
   deleteAllOffersAction,
-  deleteDemandAction, // Added
-  deleteAllDemandsAction, // Added
+  deleteDemandAction,
+  deleteAllDemandsAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
@@ -66,9 +102,7 @@ import type {
   CellContext,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import { BsThreeDotsVertical } from "react-icons/bs";
 
-// --- (All your existing schemas, types, and helper functions can remain here without changes) ---
 // --- Form Schemas ---
 const exportReasonSchema = z.object({
   reason: z
@@ -139,6 +173,8 @@ export type OfferDemandItem = {
   createdByInfo: {
     userId: string;
     userName: string;
+    // Mocked email for modal functionality
+    email: string;
   };
   assignedToInfo?: {
     userId: string;
@@ -152,10 +188,704 @@ export type OfferDemandItem = {
   updated_by_name?: string;
   updated_by_role?: string;
   originalApiItem: ActualApiOfferShape | ActualApiDemandShape;
+  // Added for modal consistency
+  health_score?: number;
 };
 
 // --- Constants ---
 const TABS = { ALL: "all", OFFER: "offer", DEMAND: "demand" };
+
+// ============================================================================
+// --- MODALS SECTION ---
+// All modal components for Offers & Demands are defined here.
+// ============================================================================
+
+// --- Type Definitions for Modals ---
+export type OfferDemandModalType =
+  | "email"
+  | "whatsapp"
+  | "notification"
+  | "task"
+  | "active"
+  | "calendar"
+  | "alert"
+  | "trackRecord"
+  | "engagement"
+  | "document"
+  | "feedback"
+  | "wallLink";
+
+export interface OfferDemandModalState {
+  isOpen: boolean;
+  type: OfferDemandModalType | null;
+  data: OfferDemandItem | null;
+}
+interface OfferDemandModalsProps {
+  modalState: OfferDemandModalState;
+  onClose: () => void;
+}
+
+// --- Helper Data for Modal Demos ---
+const dummyUsers = [
+  { value: "user1", label: "Alice Johnson" },
+  { value: "user2", label: "Bob Williams" },
+  { value: "user3", label: "Charlie Brown" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Project Deadline" },
+];
+const dummyAlerts = [
+  {
+    id: 1,
+    severity: "danger",
+    message: "Offer #OD123 has low engagement. Needs follow-up.",
+    time: "2 days ago",
+  },
+  {
+    id: 2,
+    severity: "warning",
+    message: "Demand #DD456 is approaching its expiration date.",
+    time: "5 days ago",
+  },
+];
+const dummyTimeline = [
+  {
+    id: 1,
+    icon: <TbMail />,
+    title: "Initial Offer Created",
+    desc: "Offer was created and sent to potential buyers.",
+    time: "2023-11-01",
+  },
+  {
+    id: 2,
+    icon: <TbCalendar />,
+    title: "Follow-up Call Scheduled",
+    desc: "Scheduled a call with the creator to discuss progress.",
+    time: "2023-10-28",
+  },
+  {
+    id: 3,
+    icon: <TbUser />,
+    title: "Item Assigned",
+    desc: "Assigned to internal team for review.",
+    time: "2023-10-27",
+  },
+];
+const dummyDocs = [
+  {
+    id: "doc1",
+    name: "Offer_Details.pdf",
+    type: "pdf",
+    size: "1.2 MB",
+  },
+  {
+    id: "doc2",
+    name: "Related_Images.zip",
+    type: "zip",
+    size: "8.5 MB",
+  },
+];
+
+const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
+  modalState,
+  onClose,
+}) => {
+  const { type, data: item, isOpen } = modalState;
+  if (!isOpen || !item) return null;
+
+  const renderModalContent = () => {
+    switch (type) {
+      case "email":
+        return <SendEmailDialog item={item} onClose={onClose} />;
+      case "whatsapp":
+        return <SendWhatsAppDialog item={item} onClose={onClose} />;
+      case "notification":
+        return <AddNotificationDialog item={item} onClose={onClose} />;
+      case "task":
+        return <AssignTaskDialog item={item} onClose={onClose} />;
+      case "calendar":
+        return <AddScheduleDialog item={item} onClose={onClose} />;
+      case "alert":
+        return <ViewAlertDialog item={item} onClose={onClose} />;
+      case "trackRecord":
+        return <TrackRecordDialog item={item} onClose={onClose} />;
+      case "engagement":
+        return <ViewEngagementDialog item={item} onClose={onClose} />;
+      case "document":
+        return <DownloadDocumentDialog item={item} onClose={onClose} />;
+      // Add other cases as needed
+      default:
+        return (
+          <GenericActionDialog type={type} item={item} onClose={onClose} />
+        );
+    }
+  };
+  return <>{renderModalContent()}</>;
+};
+
+// --- Individual Dialog Components (Adapted for OfferDemandItem) ---
+const SendEmailDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { subject: "", message: "" },
+  });
+  const onSendEmail = (data: { subject: string; message: string }) => {
+    setIsLoading(true);
+    console.log("Sending email to", item.createdByInfo.email, "with data:", data);
+    setTimeout(() => {
+      toast.push(
+        <Notification type="success" title="Email Sent Successfully" />
+      );
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Email regarding {item.name}</h5>
+      <p className="mb-4 text-sm">
+        Recipient: {item.createdByInfo.userName} ({item.createdByInfo.email})
+      </p>
+      <form onSubmit={handleSubmit(onSendEmail)}>
+        <FormItem label="Subject">
+          <Controller
+            name="subject"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder={`Regarding your ${item.type}: ${item.name}`} />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => (
+              <RichTextEditor value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const SendWhatsAppDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      message: `Hi ${item.createdByInfo.userName}, regarding your ${item.type} "${item.name}"...`,
+    },
+  });
+  const onSendMessage = (data: { message: string }) => {
+    const phone = "1234567890"; // Mock phone number
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
+      data.message
+    )}`;
+    window.open(url, "_blank");
+    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+    onClose();
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send WhatsApp about {item.name}</h5>
+      <form onSubmit={handleSubmit(onSendMessage)}>
+        <FormItem label="Message Template">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit">
+            Open WhatsApp
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddNotificationDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", users: [], message: "" },
+  });
+  const onSend = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      "Sending in-app notification for",
+      item.name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Notification Sent" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {item.name}</h5>
+      <form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Send to Users">
+          <Controller
+            name="users"
+            control={control}
+            render={({ field }) => (
+              <Select
+                isMulti
+                placeholder="Select Users"
+                options={dummyUsers}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AssignTaskDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: `Follow up on ${item.type}: ${item.name}`,
+      assignee: null,
+      dueDate: null,
+      priority: null,
+      description: "",
+    },
+  });
+  const onAssignTask = (data: any) => {
+    setIsLoading(true);
+    console.log("Assigning task for", item.name, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Task Assigned" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for {item.name}</h5>
+      <form onSubmit={handleSubmit(onAssignTask)}>
+        <FormItem label="Task Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Assign To">
+            <Controller
+              name="assignee"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select User"
+                  options={dummyUsers}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Priority">
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Priority"
+                  options={priorityOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Due Date">
+          <Controller
+            name="dueDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                placeholder="Select date"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Description">
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Assign Task
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddScheduleDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: "",
+      eventType: null,
+      startDate: null,
+      notes: "",
+    },
+  });
+  const onAddEvent = (data: any) => {
+    setIsLoading(true);
+    console.log("Adding event for", item.name, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Event Scheduled" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for {item.name}</h5>
+      <form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder={`e.g., Review ${item.type}`} />
+            )}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Event Type">
+            <Controller
+              name="eventType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Type"
+                  options={eventTypeOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Date & Time">
+            <Controller
+              name="startDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker.DateTimepicker
+                  placeholder="Select date and time"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Notes">
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Save Event
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const ViewAlertDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const alertColors: Record<string, string> = {
+    danger: "red",
+    warning: "amber",
+    info: "blue",
+  };
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Alerts for {item.name}</h5>
+      <div className="mt-4 flex flex-col gap-3">
+        {dummyAlerts.length > 0 ? (
+          dummyAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`p-3 rounded-lg border-l-4 border-${
+                alertColors[alert.severity]
+              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
+                alertColors[alert.severity]
+              }-500/10`}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex items-start gap-2">
+                  <TbAlertTriangle
+                    className={`text-${alertColors[alert.severity]}-500 mt-1`}
+                    size={20}
+                  />
+                  <p className="text-sm">{alert.message}</p>
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap">
+                  {alert.time}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>No active alerts.</p>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const TrackRecordDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Track Record for {item.name}</h5>
+      <div className="mt-4 -ml-4">
+        {dummyTimeline.map((timelineItem, index) => (
+          <div key={timelineItem.id} className="flex gap-4 relative">
+            {index < dummyTimeline.length - 1 && (
+              <div className="absolute left-6 top-0 h-full w-0.5 bg-gray-200 dark:bg-gray-600"></div>
+            )}
+            <div className="flex-shrink-0 z-10 h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 border-4 border-white dark:border-gray-900 text-gray-500 flex items-center justify-center">
+              {React.cloneElement(timelineItem.icon, { size: 24 })}
+            </div>
+            <div className="pb-8">
+              <p className="font-semibold">{timelineItem.title}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {timelineItem.desc}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {timelineItem.time}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="text-right mt-2">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const ViewEngagementDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Engagement for {item.name}</h5>
+      <div className="grid grid-cols-2 gap-4 mt-4 text-center">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Last Updated</p>
+          <p className="font-bold text-lg">2 days ago</p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Health Score</p>
+          <p className="font-bold text-lg text-green-500">
+            {item.health_score || 85}%
+          </p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Views (30d)</p>
+          <p className="font-bold text-lg">125</p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <p className="text-xs text-gray-500">Interactions</p>
+          <p className="font-bold text-lg">18</p>
+        </div>
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const DownloadDocumentDialog: React.FC<{
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const iconMap: Record<string, React.ReactElement> = {
+    pdf: <TbFileText className="text-red-500" />,
+    zip: <TbFileZip className="text-amber-500" />,
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Documents for {item.name}</h5>
+      <div className="flex flex-col gap-3 mt-4">
+        {dummyDocs.map((doc) => (
+          <div
+            key={doc.id}
+            className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+          >
+            <div className="flex items-center gap-3">
+              {React.cloneElement(iconMap[doc.type] || <TbClipboardText />, {
+                size: 28,
+              })}
+              <div>
+                <p className="font-semibold text-sm">{doc.name}</p>
+                <p className="text-xs text-gray-400">{doc.size}</p>
+              </div>
+            </div>
+            <Tooltip title="Download">
+              <Button shape="circle" size="sm" icon={<TbDownload />} />
+            </Tooltip>
+          </div>
+        ))}
+      </div>
+      <div className="text-right mt-6">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const GenericActionDialog: React.FC<{
+  type: OfferDemandModalType | null;
+  item: OfferDemandItem;
+  onClose: () => void;
+}> = ({ type, item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type
+    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+    : "Confirm Action";
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(`Performing action '${type}' for item ${item.name}`);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>
+        Are you sure you want to perform this action for{" "}
+        <span className="font-semibold">{item.name}</span>?
+      </p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+          Confirm
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+// ============================================================================
+// --- END MODALS SECTION ---
+// ============================================================================
 
 // --- CSV Export Helpers ---
 type OfferDemandExportItem = Omit<
@@ -283,6 +1013,9 @@ const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
     createdByInfo: {
       userId: String(apiOffer.created_by.id),
       userName: apiOffer.created_by.name,
+      email: `${apiOffer.created_by.name
+        .replace(/\s+/g, ".")
+        .toLowerCase()}@example.com`,
     },
     assignedToInfo: apiOffer.assign_user
       ? {
@@ -343,6 +1076,9 @@ const transformApiDemand = (
     createdByInfo: {
       userId: String(apiDemand.created_by.id),
       userName: apiDemand.created_by.name,
+      email: `${apiDemand.created_by.name
+        .replace(/\s+/g, ".")
+        .toLowerCase()}@example.com`,
     },
     assignedToInfo: apiDemand.assign_user
       ? {
@@ -363,12 +1099,20 @@ const transformApiDemand = (
   };
 };
 // --- Start of Component and Hooks ---
-// ... (previous code)
 
-// UPDATED ActionColumn to remove "(Simulated)"
 const ActionColumn = React.memo(
-  ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => (
-    <div className="flex items-center justify-center">
+  ({
+    rowData,
+    onEdit,
+    onDelete,
+    onOpenModal,
+  }: {
+    rowData: OfferDemandItem;
+    onEdit: () => void;
+    onDelete: () => void;
+    onOpenModal: (type: OfferDemandModalType, data: OfferDemandItem) => void;
+  }) => (
+    <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit / View">
         <div
           role="button"
@@ -378,13 +1122,13 @@ const ActionColumn = React.memo(
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Share">
+      {/* <Tooltip title="Delete">
         <div
           role="button"
-          onClick={() => toast.push(<Notification title="Share Clicked (Not Implemented)" type="info" />)}
-          className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
+          onClick={onDelete}
+          className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
         >
-          <TbShare />
+          <TbTrash />
         </div>
       </Tooltip> */}
       <Dropdown
@@ -392,30 +1136,84 @@ const ActionColumn = React.memo(
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("email", rowData)}
+          className="flex items-center gap-2"
+        >
           <TbMail size={18} /> <span className="text-xs">Send Email</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("whatsapp", rowData)}
+          className="flex items-center gap-2"
+        >
           <TbBrandWhatsapp size={18} />{" "}
           <span className="text-xs">Send on Whatsapp</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", rowData)}
+          className="flex items-center gap-2"
+        >
           <TbBell size={18} />{" "}
           <span className="text-xs">Add as Notification</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
           <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", rowData)}
+          className="flex items-center gap-2"
+        >
           <TbTagStarred size={18} />{" "}
           <span className="text-xs">Add to Active</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", rowData)}
+          className="flex items-center gap-2"
+        >
           <TbCalendarEvent size={18} />{" "}
           <span className="text-xs">Add to Calendar</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", rowData)}
+          className="flex items-center gap-2"
+        >
           <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("trackRecord", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbFileSearch size={18} />{" "}
+          <span className="text-xs">Track Record</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("engagement", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUserSearch size={18} /> <span className="text-xs">Engagement</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("document", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbDownload size={18} />{" "}
+          <span className="text-xs">Download Document</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("feedback", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbMessageReport size={18} />{" "}
+          <span className="text-xs">View Request & Feedback</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("wallLink", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbLink size={18} /> <span className="text-xs">Add Wall Link</span>
         </Dropdown.Item>
       </Dropdown>
     </div>
@@ -535,7 +1333,6 @@ const ItemActionTools = React.memo(
 );
 ItemActionTools.displayName = "ItemActionTools";
 
-// UPDATED ItemSelected to remove "(Simulated)"
 const ItemSelected = React.memo(
   ({
     selectedItems,
@@ -615,7 +1412,6 @@ const OffersDemands = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // ... (state definitions remain the same)
   const {
     Offers: rawOffers = [],
     Demands: rawDemands = [],
@@ -657,12 +1453,26 @@ const OffersDemands = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
+  // --- MODAL STATE AND HANDLERS ---
+  const [modalState, setModalState] = useState<OfferDemandModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+  const handleOpenModal = (
+    type: OfferDemandModalType,
+    itemData: OfferDemandItem
+  ) => setModalState({ isOpen: true, type, data: itemData });
+  const handleCloseModal = () =>
+    setModalState({ isOpen: false, type: null, data: null });
+  // --- END MODAL STATE AND HANDLERS ---
+
   const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
     defaultValues: { reason: "" },
     mode: "onChange",
   });
-  // ... (all hooks and memoized calculations remain the same until the delete handlers)
+
   const currentTableConfig = useMemo(() => {
     if (currentTab === TABS.ALL) return allTableConfig;
     if (currentTab === TABS.OFFER) return offerTableConfig;
@@ -875,7 +1685,6 @@ const OffersDemands = () => {
     []
   );
 
-  // UPDATED onConfirmDelete to handle both Offers and Demands
   const onConfirmDelete = useCallback(async () => {
     if (!itemToDeleteConfirm) return;
     setIsDeleting(true);
@@ -910,7 +1719,6 @@ const OffersDemands = () => {
     }
   }, [dispatch, itemToDeleteConfirm, fetchData, setCurrentSelectedItems]);
 
-  // UPDATED handleDeleteSelected to handle both Offers and Demands
   const handleDeleteSelected = useCallback(async () => {
     if (currentSelectedItems.length === 0) return;
     setIsDeleting(true);
@@ -1015,7 +1823,7 @@ const OffersDemands = () => {
       setIsSubmittingExportReason(false);
       setIsExportReasonModalOpen(false);
     },
-    [dispatch, allFilteredAndSortedData, exportReasonFormMethods]
+    [dispatch, allFilteredAndSortedData]
   );
 
   const columns: ColumnDef<OfferDemandItem>[] = useMemo(
@@ -1168,15 +1976,17 @@ const OffersDemands = () => {
         size: 120,
         cell: (props: CellContext<OfferDemandItem, any>) => (
           <ActionColumn
+            rowData={props.row.original}
             onEdit={() => handleEdit(props.row.original)}
             onDelete={() => handleDeleteClick(props.row.original)}
+            onOpenModal={handleOpenModal}
           />
         ),
       },
     ],
-    [handleEdit, handleDeleteClick]
+    [handleEdit, handleDeleteClick, handleOpenModal]
   );
-  // ... (rest of the component JSX)
+
   const isOverallLoading =
     offersStatus === "loading" ||
     demandsStatus === "loading" ||
@@ -1321,6 +2131,9 @@ const OffersDemands = () => {
           </FormItem>
         </Form>
       </ConfirmDialog>
+
+      {/* Render the main modal component */}
+      <OfferDemandModals modalState={modalState} onClose={handleCloseModal} />
     </>
   );
 };

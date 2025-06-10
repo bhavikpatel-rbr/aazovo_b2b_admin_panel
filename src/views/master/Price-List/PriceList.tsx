@@ -19,7 +19,8 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 // import StickyFooter from "@/components/shared/StickyFooter"; // Still imported, but footer usage is commented
 import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Tag already imported
+import { Card, Dialog, Drawer, Dropdown, Form, FormItem, Input, Table, Tag } from "@/components/ui"; // Tag already imported
+import * as XLSX from "xlsx";
 
 // Icons
 import {
@@ -46,6 +47,8 @@ import {
   TbDiscountOff,
   TbEyeDollar,
   TbBell,
+  TbShare,
+  TbFileDownload,
 } from "react-icons/tb";
 
 // Types
@@ -68,6 +71,9 @@ import {
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { Link } from "react-router-dom";
+import { FaRegFilePdf, FaWhatsapp } from "react-icons/fa";
+import { BsFileExcelFill } from "react-icons/bs";
+import { HiOutlineMail } from "react-icons/hi";
 
 // --- Define Product Master Type (what getAllProductAction fetches) ---
 export type ProductMasterItem = {
@@ -105,6 +111,7 @@ export type PriceListItem = {
   updated_by_role?: string;
   product: ApiProduct;
   qty?: string;
+  name: string | null;
 };
 
 // --- Status Options ---
@@ -201,6 +208,120 @@ const CSV_PRICE_LIST_KEYS: (keyof PriceListItem | "productNameForCsv")[] = [
   "updated_at",
 ];
 
+export type PriceListModalType =
+  | "notification";
+
+export interface PriceListModalState {
+  isOpen: boolean;
+  type: PriceListModalType | null;
+  data: PriceListItem | null;
+}
+interface PriceListModalsProps {
+  modalState: PriceListModalState;
+  onClose: () => void;
+}
+
+const dummyUsers = [
+  { value: "user1", label: "Alice Johnson" },
+  { value: "user2", label: "Bob Williams" },
+  { value: "user3", label: "Charlie Brown" },
+];
+
+// --- PriceListModals Manager Component ---
+const PriceListModals: React.FC<PriceListModalsProps> = ({
+  modalState,
+  onClose,
+}) => {
+  const { type, data: PriceList, isOpen } = modalState;
+  if (!isOpen || !PriceList) return null;
+
+  const renderModalContent = () => {
+    switch (type) {
+      case "notification":
+        return <AddNotificationDialog PriceList={PriceList} onClose={onClose} />;
+      default:
+        // Fallback for any other modal types if they are added later
+        return (
+            <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+                <h5 className="mb-4">Unhandled Modal</h5>
+                <p>This modal type ({type}) has not been configured.</p>
+                <div className="text-right mt-6">
+                    <Button onClick={onClose}>Close</Button>
+                </div>
+            </Dialog>
+        );
+    }
+  };
+  return <>{renderModalContent()}</>;
+};
+
+const AddNotificationDialog: React.FC<{
+  PriceList: PriceListItem;
+  onClose: () => void;
+}> = ({ PriceList, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", users: [], message: "" },
+  });
+  const onSend = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      "Sending in-app notification for",
+      PriceList.product.name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Notification Sent" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {PriceList.product.name}</h5>
+      <form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Send to Users">
+          <Controller
+            name="users"
+            control={control}
+            render={({ field }) => (
+              <Select
+                isMulti
+                placeholder="Select Users"
+                options={dummyUsers}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
 function exportPriceListToCsv(filename: string, rows: PriceListItem[]) {
   if (!rows || !rows.length) {
     toast.push(
@@ -270,11 +391,13 @@ function exportPriceListToCsv(filename: string, rows: PriceListItem[]) {
 
 // --- ActionColumn, PriceListSearch, PriceListTableTools, PriceListTable ---
 const ActionColumn = ({
+  rowData,
   onEdit,
-}: // onDelete, // Commented out
-{
+  onOpenModal,
+}: {
+  rowData: PriceListItem;
   onEdit: () => void;
-  // onDelete: () => void; // Commented out
+  onOpenModal: (type: PriceListModalType, data: PriceListItem) => void;
 }) => {
   return (
     <div className="flex items-center justify-center">
@@ -291,20 +414,19 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      {/* Delete button commented out
-      <Tooltip title="Delete">
+       <Tooltip title="Send Notification">
         <div
           className={classNames(
             "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none",
             "hover:bg-gray-100 dark:hover:bg-gray-700",
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+            "text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
           )}
           role="button"
-          onClick={onDelete}
+          onClick={() => onOpenModal('notification', rowData)}
         >
-          <TbTrash />
+          <TbBell />
         </div>
-      </Tooltip> */}
+      </Tooltip>
     </div>
   );
 };
@@ -404,15 +526,24 @@ const PriceList = () => {
     }));
   }, [productsMasterData]);
 
+  // --- MODAL STATE AND HANDLERS (LIFTED UP) ---
+  const [modalState, setModalState] = useState<PriceListModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+  const handleOpenModal = useCallback((type: PriceListModalType, priceListData: PriceListItem) =>
+    setModalState({ isOpen: true, type, data: priceListData }), []);
+  const handleCloseModal = useCallback(() =>
+    setModalState({ isOpen: false, type: null, data: null }), []);
+  // --- END MODAL STATE AND HANDLERS ---
+
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingPriceListItem, setEditingPriceListItem] =
     useState<PriceListItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [isDeleting, setIsDeleting] = useState(false); // Commented out
-  // const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false); // Commented out
-  // const [itemToDelete, setItemToDelete] = useState<PriceListItem | null>(null); // Commented out
 
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
@@ -548,15 +679,6 @@ const PriceList = () => {
       setIsSubmitting(false);
     }
   };
-
-  /* // --- Delete Logic (Commented out) ---
-  const handleDeleteClick = (item: PriceListItem) => {
-    // ...
-  };
-  const onConfirmSingleDelete = async () => {
-    // ...
-  };
-  */ // --- End Delete Logic ---
 
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria);
@@ -858,14 +980,15 @@ const PriceList = () => {
         cell: (props) => (
           <div className="flex justify-center items-center">
             <ActionColumn
+              rowData={props.row.original}
               onEdit={() => openEditDrawer(props.row.original)}
-              // onDelete={() => handleDeleteClick(props.row.original)} // Commented out
+              onOpenModal={handleOpenModal}
             />
           </div>
         ),
       },
     ],
-    [openEditDrawer /*, handleDeleteClick // Commented out */]
+    [openEditDrawer, handleOpenModal]
   );
 
   const formFieldsConfig: {
@@ -936,6 +1059,87 @@ const PriceList = () => {
     );
   };
 
+  function exportToExcel(filename: string, data: PriceListItem[]) {
+    if (!data || !data.length) {
+      toast.push(<Notification title="No Data" type="info" children="Nothing to export." />);
+      return;
+    }
+    const worksheetData = data.map(item => ({
+      'Product Name': item.product.name,
+      'Sales Price': item.sales_price,
+      'Base Price': item.base_price,
+      'Status': item.status,
+      'Last Updated': new Date(item.updated_at || '').toLocaleString(),
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Today's Prices");
+    XLSX.writeFile(workbook, filename);
+    toast.push(<Notification title="Export Successful" type="success" children={`Data exported to ${filename}.`} />);
+  }
+
+
+  // --- [NEW] --- State and handlers for the "Today's Price" drawer
+  const [isTodayPriceDrawerOpen, setIsTodayPriceDrawerOpen] = useState(false);
+  const openTodayPriceDrawer = () => setIsTodayPriceDrawerOpen(true);
+  const closeTodayPriceDrawer = () => setIsTodayPriceDrawerOpen(false);
+
+  // --- [NEW] --- Memoized data for today's prices
+  const todayPriceListData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize today's date to midnight
+
+    if (!Array.isArray(priceListData)) return [];
+
+    return priceListData.filter((item) => {
+      if (!item.updated_at) return false;
+      const itemDate = new Date(item.updated_at);
+      itemDate.setHours(0, 0, 0, 0); // Normalize item's date
+      return itemDate.getTime() === today.getTime();
+    });
+  }, [priceListData]);
+  
+  const generateShareableText = () => {
+    let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n`;
+    message += "-----------------------------------\n";
+    todayPriceListData.forEach(item => {
+      message += `*Product:* ${item.product.name}\n`;
+      message += `*Price:* ₹${item.sales_price}\n`;
+      message += `*Status:* ${item.status}\n`;
+      message += "-----------------------------------\n";
+    });
+    return message;
+  }
+  
+  const handleShareViaEmail = () => {
+    const subject = `Today's Price List - ${new Date().toLocaleDateString()}`;
+    const body = generateShareableText().replace(/\*/g, '').replace(/\n/g, '%0A'); // Simple text format for email
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+  
+  const handleShareViaWhatsapp = () => {
+    const message = generateShareableText();
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+    // --- [NEW] --- Handlers for drawer actions
+  const handlePdfDownload = () => {
+    // This would require a library like jsPDF and jspdf-autotable
+    // npm install jspdf jspdf-autotable
+    toast.push(<Notification title="Feature in Development" type="info" children="PDF export will be available soon." />);
+    // Example placeholder:
+    // import jsPDF from 'jspdf';
+    // import 'jspdf-autotable';
+    // const doc = new jsPDF();
+    // doc.autoTable({ ... });
+    // doc.save('todays-prices.pdf');
+  };
+
+  const handleExcelDownload = () => {
+    exportToExcel("todays-prices.xlsx", todayPriceListData);
+  };
+
   return (
     <>
       <Container className="h-auto">
@@ -963,6 +1167,7 @@ const PriceList = () => {
               <Button
                 className="mr-2"
                 icon={<TbEyeDollar />}
+                onClick={openTodayPriceDrawer} // <-- Added this
                 clickFeedback={false}
                 customColorClass={({ active, unclickable }) =>
                   classNames(
@@ -974,21 +1179,6 @@ const PriceList = () => {
                 }
               >
                 View Today Price
-              </Button>
-              <Button
-                className="mr-2"
-                icon={<TbBell />}
-                clickFeedback={false}
-                customColorClass={({ active, unclickable }) =>
-                  classNames(
-                    "hover:text-blue-800 dark:hover:bg-blue-600 border-0 hover:ring-0",
-                    active ? "bg-blue-200" : "bg-blue-100",
-                    unclickable && "opacity-50 cursor-not-allowed",
-                    !active && !unclickable && "hover:bg-blue-200"
-                  )
-                }
-              >
-                Add to Notifications
               </Button>
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
                 Add New
@@ -1061,7 +1251,6 @@ const PriceList = () => {
             <PriceListTable
               columns={columns}
               data={pageData}
-              // loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented out */}
               loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total: total,
@@ -1076,6 +1265,9 @@ const PriceList = () => {
         </AdaptiveCard>
       </Container>
 
+      {/* RENDER MODALS HERE */}
+      <PriceListModals modalState={modalState} onClose={handleCloseModal} />
+      
       {[
         {
           title: "Add Price List",
@@ -1331,30 +1523,105 @@ const PriceList = () => {
         </Form>
       </ConfirmDialog>
 
-      {/* <ConfirmDialog // Commented out single delete confirm dialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Price List Item"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
+      <Drawer
+        title="Today's Price List"
+        isOpen={isTodayPriceDrawerOpen}
+        onClose={closeTodayPriceDrawer}
+        onRequestClose={closeTodayPriceDrawer}
+        width={700}
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <span className="text-xs text-gray-500">
+              {todayPriceListData.length} item(s) updated today.
+            </span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                icon={<FaRegFilePdf />}
+                onClick={handlePdfDownload}
+                disabled={todayPriceListData.length === 0}
+              >
+                PDF
+              </Button>
+              <Button
+                size="sm"
+                icon={<BsFileExcelFill />}
+                onClick={handleExcelDownload}
+                disabled={todayPriceListData.length === 0}
+              >
+                Excel
+              </Button>
+              <Dropdown
+                placement="top-end"
+                renderTitle={
+                  <Button
+                    variant="solid"
+                    icon={<TbShare />}
+                    disabled={todayPriceListData.length === 0}
+                  >
+                    Share
+                  </Button>
+                }
+              >
+                <Dropdown.Item
+                  icon={<HiOutlineMail />}
+                  onClick={handleShareViaEmail}
+                >
+                  Share via Email
+                </Dropdown.Item>
+                <Dropdown.Item
+                  icon={<FaWhatsapp />}
+                  onClick={handleShareViaWhatsapp}
+                >
+                  Share on WhatsApp
+                </Dropdown.Item>
+              </Dropdown>
+            </div>
+          </div>
+        }
       >
-        <p>
-          Are you sure you want to delete the price list item for "
-          <strong>{itemToDelete?.product?.name || "this item"}</strong>"? This action cannot be undone.
-        </p>
-      </ConfirmDialog> */}
+        <div className="h-full">
+            {todayPriceListData.length > 0 ? (
+                <Table>
+                    <Table.THead>
+                        <Table.Tr>
+                            <Table.Th>Product Name</Table.Th>
+                            <Table.Th>Sales Price</Table.Th>
+                            <Table.Th>Status</Table.Th>
+                        </Table.Tr>
+                    </Table.THead>
+                    <Table.TBody>
+                        {todayPriceListData.map((item) => (
+                            <Table.Tr key={item.id}>
+                                <Table.Td>{item.product.name}</Table.Td>
+                                <Table.Td>₹{item.sales_price}</Table.Td>
+                                <Table.Td>
+                                    <Tag
+                                        className={classNames('capitalize', {
+                                            "bg-emerald-100 text-emerald-600": item.status === "active",
+                                            "bg-red-100 text-red-600": item.status === "inactive",
+                                        })}
+                                    >
+                                        {item.status}
+                                    </Tag>
+                                </Table.Td>
+                            </Table.Tr>
+                        ))}
+                    </Table.TBody>
+                </Table>
+            ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+                        <TbFileDownload className="text-4xl text-gray-500" />
+                    </div>
+                    <h6 className="font-semibold">No Prices Updated Today</h6>
+                    <p className="text-gray-500">
+                        Check back later or view the full price list.
+                    </p>
+                </div>
+            )}
+        </div>
+      </Drawer>
     </>
   );
 };

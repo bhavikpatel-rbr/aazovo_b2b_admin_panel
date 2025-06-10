@@ -72,6 +72,7 @@ import {
   TbBoxOff,
   TbCategory,
   TbActivityHeartbeat,
+  TbMail,
 } from "react-icons/tb";
 
 // Types
@@ -101,6 +102,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
+import { RichTextEditor } from "@/components/shared";
 
 // --- Type Definitions (keeping them as they are, assuming they are correct) ---
 type ApiProductItem = {
@@ -162,6 +164,7 @@ export type ProductGalleryImageItem = {
 export type ProductItem = {
   id: number;
   name: string;
+  email: string | null,
   slug: string;
   skuCode: string | null;
   status: ProductStatus;
@@ -199,7 +202,174 @@ export type ProductItem = {
   metaKeyword: string | null;
   createdAt: string;
   updatedAt: string;
+  subject: string | null,
+  type: string | null, 
 };
+
+// ============================================================================
+// --- MODALS SECTION ---
+// All modal components for Requests & Feedbacks are defined here.
+// ============================================================================
+
+// --- Type Definitions for Modals ---
+export type ProductsModalType =
+  | "email";
+
+export interface ProductsModalState {
+  isOpen: boolean;
+  type: ProductsModalType | null;
+  data: ProductItem | null;
+}
+interface ProductsModalsProps {
+  modalState: ProductsModalState;
+  onClose: () => void;
+}
+
+// --- Helper Data for Modal Demos ---
+const dummyUsers = [
+  { value: "user1", label: "Support Team" },
+  { value: "user2", label: "Product Manager" },
+  { value: "user3", label: "Admin User" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Review Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Resolution Deadline" },
+];
+const dummyAlerts = [
+  {
+    id: 1,
+    severity: "danger",
+    message: "Complaint has been unread for more than 48 hours.",
+    time: "1 day ago",
+  },
+  {
+    id: 2,
+    severity: "warning",
+    message: "Request is 'In Progress' for over 5 days.",
+    time: "3 days ago",
+  },
+];
+
+const ProductsModals: React.FC<ProductsModalsProps> = ({
+  modalState,
+  onClose,
+}) => {
+  const { type, data: item, isOpen } = modalState;
+  if (!isOpen || !item) return null;
+
+  const renderModalContent = () => {
+    switch (type) {
+      case "email":
+        return <SendEmailDialog item={item} onClose={onClose} />;
+      default:
+        return (
+          <GenericActionDialog type={type} item={item} onClose={onClose} />
+        );
+    }
+  };
+  return <>{renderModalContent()}</>;
+};
+
+const GenericActionDialog: React.FC<{
+  type: ProductsModalType | null;
+  item: ProductItem;
+  onClose: () => void;
+}> = ({ type, item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type
+    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+    : "Confirm Action";
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(`Performing action '${type}' for item ${item.id}`);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>
+        Are you sure you want to perform this action for item #
+        <span className="font-semibold">{item.id}</span> from{" "}
+        <span className="font-semibold">{item.name}</span>?
+      </p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+          Confirm
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
+// --- Individual Dialog Components (Adapted for ProductsItem) ---
+const SendEmailDialog: React.FC<{
+  item: ProductItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      subject: `Re: Your ${item.type}: ${item.subject || `(ID: ${item.id})`}`,
+      message: "",
+    },
+  });
+  const onSendEmail = (data: { subject: string; message: string }) => {
+    setIsLoading(true);
+    console.log("Sending email to", item.email, "with data:", data);
+    setTimeout(() => {
+      toast.push(
+        <Notification type="success" title="Email Sent Successfully" />
+      );
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Email to {item.name}</h5>
+      <form onSubmit={handleSubmit(onSendEmail)}>
+        <FormItem label="Subject">
+          <Controller
+            name="subject"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => (
+              <RichTextEditor value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
 const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required.").max(255),
   slug: z.string().min(1, "Slug is required.").max(255),
@@ -302,14 +472,21 @@ const apiProductStatusOptions: {
 const ActionColumn = React.memo(
   ({
     onEdit,
+    rowData,
     onViewDetail,
     onDelete,
     onChangeStatus,
+    onOpenModal,
   }: {
     onEdit: () => void;
+    rowData: ProductItem,
     onViewDetail: () => void;
     onDelete: () => void;
     onChangeStatus: () => void;
+    onOpenModal: (
+      type: ProductsModalType,
+      data: ProductItem
+    ) => void;
   }) => (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="View">
@@ -358,19 +535,12 @@ const ActionColumn = React.memo(
           </Tooltip>
         }
       >
-        <Dropdown.Item
-          eventKey="sendLaunchMail"
-          onClick={() =>
-            toast.push(
-              <Notification title="Not Implemented" type="info">
-                Send Launch Mail
-              </Notification>
-            )
-          }
-          className="text-xs flex items-center gap-2"
-        >
-          <TbMailForward size={16} /> Send Launch Mail
-        </Dropdown.Item>{" "}
+      <Dropdown.Item
+        onClick={() => onOpenModal("email", rowData)}
+        className="flex items-center gap-2"
+      >
+        <TbMail size={18} /> <span className="text-xs">Send Email</span>
+      </Dropdown.Item>
       </Dropdown>{" "}
     </div>
   )
@@ -560,6 +730,23 @@ const Products = () => {
     sort: { order: "", key: "" },
     query: "",
   });
+
+  // --- MODAL STATE AND HANDLERS ---
+  const [modalState, setModalState] = useState<ProductsModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+  const handleOpenModal = useCallback(
+    (type: ProductsModalType, itemData: ProductItem) => {
+      setModalState({ isOpen: true, type, data: itemData });
+    },
+    [] // The state setter from useState is stable and doesn't need to be a dependency.
+  );
+    const handleCloseModal = useCallback(() => {
+      setModalState({ isOpen: false, type: null, data: null });
+    }, []);
+  // --- END MODAL STATE AND HANDLERS ---
   const [selectedItems, setSelectedItems] = useState<ProductItem[]>([]);
   const [isSubmittingForm, setIsSubmittingForm] = useState(false); // REFACTOR: More specific name
   const [itemToDelete, setItemToDelete] = useState<ProductItem | null>(null);
@@ -1463,6 +1650,9 @@ const Products = () => {
     /* dispatch(clearSubcategoriesAction()); */ closeFilterDrawer();
   }, [resetFilterForm, setFilterFormValue, closeFilterDrawer]);
 
+
+  
+
   const columns: ColumnDef<ProductItem>[] = useMemo(
     () => [
       {
@@ -1541,10 +1731,12 @@ const Products = () => {
         meta: { HeaderClass: "text-center" },
         cell: (props: CellContext<ProductItem, any>) => (
           <ActionColumn
+            rowData={props.row.original}
             onEdit={() => openEditDrawer(props.row.original)}
             onViewDetail={() => openViewDetailModal(props.row.original)}
             onDelete={() => handleDeleteProductClick(props.row.original)}
             onChangeStatus={() => handleChangeStatusClick(props.row.original)}
+            onOpenModal={handleOpenModal}
           />
         ),
       },
@@ -1555,6 +1747,7 @@ const Products = () => {
       openViewDetailModal,
       handleDeleteProductClick,
       handleChangeStatusClick,
+      handleOpenModal,
     ]
   ); // REFACTOR: Dependencies should be stable
 
@@ -2873,6 +3066,11 @@ const Products = () => {
           </div>
         )}
       </Dialog>
+            {/* Render the main modal component */}
+      <ProductsModals
+        modalState={modalState}
+        onClose={handleCloseModal}
+      />
     </>
   );
 };
