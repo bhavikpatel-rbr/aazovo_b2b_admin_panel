@@ -927,7 +927,7 @@ const Departments = () => {
           className="flex flex-col gap-4"
         >
           <FormItem
-            label="Department Name"
+            label={<div>Department Name<span className="text-red-500"> * </span></div>}
             invalid={!!addFormMethods.formState.errors.name}
             errorMessage={addFormMethods.formState.errors.name?.message}
           >
@@ -936,6 +936,24 @@ const Departments = () => {
               control={addFormMethods.control}
               render={({ field }) => (
                 <Input {...field} placeholder="Enter Department Name" />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label={<div>Status<span className="text-red-500"> * </span></div>}
+          >
+            <Controller
+              name="status"
+              control={addFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  placeholder="Select Status"
+                  options={[
+                    { label: "Active", value: "Active" },
+                    { label: "Inactive", value: "Inactive" },
+                  ]}
+                />
               )}
             />
           </FormItem>
@@ -977,7 +995,7 @@ const Departments = () => {
           className="flex flex-col gap-4"
         >
           <FormItem
-            label="Department Name"
+            label={<div>Department Name<span className="text-red-500"> * </span></div>}
             invalid={!!editFormMethods.formState.errors.name}
             errorMessage={editFormMethods.formState.errors.name?.message}
           >
@@ -986,6 +1004,24 @@ const Departments = () => {
               control={editFormMethods.control}
               render={({ field }) => (
                 <Input {...field} placeholder="Enter Department Name" />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label={<div>Status<span className="text-red-500"> * </span></div>}
+          >
+            <Controller
+              name="status"
+              control={editFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  placeholder="Select Status"
+                  options={[
+                    { label: "Active", value: "Active" },
+                    { label: "Inactive", value: "Inactive" },
+                  ]}
+                />
               )}
             />
           </FormItem>

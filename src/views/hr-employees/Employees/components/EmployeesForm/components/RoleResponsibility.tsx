@@ -123,7 +123,7 @@ const RoleResponsibilitySection = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
                     {/* Role */}
                     <FormItem
-                        label="Role"
+                        label={<div>Role<span className="text-red-500"> * </span></div>}
                         invalid={Boolean(errors.roleResponsibility?.role)}
                         errorMessage={errors.roleResponsibility?.role?.message as string}
                     >

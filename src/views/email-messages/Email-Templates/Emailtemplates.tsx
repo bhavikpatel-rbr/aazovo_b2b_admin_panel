@@ -477,31 +477,31 @@ const EmailTemplatesListing = () => {
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-        <FormItem label="Name*" invalid={!!currentErrors.name} errorMessage={currentErrors.name?.message}>
+        <FormItem label={<div>Name<span className="text-red-500"> * </span></div>} invalid={!!currentErrors.name} errorMessage={currentErrors.name?.message}>
           <Controller name="name" control={currentControl} render={({ field }) => (<Input {...field} prefix={<TbMailBolt />} placeholder="Internal Template Name" />)} />
         </FormItem>
-        <FormItem label="Template ID (Unique)*" invalid={!!currentErrors.template_id} errorMessage={currentErrors.template_id?.message}>
+        <FormItem label={<div>Template ID<span className="text-red-500"> * </span></div>} invalid={!!currentErrors.template_id} errorMessage={currentErrors.template_id?.message}>
           <Controller name="template_id" control={currentControl} render={({ field }) => (<Input {...field} prefix={<TbKey />} placeholder="e.g., WELCOME_EMAIL_V1" />)} />
         </FormItem>
-        <FormItem label="Title (Email Subject/Header)*" className="md:col-span-2" invalid={!!currentErrors.title} errorMessage={currentErrors.title?.message}>
+        <FormItem label={<div>Title (Email Subject / Header)<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!currentErrors.title} errorMessage={currentErrors.title?.message}>
           <Controller name="title" control={currentControl} render={({ field }) => (<Input {...field} prefix={<TbFileDescription />} placeholder="Actual Email Title/Subject" />)} />
         </FormItem>
-        <FormItem label="Category*" invalid={!!currentErrors.category_id} errorMessage={currentErrors.category_id?.message}>
+        <FormItem label={<div>Category<span className="text-red-500"> * </span></div>} invalid={!!currentErrors.category_id} errorMessage={currentErrors.category_id?.message}>
           <Controller name="category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find(o => o.value === field.value)} onChange={(opt) => { field.onChange(opt?.value); }} prefix={<TbCategory2 />} />)} />
         </FormItem>
-        <FormItem label="SubCategory (Optional)" invalid={!!currentErrors.sub_category_id} errorMessage={currentErrors.sub_category_id?.message}>
+        <FormItem label="SubCategory" invalid={!!currentErrors.sub_category_id} errorMessage={currentErrors.sub_category_id?.message}>
           <Controller name="sub_category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select SubCategory" options={subCategoryOptionsForForm} value={subCategoryOptionsForForm.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbApps />} isDisabled={!watchedCategoryIdInForm || subCategoryOptionsForForm.length === 0} loading={masterLoadingStatus === "loading" /* && specific subcategory loading status */} />)} />
         </FormItem>
-        <FormItem label="Brand (Optional)" invalid={!!currentErrors.brand_id} errorMessage={currentErrors.brand_id?.message}>
+        <FormItem label="Brand" invalid={!!currentErrors.brand_id} errorMessage={currentErrors.brand_id?.message}>
           <Controller name="brand_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Brand" options={brandOptions} value={brandOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBuildingArch />} />)} />
         </FormItem>
-        <FormItem label="Role (Optional)" invalid={!!currentErrors.role_id} errorMessage={currentErrors.role_id?.message}>
+        <FormItem label="Role" invalid={!!currentErrors.role_id} errorMessage={currentErrors.role_id?.message}>
           <Controller name="role_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Role" options={roleOptions} value={roleOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbUsersGroup />} />)} />
         </FormItem>
-        <FormItem label="Department (Optional)" invalid={!!currentErrors.department_id} errorMessage={currentErrors.department_id?.message}>
+        <FormItem label="Department" invalid={!!currentErrors.department_id} errorMessage={currentErrors.department_id?.message}>
           <Controller name="department_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Department" options={departmentOptions} value={departmentOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBuildingCommunity />} />)} />
         </FormItem>
-        <FormItem label="Designation (Optional)" invalid={!!currentErrors.designation_id} errorMessage={currentErrors.designation_id?.message}>
+        <FormItem label="Designation" invalid={!!currentErrors.designation_id} errorMessage={currentErrors.designation_id?.message}>
           <Controller name="designation_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Designation" options={designationOptions} value={designationOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBriefcase />} />)} />
         </FormItem>
 

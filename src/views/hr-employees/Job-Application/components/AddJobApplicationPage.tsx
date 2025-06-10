@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 // UI Components
 import Input from '@/components/ui/Input';
 import { FormItem, FormContainer } from '@/components/ui/Form';
-import { Select as UiSelect, DatePicker, Button, Radio, Card } from '@/components/ui';
+import { Select as UiSelect, DatePicker, Button, Radio, Card, Select } from '@/components/ui';
 import Notification from '@/components/ui/Notification';
 import toast from '@/components/ui/toast';
 import Container from '@/components/shared/Container';
@@ -49,26 +49,26 @@ const countriesData = [
 ];
 
 const statesByCountryData: Record<string, Array<{ value: string; label: string }>> = {
-    USA: [ { value: 'NY', label: 'New York' }, { value: 'CA', label: 'California' }, { value: 'TX', label: 'Texas' } ],
-    CAN: [ { value: 'ON', label: 'Ontario' }, { value: 'QC', label: 'Quebec' }, { value: 'BC', label: 'British Columbia' } ],
-    IND: [ { value: 'MH', label: 'Maharashtra' }, { value: 'KA', label: 'Karnataka' }, { value: 'DL', label: 'Delhi' }, { value: 'TN', label: 'Tamil Nadu'} ],
-    GBR: [ { value: 'ENG', label: 'England' }, { value: 'SCT', label: 'Scotland' }, { value: 'WAL', label: 'Wales' } ],
+    USA: [{ value: 'NY', label: 'New York' }, { value: 'CA', label: 'California' }, { value: 'TX', label: 'Texas' }],
+    CAN: [{ value: 'ON', label: 'Ontario' }, { value: 'QC', label: 'Quebec' }, { value: 'BC', label: 'British Columbia' }],
+    IND: [{ value: 'MH', label: 'Maharashtra' }, { value: 'KA', label: 'Karnataka' }, { value: 'DL', label: 'Delhi' }, { value: 'TN', label: 'Tamil Nadu' }],
+    GBR: [{ value: 'ENG', label: 'England' }, { value: 'SCT', label: 'Scotland' }, { value: 'WAL', label: 'Wales' }],
 };
 
 const citiesByStateData: Record<string, Array<{ value: string; label: string }>> = {
-    NY: [ { value: 'NYC', label: 'New York City' }, { value: 'Buffalo', label: 'Buffalo' }, { value: 'Albany', label: 'Albany' } ],
-    CA: [ { value: 'LA', label: 'Los Angeles' }, { value: 'SF', label: 'San Francisco' }, { value: 'SD', label: 'San Diego' } ],
-    TX: [ { value: 'Houston', label: 'Houston' }, { value: 'Austin', label: 'Austin' }, { value: 'Dallas', label: 'Dallas' } ],
-    ON: [ { value: 'Toronto', label: 'Toronto' }, { value: 'Ottawa', label: 'Ottawa' }, { value: 'Hamilton', label: 'Hamilton' } ],
-    QC: [ { value: 'Montreal', label: 'Montreal' }, { value: 'QuebecCity', label: 'Quebec City' } ],
-    BC: [ { value: 'Vancouver', label: 'Vancouver' }, { value: 'Victoria', label: 'Victoria' } ],
-    MH: [ { value: 'Mumbai', label: 'Mumbai' }, { value: 'Pune', label: 'Pune' }, { value: 'Nagpur', label: 'Nagpur' } ],
-    KA: [ { value: 'Bangalore', label: 'Bengaluru' }, { value: 'Mysore', label: 'Mysuru' }, { value: 'Mangalore', label: 'Mangaluru' } ],
-    DL: [ { value: 'NewDelhi', label: 'New Delhi' } ],
-    TN: [ { value: 'Chennai', label: 'Chennai' }, { value: 'Coimbatore', label: 'Coimbatore'} ],
-    ENG: [ { value: 'London', label: 'London' }, { value: 'Manchester', label: 'Manchester' }, { value: 'Birmingham', label: 'Birmingham' }],
-    SCT: [ { value: 'Edinburgh', label: 'Edinburgh' }, { value: 'Glasgow', label: 'Glasgow' }],
-    WAL: [ { value: 'Cardiff', label: 'Cardiff' }, { value: 'Swansea', label: 'Swansea' }],
+    NY: [{ value: 'NYC', label: 'New York City' }, { value: 'Buffalo', label: 'Buffalo' }, { value: 'Albany', label: 'Albany' }],
+    CA: [{ value: 'LA', label: 'Los Angeles' }, { value: 'SF', label: 'San Francisco' }, { value: 'SD', label: 'San Diego' }],
+    TX: [{ value: 'Houston', label: 'Houston' }, { value: 'Austin', label: 'Austin' }, { value: 'Dallas', label: 'Dallas' }],
+    ON: [{ value: 'Toronto', label: 'Toronto' }, { value: 'Ottawa', label: 'Ottawa' }, { value: 'Hamilton', label: 'Hamilton' }],
+    QC: [{ value: 'Montreal', label: 'Montreal' }, { value: 'QuebecCity', label: 'Quebec City' }],
+    BC: [{ value: 'Vancouver', label: 'Vancouver' }, { value: 'Victoria', label: 'Victoria' }],
+    MH: [{ value: 'Mumbai', label: 'Mumbai' }, { value: 'Pune', label: 'Pune' }, { value: 'Nagpur', label: 'Nagpur' }],
+    KA: [{ value: 'Bangalore', label: 'Bengaluru' }, { value: 'Mysore', label: 'Mysuru' }, { value: 'Mangalore', label: 'Mangaluru' }],
+    DL: [{ value: 'NewDelhi', label: 'New Delhi' }],
+    TN: [{ value: 'Chennai', label: 'Chennai' }, { value: 'Coimbatore', label: 'Coimbatore' }],
+    ENG: [{ value: 'London', label: 'London' }, { value: 'Manchester', label: 'Manchester' }, { value: 'Birmingham', label: 'Birmingham' }],
+    SCT: [{ value: 'Edinburgh', label: 'Edinburgh' }, { value: 'Glasgow', label: 'Glasgow' }],
+    WAL: [{ value: 'Cardiff', label: 'Cardiff' }, { value: 'Swansea', label: 'Swansea' }],
 };
 
 // --- Sub-Components for Sections ---
@@ -118,65 +118,83 @@ const PersonalDetailsSection = ({ control, errors, setValue }: { control: any, e
         <Card id="personalDetails" className="mb-6">
             <h4 className="mb-6">1. Personal Details</h4>
             <div className="grid md:grid-cols-3 gap-x-4 gap-y-2">
-                <FormItem label="Department*" error={errors.department?.message}><Controller name="department" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Engineering" />} /></FormItem>
-                <FormItem label="Applicant Name*" error={errors.name?.message}><Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Full name" />} /></FormItem>
-                <FormItem label="Email*" error={errors.email?.message}><Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="email@example.com" />} /></FormItem>
-                <FormItem label="Mobile No*" error={errors.mobileNo?.message}><Controller name="mobileNo" control={control} render={({ field }) => <Input {...field} placeholder="+1-XXX-XXX-XXXX" />} /></FormItem>
-                <FormItem label="Gender" error={errors.gender?.message}><Controller name="gender" control={control} render={({ field }) => <UiSelect placeholder="Select Gender" options={genderOptions} value={genderOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
-                <FormItem label="Date Of Birth*" error={errors.dateOfBirth?.message as string}><Controller name="dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select DOB" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} />} /></FormItem>
+                <FormItem label={<div>Job Department<span className="text-red-500"> * </span></div>}
+                    error={errors.department?.message}
+                >
+                    <Controller name="department" control={control} render={({ field }) =>
+                        <Select
+                            {...field}
+                            placeholder="e.g., Engineering"
+                            options={[
+                                { label: "Sales", value: "Sales" },
+                                { label: "Accounts", value: "Accounts" },
+                            ]}
+                        />} />
+                </FormItem>
+                <FormItem label={<div>Applicant Name<span className="text-red-500"> * </span></div>}
+                    error={errors.name?.message}
+                >
+                    <Controller name="name" control={control} render={({ field }) =>
+                        <Input {...field} placeholder="Full name" />} />
+                </FormItem>
+                <FormItem label={<div>Email<span className="text-red-500"> * </span></div>} error={errors.email?.message}><Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="email@example.com" />} /></FormItem>
+                <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} error={errors.mobileNo?.message}><Controller name="mobileNo" control={control} render={({ field }) => <Input {...field} placeholder="+1-XXX-XXX-XXXX" />} /></FormItem>
+                <FormItem label="Gender" error={errors.gender?.message}><Controller name="gender" control={control} render={({ field }) => <UiSelect placeholder="Select Gender" options={genderOptions} value={genderOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
+                <FormItem label={<div>Date of Birth<span className="text-red-500"> * </span></div>} error={errors.dateOfBirth?.message as string}><Controller name="dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select DOB" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} />} /></FormItem>
                 <FormItem label="Age" error={errors.age?.message as string}>
                     <Controller name="age" control={control} render={({ field }) => (
                         <Input type="number" placeholder="Enter Age" {...field} value={field.value ?? (calculatedAge !== null ? calculatedAge : '')} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} />
                     )} />
                 </FormItem>
-                <FormItem label="Nationality" error={errors.nationality?.message}><Controller name="nationality" control={control} render={({ field }) => <UiSelect placeholder="Select Nationality" options={nationalityOptions} value={nationalityOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
-                <FormItem label="Marital Status" error={errors.maritalStatus?.message}><Controller name="maritalStatus" control={control} render={({ field }) => <UiSelect placeholder="Select Marital Status" options={maritalStatusOptions} value={maritalStatusOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
-                <FormItem label="Blood Group" error={errors.bloodGroup?.message}><Controller name="bloodGroup" control={control} render={({ field }) => <UiSelect placeholder="Select Blood Group" options={bloodGroupOptions} value={bloodGroupOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} isClearable />}/></FormItem>
-                
-                <FormItem label="Country*" error={errors.country?.message}>
-                    <Controller name="country" control={control} render={({ field }) => 
-                        <UiSelect 
-                            placeholder="Select Country" 
-                            options={countriesData} 
-                            value={countriesData.find(o => o.value === field.value)} 
-                            onChange={opt => field.onChange(opt?.value)} 
-                            isClearable 
+                <FormItem label="Nationality" error={errors.nationality?.message}><Controller name="nationality" control={control} render={({ field }) => <UiSelect placeholder="Select Nationality" options={nationalityOptions} value={nationalityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
+                <FormItem label="Marital Status" error={errors.maritalStatus?.message}><Controller name="maritalStatus" control={control} render={({ field }) => <UiSelect placeholder="Select Marital Status" options={maritalStatusOptions} value={maritalStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
+                {/* <FormItem label="Blood Group" error={errors.bloodGroup?.message}><Controller name="bloodGroup" control={control} render={({ field }) => <UiSelect placeholder="Select Blood Group" options={bloodGroupOptions} value={bloodGroupOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem> */}
+
+                <FormItem label="Country" error={errors.country?.message}>
+                    <Controller name="country" control={control} render={({ field }) =>
+                        <UiSelect
+                            placeholder="Select Country"
+                            options={countriesData}
+                            value={countriesData.find(o => o.value === field.value)}
+                            onChange={opt => field.onChange(opt?.value)}
+                            isClearable
                         />}
                     />
                 </FormItem>
-                <FormItem label="State*" error={errors.state?.message}>
-                    <Controller name="state" control={control} render={({ field }) => 
-                        <UiSelect 
-                            placeholder="Select State" 
-                            options={stateOptions} 
-                            value={stateOptions.find(o => o.value === field.value)} 
-                            onChange={opt => field.onChange(opt?.value)} 
-                            isDisabled={!selectedCountry || stateOptions.length === 0}
-                            isClearable 
+                <FormItem label="State" error={errors.state?.message}>
+                    <Controller name="state" control={control} render={({ field }) =>
+                        <Input
+                            placeholder="Enter State Name"
+                            defaultValue={""}
+                        // options={stateOptions}
+                        // value={stateOptions.find(o => o.value === field.value)}
+                        // onChange={opt => field.onChange(opt?.value)}
+                        // isDisabled={!selectedCountry || stateOptions.length === 0}
                         />}
                     />
                 </FormItem>
-                <FormItem label="City*" error={errors.city?.message}>
-                    <Controller name="city" control={control} render={({ field }) => 
-                        <UiSelect 
-                            placeholder="Select City" 
-                            options={cityOptions} 
-                            value={cityOptions.find(o => o.value === field.value)} 
-                            onChange={opt => field.onChange(opt?.value)} 
-                            isDisabled={!selectedState || cityOptions.length === 0}
-                            isClearable 
+                <FormItem label="City" error={errors.city?.message}>
+                    <Controller name="city" control={control} render={({ field }) =>
+                        <Input
+                            placeholder="Select City"
+
+                        // options={cityOptions}
+                        // value={cityOptions.find(o => o.value === field.value)}
+                        // onChange={opt => field.onChange(opt?.value)}
+                        // isDisabled={!selectedState || cityOptions.length === 0}
+                        // isClearable
                         />}
                     />
                 </FormItem>
 
-                <FormItem label="Local Address*" error={errors.localAddress?.message} className="md:col-span-3">
+                <FormItem label="Local Address" error={errors.localAddress?.message} className="md:col-span-3">
                     <Controller name="localAddress" control={control} render={({ field }) => <Input textArea rows={2} placeholder="Enter Local Address" {...field} />} />
                 </FormItem>
                 <FormItem label="Permanent Address" error={errors.permanentAddress?.message} className="md:col-span-3">
                     <Controller name="permanentAddress" control={control} render={({ field }) => <Input textArea rows={2} placeholder="Enter Permanent Address" {...field} />} />
                 </FormItem>
-
-                <FormItem label="Work Experience*" error={errors.workExperienceType?.message} className="md:col-span-3">
+                
+                <FormItem label="Work Experience" error={errors.workExperienceType?.message} className="md:col-span-3">
                     <Controller name="workExperienceType" control={control}
                         render={({ field }) => (
                             <Radio.Group value={field.value} onChange={field.onChange}>
@@ -187,13 +205,21 @@ const PersonalDetailsSection = ({ control, errors, setValue }: { control: any, e
                     />
                 </FormItem>
 
-                <FormItem label="Applying for Job Title (Optional)" error={errors.jobTitle?.message}><Controller name="jobTitle" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Software Engineer" />} /></FormItem>
-                <FormItem label="Job ID (Optional)" error={errors.jobId?.message}><Controller name="jobId" control={control} render={({ field }) => <Input {...field} placeholder="e.g., JP001" />} /></FormItem>
-                <FormItem label="Application Date*" error={errors.applicationDate?.message as string}><Controller name="applicationDate" control={control} render={({ field }) => <DatePicker placeholder="Select date" {...field} value={field.value ? dayjs(field.value).toDate() : new Date()} onChange={date=> field.onChange(date)} />} /></FormItem>
-                <FormItem label="Application Status*" error={errors.status?.message}><Controller name="status" control={control} render={({ field }) => <UiSelect placeholder="Select status" options={applicationStatusOptions} value={applicationStatusOptions.find(o=>o.value===field.value)} onChange={opt=>field.onChange(opt?.value)} />}/></FormItem>
-                <FormItem label="Resume URL (Optional)" error={errors.resumeUrl?.message} className="lg:col-span-1 md:col-span-2"><Controller name="resumeUrl" control={control} render={({ field }) => <Input {...field} placeholder="https://link-to-resume.pdf" />} /></FormItem>
-                <FormItem label="Job Application Link (Optional)" error={errors.jobApplicationLink?.message} className="lg:col-span-2 md:col-span-2"><Controller name="jobApplicationLink" control={control} render={({ field }) => <Input {...field} placeholder="https://job-portal/apply/123" />} /></FormItem>
-                <FormItem label="Notes / Cover Letter (Optional)" error={errors.notes?.message || errors.coverLetter?.message} className="md:col-span-3"><Controller name="coverLetter" control={control} render={({ field }) => <Input {...field} textArea rows={3} placeholder="Enter notes or cover letter content..." />} /></FormItem>
+                <FormItem label={<div>Applying for Job Title<span className="text-red-500"> * </span></div>} error={errors.jobTitle?.message}><Controller name="jobTitle" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Software Engineer" />} /></FormItem>
+                <FormItem label="Job ID" error={errors.jobId?.message}><Controller name="jobId" control={control} render={({ field }) => <Input {...field} placeholder="e.g., JP001" />} /></FormItem>
+                <FormItem label={<div>Application Date<span className="text-red-500"> * </span></div>} error={errors.applicationDate?.message as string}><Controller name="applicationDate" control={control} render={({ field }) => <DatePicker placeholder="Select date" {...field} value={field.value ? dayjs(field.value).toDate() : new Date()} onChange={date => field.onChange(date)} />} /></FormItem>
+                <FormItem label={<div>Application Status<span className="text-red-500"> * </span></div>} error={errors.status?.message}><Controller name="status" control={control} render={({ field }) => <UiSelect placeholder="Select status" options={applicationStatusOptions} value={applicationStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />} /></FormItem>
+                <FormItem
+                    label="Resume"
+                    error={errors.resumeUrl?.message}
+                    className="lg:col-span-1 md:col-span-2"
+                >
+                    <Controller name="resumeUrl" control={control} render={({ field }) =>
+                        <Input {...field} type='file' placeholder="https://link-to-resume.pdf" />}
+                    />
+                </FormItem>
+                <FormItem label="Job Application Link" error={errors.jobApplicationLink?.message} className=""><Controller name="jobApplicationLink" control={control} render={({ field }) => <Input {...field} placeholder="https://job-portal/apply/123" />} /></FormItem>
+                <FormItem label="Notes / Cover Letter" error={errors.notes?.message || errors.coverLetter?.message} className="md:col-span-3"><Controller name="coverLetter" control={control} render={({ field }) => <Input {...field} textArea rows={3} placeholder="Enter notes or cover letter content..." />} /></FormItem>
             </div>
         </Card>
     );
@@ -225,7 +251,7 @@ const FamilyDetailsSection = ({ control, errors }: { control: any, errors: any }
                         </FormItem>
                     </div>
                     {fields.length > 0 && (
-                         <Button size="xs" color="red-500" variant="plain" icon={<TbTrash />} type="button" onClick={() => remove(index)} className="absolute top-2 right-2">Remove</Button>
+                        <Button size="xs" color="red-500" variant="plain" icon={<TbTrash />} type="button" onClick={() => remove(index)} className="absolute top-2 right-2">Remove</Button>
                     )}
                 </div>
             ))}
@@ -239,8 +265,8 @@ const EmergencyContactSection = ({ control, errors }: { control: any, errors: an
     <Card id="emergencyContact" className="mb-6">
         <h4 className="mb-6">3. Emergency Contact Details</h4>
         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
-            <FormItem label="Relation*" error={errors.emergencyRelation?.message}><Controller name="emergencyRelation" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Spouse, Parent" />} /></FormItem>
-            <FormItem label="Mobile No*" error={errors.emergencyMobileNo?.message}><Controller name="emergencyMobileNo" control={control} render={({ field }) => <Input {...field} placeholder="Emergency contact number" />} /></FormItem>
+            <FormItem label={<div>Relation<span className="text-red-500"> * </span></div>} error={errors.emergencyRelation?.message}><Controller name="emergencyRelation" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Spouse, Parent" />} /></FormItem>
+            <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} error={errors.emergencyMobileNo?.message}><Controller name="emergencyMobileNo" control={control} render={({ field }) => <Input {...field} placeholder="Emergency contact number" />} /></FormItem>
         </div>
     </Card>
 );
@@ -255,24 +281,24 @@ const EducationalDetailsSection = ({ control, errors }: { control: any, errors: 
                 <Button size="sm" type="button" icon={<TbPlus />} onClick={() => append({ degree: '', university: '', percentageGrade: '', educationFromDate: null, educationToDate: null, specialization: '' })}>Add Education</Button>
             </div>
             {fields.map((item, index) => (
-                <div key={item.id} className="border p-4 rounded-md mb-4 relative">
-                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 items-start">
-                        <FormItem label={`Degree ${index + 1}*`} error={errors.educationalDetails?.[index]?.degree?.message} className="mb-0">
+                <div key={item.id} className="border border-gray-200 p-4 rounded-md mb-4 relative">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 items-start">
+                        <FormItem label={`Degree ${index + 1}`} error={errors.educationalDetails?.[index]?.degree?.message} className="mb-0">
                             <Controller name={`educationalDetails.${index}.degree`} control={control} render={({ field }) => <Input {...field} placeholder="e.g., B.Tech, MBA" />} />
                         </FormItem>
-                        <FormItem label="University/Institution*" error={errors.educationalDetails?.[index]?.university?.message} className="mb-0">
+                        <FormItem label="University/Institution" error={errors.educationalDetails?.[index]?.university?.message} className="mb-0">
                             <Controller name={`educationalDetails.${index}.university`} control={control} render={({ field }) => <Input {...field} placeholder="Name of University" />} />
                         </FormItem>
-                        <FormItem label="Percentage/Grade*" error={errors.educationalDetails?.[index]?.percentageGrade?.message} className="mb-0">
+                        <FormItem label="Percentage/Grade" error={errors.educationalDetails?.[index]?.percentageGrade?.message} className="mb-0">
                             <Controller name={`educationalDetails.${index}.percentageGrade`} control={control} render={({ field }) => <Input {...field} placeholder="e.g., 75% or 8.2 CGPA" />} />
                         </FormItem>
-                        <FormItem label="From Date*" error={errors.educationalDetails?.[index]?.educationFromDate?.message as string} className="mb-0">
-                            <Controller name={`educationalDetails.${index}.educationFromDate`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date=> field.onChange(date)} />} />
+                        <FormItem label="From Date" error={errors.educationalDetails?.[index]?.educationFromDate?.message as string} className="mb-0">
+                            <Controller name={`educationalDetails.${index}.educationFromDate`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} />} />
                         </FormItem>
-                        <FormItem label="To Date*" error={errors.educationalDetails?.[index]?.educationToDate?.message as string} className="mb-0">
-                            <Controller name={`educationalDetails.${index}.educationToDate`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date=> field.onChange(date)} />} />
+                        <FormItem label="To Date" error={errors.educationalDetails?.[index]?.educationToDate?.message as string} className="mb-0">
+                            <Controller name={`educationalDetails.${index}.educationToDate`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} />} />
                         </FormItem>
-                        <FormItem label="Specialization (Optional)" error={errors.educationalDetails?.[index]?.specialization?.message} className="mb-0">
+                        <FormItem label="Specialization" error={errors.educationalDetails?.[index]?.specialization?.message} className="mb-0">
                             <Controller name={`educationalDetails.${index}.specialization`} control={control} render={({ field }) => <Input {...field} placeholder="e.g., Computer Science, Marketing" />} />
                         </FormItem>
                     </div>
@@ -299,22 +325,22 @@ const EmploymentDetailsSection = ({ control, errors, workExperienceType }: { con
                 <Button size="sm" type="button" icon={<TbPlus />} onClick={() => append({ organization: '', designation: '', annualCTC: '', periodServiceFrom: null, periodServiceTo: null })}>Add Employment</Button>
             </div>
             {fields.map((item, index) => (
-                <div key={item.id} className="border p-4 rounded-md mb-4 relative">
+                <div key={item.id} className="border border-gray-200 p-4 rounded-md mb-4 relative">
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 items-start">
-                        <FormItem label={`Organization ${index + 1}*`} error={errors.employmentDetails?.[index]?.organization?.message} className="mb-0">
+                        <FormItem label={`Organization ${index + 1}`} error={errors.employmentDetails?.[index]?.organization?.message} className="mb-0">
                             <Controller name={`employmentDetails.${index}.organization`} control={control} render={({ field }) => <Input {...field} placeholder="Company Name" />} />
                         </FormItem>
-                        <FormItem label="Designation*" error={errors.employmentDetails?.[index]?.designation?.message} className="mb-0">
+                        <FormItem label="Designation" error={errors.employmentDetails?.[index]?.designation?.message} className="mb-0">
                             <Controller name={`employmentDetails.${index}.designation`} control={control} render={({ field }) => <Input {...field} placeholder="Your Role" />} />
                         </FormItem>
-                        <FormItem label="Annual CTC (Optional)" error={errors.employmentDetails?.[index]?.annualCTC?.message} className="mb-0">
+                        <FormItem label="Annual CTC" error={errors.employmentDetails?.[index]?.annualCTC?.message} className="mb-0">
                             <Controller name={`employmentDetails.${index}.annualCTC`} control={control} render={({ field }) => <Input {...field} placeholder="e.g., 12 LPA or 100,000 USD" />} />
                         </FormItem>
-                        <FormItem label="Period of Service From*" error={errors.employmentDetails?.[index]?.periodServiceFrom?.message as string} className="mb-0">
-                            <Controller name={`employmentDetails.${index}.periodServiceFrom`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date=> field.onChange(date)} />} />
+                        <FormItem label="Period of Service From" error={errors.employmentDetails?.[index]?.periodServiceFrom?.message as string} className="mb-0">
+                            <Controller name={`employmentDetails.${index}.periodServiceFrom`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} />} />
                         </FormItem>
-                        <FormItem label="Period of Service To*" error={errors.employmentDetails?.[index]?.periodServiceTo?.message as string} className="mb-0">
-                            <Controller name={`employmentDetails.${index}.periodServiceTo`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date=> field.onChange(date)} />} />
+                        <FormItem label="Period of Service To" error={errors.employmentDetails?.[index]?.periodServiceTo?.message as string} className="mb-0">
+                            <Controller name={`employmentDetails.${index}.periodServiceTo`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} />} />
                         </FormItem>
                     </div>
                     <Button size="xs" color="red-500" variant="plain" icon={<TbTrash />} type="button" onClick={() => remove(index)} className="absolute top-2 right-2">Remove</Button>
@@ -337,7 +363,7 @@ const AddJobApplicationPage = () => {
         resolver: zodResolver(applicationFormSchema),
         defaultValues: {
             department: "", name: "", email: "", mobileNo: null, gender: undefined, dateOfBirth: null, age: null,
-            nationality: undefined, maritalStatus: undefined, bloodGroup: undefined, 
+            nationality: undefined, maritalStatus: undefined, bloodGroup: undefined,
             country: undefined, state: undefined, city: undefined,
             localAddress: "", permanentAddress: "", workExperienceType: undefined,
             jobId: null, jobTitle: "", applicationDate: new Date(), status: "new", resumeUrl: null,
@@ -347,84 +373,84 @@ const AddJobApplicationPage = () => {
             educationalDetails: [],
             employmentDetails: [],
         },
-        mode: 'onChange', 
+        mode: 'onChange',
     });
-    
+
     const workExperienceType = watch('workExperienceType'); // Watch workExperienceType for conditional rendering/logic
 
-      // This is the active submit handler linked to the form
-      const onSubmitHandler = async (formData: ApplicationFormData) => {
+    // This is the active submit handler linked to the form
+    const onSubmitHandler = async (formData: ApplicationFormData) => {
         setIsSubmitting(true);
 
         // Construct the payload with necessary transformations
         const payload = {
-        job_department_id: formData.department,
-        name: formData.name,
-        email: formData.email,
-        mobile_no: formData.mobileNo ?? "",
-        city: formData.city,
-        state: formData.state,
-        country: formData.country,
-        nationality: formData.nationality,
-        marital_status: formData.maritalStatus,
-        emg_mobile_no: formData.emergencyMobileNo,
-        emg_relation: formData.emergencyRelation,
-        gender: formData.gender,
-        age: formData.age,
-        dob: formData.dateOfBirth ? dayjs(formData.dateOfBirth).format("YYYY-MM-DD") : null,
-        blood_group: formData.bloodGroup,
-        local_address: formData.localAddress,
-        permanent_address: formData.permanentAddress,
-        work_experience: formData.workExperienceType,
-        total_experience: "", // Optional: Add if collected
-        expected_salary: "",  // Optional: Add if collected
-        notice_period: "",    // Optional: Add if collected
-        reference: "",        // Optional: Add if collected
-        reference_specify: "",// Optional: Add if collected
+            job_department_id: formData.department,
+            name: formData.name,
+            email: formData.email,
+            mobile_no: formData.mobileNo ?? "",
+            city: formData.city,
+            state: formData.state,
+            country: formData.country,
+            nationality: formData.nationality,
+            marital_status: formData.maritalStatus,
+            emg_mobile_no: formData.emergencyMobileNo,
+            emg_relation: formData.emergencyRelation,
+            gender: formData.gender,
+            age: formData.age,
+            dob: formData.dateOfBirth ? dayjs(formData.dateOfBirth).format("YYYY-MM-DD") : null,
+            blood_group: formData.bloodGroup,
+            local_address: formData.localAddress,
+            permanent_address: formData.permanentAddress,
+            work_experience: formData.workExperienceType,
+            total_experience: "", // Optional: Add if collected
+            expected_salary: "",  // Optional: Add if collected
+            notice_period: "",    // Optional: Add if collected
+            reference: "",        // Optional: Add if collected
+            reference_specify: "",// Optional: Add if collected
 
-        // Rename and map array values
-        education_details: formData.educationalDetails?.map(ed => ({
-            ...ed,
-            educationFromDate: ed.educationFromDate ? dayjs(ed.educationFromDate).format("YYYY-MM-DD") : null,
-            educationToDate: ed.educationToDate ? dayjs(ed.educationToDate).format("YYYY-MM-DD") : null,
-        })) ?? [],
+            // Rename and map array values
+            education_details: formData.educationalDetails?.map(ed => ({
+                ...ed,
+                educationFromDate: ed.educationFromDate ? dayjs(ed.educationFromDate).format("YYYY-MM-DD") : null,
+                educationToDate: ed.educationToDate ? dayjs(ed.educationToDate).format("YYYY-MM-DD") : null,
+            })) ?? [],
 
-        employee_details: formData.workExperienceType
-         === "experienced"
-            ? formData.employmentDetails?.map(emp => ({
-                ...emp,
-                periodServiceFrom: emp.periodServiceFrom ? dayjs(emp.periodServiceFrom).format("YYYY-MM-DD") : null,
-                periodServiceTo: emp.periodServiceTo ? dayjs(emp.periodServiceTo).format("YYYY-MM-DD") : null,
-            }))
-            : [],
+            employee_details: formData.workExperienceType
+                === "experienced"
+                ? formData.employmentDetails?.map(emp => ({
+                    ...emp,
+                    periodServiceFrom: emp.periodServiceFrom ? dayjs(emp.periodServiceFrom).format("YYYY-MM-DD") : null,
+                    periodServiceTo: emp.periodServiceTo ? dayjs(emp.periodServiceTo).format("YYYY-MM-DD") : null,
+                }))
+                : [],
 
-        family_details: formData.familyDetails?.map(fd => ({
-            ...fd,
-            familyDateOfBirth: fd.familyDateOfBirth
-            ? dayjs(fd.familyDateOfBirth).format("YYYY-MM-DD")
-            : null,
-        })) ?? [],
+            family_details: formData.familyDetails?.map(fd => ({
+                ...fd,
+                familyDateOfBirth: fd.familyDateOfBirth
+                    ? dayjs(fd.familyDateOfBirth).format("YYYY-MM-DD")
+                    : null,
+            })) ?? [],
 
-        emergency_contact_details: [], // Optional if needed
+            emergency_contact_details: [], // Optional if needed
 
-        first_interview: "", // Optional: Fill if available
-        first_int_remarks: "",
-        second_interview: "",
-        second_int_remarks: "",
-        final_interview: "",
-        final_int_remarks: "",
+            first_interview: "", // Optional: Fill if available
+            first_int_remarks: "",
+            second_interview: "",
+            second_int_remarks: "",
+            final_interview: "",
+            final_int_remarks: "",
 
-        status: formData.status, // Should be one of: new, screening, etc.
-        remarks: formData.notes ?? formData.coverLetter ?? "", // Consolidate notes/coverLetter if schema has one field for remarks
-        job_link_token: formData.jobApplicationLink ?? "",
-        job_link_datetime: "", // Optional: Add if collected
+            status: formData.status, // Should be one of: new, screening, etc.
+            remarks: formData.notes ?? formData.coverLetter ?? "", // Consolidate notes/coverLetter if schema has one field for remarks
+            job_link_token: formData.jobApplicationLink ?? "",
+            job_link_datetime: "", // Optional: Add if collected
 
-        job_title: formData.jobTitle,
-        job_id: formData.jobId,
-        application_date: formData.applicationDate ? dayjs(formData.applicationDate).format("YYYY-MM-DD") : null,
-        resume_url: formData.resumeUrl ?? "",
-        application_link: formData.jobApplicationLink ?? "", // This might be redundant with job_link_token
-        note: formData.coverLetter ?? "", // If 'remarks' above handles cover letter, this might be redundant or for a different purpose
+            job_title: formData.jobTitle,
+            job_id: formData.jobId,
+            application_date: formData.applicationDate ? dayjs(formData.applicationDate).format("YYYY-MM-DD") : null,
+            resume_url: formData.resumeUrl ?? "",
+            application_link: formData.jobApplicationLink ?? "", // This might be redundant with job_link_token
+            note: formData.coverLetter ?? "", // If 'remarks' above handles cover letter, this might be redundant or for a different purpose
         };
 
         // A small adjustment to ensure dates are formatted only if they exist
@@ -442,42 +468,42 @@ const AddJobApplicationPage = () => {
                 periodServiceTo: emp.periodServiceTo,     // Already formatted or null
             }));
         }
-        
+
         console.log("Submitting New Application Payload:", payload); // Verify payload content
 
         try {
             await dispatch(addJobApplicationAction(payload)).unwrap();
             toast.push(
-              <Notification
-                title="Job Application Added" 
-                type="success"
-                duration={2000}
-              >
-                New job application added successfully. 
-              </Notification>
+                <Notification
+                    title="Job Application Added"
+                    type="success"
+                    duration={2000}
+                >
+                    New job application added successfully.
+                </Notification>
             );
-          dispatch(getJobApplicationsAction()); 
-          reset(); 
-          navigate('/hr-employees/job-application'); 
+            dispatch(getJobApplicationsAction());
+            reset();
+            navigate('/hr-employees/job-application');
         } catch (error: any) {
-          toast.push(
-            <Notification
-              title="Add Application Failed" 
-              type="danger"
-              duration={3000}
-            >
-              {error?.data?.message || error?.message || "Operation failed."}
-            </Notification>
-          );
-          console.error("Job Application Submit Error:", error); 
+            toast.push(
+                <Notification
+                    title="Add Application Failed"
+                    type="danger"
+                    duration={3000}
+                >
+                    {error?.data?.message || error?.message || "Operation failed."}
+                </Notification>
+            );
+            console.error("Job Application Submit Error:", error);
         } finally {
-          setIsSubmitting(false);
+            setIsSubmitting(false);
         }
-      };
+    };
 
-      useEffect(() => {
+    useEffect(() => {
         // Removed dispatch(getJobApplicationsAction()); from here as it's more relevant after successful add or on list page.
-      }, [dispatch]);
+    }, [dispatch]);
 
 
     const handleCancel = () => {
@@ -514,11 +540,11 @@ const AddJobApplicationPage = () => {
                     </div>
                 </form>
             </FormContainer>
-            <ConfirmDialog 
-                isOpen={cancelConfirmOpen} 
-                type="warning" 
-                title="Discard Changes?" 
-                onClose={() => setCancelConfirmOpen(false)} 
+            <ConfirmDialog
+                isOpen={cancelConfirmOpen}
+                type="warning"
+                title="Discard Changes?"
+                onClose={() => setCancelConfirmOpen(false)}
                 onConfirm={() => { setCancelConfirmOpen(false); navigate('/hr-employees/job-application'); }}
                 onCancel={() => setCancelConfirmOpen(false)}
             >

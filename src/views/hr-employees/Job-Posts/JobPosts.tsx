@@ -70,6 +70,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { RichTextEditor } from "@/components/shared";
 
 // --- Define Types ---
 export type JobDepartmentListItem = {
@@ -1012,7 +1013,7 @@ const JobPostsListing = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <FormItem
-          label="Job Title"
+          label={<div>Job Title<span className="text-red-500"> * </span></div>}
           className="md:col-span-2"
           invalid={!!currentFormMethods.formState.errors.job_title}
           errorMessage={currentFormMethods.formState.errors.job_title?.message}
@@ -1030,7 +1031,7 @@ const JobPostsListing = () => {
           />
         </FormItem>
         <FormItem
-          label="Job Department"
+          label={<div>Job Department<span className="text-red-500"> * </span></div>}
           invalid={!!currentFormMethods.formState.errors.job_department_id}
           errorMessage={
             currentFormMethods.formState.errors.job_department_id?.message
@@ -1051,7 +1052,7 @@ const JobPostsListing = () => {
           />
         </FormItem>
         <FormItem
-          label="Status"
+          label={<div>Status<span className="text-red-500"> * </span></div>}
           invalid={!!currentFormMethods.formState.errors.status}
           errorMessage={currentFormMethods.formState.errors.status?.message}
         >
@@ -1125,7 +1126,7 @@ const JobPostsListing = () => {
             name="description"
             control={currentFormMethods.control}
             render={({ field }) => (
-              <Input
+              <RichTextEditor
                 {...field}
                 rows={5}
                 // prefix={<TbFileText />} // prefix on textArea might look odd, remove if so

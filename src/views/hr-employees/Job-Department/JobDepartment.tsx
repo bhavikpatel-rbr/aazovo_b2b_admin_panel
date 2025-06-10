@@ -816,7 +816,7 @@ const JobDepartment = () => {
           className="flex flex-col gap-4"
         >
           <FormItem
-            label="Department Name"
+            label={<div>Department Name<span className="text-red-500"> * </span></div>}
             invalid={!!formMethods.formState.errors.name}
             errorMessage={formMethods.formState.errors.name?.message}
           >
@@ -825,6 +825,24 @@ const JobDepartment = () => {
               control={formMethods.control}
               render={({ field }) => (
                 <Input {...field} placeholder="Enter Department Name" />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label={<div>Status<span className="text-red-500"> * </span></div>}
+          >
+            <Controller
+              name="status"
+              control={formMethods.control}
+              render={({ field }) => (
+                <Select  
+                  {...field} 
+                  placeholder="Select Status" 
+                  options={[
+                    {label : "Active", value: "Active"},
+                    {label : "Inactive", value: "Inactive"},
+                  ]}
+                />
               )}
             />
           </FormItem>

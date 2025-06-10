@@ -57,7 +57,7 @@ const DocumentSubmissionSection = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                     {/* Identity Proof */}
                     <FormItem
-                        label="Identity Proof (e.g., Aadhaar, Passport, Driver's License)"
+                        label={<div>Identity Proof (e.g., Aadhaar, Passport, Driver's License)<span className="text-red-500"> * </span></div>}
                         invalid={Boolean(errors.documents?.identityProof)}
                         errorMessage={errors.documents?.identityProof?.message as string}
                     >
@@ -83,7 +83,7 @@ const DocumentSubmissionSection = ({
 
                     {/* Address Proof */}
                     <FormItem
-                        label="Address Proof (e.g., Utility Bill, Rental Agreement)"
+                        label={<div>Address Proof (e.g., Utility Bill, Rental Agreement)<span className="text-red-500"> * </span></div>}
                         invalid={Boolean(errors.documents?.addressProof)}
                         errorMessage={errors.documents?.addressProof?.message as string}
                     >

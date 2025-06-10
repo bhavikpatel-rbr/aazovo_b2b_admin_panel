@@ -84,7 +84,7 @@ const PersonalInformationSection = ({
                     {/* Status Select */}
                     <FormItem
                         className='col-span-6 lg:col-span-4'
-                        label="Status"
+                        label={<div>Status<span className="text-red-500"> * </span></div>}
                         invalid={Boolean(errors.personalInformation?.status)}
                         errorMessage={errors.personalInformation?.status?.message as string}
                     >

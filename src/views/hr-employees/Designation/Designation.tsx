@@ -964,7 +964,7 @@ const DesignationListing = () => {
           className="flex flex-col gap-y-6"
         >
           <FormItem
-            label="Designation Name"
+            label={<div>Designation Name<span className="text-red-500"> * </span></div>}
             invalid={!!addFormMethods.formState.errors.name}
             errorMessage={addFormMethods.formState.errors.name?.message}
           >
@@ -977,7 +977,7 @@ const DesignationListing = () => {
             />
           </FormItem>
           <FormItem
-            label="Department"
+            label={<div>Department<span className="text-red-500"> * </span></div>}
           >
             <Controller
               name="department"
@@ -1009,7 +1009,7 @@ const DesignationListing = () => {
             />
           </FormItem>
           <FormItem
-            label="Status"
+            label={<div>Status<span className="text-red-500"> * </span></div>}
           >
             <Controller
               name="Status"
@@ -1066,7 +1066,7 @@ const DesignationListing = () => {
           className="flex flex-col gap-y-6"
         >
           <FormItem
-            label="Designation Name"
+            label={<div>Designation Name<span className="text-red-500"> * </span></div>}
             invalid={!!editFormMethods.formState.errors.name}
             errorMessage={editFormMethods.formState.errors.name?.message}
           >
@@ -1079,7 +1079,7 @@ const DesignationListing = () => {
             />
           </FormItem>
           <FormItem
-            label="Department"
+            label={<div>Department Name<span className="text-red-500"> * </span></div>}
           >
             <Controller
               name="department"
@@ -1111,7 +1111,7 @@ const DesignationListing = () => {
             />
           </FormItem>
           <FormItem
-            label="Status"
+            label={<div>Status<span className="text-red-500"> * </span></div>}
           >
             <Controller
               name="Status"

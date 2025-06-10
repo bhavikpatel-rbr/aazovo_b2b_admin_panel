@@ -15,7 +15,7 @@ const Registration = ({
             <div className="md:grid md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
             {/* Full Name */}
             <FormItem
-                label="Full Name"
+                label={<div>Full Name<span className="text-red-500"> * </span></div>}
                 invalid={Boolean(errors.full_name)}
                 errorMessage={errors.full_name?.message as string}
                 className="col-span-1"
@@ -36,7 +36,7 @@ const Registration = ({
 
             {/* Date of Joining */}
             <FormItem
-                label="Date of Joining"
+                label={<div>Date of Joining<span className="text-red-500"> * </span></div>}
                 invalid={Boolean(errors.date_of_joining)}
                 errorMessage={errors.date_of_joining?.message as string}
                 className="col-span-1"
@@ -59,7 +59,7 @@ const Registration = ({
 
             {/* Mobile Number */}
             <FormItem
-                label="Mobile Number"
+                label={<div>Mobile Number<span className="text-red-500"> * </span></div>}
                 invalid={Boolean(errors.mobile_number)}
                 errorMessage={errors.mobile_number?.message as string}
                 className="col-span-1"
@@ -80,7 +80,7 @@ const Registration = ({
 
             {/* Email */}
             <FormItem
-                label="Email"
+                label={<div>Email<span className="text-red-500"> * </span></div>}
                 invalid={Boolean(errors.email)}
                 errorMessage={errors.email?.message as string}
                 className="col-span-1"
@@ -107,7 +107,7 @@ const Registration = ({
 
             {/* Experience */}
             <FormItem
-                label="Experience (years)"
+                label={<div>Experience (Years)<span className="text-red-500"> * </span></div>}
                 invalid={Boolean(errors.experience)}
                 errorMessage={errors.experience?.message as string}
                 className="col-span-1"
@@ -129,7 +129,7 @@ const Registration = ({
 
             {/* Password */}
             <FormItem
-                label="Password"
+                label={<div>Password<span className="text-red-500"> * </span></div>}
                 invalid={Boolean(errors.password)}
                 errorMessage={errors.password?.message as string}
                 className="col-span-1"
