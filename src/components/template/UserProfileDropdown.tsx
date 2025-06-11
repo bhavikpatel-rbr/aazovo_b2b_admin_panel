@@ -198,7 +198,7 @@ const _UserDropdown = () => {
         placement="bottom-end"
       >
         <Dropdown.Item variant="header" className="!p-0">
-          <div className="flex items-start gap-4 p-4">
+          <div className="flex items-start gap-2">
             <div
               className="relative flex-shrink-0 rounded-full group cursor-pointer"
               onClick={handleAvatarClick}
