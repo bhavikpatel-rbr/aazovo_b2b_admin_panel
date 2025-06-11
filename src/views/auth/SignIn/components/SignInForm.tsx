@@ -108,7 +108,7 @@ const SignInForm = (props: SignInFormProps) => {
             )}
             <Form onSubmit={handleSubmit(onSignIn)}>
                 <FormItem
-                    label="Email"
+                    label="User"
                     invalid={Boolean(errors.email)}
                     errorMessage={errors.email?.message}
                 >
