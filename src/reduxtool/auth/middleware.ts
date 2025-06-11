@@ -57,15 +57,15 @@ export const loginUserByEmailAction = createAsyncThunk<
   "auth/loginByEmail",
   async (loginRequest: any, { rejectWithValue, dispatch }) => {
     try {
-      // Attach the current attempt count
       const payload = {
         ...loginRequest,
         attempt: loginAttemptCount,
       };
 
       const response: AxiosResponse<any> = await loginWithEmailAsync(payload);
-
-      if (response?.status === 200) {
+      const data = response;
+      // ✅ Backend says login successful
+      if (data?.status === true) {
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -73,31 +73,46 @@ export const loginUserByEmailAction = createAsyncThunk<
             messageText: "Login successful! Welcome.",
           })
         );
-        loginAttemptCount = 1; // ✅ Reset on success
-        return response?.data;
+        loginAttemptCount = 1;
+        return data;
       }
 
-      loginAttemptCount++; // ❌ Login failed: increase count
+      loginAttemptCount++;
+
+      const errorMsg = data?.error || "Login failed. Please check your credentials.";
+      // console.log(data)
+      if (errorMsg.includes("Account temporarily blocked.")) {
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "error",
+            messageText: "Your account is temporarily blocked. Try again after 5 minutes.",
+          })
+        );
+      } else {
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "error",
+            messageText: errorMsg,
+          })
+        );
+      }
+
+      return rejectWithValue(data);
+    } catch (error: any) {
+      loginAttemptCount++;
 
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          messageText: response?.data?.error || "Login failed. Please check your credentials.",
+          messageText: "An unexpected error occurred. Please try again later.",
         })
       );
-      return rejectWithValue(response?.data);
-    } catch (error: unknown) {
-      loginAttemptCount++; // Also increase here just in case backend couldn't be reached
 
-      dispatch(
-        showMessage({
-          ...defaultMessageObj,
-          type: "error",
-          messageText: "An unexpected network error occurred. Please try again later.",
-        })
-      );
       return rejectWithValue(error);
     }
   }
 );
+
