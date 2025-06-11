@@ -60,7 +60,7 @@ const UserProfileCard = ({
               </h5>
               <IoMdCheckmarkCircle className="text-blue-500 text-xl" />
             </div>
-            <div className="flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400" style={{ lineHeight: "24px"}}>
               <span className="flex items-center gap-1.5">
                 <PiUserDuotone /> {userData?.designtion || "Web Designer"}
               </span>
