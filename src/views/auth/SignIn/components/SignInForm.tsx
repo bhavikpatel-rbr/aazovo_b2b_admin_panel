@@ -118,7 +118,7 @@ const SignInForm = (props: SignInFormProps) => {
                         control={control}
                         render={({ field }) => (
                             <Input
-                                type="email"
+                                type="text"
                                 placeholder="Email"
                                 autoComplete="off"
                                 {...field}

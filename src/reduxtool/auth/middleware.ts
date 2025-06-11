@@ -5,6 +5,8 @@ import { loginWithEmailAsync } from "./services"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
 
+let loginAttemptCount = 1;
+
 /**
  * Logout Action
  * Dispatches success or failure messages.
@@ -50,46 +52,52 @@ export const logoutAction = createAsyncThunk<
 export const loginUserByEmailAction = createAsyncThunk<
   any,
   any,
-  { rejectValue: any } // It's good practice to type the reject value
+  { rejectValue: any }
 >(
   "auth/loginByEmail",
   async (loginRequest: any, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await loginWithEmailAsync(loginRequest)
+      // Attach the current attempt count
+      const payload = {
+        ...loginRequest,
+        attempt: loginAttemptCount,
+      };
 
-      // Case 1: API confirms successful login
-      if (response?.data?.status) {
-        // ADDED: Dispatch success message on login
+      const response: AxiosResponse<any> = await loginWithEmailAsync(payload);
+
+      if (response?.status === 200) {
         dispatch(
           showMessage({
             ...defaultMessageObj,
             type: "success",
             messageText: "Login successful! Welcome.",
           })
-        )
-        return response?.data
+        );
+        loginAttemptCount = 1; // ✅ Reset on success
+        return response?.data;
       }
 
-      // Case 2: API returns a known error (e.g., wrong password)
+      loginAttemptCount++; // ❌ Login failed: increase count
+
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
           messageText: response?.data?.error || "Login failed. Please check your credentials.",
         })
-      )
-      return rejectWithValue(response?.data) // Reject with the specific error data
+      );
+      return rejectWithValue(response?.data);
     } catch (error: unknown) {
-      // Case 3: Network or other unexpected error
-      // ADDED: Dispatch a generic error message
+      loginAttemptCount++; // Also increase here just in case backend couldn't be reached
+
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
           messageText: "An unexpected network error occurred. Please try again later.",
         })
-      )
-      return rejectWithValue(error)
+      );
+      return rejectWithValue(error);
     }
   }
-)
+);
