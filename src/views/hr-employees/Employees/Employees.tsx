@@ -109,7 +109,7 @@ const employeeStatusValues = EMPLOYEE_STATUS_OPTIONS.map((s) => s.value) as [
   ...EmployeeStatus[]
 ];
 
-const employeeStatusColor: Record<EmployeeItem["status"], string> = {
+export const employeeStatusColor: Record<EmployeeItem["status"], string> = {
   active: "bg-emerald-500",
   inactive: "bg-gray-500",
   on_leave: "bg-amber-500",
@@ -212,12 +212,12 @@ const ActionColumn = ({
   onEdit,
   onDelete,
   onChangeStatus,
-  onViewDetail,
+  onView,
 }: {
   onEdit: () => void;
   onDelete: () => void;
   onChangeStatus: () => void;
-  onViewDetail: () => void;
+  onView: () => void;
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
@@ -234,7 +234,7 @@ const ActionColumn = ({
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
           role="button"
-          onClick={onViewDetail}
+          onClick={onView}
         >
           <TbEye />
         </div>
@@ -1014,8 +1014,9 @@ const EmployeesListing = () => {
 
   // --- Dialog Handlers (from original) ---
   const handleViewDetails = useCallback((employee: EmployeeItem) => {
-    setCurrentItemForDialog(employee);
-    setDetailViewOpen(true);
+    navigate(`/hr-employees/employees/view/${employee.id}`);
+    // setCurrentItemForDialog(employee);
+    // setDetailViewOpen(true);
   }, []);
   const handleCloseDetailView = useCallback(() => {
     setDetailViewOpen(false);

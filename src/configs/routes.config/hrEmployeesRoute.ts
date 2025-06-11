@@ -14,6 +14,15 @@ const hrEmployeesRoute: Routes = [
         },
     },
     {
+        key: 'hrEmployees.employees',
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/employees/view/:id`,
+        component: lazy(() => import('@/views/hr-employees/Employees/components/EmployeeView')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'hrEmployees.designation',
         path: `${HR_EMPLOYEES_PREFIX_PATH}/designation`,
         component: lazy(() => import('@/views/hr-employees/Designation')),
