@@ -28,7 +28,6 @@ type SignInFormSchema = {
 const validationSchema: ZodType<SignInFormSchema> = z.object({
     email: z
         .string({ required_error: 'Please enter your email' })
-        .email({ message: 'Invalid email address' }) // Added email validation
         .min(1, { message: 'Please enter your email' }),
     password: z
         .string({ required_error: 'Please enter your password' })
@@ -156,6 +155,16 @@ const SignInForm = (props: SignInFormProps) => {
                     />
                 </FormItem>
                 {passwordHint}
+
+                <div className="mb-3">
+                <p className="font-semibold heading-text">
+                                <a
+                href="/forgot-password"
+                >
+                Forgot Password?
+                </a>
+                </p>
+                </div>
                 <Button
                     block
                     loading={isSubmitting}
