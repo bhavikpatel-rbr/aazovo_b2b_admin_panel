@@ -280,15 +280,10 @@ const _UserDropdown = () => {
             </span>
           </Link>
         </Dropdown.Item>
-        <Dropdown.Item variant="divider" />
-        <Dropdown.Item eventKey="Activity Log" className="px-0">
-          <Link className="flex h-full w-full px-3" to="/logout">
-            <span className="flex gap-2 items-center w-full">
-              <PiPulseDuotone className="text-xl" />
-              <span>Logout</span>
-            </span>
-          </Link>
-        </Dropdown.Item>
+        <Dropdown.Item variant="divider"/>
+                <Dropdown.Item eventKey="Sign Out" className="gap-2" onClick={handleSignOutClick}>
+                    <span className="text-xl"><PiSignOutDuotone /></span><span>Logout</span>
+                </Dropdown.Item>
       </Dropdown>
 
       <input
@@ -308,19 +303,17 @@ const _UserDropdown = () => {
         userData={userData}
       />
 
-      <ConfirmDialog
-        isOpen={isLogoutDialogOpen}
-        type="danger"
-        title="Confirm Logout"
-        width={477}
-        onClose={onDialogClose}
-        onRequestClose={onDialogClose}
-        onCancel={onDialogClose}
-        onConfirm={onDialogConfirm}
-        confirmText="Logout"
-      >
-        <p className="mt-4 text-center">Are you sure you want to log out?</p>
-      </ConfirmDialog>
+        <ConfirmDialog
+            isOpen={isLogoutDialogOpen}
+            type="warning"
+            title="Logout"
+            onClose={onDialogClose}
+            onRequestClose={onDialogClose}
+            onCancel={onDialogClose}
+            onConfirm={onDialogConfirm}
+        >
+            <p>Are you sure you want to log out?</p>
+        </ConfirmDialog>
     </>
   );
 };
