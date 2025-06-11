@@ -1124,23 +1124,8 @@ const CompanyDetailsSection = ({
   const companyLogoBrochureValue = watch("company_logo_brochure");
   return (
     <Card id="companyDetails">
-      {" "}
-      <h4 className="mb-4">Primary Information</h4>{" "}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        {" "}
-        <FormItem
-          label="Company Name"
-          invalid={!!errors.name}
-          errorMessage={errors.name?.message as string}
-        >
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Company Name" {...field} />
-            )}
-          />
-        </FormItem>{" "}
+      <h4 className="mb-4">Primary Information</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
         <FormItem
           label="Company Code"
           invalid={!!errors.company_code}
@@ -1153,7 +1138,21 @@ const CompanyDetailsSection = ({
               <Input placeholder="Company Code" {...field} />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>
+        <FormItem
+          label="Company Name"
+          invalid={!!errors.name}
+          className="md:col-span-2"
+          errorMessage={errors.name?.message as string}
+        >
+          <Controller
+            name="name"
+            control={control}
+            render={({ field }) => (
+              <Input placeholder="Company Name" {...field} />
+            )}
+          />
+        </FormItem>
         <FormItem
           label="Status"
           invalid={!!errors.status}
@@ -1170,7 +1169,22 @@ const CompanyDetailsSection = ({
               />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+        <FormItem
+          label="Primary E-mail ID"
+          invalid={!!errors.company_primary_email_id}
+          errorMessage={errors.company_primary_email_id?.message as string}
+        >
+          <Controller
+            name="company_primary_email_id"
+            control={control}
+            render={({ field }) => (
+              <Input type="email" placeholder="Primary Email" {...field} />
+            )}
+          />
+        </FormItem>
         <FormItem
           label="Primary Contact Number"
           invalid={!!errors.company_primary_contact_number}
@@ -1198,20 +1212,7 @@ const CompanyDetailsSection = ({
               )}
             />
           </div>
-        </FormItem>{" "}
-        <FormItem
-          label="Primary E-mail ID"
-          invalid={!!errors.company_primary_email_id}
-          errorMessage={errors.company_primary_email_id?.message as string}
-        >
-          <Controller
-            name="company_primary_email_id"
-            control={control}
-            render={({ field }) => (
-              <Input type="email" placeholder="Primary Email" {...field} />
-            )}
-          />
-        </FormItem>{" "}
+        </FormItem>
         <FormItem label="Alternate Contact Number">
           <div className="flex items-center gap-2">
             <Controller
@@ -1233,7 +1234,7 @@ const CompanyDetailsSection = ({
               )}
             />
           </div>
-        </FormItem>{" "}
+        </FormItem>
         <FormItem
           label="Alternate E-mail ID"
           invalid={!!errors.alternate_email_id}
@@ -1246,7 +1247,7 @@ const CompanyDetailsSection = ({
               <Input type="email" placeholder="Alternate Email" {...field} />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>
         <FormItem
           label="Ownership Type"
           invalid={!!errors.ownership_type}
@@ -1263,7 +1264,7 @@ const CompanyDetailsSection = ({
               />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>
         <FormItem
           label="Owner/Director Name"
           invalid={!!errors.owner_director_proprietor_name}
@@ -1278,7 +1279,7 @@ const CompanyDetailsSection = ({
               <Input placeholder="Owner/Director Name" {...field} />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>
         <FormItem
           label="Company Address"
           invalid={!!errors.company_address}
@@ -1292,80 +1293,81 @@ const CompanyDetailsSection = ({
               <Input textArea placeholder="Company Address" {...field} />
             )}
           />
-        </FormItem>{" "}
-        <FormItem
-          label="Continent"
-          invalid={!!errors.continent_name}
-          errorMessage={errors.continent_name?.message as string}
-        >
-          <Controller
-            name="continent_name"
-            control={control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select Continent"
-                options={continentOptions}
-                {...field}
-              />
-            )}
-          />
-        </FormItem>{" "}
-        <FormItem
-          label="Country"
-          invalid={!!errors.country}
-          errorMessage={errors.country?.message as string}
-        >
-          <Controller
-            name="country"
-            control={control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select Country"
-                options={countryOptions}
-                {...field}
-              />
-            )}
-          />
-        </FormItem>{" "}
-        <FormItem
-          label="State"
-          invalid={!!errors.state}
-          errorMessage={errors.state?.message as string}
-        >
-          <Controller
-            name="state"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Enter state" {...field} />
-            )}
-          />
-        </FormItem>{" "}
-        <FormItem
-          label="City"
-          invalid={!!errors.city}
-          errorMessage={errors.city?.message as string}
-          className="md:col-span-2"
-        >
-          <Controller
-            name="city"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Enter city" {...field} />
-            )}
-          />
-        </FormItem>{" "}
-        <FormItem
-          label="ZIP / Postal Code"
-          invalid={!!errors.zip_postal_code}
-          errorMessage={errors.zip_postal_code?.message as string}
-        >
-          <Controller
-            name="zip_postal_code"
-            control={control}
-            render={({ field }) => <Input placeholder="ZIP Code" {...field} />}
-          />
-        </FormItem>{" "}
-      </div>{" "}
+        </FormItem>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
+          <FormItem
+            label="Continent"
+            invalid={!!errors.continent_name}
+            errorMessage={errors.continent_name?.message as string}
+          >
+            <Controller
+              name="continent_name"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Continent"
+                  options={continentOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Country"
+            invalid={!!errors.country}
+            errorMessage={errors.country?.message as string}
+          >
+            <Controller
+              name="country"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Country"
+                  options={countryOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="State"
+            invalid={!!errors.state}
+            errorMessage={errors.state?.message as string}
+          >
+            <Controller
+              name="state"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="Enter state" {...field} />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="City"
+            invalid={!!errors.city}
+            errorMessage={errors.city?.message as string}
+          >
+            <Controller
+              name="city"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="Enter city" {...field} />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="ZIP / Postal Code"
+            invalid={!!errors.zip_postal_code}
+            errorMessage={errors.zip_postal_code?.message as string}
+          >
+            <Controller
+              name="zip_postal_code"
+              control={control}
+              render={({ field }) => <Input placeholder="ZIP Code" {...field} />}
+            />
+          </FormItem>
+        </div>
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>{" "}
       <div className="grid md:grid-cols-4 gap-3">
         {" "}
