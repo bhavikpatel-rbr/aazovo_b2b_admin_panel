@@ -5,8 +5,6 @@ import { loginWithEmailAsync } from "./services"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
 
-let loginAttemptCount = 1;
-
 /**
  * Logout Action
  * Dispatches success or failure messages.
@@ -52,71 +50,46 @@ export const logoutAction = createAsyncThunk<
 export const loginUserByEmailAction = createAsyncThunk<
   any,
   any,
-  { rejectValue: any }
+  { rejectValue: any } // It's good practice to type the reject value
 >(
   "auth/loginByEmail",
   async (loginRequest: any, { rejectWithValue, dispatch }) => {
     try {
-      const payload = {
-        ...loginRequest,
-        attempt: loginAttemptCount,
-      };
+      const response: AxiosResponse<any> = await loginWithEmailAsync(loginRequest)
 
-      const data = await loginWithEmailAsync(payload); // data is already the API body
-      // console.log(data.status);
-      if (data?.status === true) {
+      // Case 1: API confirms successful login
+      if (response?.data?.status) {
+        // ADDED: Dispatch success message on login
         dispatch(
           showMessage({
             ...defaultMessageObj,
             type: "success",
             messageText: "Login successful! Welcome.",
           })
-        );
-        loginAttemptCount = 1; // ✅ Reset on success
-        return data;
+        )
+        return response?.data
       }
 
-      loginAttemptCount++; // ❌ Login failed: increase count
-
-      // const errorMsg = data?.error || "Login failed. Please check your credentials.";
-
-      // if (errorMsg.toLowerCase().includes("temporarily blocked")) {
-      //   dispatch(
-      //     showMessage({
-      //       ...defaultMessageObj,
-      //       type: "error",
-      //       title: "Account Locked",
-      //       messageText: "Your account is temporarily blocked. Try again after 5 minutes.",
-      //     })
-      //   );
-      //   loginAttemptCount = 1; // Reset on block
-      // } else {
-      //   dispatch(
-      //     showMessage({
-      //       ...defaultMessageObj,
-      //       type: "error",
-      //       title: "Login Failed",
-      //       messageText: errorMsg,
-      //     })
-      //   );
-      // }
-
-      return rejectWithValue(data);
-    } catch (error: any) {
-      loginAttemptCount++;
-
+      // Case 2: API returns a known error (e.g., wrong password)
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          title: "Network Error",
-          messageText: "An unexpected error occurred. Please try again later.",
+          messageText: response?.data?.error || "Login failed. Please check your credentials.",
         })
-      );
-
-      return rejectWithValue(error);
+      )
+      return rejectWithValue(response?.data) // Reject with the specific error data
+    } catch (error: unknown) {
+      // Case 3: Network or other unexpected error
+      // ADDED: Dispatch a generic error message
+      dispatch(
+        showMessage({
+          ...defaultMessageObj,
+          type: "error",
+          messageText: "An unexpected network error occurred. Please try again later.",
+        })
+      )
+      return rejectWithValue(error)
     }
   }
-);
-
-
+)
