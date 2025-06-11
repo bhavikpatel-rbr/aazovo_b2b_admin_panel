@@ -44,11 +44,11 @@ export const SignInBase = ({
                     Please enter your credentials to sign in!
                 </p>
             </div>
-            {message && (
+            {/* {message && (
                 <Alert showIcon className="mb-4" type="danger">
                     <span className="break-all">{message}</span>
                 </Alert>
-            )}
+            )} */}
             <SignInForm
                 disableSubmit={disableSubmit}
                 setMessage={setMessage}

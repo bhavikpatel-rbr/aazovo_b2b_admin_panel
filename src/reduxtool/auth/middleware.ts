@@ -89,6 +89,7 @@ export const loginUserByEmailAction = createAsyncThunk<
             messageText: "Your account is temporarily blocked. Try again after 5 minutes.",
           })
         );
+        loginAttemptCount = 1;
       } else {
         dispatch(
           showMessage({
