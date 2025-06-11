@@ -86,6 +86,7 @@ export const loginUserByEmailAction = createAsyncThunk<
           showMessage({
             ...defaultMessageObj,
             type: "error",
+            title: "test",
             messageText: "Your account is temporarily blocked. Try again after 5 minutes.",
           })
         );
@@ -108,6 +109,7 @@ export const loginUserByEmailAction = createAsyncThunk<
         showMessage({
           ...defaultMessageObj,
           type: "error",
+          title: "test",
           messageText: "An unexpected error occurred. Please try again later.",
         })
       );

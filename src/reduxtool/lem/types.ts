@@ -7,6 +7,7 @@ export interface LemState {
 
 export interface MessageState {
   type: TypeOptions
+  title: string,
   messageText?: string
   duration?: number
   position?: ToastPosition
@@ -15,6 +16,7 @@ export interface MessageState {
 
 export const defaultMessageObj: MessageState = {
   type: "info",
+  title:"",
   messageText: "",
   duration: 3000,
   position: "top-right",
