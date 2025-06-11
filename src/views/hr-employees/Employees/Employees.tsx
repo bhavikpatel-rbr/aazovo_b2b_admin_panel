@@ -91,6 +91,7 @@ export type EmployeeItem = {
   roles: string[];
   avatar?: string | null;
   createdAt: Date;
+  role: string | null;
   // Add other fields if needed for forms, e.g., joiningDate, address, etc.
   joiningDate?: Date | null;
   bio?: string | null;
