@@ -62,9 +62,8 @@ export const loginUserByEmailAction = createAsyncThunk<
         attempt: loginAttemptCount,
       };
 
-      const response: AxiosResponse<any> = await loginWithEmailAsync(payload);
-      const data = response;
-      // ✅ Backend says login successful
+      const data = await loginWithEmailAsync(payload); // data is already the API body
+      // console.log(data.status);
       if (data?.status === true) {
         dispatch(
           showMessage({
@@ -73,33 +72,34 @@ export const loginUserByEmailAction = createAsyncThunk<
             messageText: "Login successful! Welcome.",
           })
         );
-        loginAttemptCount = 1;
+        loginAttemptCount = 1; // ✅ Reset on success
         return data;
       }
 
-      loginAttemptCount++;
+      loginAttemptCount++; // ❌ Login failed: increase count
 
-      const errorMsg = data?.error || "Login failed. Please check your credentials.";
-      // console.log(data)
-      if (errorMsg.includes("Account temporarily blocked.")) {
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "error",
-            title: "test",
-            messageText: "Your account is temporarily blocked. Try again after 5 minutes.",
-          })
-        );
-        loginAttemptCount = 1;
-      } else {
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "error",
-            messageText: errorMsg,
-          })
-        );
-      }
+      // const errorMsg = data?.error || "Login failed. Please check your credentials.";
+
+      // if (errorMsg.toLowerCase().includes("temporarily blocked")) {
+      //   dispatch(
+      //     showMessage({
+      //       ...defaultMessageObj,
+      //       type: "error",
+      //       title: "Account Locked",
+      //       messageText: "Your account is temporarily blocked. Try again after 5 minutes.",
+      //     })
+      //   );
+      //   loginAttemptCount = 1; // Reset on block
+      // } else {
+      //   dispatch(
+      //     showMessage({
+      //       ...defaultMessageObj,
+      //       type: "error",
+      //       title: "Login Failed",
+      //       messageText: errorMsg,
+      //     })
+      //   );
+      // }
 
       return rejectWithValue(data);
     } catch (error: any) {
@@ -109,7 +109,7 @@ export const loginUserByEmailAction = createAsyncThunk<
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          title: "test",
+          title: "Network Error",
           messageText: "An unexpected error occurred. Please try again later.",
         })
       );
@@ -118,4 +118,5 @@ export const loginUserByEmailAction = createAsyncThunk<
     }
   }
 );
+
 
