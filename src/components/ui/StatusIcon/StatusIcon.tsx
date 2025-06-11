@@ -22,19 +22,19 @@ const ICONS: Record<
 > = {
     success: {
         color: 'text-success',
-        icon: <HiCheckCircle />,
+        icon: <HiCheckCircle size={36}/>,
     },
     info: {
         color: 'text-info',
-        icon: <HiInformationCircle />,
+        icon: <HiInformationCircle size={36}/>,
     },
     warning: {
         color: 'text-warning',
-        icon: <HiExclamation />,
+        icon: <HiExclamation size={36}/>,
     },
     danger: {
         color: 'text-error',
-        icon: <HiXCircle />,
+        icon: <HiXCircle size={36}/>,
     },
 }
 
