@@ -596,7 +596,7 @@ export const articleListData = [
         authors: [
             {
                 name: 'Carolyn Perkins',
-                img: '/img/avatars/thumb-1.jpg',
+                img: '/img/avatars/default-user.jpg',
             },
         ],
         tags: [
@@ -723,7 +723,7 @@ export const articleListData = [
         authors: [
             {
                 name: 'Carolyn Perkins',
-                img: '/img/avatars/thumb-1.jpg',
+                img: '/img/avatars/default-user.jpg',
             },
             {
                 name: 'Gabriella May',
@@ -1002,7 +1002,7 @@ export const articleListData = [
         authors: [
             {
                 name: 'John Doe',
-                img: '/img/avatars/thumb-1.jpg',
+                img: '/img/avatars/default-user.jpg',
             },
         ],
         tags: [
@@ -1104,7 +1104,7 @@ export const articleListData = [
         authors: [
             {
                 name: 'Alice Johnson',
-                img: '/img/avatars/thumb-1.jpg',
+                img: '/img/avatars/default-user.jpg',
             },
         ],
         tags: [{ id: 17, label: 'Migration' }],

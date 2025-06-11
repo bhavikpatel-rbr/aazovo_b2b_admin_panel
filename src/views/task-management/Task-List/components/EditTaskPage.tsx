@@ -72,7 +72,7 @@ type EditTaskFormData = z.infer<typeof editTaskSchema>;
 
 
 // --- Dummy Data (largely same as CreateTaskPage, adapt as needed) ---
-const DUMMY_BOARD_MEMBERS: User[] = [ { id: 'user1', name: 'Alice Johnson', img: '/img/avatars/thumb-1.jpg' }, { id: 'user2', name: 'Bob Williams', img: '/img/avatars/thumb-2.jpg' }, { id: 'user3', name: 'Carol Davis', img: '/img/avatars/thumb-3.jpg' }, { id: 'user4', name: 'David Brown', img: '/img/avatars/thumb-4.jpg' }, ];
+const DUMMY_BOARD_MEMBERS: User[] = [ { id: 'user1', name: 'Alice Johnson', img: '/img/avatars/default-user.jpg' }, { id: 'user2', name: 'Bob Williams', img: '/img/avatars/thumb-2.jpg' }, { id: 'user3', name: 'Carol Davis', img: '/img/avatars/thumb-3.jpg' }, { id: 'user4', name: 'David Brown', img: '/img/avatars/thumb-4.jpg' }, ];
 const DUMMY_PRIORITY_OPTIONS = [ {label: "Low", value: "Low"}, {label: "Medium", value: "Medium"}, {label: "High", value: "High"}, {label: "Urgent", value: "Urgent"} ];
 const DUMMY_CATEGORY_OPTIONS = [ {label: "General", value: "General"}, {label: "Development", value: "Development"}, {label: "Marketing", value: "Marketing"}, {label: "Sales", value: "Sales"} ];
 const DUMMY_STATUS_OPTIONS = taskStatusValues.map(s => ({ label: s.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()), value: s }));
@@ -114,7 +114,7 @@ const fetchTaskById = async (id: string): Promise<TaskItem | undefined> => {
                 labels: ["Project Alpha", "Urgent"],
                 linkedTo: [{ type: "Company", id: "compA", name: "Company A" }],
                 description: "This is a more detailed description for TL001 fetched for editing.",
-                // comments: [{id: 'cmt1', name: 'Alice', src: '/img/avatars/thumb-1.jpg', date: new Date(), message: 'Initial comment from server.'}],
+                // comments: [{id: 'cmt1', name: 'Alice', src: '/img/avatars/default-user.jpg', date: new Date(), message: 'Initial comment from server.'}],
                 // attachments: [{ id: 'attServ1', name: 'server_document.pdf', size: '1.2MB', serverPath: 'docs/server_document.pdf', src: '/path/to/server_document.pdf' }]
             });
         } else if (task) {
@@ -290,7 +290,7 @@ const EditTaskPage = () => {
       const newComment: Comment = {
         id: `c${Date.now()}`,
         name: 'Current User (Edited)', // Placeholder
-        src: '/img/avatars/thumb-1.jpg', // Placeholder
+        src: '/img/avatars/default-user.jpg', // Placeholder
         date: new Date(),
         message: commentInputRef.current.value
       };
@@ -638,7 +638,7 @@ const EditTaskPage = () => {
                         </div>
                       )}
                       <div className="mb-3 flex gap-2 items-start">
-                        <Avatar shape="circle" src="/img/avatars/thumb-1.jpg" /> {/* Current user placeholder */}
+                        <Avatar shape="circle" src="/img/avatars/default-user.jpg" /> {/* Current user placeholder */}
                         <div className="w-full relative">
                           <Input ref={commentInputRef} textArea placeholder="Write comment..." rows={3} />
                           <div className="absolute bottom-2 right-2">

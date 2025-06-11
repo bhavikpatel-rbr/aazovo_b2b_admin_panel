@@ -4,7 +4,7 @@ export const profileData = {
     firstName: 'Angelina',
     lastName: 'Gotelli',
     email: 'carolyn_h@hotmail.com',
-    img: '/img/avatars/thumb-1.jpg',
+    img: '/img/avatars/default-user.jpg',
     location: 'New York, US',
     address: '123 Main St',
     postcode: '10001',

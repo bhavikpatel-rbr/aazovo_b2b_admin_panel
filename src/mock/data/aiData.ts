@@ -10,7 +10,7 @@ export const chatHistoryData = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
+                    avatarImageUrl: '/img/avatars/default-user.jpg',
                 },
                 content:
                     'I have a photoshoot tomorrow. Can you recommend me some colors and outfit options that will look good on camera?',
@@ -47,7 +47,7 @@ export const chatHistoryData = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
+                    avatarImageUrl: '/img/avatars/default-user.jpg',
                 },
                 content: `I'm planning a trip to Europe next summer. Can you help me with a travel itinerary?`,
                 timestamp: 1723430400,
@@ -72,7 +72,7 @@ export const chatHistoryData = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
+                    avatarImageUrl: '/img/avatars/default-user.jpg',
                 },
                 content: `Its about 2 weeks`,
                 timestamp: 1723430400,
@@ -107,7 +107,7 @@ export const chatHistoryData = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
+                    avatarImageUrl: '/img/avatars/default-user.jpg',
                 },
                 content: `Can you suggest some healthy dinner recipes that are quick to prepare?`,
                 timestamp: 1723430400,
@@ -143,7 +143,7 @@ export const chatHistoryData = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
+                    avatarImageUrl: '/img/avatars/default-user.jpg',
                 },
                 content: `I'm looking to start a new exercise routine. What are some effective workouts for beginners?`,
                 timestamp: 1723430400,
@@ -178,7 +178,7 @@ export const chatHistoryData = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
+                    avatarImageUrl: '/img/avatars/default-user.jpg',
                 },
                 content: `Write a Python function that finding the maximum number in a list`,
                 timestamp: 1723430400,

@@ -18,7 +18,7 @@ const CustomIcon = () => {
         <Notification
             title="Emily Gale"
             customIcon={
-                <Avatar shape="circle" src="/img/avatars/thumb-1.jpg" />
+                <Avatar shape="circle" src="/img/avatars/default-user.jpg" />
             }>
             Sent you a friend request.
         </Notification>

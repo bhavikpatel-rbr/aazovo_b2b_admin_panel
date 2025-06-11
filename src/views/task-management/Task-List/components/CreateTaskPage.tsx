@@ -57,7 +57,7 @@ type CreateTaskFormData = z.infer<typeof createTaskSchema>;
 // Dummy data for Assignees, Status Labels, Categories, etc.
 // In a real app, this would come from an API or Redux store
 const DUMMY_BOARD_MEMBERS: User[] = [
-  { id: 'user1', name: 'Alice Johnson', img: '/img/avatars/thumb-1.jpg' },
+  { id: 'user1', name: 'Alice Johnson', img: '/img/avatars/default-user.jpg' },
   { id: 'user2', name: 'Bob Williams', img: '/img/avatars/thumb-2.jpg' },
   { id: 'user3', name: 'Carol Davis', img: '/img/avatars/thumb-3.jpg' },
   { id: 'user4', name: 'David Brown', img: '/img/avatars/thumb-4.jpg' },
@@ -171,7 +171,7 @@ const CreateTaskPage = () => {
     if (commentInputRef.current?.value) {
       setComments([
         ...comments,
-        { id: `c${Date.now()}`, name: 'Current User', src: '/img/avatars/thumb-1.jpg', date: new Date(), message: commentInputRef.current.value }
+        { id: `c${Date.now()}`, name: 'Current User', src: '/img/avatars/default-user.jpg', date: new Date(), message: commentInputRef.current.value }
       ]);
       commentInputRef.current.value = '';
     }
@@ -505,7 +505,7 @@ const CreateTaskPage = () => {
                       </div>
                     )}
                     <div className="mb-3 flex gap-2">
-                      <Avatar shape="circle" src="/img/avatars/thumb-1.jpg" /> {/* Placeholder for current user */}
+                      <Avatar shape="circle" src="/img/avatars/default-user.jpg" /> {/* Placeholder for current user */}
                       <div className="w-full relative">
                         <Input ref={commentInputRef} textArea placeholder="Write comment..." />
                         <div className="absolute bottom-2 right-2">

@@ -317,7 +317,7 @@ export const fileListData = [
         author: {
             name: 'Angelina Gotelli',
             email: 'eileen_h@hotmail.com',
-            img: '/img/avatars/thumb-1.jpg',
+            img: '/img/avatars/default-user.jpg',
         },
         activities: [
             {
@@ -419,7 +419,7 @@ export const fileListData = [
             },
             {
                 userName: 'Angelina Gotelli',
-                userImg: '/img/avatars/thumb-1.jpg',
+                userImg: '/img/avatars/default-user.jpg',
                 actionType: 'EDIT',
                 timestamp: 1737652345,
             },
@@ -444,7 +444,7 @@ export const fileListData = [
             },
             {
                 userName: 'Angelina Gotelli',
-                userImg: '/img/avatars/thumb-1.jpg',
+                userImg: '/img/avatars/default-user.jpg',
                 role: 'editor',
             },
             {
@@ -591,7 +591,7 @@ export const fileListData = [
         author: {
             name: 'Angelina Gotelli',
             email: 'eileen_h@hotmail.com',
-            img: '/img/avatars/thumb-1.jpg',
+            img: '/img/avatars/default-user.jpg',
         },
         activities: [
             {

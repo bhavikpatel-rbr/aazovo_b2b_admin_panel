@@ -274,7 +274,7 @@ export const logData = [
                 type: 'COMMENT-MENTION',
                 dateTime: 1646050001,
                 username: 'Angelina Gotelli',
-                userImg: '/img/avatars/thumb-1.jpg',
+                userImg: '/img/avatars/default-user.jpg',
                 comment: `<strong>@Carolyn</strong> Don't worry if it doesn't work right. If everything did, you'd be out of a job.`,
             },
         ],

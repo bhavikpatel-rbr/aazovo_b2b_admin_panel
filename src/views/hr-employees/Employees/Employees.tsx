@@ -170,7 +170,7 @@ const initialDummyEmployees: EmployeeItem[] = [
     department: "Engineering",
     designation: "Software Engineer II",
     roles: ["Developer", "Code Reviewer"],
-    avatar: "/img/avatars/thumb-1.jpg",
+    avatar: "/img/avatars/default-user.jpg",
     createdAt: new Date(2022, 5, 15),
     joiningDate: new Date(2022, 5, 15),
     bio: "Loves coding and tea parties.",

@@ -156,7 +156,7 @@ const SignInForm = (props: SignInFormProps) => {
                 </FormItem>
                 {passwordHint}
 
-                <div className="mb-3">
+                <div>
                 <p className="font-semibold heading-text">
                                 <a
                 href="/forgot-password"

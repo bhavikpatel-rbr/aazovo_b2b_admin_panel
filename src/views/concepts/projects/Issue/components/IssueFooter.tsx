@@ -19,7 +19,7 @@ const createCommentObject = (message: string) => {
     return {
         id: uniqueId('comment'),
         name: 'Angelina Gotelli',
-        src: '/img/avatars/thumb-1.jpg',
+        src: '/img/avatars/default-user.jpg',
         message: message,
         date: dayjs().format('DD MMM YYYY'),
     }
@@ -95,7 +95,7 @@ const IssueFooter = () => {
                         <div className="mb-3 flex gap-2">
                             <Avatar
                                 shape="circle"
-                                src="/img/avatars/thumb-1.jpg"
+                                src="/img/avatars/default-user.jpg"
                             />
                             <div className="w-full relative">
                                 <Input

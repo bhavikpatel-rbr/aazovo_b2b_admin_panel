@@ -61,7 +61,7 @@ export const projectListData = [
         member: [
             {
                 name: 'Angelina Gotelli',
-                img: '/img/avatars/thumb-1.jpg',
+                img: '/img/avatars/default-user.jpg',
             },
         ],
     },
@@ -193,7 +193,7 @@ export const projectListData = [
         member: [
             {
                 name: 'Angelina Gotelli',
-                img: '/img/avatars/thumb-1.jpg',
+                img: '/img/avatars/default-user.jpg',
             },
             {
                 name: 'Roberta Horton',
@@ -237,7 +237,7 @@ const toBeProcessCards = [
                 id: '1',
                 name: 'Angelina Gotelli',
                 email: 'eileen_h@hotmail.com',
-                img: '/img/avatars/thumb-1.jpg',
+                img: '/img/avatars/default-user.jpg',
             },
             {
                 id: '2',
@@ -365,7 +365,7 @@ const onHoldCards = [
                 id: '1',
                 name: 'Angelina Gotelli',
                 email: 'eileen_h@hotmail.com',
-                img: '/img/avatars/thumb-1.jpg',
+                img: '/img/avatars/default-user.jpg',
             },
             {
                 id: '2',
@@ -508,7 +508,7 @@ const processingCards = [
             {
                 id: 'afPugkEmkp',
                 name: 'Angelina Gotelli',
-                src: '/img/avatars/thumb-1.jpg',
+                src: '/img/avatars/default-user.jpg',
                 message: '',
                 date: new Date(y, 5, 16),
             },
@@ -861,7 +861,7 @@ export const issueData = {
             type: 'COMMENT',
             dateTime: 1646578417,
             userName: 'Arlene Pierce',
-            userImg: '/img/avatars/thumb-1.jpg',
+            userImg: '/img/avatars/default-user.jpg',
             comment: `Helvetica 8-bit photo booth tumblr food truck. Enamel pin wolf tousled sartorial, brunch shoreditch skateboard beard helvetica. Plaid typewriter gastropub bespoke.`,
         },
         {
@@ -961,7 +961,7 @@ export const taskBugFix = [
         priority: 'Medium',
         assignee: {
             name: 'Angelina Gotelli',
-            img: '/img/avatars/thumb-1.jpg',
+            img: '/img/avatars/default-user.jpg',
         },
     },
 ]
@@ -1051,7 +1051,7 @@ export const taskUiUx = [
         priority: 'Low',
         assignee: {
             name: 'Angelina Gotelli',
-            img: '/img/avatars/thumb-1.jpg',
+            img: '/img/avatars/default-user.jpg',
         },
     },
 ]
@@ -1090,7 +1090,7 @@ export const taskPlaning = [
         priority: 'Low',
         assignee: {
             name: 'Angelina Gotelli',
-            img: '/img/avatars/thumb-1.jpg',
+            img: '/img/avatars/default-user.jpg',
         },
     },
 ]

@@ -19,7 +19,7 @@ const useChatSend = () => {
             sender: {
                 id: '1',
                 name: 'Angelina Gotelli',
-                avatarImageUrl: '/img/avatars/thumb-1.jpg',
+                avatarImageUrl: '/img/avatars/default-user.jpg',
             },
             content: prompt,
             timestamp: dayjs().toDate(),

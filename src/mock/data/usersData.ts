@@ -3,7 +3,7 @@ export const usersData = [
         id: '1',
         name: 'Angelina Gotelli',
         email: 'eileen_h@hotmail.com',
-        img: '/img/avatars/thumb-1.jpg',
+        img: '/img/avatars/default-user.jpg',
     },
     {
         id: '2',
@@ -98,7 +98,7 @@ export const userDetailData = [
         firstName: 'Angelina',
         lastName: 'Gotelli',
         email: 'carolyn_h@hotmail.com',
-        img: '/img/avatars/thumb-1.jpg',
+        img: '/img/avatars/default-user.jpg',
         role: 'admin',
         lastOnline: 1723430400,
         status: 'active',
