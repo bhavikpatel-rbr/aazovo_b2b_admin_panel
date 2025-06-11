@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react' // <-- Import useState
+import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import SideNav from '@/components/template/SideNav'
 import Header from '@/components/template/Header'
@@ -13,63 +13,63 @@ import LayoutBase from '@/components//template/LayoutBase'
 import ActiveItems from '@/components/template/Notification/ActiveItems'
 import Calender from '@/components/template/Notification/Calender'
 import useResponsive from '@/utils/hooks/useResponsive'
-import ConfirmDialog from '@/components/shared/ConfirmDialog' // <-- Import ConfirmDialog
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { punchIn, punchOut } from '@/reduxtool/auth/authSlice'
-import { LAYOUT_COLLAPSIBLE_SIDE } from '@/constants/theme.constant'
 import { RootState, useAppDispatch } from '@/reduxtool/store'
 import { TbPower } from 'react-icons/tb'
 import type { CommonProps } from '@/@types/common'
 import Tasks from '@/components/template/Notification/Task'
+import { LAYOUT_COLLAPSIBLE_SIDE } from '@/constants/theme.constant'
 
 const CollapsibleSide = ({ children }: CommonProps) => {
     const { larger, smaller } = useResponsive()
     const dispatch = useAppDispatch()
 
-    // --- Start of Redux & Dialog Integration ---
-
-    // 1. Get auth and punch-in status from the Redux store
     const { signedIn, punchInStatus } = useSelector(
         (state: RootState) => state.Auth
     )
 
-    // 2. NEW: State to control the punch-in dialog
     const [isPunchInDialogOpen, setIsPunchInDialogOpen] = useState(false)
+    const [promptHasBeenShown, setPromptHasBeenShown] = useState(false)
 
-    // 3. MODIFIED: useEffect to show a ConfirmDialog after login if not punched in
+    // --- CORRECTED LOGIC: This effect now works correctly ---
     useEffect(() => {
-        let timer: NodeJS.Timeout | undefined;
+        let timer: NodeJS.Timeout | undefined
 
-        // Condition to trigger the dialog
-        if (signedIn && punchInStatus === 'punched-out') {
-            // Set a timer to open the dialog after 5 seconds
+        // Condition: User is logged in, punched-out, AND the prompt has not been shown yet.
+        if (signedIn && punchInStatus === 'punched-out' && !promptHasBeenShown) {
             timer = setTimeout(() => {
+                // --- FIX ---
+                // Set the flag and open the dialog AT THE SAME TIME, after the delay.
+                setPromptHasBeenShown(true)
                 setIsPunchInDialogOpen(true)
-            }, 5000) // 5000 milliseconds = 5 seconds
+            }, 5000)
         }
 
-        // Cleanup function: This will run if the component unmounts
-        // or if the dependencies [signedIn, punchInStatus] change.
-        // It prevents the dialog from opening if the user logs out or
-        // punches in manually within the 5-second window.
+        // Cleanup function to clear the timer if dependencies change before it fires
         return () => {
             if (timer) {
                 clearTimeout(timer)
             }
         }
-    }, [signedIn, punchInStatus])
-    // --- END MODIFICATION ---
+    }, [signedIn, punchInStatus, promptHasBeenShown])
 
-    // 4. NEW: Handlers for the ConfirmDialog
+    // This effect correctly resets the flag when the user logs out
+    useEffect(() => {
+        if (!signedIn) {
+            setPromptHasBeenShown(false)
+        }
+    }, [signedIn])
+
     const handleConfirmPunchIn = () => {
         dispatch(punchIn())
-        setIsPunchInDialogOpen(false) // Close dialog on confirm
+        setIsPunchInDialogOpen(false)
     }
 
     const handleCloseDialog = () => {
-        setIsPunchInDialogOpen(false) // Close dialog on cancel or close
+        setIsPunchInDialogOpen(false)
     }
 
-    // 5. Handle the click event on the header punch-in/out button (unchanged)
     const handlePunchToggle = () => {
         if (punchInStatus === 'punched-in') {
             dispatch(punchOut())
@@ -77,8 +77,6 @@ const CollapsibleSide = ({ children }: CommonProps) => {
             dispatch(punchIn())
         }
     }
-
-    // --- End of Integration ---
 
     const isPunchedIn = punchInStatus === 'punched-in'
 
@@ -136,7 +134,6 @@ const CollapsibleSide = ({ children }: CommonProps) => {
                 </div>
             </div>
 
-            {/* 6. NEW: Add the ConfirmDialog component to the layout */}
             <ConfirmDialog
                 isOpen={isPunchInDialogOpen}
                 type="info"
