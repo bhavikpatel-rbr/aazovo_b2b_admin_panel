@@ -73,7 +73,7 @@ const NewProfilePreviewCard = ({
 
   return (
     <div className="p-2">
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2">
         <div className="relative flex-shrink-0">
           <Avatar shape="round" size={100} src={avatarSrc} />
           <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800"></div>
@@ -133,14 +133,15 @@ const ConfirmImageChangeModal = ({
       onClose={onClose}
       onRequestClose={onClose}
       width={477}
+      className="p-4"
     >
-      <h5 className="mb-4">Confirm Profile Change</h5>
+      <h5 className="mb-2">Confirm Profile Change</h5>
       <NewProfilePreviewCard
         userData={userData}
         newAvatarPreview={newAvatarPreview}
       />
       {/* <p className="mt-4 text-center">Are you sure you want to save this new profile picture?</p> */}
-      <div className="text-right mt-6">
+      <div className="text-right">
         <Button className="mr-2" onClick={onClose} disabled={isLoading}>
           Cancel
         </Button>
