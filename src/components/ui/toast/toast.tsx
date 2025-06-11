@@ -6,10 +6,15 @@ import type { ReactNode } from 'react'
 
 export const toastDefaultProps = {
     placement: PLACEMENT.TOP_CENTER,
-    offsetX: 0,
-    offsetY: "30%",
+    offsetX: "50%",
+    offsetY: "40%",
     transitionType: 'scale',
     block: false,
+    width: '420px', 
+    height: 'auto', 
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+    borderRadius: '8px',
+    padding: '12px 20px',
 }
 
 export interface Toast {
