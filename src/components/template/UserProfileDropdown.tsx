@@ -7,7 +7,6 @@ import { Link } from "react-router-dom";
 // UI Components
 import Avatar from "@/components/ui/Avatar";
 import Dropdown from "@/components/ui/Dropdown";
-import Dialog from "@/components/ui/Dialog";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Notification from "@/components/ui/Notification";
@@ -30,50 +29,25 @@ import {
   PiCameraDuotone,
   PiMapPinDuotone,
   PiEnvelopeSimpleDuotone,
-  PiCurrencyDollarSimpleDuotone,
-  PiUsersDuotone,
-  PiBriefcaseDuotone,
 } from "react-icons/pi";
 import { IoMdCheckmarkCircle } from "react-icons/io";
-import { TbStatusChange, TbSubtask } from "react-icons/tb";
 
 const { useEncryptApplicationStorage } = config;
 
-// --- 1. New Card for Previewing Profile Changes ---
-const NewProfilePreviewCard = ({
+// --- 1. Reusable Profile Card Component ---
+const UserProfileCard = ({
   userData,
   newAvatarPreview,
 }: {
   userData: any;
   newAvatarPreview: string | null;
 }) => {
-  // Use the new preview if available, otherwise fall back to the existing user avatar or a default
   const avatarSrc =
     newAvatarPreview || userData?.avatar || "/img/avatars/default-user.jpg";
 
-  const StatCard = ({
-    icon,
-    value,
-    label,
-  }: {
-    icon: JSX.Element;
-    value: string;
-    label: string;
-  }) => (
-    <div className=" flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg min-w-[120px]">
-      <div className=" p-2 rounded-md">{icon}</div>
-      <div>
-        <div className="font-bold text-lg text-gray-800 dark:text-gray-100">
-          {value}
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
-      </div>
-    </div>
-  );
-
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
         <div className="relative flex-shrink-0">
           <Avatar shape="round" size={100} src={avatarSrc} />
           <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800"></div>
@@ -99,25 +73,20 @@ const NewProfilePreviewCard = ({
               </span>
             </div>
           </div>
-          {/* <div className="flex flex-col sm:flex-row gap-3">
-                        <StatCard icon={<TbStatusChange />} value={userData?.status || 'Active'} label="Status" />
-                        <StatCard icon={<PiPulseDuotone />} value={userData?.totalTasks?.toString() || '0'} label="Total Tasks" />
-                        <StatCard icon={<TbSubtask />} value={userData?.pendingTasks?.toString() || '0'} label="Pending Tasks" />
-                    </div> */}
         </div>
       </div>
     </div>
   );
 };
 
-// --- 2. Redesigned Confirmation Modal for Image Change ---
+// --- 2. MODIFIED Confirmation Modal for Image Change (using ConfirmDialog) ---
 interface ConfirmImageChangeModalProps {
   isOpen: boolean;
   onClose: () => void;
   newAvatarPreview: string | null;
   onConfirm: () => void;
   isLoading: boolean;
-  userData: any; // <-- Accepts user data to populate the card
+  userData: any;
 }
 const ConfirmImageChangeModal = ({
   isOpen,
@@ -128,28 +97,23 @@ const ConfirmImageChangeModal = ({
   userData,
 }: ConfirmImageChangeModalProps) => {
   return (
-    <Dialog
+    <ConfirmDialog
       isOpen={isOpen}
       onClose={onClose}
       onRequestClose={onClose}
+      onCancel={onClose}
+      onConfirm={onConfirm}
+      loading={isLoading}
       width={477}
-      className="p-4"
+      title="Confirm Profile Change"
+      type="info"
+      confirmText="Save"
     >
-      <h5 className="mb-2">Confirm Profile Change</h5>
-      <NewProfilePreviewCard
+      <UserProfileCard
         userData={userData}
         newAvatarPreview={newAvatarPreview}
       />
-      {/* <p className="mt-4 text-center">Are you sure you want to save this new profile picture?</p> */}
-      <div className="text-right">
-        <Button className="mr-2" onClick={onClose} disabled={isLoading}>
-          Cancel
-        </Button>
-        <Button variant="solid" loading={isLoading} onClick={onConfirm}>
-          Save
-        </Button>
-      </div>
-    </Dialog>
+    </ConfirmDialog>
   );
 };
 
@@ -234,7 +198,7 @@ const _UserDropdown = () => {
         placement="bottom-end"
       >
         <Dropdown.Item variant="header" className="!p-0">
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-4 p-4">
             <div
               className="relative flex-shrink-0 rounded-full group cursor-pointer"
               onClick={handleAvatarClick}
@@ -282,9 +246,14 @@ const _UserDropdown = () => {
           </Link>
         </Dropdown.Item>
         <Dropdown.Item variant="divider"/>
-                <Dropdown.Item eventKey="Sign Out" className="gap-2" onClick={handleSignOutClick}>
-                    <span className="text-xl"><PiSignOutDuotone /></span><span>Logout</span>
-                </Dropdown.Item>
+        <Dropdown.Item
+          eventKey="Sign Out"
+          className="gap-2"
+          onClick={handleSignOutClick}
+        >
+          <span className="text-xl"><PiSignOutDuotone /></span>
+          <span>Logout</span>
+        </Dropdown.Item>
       </Dropdown>
 
       <input
@@ -304,17 +273,20 @@ const _UserDropdown = () => {
         userData={userData}
       />
 
-        <ConfirmDialog
-            isOpen={isLogoutDialogOpen}
-            type="warning"
-            title="Logout"
-            onClose={onDialogClose}
-            onRequestClose={onDialogClose}
-            onCancel={onDialogClose}
-            onConfirm={onDialogConfirm}
-        >
-            <p>Are you sure you want to log out?</p>
-        </ConfirmDialog>
+      <ConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        type="danger"
+        title="Confirm Logout"
+        width={477}
+        onClose={onDialogClose}
+        onRequestClose={onDialogClose}
+        onCancel={onDialogClose}
+        onConfirm={onDialogConfirm}
+        confirmText="Logout"
+      >
+        <UserProfileCard userData={userData} newAvatarPreview={null} />
+        <p className="mt-4 text-center">Are you sure you want to log out?</p>
+      </ConfirmDialog>
     </>
   );
 };
