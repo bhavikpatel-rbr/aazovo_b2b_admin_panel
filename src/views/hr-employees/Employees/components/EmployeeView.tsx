@@ -187,8 +187,8 @@ const employeeViewNavigationList = [
   { label: "Documents", link: "documents" },
   { label: "Wall Inquiry", link: "inquiry" },
   { label: "Offer & Demands", link: "offers" },
-  { label: "Team / Subordinates", link: "team" },
-  { label: "Associated Members", link: "members" },
+  { label: "Employee", link: "team" },
+  { label: "Member", link: "members" },
 ];
 type NavigatorComponentProps = {
   activeSection: string;
