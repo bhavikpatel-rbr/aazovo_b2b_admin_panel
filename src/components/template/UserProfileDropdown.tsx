@@ -72,7 +72,7 @@ const NewProfilePreviewCard = ({
   );
 
   return (
-    <div className="p-2">
+    <div>
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2">
         <div className="relative flex-shrink-0">
           <Avatar shape="round" size={100} src={avatarSrc} />
