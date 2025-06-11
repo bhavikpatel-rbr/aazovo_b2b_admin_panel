@@ -56,7 +56,6 @@ export const loginUserByEmailAction = createAsyncThunk<
   async (loginRequest: any, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await loginWithEmailAsync(loginRequest)
-
       // Case 1: API confirms successful login
       if (response?.data?.status) {
         // ADDED: Dispatch success message on login
