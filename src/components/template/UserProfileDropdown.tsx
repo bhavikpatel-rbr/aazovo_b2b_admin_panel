@@ -1,6 +1,6 @@
 // src/components/template/UserProfileDropdown.tsx
 
-import { useState } from 'react'; // <-- Import useState
+import { useEffect, useState } from 'react'; // <-- Import useState
 import Avatar from '@/components/ui/Avatar';
 import Dropdown from '@/components/ui/Dropdown';
 import ConfirmDialog from '@/components/shared/ConfirmDialog'; // <-- Import ConfirmDialog
@@ -17,7 +17,9 @@ import { useAuth } from '@/auth';
 import type { JSX } from 'react';
 import { logoutAction } from '@/reduxtool/auth/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
-
+import { encryptStorage } from '@/utils/secureLocalStorage';
+import { config } from '@/utils/config';
+const { useEncryptApplicationStorage } = config
 type DropdownList = {
     label: string;
     path: string;
@@ -27,7 +29,7 @@ type DropdownList = {
 const dropdownItemList: DropdownList[] = [
     {
         label: 'Profile',
-        path: '/concepts/account/settings',
+        path: '/layouts/UserProfile/ProfileSettings',
         icon: <PiUserDuotone />,
     },
     {
@@ -38,6 +40,7 @@ const dropdownItemList: DropdownList[] = [
 ];
 
 const _UserDropdown = () => {
+     const [userData, setuserData] = useState<any>([]);
     const { avatar, userName, email } = useSessionUser((state) => state.user);
     const dispatch = useAppDispatch();
     // const { signOut } = useAuth() // The template likely wires this up in the layout
@@ -58,6 +61,21 @@ const _UserDropdown = () => {
         dispatch(logoutAction());
         // No need to close the dialog, the app will unmount and redirect
     };
+
+  const getUserData = () => {
+  try {
+    return encryptStorage.getItem("UserData", !useEncryptApplicationStorage);
+  } catch (error) {
+    console.error("Error getting UserData from encryptStorage:", error);
+    return null;
+  }
+}
+console.log("userData",userData);
+
+
+ useEffect(() => {
+        setuserData(getUserData())
+    }, [])
 
     const avatarProps = {
         ...(avatar ? { src: avatar } : { icon: <PiUserDuotone /> }),
@@ -80,10 +98,10 @@ const _UserDropdown = () => {
                         <Avatar {...avatarProps} />
                         <div>
                             <div className="font-bold text-gray-900 dark:text-gray-100">
-                                {userName || 'Anonymous'}
+                                {userData?.name || 'Anonymous'}
                             </div>
                             <div className="text-xs">
-                                {email || 'No email available'}
+                                {userData?.email || 'No email available'}
                             </div>
                         </div>
                     </div>

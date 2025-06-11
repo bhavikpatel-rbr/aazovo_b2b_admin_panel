@@ -38,6 +38,14 @@ export const setUser = (user: any) => {
   encryptStorage.setItem("user", user, !useEncryptApplicationStorage)
 }
 
+export const setUserData = (user: any) => {
+  encryptStorage.setItem("UserData", user, !useEncryptApplicationStorage)
+}
+export const setUserpermission = (user: any) => {
+  encryptStorage.setItem("Userpermission", user, !useEncryptApplicationStorage)
+}
+
+
 export const removeUser = () => {
   encryptStorage.removeItem("user")
 }
