@@ -55,17 +55,17 @@ const UserProfileCard = ({
         <div className="flex flex-col gap-4 w-full">
           <div>
             <div className="flex items-center gap-2">
-              <h5 className="font-bold text-xl">
+              <h5 className="font-bold" style={{ fontSize: '1rem'}}>
                 {userData?.name || "Atkinson"}
               </h5>
               <IoMdCheckmarkCircle className="text-blue-500 text-xl" />
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1.5">
-                <PiUserDuotone /> {userData?.role || "Web Designer"}
+                <PiUserDuotone /> {userData?.designtion || "Web Designer"}
               </span>
               <span className="flex items-center gap-1.5">
-                <PiMapPinDuotone /> {userData?.location || "420 City Path, AU"}
+                <PiMapPinDuotone /> {userData?.phone || "+12365412"}
               </span>
               <span className="flex items-center gap-1.5">
                 <PiEnvelopeSimpleDuotone />{" "}
@@ -105,7 +105,7 @@ const ConfirmImageChangeModal = ({
       onConfirm={onConfirm}
       loading={isLoading}
       width={477}
-      title="Confirm Profile Change"
+      title="Profile Image Change"
       type="info"
       confirmText="Save"
     >
