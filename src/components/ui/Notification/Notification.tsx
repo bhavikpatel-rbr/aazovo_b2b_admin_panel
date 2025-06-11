@@ -70,6 +70,7 @@ const Notification = (props: NotificationProps) => {
                 className={classNames(
                     'notification-content',
                     !children && 'no-child',
+                    'flex-col items-center '
                 )}
             >
                 {type && !customIcon ? (
@@ -78,11 +79,12 @@ const Notification = (props: NotificationProps) => {
                     </div>
                 ) : null}
                 {customIcon && <div className="mr-3">{customIcon}</div>}
-                <div className="mr-4">
+                <div className="mr-4 text-center">
                     {title && (
                         <div
                             className={classNames(
                                 'notification-title',
+                                'text-sm',
                                 children ? 'mb-2' : '',
                             )}
                         >
@@ -92,6 +94,7 @@ const Notification = (props: NotificationProps) => {
                     <div
                         className={classNames(
                             'notification-description',
+                            'text-xs font-normal',
                             !title && children ? 'mt-1' : '',
                         )}
                     >
