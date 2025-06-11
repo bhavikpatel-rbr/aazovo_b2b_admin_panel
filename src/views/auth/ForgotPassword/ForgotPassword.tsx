@@ -34,10 +34,9 @@ export const ForgotPasswordBase = ({
                     </>
                 ) : (
                     <>
-                        <h3 className="mb-2">Reset your password</h3>
+                        <h3 className="mb-2">Reset password</h3>
                         <p className="font-semibold heading-text">
-                            Enter the email address associated with your account
-                            and we will send you a link to reset your password.
+                            Submit your email for password reset request.
                         </p>
                     </>
                 )}

@@ -55,7 +55,7 @@ export const SignInBase = ({
                 // --- Modified passwordHint prop ---
                 passwordHint={
                     // Use a flex container to place items side-by-side
-                    <div className="flex justify-between items-center mb-7 mt-5">
+                    <div className="flex justify-between items-center mt-3 mb-3">
                         {/* Checkbox and Label */}
                         {/* <label className="flex items-center gap-1 cursor-pointer">
                             <Checkbox defaultChecked onChange={onCheck}>
