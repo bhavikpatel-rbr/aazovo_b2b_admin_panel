@@ -284,7 +284,7 @@ const _UserDropdown = () => {
         onConfirm={onDialogConfirm}
         confirmText="Logout"
       >
-        <UserProfileCard userData={userData} newAvatarPreview={null} />
+        {/* <UserProfileCard userData={userData} newAvatarPreview={null} /> */}
         <p className="mt-4 text-center">Are you sure you want to log out?</p>
       </ConfirmDialog>
     </>
