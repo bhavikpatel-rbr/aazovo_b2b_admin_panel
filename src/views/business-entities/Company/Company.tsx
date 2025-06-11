@@ -341,7 +341,7 @@ const dummyMembers = [
     id: "m1",
     name: "Eleanor Vance",
     role: "CEO",
-    avatar: "/img/avatars/default-user.jpg",
+    avatar: "/img/avatars/thumb-1.jpg",
   },
   {
     id: "m2",

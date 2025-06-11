@@ -26,7 +26,7 @@ import { IoEyeOutline } from "react-icons/io5";
 import { getExportMappingsAction } from "@/reduxtool/master/middleware";
 // Icons
 import { TbChecks, TbSearch, TbCloudDownload, TbFilter, TbActivity, TbCloudUpload, TbCalendarUp, TbUserUp, TbBookUpload } from "react-icons/tb";
-import userIconPlaceholder from "/img/avatars/default-user.jpg"; // Generic placeholder
+import userIconPlaceholder from "/img/avatars/thumb-1.jpg"; // Generic placeholder
 // Types
 import type {
   OnSortParam,

@@ -9,7 +9,7 @@ const HeaderFooterBorder = () => {
                 size={30}
                 className="mr-2"
                 shape="circle"
-                src="/img/avatars/default-user.jpg"
+                src="/img/avatars/thumb-1.jpg"
             />
             <span>
                 <h6 className="text-sm">Kristen Fisher</h6>

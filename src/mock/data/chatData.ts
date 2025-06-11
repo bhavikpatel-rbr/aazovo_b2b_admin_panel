@@ -100,7 +100,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Hey, can I ask you something?`,
                 timestamp: 1723430400,
@@ -124,7 +124,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `I'm thinking about applying for a new job, but I'm not sure if it's the right move.`,
                 timestamp: 1723430400,
@@ -148,7 +148,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `It's a bigger company and a more challenging role. I'm worried it might be too much to handle.`,
                 timestamp: 1723430400,
@@ -172,7 +172,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Thanks, Mark. I needed that encouragement. I'll start working on my application tonight.`,
                 timestamp: 1723430400,
@@ -196,7 +196,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: 'Will do. Appreciate it!',
                 timestamp: 1723430400,
@@ -225,7 +225,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Yeah, I think so. Why, what's up?`,
                 timestamp: 1723430400,
@@ -249,7 +249,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Sounds fun! Where are you planning to go?`,
                 timestamp: 1723430400,
@@ -273,7 +273,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Cool, count me in! What time were you thinking of leaving?`,
                 timestamp: 1723430400,
@@ -297,7 +297,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Perfect. I'll pack some snacks and drinks.`,
                 timestamp: 1723430400,
@@ -314,7 +314,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Hey, did you get a chance to review the client feedback?`,
                 timestamp: 1723430400,
@@ -338,7 +338,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Agreed. They weren't too happy with the color scheme. Do you have any suggestions?`,
                 timestamp: 1723430400,
@@ -362,7 +362,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `That makes sense. I'll put together a few options and send them over for review`,
                 timestamp: 1723430400,
@@ -386,7 +386,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Okay, Thanks 🥰`,
                 timestamp: 1723430400,
@@ -415,7 +415,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Hi! I've been good, just busy with work. How about you?`,
                 timestamp: 1723430400,
@@ -439,7 +439,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Not really, but I did manage to catch a new movie last weekend. It was a nice break.`,
                 timestamp: 1723430400,
@@ -463,7 +463,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `"The Quantum Realm". It was amazing! You should check it out if you get a chance.`,
                 timestamp: 1723430400,
@@ -487,7 +487,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `I'd love that! Let's plan something soon.`,
                 timestamp: 1723430400,
@@ -516,7 +516,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Yeah, it's been spotty all morning. Super annoying.`,
                 timestamp: 1723430400,
@@ -540,7 +540,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Have you tried restarting your router?`,
                 timestamp: 1723430400,
@@ -564,7 +564,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Bummer. Hope they fix it soon. In the meantime, maybe try using your phone's hotspot?`,
                 timestamp: 1723430400,
@@ -588,7 +588,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `😀 No problem. Good luck with your call!`,
                 timestamp: 1723430400,
@@ -617,7 +617,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `What? Tell me!`,
                 timestamp: 1723430400,
@@ -641,7 +641,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `No way! Did it hurt?`,
                 timestamp: 1723430400,
@@ -665,7 +665,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Eww, that's hilarious! Did anyone see?`,
                 timestamp: 1723430400,
@@ -689,7 +689,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Well, at least you gave them a good story to tell!`,
                 timestamp: 1723430400,
@@ -754,7 +754,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `I'm ready with my part. Just let me know if you need any changes.`,
                 timestamp: 1723430400,
@@ -807,7 +807,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Count me in too. How about that new Italian place downtown?`,
                 timestamp: 1723430400,
@@ -872,7 +872,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `I'm almost ready. Just need to pick up some snacks and drinks.`,
                 timestamp: 1723430400,
@@ -908,7 +908,7 @@ export const conversationList = [
                 sender: {
                     id: '1',
                     name: 'Angelina Gotelli',
-                    avatarImageUrl: '/img/avatars/default-user.jpg',
+                    avatarImageUrl: '/img/avatars/thumb-1.jpg',
                 },
                 content: `Looking forward to it! See you all on Saturday.`,
                 timestamp: 1723430400,
@@ -1014,7 +1014,7 @@ export const groupsData = [
             {
                 id: '1',
                 name: 'You',
-                img: '/img/avatars/default-user.jpg',
+                img: '/img/avatars/thumb-1.jpg',
                 email: 'eileen_h@hotmail.com',
             },
             {
@@ -1045,7 +1045,7 @@ export const groupsData = [
             {
                 id: '1',
                 name: 'You',
-                img: '/img/avatars/default-user.jpg',
+                img: '/img/avatars/thumb-1.jpg',
                 email: 'eileen_h@hotmail.com',
             },
             {
@@ -1070,7 +1070,7 @@ export const groupsData = [
             {
                 id: '1',
                 name: 'You',
-                img: '/img/avatars/default-user.jpg',
+                img: '/img/avatars/thumb-1.jpg',
                 email: 'eileen_h@hotmail.com',
             },
             {

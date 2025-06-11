@@ -7,7 +7,7 @@ const Type = () => {
         <div className="flex items-center">
             <Avatar className="mr-4">AT</Avatar>
             <Avatar className="mr-4" icon={<HiOutlineUser />} />
-            <Avatar className="mr-4" src="/img/avatars/default-user.jpg" />
+            <Avatar className="mr-4" src="/img/avatars/thumb-1.jpg" />
         </div>
     )
 }

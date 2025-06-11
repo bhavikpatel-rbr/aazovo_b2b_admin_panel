@@ -33,7 +33,7 @@ const createCommentObject = (message: string): TransformedComment => {
     return {
         id: createUID(10),
         name: 'Angelina Gotelli',
-        src: '/img/avatars/default-user.jpg',
+        src: '/img/avatars/thumb-1.jpg',
         message: message,
         date: new Date(),
     }
@@ -404,7 +404,7 @@ const TicketContent = ({ onTicketClose }: { onTicketClose: () => void }) => {
                                         <div className="mb-3 flex gap-2">
                                             <Avatar
                                                 shape="circle"
-                                                src="/img/avatars/default-user.jpg"
+                                                src="/img/avatars/thumb-1.jpg"
                                             />
                                             <div className="w-full relative">
                                                 <Input

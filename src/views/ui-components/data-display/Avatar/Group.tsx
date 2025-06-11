@@ -9,7 +9,7 @@ const Group = () => {
             omittedAvatarProps={{ shape: 'circle' }}
             onOmittedAvatarClick={() => console.log('Omitted Avatar Clicked')}
         >
-            <Avatar src="/img/avatars/default-user.jpg" />
+            <Avatar src="/img/avatars/thumb-1.jpg" />
             <Avatar src="/img/avatars/thumb-2.jpg" />
             <Avatar src="/img/avatars/thumb-3.jpg" />
             <Avatar src="/img/avatars/thumb-4.jpg" />

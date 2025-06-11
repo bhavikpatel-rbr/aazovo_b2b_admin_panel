@@ -7,7 +7,7 @@ export const mailData = [
         flagged: false,
         starred: false,
         from: 'eileen_h@hotmail.com',
-        avatar: '/img/avatars/default-user.jpg',
+        avatar: '/img/avatars/thumb-1.jpg',
         title: "An 'extremely credible source'",
         mail: ['nathan@themenate.com'],
         message: [
@@ -16,7 +16,7 @@ export const mailData = [
                 name: 'Eileen Horton',
                 mail: ['nathan@themenate.com'],
                 from: 'eileen_h@hotmail.com',
-                avatar: '/img/avatars/default-user.jpg',
+                avatar: '/img/avatars/thumb-1.jpg',
                 date: '12:06PM',
                 content:
                     "<p>Hi Nathan,</p><br /><p>An 'extremely credible source' has called my office and told me that Barack Obama's placeholder text is a fraud. Lorem Ipsum best not make any more threats to your website. It will be met with fire and fury like the world has never seen.</p><p>This can&apos;t be! Artoo, you're playing the wrong message. There will be no bargain. We're doomed. I will not give up my favorite decoration. I like Captain Solo where he is. Artoo, look! Captain Solo. And he's still frozen in carbonite. What could possibly have come over Master Luke. Is it something I did? He never expressed any unhappiness with my work. Oh! Oh! Hold it! Ohh!</p><p> <br>Your fleet has lost. And your friends on the Endor moon will not survive. There is no escape, my young apprentice. <br><br><br>Moruth Doole, <br></p>",
@@ -49,7 +49,7 @@ export const mailData = [
                 name: 'Eileen Horton',
                 mail: ['nathan@themenate.com'],
                 from: 'eileen_h@hotmail.com',
-                avatar: '/img/avatars/default-user.jpg',
+                avatar: '/img/avatars/thumb-1.jpg',
                 date: '03:27AM',
                 content:
                     '<p>Hi Nathan,</p><br /><p>Saucer grinder to go organic extraction coffee frappuccino lungo. Carajillo, dark, bar , qui, rich latte medium aged americano. Cream breve, mug at flavour half and half breve.</p> <br> <p>Plunger pot redeye con panna, in, espresso brewed et americano ut spoon. Java frappuccino plunger pot coffee, eu coffee shop variety percolator id robusta black. As plunger pot, americano, mocha skinny, at aroma grinder arabica americano wings spoon.</p> <br><br>Moruth Doole',

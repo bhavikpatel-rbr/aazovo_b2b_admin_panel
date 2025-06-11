@@ -5,7 +5,7 @@ import Avatar from '@/components/ui/Avatar'
 const HeaderFooterBorder = () => {
     const cardFooter = (
         <div className="flex items-center">
-            <Avatar size={30} className="mr-2" shape="circle" src="/img/avatars/default-user.jpg" />
+            <Avatar size={30} className="mr-2" shape="circle" src="/img/avatars/thumb-1.jpg" />
             <span>
                 <h6 className="text-sm">Kristen Fisher</h6>
                 <span className="text-xs">Sep 23, 2021</span>
