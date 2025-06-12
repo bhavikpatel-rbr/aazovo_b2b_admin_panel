@@ -61,17 +61,19 @@ type SelectOption = {
 export type UnitItem = {
   id: string | number;
   name: string;
-  status: 'Active' | 'Inactive'; // Added status field
+  status: "Active" | "Inactive"; // Added status field
   created_at?: string;
   updated_at?: string;
   updated_by_name?: string;
   updated_by_role?: string;
+  category_id: any;
+  category_name: any;
 };
 
 // --- Status Options ---
 const statusOptions: SelectOption[] = [
-  { value: 'Active', label: 'Active' },
-  { value: 'Inactive', label: 'Inactive' },
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
 ];
 
 // --- Zod Schema for Add/Edit Unit Form ---
@@ -80,7 +82,12 @@ const unitFormSchema = z.object({
     .string()
     .min(1, "Unit name is required.")
     .max(100, "Name cannot exceed 100 characters."),
-  status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }), // Added status
+  status: z.enum(["Active", "Inactive"], {
+    required_error: "Status is required.",
+  }), // Added status
+  category_id: z.number(),
+     // Added status
+  
 });
 type UnitFormData = z.infer<typeof unitFormSchema>;
 
@@ -95,27 +102,37 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
-  reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS = ["ID", "Unit Name", "Status", "Updated By", "Updated Role", "Updated At"];
+const CSV_HEADERS = [
+  "ID",
+  "Unit Name",
+  "Status",
+  "Updated By",
+  "Updated Role",
+  "Updated At",
+];
 type UnitExportItem = Omit<UnitItem, "created_at" | "updated_at"> & {
-    status: 'Active' | 'Inactive'; // Ensure status is part of export
-    updated_at_formatted?: string;
+  status: "Active" | "Inactive"; // Ensure status is part of export
+  updated_at_formatted?: string;
 };
 const CSV_KEYS_EXPORT: (keyof UnitExportItem)[] = [
-    "id", 
-    "name",
-    "status", // Added status
-    "updated_by_name",
-    "updated_by_role",
-    "updated_at_formatted"
+  "id",
+  "name",
+  "status", // Added status
+  "updated_by_name",
+  "updated_by_role",
+  "updated_at_formatted",
 ];
-
 
 function exportToCsv(filename: string, rows: UnitItem[]) {
   if (!rows || !rows.length) {
@@ -126,13 +143,15 @@ function exportToCsv(filename: string, rows: UnitItem[]) {
     );
     return false;
   }
-   const transformedRows: UnitExportItem[] = rows.map((row) => ({
+  const transformedRows: UnitExportItem[] = rows.map((row) => ({
     id: row.id,
     name: row.name,
     status: row.status, // Added status
     updated_by_name: row.updated_by_name || "N/A",
     updated_by_role: row.updated_by_role || "N/A",
-    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
+    updated_at_formatted: row.updated_at
+      ? new Date(row.updated_at).toLocaleString()
+      : "N/A",
   }));
 
   const separator = ",";
@@ -170,10 +189,10 @@ function exportToCsv(filename: string, rows: UnitItem[]) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported to {filename}.
-        </Notification>
-      );
+      <Notification title="Export Successful" type="success">
+        Data exported to {filename}.
+      </Notification>
+    );
     return true;
   }
   toast.push(
@@ -185,11 +204,7 @@ function exportToCsv(filename: string, rows: UnitItem[]) {
 }
 
 // --- ActionColumn Component ---
-const ActionColumn = ({
-  onEdit,
-}: {
-  onEdit: () => void;
-}) => {
+const ActionColumn = ({ onEdit }: { onEdit: () => void }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
@@ -242,7 +257,7 @@ const UnitsTableTools = ({
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
-  onClearFilters: ()=> void
+  onClearFilters: () => void;
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -250,7 +265,11 @@ const UnitsTableTools = ({
         <UnitsSearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Button title="Clear Filters" icon={<TbReload/>} onClick={()=>onClearFilters()}></Button>
+        <Button
+          title="Clear Filters"
+          icon={<TbReload />}
+          onClick={() => onClearFilters()}
+        ></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -312,23 +331,32 @@ const Units = () => {
   const [editingUnit, setEditingUnit] = useState<UnitItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // State for export reason modal
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
-  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-  
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
+
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
     filterStatus: [], // Added
   });
 
-  const { unitData = [], status: masterLoadingStatus = "idle" } =
+  const { unitData = [], CategoriesData = [], status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
 
-  const defaultFormValues: UnitFormData = useMemo(() => ({ 
-    name: "",
-    status: 'Active', // Default status
-  }), []);
+  const defaultFormValues: UnitFormData = useMemo(
+    () => ({
+      name: "",
+      status: "Active", // Default status
+    }),
+    []
+  );
+
+  const CategoryOptions = CategoriesData.map((sc: any) => ({
+    value: String(sc.id),
+    label: sc.name,
+  }));
 
   useEffect(() => {
     dispatch(getUnitAction());
@@ -366,7 +394,9 @@ const Units = () => {
     setIsSubmitting(true);
     try {
       // API expected to handle audit fields, only send name and status
-      await dispatch(addUnitAction({ name: data.name, status: data.status })).unwrap();
+      await dispatch(
+        addUnitAction({ name: data.name, status: data.status })
+      ).unwrap();
       toast.push(
         <Notification title="Unit Added" type="success" duration={2000}>
           Unit "{data.name}" added.
@@ -385,14 +415,17 @@ const Units = () => {
     }
   };
 
-  const openEditDrawer = useCallback((unit: UnitItem) => {
-    setEditingUnit(unit);
-    editFormMethods.reset({ 
+  const openEditDrawer = useCallback(
+    (unit: UnitItem) => {
+      setEditingUnit(unit);
+      editFormMethods.reset({
         name: unit.name,
-        status: unit.status || 'Active', // Set status, default to Active
-    });
-    setIsEditDrawerOpen(true);
-  },[editFormMethods]);
+        status: unit.status || "Active", // Set status, default to Active
+      });
+      setIsEditDrawerOpen(true);
+    },
+    [editFormMethods]
+  );
 
   const closeEditDrawer = () => {
     setEditingUnit(null);
@@ -405,7 +438,11 @@ const Units = () => {
     try {
       // API expected to handle audit fields, only send id, name and status
       await dispatch(
-        editUnitAction({ id: editingUnit.id, name: data.name, status: data.status })
+        editUnitAction({
+          id: editingUnit.id,
+          name: data.name,
+          status: data.status,
+        })
       ).unwrap();
       toast.push(
         <Notification title="Unit Updated" type="success" duration={2000}>
@@ -429,24 +466,27 @@ const Units = () => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
   };
-  const closeFilterDrawerCb = useCallback(() => setIsFilterDrawerOpen(false), []);
+  const closeFilterDrawerCb = useCallback(
+    () => setIsFilterDrawerOpen(false),
+    []
+  );
   const onApplyFiltersSubmit = (data: FilterFormData) => {
-    setFilterCriteria({ 
-        filterNames: data.filterNames || [],
-        filterStatus: data.filterStatus || [], // Added
+    setFilterCriteria({
+      filterNames: data.filterNames || [],
+      filterStatus: data.filterStatus || [], // Added
     });
     handleSetTableData({ pageIndex: 1 });
     closeFilterDrawerCb();
   };
   const onClearFilters = () => {
-    const defaultFilters = { 
-        filterNames: [],
-        filterStatus: [], // Added
+    const defaultFilters = {
+      filterNames: [],
+      filterStatus: [], // Added
     };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
-    dispatch(getUnitAction())
+    dispatch(getUnitAction());
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -466,11 +506,11 @@ const Units = () => {
   }, [unitData]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const sourceData: UnitItem[] = Array.isArray(unitData) 
-      ? unitData.map(item => ({
+    const sourceData: UnitItem[] = Array.isArray(unitData)
+      ? unitData.map((item) => ({
           ...item,
-          status: item.status || 'Inactive' // Ensure status has a default
-      }))
+          status: item.status || "Inactive", // Ensure status has a default
+        }))
       : [];
     let processedData: UnitItem[] = cloneDeep(sourceData);
 
@@ -482,39 +522,49 @@ const Units = () => {
         selectedFilterNames.includes(item.name?.trim().toLowerCase() ?? "")
       );
     }
-    if (filterCriteria.filterStatus?.length) { // Added status filter
-        const statuses = filterCriteria.filterStatus.map(opt => opt.value);
-        processedData = processedData.filter(item => statuses.includes(item.status));
+    if (filterCriteria.filterStatus?.length) {
+      // Added status filter
+      const statuses = filterCriteria.filterStatus.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        statuses.includes(item.status)
+      );
     }
 
     if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) =>
-        (item.name?.trim().toLowerCase() ?? "").includes(query) ||
-        (item.status?.trim().toLowerCase() ?? "").includes(query) || // Search by status
-        (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
-        String(item.id ?? "").trim().toLowerCase().includes(query)
+      processedData = processedData.filter(
+        (item) =>
+          (item.name?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.status?.trim().toLowerCase() ?? "").includes(query) || // Search by status
+          (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
+          String(item.id ?? "")
+            .trim()
+            .toLowerCase()
+            .includes(query)
       );
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (
-      order && key &&
+      order &&
+      key &&
       ["id", "name", "status", "updated_at", "updated_by_name"].includes(key) && // Added status to sortable keys
       processedData.length > 0
     ) {
       processedData.sort((a, b) => {
         let aValue: any, bValue: any;
         if (key === "updated_at") {
-            const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-            const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-            return order === 'asc' ? dateA - dateB : dateB - dateA;
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else if (key === "status") {
+          // Added status sorting
+          aValue = a.status ?? "";
+          bValue = b.status ?? "";
+        } else {
+          aValue = a[key as keyof UnitItem] ?? "";
+          bValue = b[key as keyof UnitItem] ?? "";
         }
-        else if (key === "status") { // Added status sorting
-            aValue = a.status ?? "";
-            bValue = b.status ?? "";
-        }
-        else { aValue = a[key as keyof UnitItem] ?? ""; bValue = b[key as keyof UnitItem] ?? "";}
-        
+
         return order === "asc"
           ? String(aValue).localeCompare(String(bValue))
           : String(bValue).localeCompare(String(aValue));
@@ -534,12 +584,12 @@ const Units = () => {
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
-        toast.push(
-          <Notification title="No Data" type="info">
-            Nothing to export.
-          </Notification>
-        );
-        return;
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return;
     }
     exportReasonFormMethods.reset({ reason: "" });
     setIsExportReasonModalOpen(true);
@@ -551,18 +601,28 @@ const Units = () => {
     const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
     const fileName = `units_export_${timestamp}.csv`;
     try {
-      await dispatch(submitExportReasonAction({
-        reason: data.reason,
-        module: moduleName,
-        file_name: fileName,
-      })).unwrap();
-      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
 
       // Proceed with export
       exportToCsv(fileName, allFilteredAndSortedData);
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
-      toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+          message={error.message}
+        />
+      );
     } finally {
       setIsSubmittingExportReason(false);
     }
@@ -595,27 +655,47 @@ const Units = () => {
   const columns: ColumnDef<UnitItem>[] = useMemo(
     () => [
       // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
-      { header: "Unit Name", accessorKey: "name", enableSorting: true, size:320 },
+      {
+        header: "Unit Name",
+        accessorKey: "name",
+        enableSorting: true,
+        size: 320,
+      },
+      {
+        header: "Category",
+        accessorKey: "category_name",
+        enableSorting: true,
+        size: 320,
+      },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-       
+
         size: 120,
         cell: (props) => {
-          const { updated_at, updated_by_user, updated_by_role } = props.row.original;
+          const { updated_at, updated_by_user, updated_by_role } =
+            props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
                 updated_at
-              ).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
             : "N/A";
           return (
             <div className="text-xs">
               <span>
                 {updated_by_user?.name || "N/A"}
-                {updated_by_user?.roles[0]?.display_name && <><br /><b>{updated_by_user?.roles[0]?.display_name}</b></>}
+                {updated_by_user?.roles[0]?.display_name && (
+                  <>
+                    <br />
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
+                  </>
+                )}
               </span>
               <br />
               <span>{formattedDate}</span>
@@ -623,7 +703,8 @@ const Units = () => {
           );
         },
       },
-      { // Added Status Column
+      {
+        // Added Status Column
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
@@ -635,8 +716,10 @@ const Units = () => {
               className={classNames(
                 "capitalize font-semibold whitespace-nowrap",
                 {
-                  "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500": status === 'Active',
-                  "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500": status === 'Inactive',
+                  "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500":
+                    status === "Active",
+                  "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500":
+                    status === "Inactive",
                 }
               )}
             >
@@ -651,9 +734,7 @@ const Units = () => {
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
         size: 80,
         cell: (props) => (
-          <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-          />
+          <ActionColumn onEdit={() => openEditDrawer(props.row.original)} />
         ),
       },
     ],
@@ -695,116 +776,213 @@ const Units = () => {
       </Container>
 
       {[
-        { formMethods: addFormMethods, onSubmit: onAddUnitSubmit, isOpen: isAddDrawerOpen, closeFn: closeAddDrawer, title: "Add Unit", formId: "addUnitForm", submitText: "Adding...", saveText: "Save", isEdit: false },
-        { formMethods: editFormMethods, onSubmit: onEditUnitSubmit, isOpen: isEditDrawerOpen, closeFn: closeEditDrawer, title: "Edit Unit", formId: "editUnitForm", submitText: "Saving...", saveText: "Save", isEdit: true }
-      ].map(drawerProps => (
+        {
+          formMethods: addFormMethods,
+          onSubmit: onAddUnitSubmit,
+          isOpen: isAddDrawerOpen,
+          closeFn: closeAddDrawer,
+          title: "Add Unit",
+          formId: "addUnitForm",
+          submitText: "Adding...",
+          saveText: "Save",
+          isEdit: false,
+        },
+        {
+          formMethods: editFormMethods,
+          onSubmit: onEditUnitSubmit,
+          isOpen: isEditDrawerOpen,
+          closeFn: closeEditDrawer,
+          title: "Edit Unit",
+          formId: "editUnitForm",
+          submitText: "Saving...",
+          saveText: "Save",
+          isEdit: true,
+        },
+      ].map((drawerProps) => (
         <Drawer
-            key={drawerProps.formId}
-            title={drawerProps.title}
-            isOpen={drawerProps.isOpen}
-            onClose={drawerProps.closeFn}
-            onRequestClose={drawerProps.closeFn}
-            width={480}
-            footer={
-                <div className="text-right w-full">
-                <Button size="sm" className="mr-2" onClick={drawerProps.closeFn} disabled={isSubmitting}>Cancel</Button>
-                <Button size="sm" variant="solid" form={drawerProps.formId} type="submit" loading={isSubmitting} disabled={!drawerProps.formMethods.formState.isValid || isSubmitting}>
-                    {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
-                </Button>
+          key={drawerProps.formId}
+          title={drawerProps.title}
+          isOpen={drawerProps.isOpen}
+          onClose={drawerProps.closeFn}
+          onRequestClose={drawerProps.closeFn}
+          width={480}
+          footer={
+            <div className="text-right w-full">
+              <Button
+                size="sm"
+                className="mr-2"
+                onClick={drawerProps.closeFn}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                form={drawerProps.formId}
+                type="submit"
+                loading={isSubmitting}
+                // disabled={
+                //   !drawerProps.formMethods.formState.isValid || isSubmitting
+                // }
+              >
+                {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
+              </Button>
+            </div>
+          }
+        >
+          <Form
+            id={drawerProps.formId}
+            onSubmit={drawerProps.formMethods.handleSubmit(
+              drawerProps.onSubmit as any
+            )}
+            className="flex flex-col gap-4 relative pb-28"
+          >
+            <FormItem
+              label={
+                <div>
+                  Unit Name<span className="text-red-500"> * </span>
                 </div>
-            }
+              }
+              invalid={!!drawerProps.formMethods.formState.errors.name}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.name?.message as
+                  | string
+                  | undefined
+              }
             >
-            <Form
-                id={drawerProps.formId}
-                onSubmit={drawerProps.formMethods.handleSubmit(drawerProps.onSubmit as any)}
-                className="flex flex-col gap-4 relative pb-28"
+              <Controller
+                name="name"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Input {...field} placeholder="Enter Unit Name" />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label={
+                <div>
+                  Category<span className="text-red-500"> * </span>
+                </div>
+              }
+              invalid={!!drawerProps.formMethods.formState.errors.category}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.category?.message as
+                  | string
+                  | undefined
+              }
             >
-                <FormItem
-                    label={<div>Unit Name<span className="text-red-500"> * </span></div>}
-                    invalid={!!drawerProps.formMethods.formState.errors.name}
-                    errorMessage={drawerProps.formMethods.formState.errors.name?.message as string | undefined}
-                >
-                    <Controller name="name" control={drawerProps.formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Unit Name" />)} />
-                </FormItem>
-                <FormItem // Added Status Field
-                    label={<div>Status<span className="text-red-500"> * </span></div>}
-                    invalid={!!drawerProps.formMethods.formState.errors.status}
-                    errorMessage={drawerProps.formMethods.formState.errors.status?.message as string | undefined}
-                >
-                    <Controller
-                    name="status"
-                    control={drawerProps.formMethods.control}
-                    render={({ field }) => (
-                        <Select
-                            placeholder="Select Status"
-                            options={statusOptions}
-                            value={
-                                statusOptions.find(
-                                (option) => option.value === field.value
-                                ) || null
-                            }
-                            onChange={(option) =>
-                                field.onChange(option ? option.value : "")
-                            }
-                        />
-                    )}
-                    />
-                </FormItem>
-            </Form>
-              {drawerProps.isEdit && editingUnit && (
-                   <div className="absolute bottom-[14%] w-[92%]">
-  {/*
+              <Controller
+                name="category_id"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                <Select
+                {...field}
+                isMulti
+                placeholder="Select interested sub categories"
+                options={CategoryOptions}
+                isClearable
+              />
+                )}
+              />
+            </FormItem>
+            <FormItem // Added Status Field
+              label={
+                <div>
+                  Status<span className="text-red-500"> * </span>
+                </div>
+              }
+              invalid={!!drawerProps.formMethods.formState.errors.status}
+              errorMessage={
+                drawerProps.formMethods.formState.errors.status?.message as
+                  | string
+                  | undefined
+              }
+            >
+              <Controller
+                name="status"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Select
+                    placeholder="Select Status"
+                    options={statusOptions}
+                    value={
+                      statusOptions.find(
+                        (option) => option.value === field.value
+                      ) || null
+                    }
+                    onChange={(option) =>
+                      field.onChange(option ? option.value : "")
+                    }
+                  />
+                )}
+              />
+            </FormItem>
+          </Form>
+          {drawerProps.isEdit && editingUnit && (
+            <div className="absolute bottom-[14%] w-[92%]">
+              {/*
     - Replace 'grid-cols-2' with an arbitrary value for grid-template-columns.
     - 'grid-cols-[2fr_3fr]' means the first column gets 2 fractional units,
       and the second column gets 3 fractional units of the available space.
     - Removed the style={{flex:1}} from the grid container as it's not standard for grid.
   */}
-  <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-    {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
-    <div>
-      <b className="mt-3 mb-3 font-semibold text-primary">
-        Latest Update:
-      </b>
-      <br />
-      <p className="text-sm font-semibold">
-        {editingUnit.updated_by_user?.name || "N/A"}
-      </p>
-      <p>{editingUnit.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
-    </div>
-    {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
-    <div>
-      <br /> {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
-      <span className="font-semibold">Created At:</span>{" "}
-      <span>
-        {editingUnit.created_at
-          ? new Date(editingUnit.created_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "long",
-              year: "2-digit",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            })
-          : "N/A"}
-      </span>
-      <br />
-      <span className="font-semibold">Updated At:</span>{" "}
-      <span>
-        {editingUnit.updated_at
-          ? new Date(editingUnit.updated_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "long",
-              year: "2-digit",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            })
-          : "N/A"}
-      </span>
-    </div>
-  </div>
-</div>
-              )}
+              <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
+                <div>
+                  <b className="mt-3 mb-3 font-semibold text-primary">
+                    Latest Update:
+                  </b>
+                  <br />
+                  <p className="text-sm font-semibold">
+                    {editingUnit.updated_by_user?.name || "N/A"}
+                  </p>
+                  <p>
+                    {editingUnit.updated_by_user?.roles[0]?.display_name ||
+                      "N/A"}
+                  </p>
+                </div>
+                {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
+                <div>
+                  <br />{" "}
+                  {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>
+                    {editingUnit.created_at
+                      ? new Date(editingUnit.created_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "long",
+                            year: "2-digit",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
+                      : "N/A"}
+                  </span>
+                  <br />
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>
+                    {editingUnit.updated_at
+                      ? new Date(editingUnit.updated_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "long",
+                            year: "2-digit",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </Drawer>
       ))}
 
@@ -816,8 +994,17 @@ const Units = () => {
         width={400}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
-            <Button size="sm" variant="solid" form="filterUnitForm" type="submit">Apply</Button>
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterUnitForm"
+              type="submit"
+            >
+              Apply
+            </Button>
           </div>
         }
       >
@@ -841,7 +1028,9 @@ const Units = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Status"> {/* Added Status Filter */}
+          <FormItem label="Status">
+            {" "}
+            {/* Added Status Filter */}
             <Controller
               name="filterStatus"
               control={filterFormMethods.control}
@@ -866,32 +1055,47 @@ const Units = () => {
         onClose={() => setIsExportReasonModalOpen(false)}
         onRequestClose={() => setIsExportReasonModalOpen(false)}
         onCancel={() => setIsExportReasonModalOpen(false)}
-        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
         loading={isSubmittingExportReason}
-        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
         cancelText="Cancel"
         confirmButtonProps={{
-            disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
         }}
       >
         <Form
           id="exportReasonForm"
-          onSubmit={(e) => { 
-            e.preventDefault(); 
-            exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); 
-          }} 
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
           className="flex flex-col gap-4 mt-2"
         >
           <FormItem
             label="Please provide a reason for exporting this data:"
             invalid={!!exportReasonFormMethods.formState.errors.reason}
-            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
           >
             <Controller
               name="reason"
               control={exportReasonFormMethods.control}
               render={({ field }) => (
-                <Input textArea {...field} placeholder="Enter reason..." rows={3} />
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
               )}
             />
           </FormItem>
