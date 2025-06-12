@@ -975,6 +975,7 @@ const PaymentTerms = () => {
               columns={columns}
               data={pageData}
               loading={isLoading}
+              noData={!isLoading && pageData.length === 0}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,

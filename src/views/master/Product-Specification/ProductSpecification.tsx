@@ -1009,6 +1009,7 @@ const ProductSpecification = () => {
             <DataTable
               columns={columns}
               data={pageData}
+              noData={!isSubmitting && pageData.length === 0}
               loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total: total,
