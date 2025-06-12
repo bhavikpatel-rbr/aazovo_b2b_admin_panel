@@ -21,6 +21,15 @@ const othersRoute: Routes = [
     //         pageContainerType: 'contained',
     //     },
     // },
+    {
+        key: 'notifications',
+        path: `/notifiactions`,
+        component: lazy(() => import('@/views/others/Notification/Notifications')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
 ]
 
 export default othersRoute

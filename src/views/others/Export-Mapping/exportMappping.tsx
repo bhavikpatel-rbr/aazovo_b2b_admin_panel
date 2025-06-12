@@ -638,7 +638,6 @@ const ExportMapping = () => {
 
   useEffect(() => {
     console.log("apiExportMappings", apiExportMappings);
-    console.log("masterLoadingStatus", masterLoadingStatus);
 
     // Handle data transformation and processing state
     if (masterLoadingStatus === "loading") {
