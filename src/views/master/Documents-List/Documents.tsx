@@ -629,16 +629,19 @@ const Documents = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Documents";
+     const timestamp = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    const fileName = `documents_export_${timestamp}.csv`;
     try {
       await dispatch(submitExportReasonAction({
         reason: data.reason,
         module: moduleName,
+        file_name: fileName,
       })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
       
       // Proceed with CSV export after successful reason submit
       exportToCsvDocument(
-        "documents_export.csv",
+        fileName,
         allFilteredAndSortedData,
         documentTypeOptionsForSelect
       );
@@ -700,7 +703,7 @@ const Documents = () => {
         meta: { HeaderClass: "text-red-500" },
         size: 140,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+          const { updated_at, updated_by_user, updated_by_role } = props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
@@ -717,8 +720,8 @@ const Documents = () => {
           return (
             <div className="text-xs">
               <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && <><br /><b>{updated_by_role}</b></>}
+                {updated_by_user?.name || "N/A"}
+                {updated_by_user?.roles[0]?.display_name && <><br /><b>{updated_by_user?.roles[0]?.display_name}</b></>}
               </span>
               <br />
               <span>{formattedDate}</span>
@@ -1002,9 +1005,9 @@ const Documents = () => {
                   </b>
                   <br />
                   <p className="text-sm font-semibold">
-                    {editingDocument.updated_by_name || "N/A"}
+                    {editingDocument.updated_by_user?.name  || "N/A"}
                   </p>
-                  <p>{editingDocument.updated_by_role || "N/A"}</p>
+                  <p>{editingDocument.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
                 </div>
                 <div>
                   <br />
