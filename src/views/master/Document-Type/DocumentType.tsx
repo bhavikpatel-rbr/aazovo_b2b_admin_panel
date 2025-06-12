@@ -900,34 +900,28 @@ const Documentmaster = () => {
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingDocumentType.created_at
-                      ? new Date(editingDocumentType.created_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? new Date(editingDocumentType.created_at).toLocaleString("en-US", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingDocumentType.updated_at
-                      ? new Date(editingDocumentType.updated_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? new Date(editingDocumentType.updated_at).toLocaleString("en-US", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
                       : "N/A"}
                   </span>
                 </div>
