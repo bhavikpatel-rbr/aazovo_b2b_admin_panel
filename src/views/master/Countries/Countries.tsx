@@ -563,6 +563,7 @@ const Countries = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
+    dispatch(getCountriesAction())
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -693,14 +694,17 @@ const Countries = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Countries";
+     const timestamp = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    const fileName = `countries_export_${timestamp}.csv`;
     try {
       await dispatch(submitExportReasonAction({
         reason: data.reason,
         module: moduleName,
+        file_name:fileName
       })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
       // Proceed with CSV export after successful reason submit
-      exportToCsvCountry("countries_export.csv", allFilteredAndSortedData);
+      exportToCsvCountry(fileName, allFilteredAndSortedData);
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
       toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
@@ -751,11 +755,10 @@ const Countries = () => {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" }, // Optional styling
-
+       
         size: 160,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+          const { updated_at, updated_by_user, updated_by_role } = props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
@@ -766,8 +769,8 @@ const Countries = () => {
           return (
             <div className="text-xs">
               <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && <><br /><b>{updated_by_role}</b></>}
+                {updated_by_user?.name || "N/A"}
+                {updated_by_user?.roles[0]?.display_name && <><br /><b>{updated_by_user?.roles[0]?.display_name}</b></>}
               </span>
               <br />
               <span>{formattedDate}</span>
@@ -945,46 +948,58 @@ const Countries = () => {
               }
             </Form>
               {drawerProps.isEdit && editingCountry && (
-                <div className="absolute bottom-[14%] w-[92%]">
-                  <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                    <div>
-                      <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b>
-                      <br />
-                      <p className="text-sm font-semibold">{editingCountry.updated_by_name || "N/A"}</p>
-                      <p>{editingCountry.updated_by_role || "N/A"}</p>
-                    </div>
-                    <div>
-                      <br />
-                      <span className="font-semibold">Created At:</span>{" "}
-                      <span>
-                        {editingCountry.created_at
-                          ? new Date(editingCountry.created_at).toLocaleString("en-US", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                            })
-                          : "N/A"}
-                      </span>
-                      <br />
-                      <span className="font-semibold">Updated At:</span>{" "}
-                      <span>
-                        {editingCountry.updated_at
-                          ? new Date(editingCountry.updated_at).toLocaleString("en-US", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                            })
-                          : "N/A"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                   <div className="absolute bottom-[14%] w-[92%]">
+  {/*
+    - Replace 'grid-cols-2' with an arbitrary value for grid-template-columns.
+    - 'grid-cols-[2fr_3fr]' means the first column gets 2 fractional units,
+      and the second column gets 3 fractional units of the available space.
+    - Removed the style={{flex:1}} from the grid container as it's not standard for grid.
+  */}
+  <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+    {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
+    <div>
+      <b className="mt-3 mb-3 font-semibold text-primary">
+        Latest Update:
+      </b>
+      <br />
+      <p className="text-sm font-semibold">
+        {editingCountry.updated_by_user?.name || "N/A"}
+      </p>
+      <p>{editingCountry.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
+    </div>
+    {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
+    <div>
+      <br /> {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
+      <span className="font-semibold">Created At:</span>{" "}
+      <span>
+        {editingCountry.created_at
+          ? new Date(editingCountry.created_at).toLocaleString("en-US", {
+              day: "2-digit",
+              month: "long",
+              year: "2-digit",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "N/A"}
+      </span>
+      <br />
+      <span className="font-semibold">Updated At:</span>{" "}
+      <span>
+        {editingCountry.updated_at
+          ? new Date(editingCountry.updated_at).toLocaleString("en-US", {
+              day: "2-digit",
+              month: "long",
+              year: "2-digit",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "N/A"}
+      </span>
+    </div>
+  </div>
+</div>
               )}
         </Drawer>
       ))}
