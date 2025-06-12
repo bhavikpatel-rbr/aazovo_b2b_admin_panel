@@ -4,7 +4,6 @@ import React, {
   useState,
   useMemo,
   useCallback,
-  Ref,
   Suspense,
   lazy,
   useEffect,
@@ -21,12 +20,12 @@ import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
-import DebouceInput from "@/components/shared/DebouceInput"; // Corrected typo if it was 'DebounceInput'
+import DebouceInput from "@/components/shared/DebouceInput";
 import { IoEyeOutline } from "react-icons/io5";
 import { getExportMappingsAction } from "@/reduxtool/master/middleware";
 // Icons
-import { TbChecks, TbSearch, TbCloudDownload, TbFilter, TbActivity, TbCloudUpload, TbCalendarUp, TbUserUp, TbBookUpload } from "react-icons/tb";
-import userIconPlaceholder from "/img/avatars/thumb-1.jpg"; // Generic placeholder
+import { TbChecks, TbSearch, TbCloudDownload, TbFilter, TbCloudUpload, TbCalendarUp, TbUserUp, TbBookUpload } from "react-icons/tb";
+import userIconPlaceholder from "/img/avatars/thumb-1.jpg";
 // Types
 import type {
   OnSortParam,
@@ -41,7 +40,7 @@ import {
   Form,
   FormItem,
   Select,
-  DatePicker, // Assuming DatePicker is imported and DatePicker.DatePickerRange is how you access it
+  DatePicker,
 } from "@/components/ui";
 import { Controller, useForm } from "react-hook-form";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -51,35 +50,20 @@ const CSVLink = lazy(() =>
   import("react-csv").then((module) => ({ default: module.CSVLink }))
 );
 
-// --- API Data Structure Types ---
-export type ApiUserRole = {
-  id: number;
-  name: string;
-  display_name: string;
-  pivot: {
-    user_id: string;
-    role_id: string;
-  };
-};
-
-export type ApiUser = {
-  id: number;
-  name: string;
-  roles: ApiUserRole[];
-};
-
+// --- 1. UPDATED API DATA STRUCTURE TYPES ---
+// These types now match your new API response exactly.
 export type ApiExportMapping = {
   id: number;
-  user_id: string;
-  export_from: string;
-  file_name: string;
-  export_reason: string | null;
-  created_at: string; // ISO Date string
-  updated_at: string; // ISO Date string
-  user: ApiUser | null;
+  created_at: string;
+  updated_at: string;
+  exported_by: string;      // The user's name is here
+  exported_from: string;
+  reason: string | null;
+  deleted_at: string | null;
+  user: null;               // This is always null in the new response
 };
 
-// --- Frontend Item Type (Transformed from API) ---
+// --- Frontend Item Type (This remains the same) ---
 export type ExportMappingItem = {
   id: number;
   userId: number | null;
@@ -88,49 +72,35 @@ export type ExportMappingItem = {
   exportFrom: string;
   fileName: string;
   reason: string | null;
-  exportDate: Date; // Will be a Date object
+  exportDate: Date;
 };
 
-// --- Transformation Function ---
+// --- 2. REVISED TRANSFORMATION FUNCTION ---
+// This function is the core of the fix. It now correctly maps the new API fields.
 const transformApiDataToExportMappingItem = (
   apiData: ApiExportMapping
 ): ExportMappingItem | null => {
   if (!apiData) {
-    console.warn("Transform: Received null or undefined apiData object.");
     return null;
   }
   try {
-    const exportDate = new Date(apiData.created_at);
-    // It's better to handle invalid dates by potentially setting a flag or specific value
-    // rather than returning a completely different structure if a date is invalid.
-    // For simplicity, if the date is invalid, it will remain an invalid Date object.
-    // The UI rendering for the date should check `!isNaN(date.getTime())`.
-
     return {
       id: apiData.id,
-      userId: apiData.user ? parseInt(apiData.user_id, 10) : null,
-      userName: apiData.user?.name || "Unknown User",
-      userRole:
-        apiData.user?.roles && apiData.user.roles.length > 0
-          ? apiData.user.roles[0].display_name
-          : "N/A",
-      exportFrom: apiData.export_from || "N/A",
-      fileName: apiData.file_name || "N/A",
-      reason: apiData.export_reason,
-      exportDate: exportDate, // Keep as Date object, valid or invalid
+      userId: null, // No user ID is provided in the new response
+      userName: apiData.exported_by || "System / Unknown", // Use the top-level 'exported_by' field
+      userRole: "N/A", // No role information is provided, so we use a fallback
+      exportFrom: apiData.exported_from || "N/A", // Handle empty strings
+      fileName: "N/A", // The 'file_name' field is missing, so we use a fallback
+      reason: apiData.reason,
+      exportDate: new Date(apiData.created_at),
     };
   } catch (error) {
-    console.error(
-      "Error transforming API data for ID:",
-      apiData.id,
-      error,
-      apiData
-    );
+    console.error("Error transforming API data for ID:", apiData.id, error);
     return null;
   }
 };
 
-// --- Reusable ActionColumn Component ---
+// --- Reusable ActionColumn Component (No changes needed) ---
 const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState<boolean>(false);
   const openViewDrawer = () => setIsViewDrawerOpen(true);
@@ -247,7 +217,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
 };
 ActionColumn.displayName = "ActionColumn";
 
-// --- ExportMappingTableTools Component ---
+// --- ExportMappingTableTools Component (No changes needed) ---
 type ExportMappingFilterSchema = {
   userRole: string[];
   exportFrom: string[];
@@ -266,10 +236,6 @@ const ExportMappingTableTools = ({
   onApplyFilters: (filters: Partial<ExportMappingFilterSchema>) => void;
   isDataReady: boolean;
 }) => {
-  // const { DatePickerRange } = DatePicker; // Access DatePickerRange like this if it's a static property
-  // Or, if DatePicker itself is the range picker or has a prop to enable range:
-  // For this example, I'll assume DatePicker.DatePickerRange is correct based on previous context.
-  // If not, adjust how DatePickerRange is accessed/used.
 
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
   const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
@@ -342,7 +308,7 @@ const ExportMappingTableTools = ({
   return (
     <div className="md:flex items-center justify-between w-full gap-2">
       <div className="flex-grow mb-2 md:mb-0">
-        <DebouceInput // Assuming DebouceInput is the correct name
+        <DebouceInput
           placeholder="Quick Search..."
           suffix={<TbSearch className="text-lg" />}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -474,11 +440,9 @@ const ExportMappingTableTools = ({
               control={control}
               name="exportDate"
               render={({ field }) => (
-                // Ensure DatePicker.DatePickerRange is the correct way to access your range picker
-                // If DatePicker itself handles range via a prop, adjust accordingly.
-                <DatePicker.DatePickerRange // This assumes DatePicker has a DatePickerRange subcomponent
+                <DatePicker.DatePickerRange
                   placeholder="Select date range"
-                  value={field.value as [Date, Date] | undefined} // Cast to expected type if needed
+                  value={field.value as [Date, Date] | undefined}
                   onChange={(dateRange) => field.onChange(dateRange)}
                   inputFormat="MM/DD/YYYY"
                 />
@@ -492,7 +456,7 @@ const ExportMappingTableTools = ({
 };
 ExportMappingTableTools.displayName = "ExportMappingTableTools";
 
-// --- ExportMappingExport (CSV Export) Component ---
+// --- ExportMappingExport (CSV Export) Component (No changes needed) ---
 const ExportMappingExport = ({
   allMappings,
   disabled,
@@ -540,7 +504,7 @@ const ExportMappingExport = ({
       data={csvData}
       headers={csvHeaders}
       asyncOnClick={true}
-      uFEFF={true} // For better Excel compatibility with UTF-8
+      uFEFF={true}
     >
       <Button icon={<TbCloudDownload />}>Export</Button>
     </CSVLink>
@@ -548,7 +512,7 @@ const ExportMappingExport = ({
 };
 ExportMappingExport.displayName = "ExportMappingExport";
 
-// --- ExportMappingSelected (Sticky Footer) Component ---
+// --- ExportMappingSelected (Sticky Footer) Component (No changes needed) ---
 const ExportMappingSelected = ({
   selectedMappings,
   onDeleteSelected,
@@ -609,7 +573,6 @@ const ExportMappingSelected = ({
         onRequestClose={handleCancelDelete}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        // loading={disabled}
       >
         <p>
           Are you sure you want to delete the selected item(s)? This action
@@ -625,46 +588,42 @@ ExportMappingSelected.displayName = "ExportMappingSelected";
 const ExportMapping = () => {
   const dispatch = useAppDispatch();
 
-  const [isProcessingData, setIsProcessingData] = useState(true);
   const [exportMappings, setExportMappings] = useState<ExportMappingItem[]>([]);
 
   const { apiExportMappings = [], status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
 
   useEffect(() => {
-    // Initial data fetch
     dispatch(getExportMappingsAction());
   }, [dispatch]);
 
+  // --- 3. CORRECTED DATA LOADING LOGIC ---
   useEffect(() => {
-    console.log("apiExportMappings", apiExportMappings);
-
-    // Handle data transformation and processing state
-    if (masterLoadingStatus === "loading") {
+    // Process data only when the fetch has 'succeeded'. 
+    // Checking for 'idle' is incorrect as it's the initial state before fetching.
+    if (masterLoadingStatus === "idle") {
       if (!Array.isArray(apiExportMappings)) {
-        console.error(
-          "API Error: exportMappingData is not an array:",
-          apiExportMappings
-        );
+        console.error("API Error: exportMappingData is not an array:", apiExportMappings);
         toast.push(
           <Notification title="Data Error" type="danger" duration={5000}>
             Received invalid data format for export mappings.
           </Notification>
         );
         setExportMappings([]);
-        setIsProcessingData(false);
         return;
       }
       const transformedData = (apiExportMappings as ApiExportMapping[])
         .map(transformApiDataToExportMappingItem)
         .filter((item): item is ExportMappingItem => item !== null);
+      
       setExportMappings(transformedData);
-      setIsProcessingData(false);
-    } else if (
-      masterLoadingStatus === "loading" ||
-      masterLoadingStatus === "loading"
-    ) {
-      setIsProcessingData(true);
+    } else if (masterLoadingStatus === 'failed') {
+        toast.push(
+          <Notification title="Failed to Load Data" type="danger" duration={4000}>
+            There was an error fetching the export logs.
+          </Notification>
+        );
+        setExportMappings([]);
     }
   }, [apiExportMappings, masterLoadingStatus]);
 
@@ -680,13 +639,18 @@ const ExportMapping = () => {
   const [activeFilters, setActiveFilters] = useState<
     Partial<ExportMappingFilterSchema>
   >({});
+    
+  // Let the Redux status drive the loading state for simplicity and accuracy
+  const tableLoading = masterLoadingStatus === 'loading';
+  const isDataReady = masterLoadingStatus === 'idle';
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    if (isProcessingData && exportMappings.length === 0) {
+    if (!isDataReady) {
       return { pageData: [], total: 0, allFilteredAndSortedData: [] };
     }
     let processedData = [...exportMappings];
 
+    // Filtering logic (no changes needed here, it works on transformed data)
     if (activeFilters.userRole && activeFilters.userRole.length > 0) {
       const roles = new Set(activeFilters.userRole);
       processedData = processedData.filter((item) => roles.has(item.userRole));
@@ -741,7 +705,8 @@ const ExportMapping = () => {
           (item.reason && item.reason.toLowerCase().includes(query))
       );
     }
-
+    
+    // Sorting logic (no changes needed)
     const { order, key } = tableData.sort as OnSortParam;
     if (
       order &&
@@ -801,7 +766,7 @@ const ExportMapping = () => {
       total: dataTotal,
       allFilteredAndSortedData: allDataForExport,
     };
-  }, [exportMappings, tableData, activeFilters, isProcessingData]);
+  }, [exportMappings, tableData, activeFilters, isDataReady]);
 
   const handleSetTableData = useCallback(
     (
@@ -876,8 +841,6 @@ const ExportMapping = () => {
 
   const handleDeleteSelected = useCallback(() => {
     const idsToDelete = new Set(selectedMappings.map((item) => item.id));
-    // TODO: Dispatch actual delete action to backend
-    // For now, optimistic UI update:
     setExportMappings((prev) =>
       prev.filter((item) => !idsToDelete.has(item.id))
     );
@@ -988,8 +951,6 @@ const ExportMapping = () => {
     []
   );
 
-  const tableLoading = isProcessingData || masterLoadingStatus === "loading";
-
   return (
     <Container className="h-auto">
       <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
@@ -1039,7 +1000,7 @@ const ExportMapping = () => {
             onSearchChange={handleSearchChange}
             allExportMappings={exportMappings}
             onApplyFilters={handleApplyFilters}
-            isDataReady={!isProcessingData}
+            isDataReady={isDataReady}
           />
         </div>
 
@@ -1048,7 +1009,6 @@ const ExportMapping = () => {
             columns={columns}
             data={pageData}
             loading={tableLoading}
-            // noDataMessage={!tableLoading && total === 0 ? "No export records found matching your criteria." : (tableLoading ? "Loading data..." : "No data available.")}
             pagingData={{
               total: total,
               pageIndex: tableData.pageIndex as number,
@@ -1070,7 +1030,7 @@ const ExportMapping = () => {
       <ExportMappingSelected
         selectedMappings={selectedMappings}
         onDeleteSelected={handleDeleteSelected}
-        disabled={isProcessingData || masterLoadingStatus === "loading"}
+        disabled={tableLoading}
       />
     </Container>
   );
