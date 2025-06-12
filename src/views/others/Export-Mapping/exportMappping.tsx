@@ -50,6 +50,7 @@ const CSVLink = lazy(() =>
   import("react-csv").then((module) => ({ default: module.CSVLink }))
 );
 
+
 // --- 1. UPDATED API DATA STRUCTURE TYPES ---
 // These types now match your new API response exactly.
 export type ApiExportMapping = {
@@ -60,7 +61,9 @@ export type ApiExportMapping = {
   exported_from: string;
   reason: string | null;
   deleted_at: string | null;
-  user: null;               // This is always null in the new response
+  user: any; 
+  roles: any;
+  file_name: string | null;              // This is always null in the new response
 };
 
 // --- Frontend Item Type (This remains the same) ---
@@ -70,7 +73,7 @@ export type ExportMappingItem = {
   userName: string;
   userRole: string;
   exportFrom: string;
-  fileName: string;
+  fileName: string | null;
   reason: string | null;
   exportDate: Date;
 };
@@ -87,10 +90,10 @@ const transformApiDataToExportMappingItem = (
     return {
       id: apiData.id,
       userId: null, // No user ID is provided in the new response
-      userName: apiData.exported_by || "System / Unknown", // Use the top-level 'exported_by' field
-      userRole: "N/A", // No role information is provided, so we use a fallback
+      userName: apiData.user.name || "System / Unknown", // Use the top-level 'exported_by' field
+      userRole: apiData.user.roles[0]?.display_name || "N/A", // No role information is provided, so we use a fallback
       exportFrom: apiData.exported_from || "N/A", // Handle empty strings
-      fileName: "N/A", // The 'file_name' field is missing, so we use a fallback
+      fileName: apiData.file_name, // The 'file_name' field is missing, so we use a fallback
       reason: apiData.reason,
       exportDate: new Date(apiData.created_at),
     };
