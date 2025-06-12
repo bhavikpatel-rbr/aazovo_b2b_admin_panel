@@ -72,7 +72,7 @@ export const editUnitAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -218,7 +218,7 @@ export const editCurrencyAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code , status:unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -267,7 +267,7 @@ export const editcontinentAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", name: unitData?.name, continent_id: unitData?.continent_id, iso: unitData?.iso, phonecode: unitData?.phonecode, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", name: unitData?.name, continent_id: unitData?.continent_id, iso: unitData?.iso, phonecode: unitData?.phonecode })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2502,6 +2502,15 @@ export const getSalesPersonAsync = async () => {
 export const getSuppliersAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/suppliers`)
+    return response.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getEmployeeAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/admin/user`)
     return response.data
   } catch (err) {
     return isAxiosError(err)
