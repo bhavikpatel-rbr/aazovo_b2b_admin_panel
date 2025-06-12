@@ -44,6 +44,7 @@ import {
   getUnitAction,
   addUnitAction,
   editUnitAction,
+  getCategoriesAction,
   // deleteUnitAction, // Commented out
   // deleteAllUnitAction, // Commented out
   submitExportReasonAction, // Placeholder for future action
@@ -85,7 +86,10 @@ const unitFormSchema = z.object({
   status: z.enum(["Active", "Inactive"], {
     required_error: "Status is required.",
   }), // Added status
-  category_id: z.number(),
+   category_id: z
+      .number({ invalid_type_error: "Category is required." })
+      .positive("Category is required.")
+      .nullable(),
      // Added status
   
 });
@@ -353,14 +357,18 @@ const Units = () => {
     []
   );
 
-  const CategoryOptions = CategoriesData.map((sc: any) => ({
-    value: String(sc.id),
-    label: sc.name,
-  }));
-
+ 
   useEffect(() => {
     dispatch(getUnitAction());
+    dispatch(getCategoriesAction());
+    
   }, [dispatch]);
+
+  
+ const CategoryOptions = CategoriesData.length > 0 && CategoriesData?.map((sc: any) => ({
+    value: sc.id,
+    label: sc.name,
+  }));
 
   const addFormMethods = useForm<UnitFormData>({
     resolver: zodResolver(unitFormSchema),
@@ -391,11 +399,13 @@ const Units = () => {
     setIsAddDrawerOpen(false);
   };
   const onAddUnitSubmit = async (data: UnitFormData) => {
+    console.log("bhavik", data);
+    
     setIsSubmitting(true);
     try {
       // API expected to handle audit fields, only send name and status
       await dispatch(
-        addUnitAction({ name: data.name, status: data.status })
+        addUnitAction({ name: data.name, status: data.status ,category_id:data.category_id })
       ).unwrap();
       toast.push(
         <Notification title="Unit Added" type="success" duration={2000}>
@@ -418,8 +428,11 @@ const Units = () => {
   const openEditDrawer = useCallback(
     (unit: UnitItem) => {
       setEditingUnit(unit);
+      console.log("category_id: unit.category_id,");
+      
       editFormMethods.reset({
         name: unit.name,
+        category_id: parseInt(unit.category_id),
         status: unit.status || "Active", // Set status, default to Active
       });
       setIsEditDrawerOpen(true);
@@ -441,6 +454,7 @@ const Units = () => {
         editUnitAction({
           id: editingUnit.id,
           name: data.name,
+          category_id:data.category_id,
           status: data.status,
         })
       ).unwrap();
@@ -663,7 +677,7 @@ const Units = () => {
       },
       {
         header: "Category",
-        accessorKey: "category_name",
+        accessorKey: "category.name",
         enableSorting: true,
         size: 320,
       },
@@ -859,7 +873,7 @@ const Units = () => {
                 )}
               />
             </FormItem>
-            <FormItem
+            {/* <FormItem
               label={
                 <div>
                   Category<span className="text-red-500"> * </span>
@@ -885,7 +899,31 @@ const Units = () => {
               />
                 )}
               />
-            </FormItem>
+            </FormItem> */}
+            <FormItem
+                              label="Category"
+                              invalid={!!drawerProps.formMethods.formState.errors.category_id}
+                              errorMessage={
+                drawerProps.formMethods.formState.errors.category_id?.message as
+                  | string
+                  | undefined
+              }
+                            >
+                              <Controller
+                                name="category_id"
+                                control={drawerProps.formMethods.control}
+                                render={({ field }) => (
+                                  <Select
+                                    options={CategoryOptions}
+                                    value={CategoryOptions.find(
+                                      (o :any) => o.value === field.value
+                                    )}
+                                    onChange={(opt) => field.onChange(opt?.value)}
+                                    isClearable
+                                  />
+                                )}
+                              />
+                            </FormItem>
             <FormItem // Added Status Field
               label={
                 <div>
