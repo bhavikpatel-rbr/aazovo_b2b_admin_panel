@@ -29,6 +29,7 @@ import {
   PiCameraDuotone,
   PiMapPinDuotone,
   PiEnvelopeSimpleDuotone,
+  PiPhone,
 } from "react-icons/pi";
 import { IoMdCheckmarkCircle } from "react-icons/io";
 
@@ -65,7 +66,7 @@ const UserProfileCard = ({
                 <PiUserDuotone /> {userData?.designtion || "Web Designer"}
               </span>
               <span className="flex items-center gap-1.5">
-                <PiMapPinDuotone /> {userData?.phone || "+12365412"}
+                <PiPhone /> {userData?.phone || "+12365412"}
               </span>
               <span className="flex items-center gap-1.5">
                 <PiEnvelopeSimpleDuotone />{" "}

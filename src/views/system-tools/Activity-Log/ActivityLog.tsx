@@ -100,6 +100,14 @@ const entityValues = ENTITY_TYPE_OPTIONS.map((et) => et.value) as [
   entity,
   ...entity[]
 ];
+// Type for the nested user object
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  profile_pic_path: string | null;
+  // ... other user fields can be added here if needed
+};
 
 export type ChangeLogItem = {
   id: string | number;
@@ -114,6 +122,7 @@ export type ChangeLogItem = {
   updated_at?: string;
   updated_by_name?: string;
   updated_by_role?: string;
+  user: User | null; // The nested user object, can be null
 };
 
 const changeTypeColor: Record<ChangeType, string> = {
