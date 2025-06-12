@@ -118,10 +118,8 @@ export const addDocumentTypeAsync = async (unitData: any) => {
 }
 
 export const editDocumentTypeAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/document_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
-
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)

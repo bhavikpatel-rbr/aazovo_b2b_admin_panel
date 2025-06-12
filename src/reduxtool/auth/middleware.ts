@@ -47,18 +47,24 @@ export const logoutAction = createAsyncThunk<
  * Login Action
  * Dispatches success or failure messages.
  */
+let loginAttempt = 0 // <-- Global module-scoped variable
+
 export const loginUserByEmailAction = createAsyncThunk<
   any,
   any,
-  { rejectValue: any } // It's good practice to type the reject value
+  { rejectValue: any }
 >(
   "auth/loginByEmail",
   async (loginRequest: any, { rejectWithValue, dispatch }) => {
+    loginAttempt++ // Increment attempt count
+
     try {
-      const response: AxiosResponse<any> = await loginWithEmailAsync(loginRequest)
-      // Case 1: API confirms successful login
+      const payloadWithAttempt = { ...loginRequest, attempt: loginAttempt }
+
+      const response: AxiosResponse<any> = await loginWithEmailAsync(payloadWithAttempt)
+
       if (response?.data?.status) {
-        // ADDED: Dispatch success message on login
+        loginAttempt = 0 // Reset attempt count on success
         dispatch(
           showMessage({
             ...defaultMessageObj,
@@ -69,7 +75,6 @@ export const loginUserByEmailAction = createAsyncThunk<
         return response?.data
       }
 
-      // Case 2: API returns a known error (e.g., wrong password)
       dispatch(
         showMessage({
           ...defaultMessageObj,
@@ -77,10 +82,13 @@ export const loginUserByEmailAction = createAsyncThunk<
           messageText: response?.data?.error || "Login failed. Please check your credentials.",
         })
       )
-      return rejectWithValue(response?.data) // Reject with the specific error data
+
+      if (loginAttempt >= 3) {
+        window.location.reload() // Refresh page after 3 failed attempts
+      }
+
+      return rejectWithValue(response?.data)
     } catch (error: unknown) {
-      // Case 3: Network or other unexpected error
-      // ADDED: Dispatch a generic error message
       dispatch(
         showMessage({
           ...defaultMessageObj,
@@ -88,7 +96,13 @@ export const loginUserByEmailAction = createAsyncThunk<
           messageText: "An unexpected network error occurred. Please try again later.",
         })
       )
+
+      if (loginAttempt >= 3) {
+        window.location.reload() // Refresh page after 3 failed attempts
+      }
+
       return rejectWithValue(error)
     }
   }
 )
+

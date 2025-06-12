@@ -489,6 +489,7 @@ const Documentmaster = () => {
   const onAddDocumentTypeSubmit = async (data: DocumentTypeFormData) => {
     setIsSubmitting(true);
     try {
+      console.log("data",data)
       // API expected to handle audit fields, only send form data
       await dispatch(addDocumentTypeAction(data)).unwrap();
       toast.push(
