@@ -557,14 +557,17 @@ const Continents = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Continents";
+    const timestamp = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    const fileName = `continents_export_${timestamp}.csv`;
     try {
       await dispatch(submitExportReasonAction({ 
         reason: data.reason, 
         module: moduleName,
+        file_name:fileName
       })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
       // After successful reason submit, download CSV
-      exportToCsvContinent("continents_export.csv", allFilteredAndSortedData);
+      exportToCsvContinent(fileName, allFilteredAndSortedData);
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
       toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
