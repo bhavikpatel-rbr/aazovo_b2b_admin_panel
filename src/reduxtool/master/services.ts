@@ -72,7 +72,7 @@ export const editUnitAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
+    const response = await axiosInstance.post(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -218,7 +218,7 @@ export const editCurrencyAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code , status:unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -267,7 +267,7 @@ export const editcontinentAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", name: unitData?.name, continent_id: unitData?.continent_id, iso: unitData?.iso, phonecode: unitData?.phonecode })
+    const response = await axiosInstance.post(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", name: unitData?.name, continent_id: unitData?.continent_id, iso: unitData?.iso, phonecode: unitData?.phonecode, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
