@@ -280,6 +280,16 @@ const ExportMappingTableTools = ({
     closeFilterDrawer();
   };
 
+   const handleClearFilters = () => {
+    reset({
+      userRole: [],
+      exportFrom: [],
+      fileExtensions: [],
+      exportDate: null,
+    });
+    onApplyFilters({});
+    setIsFilterDrawerOpen(false);
+  };
   const handleClearInternal = () => {
     reset({
       userRole: [],
