@@ -346,6 +346,9 @@ const Documentmaster = () => {
     []
   );
 
+  console.log("DocumentTypeData",DocumentTypeData);
+  
+
   useEffect(() => {
     dispatch(getDocumentTypeAction());
   }, [dispatch]);
@@ -475,6 +478,7 @@ const Documentmaster = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
+    dispatch(getDocumentTypeAction());
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -664,7 +668,7 @@ const Documentmaster = () => {
         meta: { HeaderClass: "text-red-500" },
         size: 160,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } =
+          const { updated_at, updated_by_user, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
@@ -679,13 +683,13 @@ const Documentmaster = () => {
           return (
             <div className="text-xs">
               <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && (
+                {updated_by_user?.name || "N/A"}
+                {/* {updated_by_user?.roles?.display_name && ( */}
                   <>
                     <br />
-                    <b>{updated_by_role}</b>
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
                   </>
-                )}
+                {/* )} */}
               </span>
               <br />
               <span>{formattedDate}</span>
@@ -887,9 +891,9 @@ const Documentmaster = () => {
                   </b>
                   <br />
                   <p className="text-sm font-semibold">
-                    {editingDocumentType.updated_by_name || "N/A"}
+                    {editingDocumentType.updated_by_user?.name || "N/A"}
                   </p>
-                  <p>{editingDocumentType.updated_by_role || "N/A"}</p>
+                  <p>{editingDocumentType.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
                 </div>
                 <div>
                   <br />

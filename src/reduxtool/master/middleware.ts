@@ -1503,7 +1503,7 @@ export const getExportMappingsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getExportMappingsAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
       dispatch(
         showMessage({
@@ -5463,7 +5463,7 @@ export const deleteAllWallAction = createAsyncThunk<any, any>(
 )
 
 export const submitExportReasonAction = createAsyncThunk("auth/submitResponse",
-async (data, { rejectWithValue, dispatch }) => {
+  async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await submitResponseAsync(data)
       if (response?.data?.status === true) {
@@ -5755,7 +5755,7 @@ export const getActivityLogAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getActivityLogAsync();
       if (response?.data?.status === true) {
-        return response?.data?.data;
+        return response?.data;
       }
       dispatch(
         showMessage({
