@@ -502,6 +502,7 @@ const Documents = () => {
     filterFormMethods.reset(defaults);
     setFilterCriteria(defaults);
     handleSetTableData({ pageIndex: 1 });
+    dispatch(getDocumentListAction())
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -700,7 +701,7 @@ const Documents = () => {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" },
+        
         size: 140,
         cell: (props) => {
           const { updated_at, updated_by_user, updated_by_role } = props.row.original;

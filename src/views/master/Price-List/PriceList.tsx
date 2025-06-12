@@ -913,10 +913,10 @@ const PriceList = () => {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" },
+       
         size: 180,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } =
+          const { updated_at, updated_by_user, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
@@ -934,11 +934,11 @@ const PriceList = () => {
           return (
             <div className="text-xs">
               <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && (
+                {updated_by_user?.name || "N/A"}
+                {updated_by_user?.roles[0]?.display_name && (
                   <>
                     <br />
-                    <b>{updated_by_role}</b>
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
                   </>
                 )}
               </span>
