@@ -15,17 +15,14 @@ import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog"; // Kept for export reason modal
-// import StickyFooter from "@/components/shared/StickyFooter"; // Commented out
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Added Tag
+import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
-  // TbTrash, // Commented out
-  // TbChecks, // Commented out
   TbSearch,
   TbFilter,
   TbPlus,
@@ -37,7 +34,6 @@ import {
 import type {
   OnSortParam,
   ColumnDef,
-  // Row, // Commented out
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -45,9 +41,7 @@ import {
   getDocumentTypeAction,
   addDocumentTypeAction,
   editDocumentTypeAction,
-  // deleteDocumentTypeAction, // Commented out
-  // deleteAllDocumentTypeAction, // Commented out
-  submitExportReasonAction, // Placeholder for future action
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -62,11 +56,11 @@ type SelectOption = {
 export type DocumentItem = {
   id: string | number;
   name: string;
-  status: "Active" | "Inactive"; // Added status field
-  created_at?: string; // Added for audit
-  updated_at?: string; // Added for audit
-  updated_by_name?: string; // Added for audit
-  updated_by_role?: string; // Added for audit
+  status: "Active" | "Inactive";
+  created_at?: string;
+  updated_at?: string;
+  updated_by_name?: string;
+  updated_by_role?: string;
 };
 
 // --- Status Options ---
@@ -83,7 +77,7 @@ const documentTypeFormSchema = z.object({
     .max(100, "Name cannot exceed 100 characters."),
   status: z.enum(["Active", "Inactive"], {
     required_error: "Status is required.",
-  }), // Added status
+  }),
 });
 type DocumentTypeFormData = z.infer<typeof documentTypeFormSchema>;
 
@@ -92,7 +86,7 @@ const filterFormSchema = z.object({
   filterNames: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  filterStatus: z // Added status filter
+  filterStatus: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
 });
@@ -186,7 +180,6 @@ function exportToCsvDocType(filename: string, rows: DocumentItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    // Success toast now handled by handleConfirmExportWithReason
     return true;
   }
   toast.push(
@@ -200,10 +193,9 @@ function exportToCsvDocType(filename: string, rows: DocumentItem[]) {
 // --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
-}: // onDelete, // Commented out
+}:
 {
   onEdit: () => void;
-  // onDelete: () => void; // Commented out
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
@@ -223,19 +215,6 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete"> // Commented out
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
-          role="button"
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip> */}
     </div>
   );
 };
@@ -293,7 +272,7 @@ const DocumentTypeTableTools = ({
         </Button>
         <Button
           icon={<TbCloudUpload />}
-          onClick={onExport} // Will open export reason modal
+          onClick={onExport}
           className="w-full sm:w-auto"
         >
           Export
@@ -309,114 +288,32 @@ type DocumentTypeTableProps = {
   data: DocumentItem[];
   loading: boolean;
   pagingData: { total: number; pageIndex: number; pageSize: number };
-  // selectedItems: DocumentItem[]; // Commented out
   onPaginationChange: (page: number) => void;
   onSelectChange: (value: number) => void;
   onSort: (sort: OnSortParam) => void;
-  // onRowSelect: (checked: boolean, row: DocumentItem) => void; // Commented out
-  // onAllRowSelect: (checked: boolean, rows: Row<DocumentItem>[]) => void; // Commented out
 };
 const DocumentTypeTable = ({
   columns,
   data,
   loading,
   pagingData,
-  // selectedItems, // Commented out
   onPaginationChange,
   onSelectChange,
   onSort,
-}: // onRowSelect, // Commented out
-// onAllRowSelect, // Commented out
-DocumentTypeTableProps) => {
+}: DocumentTypeTableProps) => {
   return (
     <DataTable
-      // selectable // Commented out
       columns={columns}
       data={data}
       noData={!loading && data.length === 0}
       loading={loading}
       pagingData={pagingData}
-      // checkboxChecked={(row) => // Commented out
-      //   selectedItems.some((selected) => selected.id === row.id)
-      // }
       onPaginationChange={onPaginationChange}
       onSelectChange={onSelectChange}
       onSort={onSort}
-      // onCheckBoxChange={onRowSelect} // Commented out
-      // onIndeterminateCheckBoxChange={onAllRowSelect} // Commented out
     />
   );
 };
-
-/* // --- DocumentTypeSelectedFooter Component (Commented out) ---
-type DocumentTypeSelectedFooterProps = {
-  selectedItems: DocumentItem[];
-  onDeleteSelected: () => void;
-  isDeleting: boolean; // Added
-};
-const DocumentTypeSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-  isDeleting, // Added
-}: DocumentTypeSelectedFooterProps) => {
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmationOpen(false);
-  };
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              <span className="heading-text">{selectedItems.length}</span>
-              <span>Item{selectedItems.length > 1 ? "s" : ""} selected</span>
-            </span>
-          </span>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={handleDeleteClick}
-              loading={isDeleting} // Added
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Document Type${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-        loading={isDeleting} // Added
-      >
-        <p>
-          Are you sure you want to delete the selected document type
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>
-      </ConfirmDialog>
-    </>
-  );
-};
-*/
 
 // --- Main Documentmaster Component ---
 const Documentmaster = () => {
@@ -429,18 +326,13 @@ const Documentmaster = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [isDeleting, setIsDeleting] = useState(false); // Commented out
-
-  // const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false); // Commented out
-  // const [documentTypeToDelete, setDocumentTypeToDelete] = useState<DocumentItem | null>(null); // Commented out
-
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
-    filterStatus: [], // Added
+    filterStatus: [],
   });
 
   const { DocumentTypeData = [], status: masterLoadingStatus = "idle" } =
@@ -449,10 +341,13 @@ const Documentmaster = () => {
   const defaultFormValues: DocumentTypeFormData = useMemo(
     () => ({
       name: "",
-      status: "Active", // Default status
+      status: "Active",
     }),
     []
   );
+
+  console.log("DocumentTypeData",DocumentTypeData);
+  
 
   useEffect(() => {
     dispatch(getDocumentTypeAction());
@@ -489,7 +384,6 @@ const Documentmaster = () => {
   const onAddDocumentTypeSubmit = async (data: DocumentTypeFormData) => {
     setIsSubmitting(true);
     try {
-      // API expected to handle audit fields, only send form data
       await dispatch(addDocumentTypeAction(data)).unwrap();
       toast.push(
         <Notification
@@ -517,7 +411,7 @@ const Documentmaster = () => {
     setEditingDocumentType(docType);
     editFormMethods.reset({
       name: docType.name,
-      status: docType.status || "Active", // Set status, default to Active
+      status: docType.status || "Active",
     });
     setIsEditDrawerOpen(true);
   };
@@ -538,7 +432,6 @@ const Documentmaster = () => {
     }
     setIsSubmitting(true);
     try {
-      // API expected to handle audit fields
       await dispatch(
         editDocumentTypeAction({ id: editingDocumentType.id, ...data })
       ).unwrap();
@@ -564,18 +457,6 @@ const Documentmaster = () => {
     }
   };
 
-  /* // --- Delete Logic (Commented out) ---
-  const handleDeleteClick = (docType: DocumentItem) => {
-    // ...
-  };
-  const onConfirmSingleDelete = async () => {
-    // ...
-  };
-  const handleDeleteSelected = async () => {
-    // ...
-  };
-  */ // --- End Delete Logic ---
-
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
@@ -584,7 +465,7 @@ const Documentmaster = () => {
   const onApplyFiltersSubmit = (data: FilterFormData) => {
     setFilterCriteria({
       filterNames: data.filterNames || [],
-      filterStatus: data.filterStatus || [], // Added
+      filterStatus: data.filterStatus || [],
     });
     handleSetTableData({ pageIndex: 1 });
     closeFilterDrawer();
@@ -592,11 +473,12 @@ const Documentmaster = () => {
   const onClearFilters = () => {
     const defaultFilters = {
       filterNames: [],
-      filterStatus: [], // Added
+      filterStatus: [],
     };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
+    dispatch(getDocumentTypeAction());
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -605,7 +487,6 @@ const Documentmaster = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  // const [selectedItems, setSelectedItems] = useState<DocumentItem[]>([]); // Commented out
 
   const documentTypeNameOptions = useMemo(() => {
     if (!Array.isArray(DocumentTypeData)) return [];
@@ -622,7 +503,7 @@ const Documentmaster = () => {
     const sourceData: DocumentItem[] = Array.isArray(DocumentTypeData)
       ? DocumentTypeData.map((item) => ({
           ...item,
-          status: item.status || "Inactive", // Ensure status has a default
+          status: item.status || "Inactive",
         }))
       : [];
     let processedData: DocumentItem[] = cloneDeep(sourceData);
@@ -636,7 +517,6 @@ const Documentmaster = () => {
       );
     }
     if (filterCriteria.filterStatus?.length) {
-      // Added status filter
       const statuses = filterCriteria.filterStatus.map((opt) => opt.value);
       processedData = processedData.filter((item) =>
         statuses.includes(item.status)
@@ -648,7 +528,7 @@ const Documentmaster = () => {
       processedData = processedData.filter(
         (item) =>
           (item.name?.trim().toLowerCase() ?? "").includes(query) ||
-          (item.status?.trim().toLowerCase() ?? "").includes(query) || // Search by status
+          (item.status?.trim().toLowerCase() ?? "").includes(query) ||
           (item.updated_by_name?.trim().toLowerCase() ?? "").includes(query) ||
           String(item.id ?? "")
             .trim()
@@ -662,7 +542,6 @@ const Documentmaster = () => {
       key &&
       ["id", "name", "status", "updated_at", "updated_by_name"].includes(key)
     ) {
-      // Added status and audit keys
       processedData.sort((a, b) => {
         let aValue: any, bValue: any;
         if (key === "updated_at") {
@@ -710,18 +589,37 @@ const Documentmaster = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Document Type";
+
+    // 1. Generate the dynamic filename BEFORE the API call
+    const timestamp = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    const fileName = `document_types_export_${timestamp}.csv`;
+
     try {
-      await dispatch(submitExportReasonAction({
-        reason: data.reason,
-        module: moduleName,
-      })).unwrap();
-      toast.push(<Notification title="Export Reason Submitted" type="success" />);
-      
-      // Proceed with CSV export after successful reason submit
-      exportToCsvDocType("document_types_export.csv", allFilteredAndSortedData);
+      // 2. Include the 'file_name' in the payload for your Redux action
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName, // <-- ADDED THIS FIELD
+        })
+      ).unwrap();
+
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
+
+      // 3. Pass the SAME generated filename to the export utility
+      exportToCsvDocType(fileName, allFilteredAndSortedData);
+
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
-      toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+          message={error.message}
+        />
+      );
     } finally {
       setIsSubmittingExportReason(false);
     }
@@ -740,7 +638,7 @@ const Documentmaster = () => {
       handleSetTableData({
         pageSize: Number(value),
         pageIndex: 1,
-      }); /* setSelectedItems([]); // Commented out */
+      });
     },
     [handleSetTableData]
   );
@@ -755,36 +653,22 @@ const Documentmaster = () => {
     [handleSetTableData]
   );
 
-  /* // --- Row Select Logic (Commented out) ---
-  const handleRowSelect = useCallback((checked: boolean, row: DocumentItem) => {
-    // setSelectedItems((prev) => {
-    //   if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
-    //   return prev.filter((item) => item.id !== row.id);
-    // });
-  }, []);
-  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<DocumentItem>[]) => {
-    // ...
-  }, []);
-  */ // --- End Row Select Logic ---
-
   const columns: ColumnDef<DocumentItem>[] = useMemo(
     () => [
-      // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
       {
         header: "Document Type Name",
         accessorKey: "name",
         enableSorting: true,
-        size:360
+        size: 360,
       },
       {
-        // Added Updated Info Column
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" },
+       
         size: 160,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } =
+          const { updated_at, updated_by_user, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
@@ -799,13 +683,13 @@ const Documentmaster = () => {
           return (
             <div className="text-xs">
               <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && (
+                {updated_by_user?.name || "N/A"}
+                {/* {updated_by_user?.roles?.display_name && ( */}
                   <>
                     <br />
-                    <b>{updated_by_role}</b>
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
                   </>
-                )}
+                {/* )} */}
               </span>
               <br />
               <span>{formattedDate}</span>
@@ -814,7 +698,6 @@ const Documentmaster = () => {
         },
       },
       {
-        // Added Status Column
         header: "Status",
         accessorKey: "status",
         enableSorting: true,
@@ -847,13 +730,13 @@ const Documentmaster = () => {
           <ActionColumn
             onEdit={() =>
               openEditDrawer(props.row.original)
-            } /* onDelete={() => handleDeleteClick(props.row.original)} // Commented out */
+            }
           />
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [openEditDrawer /*, handleDeleteClick // Commented out */]
+    [openEditDrawer]
   );
 
   return (
@@ -869,32 +752,26 @@ const Documentmaster = () => {
           <DocumentTypeTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal} // Changed to open reason modal
+            onExport={handleOpenExportReasonModal}
             onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <DocumentTypeTable
               columns={columns}
               data={pageData}
-              // loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented */}
               loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              // selectedItems={selectedItems} // Commented out
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
-              // onRowSelect={handleRowSelect} // Commented out
-              // onAllRowSelect={handleAllRowSelect} // Commented out
             />
           </div>
         </AdaptiveCard>
       </Container>
-
-      {/* <DocumentTypeSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} /> // Commented out */}
 
       {[
         {
@@ -1014,43 +891,37 @@ const Documentmaster = () => {
                   </b>
                   <br />
                   <p className="text-sm font-semibold">
-                    {editingDocumentType.updated_by_name || "N/A"}
+                    {editingDocumentType.updated_by_user?.name || "N/A"}
                   </p>
-                  <p>{editingDocumentType.updated_by_role || "N/A"}</p>
+                  <p>{editingDocumentType.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
                 </div>
                 <div>
                   <br />
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingDocumentType.created_at
-                      ? new Date(editingDocumentType.created_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? new Date(editingDocumentType.created_at).toLocaleString("en-US", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "2-digit",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingDocumentType.updated_at
-                      ? new Date(editingDocumentType.updated_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? new Date(editingDocumentType.updated_at).toLocaleString("en-US", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "2-digit",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
                       : "N/A"}
                   </span>
                 </div>
@@ -1172,19 +1043,6 @@ const Documentmaster = () => {
           </FormItem>
         </Form>
       </ConfirmDialog>
-
-      {/* <ConfirmDialog // Commented out single delete confirm dialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Document Type"
-        onClose={() => {setSingleDeleteConfirmOpen(false); setDocumentTypeToDelete(null);}}
-        onRequestClose={() => {setSingleDeleteConfirmOpen(false); setDocumentTypeToDelete(null);}}
-        onCancel={() => {setSingleDeleteConfirmOpen(false); setDocumentTypeToDelete(null);}}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
-      >
-        <p>Are you sure you want to delete the document type "<strong>{documentTypeToDelete?.name}</strong>"?</p>
-      </ConfirmDialog> */}
     </>
   );
 };

@@ -4,7 +4,7 @@ import type { Routes } from '@/@types/routes'
 
 const othersRoute: Routes = [
     {
-        key: 'exportMapping',
+        key: 'others.exportMapping',
         path: `/export-mapping`,
         component: lazy(() => import('@/views/others/Export-Mapping')),
         authority: [ADMIN, USER],
@@ -21,6 +21,15 @@ const othersRoute: Routes = [
     //         pageContainerType: 'contained',
     //     },
     // },
+    {
+        key: 'notifications',
+        path: `/notifiactions`,
+        component: lazy(() => import('@/views/others/Notification/Notifications')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
 ]
 
 export default othersRoute

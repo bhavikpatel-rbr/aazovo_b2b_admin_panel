@@ -118,10 +118,8 @@ export const addDocumentTypeAsync = async (unitData: any) => {
 }
 
 export const editDocumentTypeAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/document_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
-
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -365,7 +363,7 @@ export const editDocumentListAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, document_type: unitData?.document_type })
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, document_type: unitData?.document_type, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)

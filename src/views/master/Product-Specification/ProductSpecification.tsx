@@ -16,17 +16,14 @@ import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog"; // Kept for export reason modal
-// import StickyFooter from "@/components/shared/StickyFooter"; // Commented out
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Dialog, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
-  // TbTrash, // Commented out
-  // TbChecks, // Commented out
   TbSearch,
   TbFilter,
   TbPlus,
@@ -39,7 +36,6 @@ import {
 import type {
   OnSortParam,
   ColumnDef,
-  // Row, // Commented out
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -47,10 +43,8 @@ import {
   getProductSpecificationsAction,
   addProductSpecificationAction,
   editProductSpecificationAction,
-  // deleteProductSpecificationAction, // Commented out
-  // deleteAllProductSpecificationsAction, // Commented out
   getCountriesAction,
-  submitExportReasonAction, // Placeholder for future action
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -241,10 +235,9 @@ function exportProductSpecificationsToCsv(
 
 const ActionColumn = ({
   onEdit,
-}: // onDelete, // Commented out
+}:
 {
   onEdit: () => void;
-  // onDelete: () => void; // Commented out
 }) => {
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
@@ -266,21 +259,6 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete"> // Commented out
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          )}
-          role="button"
-          tabIndex={0}
-          onClick={onDelete}
-          onKeyDown={(e) => e.key === "Enter" && onDelete()}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip> */}
     </div>
   );
 };
@@ -352,78 +330,6 @@ const ItemTableTools = ({
 };
 ItemTableTools.displayName = "ItemTableTools";
 
-/* // --- ItemSelectedFooter Component (Commented out) ---
-type ItemSelectedFooterProps = {
-  selectedItems: ProductSpecificationItem[];
-  onDeleteSelected: () => void;
-  disabled?: boolean;
-};
-const ItemSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-  disabled,
-}: ItemSelectedFooterProps) => {
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmationOpen(false);
-  };
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              <span className="heading-text">{selectedItems.length}</span>
-              <span>Item{selectedItems.length > 1 ? "s" : ""} selected</span>
-            </span>
-          </span>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={handleDeleteClick}
-              disabled={disabled}
-              loading={disabled}
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Specification${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-        loading={disabled}
-      >
-        <p>
-          Are you sure you want to delete the selected specification
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>
-      </ConfirmDialog>
-    </>
-  );
-};
-ItemSelectedFooter.displayName = "ItemSelectedFooter";
-*/
-
 const ProductSpecification = () => {
   const dispatch = useAppDispatch();
 
@@ -441,10 +347,6 @@ const ProductSpecification = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [isDeleting, setIsDeleting] = useState(false); // Commented out
-
-  // const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false); // Commented out
-  // const [itemToDelete, setItemToDelete] = useState<ProductSpecificationItem | null>(null); // Commented out
 
   const [addFormFlagIconPreviewUrl, setAddFormFlagIconPreviewUrl] = useState<
     string | null
@@ -468,7 +370,6 @@ const ProductSpecification = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  // const [selectedItems, setSelectedItems] = useState<ProductSpecificationItem[]>([]); // Commented out
   const [countryOptions, setCountryOptions] = useState<CountryOption[]>([]);
 
   useEffect(() => {
@@ -714,66 +615,6 @@ const ProductSpecification = () => {
     }
   };
 
-  /* // --- Delete Logic (Commented out) ---
-  const handleDeleteClick = useCallback((item: ProductSpecificationItem) => {
-    if (item.id === undefined || item.id === null) {
-      toast.push(<Notification title="Error" type="danger">Cannot delete: Specification ID is missing.</Notification>);
-      return;
-    }
-    setItemToDelete(item);
-    setSingleDeleteConfirmOpen(true);
-  }, []);
-
-  const onConfirmSingleDelete = async () => {
-    if (!itemToDelete?.id) {
-      toast.push(<Notification title="Error" type="danger">Cannot delete: Specification ID is missing.</Notification>);
-      setItemToDelete(null); setSingleDeleteConfirmOpen(false); return;
-    }
-    setIsDeleting(true);
-    setSingleDeleteConfirmOpen(false);
-    try {
-      await dispatch(deleteProductSpecificationAction({ id: itemToDelete.id })).unwrap();
-      toast.push(<Notification title="Specification Deleted" type="success" duration={2000}>Specification "{itemToDelete.name}" deleted.</Notification>);
-      // setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id)); // selectedItems commented
-      dispatch(getProductSpecificationsAction());
-    } catch (error: any) {
-      const message = error?.message || error?.data?.message || "Could not delete specification.";
-      toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}>{message}</Notification>);
-    } finally {
-      setIsDeleting(false);
-      setItemToDelete(null);
-    }
-  };
-
-  const handleDeleteSelected = async () => {
-    // if (selectedItems.length === 0) { // selectedItems commented
-    //   toast.push(<Notification title="No Selection" type="info">Please select items to delete.</Notification>);
-    //   return;
-    // }
-    // setIsDeleting(true); // selectedItems commented
-    // const validItemsToDelete = selectedItems.filter(item => item.id !== undefined && item.id !== null); // selectedItems commented
-    // if (validItemsToDelete.length !== selectedItems.length) { // selectedItems commented
-    //   toast.push(<Notification title="Deletion Warning" type="warning" duration={3000}>Some selected items had missing IDs and were skipped.</Notification>);
-    // }
-    // if (validItemsToDelete.length === 0) { // selectedItems commented
-    //   toast.push(<Notification title="No Valid Items" type="info">No valid items to delete.</Notification>);
-    //   setIsDeleting(false); return;
-    // }
-    // const idsToDelete = validItemsToDelete.map((item) => String(item.id)); // selectedItems commented
-    try {
-      // await dispatch(deleteAllProductSpecificationsAction({ ids: idsToDelete.join(",") })).unwrap(); // selectedItems commented
-      // toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{validItemsToDelete.length} specification(s) deleted.</Notification>); // selectedItems commented
-      // setSelectedItems([]); // selectedItems commented
-      dispatch(getProductSpecificationsAction());
-    } catch (error: any)      {
-      // const message = error?.message || error?.data?.message || "Failed to delete selected specifications."; // selectedItems commented
-      // toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{message}</Notification>); // selectedItems commented
-    } finally {
-      // setIsDeleting(false); // selectedItems commented
-    }
-  };
-  */ // --- End Delete Logic ---
-
   const openFilterDrawer = useCallback(() => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
@@ -800,7 +641,9 @@ const ProductSpecification = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
-  }, [filterFormMethods, handleSetTableData]);
+    setIsFilterDrawerOpen(false);
+    dispatch(getProductSpecificationsAction());
+  }, [filterFormMethods, handleSetTableData, dispatch]);
 
   const specNameFilterOptions = useMemo(() => {
     if (!Array.isArray(ProductSpecificationsData)) return [];
@@ -942,33 +785,44 @@ const ProductSpecification = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Product Specification";
+    
+    // --- MODIFIED: Generate filename before API call ---
+    const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `product_specifications_export_${timestamp}.csv`;
+
     try {
+      // --- MODIFIED: Include file_name in the payload ---
       await dispatch(submitExportReasonAction({
         reason: data.reason,
         module: moduleName,
+        file_name: fileName, // Pass the generated filename
       })).unwrap();
-    } catch (error: any) {
-      setIsSubmittingExportReason(false);
-      return;
-    }
 
-    const success = exportProductSpecificationsToCsv(
-      "product_specifications.csv",
-      allFilteredAndSortedData
-    );
-
-    if (success) {
-      toast.push(
-        <Notification title="Export Successful" type="success" duration={2000}>
-          Data exported from {moduleName}.
-        </Notification>
+      // --- MODIFIED: Use the generated filename for export ---
+      const success = exportProductSpecificationsToCsv(
+        fileName,
+        allFilteredAndSortedData
       );
+
+      if (success) {
+        toast.push(
+          <Notification title="Export Successful" type="success" duration={2000}>
+            Data exported from {moduleName}.
+          </Notification>
+        );
+      }
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+        const message = error?.message || "Failed to submit export reason.";
+        toast.push(<Notification title="Export Failed" type="danger">{message}</Notification>);
+    } finally {
+      setIsSubmittingExportReason(false);
     }
-
-    setIsSubmittingExportReason(false);
-    setIsExportReasonModalOpen(false);
   };
-
+  const [isImageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageToView, setImageToView] = useState<string | null>(null);
+  const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
+  const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
   const handlePaginationChange = useCallback(
     (page: number) => handleSetTableData({ pageIndex: page }),
@@ -979,7 +833,7 @@ const ProductSpecification = () => {
       handleSetTableData({
         pageSize: Number(value),
         pageIndex: 1,
-      }); /* setSelectedItems([]); // Commented out */
+      });
     },
     [handleSetTableData]
   );
@@ -991,51 +845,48 @@ const ProductSpecification = () => {
     (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
     [handleSetTableData]
   );
+    const formatFullDate = (dateString: string | undefined | null) => {
+    if (!dateString) return "N/A";
 
-  /* // --- Row Select Logic (Commented out) ---
-  const handleRowSelect = useCallback((checked: boolean, row: ProductSpecificationItem) => {
-    // setSelectedItems((prev) => {
-    //   if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
-    //   return prev.filter((item) => item.id !== row.id);
-    // });
-  }, []);
-  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<ProductSpecificationItem>[]) => {
-    // const originals = currentRows.map((r) => r.original);
-    // if (checked) {
-    //   setSelectedItems((prev) => {
-    //     const prevIds = new Set(prev.map((item) => item.id));
-    //     const newToAdd = originals.filter((r) => r.id !== undefined && !prevIds.has(r.id));
-    //     return [...prev, ...newToAdd];
-    //   });
-    // } else {
-    //   const currentIds = new Set(originals.map((r) => r.id).filter((id) => id !== undefined));
-    //   setSelectedItems((prev) => prev.filter((item) => item.id !== undefined && !currentIds.has(item.id)));
-    // }
-  }, []);
-  */ // --- End Row Select Logic ---
+    const date = new Date(dateString);
+
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = date.toLocaleString("en-US", { month: "long" });
+    const year = date.getFullYear();
+
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert to 12-hour format
+    const hourStr = hours.toString().padStart(2, "0");
+
+    return `${day} ${month}, ${year} ${hourStr}:${minutes} ${ampm}`;
+  };
 
   const columns: ColumnDef<ProductSpecificationItem>[] = useMemo(
     () => [
-      // { header: "ID", accessorKey: "id", enableSorting: true, size: 80 },
-      {
-        header: "Flag Icon",
-        accessorKey: "icon_full_path",
-        enableSorting: false,
-        size: 100,
-        cell: (props) => {
-          const icon_full_path = props.row.original.icon_full_path;
-          return icon_full_path ? (
-            <Avatar
-              src={icon_full_path}
-              size={30}
-              shape="circle"
-              icon={<TbPhoto />}
-            />
-          ) : (
-            <span className="text-gray-400">-</span>
-          );
+        {
+          header: "Flag Icon",
+          accessorKey: "icon_full_path",
+          enableSorting: false,
+          size: 100,
+          cell: (props) => {
+            const { icon_full_path } = props.row.original;
+            return icon_full_path ? (
+              <Avatar
+                src={icon_full_path}
+                size={30}
+                shape="circle"
+                icon={<TbPhoto />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() => openImageViewer(icon_full_path)}
+              />
+            ) : (
+              <span className="text-gray-400">-</span>
+            );
+          },
         },
-      },
+
       {
         header: "Specification Name",
         accessorKey: "name",
@@ -1046,7 +897,7 @@ const ProductSpecification = () => {
         header: "Country Name",
         accessorKey: "country.name",
         enableSorting: true,
-        size: 160, // Updated accessorKey for sorting
+        size: 160,
         cell: (props) => {
           const countryName =
             props.row.original.country?.name || props.row.original.country_name;
@@ -1063,10 +914,10 @@ const ProductSpecification = () => {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" },
+       
         size: 160,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } =
+          const { updated_at, updated_by_user, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
@@ -1081,13 +932,13 @@ const ProductSpecification = () => {
           return (
             <div className="text-xs">
               <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && (
+                {updated_by_user?.name || "N/A"}
+                {/* {updated_by_user?.roles?.display_name && ( */}
                   <>
                     <br />
-                    <b>{updated_by_role}</b>
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
                   </>
-                )}
+                {/* )} */}
               </span>
               <br />
               <span>{formattedDate}</span>
@@ -1125,12 +976,12 @@ const ProductSpecification = () => {
           <ActionColumn
             onEdit={() =>
               openEditDrawer(props.row.original)
-            } /* onDelete={() => handleDeleteClick(props.row.original)} // Commented out */
+            }
           />
         ),
       },
     ],
-    [openEditDrawer /*, handleDeleteClick // Commented out */]
+    [openEditDrawer, openImageViewer]
   );
 
   return (
@@ -1139,7 +990,6 @@ const ProductSpecification = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Product Spec</h5>
-            {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented out>Add New</Button> */}
             <Button
               variant="solid"
               icon={<TbPlus />}
@@ -1159,27 +1009,19 @@ const ProductSpecification = () => {
             <DataTable
               columns={columns}
               data={pageData}
-              // loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting /* isDeleting commented out */}
               loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              // selectable // Commented out
-              // checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} // Commented out
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
-              // onCheckBoxChange={handleRowSelect} // Commented out
-              // onIndeterminateCheckBoxChange={handleAllRowSelect} // Commented out
             />
           </div>
         </AdaptiveCard>
       </Container>
-
-      {/* <ItemSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} disabled={isDeleting || masterLoadingStatus === "loading"}/> // Commented out */}
-
       {[
         {
           formMethods: addFormMethods,
@@ -1435,40 +1277,19 @@ const ProductSpecification = () => {
                     <div>
                       <b className="font-semibold text-primary">Latest Update:</b>
                       <p className="text-sm font-semibold mt-1">
-                        {drawerProps.currentItem.updated_by_name || "N/A"}
+                        {editingItem?.updated_by_user?.name || "N/A"}
                       </p>
-                      <p>{drawerProps.currentItem.updated_by_role || "N/A"}</p>
+                      <p>{editingItem?.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
                     </div>
                     <div>
-                      <br/>
+                      <br />
                       <span className="font-semibold">Created At:</span>{" "}
-                      <span>
-                        {drawerProps.currentItem.created_at
-                          ? new Date(drawerProps.currentItem.created_at).toLocaleString("en-US", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                            })
-                          : "N/A"}
-                      </span>
+                      <span>{formatFullDate(editingItem?.created_at)}</span>
                       <br />
                       <span className="font-semibold">Updated At:</span>{" "}
-                      <span>
-                        {drawerProps.currentItem.updated_at
-                          ? new Date(drawerProps.currentItem.updated_at).toLocaleString("en-US", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                            })
-                          : "N/A"}
-                      </span>
+                      <span>{formatFullDate(editingItem?.updated_at)}</span>
                     </div>
+
                   </div>
                 </div>
             )}
@@ -1609,16 +1430,9 @@ const ProductSpecification = () => {
           </FormItem>
         </Form>
       </ConfirmDialog>
-
-      {/* <ConfirmDialog // Commented out single delete confirm dialog
-        isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Specification"
-        onClose={() => {setSingleDeleteConfirmOpen(false); setItemToDelete(null);}}
-        onRequestClose={() => {setSingleDeleteConfirmOpen(false); setItemToDelete(null);}}
-        onCancel={() => {setSingleDeleteConfirmOpen(false); setItemToDelete(null);}}
-        onConfirm={onConfirmSingleDelete} loading={isDeleting}
-      >
-        <p>Are you sure you want to delete the specification "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p>
-      </ConfirmDialog> */}
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
+        <div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Slider Image Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}</div>
+      </Dialog>
     </>
   );
 };
