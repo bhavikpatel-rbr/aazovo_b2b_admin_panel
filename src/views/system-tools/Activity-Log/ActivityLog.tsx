@@ -109,6 +109,8 @@ export type User = {
   // ... other user fields can be added here if needed
 };
 
+
+
 export type ChangeLogItem = {
   id: string | number;
   timestamp: string;
@@ -394,7 +396,7 @@ const ActivityLog = () => {
   const dispatch = useAppDispatch();
   // Ensure your masterSelector and Redux state provide these:
   const {
-    activityLogsData = [], // Default to empty array
+    activityLogsData   = [], // Default to empty array
     activityLogsTotal = 0, // Default to 0
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
@@ -593,27 +595,27 @@ const ActivityLog = () => {
   // Data for table display: directly use Redux state if server paginates
   // If server sends all filtered data and client paginates/sorts, useMemo is more complex
   const pageData = useMemo(() => {
-    // If activityLogsData is already paginated and sorted by server, just return it.
+    // If activityLogsData?.data is already paginated and sorted by server, just return it.
     // Otherwise, you might need client-side sorting/pagination here based on tableData.
-    // For this example, assuming activityLogsData is the correctly paginated/sorted set from server.
-    return Array.isArray(activityLogsData) ? activityLogsData : [];
-  }, [activityLogsData]);
+    // For this example, assuming activityLogsData?.data is the correctly paginated/sorted set from server.
+    return Array.isArray(activityLogsData?.data) ? activityLogsData?.data : [];
+  }, [activityLogsData?.data]);
 
   // For export, we might need all data, not just current page.
   // This part needs careful consideration with server-side pagination.
   // Option 1: Fetch all data for export (can be slow for large datasets).
   // Option 2: Export only current view (less useful).
   // Option 3: Server-side export generation.
-  // For now, this will use whatever is in `activityLogsData`, which might just be one page.
+  // For now, this will use whatever is in `activityLogsData?.data`, which might just be one page.
   const allFilteredAndSortedDataForExport = useMemo(() => {
-    // If activityLogsData contains ALL filtered items (not just one page), this is fine.
+    // If activityLogsData?.data contains ALL filtered items (not just one page), this is fine.
     // If it's just one page, export will be limited.
     // A real solution might involve a separate fetch for all export data.
     let dataToExport = cloneDeep(
-      Array.isArray(activityLogsData) ? activityLogsData : []
+      Array.isArray(activityLogsData?.data) ? activityLogsData?.data : []
     );
 
-    // If you need to re-apply sorting for export (if `activityLogsData` is not sorted as per `tableData.sort`)
+    // If you need to re-apply sorting for export (if `activityLogsData?.data` is not sorted as per `tableData.sort`)
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       dataToExport.sort((a, b) => {
@@ -639,7 +641,7 @@ const ActivityLog = () => {
       });
     }
     return dataToExport;
-  }, [activityLogsData, tableData.sort]);
+  }, [activityLogsData?.data, tableData.sort]);
 
   const handleOpenExportReasonModal = useCallback(() => {
     if (
@@ -1005,7 +1007,7 @@ const ActivityLog = () => {
                 <TbActivity size={24} />
               </div>
               <div>
-                <h6 className="text-blue-500">879</h6>
+                <h6 className="text-blue-500">{activityLogsData?.counts?.total}</h6>
                 <span className="font-semibold text-xs">Total</span>
               </div>
             </Card>
