@@ -883,50 +883,58 @@ const Documentmaster = () => {
             </FormItem>
           </Form>
           {drawerProps.isEdit && editingDocumentType && (
-            <div className="absolute bottom-[14%] w-[92%]">
-              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                <div>
-                  <b className="mt-3 mb-3 font-semibold text-primary">
-                    Latest Update:
-                  </b>
-                  <br />
-                  <p className="text-sm font-semibold">
-                    {editingDocumentType.updated_by_user?.name || "N/A"}
-                  </p>
-                  <p>{editingDocumentType.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
-                </div>
-                <div>
-                  <br />
-                  <span className="font-semibold">Created At:</span>{" "}
-                  <span>
-                    {editingDocumentType.created_at
-                      ? new Date(editingDocumentType.created_at).toLocaleString("en-US", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "2-digit",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
-                      : "N/A"}
-                  </span>
-                  <br />
-                  <span className="font-semibold">Updated At:</span>{" "}
-                  <span>
-                    {editingDocumentType.updated_at
-                      ? new Date(editingDocumentType.updated_at).toLocaleString("en-US", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "2-digit",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
-                      : "N/A"}
-                  </span>
-                </div>
-              </div>
-            </div>
+           <div className="absolute bottom-[14%] w-[92%]">
+  {/*
+    - Replace 'grid-cols-2' with an arbitrary value for grid-template-columns.
+    - 'grid-cols-[2fr_3fr]' means the first column gets 2 fractional units,
+      and the second column gets 3 fractional units of the available space.
+    - Removed the style={{flex:1}} from the grid container as it's not standard for grid.
+  */}
+  <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+    {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
+    <div>
+      <b className="mt-3 mb-3 font-semibold text-primary">
+        Latest Update:
+      </b>
+      <br />
+      <p className="text-sm font-semibold">
+        {editingDocumentType.updated_by_user?.name || "N/A"}
+      </p>
+      <p>{editingDocumentType.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
+    </div>
+    {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
+    <div>
+      <br /> {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
+      <span className="font-semibold">Created At:</span>{" "}
+      <span>
+        {editingDocumentType.created_at
+          ? new Date(editingDocumentType.created_at).toLocaleString("en-US", {
+              day: "2-digit",
+              month: "long",
+              year: "2-digit",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "N/A"}
+      </span>
+      <br />
+      <span className="font-semibold">Updated At:</span>{" "}
+      <span>
+        {editingDocumentType.updated_at
+          ? new Date(editingDocumentType.updated_at).toLocaleString("en-US", {
+              day: "2-digit",
+              month: "long",
+              year: "2-digit",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "N/A"}
+      </span>
+    </div>
+  </div>
+</div>
           )}
         </Drawer>
       ))}

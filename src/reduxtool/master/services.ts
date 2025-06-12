@@ -169,7 +169,7 @@ export const editPaymentTermAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/payment_term/${unitData?.id}`, { _method: "PUT", term_name: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/payment_term/${unitData?.id}`, { _method: "PUT", term_name: unitData?.term_name })
+    const response = await axiosInstance.post(`${config.apiURL}/master/payment_term/${unitData?.id}`, { _method: "PUT", term_name: unitData?.term_name, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)

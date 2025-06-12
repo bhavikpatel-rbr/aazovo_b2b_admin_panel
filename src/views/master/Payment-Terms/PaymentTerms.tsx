@@ -274,13 +274,11 @@ const PaymentTermTableTools = ({
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Tooltip title="Clear Filters">
-            <Button
-            icon={<TbReload />}
-            onClick={() => onClearFilters()}
-            variant="plain"
-            shape="circle"
-            size="sm"
-            />
+           <Button
+                     title="Clear Filters"
+                     icon={<TbReload />}
+                     onClick={() => onClearFilters()}
+                   ></Button>
         </Tooltip>
         <Button
           icon={<TbFilter />}
@@ -449,7 +447,7 @@ const PaymentTerms = () => {
         </Notification>
       );
       closeAddDrawer();
-      dispatch(getPaymentTermAction());
+      // dispatch(getPaymentTermAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Add" type="danger" duration={3000}>
@@ -499,7 +497,7 @@ const PaymentTerms = () => {
         </Notification>
       );
       closeEditDrawer();
-      dispatch(getPaymentTermAction());
+      // dispatch(getPaymentTermAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Update" type="danger" duration={3000}>
@@ -551,7 +549,7 @@ const PaymentTerms = () => {
         </Notification>
       );
       // setSelectedItems((prev) => prev.filter((item) => item.id !== paymentTermToDelete!.id)); // Commented out
-      dispatch(getPaymentTermAction());
+      // dispatch(getPaymentTermAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Delete" type="danger" duration={3000}>
@@ -650,6 +648,7 @@ const PaymentTerms = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
+    dispatch(getPaymentTermAction())
     // setSelectedItems([]); // Commented out
   };
 
@@ -768,11 +767,14 @@ const PaymentTerms = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Payment Terms";
+     const timestamp = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    const fileName = `payment_terms_export_${timestamp}.csv`;
     try {
       await dispatch(
         submitExportReasonAction({
           reason: data.reason,
           module: moduleName,
+          file_name:fileName
         })
       ).unwrap();
     } catch (error: any) {
@@ -780,7 +782,7 @@ const PaymentTerms = () => {
     }
 
     const success = exportToCsvPaymentTerm(
-      "payment_terms_export.csv",
+      fileName,
       allFilteredAndSortedData
     );
 
@@ -881,10 +883,10 @@ const PaymentTerms = () => {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" },
+       
         size: 160,
         cell: (props: CellContext<PaymentTermsItem, unknown>) => {
-          const { updated_at, updated_by_name, updated_by_role } =
+          const { updated_at, updated_by_user, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
             ? new Date(updated_at).toLocaleString('en-US', {
@@ -895,11 +897,11 @@ const PaymentTerms = () => {
           return (
             <div className="text-xs leading-tight">
               <span className="font-semibold">
-                {updated_by_name || "N/A"}
+                {updated_by_user?.name || "N/A"}
               </span>
-              {updated_by_role && (
+              {updated_by_user?.roles[0]?.display_name && (
                 <span className="block text-gray-500 dark:text-gray-400">
-                  {updated_by_role}
+                  {updated_by_user?.roles[0]?.display_name}
                 </span>
               )}
               <span className="block text-gray-500 dark:text-gray-400">{formattedDate}</span>
@@ -1104,31 +1106,60 @@ const PaymentTerms = () => {
                 )}
               />
             </FormItem>
-            {drawerProps.isEdit && editingPaymentTerm && (
-            <div className="mt-4">
-              <h6 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Audit Information</h6>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400 font-semibold">Created At:</p>
-                  <p className="font-medium">
-                    {editingPaymentTerm.created_at
-                      ? new Date(editingPaymentTerm.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-                      : "N/A"}
-                  </p>
-                </div>
-                 <div>
-                  <p className="text-gray-500 dark:text-gray-400 font-semibold">Last Updated At:</p>
-                  <p className="font-medium">
-                    {editingPaymentTerm.updated_at
-                      ? new Date(editingPaymentTerm.updated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
-                      : "N/A"}
-                  </p>
-                </div>
-                <div className="sm:col-span-2">
-                   <p className="text-gray-500 dark:text-gray-400 font-semibold">Last Updated By: <span className="text-xs font-normal">{editingPaymentTerm.updated_by_name || "Tushar Joshi"} {editingPaymentTerm.updated_by_role && ` (${editingPaymentTerm.updated_by_role})` || "(System Admin)"}</span></p>
-                </div>
-              </div>
-            </div>
+           
+           {drawerProps.isEdit && editingPaymentTerm && (
+            <div className="absolute bottom-[14%] w-[92%]">
+  {/*
+    - Replace 'grid-cols-2' with an arbitrary value for grid-template-columns.
+    - 'grid-cols-[2fr_3fr]' means the first column gets 2 fractional units,
+      and the second column gets 3 fractional units of the available space.
+    - Removed the style={{flex:1}} from the grid container as it's not standard for grid.
+  */}
+  <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+    {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
+    <div>
+      <b className="mt-3 mb-3 font-semibold text-primary">
+        Latest Update:
+      </b>
+      <br />
+      <p className="text-sm font-semibold">
+        {editingPaymentTerm.updated_by_user?.name || "N/A"}
+      </p>
+      <p>{editingPaymentTerm.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
+    </div>
+    {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
+    <div>
+      <br /> {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
+      <span className="font-semibold">Created At:</span>{" "}
+      <span>
+        {editingPaymentTerm.created_at
+          ? new Date(editingPaymentTerm.created_at).toLocaleString("en-US", {
+              day: "2-digit",
+              month: "long",
+              year: "2-digit",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "N/A"}
+      </span>
+      <br />
+      <span className="font-semibold">Updated At:</span>{" "}
+      <span>
+        {editingPaymentTerm.updated_at
+          ? new Date(editingPaymentTerm.updated_at).toLocaleString("en-US", {
+              day: "2-digit",
+              month: "long",
+              year: "2-digit",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "N/A"}
+      </span>
+    </div>
+  </div>
+</div>
           )}
           </Form>
         </Drawer>
