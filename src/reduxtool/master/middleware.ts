@@ -6261,11 +6261,10 @@ export const getEmployeesAction = createAsyncThunk(
   "auth/getEmployeesAction",
   async (_, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await getEmployeeAsync()
-        // console.log("Employeeeeee", response?.users?.data)
-      if (response?.users) { // Assuming response.data itself contains the relevant structure
-        console.log("Employeeeeee", response?.users?.data)
-        response?.users?.data
+      const response: AxiosResponse<any> = await getEmployeeAsync();
+
+      if (response?.users?.data) {
+        return response.users.data;
       }
       dispatch(
         showMessage({
@@ -6273,9 +6272,9 @@ export const getEmployeesAction = createAsyncThunk(
           type: "error",
           messageText: response?.data?.message || "failed",
         }))
-      return rejectWithValue(response)
+      return rejectWithValue("No users found");
     } catch (error: unknown) {
-      return rejectWithValue(error as Error)
+      return rejectWithValue(error as Error);
     }
   }
-)
+);

@@ -7,13 +7,15 @@ import DatePicker from "@/components/ui/DatePicker";
 import { FormItem } from "@/components/ui/Form";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { addInquiriesAction, editInquiriesAction } from "@/reduxtool/master/middleware";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { addInquiriesAction, editInquiriesAction, getDepartmentsAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import axiosInstance from '@/services/api/api';
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { BiChevronRight } from "react-icons/bi";
+import { useSelector } from "react-redux";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
@@ -129,7 +131,7 @@ const CreateInquiry = () => {
     inquiry_attachments_array: z.any().optional().nullable(),
     assigned_to_name: z.string().optional().nullable(),
     inquiry_department_name: z.string().optional().nullable(),
-    department: z.string().optional().nullable(),
+    department: z.optional().nullable(),
   });
   const {
     control,
@@ -147,8 +149,22 @@ const CreateInquiry = () => {
   const inquiryID = location.state ? location.state : undefined
   const isEditMode = Boolean(location.state ? true : false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const {
+    // inquiryList1,
+    departmentsData,
+    // status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector);
 
+  const departmentFilterOptions = departmentsData.map((c: any) => ({
+    value: String(c.id),
+    label: c.name,
+  }));
 
+  useEffect(() => {
+    // Dispatch actions to fetch initial data
+    dispatch(getDepartmentsAction());
+  }, [dispatch]);
+  
   useEffect(() => {
     if (isEditMode && inquiryID) {
       const fetchMemberData = async () => {
@@ -538,26 +554,38 @@ const CreateInquiry = () => {
                   name="department"
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      options={[
-                        { value: "Sales", label: "Sales" },
-                        { value: "Support", label: "Support" },
-                        { value: "HR", label: "HR" },
-                        { value: "IT", label: "IT" },
-                        { value: "Finance", label: "Finance" },
-                      ]}
-                      placeholder="Select department"
-                      value={
-                        [
-                          { value: "Sales", label: "Sales" },
-                          { value: "Support", label: "Support" },
-                          { value: "HR", label: "HR" },
-                          { value: "IT", label: "IT" },
-                          { value: "Finance", label: "Finance" },
-                        ].find((option) => option.value === field.value) || null
-                      }
-                      onChange={(option) => field.onChange(option ? option.value : "")}
-                    />
+<Select
+  isMulti
+  placeholder="Select Department"
+  options={departmentFilterOptions} // must be [{ value, label }, ...]
+  value={departmentFilterOptions.filter(opt =>
+    field.value?.includes(opt.value)
+  )}
+  onChange={(selectedOptions) =>
+    field.onChange(selectedOptions.map((opt) => opt.value))
+  }
+/>
+
+                    // <Select
+                    //   options={[
+                    //     { value: "Sales", label: "Sales" },
+                    //     { value: "Support", label: "Support" },
+                    //     { value: "HR", label: "HR" },
+                    //     { value: "IT", label: "IT" },
+                    //     { value: "Finance", label: "Finance" },
+                    //   ]}
+                    //   placeholder="Select department"
+                    //   value={
+                    //     [
+                    //       { value: "Sales", label: "Sales" },
+                    //       { value: "Support", label: "Support" },
+                    //       { value: "HR", label: "HR" },
+                    //       { value: "IT", label: "IT" },
+                    //       { value: "Finance", label: "Finance" },
+                    //     ].find((option) => option.value === field.value) || null
+                    //   }
+                    //   onChange={(option) => field.onChange(option ? option.value : "")}
+                    // />
                   )}
                 />
               </FormItem>

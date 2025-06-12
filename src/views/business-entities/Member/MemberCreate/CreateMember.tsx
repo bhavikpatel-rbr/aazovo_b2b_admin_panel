@@ -1696,7 +1696,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     ProductsData = [],
     Employees = [],
   } = useSelector(masterSelector);
-  console.log('managerOptions', Employees)
+
   const { fields, append, remove } = useFieldArray({
     control,
     name: "member_profiles" as "member_profiles",
