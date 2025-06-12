@@ -94,6 +94,7 @@ import {
   editRequestFeedbackAction,
   deleteRequestFeedbackAction,
   deleteAllRequestFeedbacksAction,
+  getEmployeesAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
@@ -1689,30 +1690,32 @@ const NavigatorComponent = (props: {
 const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
   // Assuming these are fetched from Redux. You must implement the respective actions and reducers.
   const {
-    brandsData = [],
-    categoriesData = [],
+    BrandData = [],
+    CategoriesData = [],
     subCategoriesData = [],
+    ProductsData = [],
+    Employees = [],
   } = useSelector(masterSelector);
-
+  console.log('managerOptions', Employees)
   const { fields, append, remove } = useFieldArray({
     control,
     name: "member_profiles" as "member_profiles",
   });
 
   // Mock options if data not available, replace with real data from selectors
-  const productOptions = [
-    { value: "1", label: "Product A (ID:1)" },
-    { value: "2", label: "Product B (ID:2)" },
-  ];
-  const brandOptions = brandsData.map((b: any) => ({
+  const productOptions = ProductsData.map((p: any) => ({
+    value: String(p.id),
+    label: p.name,
+  }));
+  const brandOptions = BrandData.map((b: any) => ({
     value: String(b.id),
     label: b.name,
   }));
-  const categoryOptions = categoriesData.map((c: any) => ({
+  const categoryOptions = CategoriesData.map((c: any) => ({
     value: String(c.id),
     label: c.name,
   }));
-  const subCategoryOptions = subCategoriesData.map((sc: any) => ({
+  const subCategoryOptions = CategoriesData.map((sc: any) => ({
     value: String(sc.id),
     label: sc.name,
   }));
@@ -1727,10 +1730,10 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "B", label: "B" },
     { value: "C", label: "C" },
   ];
-  const managerOptions = [
-    { value: "Manager1", label: "Manager 1" },
-    { value: "Manager2", label: "Manager 2" },
-  ];
+  const managerOptions = Employees.map((m: any) => ({
+    value: String(m.id),
+    label: m.name,
+  }));
   const yesNoOptions = [
     { value: "Yes", label: "Yes" },
     { value: "No", label: "No" },
@@ -2019,11 +2022,11 @@ const PersonalDetailsComponent = ({
   control,
   errors,
 }: FormSectionBaseProps) => {
-  // Assuming `companiesData` is fetched and available in the master slice
+  // Assuming `CompanyData` is fetched and available in the master slice
   const {
     CountriesData = [],
     ContinentsData = [],
-    companiesData = [],
+    CompanyData = [],
   } = useSelector(masterSelector);
 
   const countryOptions = CountriesData.map((country: any) => ({
@@ -2040,7 +2043,7 @@ const PersonalDetailsComponent = ({
     value: String(continent.id),
     label: continent.name,
   }));
-  const companyOptions = companiesData.map((c: any) => ({
+  const companyOptions = CompanyData.map((c: any) => ({
     value: String(c.id),
     label: c.name,
   })); // Assumes structure {id, name}
@@ -2900,7 +2903,8 @@ const MemberCreate = () => {
     dispatch(getCompanyAction());
     dispatch(getBrandAction());
     dispatch(getCategoriesAction());
-    dispatch(getSubcategoriesByIdAction());
+    // dispatch(getSubcategoriesByIdAction());
+    dispatch(getEmployeesAction());
   }, [dispatch]);
 
   useEffect(() => {

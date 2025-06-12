@@ -95,6 +95,7 @@ import {
   getLeadMemberAction,
   getSalesPersonAction,
   getSuppliersAction,
+  getEmployeesAction,
 } from "./middleware";
 import Opportunities from "@/views/sales-Leads/Opportunities";
 
@@ -158,6 +159,7 @@ const INITIAL_STATE: any = {
   leadMember: [],
   salesPerson: [],
   suppliers: [],
+  Employees: [],
 };
 
 const masterSlice = createSlice({
@@ -580,6 +582,10 @@ const masterSlice = createSlice({
     builder.addCase(getSuppliersAction.fulfilled, (state, { payload }) => ({
       ...state,
       suppliers: payload,
+    }));
+    builder.addCase(getEmployeesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      Employees: payload,
     }));
   },
 });
