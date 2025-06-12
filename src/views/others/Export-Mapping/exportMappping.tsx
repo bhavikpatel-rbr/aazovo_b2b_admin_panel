@@ -605,8 +605,8 @@ const ExportMapping = () => {
     // Process data only when the fetch has 'succeeded'. 
     // Checking for 'idle' is incorrect as it's the initial state before fetching.
     if (masterLoadingStatus === "idle") {
-      if (!Array.isArray(apiExportMappings)) {
-        console.error("API Error: exportMappingData is not an array:", apiExportMappings);
+      if (!Array.isArray(apiExportMappings?.data)) {
+        console.error("API Error: exportMappingData is not an array:", apiExportMappings?.data);
         toast.push(
           <Notification title="Data Error" type="danger" duration={5000}>
             Received invalid data format for export mappings.
@@ -615,7 +615,7 @@ const ExportMapping = () => {
         setExportMappings([]);
         return;
       }
-      const transformedData = (apiExportMappings as ApiExportMapping[])
+      const transformedData = (apiExportMappings?.data as ApiExportMapping[])
         .map(transformApiDataToExportMappingItem)
         .filter((item): item is ExportMappingItem => item !== null);
       
@@ -628,7 +628,7 @@ const ExportMapping = () => {
         );
         setExportMappings([]);
     }
-  }, [apiExportMappings, masterLoadingStatus]);
+  }, [apiExportMappings?.data, masterLoadingStatus]);
 
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -671,7 +671,7 @@ const ExportMapping = () => {
       const extensions = new Set(
         activeFilters.fileExtensions.map((ext) => ext.toLowerCase())
       );
-      processedData = processedData.filter((item) => {
+      processedData = processedData.filter((item :any) => {
         const fileExt = item.fileName
           .slice(item.fileName.lastIndexOf("."))
           .toLowerCase();
@@ -704,7 +704,7 @@ const ExportMapping = () => {
           item.userName.toLowerCase().includes(query) ||
           item.userRole.toLowerCase().includes(query) ||
           item.exportFrom.toLowerCase().includes(query) ||
-          item.fileName.toLowerCase().includes(query) ||
+          // item.fileName.toLowerCase().includes(query) ||
           (item.reason && item.reason.toLowerCase().includes(query))
       );
     }
@@ -842,6 +842,9 @@ const ExportMapping = () => {
     []
   );
 
+  
+  
+
   const handleDeleteSelected = useCallback(() => {
     const idsToDelete = new Set(selectedMappings.map((item) => item.id));
     setExportMappings((prev) =>
@@ -966,7 +969,7 @@ const ExportMapping = () => {
               <TbCloudUpload size={24}/>
             </div>
             <div>
-              <h6 className="text-blue-500">879</h6>
+              <h6 className="text-blue-500">{apiExportMappings?.counts?.today}</h6>
               <span className="font-semibold text-xs">Total Exports</span>
             </div>
           </Card>
@@ -975,7 +978,7 @@ const ExportMapping = () => {
               <TbCalendarUp size={24}/>
             </div>
             <div>
-              <h6 className="text-violet-500">879</h6>
+              <h6 className="text-violet-500">{apiExportMappings?.counts?.today}</h6>
               <span className="font-semibold text-xs">Exports Today</span>
             </div>
           </Card>
@@ -984,7 +987,7 @@ const ExportMapping = () => {
               <TbUserUp size={24}/>
             </div>
             <div>
-              <h6 className="text-pink-500">System Admin</h6>
+              <h6 className="text-pink-500">{apiExportMappings?.counts?.top_user}</h6>
               <span className="font-semibold text-xs">Top User</span>
             </div>
           </Card>
@@ -993,7 +996,7 @@ const ExportMapping = () => {
               <TbBookUpload size={24}/>
             </div>
             <div>
-              <h6 className="text-green-500">Company</h6>
+              <h6 className="text-green-500">{apiExportMappings?.counts?.top_module}</h6>
               <span className="font-semibold text-xs">Top Module</span>
             </div>
           </Card>
