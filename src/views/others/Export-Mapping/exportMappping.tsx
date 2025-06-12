@@ -5,11 +5,17 @@ import React, {
   useMemo,
   useCallback,
   Suspense,
-  lazy,
   useEffect,
+  useRef,
 } from "react";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { CSVLink } from "react-csv";
+import classNames from "classnames";
+
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
@@ -19,20 +25,7 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import { IoEyeOutline } from "react-icons/io5";
-import { getExportMappingsAction } from "@/reduxtool/master/middleware";
-// Icons
-import { TbChecks, TbSearch, TbCloudDownload, TbFilter, TbCloudUpload, TbCalendarUp, TbUserUp, TbBookUpload } from "react-icons/tb";
-import userIconPlaceholder from "/img/avatars/thumb-1.jpg";
-// Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-} from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
 import {
   Card,
   Drawer,
@@ -41,14 +34,24 @@ import {
   FormItem,
   Select,
   DatePicker,
+  Input,
 } from "@/components/ui";
-import { Controller, useForm } from "react-hook-form";
+
+// Redux Actions
+import { getExportMappingsAction, submitExportReasonAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 
-// --- Lazy Load CSVLink ---
-const CSVLink = lazy(() =>
-  import("react-csv").then((module) => ({ default: module.CSVLink }))
-);
+// Icons
+import { IoEyeOutline } from "react-icons/io5";
+import { TbSearch, TbCloudDownload, TbFilter, TbCloudUpload, TbCalendarUp, TbUserUp, TbBookUpload, TbReload } from "react-icons/tb";
+import userIconPlaceholder from "/img/avatars/thumb-1.jpg";
+
+// Types
+import type {
+  OnSortParam,
+  ColumnDef,
+} from "@/components/shared/DataTable";
+import type { TableQueries } from "@/@types/common";
 
 
 // --- 1. UPDATED API DATA STRUCTURE TYPES ---
@@ -61,7 +64,7 @@ export type ApiExportMapping = {
   exported_from: string;
   reason: string | null;
   deleted_at: string | null;
-  user: any; 
+  user: any;
   roles: any;
   file_name: string | null;              // This is always null in the new response
 };
@@ -77,6 +80,15 @@ export type ExportMappingItem = {
   reason: string | null;
   exportDate: Date;
 };
+
+// --- Zod Schema for Export Reason Form (New) ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- 2. REVISED TRANSFORMATION FUNCTION ---
 // This function is the core of the fix. It now correctly maps the new API fields.
@@ -220,7 +232,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
 };
 ActionColumn.displayName = "ActionColumn";
 
-// --- ExportMappingTableTools Component (No changes needed) ---
+// --- ExportMappingTableTools Component (Modified) ---
 type ExportMappingFilterSchema = {
   userRole: string[];
   exportFrom: string[];
@@ -232,11 +244,15 @@ const ExportMappingTableTools = ({
   onSearchChange,
   allExportMappings,
   onApplyFilters,
+  onClearFilters, // <-- Added prop
+  onExport,
   isDataReady,
 }: {
   onSearchChange: (query: string) => void;
   allExportMappings: ExportMappingItem[];
   onApplyFilters: (filters: Partial<ExportMappingFilterSchema>) => void;
+  onClearFilters: () => void; // <-- Added prop type
+  onExport: () => void;
   isDataReady: boolean;
 }) => {
 
@@ -264,14 +280,14 @@ const ExportMappingTableTools = ({
     closeFilterDrawer();
   };
 
-  const handleClearFilters = () => {
+  const handleClearInternal = () => {
     reset({
       userRole: [],
       exportFrom: [],
       fileExtensions: [],
       exportDate: null,
     });
-    onApplyFilters({});
+    onApplyFilters({}); // Call parent clear function
   };
 
   const userRoles = useMemo(() => {
@@ -321,24 +337,25 @@ const ExportMappingTableTools = ({
       </div>
       <div className="flex gap-2">
         <Button
+        title="Clear Filters"
+        icon={<TbReload />}
+        onClick={onClearFilters}
+        disabled={!isDataReady}
+        />
+        <Button
           icon={<TbFilter />}
           onClick={openFilterDrawer}
           disabled={!isDataReady}
         >
           Filter
         </Button>
-        <Suspense
-          fallback={
-            <Button loading icon={<TbCloudDownload />} disabled={!isDataReady}>
-              Export
-            </Button>
-          }
+        <Button
+          icon={<TbCloudDownload />}
+          onClick={onExport}
+          disabled={!isDataReady || allExportMappings.length === 0}
         >
-          <ExportMappingExport
-            allMappings={allExportMappings}
-            disabled={!isDataReady || allExportMappings.length === 0}
-          />
-        </Suspense>
+          Export
+        </Button>
       </div>
       <Drawer
         title="Filters"
@@ -353,12 +370,6 @@ const ExportMappingTableTools = ({
               className="mr-2"
               onClick={handleClearFilters}
               type="button"
-              disabled={
-                !isDirty &&
-                Object.values(getValues()).every((val) =>
-                  Array.isArray(val) ? val.length === 0 : val === null
-                )
-              }
             >
               Clear
             </Button>
@@ -445,7 +456,7 @@ const ExportMappingTableTools = ({
               render={({ field }) => (
                 <DatePicker.DatePickerRange
                   placeholder="Select date range"
-                  value={field.value as [Date, Date] | undefined}
+                  value={field.value ?? undefined} // <-- FIX: Removed incorrect type casting
                   onChange={(dateRange) => field.onChange(dateRange)}
                   inputFormat="MM/DD/YYYY"
                 />
@@ -459,142 +470,30 @@ const ExportMappingTableTools = ({
 };
 ExportMappingTableTools.displayName = "ExportMappingTableTools";
 
-// --- ExportMappingExport (CSV Export) Component (No changes needed) ---
-const ExportMappingExport = ({
-  allMappings,
-  disabled,
-}: {
-  allMappings: ExportMappingItem[];
-  disabled?: boolean;
-}) => {
-  const csvData = useMemo(() => {
-    return allMappings.map((item) => ({
-      id: item.id,
-      userName: item.userName,
-      userRole: item.userRole,
-      exportFrom: item.exportFrom,
-      fileName: item.fileName,
-      reason: item.reason || "",
-      exportDate: !isNaN(item.exportDate.getTime())
-        ? item.exportDate.toISOString()
-        : "Invalid Date",
-    }));
-  }, [allMappings]);
 
-  const csvHeaders = [
-    { label: "Record ID", key: "id" },
-    { label: "User Name", key: "userName" },
-    { label: "User Role", key: "userRole" },
-    { label: "Exported From Module", key: "exportFrom" },
-    { label: "File Name", key: "fileName" },
-    { label: "Reason", key: "reason" },
-    { label: "Export Date (UTC)", key: "exportDate" },
-  ];
-
-  if (disabled || allMappings.length === 0) {
-    return (
-      <Button icon={<TbCloudDownload />} disabled>
-        Export
-      </Button>
-    );
-  }
-
-  return (
-    <CSVLink
-      filename={`export_mappings_log_${
-        new Date().toISOString().split("T")[0]
-      }.csv`}
-      data={csvData}
-      headers={csvHeaders}
-      asyncOnClick={true}
-      uFEFF={true}
-    >
-      <Button icon={<TbCloudDownload />}>Export</Button>
-    </CSVLink>
-  );
-};
-ExportMappingExport.displayName = "ExportMappingExport";
-
-// --- ExportMappingSelected (Sticky Footer) Component (No changes needed) ---
-const ExportMappingSelected = ({
-  selectedMappings,
-  onDeleteSelected,
-  disabled,
-}: {
-  selectedMappings: ExportMappingItem[];
-  onDeleteSelected: () => void;
-  disabled?: boolean;
-}) => {
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmationOpen(false);
-  };
-
-  if (selectedMappings.length === 0) return null;
-
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              <span className="heading-text">{selectedMappings.length}</span>
-              <span>
-                Record{selectedMappings.length > 1 ? "s" : ""} selected
-              </span>
-            </span>
-          </span>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={handleDeleteClick}
-              disabled={disabled}
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Delete ${selectedMappings.length} Record${
-          selectedMappings.length > 1 ? "s" : ""
-        }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-      >
-        <p>
-          Are you sure you want to delete the selected item(s)? This action
-          cannot be undone.
-        </p>
-      </ConfirmDialog>
-    </>
-  );
-};
-ExportMappingSelected.displayName = "ExportMappingSelected";
-
-// --- Main ExportMapping Component ---
+// --- Main ExportMapping Component (Heavily Modified) ---
 const ExportMapping = () => {
   const dispatch = useAppDispatch();
+  const csvLinkRef = useRef<any>(null);
 
   const [exportMappings, setExportMappings] = useState<ExportMappingItem[]>([]);
-
   const { apiExportMappings = [], status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
+  
+  // State for the new export modal
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [exportData, setExportData] = useState<{data: any[], filename: string}>({
+      data: [],
+      filename: ''
+  });
+
+  // Form setup for the export reason modal
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   useEffect(() => {
     dispatch(getExportMappingsAction());
@@ -602,8 +501,6 @@ const ExportMapping = () => {
 
   // --- 3. CORRECTED DATA LOADING LOGIC ---
   useEffect(() => {
-    // Process data only when the fetch has 'succeeded'. 
-    // Checking for 'idle' is incorrect as it's the initial state before fetching.
     if (masterLoadingStatus === "idle") {
       if (!Array.isArray(apiExportMappings)) {
         console.error("API Error: exportMappingData is not an array:", apiExportMappings);
@@ -636,14 +533,11 @@ const ExportMapping = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  const [selectedMappings, setSelectedMappings] = useState<ExportMappingItem[]>(
-    []
-  );
+
   const [activeFilters, setActiveFilters] = useState<
     Partial<ExportMappingFilterSchema>
   >({});
     
-  // Let the Redux status drive the loading state for simplicity and accuracy
   const tableLoading = masterLoadingStatus === 'loading';
   const isDataReady = masterLoadingStatus === 'idle';
 
@@ -672,6 +566,7 @@ const ExportMapping = () => {
         activeFilters.fileExtensions.map((ext) => ext.toLowerCase())
       );
       processedData = processedData.filter((item) => {
+        if (!item.fileName) return false;
         const fileExt = item.fileName
           .slice(item.fileName.lastIndexOf("."))
           .toLowerCase();
@@ -704,7 +599,7 @@ const ExportMapping = () => {
           item.userName.toLowerCase().includes(query) ||
           item.userRole.toLowerCase().includes(query) ||
           item.exportFrom.toLowerCase().includes(query) ||
-          item.fileName.toLowerCase().includes(query) ||
+          (item.fileName && item.fileName.toLowerCase().includes(query)) ||
           (item.reason && item.reason.toLowerCase().includes(query))
       );
     }
@@ -771,6 +666,14 @@ const ExportMapping = () => {
     };
   }, [exportMappings, tableData, activeFilters, isDataReady]);
 
+  // Effect to trigger CSV download when exportData is set
+  useEffect(() => {
+    if (exportData.data.length > 0 && exportData.filename && csvLinkRef.current) {
+        csvLinkRef.current.link.click();
+        setExportData({ data: [], filename: '' }); // Reset after click
+    }
+  }, [exportData]);
+
   const handleSetTableData = useCallback(
     (
       data: Partial<TableQueries> | ((prevState: TableQueries) => TableQueries)
@@ -789,7 +692,6 @@ const ExportMapping = () => {
   const handleSelectChange = useCallback(
     (value: number) => {
       handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedMappings([]);
     },
     [handleSetTableData]
   );
@@ -809,55 +711,71 @@ const ExportMapping = () => {
     [handleSetTableData]
   );
 
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: ExportMappingItem) => {
-      setSelectedMappings((prev) => {
-        if (checked)
-          return prev.some((i) => i.id === row.id) ? prev : [...prev, row];
-        return prev.filter((i) => i.id !== row.id);
-      });
-    },
-    []
-  );
-
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentTableRows: Row<ExportMappingItem>[]) => {
-      const currentPageRowOriginals = currentTableRows.map((r) => r.original);
-      const currentPageRowIds = new Set(
-        currentPageRowOriginals.map((r) => r.id)
+  // --- Export Modal Logic (New) ---
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          There is no data to export.
+        </Notification>
       );
-      if (checked) {
-        setSelectedMappings((prev) => {
-          const newItemsToAdd = currentPageRowOriginals.filter(
-            (original) => !prev.some((selected) => selected.id === original.id)
-          );
-          return [...prev, ...newItemsToAdd];
-        });
-      } else {
-        setSelectedMappings((prev) =>
-          prev.filter((item) => !currentPageRowIds.has(item.id))
-        );
-      }
-    },
-    []
-  );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+  
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Export Mapping Log";
+    const timestamp = new Date().toISOString().split("T")[0];
+    const fileName = `export_mappings_log_${timestamp}.csv`;
+  
+    try {
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+  
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      
+      const dataToExport = allFilteredAndSortedData.map((item) => ({
+          id: item.id,
+          userName: item.userName,
+          userRole: item.userRole,
+          exportFrom: item.exportFrom,
+          fileName: item.fileName,
+          reason: item.reason || "",
+          exportDate: !isNaN(item.exportDate.getTime())
+              ? item.exportDate.toISOString()
+              : "Invalid Date",
+      }));
 
-  const handleDeleteSelected = useCallback(() => {
-    const idsToDelete = new Set(selectedMappings.map((item) => item.id));
-    setExportMappings((prev) =>
-      prev.filter((item) => !idsToDelete.has(item.id))
-    );
-    setSelectedMappings([]);
-    toast.push(
-      <Notification
-        title={`${idsToDelete.size} Record(s) Marked for Deletion`}
-        type="success"
-        duration={2500}
-      >
-        This is a UI-only delete for now.
-      </Notification>
-    );
-  }, [selectedMappings]);
+      setExportData({ data: dataToExport, filename: fileName });
+      setIsExportReasonModalOpen(false);
+
+    } catch (error: any) {
+      toast.push(
+        <Notification title="Failed to Submit Reason" type="danger" message={error.message} />
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
+  
+  const csvHeaders = useMemo(() => [
+    { label: "Record ID", key: "id" },
+    { label: "User Name", key: "userName" },
+    { label: "User Role", key: "userRole" },
+    { label: "Exported From Module", key: "exportFrom" },
+    { label: "File Name", key: "fileName" },
+    { label: "Reason", key: "reason" },
+    { label: "Export Date (UTC)", key: "exportDate" },
+  ], []);
+
 
   const columns: ColumnDef<ExportMappingItem>[] = useMemo(
     () => [
@@ -901,7 +819,7 @@ const ExportMapping = () => {
               </span>
               <Tooltip title={fileName} placement="top">
                 <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] block">
-                  {fileName}
+                  {fileName || "N/A"}
                 </span>
               </Tooltip>
             </div>
@@ -955,6 +873,7 @@ const ExportMapping = () => {
   );
 
   return (
+    <>
     <Container className="h-auto">
       <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
         <div className="lg:flex items-center justify-between mb-4">
@@ -1003,6 +922,7 @@ const ExportMapping = () => {
             onSearchChange={handleSearchChange}
             allExportMappings={exportMappings}
             onApplyFilters={handleApplyFilters}
+            onExport={handleOpenExportReasonModal} // <-- Pass handler to tools
             isDataReady={isDataReady}
           />
         </div>
@@ -1017,30 +937,71 @@ const ExportMapping = () => {
               pageIndex: tableData.pageIndex as number,
               pageSize: tableData.pageSize as number,
             }}
-            selectable
-            checkboxChecked={(row) =>
-              selectedMappings.some((selected) => selected.id === row.id)
-            }
             onPaginationChange={handlePaginationChange}
             onSelectChange={handleSelectChange}
             onSort={handleSort}
-            onCheckBoxChange={handleRowSelect}
-            onIndeterminateCheckBoxChange={handleAllRowSelect}
           />
         </div>
       </AdaptiveCard>
 
-      <ExportMappingSelected
-        selectedMappings={selectedMappings}
-        onDeleteSelected={handleDeleteSelected}
-        disabled={tableLoading}
-      />
+        {/* Hidden CSVLink for programmatic download */}
+        <CSVLink
+            ref={csvLinkRef}
+            data={exportData.data}
+            headers={csvHeaders}
+            filename={exportData.filename}
+            className="hidden"
+            uFEFF={true}
+        />
     </Container>
+
+    {/* Export Reason Modal */}
+    <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+            handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{
+            disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason,
+        }}
+    >
+        <Form
+            id="exportReasonForm"
+            onSubmit={(e) => {
+                e.preventDefault();
+                exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)();
+            }}
+            className="flex flex-col gap-4 mt-2"
+        >
+            <FormItem
+                label="Please provide a reason for exporting this data:"
+                invalid={!!exportReasonFormMethods.formState.errors.reason}
+                errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+            >
+                <Controller
+                    name="reason"
+                    control={exportReasonFormMethods.control}
+                    render={({ field }) => (
+                        <Input textArea
+                            {...field}
+                            placeholder="Enter reason..."
+                            rows={3}
+                        />
+                    )}
+                />
+            </FormItem>
+        </Form>
+    </ConfirmDialog>
+    </>
   );
 };
 
 export default ExportMapping;
-
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}
