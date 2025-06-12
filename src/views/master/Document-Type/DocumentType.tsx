@@ -665,7 +665,7 @@ const Documentmaster = () => {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" },
+       
         size: 160,
         cell: (props) => {
           const { updated_at, updated_by_user, updated_by_role } =
