@@ -723,16 +723,33 @@ const ActivityLog = () => {
       },
       {
         header: "User",
-        size: 160,
+        accessorKey: 'user', // It's good practice to add an accessor
         enableSorting: true,
+        size: 160,
         cell: (props) => {
-          const { userName, userId } = props.row.original;
+          // Get the entire row's data
+          const rowData = props.row.original;
+          
+          // Safely access the nested user object. Fallback to an empty object if it doesn't exist.
+          const user = rowData.user || {};
+
+          // Extract user details with fallbacks
+          const userName = user.name || "Unknown";
+          const userId = user.id || rowData.user_id || "System"; // Fallback to top-level user_id if needed
+          const avatarSrc = user.profile_pic_path;
+
           return (
             <div className="flex items-center gap-2">
-              <Avatar size={28} shape="circle" icon={<TbUserCircle />} />
+              {/* The Avatar component can now display the user's image or a fallback icon */}
+              <Avatar 
+                size={28} 
+                shape="circle" 
+                src={avatarSrc} 
+                icon={<TbUserCircle />} 
+              />
               <div className="text-xs leading-tight">
-                <b>{userName || "Unknown"}</b>
-                <p className="text-gray-500">{userId || "System"}</p>
+                <b>{userName}</b>
+                <p className="text-gray-500">ID: {userId}</p>
               </div>
             </div>
           );
