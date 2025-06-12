@@ -4,7 +4,7 @@ import type { Routes } from '@/@types/routes'
 
 const othersRoute: Routes = [
     {
-        key: 'exportMapping',
+        key: 'others.exportMapping',
         path: `/export-mapping`,
         component: lazy(() => import('@/views/others/Export-Mapping')),
         authority: [ADMIN, USER],
