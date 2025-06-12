@@ -349,7 +349,10 @@ const ExportMappingTableTools = ({
         <Button
         title="Clear Filters"
         icon={<TbReload />}
-        onClick={onClearFilters}
+        onClick={() => {
+         onClearFilters();
+          handleClearFilters();
+        }}
         disabled={!isDataReady}
         />
         <Button
@@ -722,6 +725,10 @@ const ExportMapping = () => {
     [handleSetTableData]
   );
 
+  const onClearFilters = () => {
+      // onApplyFilters({})
+      dispatch(getExportMappingsAction());
+    };
   // --- Export Modal Logic (New) ---
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -751,6 +758,7 @@ const ExportMapping = () => {
         })
       ).unwrap();
   
+
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
       
       const dataToExport = allFilteredAndSortedData.map((item) => ({
@@ -767,7 +775,7 @@ const ExportMapping = () => {
 
       setExportData({ data: dataToExport, filename: fileName });
       setIsExportReasonModalOpen(false);
-
+     dispatch(getExportMappingsAction())
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Submit Reason" type="danger" message={error.message} />
@@ -858,15 +866,17 @@ const ExportMapping = () => {
         cell: (props) => {
           const date = props.row.original.exportDate;
           return (
+           
             <span>
               {!isNaN(date.getTime())
-                ? date.toLocaleString([], {
-                    year: "numeric",
-                    month: "numeric",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                ? date.toLocaleString("en-US", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
                 : "Invalid Date"}
             </span>
           );
@@ -933,6 +943,7 @@ const ExportMapping = () => {
             onSearchChange={handleSearchChange}
             allExportMappings={exportMappings}
             onApplyFilters={handleApplyFilters}
+             onClearFilters={onClearFilters}
             onExport={handleOpenExportReasonModal} // <-- Pass handler to tools
             isDataReady={isDataReady}
           />

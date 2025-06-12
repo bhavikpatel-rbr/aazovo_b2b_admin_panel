@@ -903,7 +903,7 @@ const Documentmaster = () => {
                       ? new Date(editingDocumentType.created_at).toLocaleString("en-US", {
                           day: "2-digit",
                           month: "long",
-                          year: "numeric",
+                          year: "2-digit",
                           hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
@@ -917,7 +917,7 @@ const Documentmaster = () => {
                       ? new Date(editingDocumentType.updated_at).toLocaleString("en-US", {
                           day: "2-digit",
                           month: "long",
-                          year: "numeric",
+                          year: "2-digit",
                           hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
