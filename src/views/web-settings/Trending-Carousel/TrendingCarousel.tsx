@@ -16,7 +16,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Avatar from "@/components/ui/Avatar";
-import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Added Tag
+import { Dialog, Drawer, Form, FormItem, Input, Select, Tag } from "@/components/ui"; // Added Tag
 
 // Icons
 import {
@@ -29,6 +29,7 @@ import {
   TbPhoto,
   TbReload,
   TbUser,
+  TbFileText,
 } from "react-icons/tb";
 
 // Redux
@@ -93,9 +94,19 @@ const trendingCarouselFormSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal("")),
+    status: z.enum(["Active", "Inactive"], {
+        required_error: "Status is required.",
+      }), // Added status
 });
+type SelectOption = {
+  value: string | number;
+  label: string;
+};
 type TrendingCarouselFormData = z.infer<typeof trendingCarouselFormSchema>;
-
+const statusOptions: SelectOption[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
   reason: z
@@ -301,7 +312,12 @@ const TrendingCarousel = () => {
   });
   const [selectedItems, setSelectedItems] = useState<TrendingCarouselItemData[]>([]);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-
+ const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [imageToView, setImageToView] = useState<string | null>(null);
+   const closeImageViewer = () => {
+    setIsImageViewerOpen(false);
+    setImageToView(null);
+  };
   // --- Export Reason Modal State ---
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
@@ -309,7 +325,7 @@ const TrendingCarousel = () => {
 
   const formMethods = useForm<TrendingCarouselFormData>({
     resolver: zodResolver(trendingCarouselFormSchema),
-    defaultValues: { links: "", imageFile: null },
+    defaultValues: { links: "", imageFile: null  ,status:'Active'},
     mode: "onChange",
   });
 
@@ -351,7 +367,7 @@ const TrendingCarousel = () => {
   const openEditDrawer = useCallback(
     (item: TrendingCarouselItemData) => {
       setEditingItem(item);
-      formMethods.reset({ links: item.links || "", imageFile: null });
+      formMethods.reset({ links: item.links || "", imageFile: null  , status:item.status});
       setImagePreviewUrl(null);
       setIsEditDrawerOpen(true);
     },
@@ -367,6 +383,8 @@ const TrendingCarousel = () => {
   }, [formMethods, imagePreviewUrl]);
 
   const onAddItemSubmit = async (data: TrendingCarouselFormData) => {
+    console.log("data",data);
+    
     if (!data.imageFile) {
       formMethods.setError("imageFile", { type: "manual", message: "Image is required for new items." });
       return;
@@ -374,6 +392,7 @@ const TrendingCarousel = () => {
     setIsSubmitting(true);
     const formData = new FormData();
     formData.append("links", data.links || "");
+    formData.append("status", data.status || "");
     if (data.imageFile) formData.append("images", data.imageFile);
 
     try {
@@ -395,6 +414,7 @@ const TrendingCarousel = () => {
     const formData = new FormData();
     formData.append("_method", "PUT");
     formData.append("links", data.links || "");
+    formData.append("status", data.status || "");
     if (data.imageFile) formData.append("images", data.imageFile);
 
     try {
@@ -509,11 +529,13 @@ const TrendingCarousel = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Trending Carousel Images";
+     const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `trending_carousel_items_${timestamp}.csv`;
     try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })).unwrap();
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName ,file_name:fileName  })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
       
-      exportCarouselItemsToCsv("trending_carousel_items.csv", allFilteredAndSortedData);
+      exportCarouselItemsToCsv(fileName, allFilteredAndSortedData);
       toast.push(<Notification title="Data Exported" type="success">Carousel data has been exported.</Notification>);
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
@@ -528,15 +550,25 @@ const TrendingCarousel = () => {
   const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
   const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
-  const handleClearSearch = useCallback(() => handleSetTableData({ query: '', pageIndex: 1 }), [handleSetTableData]);
 
-
+const handleClearSearch = () => {
+   
+    handleSetTableData({ pageIndex: 1 });
+    dispatch(getTrendingCarouselAction());
+  };
   const handleRowSelect = useCallback((checked: boolean, row: TrendingCarouselItemData) => {
     setSelectedItems((prev) => {
       if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row];
       return prev.filter((item) => item.id !== row.id);
     });
   }, []);
+
+   const openImageViewer = (src: string | null) => {
+    if (src) {
+      setImageToView(src);
+      setIsImageViewerOpen(true);
+    }
+  };
 
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<TrendingCarouselItemData>[]) => {
     const originals = currentRows.map((r) => r.original);
@@ -555,14 +587,43 @@ const TrendingCarousel = () => {
   const columns: ColumnDef<TrendingCarouselItemData>[] = useMemo(
     () => [
       // { header: "ID", accessorKey: "id", enableSorting: true, size: 80, meta: { tdClass: "text-center", thClass: "text-center" }  },
+      // {
+      //   header: "Image",
+      //   accessorKey: "images_full_path",
+      //   enableSorting: false,
+      //   size: 80,
+      //   meta: { cellClass: "p-1" },
+      //   cell: (props) => (<Avatar size={60} className="rounded-sm"  src={props.row.original.images_full_path || undefined} icon={<TbPhoto />} />),
+      // },
       {
-        header: "Image",
-        accessorKey: "images_full_path",
-        enableSorting: false,
-        size: 80,
-        meta: { cellClass: "p-1" },
-        cell: (props) => (<Avatar size={60} className="rounded-sm"  src={props.row.original.images_full_path || undefined} icon={<TbPhoto />} />),
-      },
+              header: "Image",
+              accessorKey: "images_full_path",
+              enableSorting: false,
+              size: 60,
+              meta: { headerClass: "text-center", cellClass: "text-center" },
+              cell: (props) => {
+                const iconPath = props.row.original.images_full_path;
+                const titleInitial = props.row.original.title
+                  ?.charAt(0)
+                  .toUpperCase();
+                return (
+                  <Avatar
+                    size={40}
+                    shape="circle"
+                    src={iconPath || undefined}
+                    icon={!iconPath ? <TbFileText /> : undefined}
+                    onClick={() => openImageViewer(iconPath)}
+                    className={
+                      iconPath
+                        ? "cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                        : ""
+                    }
+                  >
+                    {!iconPath ? titleInitial : null}
+                  </Avatar>
+                );
+              },
+            },
       {
         header: "Link",
         accessorKey: "links",
@@ -572,25 +633,30 @@ const TrendingCarousel = () => {
             <a href={props.row.original.links} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate block max-w-[230px]" title={props.row.original.links}> {props.row.original.links} </a>
           ) : ( <span className="text-gray-500">No Link</span> ),
       },
-      { header: "Status",  accessorKey: "status", meta: { HeaderClass: "text-red-500" }, enableSorting: true, size: 80,
-              cell: (props) => (<Tag className={`bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0`}>{'Active'}</Tag>),
+      { header: "Status",  accessorKey: "status",  enableSorting: true, size: 80,
+              cell: (props) => (<Tag className={props.row.original.status == 'Active' ? `bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0` : `bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500`}>{props.row.original.status}</Tag>),
       },
       {
         header: "Updated Info",
         accessorKey: "updated_at", // Sort by updated_at
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" }, // Optional styling
+        
         size: 160,
         cell: (props) => {
-            const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+            const { updated_at, updated_by_user, updated_by_role } = props.row.original;
             const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
             : "N/A";
             return (
                 <div className="text-xs">
                     <span>
-                    {updated_by_name || "N/A"}
-                    {updated_by_role && (<><br /><b>{updated_by_role}</b></>)}
+                    {updated_by_user?.name || "N/A"}
+                    {updated_by_user?.roles[0]?.display_name && (
+                  <>
+                    <br />
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
+                  </>
+                )}  
                     </span>
                     <br />
                     <span>{formattedDate}</span>
@@ -624,10 +690,15 @@ const TrendingCarousel = () => {
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={masterLoadingStatus === "loading" || isSubmitting || isDeleting}> Add New </Button>
             </div>
           </div>
-          <ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchPlaceholder="Quick Search..." onClearSearch={handleClearSearch} />
+          <ItemTableTools 
+          onSearchChange={handleSearchChange} 
+          onExport={handleOpenExportReasonModal} 
+          searchPlaceholder="Quick Search..." 
+          onClearSearch={handleClearSearch} />
           <div className="mt-4">
             <DataTable
               columns={columns}
+              noData={pageData.length === 0}
               data={pageData}
               loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting}
               pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
@@ -675,6 +746,38 @@ const TrendingCarousel = () => {
           <FormItem label={<div>Link<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.links} errorMessage={formMethods.formState.errors.links?.message}>
             <Controller name="links" control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/product-page" />)} />
           </FormItem>
+             <FormItem // Added Status Field
+                        label={
+                          <div>
+                            Status<span className="text-red-500"> * </span>
+                          </div>
+                        }
+                        invalid={!!formMethods.formState.errors.status}
+                        errorMessage={
+                          formMethods.formState.errors.status?.message as
+                            | string
+                            | undefined
+                        }
+                      >
+                        <Controller
+                          name="status"
+                          control={formMethods.control}
+                          render={({ field }) => (
+                            <Select
+                              placeholder="Select Status"
+                              options={statusOptions}
+                              value={
+                                statusOptions.find(
+                                  (option) => option.value === field.value
+                                ) || null
+                              }
+                              onChange={(option) =>
+                                field.onChange(option ? option.value : "")
+                              }
+                            />
+                          )}
+                        />
+                      </FormItem>
         </Form>
       </Drawer>
 
@@ -714,32 +817,92 @@ const TrendingCarousel = () => {
           <FormItem label={<div>Link<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.links} errorMessage={formMethods.formState.errors.links?.message}>
             <Controller name="links" control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/updated-product-page" />)} />
           </FormItem>
-        
+         <FormItem // Added Status Field
+                      label={
+                        <div>
+                          Status<span className="text-red-500"> * </span>
+                        </div>
+                      }
+                      invalid={!!formMethods.formState.errors.status}
+                      errorMessage={
+                        formMethods.formState.errors.status?.message as
+                          | string
+                          | undefined
+                      }
+                    >
+                      <Controller
+                        name="status"
+                        control={formMethods.control}
+                        render={({ field }) => (
+                          <Select
+                            placeholder="Select Status"
+                            options={statusOptions}
+                            value={
+                              statusOptions.find(
+                                (option) => option.value === field.value
+                              ) || null
+                            }
+                            onChange={(option) =>
+                              field.onChange(option ? option.value : "")
+                            }
+                          />
+                        )}
+                      />
+                    </FormItem>
           {editingItem && (
             <div className="absolute bottom-0 w-full"> {/* Positioned audit info */}
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
                         <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                        <p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p>
-                        <p>{editingItem.updated_by_role || "N/A"}</p>
+                        <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
+                        <p>{editingItem.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
                     </div>
                     <div>
                         <br />
                         <span className="font-semibold">Created At:</span>{" "}
-                        <span>
-                            {editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}
-                        </span>
-                        <br />
-                        <span className="font-semibold">Updated At:</span>{" "}
-                        <span>
-                            {editingItem.updated_at ? new Date(editingItem.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}
-                        </span>
+<span>
+  {editingItem.created_at
+    ? `${new Date(editingItem.created_at).getDate()} ${new Date(
+        editingItem.created_at
+      ).toLocaleString("en-US", {
+        month: "short",
+      })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
+        editingItem.created_at
+      ).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })}`
+    : "N/A"}
+</span>
+<br />
+<span className="font-semibold">Updated At:</span>{" "}
+<span>
+  {editingItem.updated_at
+    ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
+        editingItem.updated_at
+      ).toLocaleString("en-US", {
+        month: "short",
+      })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
+        editingItem.updated_at
+      ).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })}`
+    : "N/A"}
+</span>
                     </div>
                 </div>
             </div>
           )}
         </Form>
       </Drawer>
+
+
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
+              <div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Slider Image Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}</div>
+            </Dialog>
 
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Carousel Item"
         onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
