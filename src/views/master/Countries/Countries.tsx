@@ -102,11 +102,11 @@ const countryFormSchema = z.object({
   iso: z
     .string()
     .min(1, "ISO code is required.")
-    .max(10, "ISO code cannot exceed 10 characters."),
+    .max(3, "ISO code max 3 characters."),
   phonecode: z
     .string()
     .min(1, "Phone code is required.")
-    .max(10, "Phone code cannot exceed 10 characters."),
+    .max(5, "Phone code max 10 characters."),
   status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }), // Added status
 });
 type CountryFormData = z.infer<typeof countryFormSchema>;
