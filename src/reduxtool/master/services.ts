@@ -734,7 +734,7 @@ export const editPriceListAsync = async (unitData: any) => {
   console.log("unitData", unitData);
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/price_list/${unitData?.id}`, { _method: "PUT", product_id: parseInt(unitData?.product_id), price: parseFloat(unitData?.price), usd_rate: parseFloat(unitData?.usd_rate), expance: parseFloat(unitData?.expance), margin: parseFloat(unitData?.margin), id: unitData?.id })
+    const response = await axiosInstance.post(`${config.apiURL}/other/price_list/${unitData?.id}`, { _method: "PUT", product_id: parseInt(unitData?.product_id), price: parseFloat(unitData?.price), usd_rate: parseFloat(unitData?.usd_rate), expance: parseFloat(unitData?.expance), margin: parseFloat(unitData?.margin), id: unitData?.id, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)

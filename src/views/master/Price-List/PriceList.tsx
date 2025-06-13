@@ -104,7 +104,7 @@ export type PriceListItem = {
   nlc: string;
   margin: string;
   sales_price: string;
-  status: "active" | "inactive"; // Made status non-optional
+  status: "Active" | "Inactive"; // Made status non-optional
   created_at?: string;
   updated_at?: string;
   updated_by_name?: string;
@@ -116,8 +116,8 @@ export type PriceListItem = {
 
 // --- Status Options ---
 const statusOptions: SelectOption[] = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
 ];
 
 // --- Zod Schema for SIMPLIFIED Add/Edit PriceList Form ---
@@ -142,7 +142,7 @@ const priceListFormSchema = z.object({
     .string()
     .min(1, "Margin is required.")
     .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid number"),
-  status: z.enum(["active", "inactive"], {
+  status: z.enum(["Active", "Inactive"], {
     required_error: "Status is required.",
   }), // Added status
 });
@@ -546,9 +546,11 @@ const PriceList = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isTodayExportReasonModalOpen, setIsTodayExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
-
+ const [isTodaySubmittingExportReason, setIsTodaySubmittingExportReason] =
+    useState(false);
   const [filterCriteria, setFilterCriteria] = useState<PriceListFilterFormData>(
     { filterProductIds: [], filterStatus: [] }
   );
@@ -565,7 +567,7 @@ const PriceList = () => {
       usd_rate: "",
       expance: "",
       margin: "",
-      status: "active",
+      status: "Active",
     }),
     [productSelectOptions]
   );
@@ -633,13 +635,15 @@ const PriceList = () => {
 
   const openEditDrawer = (item: PriceListItem) => {
     setEditingPriceListItem(item);
+    console.log("item",item);
+    
     editFormMethods.reset({
       product_id: String(item.product_id),
       price: item.price,
       usd_rate: item.usd_rate,
       expance: item.expance,
       margin: item.margin,
-      status: item.status || "active",
+      status: item.status || "Active",
     });
     setIsEditDrawerOpen(true);
   };
@@ -701,6 +705,7 @@ const PriceList = () => {
     filterFormMethods.reset(df);
     setFilterCriteria(df);
     handleSetTableData({ pageIndex: 1 });
+    dispatch(getPriceListAction())
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -714,7 +719,7 @@ const PriceList = () => {
     const sourceData: PriceListItem[] = Array.isArray(priceListData?.data)
       ? priceListData?.data.map((item) => ({
           ...item,
-          status: item.status || "inactive",
+          status: item.status || "Inactive",
         }))
       : [];
 
@@ -730,7 +735,7 @@ const PriceList = () => {
     }
     if (filterCriteria.filterStatus?.length) {
       const statuses = filterCriteria.filterStatus.map(
-        (opt) => opt.value as "active" | "inactive"
+        (opt) => opt.value as "Active" | "Inactive"
       );
       processedData = processedData.filter((item) =>
         statuses.includes(item.status)
@@ -820,19 +825,43 @@ const PriceList = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Price List";
+    const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `prizeList_export_${timestamp}.csv`;
     try {
       await dispatch(submitExportReasonAction({
         reason: data.reason,
         module: moduleName,
+         file_name: fileName,
       })).unwrap();
     } catch (error: any) {
       setIsSubmittingExportReason(false);
       return;
     }
 
-    exportPriceListToCsv("pricelist_export.csv", allFilteredAndSortedData);
+    exportPriceListToCsv(fileName, allFilteredAndSortedData);
     setIsSubmittingExportReason(false);
     setIsExportReasonModalOpen(false);
+  };
+
+   const handleTodayConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsTodaySubmittingExportReason(true);
+    const moduleName = "Price List";
+    const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `todayPrizeList_export_${timestamp}.csv`;
+    try {
+      await dispatch(submitExportReasonAction({
+        reason: data.reason,
+        module: moduleName,
+         file_name: fileName,
+      })).unwrap();
+    } catch (error: any) {
+      setIsTodaySubmittingExportReason(false);
+      return;
+    }
+
+    exportPriceListToCsv(fileName, todayPriceListData);
+    setIsTodaySubmittingExportReason(false);
+    setIsTodayExportReasonModalOpen(false);
   };
 
 
@@ -961,9 +990,9 @@ const PriceList = () => {
                 "capitalize font-semibold whitespace-nowrap",
                 {
                   "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500":
-                    status === "active",
+                    status === "Active",
                   "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500":
-                    status === "inactive",
+                    status === "Inactive",
                 }
               )}
             >
@@ -1137,7 +1166,11 @@ const PriceList = () => {
   };
 
   const handleExcelDownload = () => {
-    exportToExcel("todays-prices.xlsx", todayPriceListData);
+
+    setIsTodayPriceDrawerOpen(false)
+     exportReasonFormMethods.reset({ reason: "" });
+    setIsTodayExportReasonModalOpen(true)
+    // exportToExcel("todays-prices.xlsx", todayPriceListData);
   };
 
   return (
@@ -1152,12 +1185,12 @@ const PriceList = () => {
                   className="mr-2"
                   icon={<TbUser />}
                   clickFeedback={false}
-                  customColorClass={({ active, unclickable }) =>
+                  customColorClass={({ Active, unclickable }) =>
                     classNames(
                       "hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0",
-                      active ? "bg-gray-200" : "bg-gray-100",
+                      Active ? "bg-gray-200" : "bg-gray-100",
                       unclickable && "opacity-50 cursor-not-allowed",
-                      !active && !unclickable && "hover:bg-gray-200"
+                      !Active && !unclickable && "hover:bg-gray-200"
                     )
                   }
                 >
@@ -1169,12 +1202,12 @@ const PriceList = () => {
                 icon={<TbEyeDollar />}
                 onClick={openTodayPriceDrawer} // <-- Added this
                 clickFeedback={false}
-                customColorClass={({ active, unclickable }) =>
+                customColorClass={({ Active, unclickable }) =>
                   classNames(
                     "hover:text-green-800 dark:hover:bg-green-600 border-0 hover:ring-0",
-                    active ? "bg-green-200" : "bg-green-100",
+                    Active ? "bg-green-200" : "bg-green-100",
                     unclickable && "opacity-50 cursor-not-allowed",
-                    !active && !unclickable && "hover:bg-green-200"
+                    !Active && !unclickable && "hover:bg-green-200"
                   )
                 }
               >
@@ -1228,7 +1261,7 @@ const PriceList = () => {
               </div>
               <div>
                 <h6 className="text-green-500">{priceListData?.counts?.active}</h6>
-                <span className="font-semibold text-xs">Acitve</span>
+                <span className="font-semibold text-xs">Active</span>
               </div>
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
@@ -1353,49 +1386,63 @@ const PriceList = () => {
             </div>}
           </Form>
           {drawerProps.isEdit && editingPriceListItem && (
-            <div className="w-full">
-              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+               <div className="absolute bottom-[14%] w-[92%]">
+              {/*
+    - Replace 'grid-cols-2' with an arbitrary value for grid-template-columns.
+    - 'grid-cols-[2fr_3fr]' means the first column gets 2 fractional units,
+      and the second column gets 3 fractional units of the available space.
+    - Removed the style={{flex:1}} from the grid container as it's not standard for grid.
+  */}
+              <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">
                     Latest Update:
                   </b>
                   <br />
                   <p className="text-sm font-semibold">
-                    {editingPriceListItem.updated_by_name || "N/A"}
+                    {editingPriceListItem.updated_by_user?.name || "N/A"}
                   </p>
-                  <p>{editingPriceListItem.updated_by_role || "N/A"}</p>
+                  <p>
+                    {editingPriceListItem.updated_by_user?.roles[0]?.display_name ||
+                      "N/A"}
+                  </p>
                 </div>
+                {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
                 <div>
-                  <br />
+                  <br />{" "}
+                  {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingPriceListItem.created_at
-                      ? new Date(
-                          editingPriceListItem.created_at
-                        ).toLocaleString("en-US", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
+                      ? new Date(editingPriceListItem.created_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "long",
+                            year: "2-digit",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingPriceListItem.updated_at
-                      ? new Date(
-                          editingPriceListItem.updated_at
-                        ).toLocaleString("en-US", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
+                      ? new Date(editingPriceListItem.updated_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "long",
+                            year: "2-digit",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
                       : "N/A"}
                   </span>
                 </div>
@@ -1523,6 +1570,66 @@ const PriceList = () => {
         </Form>
       </ConfirmDialog>
 
+
+      <ConfirmDialog
+        isOpen={isTodayExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        className={'w-full'}
+        onClose={() => setIsTodayExportReasonModalOpen(false)}
+        onRequestClose={() => setIsTodayExportReasonModalOpen(false)}
+        onCancel={() => setIsTodayExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleTodayConfirmExportWithReason
+        )}
+        loading={isTodayExportReasonModalOpen}
+        confirmText={
+          isTodaySubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        disableConfirm={
+          !exportReasonFormMethods.formState.isValid || isTodaySubmittingExportReason
+        } // Corrected: use disableConfirm
+        confirmButtonProps={{
+          // Alternative for older ConfirmDialog versions, ensure only one method is used
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isTodaySubmittingExportReason,
+        }}
+      >
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
+
       <Drawer
         title="Today's Price List"
         isOpen={isTodayPriceDrawerOpen}
@@ -1599,8 +1706,8 @@ const PriceList = () => {
                                 <Table.Td>
                                     <Tag
                                         className={classNames('capitalize', {
-                                            "bg-emerald-100 text-emerald-600": item.status === "active",
-                                            "bg-red-100 text-red-600": item.status === "inactive",
+                                            "bg-emerald-100 text-emerald-600": item.status === "Active",
+                                            "bg-red-100 text-red-600": item.status === "Inactive",
                                         })}
                                     >
                                         {item.status}
