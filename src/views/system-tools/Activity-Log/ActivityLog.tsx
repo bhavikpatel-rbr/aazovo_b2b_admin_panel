@@ -35,11 +35,9 @@ import {
   TbActivity,
   TbCalendarWeek,
   TbLogin,
-  TbCloudNetwork,
-  TbCloudExclamation,
   TbCloudPin,
+  TbCloudExclamation,
   TbCloudCog,
-  TbTrashX,
   TbCancel,
 } from "react-icons/tb";
 
@@ -48,15 +46,14 @@ import type { OnSortParam, ColumnDef } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store"; // Assuming this path
+import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
-// conceptual:
 import { getActivityLogAction } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming this path and selector
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Define Item Type & Constants ---
 type ChangeType =
-  | "CREATE"
+  | "Add"
   | "UPDATE"
   | "DELETE"
   | "LOGIN"
@@ -72,6 +69,7 @@ const CHANGE_TYPE_OPTIONS = [
   { value: "SYSTEM", label: "System" },
   { value: "OTHER", label: "Other" },
 ];
+
 const changeTypeValues = CHANGE_TYPE_OPTIONS.map((ct) => ct.value) as [
   ChangeType,
   ...ChangeType[]
@@ -100,21 +98,18 @@ const entityValues = ENTITY_TYPE_OPTIONS.map((et) => et.value) as [
   entity,
   ...entity[]
 ];
-// Type for the nested user object
+
 export type User = {
   id: number;
   name: string;
   email: string;
   profile_pic_path: string | null;
-  // ... other user fields can be added here if needed
 };
-
-
 
 export type ChangeLogItem = {
   id: string | number;
   timestamp: string;
-  userName: string;
+  userName: string; // Fallback if user object is null
   userId: string | null;
   action: ChangeType;
   entity: entity;
@@ -122,21 +117,20 @@ export type ChangeLogItem = {
   description: string;
   details?: string;
   updated_at?: string;
-  updated_by_name?: string;
+  updated_by_user?: string;
   updated_by_role?: string;
-  user: User | null; // The nested user object, can be null
+  user: User | null;
 };
 
-const changeTypeColor: Record<ChangeType, string> = {
-  CREATE:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
-  UPDATE: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100",
-  DELETE: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
-  LOGIN: "bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-100",
-  LOGOUT: "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100",
-  SYSTEM:
+const changeTypeColor: any = {
+  Add: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Update: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100",
+  Delete: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
+  Login: "bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-100",
+  Logout: "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100",
+  System:
     "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-100",
-  OTHER: "bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-100",
+  Other: "bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-100",
 };
 
 const changeLogFormSchema = z.object({
@@ -174,7 +168,6 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- MOCK Redux Action for Submit Export Reason (replace with your actual action) ---
 const submitExportReasonAction = (payload: {
   reason: string;
   module: string;
@@ -189,6 +182,7 @@ const CSV_HEADERS_LOG = [
   "Timestamp",
   "User Name",
   "User ID",
+  "User Email",
   "Action Type",
   "Entity Type",
   "Entity ID",
@@ -198,22 +192,29 @@ const CSV_HEADERS_LOG = [
   "Updated By Name",
   "Updated By Role",
 ];
-type ChangeLogExportItem = Omit<ChangeLogItem, "timestamp" | "updated_at"> & {
+type ChangeLogExportItem = Omit<
+  ChangeLogItem,
+  "timestamp" | "updated_at" | "user"
+> & {
   timestamp_formatted?: string;
   updated_at_formatted?: string;
+  user_name_export: string;
+  user_id_export: string | number;
+  user_email_export: string;
 };
 const CSV_KEYS_LOG_EXPORT: (keyof ChangeLogExportItem)[] = [
   "id",
   "timestamp_formatted",
-  "userName",
-  "userId",
+  "user_name_export",
+  "user_id_export",
+  "user_email_export",
   "action",
   "entity",
   "entityId",
   "description",
   "details",
   "updated_at_formatted",
-  "updated_by_name",
+  "updated_by_user",
   "updated_by_role",
 ];
 
@@ -230,8 +231,12 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
     updated_at_formatted: row.updated_at
       ? new Date(row.updated_at).toLocaleString()
       : "N/A",
-    updated_by_name: row.updated_by_name || "N/A",
+    updated_by_user: row.updated_by_user || "N/A",
     updated_by_role: row.updated_by_role || "N/A",
+    // Add flattened user details for export
+    user_name_export: row.user?.name || row.userName || "N/A",
+    user_id_export: row.user?.id || row.userId || "N/A",
+    user_email_export: row.user?.email || "N/A",
   }));
   const separator = ",";
   const csvContent =
@@ -248,6 +253,7 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
         }).join(separator)
       )
       .join("\n");
+
   const blob = new Blob(["\ufeff" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
@@ -273,10 +279,10 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
 
 const ActionColumn = ({
   onViewDetail,
-  onEdit,
+  onBlock,
 }: {
   onViewDetail: () => void;
-  onEdit?: () => void;
+  onBlock: () => void;
 }) => (
   <div className="flex items-center justify-center gap-1">
     <Tooltip title="View">
@@ -288,22 +294,15 @@ const ActionColumn = ({
         <TbEye />
       </button>
     </Tooltip>
-    {onEdit && (
-      <Tooltip title="Edit (Admin)">
-        <button
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
-          role="button"
-          onClick={onEdit}
-        >
-          <TbPencil />
-        </button>
-      </Tooltip>
-    )}
     <Tooltip title="Block Activity">
-        <button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}>
-          <TbCancel />
-        </button>
-      </Tooltip>
+      <button
+        className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
+        role="button"
+        onClick={onBlock}
+      >
+        <TbCancel />
+      </button>
+    </Tooltip>
   </div>
 );
 
@@ -334,29 +333,25 @@ const ChangeLogsTableTools = ({
 }) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
-      {" "}
-      <ChangeLogsSearch onInputChange={onSearchChange} />{" "}
+      <ChangeLogsSearch onInputChange={onSearchChange} />
     </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters">
-        {" "}
-        <Button icon={<TbReload />} onClick={onClearFilters} />{" "}
+      <Tooltip title="Clear All Filters & Search">
+        <Button icon={<TbReload />} onClick={onClearFilters} />
       </Tooltip>
       <Button
         icon={<TbFilter />}
         className="w-full sm:w-auto"
         onClick={onFilter}
       >
-        {" "}
-        Filter{" "}
+        Filter
       </Button>
       <Button
         icon={<TbCloudUpload />}
         onClick={onExport}
         className="w-full sm:w-auto"
       >
-        {" "}
-        Export{" "}
+        Export
       </Button>
     </div>
   </div>
@@ -394,23 +389,36 @@ const ChangeLogsTable = ({
 // --- Main ActivityLog Component ---
 const ActivityLog = () => {
   const dispatch = useAppDispatch();
-  // Ensure your masterSelector and Redux state provide these:
-  const {
-    activityLogsData   = [], // Default to empty array
-    activityLogsTotal = 0, // Default to 0
-    status: masterLoadingStatus = "idle",
-  } = useSelector(masterSelector, shallowEqual);
+  const { activityLogsData, status: masterLoadingStatus = "idle" } =
+    useSelector(masterSelector, shallowEqual);
 
-  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<ChangeLogItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [viewingItem, setViewingItem] = useState<ChangeLogItem | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [blockItem, setBlockItem] = useState<ChangeLogItem | null>(null);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
+  const [blockConfirmationOpen, setBlockConfirmationOpen] = useState(false);
+  const handleCanceBlock = () => setBlockConfirmationOpen(false);
+  const [isBlock, setIsBlock] = useState(false); // Commented out
+  const handleConfirmBlock = () => {
+    handleBlockSelected();
+    setBlockConfirmationOpen(false);
+  };
 
+  const handleBlockSelected = async () => {
+    setBlockConfirmationOpen(false);
+    try {
+      // await dispatch(deleteAllCurrencyAction({ ids: idsToDelete.join(',') })).unwrap(); // selectedItems commented
+      // toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{validItemsToDelete.length} currency(ies) successfully processed for deletion.</Notification>); // selectedItems commented
+    } catch (error: any) {
+      // toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{error.message || "Failed to delete selected currencies."}</Notification>);
+    } finally {
+      // setSelectedItems([]); // selectedItems commented
+      // dispatch(getCurrencyAction());
+      // setIsBlock(false);
+    }
+  };
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
     filterFormSchema.parse({})
   );
@@ -421,13 +429,6 @@ const ActivityLog = () => {
     query: "",
   });
 
-  const formMethods = useForm<ChangeLogFormData>({
-    resolver: zodResolver(changeLogFormSchema),
-    defaultValues: {
-      /* default values set in openAddDrawer */
-    },
-    mode: "onChange",
-  });
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
@@ -438,115 +439,51 @@ const ActivityLog = () => {
     mode: "onChange",
   });
 
-  // Fetch data
+  const actionTypeOptions = useMemo(() => {
+    if (!Array.isArray(activityLogsData?.data)) return [];
+    const uniqueNames = new Set(
+      activityLogsData?.data.map((actionType) => actionType.action)
+    );
+    return Array.from(uniqueNames).map((action) => ({
+      value: action,
+      label: action,
+    }));
+  }, [activityLogsData]);
+
+  const entityTypeOptions = useMemo(() => {
+    if (!Array.isArray(activityLogsData?.data)) return [];
+    const uniqueNames = new Set(
+      activityLogsData?.data.map((entityType) => entityType.entity)
+    );
+    return Array.from(uniqueNames).map((entity) => ({
+      value: entity,
+      label: entity,
+    }));
+  }, [activityLogsData]);
+  // console.log(activityLogsData)
+  // Fetch all data on component mount
   useEffect(() => {
-    const paramsToSubmit = {
-      ...tableData,
-      // Convert filterCriteria to params format expected by API
-      filteraction: filterCriteria.filteraction?.map((f) => f.value),
-      filterentity: filterCriteria.filterentity?.map((f) => f.value),
-      filterUserName: filterCriteria.filterUserName,
-      filterDateStart: filterCriteria.filterDateRange?.[0]?.toISOString(),
-      filterDateEnd: filterCriteria.filterDateRange?.[1]?.toISOString(),
-    };
+    // Dispatch action to fetch all activity logs.
+    // The empty params object signifies we want the full dataset for client-side processing.
     // @ts-ignore // conceptual action
-    dispatch(getActivityLogAction({ params: paramsToSubmit }));
-  }, [dispatch, tableData, filterCriteria]);
-
-  const openAddDrawer = useCallback(() => {
-    formMethods.reset({
-      timestamp: new Date().toISOString().substring(0, 16),
-      userName: "System",
-      userId: null,
-      action: "OTHER",
-      entity: "Other",
-      entityId: null,
-      description: "",
-      details: "",
-    });
-    setIsAddDrawerOpen(true);
-  }, [formMethods]);
-  const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
-
-  const openEditDrawer = useCallback(
-    (item: ChangeLogItem) => {
-      setEditingItem(item);
-      formMethods.reset({
-        ...item,
-        timestamp: item.timestamp.substring(0, 16),
-      });
-      setIsEditDrawerOpen(true);
-    },
-    [formMethods]
-  );
-  const closeEditDrawer = useCallback(() => {
-    setIsEditDrawerOpen(false);
-    setEditingItem(null);
-  }, []);
-
-  const onSubmitLog = useCallback(
-    async (data: ChangeLogFormData) => {
-      setIsSubmitting(true);
-      const payload = {
-        ...data,
-        timestamp: new Date(data.timestamp).toISOString(),
-      };
-      try {
-        if (editingItem) {
-          // conceptual: await dispatch(editChangeLogAction({ id: editingItem.id, data: payload })).unwrap();
-          console.log("Simulating edit log:", {
-            ...payload,
-            id: editingItem.id,
-          });
-          await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API
-          // Manually update local Redux store for demo if not using real backend + thunk
-          // This part would be handled by the thunk and reducer in a real app
-          const updatedItem: ChangeLogItem = {
-            ...editingItem,
-            ...payload,
-            updated_at: new Date().toISOString(),
-            updated_by_name: "Admin Editor",
-            updated_by_role: "Administrator",
-          };
-          // dispatch(updateActivityLogEntryInStore(updatedItem)); // conceptual local update
-          toast.push(<Notification title="Log Entry Updated" type="success" />);
-          closeEditDrawer();
-        } else {
-          // conceptual: await dispatch(addChangeLogAction(payload)).unwrap();
-          console.log("Simulating add log:", payload);
-          await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API
-          // dispatch(addActivityLogEntryToStore(newItem)); // conceptual local update
-          toast.push(<Notification title="Log Entry Added" type="success" />);
-          closeAddDrawer();
-        }
-        // Refetch list after add/edit
-        const paramsToSubmit = { ...tableData /* ... filter params ... */ };
-        // @ts-ignore // conceptual action
-        dispatch(getActivityLogAction({ params: paramsToSubmit }));
-      } catch (e: any) {
-        toast.push(
-          <Notification title="Operation Failed" type="danger">
-            {e.message || "Error"}
-          </Notification>
-        );
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [
-      dispatch,
-      editingItem,
-      closeAddDrawer,
-      closeEditDrawer,
-      tableData,
-      filterCriteria,
-    ]
-  ); // Added dependencies
+    dispatch(getActivityLogAction({ params: {} }));
+  }, [dispatch]);
 
   const openViewDialog = useCallback(
     (item: ChangeLogItem) => setViewingItem(item),
     []
   );
+
+  const openBlockDialog = useCallback(
+    (item: ChangeLogItem) => {
+      setBlockItem(item);
+
+      setBlockConfirmationOpen(true);
+    },
+
+    []
+  );
+  console.log("blockItem", blockItem);
   const closeViewDialog = useCallback(() => setViewingItem(null), []);
 
   const openFilterDrawer = useCallback(() => {
@@ -556,9 +493,8 @@ const ActivityLog = () => {
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
     setFilterCriteria(data);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 })); // Reset to page 1 on filter change
+    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     setIsFilterDrawerOpen(false);
-    // useEffect will trigger data fetch
   }, []);
 
   const onClearFilters = useCallback(() => {
@@ -566,12 +502,10 @@ const ActivityLog = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
-    // useEffect will trigger data fetch
   }, [filterFormMethods]);
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
-    // useEffect will trigger data fetch
   }, []);
 
   const handlePaginationChange = useCallback(
@@ -592,56 +526,108 @@ const ActivityLog = () => {
     [handleSetTableData]
   );
 
-  // Data for table display: directly use Redux state if server paginates
-  // If server sends all filtered data and client paginates/sorts, useMemo is more complex
-  const pageData = useMemo(() => {
-    // If activityLogsData?.data is already paginated and sorted by server, just return it.
-    // Otherwise, you might need client-side sorting/pagination here based on tableData.
-    // For this example, assuming activityLogsData?.data is the correctly paginated/sorted set from server.
-    return Array.isArray(activityLogsData?.data) ? activityLogsData?.data : [];
-  }, [activityLogsData?.data]);
+  // *** CENTRAL DATA PROCESSING LOGIC ***
+  const { pageData, total, allFilteredAndSortedDataForExport } = useMemo(() => {
+    const sourceData: ChangeLogItem[] = Array.isArray(activityLogsData?.data)
+      ? activityLogsData.data
+      : [];
+    let processedData: ChangeLogItem[] = cloneDeep(sourceData);
 
-  // For export, we might need all data, not just current page.
-  // This part needs careful consideration with server-side pagination.
-  // Option 1: Fetch all data for export (can be slow for large datasets).
-  // Option 2: Export only current view (less useful).
-  // Option 3: Server-side export generation.
-  // For now, this will use whatever is in `activityLogsData?.data`, which might just be one page.
-  const allFilteredAndSortedDataForExport = useMemo(() => {
-    // If activityLogsData?.data contains ALL filtered items (not just one page), this is fine.
-    // If it's just one page, export will be limited.
-    // A real solution might involve a separate fetch for all export data.
-    let dataToExport = cloneDeep(
-      Array.isArray(activityLogsData?.data) ? activityLogsData?.data : []
-    );
-
-    // If you need to re-apply sorting for export (if `activityLogsData?.data` is not sorted as per `tableData.sort`)
-    const { order, key } = tableData.sort as OnSortParam;
-    if (order && key) {
-      dataToExport.sort((a, b) => {
-        if (key === "timestamp" || key === "updated_at") {
-          const dateA = a[key as "timestamp" | "updated_at"]
-            ? new Date(a[key as "timestamp" | "updated_at"]!).getTime()
-            : 0;
-          const dateB = b[key as "timestamp" | "updated_at"]
-            ? new Date(b[key as "timestamp" | "updated_at"]!).getTime()
-            : 0;
-          if (dateA === 0 && dateB === 0) return 0;
-          if (dateA === 0) return order === "asc" ? 1 : -1;
-          if (dateB === 0) return order === "asc" ? -1 : 1;
-          return order === "asc" ? dateA - dateB : dateB - dateA;
-        }
-        const aVal = a[key as keyof ChangeLogItem];
-        const bVal = b[key as keyof ChangeLogItem];
-        const aStr = String(aVal ?? "").toLowerCase();
-        const bStr = String(bVal ?? "").toLowerCase();
-        return order === "asc"
-          ? aStr.localeCompare(bStr)
-          : bStr.localeCompare(aStr);
+    // 1. Apply Filters
+    if (filterCriteria.filteraction?.length) {
+      const actions = filterCriteria.filteraction.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        actions.includes(item.action)
+      );
+    }
+    if (filterCriteria.filterentity?.length) {
+      const entities = filterCriteria.filterentity.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        entities.includes(item.entity)
+      );
+    }
+    if (filterCriteria.filterUserName) {
+      const nameQuery = filterCriteria.filterUserName.toLowerCase();
+      processedData = processedData.filter((item) =>
+        (item.user?.name || item.userName || "")
+          .toLowerCase()
+          .includes(nameQuery)
+      );
+    }
+    if (
+      filterCriteria.filterDateRange &&
+      (filterCriteria.filterDateRange[0] || filterCriteria.filterDateRange[1])
+    ) {
+      const [startDate, endDate] = filterCriteria.filterDateRange;
+      const start = startDate
+        ? new Date(startDate.setHours(0, 0, 0, 0)).getTime()
+        : null;
+      const end = endDate
+        ? new Date(endDate.setHours(23, 59, 59, 999)).getTime()
+        : null;
+      processedData = processedData.filter((item) => {
+        const itemTime = new Date(item.timestamp).getTime();
+        if (start && end) return itemTime >= start && itemTime <= end;
+        if (start) return itemTime >= start;
+        if (end) return itemTime <= end;
+        return true;
       });
     }
-    return dataToExport;
-  }, [activityLogsData?.data, tableData.sort]);
+
+    // 2. Apply Search Query
+    if (tableData.query) {
+      const query = tableData.query.toLowerCase().trim();
+      processedData = processedData.filter(
+        (item) =>
+          String(item.id).toLowerCase().includes(query) ||
+          (item.user?.name || item.userName || "")
+            .toLowerCase()
+            .includes(query) ||
+          (item.action || "").toLowerCase().includes(query) ||
+          (item.entity || "").toLowerCase().includes(query) ||
+          (item.entityId || "").toLowerCase().includes(query) ||
+          (item.description || "").toLowerCase().includes(query)
+      );
+    }
+
+    // 3. Apply Sorting
+    const { order, key } = tableData.sort as OnSortParam;
+    if (order && key) {
+      processedData.sort((a, b) => {
+        let aVal: any, bVal: any;
+        if (key === "user") {
+          aVal = a.user?.name || a.userName || "";
+          bVal = b.user?.name || b.userName || "";
+        } else if (key === "timestamp" || key === "updated_at") {
+          const dateA = a[key] ? new Date(a[key]!).getTime() : 0;
+          const dateB = b[key] ? new Date(b[key]!).getTime() : 0;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else {
+          aVal = a[key as keyof ChangeLogItem] ?? "";
+          bVal = b[key as keyof ChangeLogItem] ?? "";
+        }
+        return order === "asc"
+          ? String(aVal).localeCompare(String(bVal))
+          : String(bVal).localeCompare(String(aVal));
+      });
+    }
+
+    // 4. Paginate
+    const currentTotal = processedData.length;
+    const pageIndex = tableData.pageIndex as number;
+    const pageSize = tableData.pageSize as number;
+    const startIndex = (pageIndex - 1) * pageSize;
+    const paginatedData = processedData.slice(
+      startIndex,
+      startIndex + pageSize
+    );
+
+    return {
+      pageData: paginatedData,
+      total: currentTotal,
+      allFilteredAndSortedDataForExport: processedData,
+    };
+  }, [activityLogsData?.data, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = useCallback(() => {
     if (
@@ -667,11 +653,9 @@ const ActivityLog = () => {
         // @ts-ignore // conceptual action
         await dispatch(
           submitExportReasonAction({ reason: data.reason, module: moduleName })
-        ).unwrap(); // If it's a thunk
-        // dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })); // If it's a simple action
-
+        ).unwrap();
         const success = exportChangeLogsToCsv(
-          "change_logs.csv",
+          "activity_logs_export.csv",
           allFilteredAndSortedDataForExport
         );
         if (success) {
@@ -734,29 +718,22 @@ const ActivityLog = () => {
       },
       {
         header: "User",
-        accessorKey: 'user', // It's good practice to add an accessor
+        accessorKey: "user",
         enableSorting: true,
         size: 160,
         cell: (props) => {
-          // Get the entire row's data
           const rowData = props.row.original;
-          
-          // Safely access the nested user object. Fallback to an empty object if it doesn't exist.
           const user = rowData.user || {};
-
-          // Extract user details with fallbacks
-          const userName = user.name || "Unknown";
-          const userId = user.id || rowData.user_id || "System"; // Fallback to top-level user_id if needed
+          const userName = user.name || rowData.userName || "Unknown";
+          const userId = user.id || rowData.userId || "System";
           const avatarSrc = user.profile_pic_path;
-
           return (
             <div className="flex items-center gap-2">
-              {/* The Avatar component can now display the user's image or a fallback icon */}
-              <Avatar 
-                size={28} 
-                shape="circle" 
-                src={avatarSrc} 
-                icon={<TbUserCircle />} 
+              <Avatar
+                size={28}
+                shape="circle"
+                src={avatarSrc}
+                icon={<TbUserCircle />}
               />
               <div className="text-xs leading-tight">
                 <b>{userName}</b>
@@ -768,6 +745,7 @@ const ActivityLog = () => {
       },
       {
         header: "Action",
+        accessorKey: "action",
         size: 110,
         enableSorting: true,
         cell: (props) => {
@@ -787,65 +765,41 @@ const ActivityLog = () => {
       },
       {
         header: "Entity",
+        accessorKey: "entity",
         size: 150,
         enableSorting: true,
-        cell: (props) => {
-          const entity = props.row.original.entity;
-          return (
-            <div className="text-xs leading-tight">
-              <div className="text-gray-500">{entity}</div>
-            </div>
-          );
-        },
+        cell: (props) => (
+          <div className="text-xs leading-tight">
+            <div className="text-gray-500">{props.row.original.entity}</div>
+          </div>
+        ),
       },
       {
         header: "Description",
+        accessorKey: "description",
         enableSorting: false,
-        cell: (props) => {
-          const description = props.row.original.description || "-";
-          return (
-            <div className="text-xs whitespace-pre-wrap break-words max-w-[400px]">
-              {description}
-            </div>
-          );
-        },
+        cell: (props) => (
+          <div className="text-xs whitespace-pre-wrap break-words max-w-[400px]">
+            {props.row.original.description || "-"}
+          </div>
+        ),
       },
-      {
-        header: "Updated Info",
-        accessorKey: "updated_at",
-        enableSorting: true,
-        size: 170,
-        meta: { HeaderClass: "text-red-500" }, // Matched size with Domain module
-        cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } =
-            props.row.original;
-          const formattedDate = updated_at
-            ? `${new Date(updated_at).getDate()} ${new Date(
-                updated_at
-              ).toLocaleString("en-US", { month: "short" })} ${new Date(
-                updated_at
-              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
-                "en-US",
-                { hour: "numeric", minute: "2-digit", hour12: true }
-              )}`
-            : "N/A";
-          return (
-            <div className="text-xs">
-              <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && (
-                  <>
-                    <br />
-                    <b>{updated_by_role}</b>
-                  </>
-                )}
-              </span>
-              <br />
-              <span>{formattedDate}</span>
-            </div>
-          );
-        },
-      },
+      // {
+      //   header: 'Updated Info',
+      //   accessorKey: 'updated_at',
+      //   enableSorting: true,
+      //   size: 170,
+      //   cell: props => {
+      //       const { updated_at, updated_by_user, updated_by_role } = props.row.original;
+      //       const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A';
+      //       return (
+      //         <div className="text-xs">
+      //           <span>{updated_by_user || 'N/A'}{updated_by_role && <><br /><b>{updated_by_role}</b></>}</span><br />
+      //           <span>{formattedDate}</span>
+      //         </div>
+      //       );
+      //   },
+      // },
       {
         header: "Actions",
         id: "action",
@@ -854,6 +808,7 @@ const ActivityLog = () => {
         cell: (props) => (
           <ActionColumn
             onViewDetail={() => openViewDialog(props.row.original)}
+            onBlock={() => openBlockDialog(props.row.original)}
           />
         ),
       },
@@ -861,137 +816,8 @@ const ActivityLog = () => {
     [openViewDialog]
   );
 
-  const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem
-        label="Timestamp"
-        invalid={!!currentFormMethods.formState.errors.timestamp}
-        errorMessage={currentFormMethods.formState.errors.timestamp?.message}
-      >
-        <Controller
-          name="timestamp"
-          control={currentFormMethods.control}
-          render={({ field }) => <Input {...field} type="datetime-local" />}
-        />
-      </FormItem>
-      <FormItem
-        label="User Name"
-        invalid={!!currentFormMethods.formState.errors.userName}
-        errorMessage={currentFormMethods.formState.errors.userName?.message}
-      >
-        <Controller
-          name="userName"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input {...field} placeholder="Username or System" />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="User ID (Optional)"
-        invalid={!!currentFormMethods.formState.errors.userId}
-        errorMessage={currentFormMethods.formState.errors.userId?.message}
-      >
-        <Controller
-          name="userId"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input {...field} value={field.value || ""} placeholder="U001" />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Action Type"
-        invalid={!!currentFormMethods.formState.errors.action}
-        errorMessage={currentFormMethods.formState.errors.action?.message}
-      >
-        <Controller
-          name="action"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              placeholder="Select action"
-              options={CHANGE_TYPE_OPTIONS}
-              value={CHANGE_TYPE_OPTIONS.find((o) => o.value === field.value)}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Entity Type"
-        invalid={!!currentFormMethods.formState.errors.entity}
-        errorMessage={currentFormMethods.formState.errors.entity?.message}
-      >
-        <Controller
-          name="entity"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              placeholder="Select entity type"
-              options={ENTITY_TYPE_OPTIONS}
-              value={ENTITY_TYPE_OPTIONS.find((o) => o.value === field.value)}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Entity ID (Optional)"
-        invalid={!!currentFormMethods.formState.errors.entityId}
-        errorMessage={currentFormMethods.formState.errors.entityId?.message}
-      >
-        <Controller
-          name="entityId"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input {...field} value={field.value || ""} placeholder="PROD005" />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Description"
-        className="md:col-span-2"
-        invalid={!!currentFormMethods.formState.errors.description}
-        errorMessage={currentFormMethods.formState.errors.description?.message}
-      >
-        <Controller
-          name="description"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              textArea
-              {...field}
-              rows={3}
-              placeholder="Summary of the change"
-            />
-          )}
-        />
-      </FormItem>
-      <FormItem
-        label="Details (JSON or Text, Optional)"
-        className="md:col-span-2"
-        invalid={!!currentFormMethods.formState.errors.details}
-        errorMessage={currentFormMethods.formState.errors.details?.message}
-      >
-        <Controller
-          name="details"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              textArea
-              {...field}
-              value={field.value || ""}
-              rows={4}
-              placeholder='e.g., {"oldValue": "X", "newValue": "Y"}'
-            />
-          )}
-        />
-      </FormItem>
-    </div>
-  );
-
-  const tableIsLoading = masterLoadingStatus === "pending" || isSubmitting;
+  const tableIsLoading =
+    masterLoadingStatus === "loading" || masterLoadingStatus === "pending";
 
   return (
     <>
@@ -999,63 +825,89 @@ const ActivityLog = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Activity Log</h5>
-            {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add Log Entry (Admin)</Button> */}
           </div>
-          <div className="grid grid-cols-6 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-blue-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                 <TbActivity size={24} />
               </div>
               <div>
-                <h6 className="text-blue-500">{activityLogsData?.counts?.total}</h6>
+                <h6 className="text-blue-500">
+                  {activityLogsData?.counts?.total ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Total</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-green-300"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
                 <TbCalendarWeek size={24} />
               </div>
               <div>
-                <h6 className="text-green-500">23</h6>
+                <h6 className="text-green-500">
+                  {activityLogsData?.counts?.today ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Today</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-pink-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
                 <TbLogin size={24} />
               </div>
               <div>
-                <h6 className="text-pink-500">34</h6>
+                <h6 className="text-pink-500">
+                  {activityLogsData?.counts?.failed_login ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Failed Login</span>
               </div>
             </Card>
-
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300" >
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-violet-300"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
                 <TbCloudPin size={24} />
               </div>
               <div>
-                <h6 className="text-violet-500">9</h6>
+                <h6 className="text-violet-500">
+                  {activityLogsData?.counts?.unique_ip ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Unique IP</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-orange-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
                 <TbCloudCog size={24} />
               </div>
               <div>
-                <h6 className="text-orange-500">23</h6>
+                <h6 className="text-orange-500">
+                  {activityLogsData?.counts?.distinact_ip ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Distinct IP</span>
               </div>
             </Card>
-
-
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-red-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
                 <TbCloudExclamation size={24} />
               </div>
               <div>
-                <h6 className="text-red-500">3</h6>
+                <h6 className="text-red-500">
+                  {activityLogsData?.counts?.suspicious_ip ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Suspicious IP</span>
               </div>
             </Card>
@@ -1069,10 +921,10 @@ const ActivityLog = () => {
           <div className="mt-4">
             <ChangeLogsTable
               columns={columns}
-              data={pageData} // Use pageData from useMemo (which uses Redux state)
+              data={pageData}
               loading={tableIsLoading}
               pagingData={{
-                total: activityLogsTotal, // Use total from Redux state
+                total: total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
@@ -1102,6 +954,8 @@ const ActivityLog = () => {
                 let value: any = viewingItem[key];
                 if ((key === "timestamp" || key === "updated_at") && value)
                   value = new Date(value).toLocaleString();
+                else if (key === "user" && value)
+                  value = `${(value as User).name} (ID: ${(value as User).id})`;
                 else if (key === "action")
                   value =
                     CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label ||
@@ -1115,23 +969,19 @@ const ActivityLog = () => {
                   value &&
                   typeof value === "string"
                 ) {
-                  let isJson = false;
                   try {
                     const p = JSON.parse(value);
                     if (typeof p === "object" && p !== null) {
-                      value = JSON.stringify(p, null, 2);
-                      isJson = true;
+                      return (
+                        <div key={key} className="flex flex-col">
+                          <span className="font-semibold">{label}:</span>
+                          <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-40 overflow-auto">
+                            {JSON.stringify(p, null, 2) || "-"}
+                          </pre>
+                        </div>
+                      );
                     }
                   } catch {}
-                  if (isJson)
-                    return (
-                      <div key={key} className="flex flex-col">
-                        <span className="font-semibold">{label}:</span>
-                        <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-40 overflow-auto">
-                          {value || "-"}
-                        </pre>
-                      </div>
-                    );
                 }
                 return (
                   <div key={key} className="flex">
@@ -1150,61 +1000,26 @@ const ActivityLog = () => {
           </div>
         )}
         <div className="text-right mt-6">
-          {" "}
           <Button variant="solid" onClick={closeViewDialog}>
             Close
-          </Button>{" "}
+          </Button>
         </div>
       </Dialog>
-
-      <Drawer
-        title={
-          editingItem ? "Edit Log Entry (Admin)" : "Add New Log Entry (Admin)"
-        }
-        isOpen={isAddDrawerOpen || isEditDrawerOpen}
-        onClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        width={700}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={editingItem ? closeEditDrawer : closeAddDrawer}
-              disabled={isSubmitting}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="changeLogForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!formMethods.formState.isValid || isSubmitting}
-            >
-              {" "}
-              {isSubmitting
-                ? editingItem
-                  ? "Saving..."
-                  : "Adding..."
-                : editingItem
-                ? "Save"
-                : "Save"}{" "}
-            </Button>
-          </div>
-        }
+      <ConfirmDialog
+        isOpen={blockConfirmationOpen}
+        type="danger"
+        title={`Block ${blockItem?.entity + "-" + blockItem?.action} Activity!`}
+        onClose={handleCanceBlock}
+        onRequestClose={handleCanceBlock}
+        onCancel={handleCanceBlock}
+        onConfirm={handleConfirmBlock}
+        loading={isBlock}
       >
-        <Form
-          id="changeLogForm"
-          onSubmit={formMethods.handleSubmit(onSubmitLog)}
-          className="flex flex-col gap-4"
-        >
-          {renderDrawerForm(formMethods)}
-        </Form>
-      </Drawer>
-
+        <p>
+          Are you sure you want to block this{" "}
+          {blockItem?.entity + "-" + blockItem?.action} This action.
+        </p>
+      </ConfirmDialog>
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
@@ -1217,7 +1032,10 @@ const ActivityLog = () => {
               <Button
                 size="sm"
                 className="mr-2"
-                onClick={onClearFilters}
+                onClick={() => {
+                  onClearFilters();
+                  setIsFilterDrawerOpen(false);
+                }}
                 type="button"
               >
                 Clear
@@ -1247,7 +1065,7 @@ const ActivityLog = () => {
                 <Select
                   isMulti
                   placeholder="Select Action Type"
-                  options={CHANGE_TYPE_OPTIONS}
+                  options={actionTypeOptions}
                   value={field.value || []}
                   onChange={(opts) => field.onChange(opts || [])}
                 />
@@ -1262,7 +1080,7 @@ const ActivityLog = () => {
                 <Select
                   isMulti
                   placeholder="Select Entity Type"
-                  options={ENTITY_TYPE_OPTIONS}
+                  options={entityTypeOptions}
                   value={field.value || []}
                   onChange={(opts) => field.onChange(opts || [])}
                 />
