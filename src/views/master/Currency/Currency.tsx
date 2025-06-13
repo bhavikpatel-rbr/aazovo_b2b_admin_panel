@@ -1159,28 +1159,34 @@ const Currency = () => {
       <span className="font-semibold">Created At:</span>{" "}
       <span>
         {editingCurrency.created_at
-          ? new Date(editingCurrency.created_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "long",
-              year: "2-digit",
+          ? `${new Date(editingCurrency.created_at).getDate()} ${new Date(
+              editingCurrency.created_at
+            ).toLocaleString("en-US", {
+              month: "short",
+            })} ${new Date(editingCurrency.created_at).getFullYear()}, ${new Date(
+              editingCurrency.created_at
+            ).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
-            })
+            })}`
           : "N/A"}
       </span>
       <br />
       <span className="font-semibold">Updated At:</span>{" "}
       <span>
         {editingCurrency.updated_at
-          ? new Date(editingCurrency.updated_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "long",
-              year: "2-digit",
+          ? `${new Date(editingCurrency.updated_at).getDate()} ${new Date(
+              editingCurrency.updated_at
+            ).toLocaleString("en-US", {
+              month: "short",
+            })} ${new Date(editingCurrency.updated_at).getFullYear()}, ${new Date(
+              editingCurrency.updated_at
+            ).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
-            })
+            })}`
           : "N/A"}
       </span>
     </div>

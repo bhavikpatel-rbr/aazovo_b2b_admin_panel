@@ -1015,30 +1015,37 @@ const Documents = () => {
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingDocument.created_at
-                      ? new Date(editingDocument.created_at).toLocaleString("en-US", {
-                          day: "2-digit",
+                      ? `${new Date(editingDocument.created_at).getDate()} ${new Date(
+                          editingDocument.created_at
+                        ).toLocaleString("en-US", {
                           month: "short",
-                          year: "numeric",
+                        })} ${new Date(editingDocument.created_at).getFullYear()}, ${new Date(
+                          editingDocument.created_at
+                        ).toLocaleTimeString("en-US", {
                           hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
-                        })
+                        })}`
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingDocument.updated_at
-                      ? new Date(editingDocument.updated_at).toLocaleString("en-US", {
-                          day: "2-digit",
+                      ? `${new Date(editingDocument.updated_at).getDate()} ${new Date(
+                          editingDocument.updated_at
+                        ).toLocaleString("en-US", {
                           month: "short",
-                          year: "numeric",
+                        })} ${new Date(editingDocument.updated_at).getFullYear()}, ${new Date(
+                          editingDocument.updated_at
+                        ).toLocaleTimeString("en-US", {
                           hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
-                        })
+                        })}`
                       : "N/A"}
                   </span>
+
                 </div>
               </div>
             </div>
