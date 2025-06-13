@@ -48,7 +48,7 @@ import type { TableQueries } from "@/@types/common";
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
-import { getActivityLogAction } from "@/reduxtool/master/middleware";
+import { getActivityLogAction, submitExportReasonAction } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Define Item Type & Constants ---
@@ -168,13 +168,15 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-const submitExportReasonAction = (payload: {
-  reason: string;
-  module: string;
-}) => {
-  console.log("Dispatching conceptual submitExportReasonAction with:", payload);
-  return { type: "master/submitExportReason/pending" };
-};
+// Corrected conceptual action to match reference
+// const submitExportReasonAction = (payload: {
+//   reason: string;
+//   module: string;
+//   file_name?: string; // Add file_name property
+// }) => {
+//   console.log("Dispatching conceptual submitExportReasonAction with:", payload);
+//   return { type: "master/submitExportReason/pending" };
+// };
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS_LOG = [
@@ -219,9 +221,16 @@ const CSV_KEYS_LOG_EXPORT: (keyof ChangeLogExportItem)[] = [
 ];
 
 function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
-  if (!rows || !rows.length) return false;
-  const preparedRows: ChangeLogExportItem[] = rows.map((row) => ({
-    ...row,
+  if (!rows || !rows.length) {
+    toast.push(
+      <Notification title="No Data" type="info">
+        Nothing to export.
+      </Notification>
+    );
+    return false;
+  }
+
+  const transformedRows: ChangeLogExportItem[] = rows.map((row) => ({
     timestamp_formatted: row.timestamp
       ? new Date(row.timestamp).toLocaleString()
       : "N/A",
@@ -233,22 +242,27 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
       : "N/A",
     updated_by_user: row.updated_by_user || "N/A",
     updated_by_role: row.updated_by_role || "N/A",
-    // Add flattened user details for export
     user_name_export: row.user?.name || row.userName || "N/A",
     user_id_export: row.user?.id || row.userId || "N/A",
     user_email_export: row.user?.email || "N/A",
   }));
+
   const separator = ",";
   const csvContent =
     CSV_HEADERS_LOG.join(separator) +
     "\n" +
-    preparedRows
+    transformedRows
       .map((row) =>
         CSV_KEYS_LOG_EXPORT.map((k) => {
-          let cell: any = row[k as keyof ChangeLogExportItem];
-          if (cell === null || cell === undefined) cell = "";
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+          let cell = row[k as keyof ChangeLogExportItem];
+          if (cell === null || cell === undefined) {
+            cell = "";
+          } else {
+            cell = String(cell).replace(/"/g, '""');
+          }
+          if (String(cell).search(/("|,|\n)/g) >= 0) {
+            cell = `"${cell}"`;
+          }
           return cell;
         }).join(separator)
       )
@@ -257,6 +271,7 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
   const blob = new Blob(["\ufeff" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
+
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -269,6 +284,7 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
     URL.revokeObjectURL(url);
     return true;
   }
+
   toast.push(
     <Notification title="Export Failed" type="danger">
       Browser does not support this feature.
@@ -276,6 +292,7 @@ function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
   );
   return false;
 }
+
 
 const ActionColumn = ({
   onViewDetail,
@@ -460,11 +477,8 @@ const ActivityLog = () => {
       label: entity,
     }));
   }, [activityLogsData]);
-  // console.log(activityLogsData)
-  // Fetch all data on component mount
+
   useEffect(() => {
-    // Dispatch action to fetch all activity logs.
-    // The empty params object signifies we want the full dataset for client-side processing.
     // @ts-ignore // conceptual action
     dispatch(getActivityLogAction({ params: {} }));
   }, [dispatch]);
@@ -477,13 +491,10 @@ const ActivityLog = () => {
   const openBlockDialog = useCallback(
     (item: ChangeLogItem) => {
       setBlockItem(item);
-
       setBlockConfirmationOpen(true);
     },
-
     []
   );
-  console.log("blockItem", blockItem);
   const closeViewDialog = useCallback(() => setViewingItem(null), []);
 
   const openFilterDrawer = useCallback(() => {
@@ -645,19 +656,33 @@ const ActivityLog = () => {
     setIsExportReasonModalOpen(true);
   }, [allFilteredAndSortedDataForExport, exportReasonFormMethods]);
 
-  const handleConfirmExportWithReason = useCallback(
+  // --- CORRECTED EXPORT HANDLER ---
+  const handleConfirmExportWithReason =
     async (data: ExportReasonFormData) => {
       setIsSubmittingExportReason(true);
       const moduleName = "Activity Log";
+
+      // 1. Generate dynamic filename
+      const timestamp = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+      const fileName = `activity_logs_export_${timestamp}.csv`;
+
       try {
+        // 2. Dispatch action with the filename
         // @ts-ignore // conceptual action
         await dispatch(
-          submitExportReasonAction({ reason: data.reason, module: moduleName })
+          submitExportReasonAction({
+            reason: data.reason,
+            module: moduleName,
+            file_name: fileName, // <-- Pass filename to action
+          })
         ).unwrap();
+
+        // 3. Call export utility with the same dynamic filename
         const success = exportChangeLogsToCsv(
-          "activity_logs_export.csv",
+          fileName,
           allFilteredAndSortedDataForExport
         );
+        
         if (success) {
           toast.push(
             <Notification
@@ -681,9 +706,7 @@ const ActivityLog = () => {
       } finally {
         setIsSubmittingExportReason(false);
       }
-    },
-    [dispatch, allFilteredAndSortedDataForExport]
-  );
+    };
 
   const columns: ColumnDef<ChangeLogItem>[] = useMemo(
     () => [
@@ -784,22 +807,6 @@ const ActivityLog = () => {
           </div>
         ),
       },
-      // {
-      //   header: 'Updated Info',
-      //   accessorKey: 'updated_at',
-      //   enableSorting: true,
-      //   size: 170,
-      //   cell: props => {
-      //       const { updated_at, updated_by_user, updated_by_role } = props.row.original;
-      //       const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A';
-      //       return (
-      //         <div className="text-xs">
-      //           <span>{updated_by_user || 'N/A'}{updated_by_role && <><br /><b>{updated_by_role}</b></>}</span><br />
-      //           <span>{formattedDate}</span>
-      //         </div>
-      //       );
-      //   },
-      // },
       {
         header: "Actions",
         id: "action",
@@ -813,7 +820,7 @@ const ActivityLog = () => {
         ),
       },
     ],
-    [openViewDialog]
+    [openViewDialog, openBlockDialog]
   );
 
   const tableIsLoading =
