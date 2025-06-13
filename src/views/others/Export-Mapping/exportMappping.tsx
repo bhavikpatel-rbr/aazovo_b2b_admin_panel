@@ -864,24 +864,23 @@ const ExportMapping = () => {
         enableSorting: true,
         size: 220,
         cell: (props) => {
-          const date = props.row.original.exportDate;
+          const date = new Date(props.row.original.exportDate);
           return (
-           
             <span className="text-sm">
               {!isNaN(date.getTime())
-                ? date.toLocaleString("en-US", {
-                          day: "2-digit",
-                          month: "long",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
+                ? `${date.getDate()} ${date.toLocaleString("en-US", {
+                    month: "short",
+                  })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}`
                 : "Invalid Date"}
             </span>
           );
         },
       },
+
       {
         header: "Action",
         id: "action",
