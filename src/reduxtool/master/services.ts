@@ -1219,6 +1219,7 @@ export const editDomainsAsync = async (unitData: any) => {
       current_customer_code: unitData?.current_customer_code,
       non_kyc_customer_code_starting: unitData?.non_kyc_customer_code_starting,
       non_kyc_current_customer_code: unitData?.non_kyc_current_customer_code,
+      status: unitData?.status
     })
     return response
   } catch (err) {

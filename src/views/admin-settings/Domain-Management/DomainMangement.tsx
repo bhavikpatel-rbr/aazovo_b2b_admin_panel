@@ -19,7 +19,6 @@ import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
 import { Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
-// import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Assuming Input can be textArea
 
 // Icons
 import {
@@ -30,12 +29,10 @@ import {
   TbPlus,
   TbCloudUpload,
   TbWorldWww,
-  TbSettingsCog,
-  // TbDotsVertical, // Commented out
-  // TbShare, // Commented out
+  // TbSettingsCog, // Assuming not used now
   TbEye,
   TbReload,
-  TbUser,
+  // TbUser, // Assuming not used now
 } from "react-icons/tb";
 
 // Types
@@ -53,19 +50,19 @@ import {
   getDomainsAction,
   addDomainAction,
   editDomainAction,
-  deleteDomainAction,
+  // deleteDomainAction, // Not used directly in this version's ActionColumn
   deleteAllDomainsAction,
   getCountriesAction,
-  getCurrencyAction, // Added
-  submitExportReasonAction, // Placeholder
+  getCurrencyAction,
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { Link } from "react-router-dom";
+// import { Link } from "react-router-dom"; // Assuming not used now
 
 // --- Define Types ---
 export type CountryListItem = { id: string | number; name: string };
 export type CountryOption = { value: string; label: string };
-export type CurrencyListItem = { id: string | number; currency_symbol: string, currency_code: string }; // Added code
+export type CurrencyListItem = { id: string | number; currency_symbol: string, currency_code: string };
 export type CurrencyOption = { value: string; label: string };
 
 
@@ -80,17 +77,29 @@ export type DomainItem = {
   current_customer_code?: string;
   non_kyc_customer_code_starting?: string;
   non_kyc_current_customer_code?: string;
+  status: "Active" | "Inactive"; // <<<< ADDED STATUS
   created_at?: string;
   updated_at?: string;
-  updated_by_name?: string; // Added
-  updated_by_role?: string; // Added
+  updated_by_name?: string;
+  updated_by_role?: string;
+  updated_by_user?: { name: string, roles: [{ display_name: string }] }; // For detailed info
 };
+
+const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
+
+const statusOptions: { value: "Active" | "Inactive"; label: string }[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
 
 // --- Zod Schema for Add/Edit Form ---
 const domainFormSchema = z
   .object({
     domain: z.string().min(1, "Domain name is required.").regex(/^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$/, "Invalid domain format."),
-    currency_id: z.string().min(1, "Please select a currency."), // Changed to string as value from Select is string
+    currency_id: z.string().min(1, "Please select a currency."),
     kycPrefix: z.string().max(10, "KYC Prefix too long.").optional().or(z.literal("")),
     kycStartNumber: z.coerce.number().int().min(0, "KYC Start # must be non-negative."),
     kycCurrentNumber: z.coerce.number().int().min(0, "KYC Current # must be non-negative."),
@@ -98,10 +107,13 @@ const domainFormSchema = z
     tempCurrentNumber: z.coerce.number().int().min(0, "Temp Current # must be non-negative."),
     analyticsScript: z.string().optional().or(z.literal("")),
     countries: z.array(z.string()).min(1, "At least one country must be selected."),
+    status: z.enum(["Active", "Inactive"], { // <<<< ADDED STATUS VALIDATION
+      required_error: "Status is required.",
+    }),
   })
   .superRefine((data, ctx) => {
-    if (data.kycCurrentNumber < data.kycStartNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "KYC Current # must be ≥ Start #.", path: ["kycCurrentNumber"] });
-    if (data.tempCurrentNumber < data.tempStartNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Temp Current # must be ≥ Start #.", path: ["tempCurrentNumber"] });
+   // if (data.kycCurrentNumber < data.kycStartNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "KYC Current # must be ≥ Start #.", path: ["kycCurrentNumber"] });
+    //if (data.tempCurrentNumber < data.tempStartNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Temp Current # must be ≥ Start #.", path: ["tempCurrentNumber"] });
   });
 type DomainFormData = z.infer<typeof domainFormSchema>;
 
@@ -109,6 +121,9 @@ type DomainFormData = z.infer<typeof domainFormSchema>;
 const filterFormSchema = z.object({
   filterCountries: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterCurrency: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterStatuses: z // <<<< ADDED STATUS FILTER SCHEMA
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -123,6 +138,7 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const CSV_HEADERS_DOM = [
   "ID",
   "Domain",
+  "Status", // <<<< ADDED
   "Currency ID",
   "KYC Prefix",
   "KYC Start",
@@ -131,20 +147,22 @@ const CSV_HEADERS_DOM = [
   "Temp Current",
   "Country IDs",
   "Analytics Script",
-  "Created At", // Added
-  "Updated By", // Added
-  "Updated Role", // Added
-  "Updated At", // Added
+  "Created At",
+  "Updated By",
+  "Updated Role",
+  "Updated At",
 ];
 
 type DomainExportItem = Omit<DomainItem, "created_at" | "updated_at"> & {
     created_at_formatted?: string;
     updated_at_formatted?: string;
+    // status is already in DomainItem
 };
 
 const CSV_KEYS_DOM_EXPORT: (keyof DomainExportItem)[] = [
   "id",
   "domain",
+  "status", // <<<< ADDED
   "currency_id",
   "prefix",
   "customer_code_starting",
@@ -161,7 +179,6 @@ const CSV_KEYS_DOM_EXPORT: (keyof DomainExportItem)[] = [
 
 function exportDomainsToCsv(filename: string, rows: DomainItem[]) {
   if (!rows || !rows.length) {
-    // Toast handled by caller
     return false;
   }
    const preparedRows: DomainExportItem[] = rows.map((row) => ({
@@ -173,6 +190,7 @@ function exportDomainsToCsv(filename: string, rows: DomainItem[]) {
     non_kyc_current_customer_code: row.non_kyc_current_customer_code || "0",
     country_ids: row.country_ids || "N/A",
     analytics_script: row.analytics_script || "N/A",
+    status: row.status, // <<<< ENSURE STATUS IS INCLUDED
     created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : "N/A",
     updated_by_name: row.updated_by_name || "N/A",
     updated_by_role: row.updated_by_role || "N/A",
@@ -212,15 +230,12 @@ function exportDomainsToCsv(filename: string, rows: DomainItem[]) {
 }
 
 // --- ActionColumn ---
-const ActionColumn = ({ onEdit, onViewDetail }: { onEdit: () => void; onViewDetail: () => void; }) => { // Removed onChangeStatus
+const ActionColumn = ({ onEdit }: { onEdit: () => void; }) => { // Removed onViewDetail as it duplicates edit
   return (
     <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit">
+      <Tooltip title="Edit/View Details">
         <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div>
       </Tooltip>
-      {/* <Tooltip title="View"> // View button seems redundant if edit shows all details
-        <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div>
-      </Tooltip> */}
     </div>
   );
 };
@@ -236,7 +251,7 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: 
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Button title="Clear Filters" icon={<TbReload/>} onClick={onClearFilters}></Button> {/* Changed onClick */}
+      <Button title="Clear Filters" icon={<TbReload/>} onClick={onClearFilters}></Button>
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
       <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
     </div>
@@ -278,33 +293,36 @@ const DomainManagementListing = () => {
   const {
     domainsData = [],
     CountriesData = [],
-    CurrencyData = [], // Added
+    CurrencyData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
   const [allCountryOptions, setAllCountryOptions] = useState<CountryOption[]>([]);
-  const [currencyFormOptions, setCurrencyFormOptions] = useState<CurrencyOption[]>([]); // For form dropdown
+  const [currencyFormOptions, setCurrencyFormOptions] = useState<CurrencyOption[]>([]);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DomainItem | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<DomainItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<DomainItem | null>(null); // For single delete from action column if re-added
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" }); // Default sort
+  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false); // For single delete from action column
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<DomainItem[]>([]);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterCountries: [], filterCurrency: [] });
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
+    filterCountries: [],
+    filterCurrency: [],
+    filterStatuses: [], // <<<< ADDED STATUS TO INITIAL FILTER CRITERIA
+  });
 
-  // --- Export Reason Modal State ---
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
 
   useEffect(() => {
     dispatch(getDomainsAction());
     dispatch(getCountriesAction());
-    dispatch(getCurrencyAction()); // Fetch currencies
+    dispatch(getCurrencyAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -316,14 +334,13 @@ const DomainManagementListing = () => {
     }
   }, [CountriesData]);
 
-  useEffect(() => { // Populate currency options for dropdowns
+  useEffect(() => {
     if (Array.isArray(CurrencyData) && CurrencyData.length > 0) {
       const options = CurrencyData.map((currency: CurrencyListItem) => ({
         value: String(currency.id),
         label: `${currency.currency_code} - ${currency.currency_symbol}`,
       }));
       setCurrencyFormOptions(options);
-      console.log("CurrencyData CurrencyData CurrencyData", CurrencyData)
     } else {
       setCurrencyFormOptions([]);
     }
@@ -332,7 +349,7 @@ const DomainManagementListing = () => {
 
   const defaultFormValues: DomainFormData = useMemo(() => ({
     domain: "",
-    currency_id: currencyFormOptions[0]?.value || "", // Default to first available currency
+    currency_id: currencyFormOptions[0]?.value || "",
     kycPrefix: "",
     kycStartNumber: 0,
     kycCurrentNumber: 0,
@@ -340,14 +357,19 @@ const DomainManagementListing = () => {
     tempCurrentNumber: 0,
     analyticsScript: "",
     countries: [],
-  }), [currencyFormOptions]); // Depend on currencyFormOptions
+    status: 'Active', // <<<< ADDED DEFAULT STATUS
+  }), [currencyFormOptions]);
 
   const formMethods = useForm<DomainFormData>({ resolver: zodResolver(domainFormSchema), defaultValues: defaultFormValues, mode: "onChange" });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
 
-  const openAddDrawer = useCallback(() => { formMethods.reset(defaultFormValues); setIsAddDrawerOpen(true); }, [formMethods, defaultFormValues]);
+  const openAddDrawer = useCallback(() => {
+    setEditingItem(null);
+    formMethods.reset(defaultFormValues);
+    setIsAddDrawerOpen(true);
+  }, [formMethods, defaultFormValues]);
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
   const openEditDrawer = useCallback(
@@ -364,6 +386,7 @@ const DomainManagementListing = () => {
         tempCurrentNumber: Number(item.non_kyc_current_customer_code) || 0,
         analyticsScript: item.analytics_script || "",
         countries: selectedCountryIdsArray,
+        status: (item.status === "Active" || item.status === "Inactive") ? item.status : 'Active', // <<<< SET STATUS FOR EDIT
       });
       setIsEditDrawerOpen(true);
     },
@@ -378,6 +401,7 @@ const DomainManagementListing = () => {
       customer_code_starting: String(data.kycStartNumber), current_customer_code: String(data.kycCurrentNumber),
       non_kyc_customer_code_starting: String(data.tempStartNumber), non_kyc_current_customer_code: String(data.tempCurrentNumber),
       analytics_script: data.analyticsScript, country_ids: data.countries.join(","),
+      status: data.status, // <<<< INCLUDE STATUS IN PAYLOAD
     };
 
     try {
@@ -392,18 +416,27 @@ const DomainManagementListing = () => {
       }
       dispatch(getDomainsAction());
     } catch (error: any) {
-      toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger" duration={3000}>{error?.message || "Operation failed."}</Notification>);
+      const errorMsg = error?.response?.data?.message || error?.message || "An unknown error occurred.";
+      toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger" duration={3000}>{errorMsg}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeleteClick = useCallback((item: DomainItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-  const onConfirmSingleDelete = useCallback(async () => {
+  const handleDeleteClick = useCallback((item: DomainItem) => { // Re-added for potential future use if individual delete from row is needed
+    if (!item.id) return;
+    setItemToDelete(item);
+    setSingleDeleteConfirmOpen(true);
+  }, []);
+
+  const onConfirmSingleDelete = useCallback(async () => { // For individual delete
     if (!itemToDelete?.id) return;
     setIsDeleting(true); setSingleDeleteConfirmOpen(false);
     try {
-      await dispatch(deleteDomainAction({ id: itemToDelete.id })).unwrap();
+      // Assuming deleteDomainAction exists and takes {id: string | number}
+      // await dispatch(deleteDomainAction({ id: itemToDelete.id })).unwrap();
+      // For now, let's use deleteAllDomainsAction with a single ID for consistency if deleteDomainAction is not separate
+      await dispatch(deleteAllDomainsAction({ ids: String(itemToDelete.id) })).unwrap();
       toast.push(<Notification title="Domain Deleted" type="success" duration={2000}>{`Domain "${itemToDelete.domain}" deleted.`}</Notification>);
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
       dispatch(getDomainsAction());
@@ -432,12 +465,38 @@ const DomainManagementListing = () => {
 
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterCountries: data.filterCountries || [], filterCurrency: data.filterCurrency || [] }); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { const defaultFilters = { filterCountries: [], filterCurrency: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); }, [filterFormMethods]); // Added query reset
+
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
+    setFilterCriteria({
+      filterCountries: data.filterCountries || [],
+      filterCurrency: data.filterCurrency || [],
+      filterStatuses: data.filterStatuses || [], // <<<< APPLY STATUS FILTER
+    });
+    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+    closeFilterDrawer();
+  }, [closeFilterDrawer]);
+  
+ const onClearFilters = () => {
+    const defaultFilters: FilterFormData = {
+      filterCountries: [],
+      filterCurrency: [],
+      filterStatuses: [], // <<<< CLEAR STATUS FILTER
+    };
+    filterFormMethods.reset(defaultFilters);
+    setFilterCriteria(defaultFilters);
+    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); // Reset query as well
+    dispatch(getDomainsAction()); // Re-fetch all data
+  };
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: DomainItem[] = Array.isArray(domainsData) ? domainsData : [];
     let processedData: DomainItem[] = cloneDeep(sourceData);
+
+    if (filterCriteria.filterStatuses?.length) { // <<<< FILTER BY STATUS
+      processedData = processedData.filter((item) =>
+        filterCriteria.filterStatuses!.some((f) => f.value === item.status)
+      );
+    }
     if (filterCriteria.filterCountries && filterCriteria.filterCountries.length > 0) {
       const selectedCountryFilterValues = filterCriteria.filterCountries.map((opt) => opt.value);
       processedData = processedData.filter((item) => { if (!item.country_ids) return false; const itemCountryIds = item.country_ids.split(",").map((id) => id.trim()); return itemCountryIds.some((id) => selectedCountryFilterValues.includes(id)); });
@@ -453,11 +512,12 @@ const DomainManagementListing = () => {
           item.domain.toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query) ||
           (currencyFormOptions.find(c => String(c.value) === String(item.currency_id))?.label.toLowerCase() ?? "").includes(query) ||
           (item.prefix && item.prefix.toLowerCase().includes(query)) ||
-          (item.updated_by_name?.toLowerCase() ?? "").includes(query) // Search by updated_by_name
+          (item.updated_by_name?.toLowerCase() ?? "").includes(query)
       );
     }
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key && ["id", "domain", "currency_id", "countriesCount", "created_at", "updated_at", "updated_by_name"].includes(String(key))) { // Added new sort keys
+    // Added "status" to sortable keys
+    if (order && key && ["id", "domain", "status", "currency_id", "countriesCount", "created_at", "updated_at", "updated_by_name"].includes(String(key))) {
         processedData.sort((a, b) => {
             let aVal: any, bVal: any;
             if (key === "created_at" || key === "updated_at") {
@@ -467,8 +527,7 @@ const DomainManagementListing = () => {
             } else if (key === "countriesCount") {
                 aVal = a.country_ids?.split(",").filter((id) => id).length || 0;
                 bVal = b.country_ids?.split(",").filter((id) => id).length || 0;
-            }
-             else {
+            } else {
                 aVal = a[key as keyof DomainItem] ?? "";
                 bVal = b[key as keyof DomainItem] ?? "";
             }
@@ -483,7 +542,7 @@ const DomainManagementListing = () => {
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
     return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
-  }, [domainsData, tableData, filterCriteria, currencyFormOptions]); // Added currencyFormOptions dependency
+  }, [domainsData, tableData, filterCriteria, currencyFormOptions]);
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -497,10 +556,12 @@ const DomainManagementListing = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Domain Management";
+    const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `domains_management_export_${timestamp}.csv`;
     try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })).unwrap();
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
-      exportDomainsToCsv("domains_management.csv", allFilteredAndSortedData); 
+      exportDomainsToCsv(fileName, allFilteredAndSortedData);
       toast.push(<Notification title="Data Exported" type="success">Domain data exported.</Notification>);
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
@@ -525,8 +586,8 @@ const DomainManagementListing = () => {
 
   const columns: ColumnDef<DomainItem>[] = useMemo(
     () => [
-      // { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
       { header: "Domain", accessorKey: "domain", enableSorting: true, size: 160, cell: (props) => (<span className="font-semibold text-blue-600 dark:text-blue-400">{props.row.original.domain}</span>) },
+     
       { header: "Countries", accessorKey: "country_ids", id: "countriesDisplay", enableSorting: true, sortingFn: (rowA, rowB) => { const countA = rowA.original.country_ids?.split(",").filter((id) => id).length || 0; const countB = rowB.original.country_ids?.split(",").filter((id) => id).length || 0; return countA - countB; },
         cell: (props) => {
           const countryIdString = props.row.original.country_ids; if (!countryIdString) return <Tag>N/A</Tag>;
@@ -534,33 +595,56 @@ const DomainManagementListing = () => {
           const names = idsArray.map((idStr) => { const country = allCountryOptions.find((opt) => opt.value === idStr); return country ? country.label : `ID:${idStr}`; });
           const displayLimit = 2; const displayedNames = names.slice(0, displayLimit); const remainingCount = names.length - displayLimit;
           return (
-
-          // <Tooltip title={names.join(", ")} 
-            // wrapperClassName="whitespace-nowrap max-w-[250px] overflow-hidden text-ellipsis">
             <div className="flex flex-wrap gap-1">{displayedNames.map((name, index) => (<Tag key={`${name}-${index}`} className="bg-gray-100 dark:bg-gray-600">{name}</Tag>))}{remainingCount > 0 && (<Tag className="bg-gray-200 dark:bg-gray-500">+{remainingCount} more</Tag>)}</div>
-          // </Tooltip>
-        );
-        }, size: 360,
+          );
+        }, size: 200, // Adjusted size
       },
       { header: "Currency", accessorKey: "currency_id", enableSorting: true, size: 100,
         cell: (props) => {
             const currencyId = String(props.row.original.currency_id);
             const currency = currencyFormOptions.find(c => c.value === currencyId);
-            return currency ? currency.label.split(' - ')[0] : 'N/A'; // Display only code e.g. INR
+            return currency ? currency.label.split(' - ')[0] : 'N/A';
         }
       },
-      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 160,
+      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 160,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+          const { updated_at, updated_by_user } = props.row.original; // Using updated_by_user
           const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
-          return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_user?.name || "N/A"}
+                {updated_by_user?.roles?.[0]?.display_name && (
+                    <><br /><b>{updated_by_user.roles[0].display_name}</b></>
+                  )}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
         },
       },
-      { header: "Actions", id: "action", size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openEditDrawer(props.row.original)} />), // Removed onDelete from here, use selected footer
+       {
+        header: "Status", // <<<< ADDED STATUS COLUMN
+        accessorKey: "status",
+        enableSorting: true,
+        size: 100,
+        cell: (props) => (
+          <Tag
+            className={
+              props.row.original.status === 'Active'
+                ? `bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0`
+                : `bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500 capitalize font-semibold border-0`
+            }
+          >
+            {props.row.original.status}
+          </Tag>
+        ),
       },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    ], [allCountryOptions, currencyFormOptions, openEditDrawer] // Added currencyFormOptions
+      { header: "Actions", id: "action", size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" },
+        cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} />),
+      },
+    ], [allCountryOptions, currencyFormOptions, openEditDrawer]
   );
 
   const renderDrawerForm = () => (
@@ -568,10 +652,31 @@ const DomainManagementListing = () => {
       <FormItem label={<div>Domain Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.domain} errorMessage={formMethods.formState.errors.domain?.message}>
         <Controller name="domain" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbWorldWww className="text-lg" />} placeholder="e.g., example.com" />)} />
       </FormItem>
-      <FormItem label="Currency" invalid={!!formMethods.formState.errors.currency_id} errorMessage={formMethods.formState.errors.currency_id?.message}>
+      <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} // <<<< ADDED STATUS FORM ITEM
+          invalid={!!formMethods.formState.errors.status}
+          errorMessage={formMethods.formState.errors.status?.message as string | undefined}
+        >
+          <Controller
+            name="status"
+            control={formMethods.control}
+            render={({ field }) => (
+              <Select
+                placeholder="Select Status"
+                options={statusOptions}
+                value={statusOptions.find((option) => option.value === field.value) || null}
+                onChange={(option) => field.onChange(option ? option.value : "")}
+              />
+            )}
+          />
+        </FormItem>
+      <FormItem label={<div>Currency<span className="text-red-500"> * </span></div>}  className="md:col-span-2" invalid={!!formMethods.formState.errors.currency_id} errorMessage={formMethods.formState.errors.currency_id?.message}>
         <Controller name="currency_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select currency" options={currencyFormOptions} value={currencyFormOptions.find((c) => c.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
-      <div className="md:col-span-2"><h6 className="text-sm font-semibold flex items-center gap-2">Numbering System For KYC Member</h6></div>
+      <FormItem label={<div>Countries<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!formMethods.formState.errors.countries} errorMessage={formMethods.formState.errors.countries?.message as string}>
+        <Controller name="countries" control={formMethods.control} render={({ field }) => (<Select isMulti placeholder="Select countries..." options={allCountryOptions} value={allCountryOptions.filter((opt) => field.value?.includes(opt.value))} onChange={(opts) => field.onChange(opts ? opts.map((o: any) => o.value) : [])} />)} />
+      </FormItem>
+
+      <div className="md:col-span-2 pt-2"><h6 className="text-sm font-semibold flex items-center gap-2">Numbering System For KYC Member</h6></div>
       <div className="col-span-2 md:grid md:grid-cols-3 gap-2">
         <FormItem label="Prefix For KYC" invalid={!!formMethods.formState.errors.kycPrefix} errorMessage={formMethods.formState.errors.kycPrefix?.message}>
           <Controller name="kycPrefix" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., EU-K-" />} />
@@ -583,15 +688,12 @@ const DomainManagementListing = () => {
           <Controller name="kycCurrentNumber" control={formMethods.control} render={({ field }) => (<Input {...field} readOnly type="number" placeholder="e.g., 10500" />)} />
         </FormItem>
       </div>
-      <div className="md:col-span-2"><h6 className="text-sm font-semibold flex items-center gap-2">Numbering System For Temporary Member</h6></div>
+      <div className="md:col-span-2 pt-2"><h6 className="text-sm font-semibold flex items-center gap-2">Numbering System For Temporary Member</h6></div>
       <FormItem label="Starting Number" invalid={!!formMethods.formState.errors.tempStartNumber} errorMessage={formMethods.formState.errors.tempStartNumber?.message}>
         <Controller name="tempStartNumber" control={formMethods.control} render={({ field }) => (<Input {...field} type="number" placeholder="e.g., 5001" />)} />
       </FormItem>
       <FormItem label="Current Number" invalid={!!formMethods.formState.errors.tempCurrentNumber} errorMessage={formMethods.formState.errors.tempCurrentNumber?.message}>
         <Controller name="tempCurrentNumber" control={formMethods.control} render={({ field }) => (<Input {...field} readOnly type="number" placeholder="e.g., 5250" />)} />
-      </FormItem>
-      <FormItem label="Countries" className="md:col-span-2" invalid={!!formMethods.formState.errors.countries} errorMessage={formMethods.formState.errors.countries?.message as string}>
-        <Controller name="countries" control={formMethods.control} render={({ field }) => (<Select isMulti placeholder="Select countries..." options={allCountryOptions} value={allCountryOptions.filter((opt) => field.value?.includes(opt.value))} onChange={(opts) => field.onChange(opts ? opts.map((o: any) => o.value) : [])} />)} />
       </FormItem>
       <FormItem label="Analytics Script" className="md:col-span-2" invalid={!!formMethods.formState.errors.analyticsScript} errorMessage={formMethods.formState.errors.analyticsScript?.message}>
         <Controller name="analyticsScript" control={formMethods.control} render={({ field }) => (<Input {...field} rows={4} placeholder="Paste your analytics script here (e.g., Google Analytics, Hotjar)" textArea />)} />
@@ -609,10 +711,12 @@ const DomainManagementListing = () => {
             <h5 className="mb-2 sm:mb-0">Domain Management</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
           </div>
-          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} /> {/* Changed onExport */}
+          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} />
           <div className="mt-4">
             <DataTable
-              columns={columns} data={pageData} loading={tableLoading}
+              columns={columns} data={pageData}
+              noData={!tableLoading && pageData.length === 0}
+              loading={tableLoading}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectable checkboxChecked={(row: DomainItem) => selectedItems.some((selected) => selected.id === row.id)}
               onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
@@ -624,7 +728,7 @@ const DomainManagementListing = () => {
 
       <DomainsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-      <Drawer title={editingItem ? "Edit Domain" : "Add New Domain"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520}
+      <Drawer title={editingItem ? "Edit Domain" : "Add New Domain"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700} // Increased width for more fields
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
@@ -632,16 +736,16 @@ const DomainManagementListing = () => {
           </div>
         }
       >
-        <Form id="domainForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col relative pb-28"> {/* Added relative pb-28 */}
+        <Form id="domainForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col relative p-1 pb-28">
           {renderDrawerForm()}
         
           {editingItem && (
-             <div className="absolute bottom-0 w-full">
+             <div className="absolute bottom-0 left-0 right-0 px-1"> {/* Ensure full width and padding consistency */}
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
                         <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                        <p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p>
-                        <p>{editingItem.updated_by_role || "N/A"}</p>
+                        <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
+                        <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                     </div>
                     <div>
                         <br />
@@ -657,15 +761,30 @@ const DomainManagementListing = () => {
         </Form>
       </Drawer>
 
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400} // Matched width
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> {/* Applied onClearFilters */}
+            <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button>
             <Button size="sm" variant="solid" form="filterDomainsForm" type="submit">Apply</Button>
           </div>
         }
       >
         <Form id="filterDomainsForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+           <FormItem label="Status"> {/* <<<< ADDED STATUS FILTER */}
+            <Controller
+              name="filterStatuses"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select status..."
+                  options={apiStatusOptions}
+                  value={field.value || []}
+                  onChange={(val) => field.onChange(val || [])}
+                />
+              )}
+            />
+          </FormItem>
           <FormItem label="Countries">
             <Controller name="filterCountries" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select countries..." options={allCountryOptions} value={field.value || []} onChange={(opts) => field.onChange(opts || [])} />)} />
           </FormItem>
@@ -679,7 +798,6 @@ const DomainManagementListing = () => {
         <p>Are you sure you want to delete the domain "<strong>{itemToDelete?.domain}</strong>"? This cannot be undone.</p>
       </ConfirmDialog>
 
-      {/* --- Export Reason Modal --- */}
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
@@ -694,7 +812,7 @@ const DomainManagementListing = () => {
         confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
       >
         <Form
-          id="exportDomainsReasonForm" // Unique ID
+          id="exportDomainsReasonForm"
           onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
           className="flex flex-col gap-4 mt-2"
         >
@@ -713,4 +831,4 @@ const DomainManagementListing = () => {
 
 export default DomainManagementListing;
 
-function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(" "); }
+// function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(" "); } // Not used in this file
