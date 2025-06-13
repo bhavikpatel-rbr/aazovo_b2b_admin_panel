@@ -226,9 +226,9 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
       <Tooltip title="Edit">
         <div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete">
         <div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400")} role="button" onClick={onDelete}><TbTrash /></div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
@@ -409,6 +409,8 @@ const Blogs = () => {
 
   const openEditDrawer = (blog: BlogItem) => {
     setEditingBlog(blog);
+    console.log("blog0",blog);
+    
     editFormMethods.reset({
       title: blog.title, slug: blog.slug || null, blog_descr: blog.blog_descr || null, icon: null,
       status: blog.status, meta_title: blog.meta_title || null, meta_descr: blog.meta_descr || null, meta_keyword: blog.meta_keyword || null,
@@ -501,7 +503,7 @@ const Blogs = () => {
   const [selectedItems, setSelectedItems] = useState<BlogItem[]>([]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: BlogItem[] = cloneDeep(BlogsData || []);
+    let processedData: BlogItem[] = cloneDeep(BlogsData?.data || []);
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
       const selectedStatuses = filterCriteria.filterStatus.map((opt) => opt.value);
       processedData = processedData.filter((item) => selectedStatuses.includes(item.status));
@@ -538,7 +540,7 @@ const Blogs = () => {
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
     return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
-  }, [BlogsData, tableData, filterCriteria]);
+  }, [BlogsData?.data, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -598,11 +600,11 @@ const Blogs = () => {
         cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); },
       },
       {
-        header: "Updated Info", accessorKey: "updated_at", enableSorting: true, meta: { HeaderClass: "text-red-500" }, size: 170,
+        header: "Updated Info", accessorKey: "updated_at", enableSorting: true,  size: 170,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+          const { updated_at, updated_by_user, updated_by_role } = props.row.original;
           const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
-          return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
+          return (<div className="text-xs"><span>{updated_by_user?.name || "N/A"}{updated_by_user?.roles[0]?.display_name && (<><br /><b>{updated_by_user?.roles[0]?.display_name}</b></>)}</span><br /><span>{formattedDate}</span></div>);
         },
       },
       {
@@ -632,7 +634,7 @@ const Blogs = () => {
                 <TbMessageStar size={24} />
               </div>
               <div>
-                <h6 className="text-blue-500">879</h6>
+                <h6 className="text-blue-500">{BlogsData?.counts?.total}</h6>
                 <span className="font-semibold text-xs">Total</span>
               </div>
             </Card>
@@ -641,7 +643,7 @@ const Blogs = () => {
                 <TbMessageShare size={24} />
               </div>
               <div>
-                <h6 className="text-violet-500">23</h6>
+                <h6 className="text-violet-500">{BlogsData?.counts?.today}</h6>
                 <span className="font-semibold text-xs">Today</span>
               </div>
             </Card>
@@ -650,7 +652,7 @@ const Blogs = () => {
                 <TbMessageUser size={24} />
               </div>
               <div>
-                <h6 className="text-orange-500">345</h6>
+                <h6 className="text-orange-500">{BlogsData?.counts?.total_views}</h6>
                 <span className="font-semibold text-xs">Total Views</span>
               </div>
             </Card>
@@ -660,7 +662,7 @@ const Blogs = () => {
                 <TbMessageCheck size={24} />
               </div>
               <div>
-                <h6 className="text-green-500">879</h6>
+                <h6 className="text-green-500">{BlogsData?.counts?.published} </h6>
                 <span className="font-semibold text-xs">Published</span>
               </div>
             </Card>
@@ -669,7 +671,7 @@ const Blogs = () => {
                 <TbMessage2X size={24} />
               </div>
               <div>
-                <h6 className="text-red-500">78</h6>
+                <h6 className="text-red-500">{BlogsData?.counts?.unpublished}</h6>
                 <span className="font-semibold text-xs">Unpublished</span>
               </div>
             </Card>
@@ -724,14 +726,15 @@ const Blogs = () => {
             <FormItem label={<div>Description<span className="text-red-500"> * </span></div>} invalid={!!drawer.methods.formState.errors.blog_descr} errorMessage={drawer.methods.formState.errors.blog_descr?.message as string | undefined}>
               {/* <Controller name="blog_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="Enter main blog content..." rows={5} />)} /> */}
               <Controller name="blog_descr" control={drawer.methods.control} render={({ field }) => (
-                <RichTextEditor
-                  {...field}
-                  value={field.value ?? ""}
-                  onChange={({ html }) => {
-                    field.onChange(html)
-                  }}
-                  placeholder="Enter main blog content..."
-                />
+                // <RichTextEditor
+                //   {...field}
+                //   value={field.value ?? ""}
+                //   onChange={({ html }) => {
+                //     field.onChange(html)
+                //   }}
+                //   placeholder="Enter main blog content..."
+                // />
+                 <Controller name="blog_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="SEO Description (max 160 chars)" rows={3} />)} />
               )} />
             </FormItem>
 
@@ -772,16 +775,41 @@ const Blogs = () => {
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                   <div>
                     <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                    <p className="text-sm font-semibold">{editingBlog.updated_by_name || "N/A"}</p>
-                    <p>{editingBlog.updated_by_role || "N/A"}</p>
+                    <p className="text-sm font-semibold"> {editingBlog.updated_by_user?.name || "N/A"}</p>
+                    <p>{editingBlog.updated_by_user?.roles[0]?.display_name ||
+                      "N/A"}</p>
                   </div>
                   <div>
                     <br />
                     <span className="font-semibold">Created At:</span>{" "}
-                    <span>{editingBlog.created_at ? new Date(editingBlog.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                    <span>{editingBlog.created_at
+                      ? new Date(editingBlog.created_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "long",
+                            year: "2-digit",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
+                      : "N/A"}</span>
                     <br />
                     <span className="font-semibold">Updated At:</span>{" "}
-                    <span>{editingBlog.updated_at ? new Date(editingBlog.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                    <span>{editingBlog.updated_at
+                      ? new Date(editingBlog.updated_at).toLocaleString(
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "long",
+                            year: "2-digit",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
+                      : "N/A"}</span>
                   </div>
                 </div>
               </div>

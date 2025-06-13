@@ -177,52 +177,7 @@ function DataTable<T>(props: DataTableProps<T>) {
     const finalColumns: ColumnDef<T>[] = useMemo(() => {
         const columns = columnsProp
 
-        if (selectable) {
-            return [
-                {
-                    id: 'select',
-                    maxSize: 50,
-                    header: ({ table }) => (
-                        <IndeterminateCheckbox
-                            checked={
-                                indeterminateCheckboxChecked
-                                    ? indeterminateCheckboxChecked(
-                                          table.getRowModel().rows,
-                                      )
-                                    : table.getIsAllRowsSelected()
-                            }
-                            indeterminate={table.getIsSomeRowsSelected()}
-                            onChange={table.getToggleAllRowsSelectedHandler()}
-                            onIndeterminateCheckBoxChange={(e) => {
-                                handleIndeterminateCheckBoxChange(
-                                    e.target.checked,
-                                    table.getRowModel().rows,
-                                )
-                            }}
-                        />
-                    ),
-                    cell: ({ row }) => (
-                        <IndeterminateCheckbox
-                            checked={
-                                checkboxChecked
-                                    ? checkboxChecked(row.original)
-                                    : row.getIsSelected()
-                            }
-                            disabled={!row.getCanSelect()}
-                            indeterminate={row.getIsSomeSelected()}
-                            onChange={row.getToggleSelectedHandler()}
-                            onCheckBoxChange={(e) =>
-                                handleCheckBoxChange(
-                                    e.target.checked,
-                                    row.original,
-                                )
-                            }
-                        />
-                    ),
-                },
-                ...columns,
-            ]
-        }
+        
         return columns
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [columnsProp, selectable, loading, checkboxChecked])
