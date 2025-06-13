@@ -1023,14 +1023,16 @@ const Sliders = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Sliders";
+      const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `sliders_export_${timestamp}.csv`;
     try {
       await dispatch(
-        submitExportReasonAction({ reason: data.reason, module: moduleName })
+        submitExportReasonAction({ reason: data.reason, module: moduleName ,file_name:fileName })
       ).unwrap();
       toast.push(
         <Notification title="Export Reason Submitted" type="success" />
       );
-      exportToCsvSlider("sliders_export.csv", allFilteredAndSortedData);
+      exportToCsvSlider(fileName, allFilteredAndSortedData);
       Optional: toast.push(
         <Notification title="Data Exported" type="success">
           Sliders data exported.
