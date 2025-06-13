@@ -16,9 +16,17 @@ import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
-import DebounceInput from "@/components/shared/DebouceInput"; // Corrected spelling
+import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Dropdown, Form, FormItem, Input, Tag } from "@/components/ui";
+import {
+  Card,
+  Drawer,
+  Dropdown,
+  Form,
+  FormItem,
+  Input,
+  Tag,
+} from "@/components/ui";
 
 // Icons
 import {
@@ -37,21 +45,18 @@ import {
   TbCalendarEvent,
   TbInfoCircle,
   TbReload,
-  TbUserPlus,
   TbBug,
   TbCalendarWeek,
   TbMailPlus,
   TbLoader,
   TbCircleCheck,
   TbCircleX,
-  TbLink,
   TbUser,
   TbMailShare,
   TbBrandWhatsapp,
   TbBell,
   TbTagStarred,
   TbCalendarClock,
-  // TbTrash, // Already imported, no need to re-declare if ActionColumn handles it
 } from "react-icons/tb";
 
 // Types
@@ -61,7 +66,6 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import type { SelectOption } from "@/@types/select"; // Assuming SelectOption type is available globally or define it
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
@@ -72,7 +76,7 @@ import {
   editBugReportAction,
   deleteBugReportAction,
   deleteAllBugReportsAction,
-  submitExportReasonAction, // Added for export reason
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import classNames from "@/utils/classNames";
@@ -82,6 +86,7 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 // --- Define Types ---
 export type BugReportStatusApi = "Read" | "Unread" | string;
 export type BugReportStatusForm = "Read" | "Unread";
+export type BugReportSeverity = "Low" | "Medium" | "High"; // ADDED
 
 export type BugReportItem = {
   id: string | number;
@@ -91,19 +96,24 @@ export type BugReportItem = {
   report: string;
   attachment?: string | null;
   status: BugReportStatusApi;
+  severity?: BugReportSeverity; // ADDED
   created_at?: string;
   updated_at?: string;
-  updated_by_name?: string; // Added
-  updated_by_role?: string; // Added
+  updated_by_name?: string;
+  updated_by_role?: string;
+  updated_by_user?: {
+    name: string;
+    roles: { display_name: string }[];
+  } | null;
 };
 
 const BUG_REPORT_STATUS_OPTIONS_FORM: {
   value: BugReportStatusForm;
   label: string;
 }[] = [
-    { value: "Unread", label: "Unread" },
-    { value: "Read", label: "Read" },
-  ];
+  { value: "Unread", label: "Unread" },
+  { value: "Read", label: "Read" },
+];
 
 const bugStatusColor: Record<BugReportStatusApi, string> = {
   Unread:
@@ -124,6 +134,12 @@ const bugReportFormSchema = z.object({
     .string()
     .min(10, "Report description must be at least 10 characters.")
     .max(5000, "Report too long"),
+  severity: z.enum(["Low", "Medium", "High"], {
+    required_error: "Severity is required.",
+  }),
+  status: z.enum(["Read", "Unread"], {
+    required_error: "Status is required.",
+  }),
   attachment: z.any().optional(),
 });
 type BugReportFormData = z.infer<typeof bugReportFormSchema>;
@@ -133,7 +149,7 @@ const filterFormSchema = z.object({
   filterStatus: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  filterReportedBy: z.string().optional(), // This searches user's name/email, not updated_by_name
+  filterReportedBy: z.string().optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -181,10 +197,8 @@ const CSV_KEYS_BUG_EXPORT: (keyof BugReportExportItem)[] = [
 ];
 
 function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
-  if (!rows || rows.length === 0) {
-    // Toast handled by caller
-    return false;
-  }
+  if (!rows || rows.length === 0) return false;
+
   const preparedRows: BugReportExportItem[] = rows.map((row) => ({
     ...row,
     mobile_no: row.mobile_no || "N/A",
@@ -238,21 +252,17 @@ function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
   return false;
 }
 
-// --- ActionColumn, Search, TableTools, SelectedFooter (mostly unchanged, minor adjustments if needed) ---
+// --- ActionColumn, Search, TableTools, SelectedFooter ---
 const ActionColumn = ({
   onEdit,
   onViewDetail,
-  onChangeStatus,
 }: {
   onEdit: () => void;
   onViewDetail: () => void;
-  onChangeStatus: () => void;
 }) => {
   return (
     <div className="flex items-center justify-center text-center">
-      {" "}
       <Tooltip title="Edit (Admin)">
-        {" "}
         <button
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
           role="button"
@@ -260,9 +270,8 @@ const ActionColumn = ({
         >
           <TbPencil />
         </button>
-      </Tooltip>{" "}
+      </Tooltip>
       <Tooltip title="View Details">
-        {" "}
         <button
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
           role="button"
@@ -270,30 +279,42 @@ const ActionColumn = ({
         >
           <TbEye />
         </button>
-      </Tooltip>{" "}
-      {/* <Tooltip title="Assign to task">
-        {" "}
-        <button
-          className={`text-xl cursor-pointer mr-0.5 select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`}
-          role="button"
-        >
-          <Link to="/task/task-list/create" >
-            <TbUserPlus size={18} />
+      </Tooltip>
+      <Dropdown
+        renderTitle={
+          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+        }
+      >
+        <Dropdown.Item className="flex items-center gap-2">
+          <TbBell size={18} />{" "}
+          <span className="text-xs">Add Notification </span>
+        </Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2">
+          <TbUser size={18} />{" "}
+          <Link to="/task/task-list/create">
+            <span className="text-xs">Assign to Task</span>
           </Link>
-        </button>
-      </Tooltip>{" "} */}
-      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        {/* <Dropdown.Item className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Shared Linked</span></Dropdown.Item> */}
-        <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <Link to="/task/task-list/create" ><span className="text-xs">Assign to Task</span></Link></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active </span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
+        </Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2">
+          <TbMailShare size={18} /> <span className="text-xs">Send Email</span>
+        </Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2">
+          <TbBrandWhatsapp size={18} />{" "}
+          <span className="text-xs">Send Whatsapp</span>
+        </Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2">
+          <TbTagStarred size={18} />{" "}
+          <span className="text-xs">Add to Active </span>
+        </Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2">
+          <TbCalendarClock size={18} />{" "}
+          <span className="text-xs">Add Schedule </span>
+        </Dropdown.Item>
       </Dropdown>
     </div>
   );
 };
+
 type ItemSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -310,6 +331,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
   )
 );
 ItemSearch.displayName = "ItemSearch";
+
 type ItemTableToolsProps = {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
@@ -362,61 +384,53 @@ const BugReportsSelectedFooter = ({
 }: BugReportsSelectedFooterProps) => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   if (selectedItems.length === 0) return null;
-  const handleDeleteClick = () => setDeleteConfirmOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmOpen(false);
-  };
   return (
     <>
-      {" "}
       <StickyFooter
         className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
         stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
       >
-        {" "}
         <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          {" "}
           <span className="flex items-center gap-2">
-            {" "}
             <span className="text-lg text-primary-600 dark:text-primary-400">
               <TbChecks />
-            </span>{" "}
+            </span>
             <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              {" "}
-              <span className="heading-text">{selectedItems.length}</span>{" "}
-              <span>Report{selectedItems.length > 1 ? "s" : ""} selected</span>{" "}
-            </span>{" "}
-          </span>{" "}
+              <span className="heading-text">{selectedItems.length}</span>
+              <span>Report{selectedItems.length > 1 ? "s" : ""} selected</span>
+            </span>
+          </span>
           <Button
             size="sm"
             variant="plain"
             className="text-red-600 hover:text-red-500"
-            onClick={handleDeleteClick}
+            onClick={() => setDeleteConfirmOpen(true)}
             loading={isDeleting}
           >
             Delete Selected
-          </Button>{" "}
-        </div>{" "}
-      </StickyFooter>{" "}
+          </Button>
+        </div>
+      </StickyFooter>
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? "s" : ""
-          }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
+        title={`Delete ${selectedItems.length} Report${
+          selectedItems.length > 1 ? "s" : ""
+        }`}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onRequestClose={() => setDeleteConfirmOpen(false)}
+        onCancel={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => {
+          onDeleteSelected();
+          setDeleteConfirmOpen(false);
+        }}
         loading={isDeleting}
       >
-        {" "}
         <p>
           Are you sure you want to delete the selected report
           {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>{" "}
-      </ConfirmDialog>{" "}
+        </p>
+      </ConfirmDialog>
     </>
   );
 };
@@ -424,8 +438,10 @@ const BugReportsSelectedFooter = ({
 // --- Main Component: BugReportListing ---
 const BugReportListing = () => {
   const dispatch = useAppDispatch();
-  const { bugReportsData = [], status: masterLoadingStatus = "idle" } =
-    useSelector(masterSelector, shallowEqual);
+  const {
+    bugReportsData: rawBugReportsData = [],
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector, shallowEqual);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -435,9 +451,9 @@ const BugReportListing = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isChangingStatus, setIsChangingStatus] = useState(false); // Kept for status change logic if any
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<BugReportItem | null>(null);
+  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterStatus: [],
@@ -452,20 +468,23 @@ const BugReportListing = () => {
   const [selectedItems, setSelectedItems] = useState<BugReportItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // --- Export Reason Modal State ---
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
   useEffect(() => {
-    const currentParams = {
-      ...tableData,
-      filterStatus: filterCriteria.filterStatus?.map((s) => s.value),
-      filterReportedBy: filterCriteria.filterReportedBy,
-    };
-    dispatch(getBugReportsAction({ params: currentParams }));
-  }, [dispatch]); // Simplified initial fetch, detailed fetches in handlers
+    dispatch(getBugReportsAction());
+  }, [dispatch]);
 
+  const bugReportsData: BugReportItem[] = useMemo(() => {
+    if (!Array.isArray(rawBugReportsData?.data)) return [];
+    return rawBugReportsData?.data.map((item: any) => ({
+      ...item,
+      updated_by_name: item.updated_by_user?.name || item.updated_by_name,
+      updated_by_role:
+        item.updated_by_user?.roles?.[0]?.display_name || item.updated_by_role,
+    }));
+  }, [rawBugReportsData?.data]);
   const itemPath = (filename: any) => {
     const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
     return filename
@@ -478,6 +497,8 @@ const BugReportListing = () => {
     email: "",
     mobile_no: "",
     report: "",
+    severity: "Low",
+    status: "Unread",
     attachment: undefined,
   };
 
@@ -513,17 +534,19 @@ const BugReportListing = () => {
         email: item.email,
         mobile_no: item.mobile_no || "",
         report: item.report,
+        severity: item.severity || "Low",
+        status: item.status as BugReportStatusForm,
         attachment: undefined,
       });
       setIsEditDrawerOpen(true);
     },
     [formMethods]
   );
+
   const closeEditDrawer = useCallback(() => {
     setEditingItem(null);
     setIsEditDrawerOpen(false);
   }, []);
-
   const openViewDrawer = useCallback((item: BugReportItem) => {
     setViewingItem(item);
     setIsViewDrawerOpen(true);
@@ -540,17 +563,12 @@ const BugReportListing = () => {
     formDataPayload.append("email", data.email);
     if (data.mobile_no) formDataPayload.append("mobile_no", data.mobile_no);
     formDataPayload.append("report", data.report);
+    formDataPayload.append("severity", data.severity);
+    formDataPayload.append("status", data.status);
     if (selectedFile) formDataPayload.append("attachment", selectedFile);
-
-    const paramsForRefetch = {
-      ...tableData,
-      filterStatus: filterCriteria.filterStatus?.map((s) => s.value),
-      filterReportedBy: filterCriteria.filterReportedBy,
-    };
 
     try {
       if (editingItem) {
-        formDataPayload.append("status", editingItem.status); // Preserve existing status or allow change via a form field
         formDataPayload.append("_method", "PUT");
         await dispatch(
           editBugReportAction({ id: editingItem.id, formData: formDataPayload })
@@ -558,7 +576,6 @@ const BugReportListing = () => {
         toast.push(<Notification title="Bug Report Updated" type="success" />);
         closeEditDrawer();
       } else {
-        formDataPayload.append("status", "Unread"); // Default for new
         await dispatch(addBugReportAction(formDataPayload)).unwrap();
         toast.push(
           <Notification title="Bug Report Submitted" type="success">
@@ -567,7 +584,7 @@ const BugReportListing = () => {
         );
         closeAddDrawer();
       }
-      dispatch(getBugReportsAction({ params: paramsForRefetch }));
+      dispatch(getBugReportsAction());
     } catch (error: any) {
       toast.push(
         <Notification
@@ -582,25 +599,18 @@ const BugReportListing = () => {
     }
   };
 
-  // Example direct status change, can be invoked from ActionColumn or a dedicated button in ViewDrawer
   const handleChangeStatus = useCallback(
     async (item: BugReportItem, newStatus: BugReportStatusForm) => {
       setIsChangingStatus(true);
-      // Create a FormData object even if not sending files, as editBugReportAction expects it.
-      // Or, create a separate action for status change if API supports it.
       const formData = new FormData();
-      formData.append("name", item.name); // API might require all fields or just the changed ones
+      formData.append("name", item.name);
       formData.append("email", item.email);
       if (item.mobile_no) formData.append("mobile_no", item.mobile_no);
       formData.append("report", item.report);
+      formData.append("severity", item.severity || "Low");
       formData.append("status", newStatus);
-      formData.append("_method", "PUT"); // Important for Laravel or similar backends
+      formData.append("_method", "PUT");
 
-      const paramsForRefetch = {
-        ...tableData,
-        filterStatus: filterCriteria.filterStatus?.map((s) => s.value),
-        filterReportedBy: filterCriteria.filterReportedBy,
-      };
       try {
         await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
         toast.push(
@@ -609,9 +619,8 @@ const BugReportListing = () => {
             type="success"
           >{`Report status changed to ${newStatus}.`}</Notification>
         );
-        dispatch(getBugReportsAction({ params: paramsForRefetch }));
+        dispatch(getBugReportsAction());
         if (viewingItem?.id === item.id) {
-          // If viewing this item, update its state too
           setViewingItem((prev) =>
             prev ? { ...prev, status: newStatus } : null
           );
@@ -626,7 +635,7 @@ const BugReportListing = () => {
         setIsChangingStatus(false);
       }
     },
-    [dispatch, tableData, filterCriteria, viewingItem]
+    [dispatch, viewingItem]
   );
 
   const handleDeleteClick = useCallback((item: BugReportItem) => {
@@ -634,15 +643,11 @@ const BugReportListing = () => {
     setItemToDelete(item);
     setSingleDeleteConfirmOpen(true);
   }, []);
+
   const onConfirmSingleDelete = useCallback(async () => {
     if (!itemToDelete?.id) return;
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
-    const paramsForRefetch = {
-      ...tableData,
-      filterStatus: filterCriteria.filterStatus?.map((s) => s.value),
-      filterReportedBy: filterCriteria.filterReportedBy,
-    };
     try {
       await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap();
       toast.push(
@@ -652,7 +657,7 @@ const BugReportListing = () => {
         >{`Report by "${itemToDelete.name}" deleted.`}</Notification>
       );
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
-      dispatch(getBugReportsAction({ params: paramsForRefetch }));
+      dispatch(getBugReportsAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Delete Failed" type="danger">
@@ -663,17 +668,12 @@ const BugReportListing = () => {
       setIsDeleting(false);
       setItemToDelete(null);
     }
-  }, [dispatch, itemToDelete, tableData, filterCriteria]);
+  }, [dispatch, itemToDelete]);
 
   const handleDeleteSelected = useCallback(async () => {
     if (selectedItems.length === 0) return;
     setIsDeleting(true);
     const idsToDelete = selectedItems.map((item) => String(item.id));
-    const paramsForRefetch = {
-      ...tableData,
-      filterStatus: filterCriteria.filterStatus?.map((s) => s.value),
-      filterReportedBy: filterCriteria.filterReportedBy,
-    };
     try {
       await dispatch(
         deleteAllBugReportsAction({ ids: idsToDelete.join(",") })
@@ -685,7 +685,7 @@ const BugReportListing = () => {
         >{`${idsToDelete.length} report(s) deleted.`}</Notification>
       );
       setSelectedItems([]);
-      dispatch(getBugReportsAction({ params: paramsForRefetch }));
+      dispatch(getBugReportsAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Deletion Failed" type="danger">
@@ -695,7 +695,7 @@ const BugReportListing = () => {
     } finally {
       setIsDeleting(false);
     }
-  }, [dispatch, selectedItems, tableData, filterCriteria]);
+  }, [dispatch, selectedItems]);
 
   const openFilterDrawer = useCallback(() => {
     filterFormMethods.reset(filterCriteria);
@@ -705,67 +705,33 @@ const BugReportListing = () => {
 
   const onApplyFiltersSubmit = useCallback(
     (data: FilterFormData) => {
-      const newFilterCriteria = {
+      setFilterCriteria({
         filterStatus: data.filterStatus || [],
         filterReportedBy: data.filterReportedBy || "",
-      };
-      setFilterCriteria(newFilterCriteria);
-      const newPageIndex = 1;
-      setTableData((prev) => ({ ...prev, pageIndex: newPageIndex }));
-      dispatch(
-        getBugReportsAction({
-          params: {
-            ...tableData,
-            pageIndex: newPageIndex,
-            filterStatus: newFilterCriteria.filterStatus?.map((s) => s.value),
-            filterReportedBy: newFilterCriteria.filterReportedBy,
-          },
-        })
-      );
+      });
+      handleSetTableData({ pageIndex: 1 });
       closeFilterDrawer();
     },
-    [closeFilterDrawer, dispatch, tableData]
+    [closeFilterDrawer]
   );
 
   const onClearFilters = useCallback(() => {
-    const defaultFilters: FilterFormData = {
-      filterStatus: [],
-      filterReportedBy: "",
-    };
-    filterFormMethods.reset(defaultFilters);
-    setFilterCriteria(defaultFilters);
-    const newPageIndex = 1;
-    setTableData((prev) => ({ ...prev, pageIndex: newPageIndex, query: "" })); // Also clear search query
-    dispatch(
-      getBugReportsAction({
-        params: {
-          ...tableData,
-          pageIndex: newPageIndex,
-          query: "",
-          filterStatus: [],
-          filterReportedBy: "",
-        },
-      })
-    );
-  }, [filterFormMethods, dispatch, tableData]);
+    setFilterCriteria({ filterStatus: [], filterReportedBy: "" });
+    formMethods.reset({ filterStatus: [], filterReportedBy: "" });
+    handleSetTableData({ query: "", pageIndex: 1 });
+    dispatch(getBugReportsAction());
+  }, [formMethods]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const sourceData: BugReportItem[] = Array.isArray(bugReportsData)
-      ? bugReportsData
-      : [];
-    let processedData: BugReportItem[] = cloneDeep(sourceData);
+    let processedData: BugReportItem[] = cloneDeep(bugReportsData);
 
-    // Apply filters (client-side on top of potential server-side filtering)
-    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
+    if (filterCriteria.filterStatus?.length) {
       const statusValues = filterCriteria.filterStatus.map((s) => s.value);
       processedData = processedData.filter((item) =>
         statusValues.includes(item.status)
       );
     }
-    if (
-      filterCriteria.filterReportedBy &&
-      filterCriteria.filterReportedBy.trim() !== ""
-    ) {
+    if (filterCriteria.filterReportedBy) {
       const reportedByQuery = filterCriteria.filterReportedBy
         .toLowerCase()
         .trim();
@@ -775,8 +741,7 @@ const BugReportListing = () => {
           item.email.toLowerCase().includes(reportedByQuery)
       );
     }
-
-    if (tableData.query && tableData.query.trim() !== "") {
+    if (tableData.query) {
       const queryLower = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(
         (item) =>
@@ -785,23 +750,12 @@ const BugReportListing = () => {
           item.report.toLowerCase().includes(queryLower) ||
           (item.mobile_no &&
             item.mobile_no.toLowerCase().includes(queryLower)) ||
-          (item.updated_by_name?.toLowerCase() ?? "").includes(queryLower) // Search by updated_by_name
+          (item.updated_by_name?.toLowerCase() ?? "").includes(queryLower)
       );
     }
 
     const { order, key } = tableData.sort as OnSortParam;
-    if (
-      order &&
-      key &&
-      [
-        "name",
-        "email",
-        "status",
-        "created_at",
-        "updated_at",
-        "updated_by_name",
-      ].includes(String(key))
-    ) {
+    if (order && key) {
       processedData.sort((a, b) => {
         let aVal: any, bVal: any;
         if (key === "created_at" || key === "updated_at") {
@@ -824,44 +778,41 @@ const BugReportListing = () => {
       });
     }
 
-    const dataToExport = [...processedData];
-    const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
-    const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-
     return {
-      pageData: dataForPage,
-      total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      pageData: processedData.slice(
+        (pageIndex - 1) * pageSize,
+        pageIndex * pageSize
+      ),
+      total: processedData.length,
+      allFilteredAndSortedData: processedData,
     };
   }, [bugReportsData, tableData, filterCriteria]);
 
   const handleSetTableData = useCallback(
-    (data: Partial<TableQueries>) => {
-      const newTableData = { ...tableData, ...data };
-      setTableData(newTableData);
-      // Only dispatch if it's a change that requires server data (sort, page, global query)
-      // Filters have their own dispatch logic in onApplyFilters/onClearFilters
-      if (
-        data.sort ||
-        data.pageIndex ||
-        data.pageSize ||
-        (data.query !== undefined && data.query !== tableData.query)
-      ) {
-        dispatch(
-          getBugReportsAction({
-            params: {
-              ...newTableData,
-              filterStatus: filterCriteria.filterStatus?.map((s) => s.value),
-              filterReportedBy: filterCriteria.filterReportedBy,
-            },
-          })
-        );
-      }
+    (data: Partial<TableQueries>) =>
+      setTableData((prev) => ({ ...prev, ...data })),
+    []
+  );
+  const handlePaginationChange = useCallback(
+    (page: number) => handleSetTableData({ pageIndex: page }),
+    [handleSetTableData]
+  );
+  const handleSelectChange = useCallback(
+    (value: number) => {
+      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
+      setSelectedItems([]);
     },
-    [tableData, dispatch, filterCriteria]
+    [handleSetTableData]
+  );
+  const handleSort = useCallback(
+    (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
+    [handleSetTableData]
+  );
+  const handleSearchChange = useCallback(
+    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
+    [handleSetTableData]
   );
 
   const handleOpenExportReasonModal = () => {
@@ -879,16 +830,12 @@ const BugReportListing = () => {
 
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    const moduleName = "Bug Reports"; // Module name for this export
+    const moduleName = "Bug Reports";
+    const date = new Date().toISOString().split("T")[0];
+    const fileName = `bug-reports_${date}.csv`; // Dynamic filename
     try {
-      await dispatch(
-        submitExportReasonAction({ reason: data.reason, module: moduleName })
-      ).unwrap();
-      // toast.push(<Notification title="Export Reason Submitted" type="success" />); // Optional: can be combined
-      const success = exportBugReportsToCsv(
-        "bug_reports_export.csv",
-        allFilteredAndSortedData
-      );
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName , file_name:fileName })).unwrap();
+      const success = exportBugReportsToCsv(fileName, allFilteredAndSortedData);
       if (success) {
         toast.push(
           <Notification title="Data Exported" type="success">
@@ -910,29 +857,6 @@ const BugReportListing = () => {
     }
   };
 
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => {
-      handleSetTableData({ sort: sort, pageIndex: 1 });
-    },
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => {
-      handleSetTableData({ query: query, pageIndex: 1 });
-    },
-    [handleSetTableData]
-  );
   const handleRowSelect = useCallback(
     (checked: boolean, row: BugReportItem) => {
       setSelectedItems((prev) => {
@@ -945,6 +869,7 @@ const BugReportListing = () => {
     },
     []
   );
+
   const handleAllRowSelect = useCallback(
     (checked: boolean, currentRows: Row<BugReportItem>[]) => {
       const cPOR = currentRows.map((r) => r.original);
@@ -975,67 +900,58 @@ const BugReportListing = () => {
           <span className="font-semibold">{props.getValue<string>()}</span>
         ),
       },
-      // { header: "", accessorKey: "email", size: 200, enableSorting: true },
       {
         header: "Contact",
         accessorKey: "mobile_no",
-        size: 130,
-        cell: (props) => {
-
-          return (
-            <div className="">
-              <span>{props.row.original.email}</span> <br />
-              <span>{props.row.original.mobile_no}</span>
-            </div>
-          )
-        },
+        size: 200,
+        cell: (props) => (
+          <div>
+            <span>{props.row.original.email}</span> <br />
+            <span>{props.row.original.mobile_no}</span>
+          </div>
+        ),
       },
       {
         header: "Reported On",
         accessorKey: "created_at",
         size: 200,
         enableSorting: true,
-        cell: (props) => {
-          return (
-            <div className="text-xs">
-              {`${new Date(props.getValue()).getDate()} ${new Date(
-                props.getValue()
-              ).toLocaleString("en-US", { month: "short" })} ${new Date(
-                props.getValue()
-              ).getFullYear()}, ${new Date(props.getValue()).toLocaleTimeString(
-                "en-US",
-                { hour: "numeric", minute: "2-digit", hour12: true }
-              )}`}
-            </div>
-          )
-        }
+        cell: (props) => (
+          <div className="text-xs">
+            {new Date(props.getValue()).toLocaleString("en-US", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </div>
+        ),
       },
       {
         header: "Severity",
-        enableSorting: true,
-        meta: { HeaderClass: "text-red-500" },
-        cell: (props) => {
-          return <Tag className="bg-red-100 text-red-500 text-[10px]">Critical</Tag>
-        }
+        accessorKey: "severity",
+        size: 200,
+        cell: (props) => (
+          <div>
+            <span>{props.row.original.severity}</span> <br />
+          </div>
+        ),
       },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        size: 170,
-        meta: { HeaderClass: "text-red-500" },
+        size: 200,
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
-            ? `${new Date(updated_at).getDate()} ${new Date(
-              updated_at
-            ).toLocaleString("en-US", { month: "short" })} ${new Date(
-              updated_at
-            ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
-              "en-US",
-              { hour: "numeric", minute: "2-digit", hour12: true }
-            )}`
+            ? new Date(updated_at).toLocaleString("en-US", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })
             : "N/A";
           return (
             <div className="text-xs">
@@ -1066,7 +982,7 @@ const BugReportListing = () => {
               className={classNames(
                 "capitalize whitespace-nowrap min-w-[60px] text-center",
                 bugStatusColor[statusVal] ||
-                "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
+                  "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
               )}
             >
               {statusVal || "N/A"}
@@ -1078,17 +994,11 @@ const BugReportListing = () => {
         header: "Actions",
         id: "actions",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 100, // Reduced size as one icon removed
+        size: 100,
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
             onViewDetail={() => openViewDrawer(props.row.original)}
-            onChangeStatus={() =>
-              handleChangeStatus(
-                props.row.original,
-                props.row.original.status === "Read" ? "Unread" : "Read"
-              )
-            }
           />
         ),
       },
@@ -1097,9 +1007,13 @@ const BugReportListing = () => {
   );
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormItem
-        label={<div>Name<span className="text-red-500"> * </span></div>}
+        label={
+          <div>
+            Name<span className="text-red-500"> *</span>
+          </div>
+        }
         className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.name}
         errorMessage={currentFormMethods.formState.errors.name?.message}
@@ -1117,7 +1031,11 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label={<div>Email<span className="text-red-500"> * </span></div>}
+        label={
+          <div>
+            Email<span className="text-red-500"> *</span>
+          </div>
+        }
         className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.email}
         errorMessage={currentFormMethods.formState.errors.email?.message}
@@ -1136,7 +1054,7 @@ const BugReportListing = () => {
         />
       </FormItem>
       <FormItem
-        label={<div>Mobile No.<span className="text-red-500"> * </span></div>}
+        label="Mobile No."
         className="md:col-span-1"
         invalid={!!currentFormMethods.formState.errors.mobile_no}
         errorMessage={currentFormMethods.formState.errors.mobile_no?.message}
@@ -1156,21 +1074,52 @@ const BugReportListing = () => {
       </FormItem>
       <FormItem
         label="Severity"
-        className="md:col-span-1 text-red-500"
+        className="md:col-span-1"
+        invalid={!!currentFormMethods.formState.errors.severity}
+        errorMessage={currentFormMethods.formState.errors.severity?.message}
       >
         <Controller
           name="severity"
           control={currentFormMethods.control}
           render={({ field }) => (
             <Select
-              {...field}
               placeholder="Select Severity"
+              value={[
+                { label: "Low", value: "Low" },
+                { label: "Medium", value: "Medium" },
+                { label: "High", value: "High" },
+              ].find((opt) => opt.value === field.value)}
               options={[
                 { label: "Low", value: "Low" },
                 { label: "Medium", value: "Medium" },
                 { label: "High", value: "High" },
-                { label: "Critical", value: "Critical" },
               ]}
+              onChange={(opt) => field.onChange(opt?.value)}
+            />
+          )}
+        />
+      </FormItem>
+      <FormItem
+        label={
+          <div>
+            Status<span className="text-red-500"> *</span>
+          </div>
+        }
+        className="md:col-span-1"
+        invalid={!!currentFormMethods.formState.errors.status}
+        errorMessage={currentFormMethods.formState.errors.status?.message}
+      >
+        <Controller
+          name="status"
+          control={currentFormMethods.control}
+          render={({ field }) => (
+            <Select
+              placeholder="Select Status"
+              value={BUG_REPORT_STATUS_OPTIONS_FORM.find(
+                (opt) => opt.value === field.value
+              )}
+              options={BUG_REPORT_STATUS_OPTIONS_FORM}
+              onChange={(opt) => field.onChange(opt?.value)}
             />
           )}
         />
@@ -1241,8 +1190,6 @@ const BugReportListing = () => {
   const renderViewDetails = (item: BugReportItem) => (
     <div className="p-1 space-y-5">
       <div className="flex items-center justify-between">
-        {" "}
-        {/* Status and change button */}
         <div className="flex items-start">
           <TbInfoCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
@@ -1253,7 +1200,7 @@ const BugReportListing = () => {
               className={classNames(
                 "capitalize text-sm",
                 bugStatusColor[item.status] ||
-                "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
+                  "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
               )}
             >
               {item.status}
@@ -1273,68 +1220,58 @@ const BugReportListing = () => {
         </Button>
       </div>
       <div className="flex items-start">
-        {" "}
-        <TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />{" "}
+        <TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
         <div>
-          {" "}
           <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
             Name
-          </h6>{" "}
+          </h6>
           <p className="text-gray-800 dark:text-gray-100 text-base">
             {item.name}
-          </p>{" "}
-        </div>{" "}
+          </p>
+        </div>
       </div>
       <div className="flex items-start">
-        {" "}
-        <TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />{" "}
+        <TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
         <div>
-          {" "}
           <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
             Email
-          </h6>{" "}
+          </h6>
           <p className="text-gray-800 dark:text-gray-100 text-base">
             {item.email}
-          </p>{" "}
-        </div>{" "}
+          </p>
+        </div>
       </div>
       {item.mobile_no && (
         <div className="flex items-start">
-          {" "}
-          <TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />{" "}
+          <TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            {" "}
             <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
               Mobile No.
-            </h6>{" "}
+            </h6>
             <p className="text-gray-800 dark:text-gray-100 text-base">
               {item.mobile_no}
-            </p>{" "}
-          </div>{" "}
+            </p>
+          </div>
         </div>
       )}
       <div className="flex items-start">
-        {" "}
-        <TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />{" "}
+        <TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
         <div>
-          {" "}
           <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
             Report Description
-          </h6>{" "}
+          </h6>
           <p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">
             {item.report}
-          </p>{" "}
-        </div>{" "}
+          </p>
+        </div>
       </div>
       {item.attachment && (
         <div className="flex items-start">
-          {" "}
-          <TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />{" "}
+          <TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            {" "}
             <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
               Attachment
-            </h6>{" "}
+            </h6>
             <a
               href={itemPath(item.attachment)}
               target="_blank"
@@ -1342,19 +1279,17 @@ const BugReportListing = () => {
               className="text-primary-600 hover:underline break-all text-base"
             >
               {item.attachment}
-            </a>{" "}
-          </div>{" "}
+            </a>
+          </div>
         </div>
       )}
       {item.created_at && (
         <div className="flex items-start">
-          {" "}
-          <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />{" "}
+          <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            {" "}
             <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
               Reported On
-            </h6>{" "}
+            </h6>
             <p className="text-gray-800 dark:text-gray-100 text-base">
               {new Date(item.created_at).toLocaleString("en-US", {
                 day: "2-digit",
@@ -1364,19 +1299,17 @@ const BugReportListing = () => {
                 minute: "2-digit",
                 hour12: true,
               })}
-            </p>{" "}
-          </div>{" "}
+            </p>
+          </div>
         </div>
       )}
       {item.updated_at && (
         <div className="flex items-start">
-          {" "}
-          <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />{" "}
+          <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            {" "}
             <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
               Last Updated
-            </h6>{" "}
+            </h6>
             <p className="text-gray-800 dark:text-gray-100 text-base">
               {new Date(item.updated_at).toLocaleString("en-US", {
                 day: "2-digit",
@@ -1386,8 +1319,8 @@ const BugReportListing = () => {
                 minute: "2-digit",
                 hour12: true,
               })}
-            </p>{" "}
-          </div>{" "}
+            </p>
+          </div>
         </div>
       )}
       {(item.updated_by_name || item.updated_by_role) && (
@@ -1430,62 +1363,91 @@ const BugReportListing = () => {
             </Button>
           </div>
           <div className="grid grid-cols-6 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-blue-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                 <TbBug size={24} />
               </div>
               <div>
-                <h6 className="text-blue-500">879</h6>
+                <h6 className="text-blue-500">
+                  {rawBugReportsData?.counts?.total ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Total</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-violet-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
                 <TbCalendarWeek size={24} />
               </div>
               <div>
-                <h6 className="text-violet-500">23</h6>
+                <h6 className="text-violet-500">
+                  {rawBugReportsData?.counts?.today ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Today</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-pink-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
                 <TbMailPlus size={24} />
               </div>
               <div>
-                <h6 className="text-pink-500">34</h6>
+                <h6 className="text-pink-500">
+                  {rawBugReportsData?.counts?.new ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">New</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-orange-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
                 <TbLoader size={24} />
               </div>
               <div>
-                <h6 className="text-orange-500">345</h6>
+                <h6 className="text-orange-500">
+                  {rawBugReportsData?.counts?.under_review ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Under Review</span>
               </div>
             </Card>
 
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-green-300"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
                 <TbCircleCheck size={24} />
               </div>
               <div>
-                <h6 className="text-green-500">879</h6>
+                <h6 className="text-green-500">
+                  {rawBugReportsData?.counts?.resolved ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Resolved</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-red-200"
+            >
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
                 <TbCircleX size={24} />
               </div>
               <div>
-                <h6 className="text-red-500">78</h6>
+                <h6 className="text-red-500">
+                  {rawBugReportsData?.counts?.unresolved ?? "..."}
+                </h6>
                 <span className="font-semibold text-xs">Unresolved</span>
               </div>
             </Card>
-
           </div>
           <ItemTableTools
             onSearchChange={handleSearchChange}
@@ -1496,6 +1458,7 @@ const BugReportListing = () => {
           <div className="mt-4">
             <DataTable
               columns={columns}
+              noData={!tableLoading && pageData.length === 0}
               data={pageData}
               loading={tableLoading}
               pagingData={{
@@ -1531,7 +1494,6 @@ const BugReportListing = () => {
         width={520}
         footer={
           <div className="text-right w-full">
-            {" "}
             <Button
               size="sm"
               className="mr-2"
@@ -1540,7 +1502,7 @@ const BugReportListing = () => {
               type="button"
             >
               Cancel
-            </Button>{" "}
+            </Button>
             <Button
               size="sm"
               variant="solid"
@@ -1554,9 +1516,9 @@ const BugReportListing = () => {
                   ? "Saving..."
                   : "Submitting..."
                 : editingItem
-                  ? "Save"
-                  : "Submit"}
-            </Button>{" "}
+                ? "Save"
+                : "Submit"}
+            </Button>
           </div>
         }
       >
@@ -1565,14 +1527,10 @@ const BugReportListing = () => {
           onSubmit={formMethods.handleSubmit(onSubmitHandler)}
           className="flex flex-col gap-4 relative pb-28"
         >
-          {" "}
-          {/* Added relative pb-28 */}
           {renderDrawerForm(formMethods)}
           {editingItem && (
             <div className="absolute bottom-[4%] w-full left-1/2 transform -translate-x-1/2">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4">
-                {" "}
-                {/* Increased padding and mt */}
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">
                     Latest Update:
@@ -1586,25 +1544,23 @@ const BugReportListing = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  {" "}
                   <br />
-                  {/* Align text to right for dates */}
                   <span className="font-semibold text-gray-700 dark:text-gray-200">
                     Created:
                   </span>{" "}
                   <span className="text-gray-600 dark:text-gray-300">
                     {editingItem.created_at
                       ? new Date(editingItem.created_at).toLocaleString(
-                        "en-US",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        }
-                      )
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
                       : "N/A"}
                   </span>
                   <br />
@@ -1614,16 +1570,16 @@ const BugReportListing = () => {
                   <span className="text-gray-600 dark:text-gray-300">
                     {editingItem.updated_at
                       ? new Date(editingItem.updated_at).toLocaleString(
-                        "en-US",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        }
-                      )
+                          "en-US",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )
                       : "N/A"}
                   </span>
                 </div>
@@ -1657,7 +1613,6 @@ const BugReportListing = () => {
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            {" "}
             <Button
               size="sm"
               className="mr-2"
@@ -1665,7 +1620,7 @@ const BugReportListing = () => {
               type="button"
             >
               Clear
-            </Button>{" "}
+            </Button>
             <Button
               size="sm"
               variant="solid"
@@ -1673,7 +1628,7 @@ const BugReportListing = () => {
               type="submit"
             >
               Apply Filters
-            </Button>{" "}
+            </Button>
           </div>
         }
       >
@@ -1738,7 +1693,6 @@ const BugReportListing = () => {
         </p>
       </ConfirmDialog>
 
-      {/* --- Export Reason Modal --- */}
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
@@ -1797,5 +1751,3 @@ const BugReportListing = () => {
 };
 
 export default BugReportListing;
-
-// function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(" "); } // Already available via import utils
