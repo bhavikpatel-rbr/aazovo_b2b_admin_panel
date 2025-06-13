@@ -1940,7 +1940,7 @@ const Products = () => {
             {currentFormTab === FORM_TABS.GENERAL && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0">
                 <FormItem
-                  label="Product Name"
+                  label={<div>Product Name<span className="text-red-500"> * </span></div>}
                   isRequired
                   invalid={!!formErrors.name}
                   errorMessage={formErrors.name?.message}
@@ -1952,7 +1952,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Slug / Url"
+                  label={<div>Slug/URL<span className="text-red-500"> * </span></div>}
                   isRequired
                   invalid={!!formErrors.slug}
                   errorMessage={formErrors.slug?.message}
@@ -1964,7 +1964,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="SKU Code"
+                  label={<div>SKU Code<span className="text-red-500"> * </span></div>}
                   invalid={!!formErrors.sku_code}
                   errorMessage={formErrors.sku_code?.message}
                 >
@@ -1977,7 +1977,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Status"
+                  label={<div>Status<span className="text-red-500"> * </span></div>}
                   isRequired
                   invalid={!!formErrors.status}
                   errorMessage={formErrors.status?.message}
@@ -1997,7 +1997,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Domains"
+                  label={<div>Domains<span className="text-red-500"> * </span></div>}
                   isRequired
                   className="md:col-span-2"
                   invalid={!!formErrors.domain_ids}
@@ -2023,7 +2023,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Category"
+                  label={<div>Category<span className="text-red-500"> * </span></div>}
                   isRequired
                   invalid={!!formErrors.category_id}
                   errorMessage={formErrors.category_id?.message}
@@ -2044,7 +2044,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Sub Category"
+                  label={<div>Sub Category<span className="text-red-500"> * </span></div>}
                   invalid={!!formErrors.sub_category_id}
                   errorMessage={
                     formErrors.sub_category_id?.message as string | undefined
@@ -2102,7 +2102,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Unit"
+                  label={<div>Unit<span className="text-red-500"> * </span></div>}
                   isRequired
                   invalid={!!formErrors.unit_id}
                   errorMessage={formErrors.unit_id?.message}
@@ -2155,7 +2155,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="HSN Code"
+                  label={<div>HSN Code<span className="text-red-500"> * </span></div>}
                   invalid={!!formErrors.hsn_code}
                   errorMessage={formErrors.hsn_code?.message}
                 >
@@ -2238,7 +2238,7 @@ const Products = () => {
             {currentFormTab === FORM_TABS.DESCRIPTION && (
               <div className="flex flex-col gap-y-4">
                 <FormItem
-                  label="Description"
+                  label={<div>Description<span className="text-red-500"> * </span></div>}
                   invalid={!!formErrors.description}
                   errorMessage={formErrors.description?.message}
                 >
@@ -2256,7 +2256,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Short Description"
+                  label={<div>Short Description<span className="text-red-500"> * </span></div>}
                   invalid={!!formErrors.short_description}
                   errorMessage={formErrors.short_description?.message}
                 >
@@ -2484,7 +2484,7 @@ const Products = () => {
             {currentFormTab === FORM_TABS.META && (
               <div className="flex flex-col gap-y-4">
                 <FormItem
-                  label="Meta Tag Title"
+                  label={<div>Meta Tag Title<span className="text-red-500"> * </span></div>}
                   invalid={!!formErrors.meta_title}
                   errorMessage={formErrors.meta_title?.message}
                 >
@@ -2497,7 +2497,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Meta Tag Description"
+                  label={<div>Meta Tag Description<span className="text-red-500"> * </span></div>}
                   invalid={!!formErrors.meta_descr}
                   errorMessage={formErrors.meta_descr?.message}
                 >

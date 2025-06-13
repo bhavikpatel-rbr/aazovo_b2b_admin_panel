@@ -336,13 +336,13 @@ const AutoEmailTemplatesListing = () => {
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem label="Email Type" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.email_type} errorMessage={currentFormMethods.formState.errors.email_type?.message}>
+      <FormItem label={<div>Email Type<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.email_type} errorMessage={currentFormMethods.formState.errors.email_type?.message}>
         <Controller name="email_type" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbMailBolt />} placeholder="e.g., Welcome Email, Order Confirmation" />)} />
       </FormItem>
-      <FormItem label="Template Key" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.template_key} errorMessage={currentFormMethods.formState.errors.template_key?.message}>
+      <FormItem label={<div>Template ID<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.template_key} errorMessage={currentFormMethods.formState.errors.template_key?.message}>
         <Controller name="template_key" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbKey />} placeholder="UNIQUE_TEMPLATE_KEY (e.g., WELCOME_V1)" />)} />
       </FormItem>
-      <FormItem label="Category" invalid={!!currentFormMethods.formState.errors.category_id} errorMessage={currentFormMethods.formState.errors.category_id?.message}>
+      <FormItem label={<div>Category<span className="text-red-500"> * </span></div>} invalid={!!currentFormMethods.formState.errors.category_id} errorMessage={currentFormMethods.formState.errors.category_id?.message}>
         <Controller name="category_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory2 />} />)} />
       </FormItem>
       <FormItem label="Department" invalid={!!currentFormMethods.formState.errors.department_id} errorMessage={currentFormMethods.formState.errors.department_id?.message}>

@@ -620,13 +620,13 @@ const EmailCampaignListing = () => {
       case 1:
         return (
           <Card header={<div className="flex items-center gap-2 font-semibold"><TbTemplate /> Step 1: Template & Name</div>} bodyClass="p-4 md:p-6">
-            <FormItem label="Mail Template" invalid={!!errors.template_id} errorMessage={errors.template_id?.message}>
+            <FormItem label={<div>Mail Template<span className="text-red-500"> * </span></div>} invalid={!!errors.template_id} errorMessage={errors.template_id?.message}>
               <Controller name="template_id" control={control} render={({ field }) => (
                 <Select placeholder="Select a template..." options={mailTemplateOptions} value={mailTemplateOptions.find(o => o.value === field.value)}
                   onChange={(opt) => field.onChange(opt?.value)} />
               )} />
             </FormItem>
-            <FormItem label="Campaign Name (Internal Tracking)" className="mt-4" invalid={!!errors.campaign_name} errorMessage={errors.campaign_name?.message}>
+            <FormItem label={<div>Campaign Name<span className="text-red-500"> * </span></div>} className="mt-4" invalid={!!errors.campaign_name} errorMessage={errors.campaign_name?.message}>
               <Controller name="campaign_name" control={control} render={({ field }) => (<Input {...field} prefix={<TbClipboardText />} placeholder="e.g., Q4 Holiday Promo" />)} />
             </FormItem>
           </Card>
@@ -648,7 +648,7 @@ const EmailCampaignListing = () => {
         return (
           <Card header={<div className="flex items-center gap-2 font-semibold"><TbForms /> Step 2: Customize Content</div>} bodyClass="p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-              <FormItem label="Header Text (for {{header_text}})" className="md:col-span-2" invalid={!!errors.text_block_1} errorMessage={errors.text_block_1?.message}>
+              <FormItem label="Header Text (for {{header_text}})" label={<div>Continent<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!errors.text_block_1} errorMessage={errors.text_block_1?.message}>
                 <Controller name="text_block_1" control={control} render={({ field }) => (<Input textArea {...field} rows={3} placeholder="Main heading or introductory text..." />)} />
               </FormItem>
 

@@ -959,7 +959,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
         <Form id="addBrandForm" onSubmit={addFormMethods.handleSubmit(onAddBrandSubmit)} className="flex flex-col gap-2">
           <div className="flex gap-2">
             <FormItem 
-              label="Brand Icon (250 X 250)" 
+              label={<div>Brand Icon (250 X 250)<span className="text-red-500"> * </span></div>} 
               invalid={!!addFormMethods.formState.errors.icon} 
               errorMessage={addFormMethods.formState.errors.icon?.message as string}
               className="w-full"
@@ -981,13 +981,13 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             {addFormPreviewUrl && <div className="mt-2 text-right"><Avatar src={addFormPreviewUrl} size={70} shape="circle" /></div>}
 
           </div>
-          <FormItem label="Brand Name" invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired>
+          <FormItem label={<div>Brand Name<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.name} errorMessage={addFormMethods.formState.errors.name?.message} isRequired>
             <Controller name="name" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter Brand Name" />} />
           </FormItem>
-          <FormItem label="Slug/URL" invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired>
+          <FormItem label={<div>Slug/URL<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.slug} errorMessage={addFormMethods.formState.errors.slug?.message} isRequired>
             <Controller name="slug" control={addFormMethods.control} render={({ field }) => <Input {...field} placeholder="Enter brand-slug" />} />
           </FormItem>
-          <FormItem label="Mobile No." invalid={!!addFormMethods.formState.errors.mobile_no} errorMessage={addFormMethods.formState.errors.mobile_no?.message}>
+          <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.mobile_no} errorMessage={addFormMethods.formState.errors.mobile_no?.message}>
             <Controller name="mobile_no" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Enter Mobile Number" />} />
           </FormItem>
           <div className="grid grid-cols-2 gap-2">
@@ -1007,10 +1007,10 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             </FormItem>
           </div>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
-          <FormItem label="Meta Title" invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}>
+          <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_title} errorMessage={addFormMethods.formState.errors.meta_title?.message}>
             <Controller name="meta_title" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} placeholder="Meta Title" />} />
           </FormItem>
-          <FormItem label="Meta Description" invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}>
+          <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!addFormMethods.formState.errors.meta_descr} errorMessage={addFormMethods.formState.errors.meta_descr?.message}>
             <Controller name="meta_descr" control={addFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Meta Description" />} />
           </FormItem>
           <FormItem label="Meta Keywords" invalid={!!addFormMethods.formState.errors.meta_keyword} errorMessage={addFormMethods.formState.errors.meta_keyword?.message}>
@@ -1054,13 +1054,13 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
               </FormItem>
               {editFormPreviewUrl && <div className="border border-gray-200 rounded-sm bg-gray-200 p-1 flex items-center justify-center "><Avatar src={editFormPreviewUrl} size={80} shape="square" className=""/></div>}
           </div>
-          <FormItem label="Brand Name" invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message} isRequired>
+          <FormItem label={<div>Brand Name<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.name} errorMessage={editFormMethods.formState.errors.name?.message} isRequired>
             <Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} />} />
           </FormItem>
-          <FormItem label="Slug/URL" invalid={!!editFormMethods.formState.errors.slug} errorMessage={editFormMethods.formState.errors.slug?.message} isRequired>
+          <FormItem label={<div>Slug/URL<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.slug} errorMessage={editFormMethods.formState.errors.slug?.message} isRequired>
             <Controller name="slug" control={editFormMethods.control} render={({ field }) => <Input {...field} />} />
           </FormItem>
-          <FormItem label="Mobile No." invalid={!!editFormMethods.formState.errors.mobile_no} errorMessage={editFormMethods.formState.errors.mobile_no?.message}>
+          <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.mobile_no} errorMessage={editFormMethods.formState.errors.mobile_no?.message}>
             <Controller name="mobile_no" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} />
           </FormItem>
           
@@ -1081,10 +1081,10 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             </FormItem>
           </div>
           <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options (Optional)"></FormItem>
-          <FormItem label="Meta Title" invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}>
+          <FormItem label={<div>Meta Title<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_title} errorMessage={editFormMethods.formState.errors.meta_title?.message}>
             <Controller name="meta_title" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} />} />
           </FormItem>
-          <FormItem label="Meta Description" invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}>
+          <FormItem label={<div>Meta Description<span className="text-red-500"> * </span></div>} invalid={!!editFormMethods.formState.errors.meta_descr} errorMessage={editFormMethods.formState.errors.meta_descr?.message}>
             <Controller name="meta_descr" control={editFormMethods.control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea />} />
           </FormItem>
           <FormItem label="Meta Keywords" invalid={!!editFormMethods.formState.errors.meta_keyword} errorMessage={editFormMethods.formState.errors.meta_keyword?.message}>

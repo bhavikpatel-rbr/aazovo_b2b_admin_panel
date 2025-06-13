@@ -440,7 +440,7 @@ const AccountDocument = () => {
         }
       >
         <Form>
-          <FormItem label="Company Document">
+          <FormItem label={<div>Company Document<span className="text-red-500"> * </span></div>}>
             <Controller
               control={addNewDocumentForm.control}
               name="comp_doc"
@@ -456,7 +456,7 @@ const AccountDocument = () => {
               )}
             />
           </FormItem>
-          <FormItem label="Document Type">
+          <FormItem label={<div>Document Type<span className="text-red-500"> * </span></div>}>
             <Controller
               control={addNewDocumentForm.control}
               name="doc_type"
@@ -476,7 +476,7 @@ const AccountDocument = () => {
           </FormItem>
 
           <div className="md:grid grid-cols-2 gap-3">
-            <FormItem label="Document Number">
+            <FormItem label={<div>Document Number<span className="text-red-500"> * </span></div>}>
               <Controller
                 control={addNewDocumentForm.control}
                 name="doc_number"
@@ -485,7 +485,7 @@ const AccountDocument = () => {
                 )}
               />
             </FormItem>
-            <FormItem label="Invoice Number">
+            <FormItem label={<div>Invoice Number<span className="text-red-500"> * </span></div>}>
               <Controller
                 control={addNewDocumentForm.control}
                 name="invoice_number"
@@ -496,7 +496,7 @@ const AccountDocument = () => {
             </FormItem>
           </div>
           <div className="md:grid grid-cols-2 gap-3">
-            <FormItem label="Token Form">
+            <FormItem label={<div>Token Form<span className="text-red-500"> * </span></div>}>
               <Controller
                 control={addNewDocumentForm.control}
                 name="token_form"
@@ -514,7 +514,7 @@ const AccountDocument = () => {
                 )}
               />
             </FormItem>
-            <FormItem label="Employee">
+            <FormItem label={<div>Employee<span className="text-red-500"> * </span></div>}>
               <Controller
                 control={addNewDocumentForm.control}
                 name="employee"
@@ -532,7 +532,7 @@ const AccountDocument = () => {
             </FormItem>
           </div>
           <div className="md:grid grid-cols-2 gap-3 items-center">
-            <FormItem label="Member">
+            <FormItem label={<div>Member<span className="text-red-500"> * </span></div>}>
               <Controller
                 control={addNewDocumentForm.control}
                 name="member"

@@ -440,13 +440,13 @@ const AutoEmailListing = () => {
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <FormItem label="Email Type" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.email_type} errorMessage={currentFormMethods.formState.errors.email_type?.message}>
+      <FormItem label={<div>Email Type<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.email_type} errorMessage={currentFormMethods.formState.errors.email_type?.message}>
         <Controller name="email_type" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Email Type" options={EMAIL_TYPE_OPTIONS} value={EMAIL_TYPE_OPTIONS.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbMailForward />} />)} />
       </FormItem>
-      <FormItem label="User(s)" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.user_id} errorMessage={(currentFormMethods.formState.errors.user_id as any)?.message || (currentFormMethods.formState.errors.user_id as any)?.[0]?.message}>
+      <FormItem label={<div>Users<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.user_id} errorMessage={(currentFormMethods.formState.errors.user_id as any)?.message || (currentFormMethods.formState.errors.user_id as any)?.[0]?.message}>
         <Controller name="user_id" control={currentFormMethods.control} render={({ field }) => (<Select isMulti placeholder={userOptions.length > 0 ? "Select User(s)" : "Loading Users..."} options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} prefix={<TbUsers />} disabled={userOptions.length === 0 && masterLoadingStatus === "loading"} />)} />
       </FormItem>
-      <FormItem label="Status" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
+      <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
         <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={AUTO_EMAIL_STATUS_OPTIONS} value={AUTO_EMAIL_STATUS_OPTIONS.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbToggleRight />} />)} />
       </FormItem>
     </div>

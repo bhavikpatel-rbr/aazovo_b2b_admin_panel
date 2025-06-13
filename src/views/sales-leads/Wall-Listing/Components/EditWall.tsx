@@ -465,7 +465,7 @@ const onFormSubmit = useCallback(
           <div className="grid md:grid-cols-3 gap-4 p-4">
             {/* Row 1 */}
             <FormItem
-                label="Product Name"
+                label={<div>Product Name<span className="text-red-500"> * </span></div>}
                 invalid={!!formMethods.formState.errors.product_id}
                 errorMessage={formMethods.formState.errors.product_id?.message}
             >
@@ -493,7 +493,7 @@ const onFormSubmit = useCallback(
                 />
             </FormItem>
             <FormItem
-                label="Company Name"
+                label={<div>Company Name<span className="text-red-500"> * </span></div>}
                 invalid={!!formMethods.formState.errors.company_id}
                 errorMessage={formMethods.formState.errors.company_id?.message}
             >
@@ -521,7 +521,7 @@ const onFormSubmit = useCallback(
                 />
             </FormItem>
             <FormItem
-              label="Quantity"
+              label={<div>Quantity<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.qty}
               errorMessage={formMethods.formState.errors.qty?.message}
             >
@@ -530,14 +530,14 @@ const onFormSubmit = useCallback(
 
             {/* Row 2 */}
             <FormItem
-              label="Price"
+              label={<div>Price<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.price}
               errorMessage={formMethods.formState.errors.price?.message}
             >
               <Controller name="price" control={formMethods.control} render={({ field }) => ( <InputNumber {...field} value={field.value ?? undefined} placeholder="Enter Price (Optional)" /> )} />
             </FormItem>
             <FormItem
-              label="Intent (Want to)"
+              label={<div>Intent (Want to)<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.intent}
               errorMessage={formMethods.formState.errors.intent?.message}
             >
@@ -551,7 +551,7 @@ const onFormSubmit = useCallback(
               )}/>
             </FormItem>
             <FormItem
-              label="Product Status (Stock)"
+              label={<div>Produt Status<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.productStatus}
               errorMessage={formMethods.formState.errors.productStatus?.message}
             >
