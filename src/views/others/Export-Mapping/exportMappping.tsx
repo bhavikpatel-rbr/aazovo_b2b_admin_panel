@@ -192,7 +192,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
             </Tag>
           )}
 
-          <Card className="!mt-8 bg-gray-100 dark:bg-gray-700 border-none p-4">
+          <Card className="!mt-8 bg-gray-100 dark:bg-gray-700 border-none">
             <h6 className="text-base font-semibold">Exported Log</h6>
             <p className="mt-2">
               <span className="font-semibold text-black dark:text-white">
@@ -221,7 +221,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
                 <h6 className="text-sm font-semibold text-black dark:text-white mt-2">
                   Reason:
                 </h6>
-                <p className="whitespace-pre-wrap">{data.reason}</p>
+                <p className="whitespace-pre-wrap text-justify">{data.reason}</p>
               </>
             )}
           </Card>
@@ -852,7 +852,7 @@ const ExportMapping = () => {
         size: 250,
         cell: (props) => (
           <Tooltip title={props.row.original.reason || ""} placement="top">
-            <span className="truncate block max-w-[230px]">
+            <span className="truncate block max-w-[230px] text-justify">
               {props.row.original.reason || "–"}
             </span>
           </Tooltip>
@@ -862,12 +862,12 @@ const ExportMapping = () => {
         header: "Date",
         accessorKey: "exportDate",
         enableSorting: true,
-        size: 180,
+        size: 220,
         cell: (props) => {
           const date = props.row.original.exportDate;
           return (
            
-            <span>
+            <span className="text-sm">
               {!isNaN(date.getTime())
                 ? date.toLocaleString("en-US", {
                           day: "2-digit",
