@@ -1591,7 +1591,7 @@ const PriceList = () => {
                         </Table.Tr>
                     </Table.THead>
                     <Table.TBody>
-                        {todayPriceListData.map((item) => (
+                        {todayPriceListData?.map((item) => (
                             <Table.Tr key={item.id}>
                                 <Table.Td>{item.product.name}</Table.Td>
                                 <Table.Td>₹{item.sales_price}</Table.Td>
