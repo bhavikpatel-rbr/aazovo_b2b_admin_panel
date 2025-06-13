@@ -301,7 +301,9 @@ const FormBuilder = () => {
   }, [dispatch]);
 
   const handleEdit = (id: number) => navigate(`/system-tools/formbuilder-edit/${id}`);
-  const openViewDialog = (item: FormBuilderItem) => setViewingItem(item);
+  // const openViewDialog = (item: FormBuilderItem) => setViewingItem(item);
+
+  const openViewDialog = (item: FormBuilderItem) => navigate(`/system-tools/formbuilder-edit/${item.id}?preview=true`);
   const closeViewDialog = () => setViewingItem(null);
   const handleDeleteClick = (item: FormBuilderItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
 
@@ -334,7 +336,10 @@ const FormBuilder = () => {
   };
 
   const handleChangeStatus = async (item: FormBuilderItem, newStatus: string) => { /* ... */ };
-  const handleCloneForm = async (itemToClone: FormBuilderItem) => { /* ... (same as before, ensure payload matches backend) */ };
+  const handleCloneForm = (itemToClone: FormBuilderItem) => {
+    // Navigate to create page, passing the ID of the form to clone as a query parameter
+    navigate(`/system-tools/formbuilder-create?cloneFrom=${itemToClone.id}`);
+  };
   const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); };
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); setIsFilterDrawerOpen(false); };
   const onClearFilters = () => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); dispatch(getFormBuilderAction()); };
@@ -471,7 +476,8 @@ const FormBuilder = () => {
       },
       {
         header: "Actions", id: "action", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        cell: props => (<ActionColumn item={props.row.original} onEdit={handleEdit} onViewDetail={openViewDialog} onClone={handleCloneForm} />),
+        cell: props => (
+        <ActionColumn item={props.row.original} onEdit={handleEdit} onViewDetail={openViewDialog} onClone={handleCloneForm} />),
       },
     ], [departmentsData, CategoriesData] // Dependencies for name lookups
   );
