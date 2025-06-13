@@ -120,6 +120,7 @@ const displayPageOptionsConst = [
   { value: "blog_listing", label: "Blog Listing" },
   { value: "contact", label: "Contact Page" },
   { value: "Electronic", label: "Electronic Page" },
+  { value: "page_list", label: "Page List" },
 ];
 const displayPageValues = displayPageOptionsConst.map((opt) => opt.value) as [
   string,
@@ -178,6 +179,7 @@ const sliderFormSchema = z.object({
     .number()
     .int("Must be an integer")
     .min(0, "Cannot be negative")
+    .max(5000, "Index Position cannot exceed 5 chars.")
     .nullable()
     .optional(), // Added
 });
@@ -592,7 +594,6 @@ const Sliders = () => {
     dispatch(getSlidersAction());
     dispatch(getDomainsAction());
   }, [dispatch]);
-  console.log("domainsData", domainsData)
   
    const DomainsOptions = domainsData.length > 0 && domainsData?.map((sc: any) => ({
     value: sc.id,
@@ -894,6 +895,24 @@ const Sliders = () => {
     handleSetTableData({ pageIndex: 1 });
     setIsFilterDrawerOpen(false);
   };
+
+    const displayNameOptions = useMemo(() => {
+      if (!Array.isArray(rawSlidersData)) return [];
+      const uniqueNames = new Set(rawSlidersData.map((slider) => slider.display_page));
+      return Array.from(uniqueNames).map((display_page) => ({
+        value: display_page,
+        label: display_page,
+      }));
+    }, [rawSlidersData]);
+
+    const sourceNameOptions = useMemo(() => {
+      if (!Array.isArray(rawSlidersData)) return [];
+      const uniqueNames = new Set(rawSlidersData.map((slider) => slider.source));
+      return Array.from(uniqueNames).map((source) => ({
+        value: source,
+        label: source,
+      }));
+    }, [rawSlidersData]);
 
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -1793,7 +1812,7 @@ const Sliders = () => {
                 <UiSelect
                   isMulti
                   placeholder="Select display pages..."
-                  options={displayPageOptionsConst}
+                  options={displayNameOptions}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
                 />
@@ -1808,7 +1827,7 @@ const Sliders = () => {
                 <UiSelect
                   isMulti
                   placeholder="Select sources..."
-                  options={sourceOptionsConst}
+                  options={sourceNameOptions}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
                 />

@@ -83,22 +83,22 @@ const hrEmployeesNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            {
-                key: 'hrEmployees.jobDepartment',
-                path: `${HR_EMPLOYEES_PREFIX_PATH}/job-department`,
-                title: 'Job Department',
-                translateKey: 'nav.hrEmployees.jobDepartment',
-                icon: 'jobDepartment',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN],
-                meta: {
-                    description: {
-                        translateKey: 'nav.hrEmployees.jobDepartment',
-                        label: 'Manage job departments',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'hrEmployees.jobDepartment',
+            //     path: `${HR_EMPLOYEES_PREFIX_PATH}/job-department`,
+            //     title: 'Job Department',
+            //     translateKey: 'nav.hrEmployees.jobDepartment',
+            //     icon: 'jobDepartment',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.hrEmployees.jobDepartment',
+            //             label: 'Manage job departments',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
             {
                 key: 'hrEmployees.jobPost',
                 path: `${HR_EMPLOYEES_PREFIX_PATH}/job-post`,
