@@ -1739,7 +1739,7 @@ export const getDesignationsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getDesignationAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
