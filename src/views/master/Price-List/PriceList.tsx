@@ -1242,7 +1242,7 @@ const PriceList = () => {
                 <TbClockDollar size={24} />
               </div>
               <div>
-                <h6 className="text-orange-500">{parseFloat(priceListData?.counts?.avg_base)}</h6>
+                <h6 className="text-orange-500">{parseFloat(priceListData?.counts?.avg_base).toFixed(2)}</h6>
                 <span className="font-semibold text-xs">Avg Base (₹)</span>
               </div>
             </Card>
@@ -1251,7 +1251,7 @@ const PriceList = () => {
                 <TbPencilDollar size={24} />
               </div>
               <div>
-                <h6 className="text-gray-500">{parseFloat(priceListData?.counts?.avg_nlc)}</h6>
+                <h6 className="text-gray-500">{parseFloat(priceListData?.counts?.avg_nlc).toFixed(2)}</h6>
                 <span className="font-semibold text-xs">Avg NLC (₹)</span>
               </div>
             </Card>  
