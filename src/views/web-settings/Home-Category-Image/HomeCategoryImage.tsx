@@ -81,17 +81,33 @@ export type HomeCategoryItem = {
   view_more?: string;
   images: HomeCategoryImage[];
   created_at?: string;
+   status: "Active" | "Inactive"; 
   updated_at?: string; // Added
   updated_by_name?: string; // Added
   updated_by_role?: string; // Added
 };
 
+type SelectOption = {
+  value: string | number;
+  label: string;
+}; 
+
+const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [
+  // Changed "Disabled" to "Inactive"
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
+const statusOptions: SelectOption[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
 // --- Zod Schema for Add/Edit Home Category Form ---
 const imageFormEntrySchema = z.object({
   id: z.union([z.string(), z.number()]).optional(),
   url: z.string().optional(),
   file: z.instanceof(File).optional(),
   preview: z.string().optional(),
+   
 }).refine(data => data.url || data.file || data.preview, {
   message: "Image entry must have an existing URL or a new file.",
 });
@@ -99,16 +115,23 @@ const imageFormEntrySchema = z.object({
 const homeCategoryFormSchema = z.object({
   category_id: z.string().min(1, "Please select a category."),
   view_more: z.string().url("View more link must be a valid URL.").optional().or(z.literal("")).nullable(),
+   status: z.enum(["Active", "Inactive"], {
+          required_error: "Status is required.",
+        }), // Added status
   images: z.array(imageFormEntrySchema)
     .min(0)
     .max(MAX_IMAGES_PER_CATEGORY, `You can upload a maximum of ${MAX_IMAGES_PER_CATEGORY} images.`)
     .optional()
     .default([]),
+ 
 });
 type HomeCategoryFormData = z.infer<typeof homeCategoryFormSchema>;
 
 const filterFormSchema = z.object({
   filterCategoryIds: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterStatuses: z
+      .array(z.object({ value: z.string(), label: z.string() }))
+      .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -305,6 +328,7 @@ const HomeCategoriesListing = () => {
   const defaultFormValues: HomeCategoryFormData = useMemo(() => ({
     category_id: "",
     view_more: "",
+    status:'Active',
     images: [],
   }), []);
 
@@ -339,7 +363,7 @@ const HomeCategoriesListing = () => {
   }, [watchedImages]);
 
 
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterCategoryIds: [] });
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterCategoryIds: [] , filterStatuses: [], });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<HomeCategoryItem[]>([]);
@@ -378,6 +402,7 @@ const HomeCategoriesListing = () => {
     reset({
       category_id: String(item.category_id),
       view_more: item.view_more || "",
+      status: item.status || "",
       images: formImages,
     });
     setIsEditDrawerOpen(true);
@@ -390,6 +415,8 @@ const HomeCategoriesListing = () => {
   }, [cleanupPreviewsAndReset]);
 
   const onSubmitHandler = async (data: HomeCategoryFormData) => {
+
+    console.log("editingItem",editingItem);
     const formDataToSubmit = new FormData();
     const keepImagesFilenames: string[] = [];
 
@@ -406,7 +433,10 @@ const HomeCategoriesListing = () => {
     setIsSubmitting(true);
     formDataToSubmit.append('category_id', data.category_id);
     formDataToSubmit.append('view_more', data.view_more || "");
+    formDataToSubmit.append('status', data.status || "");
 
+    
+    
     if (editingItem) {
       formDataToSubmit.append('_method', 'PUT');
       keepImagesFilenames.forEach(filename => formDataToSubmit.append('keep_images[]', filename));
@@ -477,9 +507,28 @@ const HomeCategoriesListing = () => {
 
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterCategoryIds: data.filterCategoryIds || [] }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [closeFilterDrawer, handleSetTableData]);
-  const onClearFilters = useCallback(() => { const defaults = { filterCategoryIds: [] }; filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
+    
+     setFilterCriteria({ 
+      filterCategoryIds: data.filterCategoryIds || [] ,
+filterStatuses: data.filterStatuses || [],
+     }); 
+     handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); 
 
+    }, [closeFilterDrawer, handleSetTableData]);
+  // const onClearFilters = useCallback(() => { 
+  //   const defaults = { filterCategoryIds: [] }; 
+  //   filterFormMethods.reset(defaults); 
+  //   setFilterCriteria(defaults); 
+  //   handleSetTableData({ pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+
+  
+  const onClearFilters = () => {
+     const defaults = { filterCategoryIds: [] ,filterStatuses: [], }
+     filterFormMethods.reset(defaults); setFilterCriteria(defaults)
+      handleSetTableData({ pageIndex: 1 });
+      dispatch(getHomeCategoryAction());
+    };
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: HomeCategoryItem[] = Array.isArray(categoryData)
       ? categoryData.map(item => ({
@@ -489,7 +538,10 @@ const HomeCategoriesListing = () => {
       : [];
 
     let processedData: HomeCategoryItem[] = cloneDeep(sourceData);
-
+ if (filterCriteria.filterStatuses?.length)
+      processedData = processedData.filter((item) =>
+        filterCriteria.filterStatuses!.some((f) => f.value === item.status)
+      );
     if (filterCriteria.filterCategoryIds?.length) {
       const selectedCatIds = new Set(filterCriteria.filterCategoryIds.map(opt => opt.value));
       processedData = processedData.filter(item => selectedCatIds.has(String(item.category_id)));
@@ -539,10 +591,12 @@ const HomeCategoriesListing = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Home Category Images";
+      const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `home_categories_export_${timestamp}.csv`;
     try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName })).unwrap();
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName , file_name:fileName })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
-      exportHomeCategoriesToCsv("home_categories_export.csv", allFilteredAndSortedData);
+      exportHomeCategoriesToCsv(fileName, allFilteredAndSortedData);
       toast.push(<Notification title="Data Exported" type="success">Home categories data has been exported.</Notification>);
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
@@ -574,27 +628,34 @@ const HomeCategoriesListing = () => {
         );
       },
     },
-    { header: "Category Name", accessorKey: "category_name", enableSorting: true, size: 160 },
+    { header: "Category Name", accessorKey: "category.name", enableSorting: true, size: 160 },
     { header: "View More Link", accessorKey: "view_more", enableSorting: false, size: 200, cell: ({ row }) => row.original.view_more ? <a href={row.original.view_more} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate block max-w-[180px]" title={row.original.view_more}>{row.original.view_more}</a> : <span className="text-gray-400">-</span> },
-    { header: "Status",  accessorKey: "status", meta: { HeaderClass: "text-red-500" }, enableSorting: true, size: 80,
-            cell: (props) => (<Tag className={`bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0`}>{'Active'}</Tag>),
-    },
+    // { header: "Status",  accessorKey: "status", enableSorting: true, size: 80,
+    //         cell: (props) => (<Tag className={`bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0`}>{'Active'}</Tag>),
+    // },
+     { header: "Status",  accessorKey: "status",  enableSorting: true, size: 80,
+                  cell: (props) => (<Tag className={props.row.original.status == 'Active' ? `bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0` : `bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500`}>{props.row.original.status}</Tag>),
+          },
     {
       header: "Updated Info",
       accessorKey: "updated_at",
       enableSorting: true,
-      meta: { HeaderClass: "text-red-500" },
       size: 160,
       cell: (props) => {
-        const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+        const { updated_at, updated_by_user, updated_by_role } = props.row.original;
         const formattedDate = updated_at
           ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
           : "N/A";
         return (
           <div className="text-xs">
             <span>
-              {updated_by_name || "N/A"}
-              {updated_by_role && (<><br /><b>{updated_by_role}</b></>)}
+              {updated_by_user?.name || "N/A"}
+              {updated_by_user?.roles[0]?.display_name && (
+                  <>
+                    <br />
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
+                  </>
+                )}  
             </span>
             <br />
             <span>{formattedDate}</span>
@@ -633,6 +694,39 @@ const HomeCategoriesListing = () => {
         <FormItem label="View More Link" className="md:col-span-2" invalid={!!errors.view_more} errorMessage={errors.view_more?.message} >
           <Controller name="view_more" control={control} render={({ field }) => (<Input {...field} value={field.value ?? ""} type="url" placeholder="https://example.com/category/all" />)} />
         </FormItem>
+        <FormItem // Added Status Field
+        className="md:col-span-2" 
+                                label={
+                                  <div>
+                                    Status<span className="text-red-500"> * </span>
+                                  </div>
+                                }
+                                invalid={!!errors.status}
+                                errorMessage={
+                                 errors.status?.message as
+                                    | string
+                                    | undefined
+                                }
+                              >
+                                <Controller
+                                  name="status"
+                                  control={control}
+                                  render={({ field }) => (
+                                    <Select
+                                      placeholder="Select Status"
+                                      options={statusOptions}
+                                      value={
+                                        statusOptions.find(
+                                          (option) => option.value === field.value
+                                        ) || null
+                                      }
+                                      onChange={(option) =>
+                                        field.onChange(option ? option.value : "")
+                                      }
+                                    />
+                                  )}
+                                />
+                              </FormItem>
         <div className="md:col-span-2">
           <FormItem 
             label={<div>{`Images (Up to ${MAX_IMAGES_PER_CATEGORY})`}<span className="text-red-500"> * </span></div>}
@@ -701,7 +795,11 @@ const HomeCategoriesListing = () => {
           </div>
         }
       >
-        <Form id="homeCategoryForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 p-1 relative pb-28"> {/* Added relative pb-28 */}
+        <Form id="homeCategoryForm" 
+        
+        onSubmit={handleSubmit(onSubmitHandler)} 
+        
+        className="flex flex-col gap-4 p-1 relative pb-28"> 
           {renderDrawerForm()}
         
           {editingItem && (
@@ -713,31 +811,46 @@ const HomeCategoriesListing = () => {
                   </b>
                   <br />
                   <p className="text-sm font-semibold">
-                    {editingItem.updated_by_name || "N/A"}
+                     {editingItem.updated_by_user?.name || "N/A"}
                   </p>
-                  <p>{editingItem.updated_by_role || "N/A"}</p>
+                  <p>{editingItem.updated_by_user?.roles[0]?.display_name ||
+                        "N/A"}</p>
                 </div>
                 <div>
                   <br />
                   <span className="font-semibold">Created At:</span>{" "}
-                  <span>
-                    {editingItem.created_at
-                      ? new Date(editingItem.created_at).toLocaleString("en-US", {
-                          day: "2-digit", month: "short", year: "numeric",
-                          hour: "numeric", minute: "2-digit", hour12: true,
-                        })
-                      : "N/A"}
-                  </span>
-                  <br />
-                  <span className="font-semibold">Updated At:</span>{" "}
-                  <span>
-                    {editingItem.updated_at
-                      ? new Date(editingItem.updated_at).toLocaleString("en-US", {
-                          day: "2-digit", month: "short", year: "numeric",
-                          hour: "numeric", minute: "2-digit", hour12: true,
-                        })
-                      : "N/A"}
-                  </span>
+<span>
+  {editingItem.created_at
+    ? `${new Date(editingItem.created_at).getDate()} ${new Date(
+        editingItem.created_at
+      ).toLocaleString("en-US", {
+        month: "short",
+      })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
+        editingItem.created_at
+      ).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })}`
+    : "N/A"}
+</span>
+<br />
+<span className="font-semibold">Updated At:</span>{" "}
+<span>
+  {editingItem.updated_at
+    ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
+        editingItem.updated_at
+      ).toLocaleString("en-US", {
+        month: "short",
+      })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
+        editingItem.updated_at
+      ).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })}`
+    : "N/A"}
+</span>
                 </div>
               </div>
             </div>
@@ -748,6 +861,21 @@ const HomeCategoriesListing = () => {
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterHomeCategoryForm" type="submit">Apply</Button> </div>} >
         <Form id="filterHomeCategoryForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+          <FormItem label="Status">
+                      <Controller
+                        name="filterStatuses"
+                        control={filterFormMethods.control}
+                        render={({ field }) => (
+                          <Select
+                            isMulti
+                            placeholder="Select status..."
+                            options={apiStatusOptions}
+                            value={field.value || []}
+                            onChange={(val) => field.onChange(val || [])}
+                          />
+                        )}
+                      />
+                    </FormItem>
           <FormItem label="Category Name">
             <Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Category" options={generalCategoryOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
           </FormItem>
