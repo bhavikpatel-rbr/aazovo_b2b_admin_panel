@@ -629,6 +629,14 @@ export const getcategoryAsync = async () => {
     return isAxiosError(err)
   }
 }
+export const getParentcategoryAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/parent-category`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 export const addcategoryAsync = async (unitData: FormData) => {
   try {
