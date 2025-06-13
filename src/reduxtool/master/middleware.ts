@@ -726,7 +726,7 @@ export const getBlogsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getBlogsAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
