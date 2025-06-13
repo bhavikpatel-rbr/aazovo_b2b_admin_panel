@@ -702,16 +702,15 @@ const Products = () => {
   const dispatch = useAppDispatch();
   const {
     ProductsData = [],
-    DomainsData = [],
+    domainsData = [],
     CategoriesData: GlobalCategoriesData = [],
     SubcategoriesData = [],
-    BrandsData = [],
-    UnitsData = [],
+    BrandData = [],
+    unitData = [],
     CountriesData = [],
     status: masterLoadingStatus, // REFACTOR: Use this more granularly
     // error: masterError, // REFACTOR: Consider using error state for UI feedback
   } = useSelector(masterSelector);
-
   const [currentListTab, setCurrentListTab] = useState<string>(TABS.ALL);
   const [currentFormTab, setCurrentFormTab] = useState<string>(
     FORM_TABS.GENERAL
@@ -766,8 +765,8 @@ const Products = () => {
 
   // REFACTOR: Memoize options to prevent re-creation on every render
   const domainOptions = useMemo(
-    () => DomainsData?.map((d: any) => ({ value: d.id, label: d.name })) || [],
-    [DomainsData]
+    () => domainsData?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
+    [domainsData]
   );
   const categoryOptions = useMemo(
     () =>
@@ -777,12 +776,12 @@ const Products = () => {
     [GlobalCategoriesData]
   );
   const brandOptions = useMemo(
-    () => BrandsData?.map((b: any) => ({ value: b.id, label: b.name })) || [],
-    [BrandsData]
+    () => BrandData?.map((b: any) => ({ value: b.id, label: b.name })) || [],
+    [BrandData]
   );
   const unitOptions = useMemo(
-    () => UnitsData?.map((u: any) => ({ value: u.id, label: u.name })) || [],
-    [UnitsData]
+    () => unitData?.map((u: any) => ({ value: u.id, label: u.name })) || [],
+    [unitData]
   );
   const countryOptions = useMemo(
     () =>
@@ -840,6 +839,8 @@ const Products = () => {
     dispatch(getBrandAction());
     dispatch(getUnitsAction());
     dispatch(getCountriesAction());
+  console.log("domainsData", BrandData);
+
   }, [dispatch]);
 
   // REFACTOR: More robust subcategory options update from Redux
