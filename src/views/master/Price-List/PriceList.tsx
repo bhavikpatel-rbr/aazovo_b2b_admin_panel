@@ -1415,36 +1415,37 @@ const PriceList = () => {
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingPriceListItem.created_at
-                      ? new Date(editingPriceListItem.created_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "long",
-                            year: "2-digit",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? `${new Date(editingPriceListItem.created_at).getDate()} ${new Date(
+                          editingPriceListItem.created_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingPriceListItem.created_at).getFullYear()}, ${new Date(
+                          editingPriceListItem.created_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingPriceListItem.updated_at
-                      ? new Date(editingPriceListItem.updated_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "long",
-                            year: "2-digit",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? `${new Date(editingPriceListItem.updated_at).getDate()} ${new Date(
+                          editingPriceListItem.updated_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingPriceListItem.updated_at).getFullYear()}, ${new Date(
+                          editingPriceListItem.updated_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
+
                 </div>
               </div>
             </div>

@@ -908,28 +908,34 @@ const Documentmaster = () => {
       <span className="font-semibold">Created At:</span>{" "}
       <span>
         {editingDocumentType.created_at
-          ? new Date(editingDocumentType.created_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "long",
-              year: "2-digit",
+          ? `${new Date(editingDocumentType.created_at).getDate()} ${new Date(
+              editingDocumentType.created_at
+            ).toLocaleString("en-US", {
+              month: "short",
+            })} ${new Date(editingDocumentType.created_at).getFullYear()}, ${new Date(
+              editingDocumentType.created_at
+            ).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
-            })
+            })}`
           : "N/A"}
       </span>
       <br />
       <span className="font-semibold">Updated At:</span>{" "}
       <span>
         {editingDocumentType.updated_at
-          ? new Date(editingDocumentType.updated_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "long",
-              year: "2-digit",
+          ? `${new Date(editingDocumentType.updated_at).getDate()} ${new Date(
+              editingDocumentType.updated_at
+            ).toLocaleString("en-US", {
+              month: "short",
+            })} ${new Date(editingDocumentType.updated_at).getFullYear()}, ${new Date(
+              editingDocumentType.updated_at
+            ).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
-            })
+            })}`
           : "N/A"}
       </span>
     </div>

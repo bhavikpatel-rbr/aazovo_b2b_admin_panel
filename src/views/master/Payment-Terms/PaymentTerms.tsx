@@ -1134,28 +1134,34 @@ const PaymentTerms = () => {
       <span className="font-semibold">Created At:</span>{" "}
       <span>
         {editingPaymentTerm.created_at
-          ? new Date(editingPaymentTerm.created_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "long",
-              year: "2-digit",
+          ? `${new Date(editingPaymentTerm.created_at).getDate()} ${new Date(
+              editingPaymentTerm.created_at
+            ).toLocaleString("en-US", {
+              month: "short",
+            })} ${new Date(editingPaymentTerm.created_at).getFullYear()}, ${new Date(
+              editingPaymentTerm.created_at
+            ).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
-            })
+            })}`
           : "N/A"}
       </span>
       <br />
       <span className="font-semibold">Updated At:</span>{" "}
       <span>
         {editingPaymentTerm.updated_at
-          ? new Date(editingPaymentTerm.updated_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "long",
-              year: "2-digit",
+          ? `${new Date(editingPaymentTerm.updated_at).getDate()} ${new Date(
+              editingPaymentTerm.updated_at
+            ).toLocaleString("en-US", {
+              month: "short",
+            })} ${new Date(editingPaymentTerm.updated_at).getFullYear()}, ${new Date(
+              editingPaymentTerm.updated_at
+            ).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
-            })
+            })}`
           : "N/A"}
       </span>
     </div>
