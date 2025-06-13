@@ -1061,7 +1061,7 @@ export const editDepartmentAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/department/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
+    const response = await axiosInstance.post(`${config.apiURL}/master/department/${unitData?.id}`, { _method: "PUT", name: unitData?.name, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -1949,7 +1949,7 @@ export const deleteAllInquiriesAsync = async (unitData: any) => {
 }
 
 export const importRowDataAsync = async () => {
-  try { 
+  try {
     const response = await axiosInstance.put(`${config.apiURL}/master/import`);
     return response;
   } catch (err) {
