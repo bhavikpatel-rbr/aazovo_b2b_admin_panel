@@ -5,6 +5,7 @@ import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -14,7 +15,7 @@ import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import ConfirmDialog from "@/components/shared/ConfirmDialog"; // Now used for export reason too
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
@@ -23,23 +24,17 @@ import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 // Icons
 import {
   TbPencil,
-  TbTrash,
-  TbChecks,
-  TbEye,
-  TbShare,
-  TbDotsVertical,
+  // TbTrash, // Commented out
+  // TbChecks, // Commented out
   TbSearch,
   TbFilter,
   TbPlus,
   TbCloudUpload,
-  TbBuildingCommunity,
   TbReload,
   TbUsers,
-  TbBuildingOff,
-  TbBuildingCog,
   TbBuilding,
   TbInbox,
-  TbUserScan, // Icon for Departments
+  TbUserScan,
 } from "react-icons/tb";
 
 // Types
@@ -56,24 +51,38 @@ import {
   getDepartmentsAction,
   addDepartmentAction,
   editDepartmentAction,
-  deleteDepartmentAction,
-  deleteAllDepartmentsAction, // Ensure this action exists and handles payload correctly
-} from "@/reduxtool/master/middleware"; // Adjust path if necessary
+  deleteDepartmentAction, // Kept for reference
+  deleteAllDepartmentsAction, // Kept for reference
+  submitExportReasonAction, // Added for export reason
+} from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-// --- Define Department Type (Matches your API response for listing) ---
+// Type for Select options
+type SelectOption = {
+  value: string | number;
+  label: string;
+};
+
+// --- Define Department Type ---
 export type DepartmentItem = {
   id: string | number;
   name: string;
-  status: "Active" | "Inactive" | string; // API returns 'Active', allow string for flexibility
+  status: "Active" | "Inactive";
   totalemployee?: string;
   totaljobpost?: string;
   totalapplication?: string;
-  created_by?: string;
   created_at?: string;
   updated_at?: string;
+  created_by_user?: { name: string; roles: { display_name: string }[] };
+  updated_by_user?: { name: string; roles: { display_name: string }[] };
 };
+
+// --- Status Options ---
+const statusOptions: SelectOption[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
 
 // --- Zod Schema for Add/Edit Department Form ---
 const departmentFormSchema = z.object({
@@ -81,6 +90,9 @@ const departmentFormSchema = z.object({
     .string()
     .min(1, "Department name is required.")
     .max(100, "Department name cannot exceed 100 characters."),
+  status: z.enum(["Active", "Inactive"], {
+    required_error: "Status is required.",
+  }),
 });
 type DepartmentFormData = z.infer<typeof departmentFormSchema>;
 
@@ -89,37 +101,83 @@ const filterFormSchema = z.object({
   filterNames: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
+  filterStatus: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_DEPT = ["ID", "Department Name"];
-const CSV_KEYS_DEPT: (keyof DepartmentItem)[] = ["id", "name"];
+const CSV_HEADERS_DEPT = [
+    "ID",
+    "Department Name",
+    "Status",
+    "Updated By",
+    "Updated Role",
+    "Updated At",
+];
+type DepartmentExportItem = Omit<DepartmentItem, "created_at" | "updated_at" | "created_by_user" | "updated_by_user" | "totalemployee" | "totaljobpost" | "totalapplication"> & {
+  status: "Active" | "Inactive";
+  updated_by_name?: string;
+  updated_by_role?: string;
+  updated_at_formatted?: string;
+};
+const CSV_KEYS_DEPT: (keyof DepartmentExportItem)[] = [
+  "id",
+  "name",
+  "status",
+  "updated_by_name",
+  "updated_by_role",
+  "updated_at_formatted",
+];
 
 function exportDepartmentsToCsv(filename: string, rows: DepartmentItem[]) {
   if (!rows || !rows.length) {
-    toast.push(
-      <Notification title="No Data" type="info" duration={2000}>
-        Nothing to export.
-      </Notification>
-    );
+    // Toast notification is handled by the calling function now for consistency
     return false;
   }
+  const transformedRows: DepartmentExportItem[] = rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    status: row.status,
+    updated_by_name: row.updated_by_user?.name || "N/A",
+    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A",
+    updated_at_formatted: row.updated_at
+      ? new Date(row.updated_at).toLocaleString()
+      : "N/A",
+  }));
+
   const separator = ",";
   const csvContent =
     CSV_HEADERS_DEPT.join(separator) +
     "\n" +
-    rows
-      .map((row) =>
-        CSV_KEYS_DEPT.map((k) => {
-          let cell = row[k];
-          if (cell === null || cell === undefined) cell = "";
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+    transformedRows
+      .map((row) => {
+        return CSV_KEYS_DEPT.map((k) => {
+          let cell = row[k as keyof DepartmentExportItem];
+          if (cell === null || cell === undefined) {
+            cell = "";
+          } else {
+            cell = String(cell).replace(/"/g, '""');
+          }
+          if (String(cell).search(/("|,|\n)/g) >= 0) {
+            cell = `"${cell}"`;
+          }
           return cell;
-        }).join(separator)
-      )
+        }).join(separator);
+      })
       .join("\n");
+
   const blob = new Blob(["\ufeff" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
@@ -133,48 +191,34 @@ function exportDepartmentsToCsv(filename: string, rows: DepartmentItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    // Toast notification moved to the calling function
     return true;
   }
-  toast.push(
-    <Notification title="Export Failed" type="danger" duration={3000}>
-      Browser does not support this feature.
-    </Notification>
-  );
+  // Toast notification moved to the calling function
   return false;
 }
 
 const ActionColumn = ({
   onEdit,
-  onDelete,
 }: {
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+          className={`text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-          role="button"
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip> */}
     </div>
   );
 };
 
-// --- DepartmentsSearch Component ---
 type DepartmentsSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -193,11 +237,10 @@ const DepartmentsSearch = React.forwardRef<
 ));
 DepartmentsSearch.displayName = "DepartmentsSearch";
 
-// --- DepartmentsTableTools Component ---
 const DepartmentsTableTools = ({
   onSearchChange,
   onFilter,
-  onExport,
+  onExport, // This will now open the reason modal
   onClearFilters,
 }: {
   onSearchChange: (query: string) => void;
@@ -210,9 +253,11 @@ const DepartmentsTableTools = ({
       <DepartmentsSearch onInputChange={onSearchChange} />
     </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters">
-        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
-      </Tooltip>
+      <Button
+        title="Clear Filters"
+        icon={<TbReload />}
+        onClick={onClearFilters}
+      ></Button>
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -222,7 +267,7 @@ const DepartmentsTableTools = ({
       </Button>
       <Button
         icon={<TbCloudUpload />}
-        onClick={onExport}
+        onClick={onExport} // Changed to open reason modal
         className="w-full sm:w-auto"
       >
         Export
@@ -231,139 +276,54 @@ const DepartmentsTableTools = ({
   </div>
 );
 
-// --- DepartmentsTable Component ---
 type DepartmentsTableProps = {
   columns: ColumnDef<DepartmentItem>[];
   data: DepartmentItem[];
   loading: boolean;
   pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: DepartmentItem[];
   onPaginationChange: (page: number) => void;
   onSelectChange: (value: number) => void;
   onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: DepartmentItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<DepartmentItem>[]) => void;
 };
 const DepartmentsTable = ({
   columns,
   data,
   loading,
   pagingData,
-  selectedItems,
   onPaginationChange,
   onSelectChange,
   onSort,
-  onRowSelect,
-  onAllRowSelect,
 }: DepartmentsTableProps) => (
   <DataTable
-    // selectable
     columns={columns}
     data={data}
     loading={loading}
     pagingData={pagingData}
-    checkboxChecked={(row) =>
-      selectedItems.some((selected) => selected.id === row.id)
-    }
     onPaginationChange={onPaginationChange}
     onSelectChange={onSelectChange}
     onSort={onSort}
-    onCheckBoxChange={onRowSelect}
-    onIndeterminateCheckBoxChange={onAllRowSelect}
     noData={!loading && data.length === 0}
   />
 );
 
-// --- DepartmentsSelectedFooter Component ---
-type DepartmentsSelectedFooterProps = {
-  selectedItems: DepartmentItem[];
-  onDeleteSelected: () => void;
-  isDeleting: boolean;
-};
-const DepartmentsSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-  isDeleting,
-}: DepartmentsSelectedFooterProps) => {
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmationOpen(false);
-  };
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              <span className="heading-text">{selectedItems.length}</span>
-              <span>
-                Department{selectedItems.length > 1 ? "s" : ""} selected
-              </span>
-            </span>
-          </span>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant="plain"
-              className="text-red-600 hover:text-red-500"
-              onClick={handleDeleteClick}
-              loading={isDeleting}
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Department${selectedItems.length > 1 ? "s" : ""
-          }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-      // The loading prop on ConfirmDialog itself might not be needed if the button above shows loading
-      >
-        <p>
-          Are you sure you want to delete the selected department
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>
-      </ConfirmDialog>
-    </>
-  );
-};
-
-// --- Main Departments Component ---
 const Departments = () => {
   const dispatch = useAppDispatch();
-  // Assuming 'departmentsData' is a field in your masterSlice state
-  const { departmentsData = [], status: masterLoadingStatus = "idle" } =
+  const { departmentsData = { data: [], counts: {} }, status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DepartmentItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false); // For Add/Edit form submissions
-  const [isDeleting, setIsDeleting] = useState(false); // For single delete and bulk delete operations
-
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<DepartmentItem | null>(null);
+  // State for export reason modal
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
+    filterStatus: [],
   });
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -371,46 +331,52 @@ const Departments = () => {
     sort: { order: "", key: "" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<DepartmentItem[]>([]);
+
+  const defaultFormValues: DepartmentFormData = useMemo(
+    () => ({ name: "", status: "Active" }),
+    []
+  );
 
   useEffect(() => {
-    dispatch(getDepartmentsAction()); // Fetch initial data
+    dispatch(getDepartmentsAction());
   }, [dispatch]);
 
   const addFormMethods = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentFormSchema),
-    defaultValues: { name: "" },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const editFormMethods = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentFormSchema),
-    defaultValues: { name: "" },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ // Added for export reason
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   const openAddDrawer = useCallback(() => {
-    addFormMethods.reset({ name: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(true);
-  }, [addFormMethods]);
+  }, [addFormMethods, defaultFormValues]);
+
   const closeAddDrawer = useCallback(() => {
-    addFormMethods.reset({ name: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(false);
-  }, [addFormMethods]);
+  }, [addFormMethods, defaultFormValues]);
 
   const onAddDepartmentSubmit = useCallback(
     async (data: DepartmentFormData) => {
       setIsSubmitting(true);
       try {
-        // The payload for addDepartmentAction should match what your backend API / Redux thunk expects.
-        // Typically, for adding, you might only send the 'name'.
-        // The backend would generate id, created_at, updated_at, created_by.
-        const payload = { name: data.name };
+        const payload = { name: data.name, status: data.status };
         await dispatch(addDepartmentAction(payload)).unwrap();
-
         toast.push(
           <Notification
             title="Department Added"
@@ -419,14 +385,13 @@ const Departments = () => {
           >{`Department "${data.name}" added.`}</Notification>
         );
         closeAddDrawer();
-        dispatch(getDepartmentsAction()); // Re-fetch to get the latest list including the new item
+        dispatch(getDepartmentsAction());
       } catch (error: any) {
         toast.push(
           <Notification title="Failed to Add" type="danger" duration={3000}>
             {error.message || "Could not add department."}
           </Notification>
         );
-        console.error("Add Department Error:", error);
       } finally {
         setIsSubmitting(false);
       }
@@ -437,33 +402,32 @@ const Departments = () => {
   const openEditDrawer = useCallback(
     (item: DepartmentItem) => {
       setEditingItem(item);
-      editFormMethods.reset({ name: item.name });
+      editFormMethods.reset({
+        name: item.name,
+        status: item.status || "Active",
+      });
       setIsEditDrawerOpen(true);
     },
     [editFormMethods]
   );
+
   const closeEditDrawer = useCallback(() => {
     setEditingItem(null);
-    editFormMethods.reset({ name: "" });
+    editFormMethods.reset(defaultFormValues);
     setIsEditDrawerOpen(false);
-  }, [editFormMethods]);
+  }, [editFormMethods, defaultFormValues]);
 
   const onEditDepartmentSubmit = useCallback(
     async (data: DepartmentFormData) => {
-      if (!editingItem?.id) {
-        toast.push(
-          <Notification title="Error" type="danger">
-            Cannot edit: Department ID is missing.
-          </Notification>
-        );
-        return;
-      }
+      if (!editingItem?.id) return;
       setIsSubmitting(true);
       try {
-        // Payload for edit usually includes 'id' and the fields to update.
-        const payload = { id: editingItem.id, name: data.name };
+        const payload = {
+          id: editingItem.id,
+          name: data.name,
+          status: data.status,
+        };
         await dispatch(editDepartmentAction(payload)).unwrap();
-
         toast.push(
           <Notification
             title="Department Updated"
@@ -472,14 +436,13 @@ const Departments = () => {
           >{`Department "${data.name}" updated.`}</Notification>
         );
         closeEditDrawer();
-        dispatch(getDepartmentsAction()); // Re-fetch
+        dispatch(getDepartmentsAction());
       } catch (error: any) {
         toast.push(
           <Notification title="Failed to Update" type="danger" duration={3000}>
             {error.message || "Could not update department."}
           </Notification>
         );
-        console.error("Edit Department Error:", error);
       } finally {
         setIsSubmitting(false);
       }
@@ -487,158 +450,54 @@ const Departments = () => {
     [dispatch, editingItem, closeEditDrawer]
   );
 
-  const handleDeleteClick = useCallback((item: DepartmentItem) => {
-    if (item.id === undefined || item.id === null) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Department ID is missing.
-        </Notification>
-      );
-      return;
-    }
-    setItemToDelete(item);
-    setSingleDeleteConfirmOpen(true);
-  }, []);
-
-  const onConfirmSingleDelete = useCallback(async () => {
-    if (!itemToDelete?.id) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot delete: Department ID is missing.
-        </Notification>
-      );
-      setSingleDeleteConfirmOpen(false); // Close dialog
-      setItemToDelete(null); // Clear item
-      return;
-    }
-    setIsDeleting(true);
-    setSingleDeleteConfirmOpen(false);
-    try {
-      // Payload for delete typically just the 'id'.
-      await dispatch(deleteDepartmentAction({ id: itemToDelete.id })).unwrap();
-
-      toast.push(
-        <Notification
-          title="Department Deleted"
-          type="success"
-          duration={2000}
-        >{`Department "${itemToDelete.name}" deleted.`}</Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== itemToDelete!.id)
-      ); // Update local selection
-      dispatch(getDepartmentsAction()); // Re-fetch
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Failed to Delete" type="danger" duration={3000}>
-          {error.message || `Could not delete department.`}
-        </Notification>
-      );
-      console.error("Delete Department Error:", error);
-    } finally {
-      setIsDeleting(false);
-      setItemToDelete(null);
-    }
-  }, [dispatch, itemToDelete]);
-
-  const handleDeleteSelected = useCallback(async () => {
-    if (selectedItems.length === 0) {
-      toast.push(
-        <Notification title="No Selection" type="info">
-          Please select items to delete.
-        </Notification>
-      );
-      return;
-    }
-    setIsDeleting(true); // Use a single deleting state for simplicity
-    const validItemsToDelete = selectedItems.filter(
-      (item) => item.id !== undefined && item.id !== null
-    );
-
-    if (validItemsToDelete.length !== selectedItems.length) {
-      const skippedCount = selectedItems.length - validItemsToDelete.length;
-      toast.push(
-        <Notification title="Deletion Warning" type="warning" duration={3000}>
-          {skippedCount} item(s) could not be processed due to missing IDs.
-        </Notification>
-      );
-    }
-    if (validItemsToDelete.length === 0) {
-      toast.push(
-        <Notification title="No Valid Items" type="info">
-          No valid items to delete.
-        </Notification>
-      );
-      setIsDeleting(false);
-      return;
-    }
-
-    const idsToDelete = validItemsToDelete.map((item) => String(item.id));
-    try {
-      // Payload for bulk delete, e.g., an object with a comma-separated string of IDs or an array of IDs.
-      // Adjust based on what `deleteAllDepartmentsAction` expects.
-      await dispatch(
-        deleteAllDepartmentsAction({ ids: idsToDelete.join(",") })
-      ).unwrap();
-
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-          duration={2000}
-        >{`${validItemsToDelete.length} department(s) deleted.`}</Notification>
-      );
-      setSelectedItems([]); // Clear selection
-      dispatch(getDepartmentsAction()); // Re-fetch
-    } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger" duration={3000}>
-          {error.message || "Failed to delete selected departments."}
-        </Notification>
-      );
-      console.error("Delete Selected Departments Error:", error);
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [dispatch, selectedItems]);
-
   const openFilterDrawer = useCallback(() => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
   }, [filterFormMethods, filterCriteria]);
+
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+
   const onApplyFiltersSubmit = useCallback(
     (data: FilterFormData) => {
-      setFilterCriteria({ filterNames: data.filterNames || [] });
-      setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+      setFilterCriteria({
+        filterNames: data.filterNames || [],
+        filterStatus: data.filterStatus || [],
+      });
+      handleSetTableData({ pageIndex: 1 });
       closeFilterDrawer();
     },
-    [closeFilterDrawer]
+    [closeFilterDrawer] // Added handleSetTableData to dependencies, but it's memoized
   );
+
   const onClearFilters = useCallback(() => {
-    const defaultFilters = { filterNames: [] };
+    const defaultFilters = { filterNames: [], filterStatus: [] };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
-  }, [filterFormMethods]);
+    handleSetTableData({ pageIndex: 1, query: "" });
+    dispatch(getDepartmentsAction());
+  }, [filterFormMethods, dispatch]); // Added handleSetTableData to dependencies
 
   const departmentNameOptions = useMemo(() => {
-    // Use departmentsData from Redux store
-    const sourceData: DepartmentItem[] = Array.isArray(departmentsData)
-      ? departmentsData
+    const sourceData: DepartmentItem[] = Array.isArray(departmentsData?.data)
+      ? departmentsData?.data
       : [];
     const uniqueNames = new Set(sourceData.map((item) => item.name));
     return Array.from(uniqueNames).map((name) => ({
       value: name,
       label: name,
     }));
-  }, [departmentsData]);
+  }, [departmentsData?.data]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const sourceData: DepartmentItem[] = Array.isArray(departmentsData)
-      ? departmentsData
+    const sourceDataFromStore: DepartmentItem[] = Array.isArray(departmentsData?.data)
+      ? departmentsData.data
       : [];
+    const sourceData: DepartmentItem[] = sourceDataFromStore.map(item => ({
+        ...item,
+        status: item.status || "Inactive",
+    }));
     let processedData: DepartmentItem[] = cloneDeep(sourceData);
+
     if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
       const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
         opt.value.toLowerCase()
@@ -647,11 +506,18 @@ const Departments = () => {
         selectedFilterNames.includes(item.name?.trim().toLowerCase() ?? "")
       );
     }
+    if (filterCriteria.filterStatus?.length) {
+      const statuses = filterCriteria.filterStatus.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        statuses.includes(item.status)
+      );
+    }
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(
         (item) =>
           (item.name?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.status?.trim().toLowerCase() ?? "").includes(query) ||
           String(item.id ?? "")
             .trim()
             .toLowerCase()
@@ -662,42 +528,103 @@ const Departments = () => {
     if (
       order &&
       key &&
-      (key === "id" || key === "name") &&
+      ["id", "name", "status", "updated_at"].includes(key) &&
       processedData.length > 0
     ) {
       processedData.sort((a, b) => {
-        const aValue = String(a[key as keyof DepartmentItem] ?? "");
-        const bValue = String(b[key as keyof DepartmentItem] ?? "");
+        let aValue: any, bValue: any;
+        if (key === "updated_at") {
+            const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+            const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+            return order === "asc" ? dateA - dateB : dateB - dateA;
+        } else if (key === "status") {
+          aValue = a.status ?? "";
+          bValue = b.status ?? "";
+        } else {
+          aValue = a[key as keyof Omit<DepartmentItem, 'created_by_user' | 'updated_by_user'>] ?? "";
+          bValue = b[key as keyof Omit<DepartmentItem, 'created_by_user' | 'updated_by_user'>] ?? "";
+        }
         return order === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
       });
     }
-    const dataToExport = [...processedData];
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     return {
-      pageData: dataForPage,
+      pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      allFilteredAndSortedData: processedData,
     };
-  }, [departmentsData, tableData, filterCriteria]); // Depends on Redux data
+  }, [departmentsData?.data, tableData, filterCriteria]);
 
-  const handleExportData = useCallback(() => {
-    const success = exportDepartmentsToCsv(
-      "departments_export.csv",
-      allFilteredAndSortedData
-    );
-    if (success)
+
+  const handleOpenExportReasonModal = () => { // Added function
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
       toast.push(
-        <Notification title="Export Successful" type="success" duration={2000}>
-          Data exported.
+        <Notification title="No Data" type="info">
+          Nothing to export.
         </Notification>
       );
-  }, [allFilteredAndSortedData]);
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { // Added function
+    setIsSubmittingExportReason(true);
+    const moduleName = "Departments"; // Changed module name
+    const timestamp = new Date().toISOString().split("T")[0];
+    const fileName = `departments_export_${timestamp}.csv`; // Changed file name
+    try {
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
+
+      // Proceed with export
+      const exportSuccess = exportDepartmentsToCsv(fileName, allFilteredAndSortedData);
+      if (exportSuccess) {
+        toast.push(
+            <Notification title="Export Successful" type="success">
+                Data exported to {fileName}.
+            </Notification>
+        );
+      } else {
+         // exportDepartmentsToCsv handles its own "No Data" toast, but we might want a general failure one.
+         // However, if it reaches here and exportSuccess is false, it's likely the browser feature issue.
+         if(allFilteredAndSortedData && allFilteredAndSortedData.length > 0) { // Only show this if there was data
+            toast.push(
+                <Notification title="Export Failed" type="danger">
+                Browser does not support this feature.
+                </Notification>
+            );
+         }
+      }
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+        >
+          {error.message || "Could not submit export reason."}
+        </Notification>
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
+
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
     setTableData((prev) => ({ ...prev, ...data }));
@@ -706,10 +633,9 @@ const Departments = () => {
     (page: number) => handleSetTableData({ pageIndex: page }),
     [handleSetTableData]
   );
-  const handleSelectChange = useCallback(
+  const handleSelectPageSizeChange = useCallback(
     (value: number) => {
       handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
     },
     [handleSetTableData]
   );
@@ -723,85 +649,103 @@ const Departments = () => {
     (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
     [handleSetTableData]
   );
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: DepartmentItem) => {
-      setSelectedItems((prev) => {
-        if (checked)
-          return prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row];
-        return prev.filter((item) => item.id !== row.id);
-      });
-    },
-    []
-  );
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<DepartmentItem>[]) => {
-      const cPOR = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((pS) => {
-          const pSIds = new Set(pS.map((i) => i.id));
-          const nRTA = cPOR.filter((r) => !pSIds.has(r.id));
-          return [...pS, ...nRTA];
-        });
-      } else {
-        const cPRIds = new Set(cPOR.map((r) => r.id));
-        setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id)));
-      }
-    },
-    []
-  );
 
   const columns: ColumnDef<DepartmentItem>[] = useMemo(
     () => [
-      // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
-      { header: "Department Name", accessorKey: "name", enableSorting: true, size: 140 },
+      { header: "Department Name", accessorKey: "name", enableSorting: true, size: 200 },
+      
       {
-        header: "Status", accessorKey: "status", enableSorting: true, size: 80, meta: { HeaderClass: "text-red-500" },
-        cell: () => {
+        header: "Status",
+        accessorKey: "status",
+        enableSorting: true,
+        size: 100,
+        cell: (props) => {
+          const status = props.row.original.status;
           return (
-            <Tag className="bg-green-200 text-green-500">Active</Tag>
-          )
-        }
+            <Tag
+              className={classNames(
+                "capitalize font-semibold whitespace-nowrap",
+                {
+                  "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500":
+                    status === "Active",
+                  "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500":
+                    status === "Inactive",
+                }
+              )}
+            >
+              {status}
+            </Tag>
+          );
+        },
       },
       {
-        header: "Total Employee", accessorKey: "totalemployee", enableSorting: true, size: 140, meta: { HeaderClass: "text-red-500" },
-        cell: () => {
-          return (
-            <span>120</span>
-          )
-        }
+        header: "Total Employee",
+        accessorKey: "totalemployee",
+        enableSorting: false,
+        size: 120,
+        cell: (props) => <span>{props.row.original.total_employees || 0}</span>,
       },
       {
-        header: "Total Job Post", accessorKey: "totaljobpost", enableSorting: true, size: 140, meta: { HeaderClass: "text-red-500" },
-        cell: () => {
-          return (
-            <span>20</span>
-          )
-        }
+        header: "Total Job Post",
+        accessorKey: "totaljobpost",
+        enableSorting: false,
+        size: 120,
+        cell: (props) => <span>{props.row.original.total_job_posts || 0}</span>,
       },
       {
-        header: "Total Application", accessorKey: "totalapplication", enableSorting: true, size: 140, meta: { HeaderClass: "text-red-500" },
-        cell: () => {
+        header: "Total Application",
+        accessorKey: "totalapplication",
+        enableSorting: false,
+        size: 130,
+        cell: (props) => <span>{props.row.original.total_applicants || 0}</span>,
+      },
+      {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        size: 150,
+        cell: (props) => {
+          const { updated_at, updated_by_user } = props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
+            : "N/A";
           return (
-            <span>20</span>
-          )
-        }
+            <div className="text-xs">
+              <span>
+                {updated_by_user?.name || "N/A"}
+                {updated_by_user?.roles?.[0]?.display_name && (
+                  <>
+                    <br />
+                    <b>{updated_by_user.roles[0].display_name}</b>
+                  </>
+                )}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
       },
       {
         header: "Actions",
         id: "action",
         size: 80,
-        meta: { HeaderClass: "text-center" },
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
           />
         ),
       },
     ],
-    [openEditDrawer, handleDeleteClick] // These are stable if memoized correctly
+    [openEditDrawer]
   );
 
   return (
@@ -809,48 +753,46 @@ const Departments = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">
-              Departments
-            </h5>
+            <h5 className="mb-2 sm:mb-0">Departments</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
               Add New
             </Button>
           </div>
 
-          <div className="grid grid-cols-4 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4 gap-4">
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200">
                 <TbBuilding size={24} />
               </div>
               <div>
-                <h6 className="text-blue-500">12</h6>
+                <h6 className="text-blue-500 dark:text-blue-200">{departmentsData?.counts?.departments || 0}</h6>
                 <span className="font-semibold text-xs">Total Departments</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-violet-200 dark:border-violet-700">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200">
                 <TbUserScan size={24} />
               </div>
               <div>
-                <h6 className="text-violet-500">4</h6>
+                <h6 className="text-violet-500 dark:text-violet-200">{departmentsData?.counts?.employees || 0}</h6>
                 <span className="font-semibold text-xs">Total Employees</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-pink-200 dark:border-pink-700">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 dark:bg-pink-500/20 text-pink-500 dark:text-pink-200">
                 <TbInbox size={24} />
               </div>
               <div>
-                <h6 className="text-pink-500">8</h6>
+                <h6 className="text-pink-500 dark:text-pink-200">{departmentsData?.counts?.job_posts || 0}</h6>
                 <span className="font-semibold text-xs">Jobs Posted</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
                 <TbUsers size={24} />
               </div>
               <div>
-                <h6 className="text-green-500">34</h6>
+                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.applicants || 0}</h6>
                 <span className="font-semibold text-xs">Total Applicants</span>
               </div>
             </Card>
@@ -859,211 +801,167 @@ const Departments = () => {
           <DepartmentsTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal} // Changed to open reason modal
             onClearFilters={onClearFilters}
           />
           <div className="mt-4">
             <DepartmentsTable
               columns={columns}
               data={pageData}
-              // Combined loading state: Redux loading OR form submitting/deleting
-              loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
-              }
+              loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
+              onSelectChange={handleSelectPageSizeChange}
               onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
             />
           </div>
         </AdaptiveCard>
       </Container>
 
-      <DepartmentsSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-        isDeleting={isDeleting}
-      />
-
-      <Drawer
-        title="Add Department"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="addDepartmentForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="addDepartmentForm"
-          onSubmit={addFormMethods.handleSubmit(onAddDepartmentSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label={<div>Department Name<span className="text-red-500"> * </span></div>}
-            invalid={!!addFormMethods.formState.errors.name}
-            errorMessage={addFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Department Name" />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label={<div>Status<span className="text-red-500"> * </span></div>}
-          >
-            <Controller
-              name="status"
-              control={addFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  {...field}
-                  placeholder="Select Status"
-                  options={[
-                    { label: "Active", value: "Active" },
-                    { label: "Inactive", value: "Inactive" },
-                  ]}
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      <Drawer
-        title="Edit Department"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="editDepartmentForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="editDepartmentForm"
-          onSubmit={editFormMethods.handleSubmit(onEditDepartmentSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem
-            label={<div>Department Name<span className="text-red-500"> * </span></div>}
-            invalid={!!editFormMethods.formState.errors.name}
-            errorMessage={editFormMethods.formState.errors.name?.message}
-          >
-            <Controller
-              name="name"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter Department Name" />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label={<div>Status<span className="text-red-500"> * </span></div>}
-          >
-            <Controller
-              name="status"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  {...field}
-                  placeholder="Select Status"
-                  options={[
-                    { label: "Active", value: "Active" },
-                    { label: "Inactive", value: "Inactive" },
-                  ]}
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-        <div className="absolute bottom-[14%] w-[88%]">
-          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-              <p className="text-sm font-semibold">Tushar Joshi</p>
-              <p>System Admin</p>
+      {[
+        {
+          formMethods: addFormMethods,
+          onSubmit: onAddDepartmentSubmit,
+          isOpen: isAddDrawerOpen,
+          closeFn: closeAddDrawer,
+          title: "Add Department",
+          formId: "addDepartmentForm",
+          submitText: "Adding...",
+          saveText: "Save",
+          isEdit: false,
+        },
+        {
+          formMethods: editFormMethods,
+          onSubmit: onEditDepartmentSubmit,
+          isOpen: isEditDrawerOpen,
+          closeFn: closeEditDrawer,
+          title: "Edit Department",
+          formId: "editDepartmentForm",
+          submitText: "Saving...",
+          saveText: "Save",
+          isEdit: true,
+        },
+      ].map((drawerProps) => (
+        <Drawer
+          key={drawerProps.formId}
+          title={drawerProps.title}
+          isOpen={drawerProps.isOpen}
+          onClose={drawerProps.closeFn}
+          onRequestClose={drawerProps.closeFn}
+          width={480}
+          footer={
+            <div className="text-right w-full">
+              <Button
+                size="sm"
+                className="mr-2"
+                onClick={drawerProps.closeFn}
+                disabled={isSubmitting}
+                type="button"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                form={drawerProps.formId}
+                type="submit"
+                loading={isSubmitting}
+                disabled={
+                  !drawerProps.formMethods.formState.isValid || isSubmitting
+                }
+              >
+                {isSubmitting ? drawerProps.submitText : drawerProps.saveText}
+              </Button>
             </div>
-            <div className="w-[210px]"><br />
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
-              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+          }
+        >
+          <Form
+            id={drawerProps.formId}
+            onSubmit={drawerProps.formMethods.handleSubmit(
+              drawerProps.onSubmit as any
+            )}
+            className="flex flex-col gap-4 relative pb-28"
+          >
+            <FormItem
+              label={
+                <div>Department Name<span className="text-red-500"> * </span></div>
+              }
+              invalid={!!drawerProps.formMethods.formState.errors.name}
+              errorMessage={drawerProps.formMethods.formState.errors.name?.message as string | undefined}
+            >
+              <Controller
+                name="name"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Input {...field} placeholder="Enter Department Name" />
+                )}
+              />
+            </FormItem>
+            <FormItem
+              label={
+                <div>Status<span className="text-red-500"> * </span></div>
+              }
+              invalid={!!drawerProps.formMethods.formState.errors.status}
+              errorMessage={drawerProps.formMethods.formState.errors.status?.message as string | undefined}
+            >
+              <Controller
+                name="status"
+                control={drawerProps.formMethods.control}
+                render={({ field }) => (
+                  <Select
+                    placeholder="Select Status"
+                    options={statusOptions}
+                    value={statusOptions.find((option) => option.value === field.value) || null}
+                    onChange={(option) => field.onChange(option ? option.value : "")}
+                  />
+                )}
+              />
+            </FormItem>
+          </Form>
+          {drawerProps.isEdit && editingItem && (
+             <div className="absolute bottom-[14%] w-[92%]">
+              <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                <div>
+                  <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                  <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
+                  <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+                </div>
+                <div>
+                  <br />
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>
+                    {editingItem.created_at
+                      ? `${new Date(editingItem.created_at).getDate()} ${new Date(editingItem.created_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(editingItem.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                      : "N/A"}
+                  </span>
+                  <br />
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>
+                    {editingItem.updated_at
+                      ? `${new Date(editingItem.updated_at).getDate()} ${new Date(editingItem.updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(editingItem.updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </Drawer>
+          )}
+        </Drawer>
+      ))}
 
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
+        width={400}
         footer={
           <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={onClearFilters}
-              type="button"
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterDepartmentForm"
-              type="submit"
-            >
-              Apply
-            </Button>
+            <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button>
+            <Button size="sm" variant="solid" form="filterDepartmentForm" type="submit">Apply</Button>
           </div>
         }
       >
@@ -1087,32 +985,66 @@ const Departments = () => {
               )}
             />
           </FormItem>
+          <FormItem label="Status">
+            <Controller
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select status..."
+                  options={statusOptions}
+                  value={field.value || []}
+                  onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                />
+              )}
+            />
+          </FormItem>
         </Form>
       </Drawer>
 
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Department"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
+      <ConfirmDialog // Added for Export Reason
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason,
         }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
       >
-        <p>
-          Are you sure you want to delete the department "
-          <strong>{itemToDelete?.name}</strong>"? This action cannot be undone.
-        </p>
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => { // Prevent default form submission and trigger RHF submit
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
       </ConfirmDialog>
     </>
   );

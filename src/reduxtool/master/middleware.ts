@@ -1827,7 +1827,7 @@ export const getDepartmentsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getDepartmentAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
