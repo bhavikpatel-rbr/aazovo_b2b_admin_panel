@@ -876,10 +876,9 @@ export const addTrandingImageAsync = async (unitData: any) => {
 }
 
 export const editTrandingImageAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/other/trending_image/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/trending_image/${unitData?.id}`, { _method: "PUT", page_name: unitData?.page_name, product_ids: unitData?.product_ids })
+    const response = await axiosInstance.post(`${config.apiURL}/other/trending_image/${unitData?.id}`, { _method: "PUT", page_name: unitData?.page_name, product_ids: unitData?.product_ids, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
