@@ -286,7 +286,7 @@ const CreateInquiry = () => {
               className="grid grid-cols-1 md:grid-cols-3 gap-4"
             >
               {/* Basic Info */}
-              <FormItem
+              {/* <FormItem
                 label="Inquiry ID"
                 invalid={!!errors.inquiry_id}
                 errorMessage={
@@ -302,7 +302,7 @@ const CreateInquiry = () => {
                     <Input {...field} placeholder="Enter Inquiry ID" />
                   )}
                 />
-              </FormItem>
+              </FormItem> */}
 
               <FormItem
                 label="Company Name"
@@ -343,7 +343,7 @@ const CreateInquiry = () => {
               </FormItem>
 
               <FormItem
-                label="Contact Person Email"
+                label={<div>Contact Person Email<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.email}
                 errorMessage={
                   typeof errors.email === "object" &&
@@ -367,7 +367,7 @@ const CreateInquiry = () => {
               </FormItem>
 
               <FormItem
-                label="Contact Person Phone"
+                label={<div>Contact Person <span className="text-red-500"> * </span></div>}
                 invalid={!!errors.mobile_no}
                 errorMessage={
                   typeof errors.mobile_no === "object" &&

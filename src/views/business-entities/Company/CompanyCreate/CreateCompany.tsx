@@ -330,16 +330,16 @@ const transformApiToFormSchema = (
     company_primary_contact_number: apiData.company_primary_contact_number,
     primary_contact_country_code: apiData.primary_contact_country_code
       ? {
-          label: apiData.primary_contact_country_code,
-          value: apiData.primary_contact_country_code,
-        }
+        label: apiData.primary_contact_country_code,
+        value: apiData.primary_contact_country_code,
+      }
       : undefined,
     alternate_contact_number: apiData.alternate_contact_number,
     alternate_contact_country_code: apiData.alternate_contact_country_code
       ? {
-          label: apiData.alternate_contact_country_code,
-          value: apiData.alternate_contact_country_code,
-        }
+        label: apiData.alternate_contact_country_code,
+        value: apiData.alternate_contact_country_code,
+      }
       : undefined,
     company_primary_email_id: apiData.company_primary_email_id,
     alternate_email_id: apiData.alternate_email_id,
@@ -371,9 +371,9 @@ const transformApiToFormSchema = (
     company_logo_brochure: apiData.logo_url,
     primary_business_type: apiData.primary_business_type
       ? {
-          label: apiData.primary_business_type,
-          value: apiData.primary_business_type,
-        }
+        label: apiData.primary_business_type,
+        value: apiData.primary_business_type,
+      }
       : undefined,
     primary_business_category: apiData.primary_business_category,
     sub_category: stringToSelectArray(apiData.sub_category),
@@ -456,9 +456,9 @@ const transformApiToFormSchema = (
     secondary_account_number: apiData.secondary_bank_account_number,
     secondary_bank_name: apiData.secondary_bank_name
       ? {
-          label: apiData.secondary_bank_name,
-          value: apiData.secondary_bank_name,
-        }
+        label: apiData.secondary_bank_name,
+        value: apiData.secondary_bank_name,
+      }
       : undefined,
     secondary_ifsc_code: apiData.secondary_ifsc_code,
     secondary_bank_verification_photo:
@@ -745,7 +745,7 @@ const preparePayloadForApi = (
           : branch.office_type;
       const countryVal =
         typeof branch.location_country === "object" &&
-        branch.location_country?.value
+          branch.location_country?.value
           ? branch.location_country.value
           : branch.location_country;
       const stateVal =
@@ -1135,12 +1135,12 @@ const CompanyDetailsSection = ({
             name="company_code"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Company Code" {...field} />
+              <Input placeholder="Company Code" {...field} readOnly />
             )}
           />
         </FormItem>
         <FormItem
-          label="Company Name"
+          label={<div>Company Name<span className="text-red-500"> * </span></div>}
           invalid={!!errors.name}
           className="md:col-span-2"
           errorMessage={errors.name?.message as string}
@@ -1154,7 +1154,7 @@ const CompanyDetailsSection = ({
           />
         </FormItem>
         <FormItem
-          label="Status"
+          label={<div>Status<span className="text-red-500"> * </span></div>}
           invalid={!!errors.status}
           errorMessage={errors.status?.message as string}
         >
@@ -1173,7 +1173,7 @@ const CompanyDetailsSection = ({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
         <FormItem
-          label="Primary E-mail ID"
+          label={<div>Primary Email ID<span className="text-red-500"> * </span></div>}
           invalid={!!errors.company_primary_email_id}
           errorMessage={errors.company_primary_email_id?.message as string}
         >
@@ -1186,7 +1186,7 @@ const CompanyDetailsSection = ({
           />
         </FormItem>
         <FormItem
-          label="Primary Contact Number"
+          label={<div>Primary Contact Number<span className="text-red-500"> * </span></div>}
           invalid={!!errors.company_primary_contact_number}
           errorMessage={
             errors.company_primary_contact_number?.message as string
@@ -1294,80 +1294,80 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
-          <FormItem
-            label="Continent"
-            invalid={!!errors.continent_name}
-            errorMessage={errors.continent_name?.message as string}
-          >
-            <Controller
-              name="continent_name"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Continent"
-                  options={continentOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Country"
-            invalid={!!errors.country}
-            errorMessage={errors.country?.message as string}
-          >
-            <Controller
-              name="country"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Country"
-                  options={countryOptions}
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="State"
-            invalid={!!errors.state}
-            errorMessage={errors.state?.message as string}
-          >
-            <Controller
-              name="state"
-              control={control}
-              render={({ field }) => (
-                <Input placeholder="Enter state" {...field} />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="City"
-            invalid={!!errors.city}
-            errorMessage={errors.city?.message as string}
-          >
-            <Controller
-              name="city"
-              control={control}
-              render={({ field }) => (
-                <Input placeholder="Enter city" {...field} />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="ZIP / Postal Code"
-            invalid={!!errors.zip_postal_code}
-            errorMessage={errors.zip_postal_code?.message as string}
-          >
-            <Controller
-              name="zip_postal_code"
-              control={control}
-              render={({ field }) => <Input placeholder="ZIP Code" {...field} />}
-            />
-          </FormItem>
-        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
+        <FormItem
+          label="Continent"
+          invalid={!!errors.continent_name}
+          errorMessage={errors.continent_name?.message as string}
+        >
+          <Controller
+            name="continent_name"
+            control={control}
+            render={({ field }) => (
+              <Select
+                placeholder="Select Continent"
+                options={continentOptions}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label={<div>Country<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.country}
+          errorMessage={errors.country?.message as string}
+        >
+          <Controller
+            name="country"
+            control={control}
+            render={({ field }) => (
+              <Select
+                placeholder="Select Country"
+                options={countryOptions}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="State"
+          invalid={!!errors.state}
+          errorMessage={errors.state?.message as string}
+        >
+          <Controller
+            name="state"
+            control={control}
+            render={({ field }) => (
+              <Input placeholder="Enter state" {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="City"
+          invalid={!!errors.city}
+          errorMessage={errors.city?.message as string}
+        >
+          <Controller
+            name="city"
+            control={control}
+            render={({ field }) => (
+              <Input placeholder="Enter city" {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="ZIP / Postal Code"
+          invalid={!!errors.zip_postal_code}
+          errorMessage={errors.zip_postal_code?.message as string}
+        >
+          <Controller
+            name="zip_postal_code"
+            control={control}
+            render={({ field }) => <Input placeholder="ZIP Code" {...field} />}
+          />
+        </FormItem>
+      </div>
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>{" "}
       <div className="grid md:grid-cols-4 gap-3">
         {" "}
@@ -1512,7 +1512,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>{" "}
-        <FormItem
+        {/* <FormItem
           label="Primary Business Category"
           invalid={!!errors.primary_business_category}
           errorMessage={errors.primary_business_category?.message as string}
@@ -1524,8 +1524,8 @@ const CompanyDetailsSection = ({
               <Input placeholder="e.g., Electronics" {...field} />
             )}
           />
-        </FormItem>{" "}
-        <FormItem
+        </FormItem>{" "} */}
+        {/* <FormItem
           label="Sub Category"
           invalid={!!errors.sub_category}
           errorMessage={errors.sub_category?.message as string}
@@ -1537,8 +1537,8 @@ const CompanyDetailsSection = ({
               <Select placeholder="Select Sub-Categories" isMulti {...field} />
             )}
           />
-        </FormItem>{" "}
-        <FormItem
+        </FormItem>{" "} */}
+        {/* <FormItem
           label="Interested In"
           invalid={!!errors.interested_in}
           errorMessage={errors.interested_in?.message as string}
@@ -1571,7 +1571,7 @@ const CompanyDetailsSection = ({
               />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>{" "} */}
         <FormItem
           label="Support Email"
           invalid={!!errors.support_email}
@@ -1611,7 +1611,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>{" "}
-        <FormItem label="Brands">
+        {/* <FormItem label="Brands">
           <Controller
             name="brands"
             control={control}
@@ -1638,7 +1638,7 @@ const CompanyDetailsSection = ({
               />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>{" "} */}
       </div>{" "}
       <hr className="my-6" />{" "}
       <div className="flex justify-between items-center mb-4">
@@ -2056,11 +2056,12 @@ const BankDetailsSection = ({
             name="primary_bank_name"
             control={control}
             render={({ field }) => (
-              <Select
-                placeholder="Select Bank"
-                options={bankNameOptions}
-                {...field}
-              />
+              // <Select
+              //   placeholder="Select Bank"
+              //   options={bankNameOptions}
+              //   {...field}
+              // />
+              <Input type="text" {...field} placeholder="Enter Bank Name" />
             )}
           />
         </FormItem>{" "}
@@ -2116,11 +2117,12 @@ const BankDetailsSection = ({
             name="secondary_bank_name"
             control={control}
             render={({ field }) => (
-              <Select
-                placeholder="Select Bank"
-                options={bankNameOptions}
-                {...field}
-              />
+              // <Select
+              //   placeholder="Select Bank"
+              //   options={bankNameOptions}
+              //   {...field}
+              // />
+              <Input type="text" {...field} placeholder="Enter Bank Name" />
             )}
           />
         </FormItem>{" "}
@@ -2213,11 +2215,12 @@ const BankDetailsSection = ({
                   name={`additional_bank_details.${index}.bank_name`}
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      placeholder="Select Bank"
-                      options={bankNameOptions}
-                      {...field}
-                    />
+                    // <Select
+                    //   placeholder="Select Bank"
+                    //   options={bankNameOptions}
+                    //   {...field}
+                    // />
+                    <Input type="text" {...field} placeholder="Enter Bank Name" />
                   )}
                 />
               </FormItem>
@@ -2590,7 +2593,7 @@ const AccessibilitySection = ({
           );
         })}{" "}
         <hr />{" "}
-        <FormItem label="Domain Management">
+        {/* <FormItem label="Domain Management">
           <Controller
             name="DOMAIN_MANAGEMENT_FIELD"
             control={control}
@@ -2603,7 +2606,7 @@ const AccessibilitySection = ({
               />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>{" "} */}
         <Card className="mt-4 col-span-full">
           <hr className="my-6" />
           <h4 className="mb-4">Social Media Links</h4>
@@ -2697,9 +2700,9 @@ const MemberManagementSection = ({
     const data = memberData?.data?.data || memberData;
     return Array.isArray(data)
       ? data.map((m: any) => ({
-          value: String(m.id),
-          label: `${m.name} (ID:${m.id})`,
-        }))
+        value: String(m.id),
+        label: `${m.name} (ID:${m.id})`,
+      }))
       : [];
   }, [memberData]);
 
@@ -2723,6 +2726,13 @@ const MemberManagementSection = ({
             }
           >
             Add Member
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            icon={<TbPlus />}
+          >
+            Add Team
           </Button>
           <Button type="button" size="sm" icon={<TbPlus />}>
             <NavLink to="/business-entities/member-create">
@@ -2955,7 +2965,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
               disabled={
                 isSubmitting ||
                 navigationKeys.indexOf(activeSection) ===
-                  navigationKeys.length - 1
+                navigationKeys.length - 1
               }
             >
               Next
