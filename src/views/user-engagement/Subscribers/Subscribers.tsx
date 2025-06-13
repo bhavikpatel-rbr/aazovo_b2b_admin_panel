@@ -545,7 +545,7 @@ const SubscribersListing = () => {
                     </div>
                 }
             >
-                <FormItem label="Email">
+                <FormItem label={<div>Email<span className="text-red-500"> * </span></div>}>
                     <Input type='email' placeholder='Enter Email Address' />
                 </FormItem>
                 <FormItem label="Name">
@@ -555,7 +555,7 @@ const SubscribersListing = () => {
                     <FormItem label="Mobile No">
                         <Input type='phone' placeholder='Enter Mobile No.' />
                     </FormItem>
-                    <FormItem label="Subscription Date">
+                    <FormItem label={<div>Subscription Date<span className="text-red-500"> * </span></div>}>
                         <DatePicker placeholder='Pick Subscription Date' />
                     </FormItem>
                 </div>
@@ -577,7 +577,7 @@ const SubscribersListing = () => {
                     </FormItem>
                 </div>
                 <div className='md:grid grid-cols-2 gap-3'>
-                    <FormItem label="Status">
+                    <FormItem label={<div>Status<span className="text-red-500"> * </span></div>}>
                         <Select
                             placeholder="Select Status"
                             options={[

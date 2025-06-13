@@ -1772,7 +1772,7 @@ const RequestAndFeedbackListing = () => {
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
       <FormItem
-        label="Name"
+        label={<div>Name<span className="text-red-500"> * </span></div>}
         invalid={!!errors.name}
         errorMessage={errors.name?.message}
       >
@@ -1789,7 +1789,7 @@ const RequestAndFeedbackListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Email"
+        label={<div>Email<span className="text-red-500"> * </span></div>}
         invalid={!!errors.email}
         errorMessage={errors.email?.message}
       >
@@ -1825,7 +1825,7 @@ const RequestAndFeedbackListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Company Name (Optional)"
+        label="Company Name"
         invalid={!!errors.company_name}
         errorMessage={errors.company_name?.message}
       >
@@ -1842,7 +1842,7 @@ const RequestAndFeedbackListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Type"
+        label={<div>Type<span className="text-red-500"> * </span></div>}
         invalid={!!errors.type}
         errorMessage={errors.type?.message}
       >
@@ -1861,7 +1861,7 @@ const RequestAndFeedbackListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Status"
+        label={<div>Status<span className="text-red-500"> * </span></div>}
         invalid={!!errors.status}
         errorMessage={errors.status?.message}
       >
@@ -1880,7 +1880,7 @@ const RequestAndFeedbackListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Subject (Optional)"
+        label="Subject"
         className="md:col-span-2"
         invalid={!!errors.subject}
         errorMessage={errors.subject?.message}
@@ -1898,7 +1898,7 @@ const RequestAndFeedbackListing = () => {
         />
       </FormItem>
       <FormItem
-        label="Rating (Optional, for Feedback)"
+        label="Rating"
         className="md:col-span-2"
         invalid={!!errors.rating}
         errorMessage={errors.rating?.message}

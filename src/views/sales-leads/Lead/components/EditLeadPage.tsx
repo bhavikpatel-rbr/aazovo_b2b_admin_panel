@@ -140,15 +140,15 @@ const EditLeadPage = () => {
 
   // --- Dynamic labels based on lead_intent ---
   const leadMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return "Lead Member (Buyer) *";
-    if (leadIntentValue === "Sell") return "Lead Member (Supplier) *";
-    return "Lead Member (Supplier/Buyer) *";
+    if (leadIntentValue === "Buy") return <div>Lead Member (Buyer)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Sell") return <div>Lead Member (Supplier)<span className="text-red-500"> * </span></div>;
+    return <div>Lead Member (Supplier/Buyer)<span className="text-red-500"> * </span></div>;
   }, [leadIntentValue]);
 
   const sourceMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return "Source Member (Supplier)";
-    if (leadIntentValue === "Sell") return "Source Member (Buyer)";
-    return "Source Member (Supplier)";
+    if (leadIntentValue === "Buy") return <div>Soruce Member (Supplier)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Sell") return <div>Source Member (Buyer)<span className="text-red-500"> * </span></div>;
+    return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
   }, [leadIntentValue]);
 
   // Fetch all dropdown and specific lead data
@@ -363,7 +363,7 @@ const EditLeadPage = () => {
                 />
               </FormItem>
               <FormItem
-                label="Enquiry Type *"
+                label={<div>Enquiry Type<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.enquiry_type}
                 errorMessage={errors.enquiry_type?.message}
               >
@@ -404,7 +404,7 @@ const EditLeadPage = () => {
                 />
               </FormItem>
               <FormItem
-                label="Product Name (Interest) *"
+                label={<div>Product Name (Interest)<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.product_id}
                 errorMessage={errors.product_id?.message}
               >
@@ -426,7 +426,7 @@ const EditLeadPage = () => {
                 />
               </FormItem>
               <FormItem
-                label="Quantity"
+                label={<div>Quantity<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.qty}
                 errorMessage={errors.qty?.message}
               >
@@ -463,7 +463,7 @@ const EditLeadPage = () => {
                 />
               </FormItem>
               <FormItem
-                label="Lead Status *"
+                label={<div>Lead Status<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.lead_status}
                 errorMessage={errors.lead_status?.message}
               >

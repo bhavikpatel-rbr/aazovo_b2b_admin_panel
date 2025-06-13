@@ -355,7 +355,7 @@ const WallItemAdd = () => {
           <div className="grid md:grid-cols-3 gap-4 p-4">
             {/* Row 1 */}
             <FormItem
-                label="Product Name"
+                label={<div>Product Name<span className="text-red-500"> * </span></div>}
                 invalid={!!formMethods.formState.errors.product_name}
                 errorMessage={formMethods.formState.errors.product_name?.message}
             >
@@ -383,7 +383,7 @@ const WallItemAdd = () => {
                 />
             </FormItem>
             <FormItem
-                label="Company Name"
+                label={<div>Company Name<span className="text-red-500"> * </span></div>}
                 invalid={!!formMethods.formState.errors.company_name}
                 errorMessage={formMethods.formState.errors.company_name?.message}
             >
@@ -410,7 +410,7 @@ const WallItemAdd = () => {
             />
             </FormItem>
             <FormItem
-              label="Quantity"
+              label={<div>Quantity<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.qty}
               errorMessage={formMethods.formState.errors.qty?.message}
             >
@@ -419,14 +419,14 @@ const WallItemAdd = () => {
 
             {/* Row 2 */}
             <FormItem
-              label="Price"
+              label={<div>Price<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.price}
               errorMessage={formMethods.formState.errors.price?.message}
             >
               <Controller name="price" control={formMethods.control} render={({ field }) => ( <InputNumber {...field} value={field.value ?? undefined} placeholder="Enter Price (Optional)" /> )} />
             </FormItem>
             <FormItem
-              label="Intent (Want to)"
+              label={<div>Intent (Want to)<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.intent}
               errorMessage={formMethods.formState.errors.intent?.message}
             >
@@ -436,7 +436,7 @@ const WallItemAdd = () => {
                 placeholder="Select Intent" /> )} />
             </FormItem>
             <FormItem
-              label="Product Status"
+              label={<div>Product Status<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.productStatus}
               errorMessage={formMethods.formState.errors.productStatus?.message}
             >
