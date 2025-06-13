@@ -33,26 +33,26 @@ const CollapsibleSide = ({ children }: CommonProps) => {
     const [promptHasBeenShown, setPromptHasBeenShown] = useState(false)
 
     // --- CORRECTED LOGIC: This effect now works correctly ---
-    useEffect(() => {
-        let timer: NodeJS.Timeout | undefined
+    // useEffect(() => {
+    //     let timer: NodeJS.Timeout | undefined
 
-        // Condition: User is logged in, punched-out, AND the prompt has not been shown yet.
-        if (signedIn && punchInStatus === 'punched-out' && !promptHasBeenShown) {
-            timer = setTimeout(() => {
-                // --- FIX ---
-                // Set the flag and open the dialog AT THE SAME TIME, after the delay.
-                setPromptHasBeenShown(true)
-                setIsPunchInDialogOpen(true)
-            }, 5000)
-        }
+    //     // Condition: User is logged in, punched-out, AND the prompt has not been shown yet.
+    //     if (signedIn && punchInStatus === 'punched-out' && !promptHasBeenShown) {
+    //         timer = setTimeout(() => {
+    //             // --- FIX ---
+    //             // Set the flag and open the dialog AT THE SAME TIME, after the delay.
+    //             setPromptHasBeenShown(true)
+    //             setIsPunchInDialogOpen(true)
+    //         }, 5000)
+    //     }
 
-        // Cleanup function to clear the timer if dependencies change before it fires
-        return () => {
-            if (timer) {
-                clearTimeout(timer)
-            }
-        }
-    }, [signedIn, punchInStatus, promptHasBeenShown])
+    //     // Cleanup function to clear the timer if dependencies change before it fires
+    //     return () => {
+    //         if (timer) {
+    //             clearTimeout(timer)
+    //         }
+    //     }
+    // }, [signedIn, punchInStatus, promptHasBeenShown])
 
     // This effect correctly resets the flag when the user logs out
     useEffect(() => {

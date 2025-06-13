@@ -106,8 +106,8 @@ export type SliderItem = {
   domainIds: any;
   sliderColor: string | null;
   indexPosition: number | null; // Added
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
   updatedByName?: string; // Added
   updatedByRole?: string; // Added
 };
@@ -264,10 +264,10 @@ function exportToCsvSlider(filename: string, rows: SliderItem[]) {
     indexPosition: item.indexPosition, // Added
     domainIds: item.domainIds,
     sliderColor: item.sliderColor,
-    createdAt: new Date(item.createdAt).toLocaleString(),
+    created_at: new Date(item.created_at).toLocaleString(),
     updatedByName: item.updatedByName || "N/A", // Added
     updatedByRole: item.updatedByRole || "N/A", // Added
-    updatedAt: new Date(item.updatedAt).toLocaleString(),
+    updated_at: new Date(item.updated_at).toLocaleString(),
   }));
   const csvKeys: (keyof SliderCsvItem)[] = [
     "id",
@@ -282,10 +282,10 @@ function exportToCsvSlider(filename: string, rows: SliderItem[]) {
     "indexPosition", // Added
     "domainIds",
     "sliderColor",
-    "createdAt",
+    "created_at",
     "updatedByName", // Added
     "updatedByRole", // Added
-    "updatedAt",
+    "updated_at",
   ];
   const separator = ",";
   const csvContent =
@@ -676,8 +676,8 @@ const Sliders = () => {
         sliderColor: apiItem.slider_color || null,
         indexPosition:
           apiItem.index_position === undefined ? null : apiItem.index_position, // Handle undefined
-        createdAt: apiItem.created_at,
-        updatedAt: apiItem.updated_at,
+        created_at: apiItem.created_at,
+        updated_at: apiItem.updated_at,
         // CHANGED: Extract data from the nested object, with fallbacks to the old flat properties
         updatedByName:
           apiItem.updated_by_user?.name || apiItem.updated_by_name,
@@ -963,20 +963,20 @@ const Sliders = () => {
         "source",
         "status",
         "indexPosition",
-        "createdAt",
-        "updatedAt",
+        "created_at",
+        "updated_at",
         "updatedByName",
       ].includes(key)
     ) {
       // Added new sort keys
       processedData.sort((a, b) => {
         let aValue: any, bValue: any;
-        if (key === "createdAt" || key === "updatedAt") {
-          const dateA = a[key as "createdAt" | "updatedAt"]
-            ? new Date(a[key as "createdAt" | "updatedAt"]!).getTime()
+        if (key === "created_at" || key === "updated_at") {
+          const dateA = a[key as "created_at" | "updated_at"]
+            ? new Date(a[key as "created_at" | "updated_at"]!).getTime()
             : 0;
-          const dateB = b[key as "createdAt" | "updatedAt"]
-            ? new Date(b[key as "createdAt" | "updatedAt"]!).getTime()
+          const dateB = b[key as "created_at" | "updated_at"]
+            ? new Date(b[key as "created_at" | "updated_at"]!).getTime()
             : 0;
           return order === "asc" ? dateA - dateB : dateB - dateA;
         } else if (key === "indexPosition") {
@@ -1184,19 +1184,19 @@ const Sliders = () => {
       },
       {
         header: "Updated Info",
-        accessorKey: "updatedAt",
+        accessorKey: "updated_at",
         enableSorting: true,
         // meta: { HeaderClass: "text-red-500" },
         size: 200,
         cell: (props) => {
-          const { updatedAt, updatedByName, updatedByRole } =
+          const { updated_at, updatedByName, updatedByRole } =
             props.row.original;
-          const formattedDate = updatedAt
-            ? `${new Date(updatedAt).getDate()} ${new Date(
-                updatedAt
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
               ).toLocaleString("en-US", { month: "short" })} ${new Date(
-                updatedAt
-              ).getFullYear()}, ${new Date(updatedAt).toLocaleTimeString(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
                 "en-US",
                 { hour: "numeric", minute: "2-digit", hour12: true }
               )}`
@@ -1720,35 +1720,35 @@ const Sliders = () => {
                   <br />
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
-                    {editingSlider.createdAt
-                      ? new Date(editingSlider.createdAt).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                    {editingSlider.created_at
+                      ? `${new Date(editingSlider.created_at).getDate()} ${new Date(
+                          editingSlider.created_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingSlider.created_at).getFullYear()}, ${new Date(
+                          editingSlider.created_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
-                    {editingSlider.updatedAt
-                      ? new Date(editingSlider.updatedAt).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                    {editingSlider.updated_at
+                      ? `${new Date(editingSlider.updated_at).getDate()} ${new Date(
+                          editingSlider.updated_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingSlider.updated_at).getFullYear()}, ${new Date(
+                          editingSlider.updated_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
                 </div>
