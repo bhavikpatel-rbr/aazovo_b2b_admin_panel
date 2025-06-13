@@ -47,7 +47,8 @@ import {
   getCategoriesAction,
   // deleteUnitAction, // Commented out
   // deleteAllUnitAction, // Commented out
-  submitExportReasonAction, // Placeholder for future action
+  submitExportReasonAction,
+  getParentCategoriesAction, // Placeholder for future action
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -346,7 +347,7 @@ const Units = () => {
     filterStatus: [], // Added
   });
 
-  const { unitData = [], CategoriesData = [], status: masterLoadingStatus = "idle" } =
+  const { unitData = [], ParentCategories = [], status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
 
   const defaultFormValues: UnitFormData = useMemo(
@@ -360,12 +361,12 @@ const Units = () => {
  
   useEffect(() => {
     dispatch(getUnitAction());
-    dispatch(getCategoriesAction());
+    dispatch(getParentCategoriesAction());
     
   }, [dispatch]);
 
   
- const CategoryOptions = CategoriesData.length > 0 && CategoriesData?.map((sc: any) => ({
+ const CategoryOptions = ParentCategories.length > 0 && ParentCategories?.map((sc: any) => ({
     value: sc.id,
     label: sc.name,
   }));

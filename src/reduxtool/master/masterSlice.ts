@@ -96,6 +96,7 @@ import {
   getSalesPersonAction,
   getSuppliersAction,
   getEmployeesAction,
+  getParentCategoriesAction,
 } from "./middleware";
 import Opportunities from "@/views/sales-Leads/Opportunities";
 
@@ -587,6 +588,12 @@ const masterSlice = createSlice({
       ...state,
       Employees: payload,
     }));
+    builder.addCase(getParentCategoriesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      ParentCategories: payload,
+    }));
+
+
   },
 });
 
