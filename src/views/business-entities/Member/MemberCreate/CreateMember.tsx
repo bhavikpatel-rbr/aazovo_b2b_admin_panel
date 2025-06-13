@@ -1791,7 +1791,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
           />
         </FormItem>
         <FormItem
-          label="Interested Categories"
+          label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
           invalid={!!errors.interested_category_ids}
           errorMessage={errors.interested_category_ids?.message as string}
         >
@@ -2058,7 +2058,7 @@ const PersonalDetailsComponent = ({
       <h4 className="mb-6">Personal Details</h4>
       <div className="grid md:grid-cols-3 gap-4">
         <FormItem
-          label="Full Name"
+          label={<div>Full Name<span className="text-red-500"> * </span></div>}
           invalid={!!errors.name}
           errorMessage={errors.name?.message}
         >
@@ -2071,7 +2071,7 @@ const PersonalDetailsComponent = ({
           />
         </FormItem>
         <FormItem
-          label="Mobile Number"
+          label={<div>Mobile Number<span className="text-red-500"> * </span></div>}
           invalid={!!errors.mobile_no || !!errors.contact_country_code}
           errorMessage={
             errors.mobile_no?.message ||
@@ -2101,7 +2101,7 @@ const PersonalDetailsComponent = ({
           </div>
         </FormItem>
         <FormItem
-          label="Email"
+          label={<div>Email<span className="text-red-500"> * </span></div>}
           invalid={!!errors.email}
           errorMessage={errors.email?.message}
         >
@@ -2176,7 +2176,7 @@ const PersonalDetailsComponent = ({
         </FormItem>
 
         <FormItem
-          label="Status"
+          label={<div>Status<span className="text-red-500"> * </span></div>}
           invalid={!!errors.status}
           errorMessage={errors.status?.message as string}
         >
@@ -2188,50 +2188,6 @@ const PersonalDetailsComponent = ({
                 placeholder="Please Select"
                 options={statusOptions}
                 {...field}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="City"
-          invalid={!!errors.city}
-          errorMessage={errors.city?.message}
-        >
-          <Controller
-            name="city"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Enter city" {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="State"
-          invalid={!!errors.state}
-          errorMessage={errors.state?.message}
-        >
-          <Controller
-            name="state"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Enter state" {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Country"
-          invalid={!!errors.country_id}
-          errorMessage={errors.country_id?.message as string}
-        >
-          <Controller
-            name="country_id"
-            control={control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select Country"
-                options={countryOptions}
-                {...field}
-                isClearable
               />
             )}
           />
@@ -2254,6 +2210,53 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
+        <FormItem
+          label={<div>Country<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.country_id}
+          errorMessage={errors.country_id?.message as string}
+        >
+          <Controller
+            name="country_id"
+            control={control}
+            render={({ field }) => (
+              <Select
+                placeholder="Select Country"
+                options={countryOptions}
+                {...field}
+                isClearable
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="State"
+          invalid={!!errors.state}
+          errorMessage={errors.state?.message}
+        >
+          <Controller
+            name="state"
+            control={control}
+            render={({ field }) => (
+              <Input placeholder="Enter state" {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="City"
+          invalid={!!errors.city}
+          errorMessage={errors.city?.message}
+        >
+          <Controller
+            name="city"
+            control={control}
+            render={({ field }) => (
+              <Input placeholder="Enter city" {...field} />
+            )}
+          />
+        </FormItem>
+        
+        
+        
         <FormItem
           label="Pincode"
           invalid={!!errors.pincode}
@@ -2300,7 +2303,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
       <h4 className="mb-6">Social & Contact Information</h4>
       <div className="grid md:grid-cols-3 gap-4">
         <FormItem
-          label="WhatsApp No."
+          label={<div>WhatsApp No.<span className="text-red-500"> * </span></div>}
           invalid={!!errors.whatsapp_number}
           errorMessage={errors.whatsapp_number?.message}
         >

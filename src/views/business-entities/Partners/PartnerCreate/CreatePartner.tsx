@@ -287,7 +287,7 @@ const CreatePartner = () => {
               {/* Partner Name */}
               <FormItem
                 id="partner_name"
-                label="Partner Name"
+                label={<div>Partner Name<span className="text-red-500"> * </span></div>}
                 invalid={
                   !!addFormMethods?.formState?.errors?.partner_name?.message
                 }
@@ -319,7 +319,7 @@ const CreatePartner = () => {
                   addFormMethods?.formState?.errors?.partner_contact_number
                     ?.message
                 }
-                label="Contact Number"
+                label={<div>Contact Number<span className="text-red-500"> * </span></div>}
               >
                 <Controller
                   name="partner_contact_number"
@@ -343,7 +343,7 @@ const CreatePartner = () => {
                 errorMessage={
                   addFormMethods?.formState?.errors?.partner_email_id?.message
                 }
-                label="Email"
+                label={<div>Email<span className="text-red-500"> * </span></div>}
               >
                 <Controller
                   name="partner_email_id"
@@ -375,7 +375,7 @@ const CreatePartner = () => {
 
               {/* Status */}
               <FormItem
-                label="Partner Status"
+                label={<div>Status<span className="text-red-500"> * </span></div>}
                 invalid={Boolean(errors.partner_status)}
                 errorMessage={
                   typeof errors.partner_status?.message === "string"
