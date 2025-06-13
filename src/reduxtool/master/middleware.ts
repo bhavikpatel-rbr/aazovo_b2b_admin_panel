@@ -1238,7 +1238,7 @@ export const getPriceListAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getPriceListAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
