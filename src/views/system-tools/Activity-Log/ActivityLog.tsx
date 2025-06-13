@@ -715,23 +715,20 @@ const ActivityLog = () => {
         size: 180,
         enableSorting: true,
         cell: (props) => {
-          const { created_at, timestamp, updated_at } = props.row
-            .original as any;
-          const val = created_at || timestamp || updated_at;
-
-          if (!val) {
-            return <span className="text-xs text-gray-400">-</span>;
-          }
-
-          const d = new Date(val);
-          const formattedDate = `${d.getDate()} ${d.toLocaleString("en-US", {
-            month: "short",
-          })} ${d.getFullYear()}, ${d.toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          })}`;
-
+          const { updated_at } = props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", {
+                month: "short"
+              })} ${new Date(updated_at).getFullYear()}, ${new Date(
+                updated_at
+              ).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}`
+            : "N/A";
           return (
             <div className="text-xs">
               <span className="text-gray-700">{formattedDate}</span>
@@ -748,7 +745,7 @@ const ActivityLog = () => {
           const rowData = props.row.original;
           const user = rowData.user || {};
           const userName = user.name || rowData.userName || "Unknown";
-          const userId = user.id || rowData.userId || "System";
+          const userRole = user.roles[0].display_name || "System";
           const avatarSrc = user.profile_pic_path;
           return (
             <div className="flex items-center gap-2">
@@ -760,7 +757,7 @@ const ActivityLog = () => {
               />
               <div className="text-xs leading-tight">
                 <b>{userName}</b>
-                <p className="text-gray-500">ID: {userId}</p>
+                <p className="text-gray-500">{userRole}</p>
               </div>
             </div>
           );
@@ -959,10 +956,20 @@ const ActivityLog = () => {
                   .replace(/([A-Z])/g, " $1")
                   .replace(/^./, (str) => str.toUpperCase());
                 let value: any = viewingItem[key];
-                if ((key === "timestamp" || key === "updated_at") && value)
-                  value = new Date(value).toLocaleString();
+                if ((key === "timestamp" || key === "updated_at" || key === "created_at") && value) {
+                  const date = new Date(value);
+                  const day = date.getDate();
+                  const month = date.toLocaleString("en-US", { month: "short" });
+                  const year = date.getFullYear();
+                  const time = date.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+                  value = `${day} ${month} ${year}, ${time}`;
+                }
                 else if (key === "user" && value)
-                  value = `${(value as User).name} (ID: ${(value as User).id})`;
+                  value = `${(value as User).name} (${(value as User)?.roles[0]?.display_name})`;
                 else if (key === "action")
                   value =
                     CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label ||
