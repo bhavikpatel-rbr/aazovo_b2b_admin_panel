@@ -533,7 +533,7 @@ const PriceList = () => {
     data: null,
   });
   const handleOpenModal = useCallback((type: PriceListModalType, priceListData: PriceListItem) =>
-    setModalState({ isOpen: true, type, data: priceListData }), []);
+    setModalState({ isOpen: true, type, data: priceListData?.data }), []);
   const handleCloseModal = useCallback(() =>
     setModalState({ isOpen: false, type: null, data: null }), []);
   // --- END MODAL STATE AND HANDLERS ---
@@ -711,8 +711,8 @@ const PriceList = () => {
   });
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const sourceData: PriceListItem[] = Array.isArray(priceListData)
-      ? priceListData.map((item) => ({
+    const sourceData: PriceListItem[] = Array.isArray(priceListData?.data)
+      ? priceListData?.data.map((item) => ({
           ...item,
           status: item.status || "inactive",
         }))
@@ -802,7 +802,7 @@ const PriceList = () => {
       total: currentTotal,
       allFilteredAndSortedData: processedData,
     };
-  }, [priceListData, tableData, filterCriteria]);
+  }, [priceListData?.data, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -1089,15 +1089,15 @@ const PriceList = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize today's date to midnight
 
-    if (!Array.isArray(priceListData)) return [];
+    if (!Array.isArray(priceListData?.data)) return [];
 
-    return priceListData.filter((item) => {
+    return priceListData?.data.filter((item) => {
       if (!item.updated_at) return false;
       const itemDate = new Date(item.updated_at);
       itemDate.setHours(0, 0, 0, 0); // Normalize item's date
       return itemDate.getTime() === today.getTime();
     });
-  }, [priceListData]);
+  }, [priceListData?.data]);
   
   const generateShareableText = () => {
     let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n`;
@@ -1191,7 +1191,7 @@ const PriceList = () => {
                 <TbReceipt size={24} />
               </div>
               <div>
-                <h6 className="text-blue-500">879</h6>
+                <h6 className="text-blue-500">{priceListData?.counts?.total}</h6>
                 <span className="font-semibold text-xs">Total Listed</span>
               </div>
             </Card>
@@ -1200,7 +1200,7 @@ const PriceList = () => {
                 <TbDeviceWatchDollar size={24} />
               </div>
               <div>
-                <h6 className="text-violet-500">23</h6>
+                <h6 className="text-violet-500">{priceListData?.counts?.today}</h6>
                 <span className="font-semibold text-xs">Today Listed</span>
               </div>
             </Card>
@@ -1209,7 +1209,7 @@ const PriceList = () => {
                 <TbClockDollar size={24} />
               </div>
               <div>
-                <h6 className="text-orange-500">345</h6>
+                <h6 className="text-orange-500">{parseFloat(priceListData?.counts?.avg_base)}</h6>
                 <span className="font-semibold text-xs">Avg Base (₹)</span>
               </div>
             </Card>
@@ -1218,7 +1218,7 @@ const PriceList = () => {
                 <TbPencilDollar size={24} />
               </div>
               <div>
-                <h6 className="text-gray-500">34</h6>
+                <h6 className="text-gray-500">{parseFloat(priceListData?.counts?.avg_nlc)}</h6>
                 <span className="font-semibold text-xs">Avg NLC (₹)</span>
               </div>
             </Card>  
@@ -1227,7 +1227,7 @@ const PriceList = () => {
                 <TbDiscount size={24} />
               </div>
               <div>
-                <h6 className="text-green-500">879</h6>
+                <h6 className="text-green-500">{priceListData?.counts?.active}</h6>
                 <span className="font-semibold text-xs">Acitve</span>
               </div>
             </Card>
@@ -1236,7 +1236,7 @@ const PriceList = () => {
                 <TbDiscountOff size={24} />
               </div>
               <div>
-                <h6 className="text-red-500">78</h6>
+                <h6 className="text-red-500">{priceListData?.counts?.inactive}</h6>
                 <span className="font-semibold text-xs">Inactive</span>
               </div>
             </Card>
@@ -1555,6 +1555,7 @@ const PriceList = () => {
                 placement="top-end"
                 renderTitle={
                   <Button
+                  size="sm"
                     variant="solid"
                     icon={<TbShare />}
                     disabled={todayPriceListData.length === 0}
