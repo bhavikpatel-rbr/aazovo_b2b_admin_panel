@@ -191,12 +191,12 @@ const JobApplicationListing = () => {
     // If your API for getJobApplicationsAction requires pagination/sort params even for an initial load,
     // you might pass default params here or adjust the action.
     // For simplicity, like JobPostsListing, let's assume it fetches a base list.
-    dispatch(getJobApplicationsAction({})); // Pass empty object or default params if needed by action
+    dispatch(getJobApplicationsAction()); // Pass empty object or default params if needed by action
   }, [dispatch]);
 
   // --- Client-Side Data Processing (Filtering, Sorting, Pagination) ---
   const { pageData, total } = useMemo(() => {
-    const sourceData: JobApplicationItem[] = Array.isArray(jobApplicationsData) ? jobApplicationsData : [];
+    const sourceData: JobApplicationItem[] = Array.isArray(jobApplicationsData?.data) ? jobApplicationsData?.data : [];
     let processedData = cloneDeep(sourceData);
 
     // Apply filters
@@ -257,7 +257,7 @@ const JobApplicationListing = () => {
     const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
 
     return { pageData: dataForPage, total: currentTotal };
-  }, [jobApplicationsData, tableData, filterCriteria]);
+  }, [jobApplicationsData?.data, tableData, filterCriteria]);
 
   // --- Table Interaction Handlers ---
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
@@ -381,11 +381,11 @@ const JobApplicationListing = () => {
 
   const departmentOptionsForFilter = useMemo(() => {
     // Now derives from the full jobApplicationsData from Redux
-    const sourceData: JobApplicationItem[] = Array.isArray(jobApplicationsData) ? jobApplicationsData : [];
+    const sourceData: JobApplicationItem[] = Array.isArray(jobApplicationsData?.data) ? jobApplicationsData?.data : [];
     return Array.from(new Set(sourceData.map(app => app.department)))
       .filter(dept => dept)
       .map(dept => ({ value: dept, label: dept }));
-  }, [jobApplicationsData]);
+  }, [jobApplicationsData?.data]);
 
   return (
     <Container className="h-auto">
@@ -405,7 +405,7 @@ const JobApplicationListing = () => {
               <TbMail size={24} />
             </div>
             <div>
-              <h6 className="text-blue-500">879</h6>
+              <h6 className="text-blue-500">{jobApplicationsData?.counts?.total}</h6>
               <span className="font-semibold text-xs">Total</span>
             </div>
           </Card>
@@ -414,7 +414,7 @@ const JobApplicationListing = () => {
               <TbMailSpark size={24} />
             </div>
             <div>
-              <h6 className="text-emerald-500">34</h6>
+              <h6 className="text-emerald-500">{jobApplicationsData?.counts?.new}</h6>
               <span className="font-semibold text-xs">New</span>
             </div>
           </Card>
@@ -423,7 +423,7 @@ const JobApplicationListing = () => {
               <TbMailUp size={24} />
             </div>
             <div>
-              <h6 className="text-pink-500">3</h6>
+              <h6 className="text-pink-500">{jobApplicationsData?.counts?.new}</h6>
               <span className="font-semibold text-xs">Today</span>
             </div>
           </Card>
@@ -432,7 +432,7 @@ const JobApplicationListing = () => {
               <TbMailSearch size={24} />
             </div>
             <div>
-              <h6 className="text-orange-500">345</h6>
+              <h6 className="text-orange-500">{jobApplicationsData?.counts?.in_review}</h6>
               <span className="font-semibold text-xs">In Review</span>
             </div>
           </Card>
@@ -441,7 +441,7 @@ const JobApplicationListing = () => {
               <TbMailCheck size={24} />
             </div>
             <div>
-              <h6 className="text-violet-500">23</h6>
+              <h6 className="text-violet-500">{jobApplicationsData?.counts?.shortlisted}</h6>
               <span className="font-semibold text-xs">Shortlisted</span>
             </div>
           </Card>
@@ -450,7 +450,7 @@ const JobApplicationListing = () => {
               <TbMailHeart size={24} />
             </div>
             <div>
-              <h6 className="text-green-500">18</h6>
+              <h6 className="text-green-500">{jobApplicationsData?.counts?.hired}</h6>
               <span className="font-semibold text-xs">Hired</span>
             </div>
           </Card>
@@ -459,7 +459,7 @@ const JobApplicationListing = () => {
               <TbMailX size={24} />
             </div>
             <div>
-              <h6 className="text-red-500">78</h6>
+              <h6 className="text-red-500">{jobApplicationsData?.counts?.rejected}</h6>
               <span className="font-semibold text-xs">Rejected</span>
             </div>
           </Card>
