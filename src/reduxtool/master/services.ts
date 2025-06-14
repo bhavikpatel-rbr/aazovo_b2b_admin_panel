@@ -2570,3 +2570,12 @@ export const deleteAllRolesAsync = async (RolesData: any) => {
     return isAxiosError(err)
   }
 }
+
+export const sendCampaignNowAsync = async (data: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/campaign`, data)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
