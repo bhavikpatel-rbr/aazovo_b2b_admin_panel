@@ -1422,6 +1422,34 @@ export const getSubscribersAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+export const addSubscriberAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/subscriber`, unitData, {
+
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editSubscriberAsync = async (brandId: number | string, formData: FormData) => {
+  try {
+    // formData.append('_method', 'PUT');
+    const response = await axiosInstance.post(
+      `${config.apiURL}/subscriber/${brandId}`, // Use brandId in the URL
+      formData,
+
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
 export const getHomeCategoryAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/other/home_category_image`)

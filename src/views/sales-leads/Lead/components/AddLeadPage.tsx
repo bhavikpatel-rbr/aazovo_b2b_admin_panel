@@ -764,68 +764,7 @@ const AddLeadPage = () => {
             </div>
           </AdaptableCard>
 
-          <AdaptableCard>
-            <h5 className="mb-6 font-semibold">Matched Opportunity</h5>
-            <Table>
-              <Table.THead>
-                <Table.Tr>
-                  <Table.Th>Company & Member</Table.Th>
-                  <Table.Th>Key Details</Table.Th>
-                  <Table.Th>Timestamp</Table.Th>
-                  <Table.Th>Action</Table.Th>
-                </Table.Tr>
-              </Table.THead>
-              <Table.TBody>
-                {matchedOpportunities.map((op) => {
-                  const iconButtonClass =
-                    "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-                  const hoverBgClass =
-                    "hover:bg-gray-100 dark:hover:bg-gray-700";
-
-                  return (
-                    <Table.Tr key={op.id}>
-                      <Table.Td>
-                        <div className="font-semibold">{op.company}</div>
-                        <div className="text-xs text-gray-500">{op.member}</div>
-                      </Table.Td>
-                      <Table.Td>{op.details}</Table.Td>
-                      <Table.Td>{op.timestamp}</Table.Td>
-                      <Table.Td>
-                        <div className="flex items-center justify-start gap-2">
-                          <Tooltip title="Edit">
-                            <div
-                              className={classNames(
-                                iconButtonClass,
-                                hoverBgClass,
-                                "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-                              )}
-                              role="button"
-                              onClick={() => alert(`Editing item ${op.id}`)}
-                            >
-                              <TbPencil />
-                            </div>
-                          </Tooltip>
-                          <Tooltip title="Remove">
-                            <div
-                              className={classNames(
-                                iconButtonClass,
-                                hoverBgClass,
-                                "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                              )}
-                              role="button"
-                              onClick={() => alert(`Removing item ${op.id}`)}
-                            >
-                              <TbTrash />
-                            </div>
-                          </Tooltip>
-                        </div>
-                      </Table.Td>
-                    </Table.Tr>
-                  );
-                })}
-              </Table.TBody>
-            </Table>
-          </AdaptableCard>
+     
 
           <div className="mt-6 flex justify-end gap-2">
             <Button

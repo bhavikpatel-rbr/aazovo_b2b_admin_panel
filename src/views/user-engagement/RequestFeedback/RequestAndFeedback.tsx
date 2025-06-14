@@ -1313,7 +1313,7 @@ const RequestAndFeedbackListing = () => {
     )},
     { header: "Type", accessorKey: "type", size: 100, cell: props => <Tag className="capitalize">{TYPE_OPTIONS.find(t => t.value === props.getValue())?.label || props.getValue() || "N/A"}</Tag> },
     { header: "Subject", accessorKey: "subject", size: 200, cell: props => <div className="truncate w-48" title={props.getValue() as string}>{(props.getValue() as string) || "N/A"}</div> },
-    { header: "Status", accessorKey: "status", size: 110, cell: props => { const s = props.getValue<RequestFeedbackApiStatus>(); return <Tag className={classNames("capitalize whitespace-nowrap min-w-[90px] text-center", statusColors[s] || statusColors.default)}>{STATUS_OPTIONS_FORM.find(opt => opt.value === s)?.label || s || "N/A"}</Tag>; }},
+    { header: "Status", accessorKey: "status", size: 110, cell: props => { const s = props.getValue<RequestFeedbackApiStatus>(); return <Tag className={classNames("capitalize whitespace-nowrap  text-center", statusColors[s] || statusColors.default)}>{STATUS_OPTIONS_FORM.find(opt => opt.value === s)?.label || s || "N/A"}</Tag>; }},
     { header: "Rating", accessorKey: "rating", size: 90, cell: props => props.getValue() ? <span className="flex items-center gap-1"><TbStar className="text-amber-500" />{`${props.getValue()}`}</span> : "N/A" },
     {
         header: "Updated Info",
