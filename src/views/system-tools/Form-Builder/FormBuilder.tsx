@@ -291,7 +291,7 @@ const FormBuilder = () => {
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
   const categoryFilterOptions = useMemo(() => CategoriesData.map((cat: GeneralCategoryListItem) => ({ value: String(cat.id), label: cat.name })), [CategoriesData]);
-  const departmentFilterOptions = useMemo(() => departmentsData?.data.map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData]);
+  const departmentFilterOptions = useMemo(() => departmentsData?.data.map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData?.data]);
   const statusFilterOptions = useMemo(() => FORM_STATUS_OPTIONS, []);
 
   useEffect(() => {
@@ -352,7 +352,7 @@ const FormBuilder = () => {
     try {
       await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
-      exportFormsToCsvLogic(fileName, allFilteredAndSortedData, departmentsData, CategoriesData); // Pass master lists
+      exportFormsToCsvLogic(fileName, allFilteredAndSortedData, departmentsData?.data, CategoriesData); // Pass master lists
       toast.push(<Notification title="Data Exported" type="success">Forms data exported.</Notification>);
     } catch (error: any) {
       toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
@@ -445,7 +445,7 @@ const FormBuilder = () => {
             displayNames = item.departments;
           } else {
             const ids = item.department_ids_array || [];
-            displayNames = ids.map(id => departmentsData.find(d => String(d.id) === String(id))?.name || `ID:${id}`);
+            displayNames = ids.map(id => departmentsData?.data.find(d => String(d.id) === String(id))?.name || `ID:${id}`);
           }
           if (!displayNames.length) return <Tag>N/A</Tag>;
           return (<div className="flex flex-wrap gap-1">{displayNames.slice(0,2).map(name => <Tag key={name}>{name}</Tag>)}{displayNames.length > 2 && <Tag>+{displayNames.length-2}</Tag>}</div>);
@@ -479,7 +479,7 @@ const FormBuilder = () => {
         cell: props => (
         <ActionColumn item={props.row.original} onEdit={handleEdit} onViewDetail={openViewDialog} onClone={handleCloneForm} />),
       },
-    ], [departmentsData, CategoriesData] // Dependencies for name lookups
+    ], [departmentsData?.data, CategoriesData] // Dependencies for name lookups
   );
 
   const tableLoading = masterLoadingStatus === "pending" || isProcessing;
@@ -514,7 +514,7 @@ const FormBuilder = () => {
               <p><strong>Form Title:</strong> {viewingItem.form_title || "N/A"}</p>
               <p><strong>Form Description:</strong> {viewingItem.form_description || "N/A"}</p>
               <p><strong>Status:</strong> <Tag className={classNames("capitalize", statusColors[viewingItem.status] || statusColors.Draft)}>{viewingItem.status}</Tag></p>
-              <p><strong>Departments:</strong> { (Array.isArray(viewingItem.departments) && viewingItem.departments.length > 0) ? viewingItem.departments.join(', ') : (viewingItem.department_ids_array || []).map(id => departmentsData.find(d => String(d.id) === String(id))?.name || `ID:${id}`).join(', ') || "N/A" }</p>
+              <p><strong>Departments:</strong> { (Array.isArray(viewingItem.departments) && viewingItem.departments.length > 0) ? viewingItem.departments.join(', ') : (viewingItem.department_ids_array || []).map(id => departmentsData?.data.find(d => String(d.id) === String(id))?.name || `ID:${id}`).join(', ') || "N/A" }</p>
               <p><strong>Categories:</strong> { (Array.isArray(viewingItem.categories) && viewingItem.categories.length > 0) ? viewingItem.categories.join(', ') : (viewingItem.category_ids_array || []).map(id => CategoriesData.find(c => String(c.id) === String(id))?.name || `ID:${id}`).join(', ') || "N/A" }</p>
               <p><strong>Created At:</strong> {new Date(viewingItem.created_at).toLocaleString()}</p>
               <p><strong>Updated At:</strong> {new Date(viewingItem.updated_at).toLocaleString()}</p>
