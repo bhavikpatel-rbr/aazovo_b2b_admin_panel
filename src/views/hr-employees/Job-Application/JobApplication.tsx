@@ -93,12 +93,15 @@ interface DepartmentItem {
     // ... other department fields
 }
 
-
+let inreview = 'In Review'
 // --- Constants ---
-const applicationStatusColor: Record<ApplicationStatus, string> = {
-  new: "bg-blue-500", screening: "bg-cyan-500", interviewing: "bg-indigo-500",
-  offer_extended: "bg-purple-500", hired: "bg-emerald-500",
-  rejected: "bg-red-500", withdrawn: "bg-gray-500",
+const applicationStatusColor: { [key in ApplicationStatus]?: string } = {
+  'New': "bg-blue-500",    
+  'In Review': "bg-yellow-500", // As per your request
+  'Shortlisted': "bg-violet-500",
+  'Hired': "bg-emerald-500",
+  'Rejected': "bg-red-500",
+  // 'Withdrawn': "bg-gray-500", // If 'Withdrawn' is still a status, add it here and in types.ts
 };
 
 const filterFormSchema = z.object({
@@ -111,9 +114,11 @@ import { applicationFormSchema as editApplicationFormSchema } from './types';
 type EditApplicationFormData = ApplicationFormData;
 
 
-const ActionColumn = ({ onView, onEdit, onDelete, onScheduleInterview, onAddJobLink }: {
+const ActionColumn = ({ 
+  onView, onEdit, onDelete, onScheduleInterview, onAddJobLink, onDownloadResume 
+}: {
   onView: () => void; onEdit: () => void; onDelete: () => void;
-  onScheduleInterview: () => void; onAddJobLink: () => void;
+  onScheduleInterview: () => void; onAddJobLink: () => void; onDownloadResume: () => void;
 }) => {
   const iconButtonClass = "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
@@ -127,7 +132,7 @@ const ActionColumn = ({ onView, onEdit, onDelete, onScheduleInterview, onAddJobL
         <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
         <Dropdown.Item onClick={onAddJobLink} className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Generate Job Link</span></Dropdown.Item>
-        <Dropdown.Item onClick={onAddJobLink} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Resume</span></Dropdown.Item>
+        <Dropdown.Item onClick={onDownloadResume} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Resume</span></Dropdown.Item>
         <Dropdown.Item onClick={onScheduleInterview} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Schedule Interview</span></Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2"><TbUserShare size={18} /> <span className="text-xs">Convert to Employee</span></Dropdown.Item>
       </Dropdown>
@@ -198,7 +203,109 @@ const ApplicationSelected = ({ selectedApplications, onDeleteSelected, isDeletin
   return (<><StickyFooter stickyClass="-mx-4 sm:-mx-8 border-t px-8" className="py-4"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500" /><span className="font-semibold">{selectedApplications.length} selected</span></span><Button size="sm" variant="plain" className="text-red-500" onClick={() => setOpen(true)} loading={isDeleting}>Delete</Button></div></StickyFooter><ConfirmDialog type="danger" title="Delete Selected" isOpen={open} onClose={() => setOpen(false)} onConfirm={() => { onDeleteSelected(); setOpen(false); }} loading={isDeleting}><p>Are you sure you want to delete the selected {selectedApplications.length} application(s)?</p></ConfirmDialog></>);
 };
 
-const ApplicationDetailDialog = ({ isOpen, onClose, application }: any) => { if (!application) return null; return <Dialog isOpen={isOpen} onClose={onClose} title={`Details: ${application.name}`}><p>ID: {application.id}</p><Button onClick={onClose}>Close</Button></Dialog> };
+// --- MODIFIED: ApplicationDetailDialog ---
+const ApplicationDetailDialog = ({ 
+  isOpen, 
+  onClose, 
+  application 
+}: {
+  isOpen: boolean;
+  onClose: (e?: MouseEvent) => void;
+  application: JobApplicationItemInternal | null;
+}) => {
+  if (!application) return null;
+
+  const detailItemClass = "py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0";
+  const labelClass = "text-xs font-semibold text-gray-500 dark:text-gray-400 mb-0.5";
+  const valueClass = "text-sm text-gray-800 dark:text-gray-200";
+
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      onRequestClose={onClose}
+      title={`Application Details: ${application.name}`}
+      width={600}
+    >
+      <div className="mt-4 space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+        <div className={detailItemClass}>
+          <p className={labelClass}>Applicant Name:</p>
+          <p className={valueClass}>{application.name}</p>
+        </div>
+        <div className={detailItemClass}>
+          <p className={labelClass}>Email:</p>
+          <p className={valueClass}>{application.email}</p>
+        </div>
+        <div className={detailItemClass}>
+          <p className={labelClass}>Mobile No:</p>
+          <p className={valueClass}>{application.mobileNo || "N/A"}</p>
+        </div>
+        <div className={detailItemClass}>
+          <p className={labelClass}>Status:</p>
+          <Tag className={`${applicationStatusColor[application.status]} text-white capitalize px-2 py-1 text-xs`}>
+            {application.status.replace(/_/g, " ")}
+          </Tag>
+        </div>
+        <div className={detailItemClass}>
+          <p className={labelClass}>Department:</p>
+          <p className={valueClass}>{application.departmentName || "N/A"}</p>
+        </div>
+        <div className={detailItemClass}>
+          <p className={labelClass}>Job Title:</p>
+          <p className={valueClass}>{application.jobTitle || "N/A"}</p>
+        </div>
+        <div className={detailItemClass}>
+          <p className={labelClass}>Job ID:</p>
+          <p className={valueClass}>{application.jobId || "N/A"}</p>
+        </div>
+        <div className={detailItemClass}>
+          <p className={labelClass}>Work Experience:</p>
+          <p className={valueClass}>{application.workExperience || "N/A"}</p>
+        </div>
+        <div className={detailItemClass}>
+          <p className={labelClass}>Application Date:</p>
+          <p className={valueClass}>
+            {application.applicationDate ? dayjs(application.applicationDate).format("MMM D, YYYY h:mm A") : "N/A"}
+          </p>
+        </div>
+        {application.resumeUrl && (
+          <div className={detailItemClass}>
+            <p className={labelClass}>Resume URL:</p>
+            <a href={application.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+              {application.resumeUrl}
+            </a>
+          </div>
+        )}
+        {application.jobApplicationLink && (
+          <div className={detailItemClass}>
+            <p className={labelClass}>Job Application Link:</p>
+            <a href={application.jobApplicationLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+              {application.jobApplicationLink}
+            </a>
+          </div>
+        )}
+        <div className={detailItemClass}>
+          <p className={labelClass}>Notes:</p>
+          <p className={valueClass} style={{ whiteSpace: 'pre-wrap' }}>{application.notes || "N/A"}</p>
+        </div>
+        {application.coverLetter && ( // Display if coverLetter is part of JobApplicationItemInternal and populated
+          <div className={detailItemClass}>
+            <p className={labelClass}>Cover Letter:</p>
+            <p className={valueClass} style={{ whiteSpace: 'pre-wrap' }}>{application.coverLetter}</p>
+          </div>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+// --- END MODIFIED: ApplicationDetailDialog ---
+
+
 const ScheduleInterviewDialog = ({ isOpen, onClose, application }: any) => { if (!application) return null; return <Dialog isOpen={isOpen} onClose={onClose} title={`Schedule for ${application.name}`}><p>Form to schedule...</p><Button onClick={onClose}>Close</Button></Dialog> };
 const AddJobLinkDialog = ({ isOpen, onClose, application, onLinkSubmit }: any) => { if (!application) return null; return <Dialog isOpen={isOpen} onClose={onClose} title="Add Job Link"><Input placeholder="Enter link" /><Button onClick={() => onLinkSubmit(application.id, 'dummy-link')}>Save</Button></Dialog> };
 
@@ -207,20 +314,13 @@ const JobApplicationListing = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // const {
-  //   jobApplicationsData: jobApplicationsDataFromApi = { data: [], counts: {} },
-  //   status: masterLoadingStatus = "idle",
-  // } = useSelector(masterSelector, shallowEqual);
-
   const {
-    jobApplicationsData: jobApplicationsDataFromApi = { data: [], counts: {} },
-    departmentsData = [] as DepartmentItem[], // Get departmentsData from masterSelector, provide default
+    jobApplicationsData = [],
+    departmentsData = { data: [] } as { data: DepartmentItem[] }, // Ensure departmentsData.data exists
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
+console.log("jobApplicationsData",jobApplicationsData?.data[0]?.status);
 
-  // --- TODO: Replace with your actual selector for departments ---
-  // const { data: departmentsData = [] } = useSelector(departmentsSelector, shallowEqual); // Example
-  // const departmentsData: DepartmentItem[] = useSelector((state: any) => state.master.departmentsData || [], shallowEqual); // Placeholder
 
   const [dialogIsOpen, setIsOpen] = useState(false);
   const openDialog = () => setIsOpen(true);
@@ -251,23 +351,19 @@ const JobApplicationListing = () => {
 
   useEffect(() => {
     dispatch(getJobApplicationsAction());
-
-    // --- TODO: Dispatch your actual getDepartmentsAction ---
-     dispatch(getDepartmentsAction()); // Example
-    // Simulating dispatch if action is not ready:
-    // dispatch({ type: 'master/setDepartmentsData', payload: [{id: '1', name: 'Engineering'}, {id: '2', name: 'HR'}, {id: '3', name: 'Sales'}] });
+     dispatch(getDepartmentsAction());
   }, [dispatch]);
-
-  // Transform API data (snake_case) to internal format (camelCase) and resolve department names
+  
   const transformedJobApplications = useMemo(() => {
-    const apiData: JobApplicationApiItem[] = Array.isArray(jobApplicationsDataFromApi?.data) ? jobApplicationsDataFromApi.data : [];
-    const depts: DepartmentItem[] = Array.isArray(departmentsData?.data) ? departmentsData?.data : [];
+    const apiData: JobApplicationApiItem[] = Array.isArray(jobApplicationsData?.data) ? jobApplicationsData.data : [];
+    // Ensure departmentsData.data is an array before mapping
+    const depts: DepartmentItem[] = Array.isArray(departmentsData?.data) ? departmentsData.data : [];
     
     const departmentMap = new Map(depts.map(dept => [String(dept.id), dept.name]));
 
     return apiData.map((apiItem): JobApplicationItemInternal => ({
-      id: String(apiItem.id), // Ensure ID is string for consistency if needed by DataTable/search
-      status: (apiItem.status?.toLowerCase() || 'new') as ApplicationStatus, // Normalize status
+      id: String(apiItem.id),
+      status: (apiItem.status || 'new') as ApplicationStatus,
       name: apiItem.name,
       email: apiItem.email,
       mobileNo: apiItem.mobile_no || "",
@@ -275,61 +371,41 @@ const JobApplicationListing = () => {
       departmentName: apiItem.job_department_id ? departmentMap.get(String(apiItem.job_department_id)) || "Unknown Dept." : "N/A",
       jobTitle: apiItem.job_title || "",
       workExperience: apiItem.work_experience || "",
-      applicationDate: apiItem.application_date ? new Date(apiItem.application_date) : new Date(), // Convert to Date object
+      applicationDate: apiItem.application_date ? new Date(apiItem.application_date) : new Date(),
       resumeUrl: apiItem.resume_url || "",
-      jobApplicationLink: apiItem.application_link || "", // Mapping from application_link
+      jobApplicationLink: apiItem.application_link || "",
       notes: apiItem.note || "",
       jobId: apiItem.job_id || "",
-      avatar: apiItem.avatar || undefined, // Example if avatar comes from API
-      // coverLetter: apiItem.cover_letter || "", // If cover_letter exists in API
-      // Add other necessary camelCase mappings here
+      avatar: apiItem.avatar || undefined,
+      coverLetter: apiItem.cover_letter || "", // Assuming cover_letter might come from API
     }));
-  }, [jobApplicationsDataFromApi, departmentsData?.data]);
+  }, [jobApplicationsData?.data, departmentsData?.data]);
 
 
   const processedAndSortedData = useMemo(() => {
-    let processedDataResult = cloneDeep(transformedJobApplications); // Use transformed data
+    let processedDataResult = cloneDeep(transformedJobApplications);
 
-    // Apply filters
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
       const selectedStatuses = filterCriteria.filterStatus.map(opt => opt.value as ApplicationStatus);
+      console.log("selectedStatuses",selectedStatuses);
+      console.log("processedDataResult",processedDataResult);
+      
       processedDataResult = processedDataResult.filter(app => selectedStatuses.includes(app.status));
     }
     if (filterCriteria.filterDepartment && filterCriteria.filterDepartment.length > 0) {
       const selectedDeptNames = filterCriteria.filterDepartment.map(opt => opt.value.toLowerCase());
       processedDataResult = processedDataResult.filter(app => app.departmentName && selectedDeptNames.includes(app.departmentName.toLowerCase()));
     }
-
-    console.log("tableData.query",tableData.query);
     
-    // Apply search query
     if (tableData.query && tableData.query.trim() !== "") {
-  const query = tableData.query.toLowerCase().trim();
-  console.log(`[Search] Filtering with query: "${query}"`); // Log the query being used
+        const query = tableData.query.toLowerCase().trim();
+        processedDataResult = processedDataResult.filter(a => {
+            return Object.values(a).some(value => 
+                String(value).toLowerCase().includes(query)
+            );
+        });
+    }
 
-  processedDataResult = processedDataResult.filter(a => {
-    const idMatch = String(a.id).toLowerCase().includes(query);
-    const statusMatch = a.status.toLowerCase().includes(query);
-    const nameMatch = a.name.toLowerCase().includes(query);
-    const emailMatch = a.email.toLowerCase().includes(query);
-    const mobileNoMatch = (a.mobileNo?.toLowerCase().includes(query) ?? false);
-    const departmentNameMatch = (a.departmentName?.toLowerCase().includes(query) ?? false);
-    const jobTitleMatch = (a.jobTitle?.toLowerCase().includes(query) ?? false);
-    const workExperienceMatch = (a.workExperience?.toLowerCase().includes(query) ?? false);
-
-    // For debugging a specific item, e.g., if you know an item's name:
-    // if (a.name === "Specific Applicant Name") {
-    //   console.log(`[Search Debug Item: ${a.name}] Query: "${query}"`, {
-    //     idMatch, statusMatch, nameMatch, emailMatch, mobileNoMatch, departmentNameMatch, jobTitleMatch, workExperienceMatch
-    //   });
-    // }
-
-    return idMatch || statusMatch || nameMatch || emailMatch || mobileNoMatch || departmentNameMatch || jobTitleMatch || workExperienceMatch;
-  });
-  console.log(`[Search] Items after filtering: ${processedDataResult.length}`); // Log count after filtering
-}
-
-    // Apply sorting
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedDataResult.sort((a, b) => {
@@ -337,7 +413,7 @@ const JobApplicationListing = () => {
         let bVal = b[key as keyof JobApplicationItemInternal] as any;
 
         if (key === "applicationDate") {
-            const d_a = aVal as Date | null; // applicationDate is now Date object
+            const d_a = aVal as Date | null;
             const d_b = bVal as Date | null;
             if (d_a === null && d_b === null) return 0;
             if (d_a === null) return order === 'asc' ? -1 : 1;
@@ -374,9 +450,8 @@ const JobApplicationListing = () => {
   const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedApplications([]); }, [handleSetTableData]);
   const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
   const handleSearchChange = useCallback((query: string) => {
-    console.log('[JobAppListing] handleSearchChange CALLED with query:', query); // <<< ADD THIS LOG
     handleSetTableData({ query: query, pageIndex: 1 });
-  }, [handleSetTableData]); // handleSetTableData is stable, so this is fine.
+  }, [handleSetTableData]); 
   const handleRowSelect = useCallback((checked: boolean, row: JobApplicationItemInternal) => setSelectedApplications(prev => checked ? (prev.some(a => a.id === row.id) ? prev : [...prev, row]) : prev.filter(a => a.id !== row.id)), []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobApplicationItemInternal>[]) => { const originals = currentRows.map(r => r.original); if (checked) { setSelectedApplications(prev => { const oldIds = new Set(prev.map(i => i.id)); return [...prev, ...originals.filter(o => !oldIds.has(o.id))] }); } else { const currentIds = new Set(originals.map(o => o.id)); setSelectedApplications(prev => prev.filter(i => !currentIds.has(i.id))); } }, []);
 
@@ -387,7 +462,7 @@ const JobApplicationListing = () => {
     if (!itemToDelete?.id) return; setIsDeleting(true); setDeleteConfirmOpen(false);
     try {
       // await dispatch(deleteJobApplicationAction({ id: itemToDelete.id })).unwrap();
-      dispatch(getJobApplicationsAction({})); // Refetch
+      dispatch(getJobApplicationsAction()); // Refetch
       toast.push(<Notification title="Deleted" type="success">{`Application for ${itemToDelete.name} deleted.`}</Notification>);
       setSelectedApplications(prev => prev.filter(a => a.id !== itemToDelete!.id));
     } catch (error: any) { toast.push(<Notification title="Delete Failed" type="danger">{error.message || "Could not delete."}</Notification>);
@@ -408,6 +483,17 @@ const JobApplicationListing = () => {
 
   const handleScheduleInterview = useCallback((item: JobApplicationItemInternal) => { setCurrentItemForDialog(item); setScheduleInterviewOpen(true); }, []);
   const handleAddJobLink = useCallback((item: JobApplicationItemInternal) => { setCurrentItemForDialog(item); setAddJobLinkOpen(true); }, []);
+  
+  // --- ADDED: handleDownloadResume ---
+  const handleDownloadResume = useCallback((item: JobApplicationItemInternal) => {
+    if (item.resumeUrl) {
+      window.open(item.resumeUrl, '_blank');
+      toast.push(<Notification title="Resume" type="info">Attempting to open/download resume...</Notification>);
+    } else {
+      toast.push(<Notification title="No Resume" type="warning">No resume URL found for this applicant.</Notification>);
+    }
+  }, []);
+
   const handleSubmitJobLink = useCallback(async (applicationId: string, link: string) => {
     setIsSubmittingDrawer(true);
     try {
@@ -420,37 +506,51 @@ const JobApplicationListing = () => {
 
   const openEditDrawer = useCallback((item: JobApplicationItemInternal) => {
     setEditingApplication(item);
-    // item is already camelCased and applicationDate is a Date object from transformation
     editFormMethods.reset({
-      ...item, // Spread the camelCased item
-      // Ensure all fields expected by EditApplicationFormData are present
-      // applicationDate is already a Date object
-      mobileNo: item.mobileNo || "", // Default if undefined
-      // etc. for other optional fields in EditApplicationFormData
+      ...item,
+      mobileNo: item.mobileNo || "",
+      department: item.departmentName, // Assuming department in form is by name for Select
+                                      // Or use item.departmentId if Select expects ID
+      // If form expects department as { value: string, label: string }
+      // department: departmentOptionsForFilter.find(opt => opt.value === item.departmentName) || undefined,
     });
     setIsEditDrawerOpen(true);
-  }, [editFormMethods]);
+  }, [editFormMethods]); // Add departmentOptionsForFilter if used directly here
 
   const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingApplication(null); editFormMethods.reset(); }, [editFormMethods]);
 
   const onEditApplicationSubmit = useCallback(async (data: EditApplicationFormData) => {
     if (!editingApplication) return; setIsSubmittingDrawer(true);
     try {
-      // TODO: Transform data back to snake_case if API expects it
       const payload = { ...editingApplication, ...data, id: editingApplication.id };
+      // TODO: Transform data.department back to departmentId if API expects ID
+      // For example, if data.department is a string (name), find its ID
+      // const dept = departmentsData?.data.find(d => d.name === data.department);
+      // payload.departmentId = dept ? dept.id : null;
+      
       // await dispatch(editJobApplicationAction(payload)).unwrap();
       dispatch(getJobApplicationsAction({})); // Refetch
       toast.push(<Notification title="Updated" type="success">{`Application for ${data.name} updated.`}</Notification>);
       closeEditDrawer();
     } catch (error: any) { toast.push(<Notification title="Update Failed" type="danger">{error.message || "Could not update."}</Notification>);
     } finally { setIsSubmittingDrawer(false); }
-  }, [dispatch, editingApplication, closeEditDrawer]);
+  }, [dispatch, editingApplication, closeEditDrawer]); // Add departmentsData if used for mapping
+
 
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterDepartment: data.filterDepartment || [] }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => 
+
+    { 
+      console.log("data.filterStatus",data.filterStatus);
+      
+      
+      setFilterCriteria({ filterStatus: data.filterStatus || [], 
+      filterDepartment: data.filterDepartment || [] }); 
+      handleSetTableData({ pageIndex: 1 }); 
+      closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
   const onClearFilters = 
   useCallback(() => { 
     const defaults = { filterStatus: [], filterDepartment: [] }; 
@@ -458,7 +558,7 @@ const JobApplicationListing = () => {
     setFilterCriteria(defaults); 
     handleSetTableData({ pageIndex: 1, query: "" });
   dispatch(getJobApplicationsAction())
-  }, [filterFormMethods, handleSetTableData]);
+  }, [filterFormMethods, handleSetTableData, dispatch]); // Added dispatch to dependencies
   const exportReasonSchema = z.object({
     reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
   });
@@ -483,7 +583,7 @@ const JobApplicationListing = () => {
           toast.push(<Notification title="Export Reason Submitted" type="success" />);
            exportJobApplicationsToCsv(fileName, processedAndSortedData);
           
-          toast.push(<Notification title="Data Exported" type="success">Domain data exported.</Notification>);
+          toast.push(<Notification title="Data Exported" type="success">Job application data exported.</Notification>);
           setIsExportReasonModalOpen(false);
         } catch (error: any) {
           toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
@@ -493,122 +593,117 @@ const JobApplicationListing = () => {
       };
 
       function exportJobApplicationsToCsv(filename: string, rows: JobApplicationItemInternal[]): boolean {
-  if (!rows || !rows.length) {
-    // Optionally, show a toast notification here if no data
-    // toast.push(<Notification title="No Data" type="info">There is no data to export.</Notification>);
-    return false;
-  }
+        if (!rows || !rows.length) {
+          return false;
+        }
 
-  const preparedRows: JobApplicationExportItem[] = rows.map((row) => ({
-    id: row.id,
-    // Transform status to be more readable (e.g., 'new' -> 'New', 'offer_extended' -> 'Offer Extended')
-    status: row.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-    name: row.name || "N/A",
-    email: row.email || "N/A",
-    mobileNo: row.mobileNo || "N/A",
-    departmentName: row.departmentName || "N/A",
-    jobTitle: row.jobTitle || "N/A",
-    workExperience: row.workExperience || "N/A",
-    applicationDateFormatted: row.applicationDate ? dayjs(row.applicationDate).format("YYYY-MM-DD HH:mm:ss") : "N/A",
-    resumeUrl: row.resumeUrl || "N/A",
-    jobApplicationLink: row.jobApplicationLink || "N/A",
-    notes: row.notes || "N/A",
-    jobId: row.jobId || "N/A",
-    // coverLetter: row.coverLetter || "N/A", // If you add coverLetter to JobApplicationExportItem
-  }));
+        const preparedRows: JobApplicationExportItem[] = rows.map((row) => ({
+          id: row.id,
+          status: row.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+          name: row.name || "N/A",
+          email: row.email || "N/A",
+          mobileNo: row.mobileNo || "N/A",
+          departmentName: row.departmentName || "N/A",
+          jobTitle: row.jobTitle || "N/A",
+          workExperience: row.workExperience || "N/A",
+          applicationDateFormatted: row.applicationDate ? dayjs(row.applicationDate).format("YYYY-MM-DD HH:mm:ss") : "N/A",
+          resumeUrl: row.resumeUrl || "N/A",
+          jobApplicationLink: row.jobApplicationLink || "N/A",
+          notes: row.notes || "N/A",
+          jobId: row.jobId || "N/A",
+        }));
 
-  const separator = ",";
-  const csvContent =
-    CSV_HEADERS_JOB_APPLICATIONS.join(separator) +
-    "\n" +
-    preparedRows
-      .map((rowItem) =>
-        CSV_KEYS_JOB_APPLICATIONS_EXPORT.map((k) => {
-          let cell = rowItem[k as keyof JobApplicationExportItem];
-          if (cell === null || cell === undefined) {
-            cell = ""; // Use empty string for null/undefined to avoid "null" or "undefined" in CSV
-          } else {
-            // Escape double quotes by doubling them, and wrap in double quotes if cell contains comma, newline or double quote
-            cell = String(cell).replace(/"/g, '""');
-            if (String(cell).search(/("|,|\n)/g) >= 0) {
-              cell = `"${cell}"`;
-            }
-          }
-          return cell;
-        }).join(separator)
-      )
-      .join("\n");
+        const separator = ",";
+        const csvContent =
+          CSV_HEADERS_JOB_APPLICATIONS.join(separator) +
+          "\n" +
+          preparedRows
+            .map((rowItem) =>
+              CSV_KEYS_JOB_APPLICATIONS_EXPORT.map((k) => {
+                let cell = rowItem[k as keyof JobApplicationExportItem];
+                if (cell === null || cell === undefined) {
+                  cell = ""; 
+                } else {
+                  cell = String(cell).replace(/"/g, '""');
+                  if (String(cell).search(/("|,|\n)/g) >= 0) {
+                    cell = `"${cell}"`;
+                  }
+                }
+                return cell;
+              }).join(separator)
+            )
+            .join("\n");
 
-  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); // \ufeff for BOM to ensure Excel opens UTF-8 correctly
-  const link = document.createElement("a");
+        const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); 
+        const link = document.createElement("a");
 
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    return true;
-  }
-
-  // Fallback for older browsers (though very rare now)
-  // Consider removing if not supporting very old browsers
-  // For JobApplicationListing, we already use toast from "@/components/ui/toast"
-  // So, ensure toast and Notification are available in the scope where this function is defined/used.
-  // For this example, I'll assume it's used within JobApplicationListing.
-  toast.push(<Notification title="Export Failed" type="danger">Your browser does not support this feature.</Notification>);
-  return false;
-}
-  const handleExportData = useCallback(() => {
-    if (!processedAndSortedData || processedAndSortedData.length === 0) {
-        toast.push(<Notification title="No Data" type="info">There is no data to export.</Notification>); return;
-    }
-    const exportColumnsDefinition = [
-        { header: "ID", key: "id" },
-        { header: "Status", key: "status", transform: (val: ApplicationStatus) => val.replace(/_/g, " ") },
-        { header: "Applicant Name", key: "name" }, { header: "Email", key: "email" },
-        { header: "Mobile", key: "mobileNo" }, { header: "Department", key: "departmentName" },
-        { header: "Job Title", key: "jobTitle" }, { header: "Experience", key: "workExperience" },
-        { header: "Applied Date", key: "applicationDate", isDate: true, format: "YYYY-MM-DD HH:mm:ss" },
-        { header: "Resume URL", key: "resumeUrl"}, { header: "Job App Link", key: "jobApplicationLink"},
-        { header: "Notes", key: "notes"},
-    ];
-    const dataToExport = processedAndSortedData.map(app => {
-        const row: any = {};
-        exportColumnsDefinition.forEach(col => {
-            let value = app[col.key as keyof JobApplicationItemInternal];
-            if (col.transform && value !== undefined && value !== null) value = col.transform(value as any);
-            if (col.isDate && value instanceof Date) value = dayjs(value).format(col.format || "YYYY-MM-DD");
-            row[col.header] = (value !== undefined && value !== null) ? String(value) : "";
-        });
-        return row;
-    });
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "JobApplications");
-    const colWidths = exportColumnsDefinition.map(col => ({ wch: col.header.length < 15 ? 15 : col.header.length + 5 }));
-    worksheet['!cols'] = colWidths;
-    XLSX.writeFile(workbook, `JobApplications_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`);
-    toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
-  }, [processedAndSortedData]);
+        if (link.download !== undefined) {
+          const url = URL.createObjectURL(blob);
+          link.setAttribute("href", url);
+          link.setAttribute("download", filename);
+          link.style.visibility = "hidden";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          return true;
+        }
+        toast.push(<Notification title="Export Failed" type="danger">Your browser does not support this feature.</Notification>);
+        return false;
+      }
 
   const columns: ColumnDef<JobApplicationItemInternal>[] = useMemo(() => [
-    { header: "Status", accessorKey: "status", width: 120, cell: props => <Tag className={`${applicationStatusColor[props.row.original.status]} text-white capitalize px-2 py-1 text-xs`}>{props.row.original.status.replace(/_/g, " ")}</Tag> },
     { header: "Applicant", accessorKey: "name", cell: props => <div className="flex items-center"><Avatar size={28} shape="circle" src={props.row.original.avatar} icon={<TbUserCircle />}>{!props.row.original.avatar && props.row.original.name ? props.row.original.name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2"><span className="font-semibold">{props.row.original.name}</span><div className="text-xs text-gray-500">{props.row.original.email}</div></div></div> },
+    { header: "Status", accessorKey: "status", width: 120, cell: props => <Tag className={`${applicationStatusColor[props.row.original.status]} text-white capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag> },
     { header: "Mobile", accessorKey: "mobileNo", width: 140, cell: props => props.row.original.mobileNo || "-" },
-    { header: "Department", accessorKey: "departmentName", width: 160, cell: props => props.row.original.departmentName || "-" }, // Display resolved department name
+    { header: "Department", accessorKey: "departmentName", width: 160, cell: props => props.row.original.departmentName || "-" },
     { header: "Job Title", accessorKey: "jobTitle", width: 200, cell: props => props.row.original.jobTitle || "N/A" },
     { header: "Experience", accessorKey: "workExperience", width: 150, cell: props => props.row.original.workExperience || "N/A" },
-    { header: "Applied Date", accessorKey: "applicationDate", width: 160, cell: props => props.row.original.applicationDate ? dayjs(props.row.original.applicationDate).format("MMM D, YYYY h:mm A") : "-" }, // applicationDate is now Date
-    { header: "Action", id: "action", width: 130, meta: { HeaderClass: "text-center" }, cell: props => <ActionColumn onView={() => handleViewDetails(props.row.original)} onEdit={() => navigate(`/hr-employees/job-applications/edit/${props.row.original.id}`)} onDelete={() => handleDeleteClick(props.row.original)} onScheduleInterview={() => handleScheduleInterview(props.row.original)} onAddJobLink={() => handleAddJobLink(props.row.original)} /> },
-  ], [navigate, handleViewDetails, handleDeleteClick, handleScheduleInterview, handleAddJobLink]);
+    { header: "Applied Date", 
+      accessorKey: "applicationDate", 
+      width: 160, 
+      cell: (props) => {
+          const { updated_at, updated_by_user, updated_by_role } =
+            props.row.original.applicationDate ;
+          const formattedDate = props.row.original.applicationDate 
+            ? `${new Date(props.row.original.applicationDate).getDate()} ${new Date(
+                props.row.original.applicationDate 
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(
+                props.row.original.applicationDate 
+              ).getFullYear()}, ${new Date(props.row.original.applicationDate).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+             
+              <span>{formattedDate}</span>
+            </div>
+          );
+        }
+      },
+      // cell: props => props.row.original.applicationDate ? dayjs(props.row.original.applicationDate).format("MMM D, YYYY h:mm A") : "-" },
+
+    { 
+      header: "Action", id: "action", width: 130, meta: { HeaderClass: "text-center" }, 
+      cell: props => (
+        <ActionColumn 
+          onView={() => handleViewDetails(props.row.original)} 
+          onEdit={() => openEditDrawer(props.row.original)} // --- MODIFIED: onEdit now opens drawer ---
+          onDelete={() => handleDeleteClick(props.row.original)} 
+          onScheduleInterview={() => handleScheduleInterview(props.row.original)} 
+          onAddJobLink={() => handleAddJobLink(props.row.original)}
+          onDownloadResume={() => handleDownloadResume(props.row.original)} // --- ADDED: onDownloadResume ---
+        />
+      ) 
+    },
+  ], [navigate, handleViewDetails, handleDeleteClick, handleScheduleInterview, handleAddJobLink, openEditDrawer, handleDownloadResume]); // Added openEditDrawer & handleDownloadResume
 
   const departmentOptionsForFilter = useMemo(() => {
-    const depts: DepartmentItem[] = Array.isArray(departmentsData?.data) ? departmentsData?.data : [];
-    return Array.from(new Set(depts.map(dept => dept.name))) // Use names from fetched departments
+    // Ensure departmentsData.data is an array before mapping
+    const depts: DepartmentItem[] = Array.isArray(departmentsData?.data) ? departmentsData.data : [];
+    return Array.from(new Set(depts.map(dept => dept.name)))
       .filter(name => !!name)
       .map(name => ({ value: name, label: name }));
   }, [departmentsData?.data]);
@@ -622,7 +717,7 @@ const JobApplicationListing = () => {
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <Button icon={<TbCalendarTime />} className="w-full sm:w-auto">View Schedule</Button>
             <Button icon={<TbUserCheck />} className="w-full sm:w-auto">View Shortlisted</Button>
-            <Button icon={<TbBriefcase />} onClick={openDialog} className="w-full sm:w-auto">Add New Job Post</Button>
+            <Button icon={<TbBriefcase />} onClick={() => navigate('/hr-employees/job-post')} className="w-full sm:w-auto">Add New Job Post</Button>
             <Button variant="solid" icon={<TbPlus />} onClick={() => navigate('/hr-employees/job-applications/add')} className="w-full sm:w-auto">Add New Application</Button>
           </div>
         </div>
@@ -631,31 +726,31 @@ const JobApplicationListing = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 mb-4 gap-2">
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMail size={24} /></div>
-                <div><h6 className="text-blue-500">{jobApplicationsDataFromApi?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div>
+                <div><h6 className="text-blue-500">{jobApplicationsData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div>
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-emerald-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbMailSpark size={24} /></div>
-                <div><h6 className="text-emerald-500">{jobApplicationsDataFromApi?.counts?.new || 0}</h6><span className="font-semibold text-xs">New</span></div>
+                <div><h6 className="text-emerald-500">{jobApplicationsData?.counts?.new || 0}</h6><span className="font-semibold text-xs">New</span></div>
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbMailUp size={24} /></div>
-                <div><h6 className="text-pink-500">{jobApplicationsDataFromApi?.counts?.today || 0}</h6><span className="font-semibold text-xs">Today</span></div>
+                <div><h6 className="text-pink-500">{jobApplicationsData?.counts?.today || 0}</h6><span className="font-semibold text-xs">Today</span></div>
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbMailSearch size={24} /></div>
-                <div><h6 className="text-orange-500">{jobApplicationsDataFromApi?.counts?.in_review || 0}</h6><span className="font-semibold text-xs">In Review</span></div>
+                <div><h6 className="text-orange-500">{jobApplicationsData?.counts?.in_review || 0}</h6><span className="font-semibold text-xs">In Review</span></div>
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbMailCheck size={24} /></div>
-                <div><h6 className="text-violet-500">{jobApplicationsDataFromApi?.counts?.shortlisted || 0}</h6><span className="font-semibold text-xs">Shortlisted</span></div>
+                <div><h6 className="text-violet-500">{jobApplicationsData?.counts?.shortlisted || 0}</h6><span className="font-semibold text-xs">Shortlisted</span></div>
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailHeart size={24} /></div>
-                <div><h6 className="text-green-500">{jobApplicationsDataFromApi?.counts?.hired || 0}</h6><span className="font-semibold text-xs">Hired</span></div>
+                <div><h6 className="text-green-500">{jobApplicationsData?.counts?.hired || 0}</h6><span className="font-semibold text-xs">Hired</span></div>
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMailX size={24} /></div>
-                <div><h6 className="text-red-500">{jobApplicationsDataFromApi?.counts?.rejected || 0}</h6><span className="font-semibold text-xs">Rejected</span></div>
+                <div><h6 className="text-red-500">{jobApplicationsData?.counts?.rejected || 0}</h6><span className="font-semibold text-xs">Rejected</span></div>
             </Card>
         </div>
 
@@ -674,7 +769,7 @@ const JobApplicationListing = () => {
           <ApplicationTable
             columns={columns}
             noData={pageData.length === 0}
-            data={pageData} // Use paginated data from transformed & processed source
+            data={pageData} 
             loading={masterLoadingStatus === "loading"}
             pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
             onPaginationChange={handlePaginationChange}
@@ -692,7 +787,7 @@ const JobApplicationListing = () => {
       <ScheduleInterviewDialog isOpen={scheduleInterviewOpen} onClose={() => setScheduleInterviewOpen(false)} application={currentItemForDialog} />
       <AddJobLinkDialog isOpen={addJobLinkOpen} onClose={() => setAddJobLinkOpen(false)} application={currentItemForDialog} onLinkSubmit={handleSubmitJobLink} />
       <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title="Delete Application" onClose={() => setDeleteConfirmOpen(false)} onConfirm={confirmDelete} loading={isDeleting}><p>Are you sure you want to delete the application for <strong>{itemToDelete?.name}</strong>?</p></ConfirmDialog>
-<ConfirmDialog
+      <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
         title="Reason for Export"
@@ -706,7 +801,7 @@ const JobApplicationListing = () => {
         confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
       >
         <Form
-          id="exportDomainsReasonForm"
+          id="exportDomainsReasonForm" // Keep id for form attribute if used, or remove if not.
           onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
           className="flex flex-col gap-4 mt-2"
         >
@@ -726,8 +821,19 @@ const JobApplicationListing = () => {
             <FormItem label="Applicant Name*" error={editFormMethods.formState.errors.name?.message}><Controller name="name" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
             <FormItem label="Email*" error={editFormMethods.formState.errors.email?.message}><Controller name="email" control={editFormMethods.control} render={({ field }) => <Input {...field} type="email" />} /></FormItem>
             <FormItem label="Mobile No" error={editFormMethods.formState.errors.mobileNo?.message}><Controller name="mobileNo" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
-            {/* Department field in edit drawer might need adjustment based on how you want to edit it (e.g., Select with department options) */}
-            <FormItem label="Department*" error={editFormMethods.formState.errors.department?.message}><Controller name="department" control={editFormMethods.control} render={({ field }) => <Select options={departmentOptionsForFilter} value={departmentOptionsForFilter.find(o=>o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />} /></FormItem>
+            <FormItem label="Department*" error={editFormMethods.formState.errors.department?.message}>
+              <Controller 
+                name="department" 
+                control={editFormMethods.control} 
+                render={({ field }) => (
+                  <Select 
+                    options={departmentOptionsForFilter} 
+                    value={departmentOptionsForFilter.find(o => o.value === field.value) || null} // Ensure value is object or null
+                    onChange={opt => field.onChange(opt?.value)} // Pass only the value string
+                  />
+                )} 
+              />
+            </FormItem>
             <FormItem label="Job Title" error={editFormMethods.formState.errors.jobTitle?.message}><Controller name="jobTitle" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
             <FormItem label="Job ID" error={editFormMethods.formState.errors.jobId?.message}><Controller name="jobId" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
             <FormItem label="Work Experience*" error={editFormMethods.formState.errors.workExperience?.message}><Controller name="workExperience" control={editFormMethods.control} render={({ field }) => <Input {...field} />} /></FormItem>
@@ -741,20 +847,18 @@ const JobApplicationListing = () => {
         )}
       </Drawer>
 
-      {/* Filter Drawer */}
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} 
       onClose={closeFilterDrawer} 
       onRequestClose={closeFilterDrawer}
       footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterAppForm" type="submit">Apply</Button></div>}>
         <Form id="filterAppForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 ">
-          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => <Select isMulti options={appStatusOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" 
+          control={filterFormMethods.control} 
+          render={({ field }) => <Select isMulti options={appStatusOptionsConst} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></FormItem>
           <FormItem label="Department"><Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => <Select isMulti options={departmentOptionsForFilter} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></FormItem>
         </Form>
       </Drawer>
-
       
-
-      {/* Generic Dialog Placeholder */}
       <Dialog isOpen={dialogIsOpen} onClose={onDialogClose} onRequestClose={onDialogClose}>
         <h5 className="mb-4">Generate Job Application Link</h5>
         <p>Link Goes Here!</p>

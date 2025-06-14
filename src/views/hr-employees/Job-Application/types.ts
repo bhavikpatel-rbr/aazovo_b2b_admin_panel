@@ -3,9 +3,19 @@ import { z } from 'zod';
 import dayjs from 'dayjs'; // If using dayjs for date transformations
 
 // --- Enums and Options (Example) ---
-export type ApplicationStatus = "new" | "screening" | "interviewing" | "offer_extended" | "hired" | "rejected" | "withdrawn";
+export type ApplicationStatus =
+    | 'New'
+    | 'In Review'
+    | 'Shortlisted'
+    | 'Hired'
+    | 'Rejected'
+
 export const applicationStatusOptions: { value: ApplicationStatus; label: string }[] = [
-    { value: "new", label: "New" }, { value: "screening", label: "Screening" }, /* ... more */
+    { value: "New", label: "New" },
+    { value: "In Review", label: "In Review" }, /* ... more */
+    { value: "Shortlisted", label: "Shortlisted" }, /* ... more */
+    { value: "Hired", label: "Hired" }, /* ... more */
+    { value: "Rejected", label: "Rejected" }, /* ... more */
 ];
 
 export type Gender = "male" | "female" | "other" | "prefer_not_to_say";
@@ -20,10 +30,10 @@ export const maritalStatusOptions: { value: MaritalStatus; label: string }[] = [
 ];
 
 // (Add more options for Nationality, Blood Group, Country, State, City etc. as needed)
-export const countryOptions = [ { value: 'us', label: 'United States'}, { value: 'in', label: 'India'} ];
-export const stateOptions = [ { value: 'ny', label: 'New York'}, { value: 'ca', label: 'California'} ];
-export const cityOptions = [ { value: 'nyc', label: 'New York City'}, { value: 'la', label: 'Los Angeles'} ];
-export const bloodGroupOptions = [ {value: 'A+', label: 'A+'}, {value: 'O-', label: 'O-'}];
+export const countryOptions = [{ value: 'us', label: 'United States' }, { value: 'in', label: 'India' }];
+export const stateOptions = [{ value: 'ny', label: 'New York' }, { value: 'ca', label: 'California' }];
+export const cityOptions = [{ value: 'nyc', label: 'New York City' }, { value: 'la', label: 'Los Angeles' }];
+export const bloodGroupOptions = [{ value: 'A+', label: 'A+' }, { value: 'O-', label: 'O-' }];
 export const nationalityOptions = [
     { value: 'afghan', label: 'Afghan' },
     { value: 'albanian', label: 'Albanian' },
@@ -280,7 +290,7 @@ export const applicationFormSchema = z.object({
     jobId: z.string().nullable().optional().transform(val => val === "" ? null : val),
     jobTitle: z.string().optional(),
     applicationDate: z.date({ required_error: "Application date is required." }),
-    status: z.enum([ "new", "screening", "interviewing", "offer_extended", "hired", "rejected", "withdrawn", ]),
+    status: z.enum(["new", "screening", "interviewing", "offer_extended", "hired", "rejected", "withdrawn",]),
     resumeUrl: z.string().url("Invalid URL for resume").or(z.literal("")).nullable().optional().transform(val => val === "" ? null : val),
     coverLetter: z.string().nullable().optional(), // Notes from original can be merged here or kept separate
     notes: z.string().nullable().optional(),
@@ -298,7 +308,7 @@ export const applicationFormSchema = z.object({
 
     // Employment Details (Array) - Only if 'experienced'
     employmentDetails: z.array(employmentDetailSchema).optional(),
-    
+
 }).superRefine((data, ctx) => {
     if (data.workExperienceType === "experienced" && (!data.employmentDetails || data.employmentDetails.length === 0)) {
         ctx.addIssue({
@@ -312,7 +322,7 @@ export const applicationFormSchema = z.object({
         const dob = dayjs(data.dateOfBirth);
         const calculatedAge = today.diff(dob, 'year');
         if (data.age !== null && data.age !== undefined && data.age !== calculatedAge) {
-             // Can add an issue or just use calculated age. For now, let's assume age is manually entered or auto-calculated.
+            // Can add an issue or just use calculated age. For now, let's assume age is manually entered or auto-calculated.
         }
     }
 });

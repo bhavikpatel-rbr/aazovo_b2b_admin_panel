@@ -905,7 +905,7 @@ const ExportMapping = () => {
               <TbCloudUpload size={24}/>
             </div>
             <div>
-              <h6 className="text-blue-500">{apiExportMappings?.counts?.today}</h6>
+              <h6 className="text-blue-500">{apiExportMappings?.counts?.total}</h6>
               <span className="font-semibold text-xs">Total Exports</span>
             </div>
           </Card>
