@@ -764,13 +764,7 @@ export const editBlogAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editBlogsAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getBlogsAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -864,13 +858,7 @@ export const editProductAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editBrandListAsync(payload.id, payload.formData); // Uses Brand service
       if (response?.data?.status === true) {
         dispatch(getBrandAction()); // Dispatches Brand action
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -962,13 +950,7 @@ export const editBrandAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editBrandListAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getBrandAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -1088,13 +1070,7 @@ export const editCategoryAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editcategoryListAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getCategoriesAction()); // Corrected dispatch
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -1365,13 +1341,7 @@ export const editSliderAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editSlidersListAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getSlidersAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -1445,13 +1415,7 @@ export const updateCompanyProfileAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editCompanyProfileListAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getCompanyProfileAction()); // Corrected dispatch
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -2309,13 +2273,7 @@ export const editBugReportAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editBugReportAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getBugReportsAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -2599,13 +2557,7 @@ export const editAutoEmailAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editAutoEmailAsync(payload);
       if (response?.data?.status === true) {
         dispatch(getAutoEmailsAction()); // Corrected dispatch
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -2711,13 +2663,7 @@ export const editEmailCampaignAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editEmailCampaignsAsync(payload);
       if (response?.data?.status === true) {
         dispatch(getEmailCampaignsAction())
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -2823,13 +2769,7 @@ export const editAutoEmailTemplateAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editAutoEmailTemplatesAsync(payload);
       if (response?.data?.status === true) {
         dispatch(getAutoEmailTemplatesAction()); // Corrected dispatch
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -2920,13 +2860,7 @@ export const editEmailTemplateAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editEmailTemplatesAsync(payload);
       if (response?.data?.status === true) {
         dispatch(getEmailTemplatesAction()); // Corrected dispatch
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3015,13 +2949,7 @@ export const editRequestFeedbackAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editRequestFeedbacksAsync(id, formData);
       if (response?.data?.status === true) {
         dispatch(getRequestFeedbacksAction()); // Corrected dispatch
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3156,13 +3084,7 @@ export const updateGlobalSettingAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editGlobalSettingAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getGlobalSettingAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "Global setting updated successfully",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3349,13 +3271,7 @@ export const addJobApplicationAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addJobApplicationAsync(data);
       if (response?.data?.status === true) {
         dispatch(getJobApplicationsAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3373,13 +3289,7 @@ export const editJobApplicationAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editJobApplicationAsync(data);
       if (response?.data?.status === true) {
         dispatch(getJobApplicationsAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3397,13 +3307,7 @@ export const deleteJobApplicationAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await deleteJobApplicationAsync(data);
       if (response?.data?.status === true) {
         dispatch(getJobApplicationsAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3421,13 +3325,7 @@ export const deleteAllJobApplicationsAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await deleteAllJobApplicationAsync(data);
       if (response?.data?.status === true) {
         dispatch(getJobApplicationsAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "success",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3514,13 +3412,7 @@ export const editCompanyAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editCompanyAsync(id, payload);
       if (response?.data?.status === true) {
         dispatch(getCompanyAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "Company updated successfully",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3809,13 +3701,7 @@ export const addFormBuilderAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addFormBuilderAsync(data);
       if (response?.data?.status === true) {
         dispatch(getFormBuilderAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "Form created successfully",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3833,13 +3719,7 @@ export const editFormBuilderAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editFormBuilderAsync(data);
       if (response?.data?.status === true) {
         dispatch(getFormBuilderAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "Form updated successfully",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3857,13 +3737,7 @@ export const deleteFormBuilderAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await deleteFormBuilderAsync(data);
       if (response?.data?.status === true) {
         dispatch(getFormBuilderAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "Form deleted successfully",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3881,13 +3755,7 @@ export const deleteAllFormBuildersAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await deleteAllFormBuilderAsync(data);
       if (response?.data?.status === true) {
         dispatch(getFormBuilderAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "Forms deleted successfully",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3924,13 +3792,7 @@ export const changeFormBuilderStatusAction = createAsyncThunk<
 
       if (response?.data?.status === true) {
         dispatch(getFormBuilderAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "Form status updated successfully",
-          })
-        );
+
         return response?.data?.data;
       }
 
@@ -3975,13 +3837,7 @@ export const cloneFormBuilderAction = createAsyncThunk<
 
       if (response?.data?.status === true) {
         dispatch(getFormBuilderAction());
-        dispatch(
-          showMessage({
-            ...defaultMessageObj,
-            type: "success",
-            messageText: response?.data?.message || "Form cloned successfully",
-          })
-        );
+
         return response?.data?.data;
       }
 
