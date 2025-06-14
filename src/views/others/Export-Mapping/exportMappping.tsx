@@ -515,16 +515,7 @@ const ExportMapping = () => {
   // --- 3. CORRECTED DATA LOADING LOGIC ---
   useEffect(() => {
     if (masterLoadingStatus === "idle") {
-      if (!Array.isArray(apiExportMappings?.data)) {
-        console.error("API Error: exportMappingData is not an array:", apiExportMappings?.data);
-        toast.push(
-          <Notification title="Data Error" type="danger" duration={5000}>
-            Received invalid data format for export mappings.
-          </Notification>
-        );
-        setExportMappings([]);
-        return;
-      }
+      
       const transformedData = (apiExportMappings?.data as ApiExportMapping[])
         .map(transformApiDataToExportMappingItem)
         .filter((item): item is ExportMappingItem => item !== null);
