@@ -503,16 +503,7 @@ const JobApplicationListing = () => {
   }, [dispatch]);
 
   const openEditDrawer = useCallback((item: JobApplicationItemInternal) => {
-    setEditingApplication(item);
-    editFormMethods.reset({
-      ...item,
-      mobileNo: item.mobileNo || "",
-      department: item.departmentName, // Assuming department in form is by name for Select
-                                      // Or use item.departmentId if Select expects ID
-      // If form expects department as { value: string, label: string }
-      // department: departmentOptionsForFilter.find(opt => opt.value === item.departmentName) || undefined,
-    });
-    setIsEditDrawerOpen(true);
+   navigate('/hr-employees/job-applications/edit/:'+ item.id)
   }, [editFormMethods]); // Add departmentOptionsForFilter if used directly here
 
   const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingApplication(null); editFormMethods.reset(); }, [editFormMethods]);
