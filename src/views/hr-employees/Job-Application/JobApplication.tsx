@@ -47,6 +47,7 @@ import { shallowEqual, useSelector } from "react-redux";
 import {
   getDepartmentsAction,
   getJobApplicationsAction,
+  submitExportReasonAction,
   // --- TODO: Ensure this action exists and is imported ---
   // getDepartmentsAction, // Example: import { getDepartmentsAction } from '@/reduxtool/master/middleware';
 } from '@/reduxtool/master/middleware';
@@ -133,6 +134,37 @@ const ActionColumn = ({ onView, onEdit, onDelete, onScheduleInterview, onAddJobL
     </div>
   );
 };
+
+interface JobApplicationExportItem {
+    id: string;
+    status: string; // User-friendly status
+    name: string;
+    email: string;
+    mobileNo: string;
+    departmentName: string;
+    jobTitle: string;
+    workExperience: string;
+    applicationDateFormatted: string; // Formatted date
+    resumeUrl: string;
+    jobApplicationLink: string;
+    notes: string;
+    jobId: string;
+    // coverLetter?: string; // Optional, add if needed
+}
+
+// Headers for the CSV file
+const CSV_HEADERS_JOB_APPLICATIONS = [
+    "ID", "Status", "Applicant Name", "Email", "Mobile No",
+    "Department", "Job Title", "Work Experience", "Application Date",
+    "Resume URL", "Job Application Link", "Notes", "Job ID"
+];
+
+// Keys from JobApplicationExportItem, in the order they should appear in the CSV
+const CSV_KEYS_JOB_APPLICATIONS_EXPORT: (keyof JobApplicationExportItem)[] = [
+    'id', 'status', 'name', 'email', 'mobileNo',
+    'departmentName', 'jobTitle', 'workExperience', 'applicationDateFormatted',
+    'resumeUrl', 'jobApplicationLink', 'notes', 'jobId'
+];
 
 const ApplicationTable = (props: any) => <DataTable {...props} />;
 // const ApplicationSearch = React.forwardRef<HTMLInputElement, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
@@ -416,6 +448,8 @@ const JobApplicationListing = () => {
 
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+    const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+    const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterDepartment: data.filterDepartment || [] }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
   const onClearFilters = 
   useCallback(() => { 
@@ -425,7 +459,109 @@ const JobApplicationListing = () => {
     handleSetTableData({ pageIndex: 1, query: "" });
   dispatch(getJobApplicationsAction())
   }, [filterFormMethods, handleSetTableData]);
+  const exportReasonSchema = z.object({
+    reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
+  });
+  type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
+  const handleOpenExportReasonModal = () => {
+      if (!processedAndSortedData || !processedAndSortedData.length) {
+        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+        return;
+      }
+      exportReasonFormMethods.reset({ reason: "" });
+      setIsExportReasonModalOpen(true);
+    };
 
+    const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+        setIsSubmittingExportReason(true);
+        const moduleName = "JobApplications";
+        const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+        const fileName = `JobApplications_export_${timestamp}.csv`;
+        try {
+          await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+          toast.push(<Notification title="Export Reason Submitted" type="success" />);
+           exportJobApplicationsToCsv(fileName, processedAndSortedData);
+          
+          toast.push(<Notification title="Data Exported" type="success">Domain data exported.</Notification>);
+          setIsExportReasonModalOpen(false);
+        } catch (error: any) {
+          toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
+        } finally {
+          setIsSubmittingExportReason(false);
+        }
+      };
+
+      function exportJobApplicationsToCsv(filename: string, rows: JobApplicationItemInternal[]): boolean {
+  if (!rows || !rows.length) {
+    // Optionally, show a toast notification here if no data
+    // toast.push(<Notification title="No Data" type="info">There is no data to export.</Notification>);
+    return false;
+  }
+
+  const preparedRows: JobApplicationExportItem[] = rows.map((row) => ({
+    id: row.id,
+    // Transform status to be more readable (e.g., 'new' -> 'New', 'offer_extended' -> 'Offer Extended')
+    status: row.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+    name: row.name || "N/A",
+    email: row.email || "N/A",
+    mobileNo: row.mobileNo || "N/A",
+    departmentName: row.departmentName || "N/A",
+    jobTitle: row.jobTitle || "N/A",
+    workExperience: row.workExperience || "N/A",
+    applicationDateFormatted: row.applicationDate ? dayjs(row.applicationDate).format("YYYY-MM-DD HH:mm:ss") : "N/A",
+    resumeUrl: row.resumeUrl || "N/A",
+    jobApplicationLink: row.jobApplicationLink || "N/A",
+    notes: row.notes || "N/A",
+    jobId: row.jobId || "N/A",
+    // coverLetter: row.coverLetter || "N/A", // If you add coverLetter to JobApplicationExportItem
+  }));
+
+  const separator = ",";
+  const csvContent =
+    CSV_HEADERS_JOB_APPLICATIONS.join(separator) +
+    "\n" +
+    preparedRows
+      .map((rowItem) =>
+        CSV_KEYS_JOB_APPLICATIONS_EXPORT.map((k) => {
+          let cell = rowItem[k as keyof JobApplicationExportItem];
+          if (cell === null || cell === undefined) {
+            cell = ""; // Use empty string for null/undefined to avoid "null" or "undefined" in CSV
+          } else {
+            // Escape double quotes by doubling them, and wrap in double quotes if cell contains comma, newline or double quote
+            cell = String(cell).replace(/"/g, '""');
+            if (String(cell).search(/("|,|\n)/g) >= 0) {
+              cell = `"${cell}"`;
+            }
+          }
+          return cell;
+        }).join(separator)
+      )
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); // \ufeff for BOM to ensure Excel opens UTF-8 correctly
+  const link = document.createElement("a");
+
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  }
+
+  // Fallback for older browsers (though very rare now)
+  // Consider removing if not supporting very old browsers
+  // For JobApplicationListing, we already use toast from "@/components/ui/toast"
+  // So, ensure toast and Notification are available in the scope where this function is defined/used.
+  // For this example, I'll assume it's used within JobApplicationListing.
+  toast.push(<Notification title="Export Failed" type="danger">Your browser does not support this feature.</Notification>);
+  return false;
+}
   const handleExportData = useCallback(() => {
     if (!processedAndSortedData || processedAndSortedData.length === 0) {
         toast.push(<Notification title="No Data" type="info">There is no data to export.</Notification>); return;
@@ -529,7 +665,7 @@ const JobApplicationListing = () => {
             onSearchChange={handleSearchChange}
             onFilterOpen={openFilterDrawer}
             onClearFilters={onClearFilters}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal}
           />
         </div>
 
@@ -556,7 +692,33 @@ const JobApplicationListing = () => {
       <ScheduleInterviewDialog isOpen={scheduleInterviewOpen} onClose={() => setScheduleInterviewOpen(false)} application={currentItemForDialog} />
       <AddJobLinkDialog isOpen={addJobLinkOpen} onClose={() => setAddJobLinkOpen(false)} application={currentItemForDialog} onLinkSubmit={handleSubmitJobLink} />
       <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title="Delete Application" onClose={() => setDeleteConfirmOpen(false)} onConfirm={confirmDelete} loading={isDeleting}><p>Are you sure you want to delete the application for <strong>{itemToDelete?.name}</strong>?</p></ConfirmDialog>
-
+<ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
+      >
+        <Form
+          id="exportDomainsReasonForm"
+          onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
       {/* Edit Application Drawer */}
       <Drawer title="Edit Job Application" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={600} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmittingDrawer}>Cancel</Button><Button size="sm" variant="solid" form="editAppForm" type="submit" loading={isSubmittingDrawer} disabled={!editFormMethods.formState.isValid || isSubmittingDrawer}>Save</Button></div>}>
         {editingApplication && (
