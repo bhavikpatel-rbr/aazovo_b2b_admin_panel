@@ -1325,6 +1325,7 @@ export const editJobPostsAsync = async (unitData: any) => {
       , experience: unitData?.experience
       , job_title: unitData?.job_title
       , job_department_id: unitData?.job_department_id
+      , job_plateforms: unitData?.job_plateforms
     })
     return response
   } catch (err) {

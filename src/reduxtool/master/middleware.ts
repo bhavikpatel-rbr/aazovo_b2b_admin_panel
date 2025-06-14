@@ -2182,7 +2182,7 @@ export const getJobPostsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getJobPostsAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
