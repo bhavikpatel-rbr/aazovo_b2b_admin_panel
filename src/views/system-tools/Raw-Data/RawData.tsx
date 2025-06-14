@@ -1121,7 +1121,7 @@ const RowDataListing = () => {
         enableSorting: true,
         size: 160,
                 cell: (props) => {
-          const mobileNo = props.getValue<string>();
+          const mobileNo = props.row.original.mobile_no;
           const isDuplicate = mobileNo && mobileNoCount[mobileNo] > 1;
           return (
             <>
