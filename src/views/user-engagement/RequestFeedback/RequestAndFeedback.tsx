@@ -1452,7 +1452,7 @@ const RequestAndFeedbackListing = () => {
       ><Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 pb-28"> {/* Increased pb for footer space */}
         {renderDrawerForm(formMethods)}
          {editingItem && (
-             <div className="absolute bottom-0 left-0 right-0 px-6 py-4"> {/* Ensure full width and padding consistency */}
+             <div className=""> {/* Ensure full width and padding consistency */}
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                     <div>
                         <b className="mt-3 mb-3 font-semibold text-primary-600 dark:text-primary-400">Latest Update:</b><br />
