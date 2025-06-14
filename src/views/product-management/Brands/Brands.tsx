@@ -58,6 +58,7 @@ import {
   editBrandAction,
   deleteBrandAction,
   deleteAllBrandsAction,
+  submitExportReasonAction,
   // changeBrandStatusAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -69,7 +70,7 @@ type ApiBrandItem = {
   slug: string;
   icon: string | null;
   show_header: string | number;
-  status: "Active" | "Disabled";
+  status: "Active" | "Inactive";
   meta_title: string | null;
   meta_descr: string | null;
   meta_keyword: string | null;
@@ -79,7 +80,7 @@ type ApiBrandItem = {
   icon_full_path?: string;
 };
 
-export type BrandStatus = "active" | "disabled";
+export type BrandStatus = "active" | "inactive";
 export type BrandItem = {
   id: number;
   name: string;
@@ -115,7 +116,7 @@ const brandFormSchema = z.object({
       errorMap: () => ({ message: "Please select if shown in header." }),
     })
     .transform((val) => Number(val)),
-  status: z.enum(["Active", "Disabled"], {
+  status: z.enum(["Active", "Inactive"], {
     errorMap: () => ({ message: "Please select a status." }),
   }),
   meta_title: z
@@ -145,6 +146,16 @@ const filterFormSchema = z.object({
     .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
+
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
 
 const CSV_HEADERS_BRAND = [
   "ID",
@@ -245,15 +256,15 @@ const BRAND_ICON_BASE_URL =
   import.meta.env.VITE_API_URL_STORAGE || "https://your-api-domain.com/storage/";
 const statusColor: Record<BrandStatus, string> = {
   active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  disabled: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
+  inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
 };
 const uiStatusOptions: { value: BrandStatus; label: string }[] = [
   { value: "active", label: "Active" },
-  { value: "disabled", label: "Inactive" },
+  { value: "inactive", label: "Inactive" },
 ];
-const apiStatusOptions: { value: "Active" | "Disabled"; label: string }[] = [
+const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [
   { value: "Active", label: "Active" },
-  { value: "Disabled", label: "Disabled" },
+  { value: "Inactive", label: "Inactive" },
 ];
 const showHeaderOptions: { value: "1" | "0"; label: string }[] = [
   { value: "1", label: "Yes" },
@@ -340,9 +351,7 @@ const BrandTableTools = ({
       <BrandSearch onInputChange={onSearchChange} />
     </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters">
-        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
-      </Tooltip>
+      <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
       <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
         Filter
       </Button>
@@ -458,6 +467,10 @@ const Brands = () => {
     filterNames: [],
     filterStatuses: [],
   });
+  
+  // State for export reason modal
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
 
   const [addFormPreviewUrl, setAddFormPreviewUrl] = useState<string | null>(null);
   const [editFormPreviewUrl, setEditFormPreviewUrl] = useState<string | null>(null);
@@ -503,6 +516,11 @@ const Brands = () => {
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ // Added for export reason
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   const mappedBrands: BrandItem[] = useMemo(() => {
     if (!Array.isArray(BrandData)) return [];
@@ -520,7 +538,7 @@ const Brands = () => {
       return {
         id: apiItem.id, name: apiItem.name, slug: apiItem.slug, icon: apiItem.icon,
         icon_full_path: fullPath, showHeader: Number(apiItem.show_header),
-        status: apiItem.status === "Active" ? "active" : "disabled",
+        status: apiItem.status === "Active" ? "active" : "inactive",
         metaTitle: apiItem.meta_title, metaDescription: apiItem.meta_descr,
         metaKeyword: apiItem.meta_keyword, createdAt: apiItem.created_at,
         updatedAt: apiItem.updated_at, mobileNo: apiItem.mobile_no,
@@ -569,7 +587,7 @@ const Brands = () => {
     editFormMethods.reset({
       name: brand.name, slug: brand.slug, mobile_no: brand.mobileNo || null, icon: null,
       show_header: String(brand.showHeader) as "0" | "1",
-      status: brand.status === "active" ? "Active" : "Disabled",
+      status: brand.status === "active" ? "Active" : "Inactive",
       meta_title: brand.metaTitle || null, meta_descr: brand.metaDescription || null,
       meta_keyword: brand.metaKeyword || null,
     });
@@ -688,7 +706,7 @@ const Brands = () => {
     addFormMethods.reset({
       name: `${brand.name} (Copy)`, slug: `${brand.slug}-copy`, mobile_no: brand.mobileNo,
       icon: null, show_header: String(brand.showHeader) as "0" | "1",
-      status: brand.status === "active" ? "Active" : "Disabled",
+      status: brand.status === "active" ? "Active" : "Inactive",
       meta_title: brand.metaTitle, meta_descr: brand.metaDescription, meta_keyword: brand.metaKeyword,
     });
     setAddFormPreviewUrl(null);
@@ -711,6 +729,8 @@ const Brands = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
+    setFilterDrawerOpen(false);
+    dispatch(getBrandAction());
   };
 
   const [tableData, setTableData] = useState<TableQueries>({
@@ -773,10 +793,62 @@ const Brands = () => {
     return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
   }, [mappedBrands, tableData, filterCriteria]);
 
-  const handleExportData = () => {
-    const success = exportToCsvBrand("brands_export.csv", allFilteredAndSortedData);
-    if (success) toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
+  const handleOpenExportReasonModal = () => { // Added function
+    if (!allFilteredAndSortedData || allFilteredAndSortedData.length === 0) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
   };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { // Added function
+    setIsSubmittingExportReason(true);
+    const moduleName = "Brands";
+    const timestamp = new Date().toISOString().split("T")[0];
+    const fileName = `brands_export_${timestamp}.csv`;
+    try {
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+      
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" duration={2000} />
+      );
+
+      // Proceed with export
+      const exportSuccess = exportToCsvBrand(fileName, allFilteredAndSortedData);
+      if (exportSuccess) {
+          toast.push(
+              <Notification title="Export Successful" type="success">
+                  Data exported to {fileName}.
+              </Notification>
+          );
+      } 
+      // The exportToCsvBrand function already handles the browser support failure toast.
+      
+      setIsExportReasonModalOpen(false);
+
+    } catch (error: any) {
+      toast.push(
+          <Notification title="Failed to Submit Reason" type="danger">
+              {error.message || "Could not submit export reason."}
+          </Notification>
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
+
+
   const handleImportData = () => setImportDialogOpen(true);
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -924,7 +996,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             onClearFilters={onClearFilters}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal}
             onImport={handleImportData}
           />
           <div className="mt-4 flex-grow overflow-y-auto">
@@ -994,7 +1066,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             <FormItem label="Show in Header?" invalid={!!addFormMethods.formState.errors.show_header} errorMessage={addFormMethods.formState.errors.show_header?.message} isRequired>
               <Controller name="show_header" control={addFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
+                  <UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === String(field.value))} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
                 )}
               />
             </FormItem>
@@ -1068,7 +1140,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
             <FormItem label="Show in Header?" invalid={!!editFormMethods.formState.errors.show_header} errorMessage={editFormMethods.formState.errors.show_header?.message} isRequired>
               <Controller name="show_header" control={editFormMethods.control}
                 render={({ field }) => (
-                  <UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
+                  <UiSelect options={showHeaderOptions} value={showHeaderOptions.find((opt) => opt.value === String(field.value))} onChange={(opt) => field.onChange(opt ? opt.value : undefined)} />
                 )}
               />
             </FormItem>
@@ -1138,7 +1210,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
       >
         <p>
           Are you sure you want to change the status for "<strong>{brandForStatusChange?.name}</strong>" to{" "}
-          <strong>{brandForStatusChange?.status === "active" ? "Disabled" : "Active"}</strong>?
+          <strong>{brandForStatusChange?.status === "active" ? "Inactive" : "Active"}</strong>?
         </p>
       </ConfirmDialog>
 
@@ -1171,116 +1243,156 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
         </div>
       </Dialog>
 
-<Dialog
-  isOpen={isViewDetailModalOpen}
-  onClose={closeViewDetailModal}
-  onRequestClose={closeViewDetailModal}
-  size="sm"
-  title=""
-  contentClassName="!p-0 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-2xl"
->
-  {brandToView ? (
-    <div className="flex flex-col max-h-[90vh]"> {/* Controlled height, no inner scroll */}
+      {/* View Detail Modal */}
+      <Dialog
+        isOpen={isViewDetailModalOpen}
+        onClose={closeViewDetailModal}
+        onRequestClose={closeViewDetailModal}
+        size="sm"
+        title=""
+        contentClassName="!p-0 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-2xl"
+      >
+        {brandToView ? (
+          <div className="flex flex-col max-h-[90vh]"> {/* Controlled height, no inner scroll */}
 
-      {/* Body */}
-      <div className="p-4 space-y-3">
-        <div className="p-3 bg-white dark:bg-slate-700/60 rounded-lg space-y-3">
+            {/* Body */}
+            <div className="p-4 space-y-3">
+              <div className="p-3 bg-white dark:bg-slate-700/60 rounded-lg space-y-3">
 
-          {/* Brand Avatar + ID */}
-          <div className="flex items-center gap-3">
-            {brandToView.icon_full_path && (
-              <Avatar
-                size={48}
-                shape="rounded"
-                src={brandToView.icon_full_path}
-                icon={<TbBuildingStore />}
-                className="border-2 border-white dark:border-slate-500 shadow"
-              />
-            )}
-            <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                {brandToView.name}
-              </p>
-              <p className="text-xs text-slate-600 dark:text-slate-400">ID: {brandToView.id}</p>
-            </div>
-          </div>
+                {/* Brand Avatar + ID */}
+                <div className="flex items-center gap-3">
+                  {brandToView.icon_full_path && (
+                    <Avatar
+                      size={48}
+                      shape="rounded"
+                      src={brandToView.icon_full_path}
+                      icon={<TbBuildingStore />}
+                      className="border-2 border-white dark:border-slate-500 shadow"
+                    />
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      {brandToView.name}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">ID: {brandToView.id}</p>
+                  </div>
+                </div>
 
-          {/* Grid Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 text-sm text-slate-700 dark:text-slate-200">
-            <DialogDetailRow
-              label="Status"
-              value={
-                <Tag className={`${statusColor[brandToView.status]} capitalize font-semibold border-0 text-[10px] px-2 py-0.5 rounded-full`}>
-                  {brandToView.status}
-                </Tag>
-              }
-            />
-            <DialogDetailRow
-              label="Show in Header"
-              value={brandToView.showHeader === 1 ? 'Visible' : 'Hidden'}
-              valueClassName={brandToView.showHeader === 1 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}
-            />
-            <DialogDetailRow label="Mobile No." value={brandToView.mobileNo || '-'} />
-            <DialogDetailRow label="Slug / URL" value={brandToView.slug} isLink breakAll />
-            <DialogDetailRow
-              label="Created"
-              value={new Date(brandToView.createdAt).toLocaleString(undefined, {
-                year: 'numeric', month: 'short', day: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-              })}
-            />
-            <DialogDetailRow
-              label="Last Updated"
-              value={new Date(brandToView.updatedAt).toLocaleString(undefined, {
-                year: 'numeric', month: 'short', day: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-              })}
-            />
-          </div>
+                {/* Grid Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 text-sm text-slate-700 dark:text-slate-200">
+                  <DialogDetailRow
+                    label="Status"
+                    value={
+                      <Tag className={`${statusColor[brandToView.status]} capitalize font-semibold border-0 text-[10px] px-2 py-0.5 rounded-full`}>
+                        {brandToView.status}
+                      </Tag>
+                    }
+                  />
+                  <DialogDetailRow
+                    label="Show in Header"
+                    value={brandToView.showHeader === 1 ? 'Visible' : 'Hidden'}
+                    valueClassName={brandToView.showHeader === 1 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}
+                  />
+                  <DialogDetailRow label="Mobile No." value={brandToView.mobileNo || '-'} />
+                  <DialogDetailRow label="Slug / URL" value={brandToView.slug} isLink breakAll />
+                  <DialogDetailRow
+                    label="Created"
+                    value={new Date(brandToView.createdAt).toLocaleString(undefined, {
+                      year: 'numeric', month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  />
+                  <DialogDetailRow
+                    label="Last Updated"
+                    value={new Date(brandToView.updatedAt).toLocaleString(undefined, {
+                      year: 'numeric', month: 'short', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  />
+                </div>
 
-          {/* SEO Section (Condensed) */}
-          {(brandToView.metaTitle || brandToView.metaDescription || brandToView.metaKeyword) && (
-            <div className="pt-2">
-              <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
-                SEO & Meta
-              </h6>
-              <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
-                {brandToView.metaTitle && (
-                  <p><span className="font-medium text-slate-500 dark:text-slate-400">Title:</span> {brandToView.metaTitle}</p>
-                )}
-                {brandToView.metaDescription && (
-                  <p className="whitespace-pre-wrap"><span className="font-medium text-slate-500 dark:text-slate-400">Description:</span> {brandToView.metaDescription}</p>
-                )}
-                {brandToView.metaKeyword && (
-                  <p><span className="font-medium text-slate-500 dark:text-slate-400">Keywords:</span> {brandToView.metaKeyword}</p>
+                {/* SEO Section (Condensed) */}
+                {(brandToView.metaTitle || brandToView.metaDescription || brandToView.metaKeyword) && (
+                  <div className="pt-2">
+                    <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                      SEO & Meta
+                    </h6>
+                    <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
+                      {brandToView.metaTitle && (
+                        <p><span className="font-medium text-slate-500 dark:text-slate-400">Title:</span> {brandToView.metaTitle}</p>
+                      )}
+                      {brandToView.metaDescription && (
+                        <p className="whitespace-pre-wrap"><span className="font-medium text-slate-500 dark:text-slate-400">Description:</span> {brandToView.metaDescription}</p>
+                      )}
+                      {brandToView.metaKeyword && (
+                        <p><span className="font-medium text-slate-500 dark:text-slate-400">Keywords:</span> {brandToView.metaKeyword}</p>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="p-8 text-center flex flex-col items-center justify-center" style={{ minHeight: '200px' }}>
-      <TbInfoCircle size={42} className="text-slate-400 dark:text-slate-500 mb-2" />
-      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No Brand Information</p>
-      <p className="text-xs text-slate-500 mt-1">Details for this brand could not be loaded.</p>
-      <div className="mt-5">
-        <Button variant="solid" color="blue-600" onClick={closeViewDetailModal} size="sm">
-          Dismiss
-        </Button>
-      </div>
-    </div>
-  )}
-</Dialog>
+          </div>
+        ) : (
+          <div className="p-8 text-center flex flex-col items-center justify-center" style={{ minHeight: '200px' }}>
+            <TbInfoCircle size={42} className="text-slate-400 dark:text-slate-500 mb-2" />
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No Brand Information</p>
+            <p className="text-xs text-slate-500 mt-1">Details for this brand could not be loaded.</p>
+            <div className="mt-5">
+              <Button variant="solid" color="blue-600" onClick={closeViewDetailModal} size="sm">
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
 
+      {/* Export Reason Modal */}
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason,
+        }}
+      >
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => { // Prevent default form submission and trigger RHF submit
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
 
     </>
   );
 };
 export default Brands;
-
-// Helper utility (not strictly needed for this example but good practice if used elsewhere)
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//   return classes.filter(Boolean).join(" ");
-// }

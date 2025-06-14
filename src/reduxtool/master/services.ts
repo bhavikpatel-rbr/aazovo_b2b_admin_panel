@@ -471,7 +471,7 @@ export const getProductAsync = async () => {
 export const addProductAsync = async (unitData: FormData) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
-    const response = await axiosInstance.post(`${config.apiURL}/master/brand`, unitData, {
+    const response = await axiosInstance.post(`${config.apiURL}/master/product`, unitData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -483,8 +483,6 @@ export const addProductAsync = async (unitData: FormData) => {
 };
 
 export const editProductListAsync = async (brandId: number | string, formData: FormData) => {
-  console.log("editBrandListAsync - brandId:", brandId);
-  console.log("editBrandListAsync - formData to be sent:");
   for (const pair of formData.entries()) {
     console.log(pair[0] + ': ' + pair[1]);
   }

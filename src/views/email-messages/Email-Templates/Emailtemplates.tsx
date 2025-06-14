@@ -220,7 +220,7 @@ const EmailTemplatesListing = () => {
   const categoryOptions = useMemo(() => Array.isArray(CategoriesData) ? CategoriesData?.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) : [], [CategoriesData]);
   const allSubCategoryOptionsForFilter = useMemo(() => Array.isArray(aetSubCategories) ? aetSubCategories.map((sc: ApiLookupItem) => ({ value: String(sc.id), label: sc.name })) : [], [aetSubCategories]);
   const brandOptions = useMemo(() => Array.isArray(BrandData) ? BrandData.map((b: ApiLookupItem) => ({ value: String(b.id), label: b.name })) : [], [BrandData]);
-  const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: ApiLookupItem) => ({ value: String(r.id), label: r.name })) : [], [Roles]);
+  const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: ApiLookupItem) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
   const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
   const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
   const subCategoryOptionsForForm = useMemo(() => Array.isArray(subCategoriesForSelectedCategoryData) ? subCategoriesForSelectedCategoryData.map((sc: ApiLookupItem) => ({ value: String(sc.id), label: sc.name })) : [], [subCategoriesForSelectedCategoryData]);

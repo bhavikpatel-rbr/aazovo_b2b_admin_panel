@@ -4,15 +4,15 @@ import React, {
   useState,
   useMemo,
   useCallback,
-  Ref,
   useEffect,
   useRef,
-} from "react"; // Added useRef
-// import cloneDeep from "lodash/cloneDeep"; // REFACTOR: Avoid if possible to prevent unnecessary re-renders
+  ChangeEvent,
+} from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Avatar from "@/components/ui/Avatar";
+import cloneDeep from "lodash/cloneDeep";
 
 // UI Components (assuming imports are correct)
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -36,7 +36,7 @@ import {
   Card,
 } from "@/components/ui";
 import Dropdown from "@/components/ui/Dropdown";
-import Spinner from "@/components/ui/Spinner"; // REFACTOR: Added for better loading indication
+import Spinner from "@/components/ui/Spinner";
 
 // Icons (assuming imports are correct)
 import {
@@ -44,12 +44,10 @@ import {
   TbTrash,
   TbChecks,
   TbSearch,
-  TbCloudUpload,
   TbFilter,
   TbPlus,
   TbBox,
   TbSwitchHorizontal,
-  TbCopy,
   TbCloudDownload,
   TbEye,
   TbMailForward,
@@ -60,19 +58,9 @@ import {
   TbX,
   TbInfoCircle,
   TbDotsVertical,
-  TbLink,
-  TbPhone,
-  TbLayoutDashboard,
-  TbWorldWww,
-  TbTypography,
-  TbTags,
-  TbHistory,
-  TbCalendarPlus,
-  TbCalendarEvent,
-  TbBoxOff,
-  TbCategory,
-  TbActivityHeartbeat,
   TbMail,
+  TbFileSpreadsheet,
+  TbCloudUpload,
 } from "react-icons/tb";
 
 // Types
@@ -96,15 +84,18 @@ import {
   getCategoriesAction,
   getSubcategoriesByCategoryIdAction,
   getBrandAction,
-  getUnitsAction,
+  getUnitAction,
   getCountriesAction,
   changeProductStatusAction,
+  // Actions to be added for import/export, following the reference module's pattern
+  // importProductsAction, // Assuming this will be created
+  submitExportReasonAction, // Assuming this will be created
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
 import { RichTextEditor } from "@/components/shared";
 
-// --- Type Definitions (keeping them as they are, assuming they are correct) ---
+// --- Type Definitions ---
 type ApiProductItem = {
   id: number;
   category_id: string | number | null;
@@ -164,7 +155,7 @@ export type ProductGalleryImageItem = {
 export type ProductItem = {
   id: number;
   name: string;
-  email: string | null,
+  email: string | null;
   slug: string;
   skuCode: string | null;
   status: ProductStatus;
@@ -202,9 +193,11 @@ export type ProductItem = {
   metaKeyword: string | null;
   createdAt: string;
   updatedAt: string;
-  subject: string | null,
-  type: string | null, 
+  subject: string | null;
+  type: string | null;
 };
+type ImportType = "products" | "keywords";
+type ExportType = "products" | "keywords";
 
 // ============================================================================
 // --- MODALS SECTION ---
@@ -212,8 +205,7 @@ export type ProductItem = {
 // ============================================================================
 
 // --- Type Definitions for Modals ---
-export type ProductsModalType =
-  | "email";
+export type ProductsModalType = "email";
 
 export interface ProductsModalState {
   isOpen: boolean;
@@ -226,95 +218,6 @@ interface ProductsModalsProps {
 }
 
 // --- Helper Data for Modal Demos ---
-const dummyUsers = [
-  { value: "user1", label: "Support Team" },
-  { value: "user2", label: "Product Manager" },
-  { value: "user3", label: "Admin User" },
-];
-const priorityOptions = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-];
-const eventTypeOptions = [
-  { value: "meeting", label: "Review Meeting" },
-  { value: "call", label: "Follow-up Call" },
-  { value: "deadline", label: "Resolution Deadline" },
-];
-const dummyAlerts = [
-  {
-    id: 1,
-    severity: "danger",
-    message: "Complaint has been unread for more than 48 hours.",
-    time: "1 day ago",
-  },
-  {
-    id: 2,
-    severity: "warning",
-    message: "Request is 'In Progress' for over 5 days.",
-    time: "3 days ago",
-  },
-];
-
-const ProductsModals: React.FC<ProductsModalsProps> = ({
-  modalState,
-  onClose,
-}) => {
-  const { type, data: item, isOpen } = modalState;
-  if (!isOpen || !item) return null;
-
-  const renderModalContent = () => {
-    switch (type) {
-      case "email":
-        return <SendEmailDialog item={item} onClose={onClose} />;
-      default:
-        return (
-          <GenericActionDialog type={type} item={item} onClose={onClose} />
-        );
-    }
-  };
-  return <>{renderModalContent()}</>;
-};
-
-const GenericActionDialog: React.FC<{
-  type: ProductsModalType | null;
-  item: ProductItem;
-  onClose: () => void;
-}> = ({ type, item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const title = type
-    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
-    : "Confirm Action";
-  const handleConfirm = () => {
-    setIsLoading(true);
-    console.log(`Performing action '${type}' for item ${item.id}`);
-    setTimeout(() => {
-      toast.push(<Notification type="success" title="Action Completed" />);
-      setIsLoading(false);
-      onClose();
-    }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-2">{title}</h5>
-      <p>
-        Are you sure you want to perform this action for item #
-        <span className="font-semibold">{item.id}</span> from{" "}
-        <span className="font-semibold">{item.name}</span>?
-      </p>
-      <div className="text-right mt-6">
-        <Button className="mr-2" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
-          Confirm
-        </Button>
-      </div>
-    </Dialog>
-  );
-};
-
-// --- Individual Dialog Components (Adapted for ProductsItem) ---
 const SendEmailDialog: React.FC<{
   item: ProductItem;
   onClose: () => void;
@@ -322,13 +225,13 @@ const SendEmailDialog: React.FC<{
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({
     defaultValues: {
-      subject: `Re: Your ${item.type}: ${item.subject || `(ID: ${item.id})`}`,
+      subject: `Re: ${item.subject || `Inquiry for Product ID: ${item.id}`}`,
       message: "",
     },
   });
   const onSendEmail = (data: { subject: string; message: string }) => {
     setIsLoading(true);
-    console.log("Sending email to", item.email, "with data:", data);
+    console.log("Simulating email send to", item.email, "with data:", data);
     setTimeout(() => {
       toast.push(
         <Notification type="success" title="Email Sent Successfully" />
@@ -369,7 +272,26 @@ const SendEmailDialog: React.FC<{
     </Dialog>
   );
 };
+const ProductsModals: React.FC<ProductsModalsProps> = ({
+  modalState,
+  onClose,
+}) => {
+  const { type, data: item, isOpen } = modalState;
+  if (!isOpen || !item) return null;
 
+  const renderModalContent = () => {
+    switch (type) {
+      case "email":
+        return <SendEmailDialog item={item} onClose={onClose} />;
+      default:
+        // Fallback or other modals can be handled here
+        return null;
+    }
+  };
+  return <>{renderModalContent()}</>;
+};
+
+// --- Form & Filter Schemas ---
 const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required.").max(255),
   slug: z.string().min(1, "Slug is required.").max(255),
@@ -405,7 +327,7 @@ const productFormSchema = z.object({
       message: "Tax rate must be a number",
     })
     .optional()
-    .nullable(), // REFACTOR: Allow empty string
+    .nullable(),
   procurement_lead_time: z.string().max(50).optional().nullable(),
   thumb_image_input: z
     .union([z.instanceof(File), z.null()])
@@ -421,6 +343,7 @@ const productFormSchema = z.object({
   meta_keyword: z.string().max(255).optional().nullable(),
 });
 type ProductFormData = z.infer<typeof productFormSchema>;
+
 const filterFormSchema = z.object({
   filterNameOrSku: z.string().optional(),
   filterCategoryIds: z.array(z.number()).optional(),
@@ -432,11 +355,20 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// --- Constants (keeping them as they are) ---
+// --- Zod Schema for Export Reason ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+// --- Constants ---
 const PRODUCT_THUMB_IMAGE_BASE_URL =
-  import.meta.env.VITE_API_URL_STORAGE || "/storage/product_thumbs/"; // REFACTOR: Use relative if same domain
+  import.meta.env.VITE_API_URL_STORAGE || "/storage/product_thumbs/";
 const PRODUCT_IMAGES_BASE_URL =
-  import.meta.env.VITE_API_URL_STORAGE || "/storage/product_gallery/"; // REFACTOR: Use relative if same domain
+  import.meta.env.VITE_API_URL_STORAGE || "/storage/product_gallery/";
 const TABS = { ALL: "all", PENDING: "pending" };
 const FORM_TABS = {
   GENERAL: "general",
@@ -468,7 +400,63 @@ const apiProductStatusOptions: {
   { value: "Draft", label: "Draft" },
 ];
 
-// --- Helper Functions and Memoized Components (Keeping ActionColumn, ProductSearch, etc., as they are for brevity) ---
+// --- CSV Exporter Logic ---
+const downloadCsv = (filename: string, csvContent: string) => {
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(<Notification title="Export Successful" type="success" />);
+  } else {
+    toast.push(<Notification title="Export Failed" type="danger" />);
+  }
+};
+
+function exportProductsToCsv(rows: ProductItem[]) {
+  const CSV_HEADERS = [
+    "ID", "Name", "Slug", "SKU", "Status", "Category", "Sub-Category",
+    "Brand", "Unit", "Country", "Color", "HSN Code", "Tax Rate",
+    "Short Description", "Description", "Created At", "Updated At",
+  ];
+  const csvContent = [
+    CSV_HEADERS.join(','),
+    ...rows.map(row => [
+      row.id, row.name, row.slug, row.skuCode, row.status, row.categoryName,
+      row.subCategoryName, row.brandName, row.unitName, row.countryName,
+      row.color, row.hsnCode, row.taxRate, row.shortDescription,
+      row.description, new Date(row.createdAt).toLocaleString(),
+      new Date(row.updatedAt).toLocaleString()
+    ].map(value => {
+      const strValue = String(value ?? '').replace(/"/g, '""');
+      return `"${strValue}"`;
+    }).join(','))
+  ].join('\n');
+  downloadCsv(`products-export_${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+}
+
+function exportKeywordsToCsv(rows: ProductItem[]) {
+  const CSV_HEADERS = ["ID", "Name", "SKU", "Meta Keywords"];
+  const csvContent = [
+    CSV_HEADERS.join(','),
+    ...rows.map(row => [
+      row.id, row.name, row.skuCode, row.metaKeyword
+    ].map(value => {
+        const strValue = String(value ?? '').replace(/"/g, '""');
+        return `"${strValue}"`;
+    }).join(','))
+  ].join('\n');
+  downloadCsv(`product-keywords-export_${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+}
+
+
+// --- Helper and Memoized Components ---
 const ActionColumn = React.memo(
   ({
     onEdit,
@@ -479,14 +467,11 @@ const ActionColumn = React.memo(
     onOpenModal,
   }: {
     onEdit: () => void;
-    rowData: ProductItem,
+    rowData: ProductItem;
     onViewDetail: () => void;
     onDelete: () => void;
     onChangeStatus: () => void;
-    onOpenModal: (
-      type: ProductsModalType,
-      data: ProductItem
-    ) => void;
+    onOpenModal: (type: ProductsModalType, data: ProductItem) => void;
   }) => (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="View">
@@ -516,15 +501,6 @@ const ActionColumn = React.memo(
           <TbSwitchHorizontal />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete">
-        <div
-          className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          role="button"
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip> */}
       <Dropdown
         placement="bottom-end"
         renderTitle={
@@ -535,16 +511,23 @@ const ActionColumn = React.memo(
           </Tooltip>
         }
       >
-      <Dropdown.Item
-        onClick={() => onOpenModal("email", rowData)}
-        className="flex items-center gap-2"
-      >
-        <TbMail size={18} /> <span className="text-xs">Send Email</span>
-      </Dropdown.Item>
-      </Dropdown>{" "}
+        <Dropdown.Item
+          onClick={() => onOpenModal("email", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbMail size={18} /> <span className="text-sm">Send Email</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={onDelete}
+          className="flex items-center gap-2 text-red-600 hover:!bg-red-50 dark:hover:!bg-red-500/10"
+        >
+          <TbTrash size={18} /> <span className="text-sm">Delete</span>
+        </Dropdown.Item>
+      </Dropdown>
     </div>
   )
 );
+
 const ProductSearch = React.memo(
   React.forwardRef<
     HTMLInputElement,
@@ -560,6 +543,7 @@ const ProductSearch = React.memo(
   ))
 );
 ProductSearch.displayName = "ProductSearch";
+
 const ProductTableTools = React.memo(
   ({
     onSearchChange,
@@ -584,6 +568,7 @@ const ProductTableTools = React.memo(
     </div>
   )
 );
+
 const ProductSelectedFooter = React.memo(
   ({
     selectedItems,
@@ -647,6 +632,7 @@ const ProductSelectedFooter = React.memo(
     );
   }
 );
+
 interface DialogDetailRowProps {
   label: string;
   value: string | React.ReactNode;
@@ -708,9 +694,18 @@ const Products = () => {
     BrandData = [],
     unitData = [],
     CountriesData = [],
-    status: masterLoadingStatus, // REFACTOR: Use this more granularly
-    // error: masterError, // REFACTOR: Consider using error state for UI feedback
+    status: masterLoadingStatus,
   } = useSelector(masterSelector);
+
+  useEffect(() => {
+    dispatch(getProductsAction());
+    dispatch(getDomainsAction());
+    dispatch(getCategoriesAction());
+    dispatch(getBrandAction());
+    dispatch(getUnitAction());
+    dispatch(getCountriesAction());
+  }, [dispatch]);
+
   const [currentListTab, setCurrentListTab] = useState<string>(TABS.ALL);
   const [currentFormTab, setCurrentFormTab] = useState<string>(
     FORM_TABS.GENERAL
@@ -730,7 +725,6 @@ const Products = () => {
     query: "",
   });
 
-  // --- MODAL STATE AND HANDLERS ---
   const [modalState, setModalState] = useState<ProductsModalState>({
     isOpen: false,
     type: null,
@@ -740,20 +734,23 @@ const Products = () => {
     (type: ProductsModalType, itemData: ProductItem) => {
       setModalState({ isOpen: true, type, data: itemData });
     },
-    [] // The state setter from useState is stable and doesn't need to be a dependency.
+    []
   );
-    const handleCloseModal = useCallback(() => {
-      setModalState({ isOpen: false, type: null, data: null });
-    }, []);
-  // --- END MODAL STATE AND HANDLERS ---
+  const handleCloseModal = useCallback(() => {
+    setModalState({ isOpen: false, type: null, data: null });
+  }, []);
+
+  // --- Import/Export State ---
+  const [exportModalType, setExportModalType] = useState<ExportType | null>(null);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [importModalType, setImportModalType] = useState<ImportType | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
   const [selectedItems, setSelectedItems] = useState<ProductItem[]>([]);
-  const [isSubmittingForm, setIsSubmittingForm] = useState(false); // REFACTOR: More specific name
-  const [itemToDelete, setItemToDelete] = useState<ProductItem | null>(null);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
-  const [importDialogType, setImportDialogType] = useState<
-    null | "product" | "keyword"
-  >(null);
 
   const [thumbImagePreviewUrl, setThumbImagePreviewUrl] = useState<
     string | null
@@ -763,7 +760,6 @@ const Products = () => {
     []
   );
 
-  // REFACTOR: Memoize options to prevent re-creation on every render
   const domainOptions = useMemo(
     () => domainsData?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
     [domainsData]
@@ -805,7 +801,7 @@ const Products = () => {
   const formMethods = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
     mode: "onTouched",
-  }); // REFACTOR: Changed mode
+  });
   const {
     watch: watchForm,
     setValue: setFormValue,
@@ -831,22 +827,14 @@ const Products = () => {
     control: filterFormControl,
   } = filterFormMethods;
 
-  // REFACTOR: Initial data loading
-  useEffect(() => {
-    dispatch(getProductsAction());
-    dispatch(getDomainsAction());
-    dispatch(getCategoriesAction());
-    dispatch(getBrandAction());
-    dispatch(getUnitsAction());
-    dispatch(getCountriesAction());
-  console.log("domainsData", BrandData);
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
-  }, [dispatch]);
-
-  // REFACTOR: More robust subcategory options update from Redux
   useEffect(() => {
     if (masterLoadingStatus !== "loading") {
-      // Only update if not in the middle of a global load
       setSubcategoryOptions(
         SubcategoriesData?.map((sc: any) => ({
           value: sc.id,
@@ -856,9 +844,8 @@ const Products = () => {
     }
   }, [SubcategoriesData, masterLoadingStatus]);
 
-  // REFACTOR: Subcategory logic for main form - more controlled to prevent loops
   const watchedFormCategoryId = watchForm("category_id");
-  const isInitializingFormRef = useRef(false); // Ref to track form initialization
+  const isInitializingFormRef = useRef(false);
 
   useEffect(() => {
     const currentSubCatIdInForm = getFormValues("sub_category_id");
@@ -869,14 +856,11 @@ const Products = () => {
       watchedFormCategoryId > 0
     ) {
       if (!isInitializingFormRef.current) {
-        // Only dispatch if not initializing for an edit
         dispatch(getSubcategoriesByCategoryIdAction(watchedFormCategoryId));
-        // Only reset sub_category_id if category truly changed by user, not during initial population
         if (
           currentSubCatIdInForm !== undefined &&
           currentSubCatIdInForm !== null
         ) {
-          // Check if this is a user change vs. initial load for an edit
           const editingProductHasSameCategory =
             editingProduct?.categoryId === watchedFormCategoryId;
           const editingProductHasThisSubCategory =
@@ -898,14 +882,12 @@ const Products = () => {
       currentSubCatIdInForm !== undefined &&
       currentSubCatIdInForm !== null
     ) {
-      // Category cleared by user
       if (!isInitializingFormRef.current) {
-        setSubcategoryOptions([]); // Clear local options immediately
+        setSubcategoryOptions([]);
         setFormValue("sub_category_id", undefined, {
           shouldValidate: true,
           shouldDirty: true,
         });
-        // dispatch(clearSubcategoriesAction()); // Optional: If you want to clear global Redux state
       }
     }
   }, [
@@ -916,7 +898,6 @@ const Products = () => {
     editingProduct,
   ]);
 
-  // REFACTOR: Subcategory Logic for Filter Drawer - simplified
   const watchedFilterCategoryIds = watchFilter("filterCategoryIds");
   useEffect(() => {
     if (isFilterDrawerOpen) {
@@ -925,16 +906,13 @@ const Products = () => {
           getSubcategoriesByCategoryIdAction(watchedFilterCategoryIds[0])
         );
       } else {
-        // If multiple categories or no category selected, clear subcategory options for filter
-        // and potentially clear the selected subcategories in the filter form.
-        setSubcategoryOptions([]); // This will be populated by the global SubcategoriesData effect if one cat is selected
+        setSubcategoryOptions([]);
         const currentFilterSubCatIds = getFilterValues("filterSubCategoryIds");
         if (currentFilterSubCatIds && currentFilterSubCatIds.length > 0) {
           setFilterFormValue("filterSubCategoryIds", [], {
             shouldValidate: true,
           });
         }
-        // dispatch(clearSubcategoriesAction()); // If you want to clear global
       }
     }
   }, [
@@ -945,7 +923,6 @@ const Products = () => {
     setFilterFormValue,
   ]);
 
-  // REFACTOR: Cleanup for image previews
   useEffect(() => {
     return () => {
       if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:")) {
@@ -957,7 +934,7 @@ const Products = () => {
         }
       });
     };
-  }, [thumbImagePreviewUrl, galleryImages]); // This effect should be stable if galleryImages itself isn't excessively recreated.
+  }, [thumbImagePreviewUrl, galleryImages]);
 
   const mappedProducts: ProductItem[] = useMemo(() => {
     if (!Array.isArray(ProductsData)) return [];
@@ -965,7 +942,7 @@ const Products = () => {
       let iconFullPath: string | null = null;
       if (apiItem.icon_full_path) iconFullPath = apiItem.icon_full_path;
       else if (apiItem.icon)
-        iconFullPath = `${PRODUCT_IMAGES_BASE_URL}${apiItem.icon}`; // REFACTOR: Ensure PRODUCT_IMAGES_BASE_URL is correct for icons too or use a separate one
+        iconFullPath = `${PRODUCT_IMAGES_BASE_URL}${apiItem.icon}`;
 
       let thumbImageFullPath: string | null = null;
       if (apiItem.thumb_image_full_path)
@@ -1005,11 +982,9 @@ const Products = () => {
       ) {
         try {
           const imagesData = JSON.parse(apiItem.product_images);
-          // Assuming imagesData could be an array of strings (filenames) or an array of objects
           if (Array.isArray(imagesData)) {
             imagesData.forEach((imgEntry: any) => {
               if (typeof imgEntry === "string") {
-                // simple filename
                 gallery.push({
                   serverPath: imgEntry,
                   previewUrl: `${PRODUCT_IMAGES_BASE_URL}${imgEntry}`,
@@ -1020,7 +995,6 @@ const Products = () => {
                 typeof imgEntry === "object" &&
                 imgEntry.image_full_path
               ) {
-                // object like product_images_array items
                 gallery.push({
                   id: imgEntry.id,
                   serverPath: imgEntry.image,
@@ -1041,7 +1015,6 @@ const Products = () => {
         }
       }
 
-      // REFACTOR: Ensure subcategoryOptions used here is the local state one, which should be up-to-date
       const localSubcategoryOptions =
         SubcategoriesData?.map((sc: any) => ({
           value: sc.id,
@@ -1054,6 +1027,9 @@ const Products = () => {
       return {
         id: apiItem.id,
         name: apiItem.name,
+        email: "product.support@example.com", // Dummy email for modal demo
+        subject: `Inquiry about: ${apiItem.name}`, // Dummy subject for modal demo
+        type: "Product Inquiry", // Dummy type for modal demo
         slug: apiItem.slug,
         skuCode: apiItem.sku_code,
         status: (apiItem.status?.toLowerCase() || "draft") as ProductStatus,
@@ -1114,16 +1090,19 @@ const Products = () => {
     unitOptions,
     countryOptions,
     SubcategoriesData,
-  ]); // REFACTOR: Added SubcategoriesData
+  ]);
 
-  const { pageData, total } = useMemo(() => {
-    let processedData: ProductItem[] = [...mappedProducts]; // REFACTOR: Shallow copy is fine here
-    if (currentListTab === TABS.PENDING)
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    let processedData: ProductItem[] = cloneDeep(mappedProducts);
+
+    // Filter by tab first
+    if (currentListTab === TABS.PENDING) {
       processedData = processedData.filter(
         (p) => p.status === "pending" || p.status === "draft"
       );
+    }
 
-    // Apply global search from table tools
+    // Then filter by quick search
     if (tableData.query) {
       const query = tableData.query.toLowerCase();
       processedData = processedData.filter(
@@ -1135,7 +1114,7 @@ const Products = () => {
       );
     }
 
-    // Apply drawer filters
+    // Then apply advanced filters
     if (filterCriteria.filterNameOrSku) {
       const query = filterCriteria.filterNameOrSku.toLowerCase();
       processedData = processedData.filter(
@@ -1167,6 +1146,7 @@ const Products = () => {
       processedData = processedData.filter((p) => statuses.has(p.status));
     }
 
+    // Then sort
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key && processedData.length > 0) {
       processedData.sort((a, b) => {
@@ -1178,7 +1158,6 @@ const Products = () => {
           return order === "asc" ? 1 : -1;
         if (typeof aVal === "number" && typeof bVal === "number")
           return order === "asc" ? aVal - bVal : bVal - aVal;
-        // Ensure string comparison for name, skuCode, categoryName, brandName
         if (
           ["name", "skuCode", "categoryName", "brandName", "slug"].includes(key)
         ) {
@@ -1188,7 +1167,6 @@ const Products = () => {
             ? strA.localeCompare(strB)
             : strB.localeCompare(strA);
         }
-        // For other string types or if type is mixed
         const strA = String(aVal);
         const strB = String(bVal);
         return order === "asc"
@@ -1200,13 +1178,14 @@ const Products = () => {
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
+
     return {
       pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
+      allFilteredAndSortedData: processedData, // For export
     };
   }, [mappedProducts, tableData, filterCriteria, currentListTab]);
 
-  // --- Callbacks for UI actions (memoized) ---
   const handleListTabChange = useCallback((tabKey: string) => {
     setCurrentListTab(tabKey);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
@@ -1218,7 +1197,7 @@ const Products = () => {
   );
 
   const openAddDrawer = useCallback(() => {
-    isInitializingFormRef.current = true; // REFACTOR: Signal start of initialization
+    isInitializingFormRef.current = true;
     setEditingProduct(null);
     resetForm({
       name: "",
@@ -1248,7 +1227,7 @@ const Products = () => {
       meta_descr: "",
       meta_keyword: "",
     });
-    setSubcategoryOptions([]); // Clear subcategories for add form
+    setSubcategoryOptions([]);
     setCurrentFormTab(FORM_TABS.GENERAL);
     if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:"))
       URL.revokeObjectURL(thumbImagePreviewUrl);
@@ -1260,30 +1239,23 @@ const Products = () => {
     });
     setGalleryImages([]);
     setIsAddEditDrawerOpen(true);
-    setTimeout(() => (isInitializingFormRef.current = false), 0); // REFACTOR: Signal end after sync operations
+    setTimeout(() => (isInitializingFormRef.current = false), 0);
   }, [resetForm, thumbImagePreviewUrl, galleryImages]);
 
   const openEditDrawer = useCallback(
     async (product: ProductItem) => {
-      // REFACTOR: Made async
       isInitializingFormRef.current = true;
       setEditingProduct(product);
-
-      // REFACTOR: Fetch subcategories for the product's category *before* resetting the form
-      // This ensures subcategoryOptions is populated when the form initializes with the product's sub_category_id
       if (product.categoryId) {
         try {
-          // We expect getSubcategoriesByCategoryIdAction to update SubcategoriesData in Redux
-          // The useEffect listening to SubcategoriesData will then update local subcategoryOptions
           await dispatch(
             getSubcategoriesByCategoryIdAction(product.categoryId)
           ).unwrap();
         } catch (e) {
           console.error("Failed to preload subcategories for edit:", e);
-          // Proceed without preloaded subcategories, they might load slightly later
         }
       } else {
-        setSubcategoryOptions([]); // No category, so no subcategories
+        setSubcategoryOptions([]);
       }
 
       resetForm({
@@ -1342,7 +1314,7 @@ const Products = () => {
   const closeAddEditDrawer = useCallback(() => {
     setIsAddEditDrawerOpen(false);
     setEditingProduct(null);
-    resetForm(); /* dispatch(clearSubcategoriesAction()); */
+    resetForm();
   }, [resetForm]);
 
   const onProductFormSubmit = useCallback(
@@ -1350,7 +1322,6 @@ const Products = () => {
       setIsSubmittingForm(true);
       const formData = new FormData();
       if (editingProduct) formData.append("_method", "PUT");
-      // REFACTOR: More robust form data appending
       (Object.keys(data) as Array<keyof ProductFormData>).forEach((key) => {
         const value = data[key];
         if (key === "thumb_image_input") return;
@@ -1372,8 +1343,7 @@ const Products = () => {
             "country_id",
           ].includes(key)
         ) {
-          // Explicitly send empty for nullable foreign keys if backend expects it, or omit
-          formData.append(key, ""); // Or omit if backend handles missing keys as null
+          formData.append(key, "");
         }
       });
 
@@ -1388,7 +1358,7 @@ const Products = () => {
       let imageIndex = 0;
       galleryImages.forEach((img) => {
         if (img.file && img.isNew && !img.isDeleted) {
-          formData.append(`product_images[${imageIndex}]`, img.file); // For array input like PHP: product_images[]
+          formData.append(`product_images[${imageIndex}]`, img.file);
           imageIndex++;
         } else if (img.id && img.isDeleted) {
           formData.append("deleted_image_ids[]", String(img.id));
@@ -1414,7 +1384,7 @@ const Products = () => {
           );
         }
         closeAddEditDrawer();
-        dispatch(getProductsAction()); // Refresh product list
+        dispatch(getProductsAction());
       } catch (error: any) {
         const errorMsg =
           error?.response?.data?.message ||
@@ -1427,7 +1397,6 @@ const Products = () => {
             {errorMsg}
           </Notification>
         );
-        // Log detailed error if available, e.g., validation errors from backend
         if (error?.response?.data?.errors)
           console.error(
             "Backend validation errors:",
@@ -1447,7 +1416,6 @@ const Products = () => {
     ]
   );
 
-  // REFACTOR: Use a single state for delete confirmation to simplify
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
     item: ProductItem | null;
@@ -1466,7 +1434,7 @@ const Products = () => {
     const { item, isBulk } = deleteConfirm;
     if (!item && !isBulk) return;
 
-    setIsSubmittingForm(true); // Use general submitting flag or a specific delete flag
+    setIsSubmittingForm(true);
     try {
       if (isBulk) {
         const idsToDelete = selectedItems.map((p) => p.id);
@@ -1487,7 +1455,7 @@ const Products = () => {
           </Notification>
         );
       }
-      dispatch(getProductsAction()); // Refresh list
+      dispatch(getProductsAction());
     } catch (error: any) {
       toast.push(
         <Notification type="danger" title="Delete Failed">
@@ -1507,11 +1475,11 @@ const Products = () => {
   }, []);
   const onConfirmChangeStatus = useCallback(async () => {
     if (!productForStatusChange || !selectedNewStatus) return;
-    setIsSubmittingForm(true); // Or a specific status change flag
+    setIsSubmittingForm(true);
     const apiStatus =
       apiProductStatusOptions.find(
         (opt) => opt.value.toLowerCase() === selectedNewStatus.toLowerCase()
-      )?.value || selectedNewStatus; // Ensure sending "Active" not "active"
+      )?.value || selectedNewStatus;
     try {
       await dispatch(
         changeProductStatusAction({
@@ -1556,30 +1524,117 @@ const Products = () => {
     setImageViewerOpen(false);
     setImageToView(null);
   }, []);
-  const handleExportProducts = useCallback(() => {
-    toast.push(<Notification title="Export Products (Not Implemented)" />);
-  }, []);
-  const handleImportProducts = useCallback(
-    () => setImportDialogType("product"),
-    []
-  );
-  const closeImportDialog = useCallback(() => setImportDialogType(null), []);
-  const handleImportFileSelected = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file && importDialogType) {
-        toast.push(
-          <Notification
-            title={`Importing ${importDialogType} (Simulated)`}
-            message={`File: ${file.name}`}
-          />
-        );
-        closeImportDialog();
+
+  // --- Import/Export Handlers ---
+  const handleOpenExportReasonModal = useCallback(
+    (type: ExportType) => {
+      if (!allFilteredAndSortedData || allFilteredAndSortedData.length === 0) {
+        toast.push(<Notification title="No data to export" type="info" />);
+        return;
       }
-      if (event.target) event.target.value = "";
+      exportReasonFormMethods.reset({ reason: "" });
+      setExportModalType(type);
     },
-    [importDialogType, closeImportDialog]
+    [allFilteredAndSortedData, exportReasonFormMethods]
   );
+
+  const handleConfirmExportWithReason = useCallback(
+    async (data: ExportReasonFormData) => {
+      if (!exportModalType) return;
+      setIsSubmittingExportReason(true);
+
+      const moduleName =
+        exportModalType === "products" ? "Products" : "Product Keywords";
+      
+      try {
+        // This is a placeholder for a real API call to log the export reason
+        // console.log("Simulating export reason submission:", {
+        //   reason: data.reason,
+        //   module: moduleName,
+        // });
+        const fileName = `products_export_${new Date().toISOString().split('T')[0]}.csv`;
+        await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API delay
+        toast.push(<Notification title="Export reason logged" type="info" duration={2000} />);
+
+        if (exportModalType === "products") {
+          exportProductsToCsv(allFilteredAndSortedData);
+        } else if (exportModalType === "keywords") {
+          exportKeywordsToCsv(allFilteredAndSortedData);
+        }
+        setExportModalType(null);
+      } catch (error: any) {
+        toast.push(
+          <Notification title="Operation Failed" type="danger">
+            {error.message || "Could not complete export."}
+          </Notification>
+        );
+      } finally {
+        setIsSubmittingExportReason(false);
+      }
+    },
+    [dispatch, allFilteredAndSortedData, exportModalType]
+  );
+
+  const openImportModal = useCallback((type: ImportType) => setImportModalType(type), []);
+  const closeImportModal = useCallback(() => {
+    setImportModalType(null);
+    setSelectedFile(null);
+  }, []);
+
+  const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (
+        file.type === "text/csv" ||
+        file.name.endsWith(".csv") ||
+        file.type === "application/vnd.ms-excel" ||
+        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ) {
+        setSelectedFile(file);
+      } else {
+        toast.push(
+          <Notification title="Invalid File Type" type="danger">
+            Please upload a CSV or Excel file.
+          </Notification>
+        );
+        setSelectedFile(null);
+        if (e.target) e.target.value = "";
+      }
+    }
+  }, []);
+
+  const handleImportSubmit = useCallback(async () => {
+    if (!selectedFile || !importModalType) {
+      toast.push(<Notification title="No File Selected" type="warning" />);
+      return;
+    }
+    setIsImporting(true);
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    
+    try {
+      // Placeholder for actual import API call
+      console.log(`Simulating import for "${importModalType}" with file:`, selectedFile.name);
+      await new Promise((resolve) => setTimeout(resolve, 1500)); 
+
+      toast.push(
+        <Notification title="Import Initiated" type="success">
+          File uploaded. {importModalType === 'products' ? 'Products' : 'Keywords'} are being processed.
+        </Notification>
+      );
+      dispatch(getProductsAction());
+      closeImportModal();
+    } catch (apiError: any) {
+      toast.push(
+        <Notification title="Import Failed" type="danger">
+          {apiError.message || `An error occurred during ${importModalType} import.`}
+        </Notification>
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  }, [selectedFile, importModalType, dispatch, closeImportModal]);
 
   const handlePaginationChange = useCallback(
     (page: number) => setTableData((prev) => ({ ...prev, pageIndex: page })),
@@ -1648,11 +1703,8 @@ const Products = () => {
     setFilterCriteria({});
     setFilterFormValue("filterSubCategoryIds", []);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
-    /* dispatch(clearSubcategoriesAction()); */ closeFilterDrawer();
+    closeFilterDrawer();
   }, [resetFilterForm, setFilterFormValue, closeFilterDrawer]);
-
-
-  
 
   const columns: ColumnDef<ProductItem>[] = useMemo(
     () => [
@@ -1750,13 +1802,12 @@ const Products = () => {
       handleChangeStatusClick,
       handleOpenModal,
     ]
-  ); // REFACTOR: Dependencies should be stable
+  );
 
   const isLoadingData =
-    masterLoadingStatus === "pending" || masterLoadingStatus === "loading"; // REFACTOR: More accurate overall data loading
-  const tableIsProcessing = isSubmittingForm; // REFACTOR: Use for operations affecting table immediately
+    masterLoadingStatus === "pending" || masterLoadingStatus === "loading";
+  const tableIsProcessing = isSubmittingForm || isImporting;
 
-  // REFACTOR: Conditional rendering for loading state
   if (isLoadingData && !ProductsData.length) {
     return (
       <Container className="h-full">
@@ -1772,48 +1823,41 @@ const Products = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-0">
-            {" "}
-            <h5 className="mb-4 lg:mb-0">Products</h5>{" "}
+            <h5 className="mb-4 lg:mb-0">Products</h5>
             <div className="flex items-center gap-2">
-              {" "}
               <Dropdown title="More Options" className="mr-2">
-                {" "}
                 <Dropdown.Item
                   eventKey="Export Product"
-                  onClick={handleExportProducts}
+                  onClick={() => handleOpenExportReasonModal("products")}
                 >
                   Export Products
-                </Dropdown.Item>{" "}
+                </Dropdown.Item>
                 <Dropdown.Item
                   eventKey="Import Product"
-                  onClick={handleImportProducts}
+                  onClick={() => openImportModal("products")}
                 >
                   Import Products
-                </Dropdown.Item>{" "}
+                </Dropdown.Item>
                 <Dropdown.Item
                   eventKey="Export Keywords"
-                  onClick={() =>
-                    toast.push(<Notification title="Not Implemented" />)
-                  }
+                  onClick={() => handleOpenExportReasonModal("keywords")}
                 >
                   Export Keywords
-                </Dropdown.Item>{" "}
+                </Dropdown.Item>
                 <Dropdown.Item
                   eventKey="Import Keywords"
-                  onClick={() => setImportDialogType("keyword")}
+                  onClick={() => openImportModal("keywords")}
                 >
                   Import Keywords
-                </Dropdown.Item>{" "}
-              </Dropdown>{" "}
+                </Dropdown.Item>
+              </Dropdown>
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
                 Add New
-              </Button>{" "}
-            </div>{" "}
+              </Button>
+            </div>
           </div>
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
-            {" "}
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-              {" "}
               {[TABS.ALL, TABS.PENDING].map((tab) => (
                 <button
                   key={tab}
@@ -1826,20 +1870,19 @@ const Products = () => {
                 >
                   {tab.replace("_", " ")} Products
                 </button>
-              ))}{" "}
-            </nav>{" "}
+              ))}
+            </nav>
           </div>
           <ProductTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
           />
           <div className="mt-4 flex-grow overflow-y-auto">
-            {" "}
             <DataTable
               columns={columns}
               data={pageData}
               loading={isLoadingData && ProductsData.length > 0}
-              /* Show overlay loading */ pagingData={{
+              pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
@@ -1851,15 +1894,14 @@ const Products = () => {
               onSort={handleSort}
               onCheckBoxChange={handleRowSelect}
               onIndeterminateCheckBoxChange={handleAllRowSelect}
-            />{" "}
+            />
           </div>
         </AdaptiveCard>
       </Container>
       <ProductSelectedFooter
         selectedItems={selectedItems}
         onDeleteSelected={handleDeleteSelectedProductsClick}
-      />{" "}
-      {/* REFACTOR: Changed handler */}
+      />
       <Drawer
         title={editingProduct ? "Edit Product" : "Add New Product"}
         isOpen={isAddEditDrawerOpen}
@@ -1884,14 +1926,14 @@ const Products = () => {
               form="productForm"
               type="submit"
               loading={isSubmittingForm}
-              disabled={
-                isSubmittingForm ||
-                !isFormValid ||
-                (editingProduct &&
-                  !isFormDirty &&
-                  !newThumbImageFile &&
-                  galleryImages.every((img) => !img.isNew && !img.isDeleted))
-              }
+              // disabled={
+              //   isSubmittingForm ||
+              //   !isFormValid ||
+              //   (editingProduct &&
+              //     !isFormDirty &&
+              //     !newThumbImageFile &&
+              //     galleryImages.every((img) => !img.isNew && !img.isDeleted))
+              // }
             >
               {isSubmittingForm
                 ? editingProduct
@@ -1908,9 +1950,7 @@ const Products = () => {
           className="flex flex-col gap-y-0 h-full"
         >
           <div className="border-b border-gray-200 dark:border-gray-700 sticky top-0 pt-3 bg-white dark:bg-gray-800 z-10 px-4">
-            {" "}
             <nav className=" flex space-x-6" aria-label="Tabs">
-              {" "}
               {[
                 FORM_TABS.GENERAL,
                 FORM_TABS.DESCRIPTION,
@@ -1927,20 +1967,24 @@ const Products = () => {
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
                   }`}
                 >
-                  {tab === FORM_TABS.GENERAL && <TbSettings />}{" "}
+                  {tab === FORM_TABS.GENERAL && <TbSettings />}
                   {tab === FORM_TABS.DESCRIPTION && <TbFileText />}
                   {tab === FORM_TABS.MEDIA && <TbPhoto />}
                   {tab === FORM_TABS.META && <TbClipboardText />}
                   {tab.replace("_", " ")}
                 </button>
-              ))}{" "}
-            </nav>{" "}
+              ))}
+            </nav>
           </div>
           <div className="flex-grow overflow-y-auto pt-4 px-4 pb-4">
             {currentFormTab === FORM_TABS.GENERAL && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0">
                 <FormItem
-                  label={<div>Product Name<span className="text-red-500"> * </span></div>}
+                  label={
+                    <div>
+                      Product Name<span className="text-red-500"> * </span>
+                    </div>
+                  }
                   isRequired
                   invalid={!!formErrors.name}
                   errorMessage={formErrors.name?.message}
@@ -1952,7 +1996,11 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>Slug/URL<span className="text-red-500"> * </span></div>}
+                  label={
+                    <div>
+                      Slug/URL<span className="text-red-500"> * </span>
+                    </div>
+                  }
                   isRequired
                   invalid={!!formErrors.slug}
                   errorMessage={formErrors.slug?.message}
@@ -1964,7 +2012,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>SKU Code<span className="text-red-500"> * </span></div>}
+                  label="SKU Code"
                   invalid={!!formErrors.sku_code}
                   errorMessage={formErrors.sku_code?.message}
                 >
@@ -1977,7 +2025,11 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>Status<span className="text-red-500"> * </span></div>}
+                  label={
+                    <div>
+                      Status<span className="text-red-500"> * </span>
+                    </div>
+                  }
                   isRequired
                   invalid={!!formErrors.status}
                   errorMessage={formErrors.status?.message}
@@ -1997,7 +2049,11 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>Domains<span className="text-red-500"> * </span></div>}
+                  label={
+                    <div>
+                      Domains<span className="text-red-500"> * </span>
+                    </div>
+                  }
                   isRequired
                   className="md:col-span-2"
                   invalid={!!formErrors.domain_ids}
@@ -2023,7 +2079,11 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>Category<span className="text-red-500"> * </span></div>}
+                  label={
+                    <div>
+                      Category<span className="text-red-500"> * </span>
+                    </div>
+                  }
                   isRequired
                   invalid={!!formErrors.category_id}
                   errorMessage={formErrors.category_id?.message}
@@ -2044,7 +2104,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>Sub Category<span className="text-red-500"> * </span></div>}
+                  label="Sub Category"
                   invalid={!!formErrors.sub_category_id}
                   errorMessage={
                     formErrors.sub_category_id?.message as string | undefined
@@ -2065,7 +2125,7 @@ const Products = () => {
                           !watchedFormCategoryId ||
                           (subcategoryOptions.length === 0 &&
                             masterLoadingStatus !== "loading")
-                        } // REFACTOR: Also check masterLoadingStatus
+                        }
                         placeholder={
                           !watchedFormCategoryId
                             ? "Select category first"
@@ -2081,7 +2141,11 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Brand"
+                  label={
+                    <div>
+                      Brand<span className="text-red-500"> * </span>
+                    </div>
+                  }
                   isRequired
                   invalid={!!formErrors.brand_id}
                   errorMessage={formErrors.brand_id?.message}
@@ -2102,7 +2166,11 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>Unit<span className="text-red-500"> * </span></div>}
+                  label={
+                    <div>
+                      Unit<span className="text-red-500"> * </span>
+                    </div>
+                  }
                   isRequired
                   invalid={!!formErrors.unit_id}
                   errorMessage={formErrors.unit_id?.message}
@@ -2121,7 +2189,12 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Country of Origin"
+                  label={
+                    <div>
+                      Country of Origin
+                      <span className="text-red-500"> * </span>
+                    </div>
+                  }
                   isRequired
                   invalid={!!formErrors.country_id}
                   errorMessage={formErrors.country_id?.message}
@@ -2155,7 +2228,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>HSN Code<span className="text-red-500"> * </span></div>}
+                  label="HSN Code"
                   invalid={!!formErrors.hsn_code}
                   errorMessage={formErrors.hsn_code?.message}
                 >
@@ -2218,8 +2291,7 @@ const Products = () => {
                       <Input type="text" {...field} value={field.value ?? ""} />
                     )}
                   />
-                </FormItem>{" "}
-                {/* REFACTOR: type="text" to allow empty, validation by Zod */}
+                </FormItem>
                 <FormItem
                   label="Procurement Lead Time"
                   invalid={!!formErrors.procurement_lead_time}
@@ -2238,7 +2310,7 @@ const Products = () => {
             {currentFormTab === FORM_TABS.DESCRIPTION && (
               <div className="flex flex-col gap-y-4">
                 <FormItem
-                  label={<div>Description<span className="text-red-500"> * </span></div>}
+                  label="Description"
                   invalid={!!formErrors.description}
                   errorMessage={formErrors.description?.message}
                 >
@@ -2256,7 +2328,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>Short Description<span className="text-red-500"> * </span></div>}
+                  label="Short Description"
                   invalid={!!formErrors.short_description}
                   errorMessage={formErrors.short_description?.message}
                 >
@@ -2374,7 +2446,7 @@ const Products = () => {
                         size={120}
                         shape="rounded"
                         className="w-full h-full"
-                      />{" "}
+                      />
                       <Button
                         size="xs"
                         shape="circle"
@@ -2398,10 +2470,9 @@ const Products = () => {
                             shouldDirty: true,
                           });
                         }}
-                      />{" "}
+                      />
                     </div>
-                  )}{" "}
-                  {/* REFACTOR: Check editingProduct.thumbImage */}
+                  )}
                 </FormItem>
                 <label className="form-label block mb-2">
                   Product Gallery Images (Max 5, 1024x1024 recommended)
@@ -2430,14 +2501,13 @@ const Products = () => {
                     if (e.target) e.target.value = "";
                     setFormValue("name", getFormValues("name"), {
                       shouldDirty: true,
-                    }); /* REFACTOR: Manually dirty form */
+                    });
                   }}
                   disabled={
                     galleryImages.filter((img) => !img.isDeleted).length >= 5
                   }
                 />
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {" "}
                   {galleryImages
                     .filter((img) => !img.isDeleted)
                     .map((image) => (
@@ -2450,7 +2520,7 @@ const Products = () => {
                           size={120}
                           shape="rounded"
                           className="w-full h-full"
-                        />{" "}
+                        />
                         <Button
                           shape="circle"
                           size="xs"
@@ -2473,18 +2543,18 @@ const Products = () => {
                             );
                             setFormValue("name", getFormValues("name"), {
                               shouldDirty: true,
-                            }); /* REFACTOR: Manually dirty form */
+                            });
                           }}
                         />
                       </div>
-                    ))}{" "}
+                    ))}
                 </div>
               </div>
             )}
             {currentFormTab === FORM_TABS.META && (
               <div className="flex flex-col gap-y-4">
                 <FormItem
-                  label={<div>Meta Tag Title<span className="text-red-500"> * </span></div>}
+                  label="Meta Tag Title"
                   invalid={!!formErrors.meta_title}
                   errorMessage={formErrors.meta_title?.message}
                 >
@@ -2497,7 +2567,7 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label={<div>Meta Tag Description<span className="text-red-500"> * </span></div>}
+                  label="Meta Tag Description"
                   invalid={!!formErrors.meta_descr}
                   errorMessage={formErrors.meta_descr?.message}
                 >
@@ -2687,9 +2757,7 @@ const Products = () => {
           setDeleteConfirm({ isOpen: false, item: null, isBulk: false })
         }
         onConfirm={onConfirmDelete}
-        loading={
-          isSubmittingForm /* REFACTOR: Use specific delete flag if needed */
-        }
+        loading={isSubmittingForm}
       >
         <p>
           Are you sure you want to delete{" "}
@@ -2705,21 +2773,17 @@ const Products = () => {
         onRequestClose={() => setIsChangeStatusDialogOpen(false)}
         title={`Change Status for "${productForStatusChange?.name || ""}"`}
       >
-        {" "}
         <div className="p-4">
-          {" "}
           <FormItem label="New Status" className="mb-4">
-            {" "}
             <UiSelect
               options={uiProductStatusOptions}
               value={uiProductStatusOptions.find(
                 (o) => o.value === selectedNewStatus
               )}
               onChange={(opt) => setSelectedNewStatus(opt?.value || "")}
-            />{" "}
-          </FormItem>{" "}
+            />
+          </FormItem>
           <div className="text-right">
-            {" "}
             <Button
               size="sm"
               className="mr-2"
@@ -2727,7 +2791,7 @@ const Products = () => {
               disabled={isSubmittingForm}
             >
               Cancel
-            </Button>{" "}
+            </Button>
             <Button
               size="sm"
               variant="solid"
@@ -2736,9 +2800,9 @@ const Products = () => {
               disabled={!selectedNewStatus || isSubmittingForm}
             >
               Confirm Change
-            </Button>{" "}
-          </div>{" "}
-        </div>{" "}
+            </Button>
+          </div>
+        </div>
       </Dialog>
       <Dialog
         isOpen={isImageViewerOpen}
@@ -2758,35 +2822,103 @@ const Products = () => {
         </div>
       </Dialog>
       <Dialog
-        isOpen={importDialogType === "product"}
-        onClose={closeImportDialog}
-        title="Import Products"
-        footer={<Button onClick={closeImportDialog}>Cancel</Button>}
+        isOpen={importModalType !== null}
+        onClose={closeImportModal}
+        onRequestClose={closeImportModal}
+        title={ importModalType === 'products' ? "Import Products" : "Import Product Keywords" }
+        width={600}
       >
-        <div className="p-4">
-          <p>Upload CSV to import products.</p>
-          <Input
-            type="file"
-            accept=".csv"
-            onChange={handleImportFileSelected}
-          />
+        <div className="py-4">
+          <p className="mb-1 text-sm">
+            Select a CSV or Excel file to import {importModalType}.
+          </p>
+          <p className="mb-4 text-xs text-gray-500">
+            {importModalType === 'products' ? (
+                <span>Required headers: <code>name, slug, sku_code, status, etc.</code></span>
+            ) : (
+                <span>Required headers: <code>product_id, meta_keywords</code></span>
+            )}
+          </p>
+          <FormItem label="Upload File" className="mb-4">
+            <Input
+              type="file"
+              name="file"
+              accept=".csv, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              onChange={handleFileChange}
+              prefix={<TbFileSpreadsheet className="text-xl" />}
+            />
+            {selectedFile && (
+              <div className="mt-2 text-xs text-gray-500">
+                Selected:{" "}
+                <span className="font-semibold">{selectedFile.name}</span>
+              </div>
+            )}
+          </FormItem>
+          <a
+            href={importModalType === 'products' ? "/sample-products-import.csv" : "/sample-keywords-import.csv"}
+            download={`sample-${importModalType}-import-template.csv`}
+            className="text-sm text-blue-600 hover:underline flex items-center gap-1 mb-6"
+          >
+            <TbCloudDownload /> Download Sample CSV
+          </a>
+          <div className="text-right">
+            <Button className="mr-2" onClick={closeImportModal} disabled={isImporting}>
+              Cancel
+            </Button>
+            <Button
+              variant="solid"
+              onClick={handleImportSubmit}
+              loading={isImporting}
+              disabled={!selectedFile || isImporting}
+              icon={!isImporting && <TbCloudUpload />}
+            >
+              {isImporting ? "Importing..." : "Upload & Import"}
+            </Button>
+          </div>
         </div>
       </Dialog>
-      <Dialog
-        isOpen={importDialogType === "keyword"}
-        onClose={closeImportDialog}
-        title="Import Product Keywords"
-        footer={<Button onClick={closeImportDialog}>Cancel</Button>}
+      <ConfirmDialog
+        isOpen={exportModalType !== null}
+        type="info"
+        title={`Reason for ${exportModalType === 'products' ? 'Product' : 'Keyword'} Export`}
+        onClose={() => setExportModalType(null)}
+        onRequestClose={() => setExportModalType(null)}
+        onCancel={() => setExportModalType(null)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={ isSubmittingExportReason ? "Submitting..." : "Submit & Export" }
+        confirmButtonProps={{
+          disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason,
+        }}
       >
-        <div className="p-4">
-          <p>Upload CSV to import product keywords.</p>
-          <Input
-            type="file"
-            accept=".csv"
-            onChange={handleImportFileSelected}
-          />
-        </div>
-      </Dialog>
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)();
+          }}
+          className="mt-2"
+        >
+          <FormItem
+            label="Please state the reason for this data export:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="e.g., Monthly sales report, Partner data sync"
+                  rows={3}
+                />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
       <Dialog
         isOpen={isViewDetailModalOpen}
         onClose={closeViewDetailModal}
@@ -2796,37 +2928,32 @@ const Products = () => {
       >
         {productToView ? (
           <div className="max-h-[90vh] flex flex-col">
-            {" "}
             <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3 sticky top-0 bg-white dark:bg-slate-800 z-10">
-              {" "}
               {productToView.thumbImageFullPath && (
                 <Avatar
                   size="lg"
                   src={productToView.thumbImageFullPath}
                   icon={<TbBox />}
                 />
-              )}{" "}
+              )}
               <h5 className="font-semibold text-slate-700 dark:text-white truncate">
                 {productToView.name}
-              </h5>{" "}
-            </div>{" "}
+              </h5>
+            </div>
             <div className="p-5 overflow-y-auto space-y-6 text-sm">
-              {" "}
               <Card>
-                {" "}
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
                   Basic Information
-                </h6>{" "}
+                </h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  {" "}
                   <DialogDetailRow
                     label="ID"
                     value={String(productToView.id)}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="SKU Code"
                     value={productToView.skuCode || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Status"
                     value={
@@ -2838,86 +2965,82 @@ const Products = () => {
                         {productToView.status}
                       </Tag>
                     }
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Slug"
                     value={productToView.slug}
                     isLink
                     breakAll
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Color"
                     value={productToView.color || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="HSN Code"
                     value={productToView.hsnCode || "-"}
-                  />{" "}
-                </div>{" "}
-              </Card>{" "}
+                  />
+                </div>
+              </Card>
               <Card>
-                {" "}
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
                   Categorization & Origin
-                </h6>{" "}
+                </h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  {" "}
                   <DialogDetailRow
                     label="Category"
                     value={productToView.categoryName || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Sub Category"
                     value={productToView.subCategoryName || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Brand"
                     value={productToView.brandName || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Unit"
                     value={productToView.unitName || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Country of Origin"
                     value={productToView.countryName || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Domains"
                     value={productToView.domainNames?.join(", ") || "-"}
-                  />{" "}
-                </div>{" "}
-              </Card>{" "}
+                  />
+                </div>
+              </Card>
               <Card>
-                {" "}
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
                   Logistics & Specifications
-                </h6>{" "}
+                </h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  {" "}
                   <DialogDetailRow
                     label="Shelf Life"
                     value={productToView.shelfLife || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Packaging Size"
                     value={productToView.packagingSize || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Packaging Type"
                     value={productToView.packagingType || "-"}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Tax Rate"
                     value={
                       productToView.taxRate ? `${productToView.taxRate}%` : "-"
                     }
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Procurement Lead Time"
                     value={productToView.procurementLeadTime || "-"}
-                  />{" "}
-                </div>{" "}
+                  />
+                </div>
                 {productToView.productSpecification && (
                   <DialogDetailRow
                     label="Product Specification"
@@ -2925,56 +3048,53 @@ const Products = () => {
                     preWrap
                     className="md:col-span-2 lg:col-span-3"
                   />
-                )}{" "}
-              </Card>{" "}
+                )}
+              </Card>
               {(productToView.description ||
                 productToView.shortDescription ||
                 productToView.paymentTerm ||
                 productToView.deliveryDetails) && (
                 <Card>
-                  {" "}
                   <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
                     Descriptions & Terms
-                  </h6>{" "}
+                  </h6>
                   {productToView.shortDescription && (
                     <DialogDetailRow
                       label="Short Description"
                       value={productToView.shortDescription}
                       preWrap
                     />
-                  )}{" "}
+                  )}
                   {productToView.description && (
                     <DialogDetailRow
                       label="Full Description"
                       value={productToView.description}
                       preWrap
                     />
-                  )}{" "}
+                  )}
                   {productToView.paymentTerm && (
                     <DialogDetailRow
                       label="Payment Term"
                       value={productToView.paymentTerm}
                       preWrap
                     />
-                  )}{" "}
+                  )}
                   {productToView.deliveryDetails && (
                     <DialogDetailRow
                       label="Delivery Details"
                       value={productToView.deliveryDetails}
                       preWrap
                     />
-                  )}{" "}
+                  )}
                 </Card>
-              )}{" "}
+              )}
               {productToView.productImages &&
                 productToView.productImages.length > 0 && (
                   <Card>
-                    {" "}
                     <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
                       Product Gallery
-                    </h6>{" "}
+                    </h6>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                      {" "}
                       {productToView.productImages
                         .filter((img) => !img.isDeleted)
                         .map((img, idx) => (
@@ -2986,61 +3106,57 @@ const Products = () => {
                             className="cursor-pointer hover:ring-2 ring-indigo-500"
                             onClick={() => openImageViewer(img.previewUrl)}
                           />
-                        ))}{" "}
-                    </div>{" "}
+                        ))}
+                    </div>
                   </Card>
-                )}{" "}
+                )}
               {(productToView.metaTitle ||
                 productToView.metaDescription ||
                 productToView.metaKeyword) && (
                 <Card>
-                  {" "}
                   <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
                     SEO Information
-                  </h6>{" "}
+                  </h6>
                   {productToView.metaTitle && (
                     <DialogDetailRow
                       label="Meta Title"
                       value={productToView.metaTitle}
                     />
-                  )}{" "}
+                  )}
                   {productToView.metaDescription && (
                     <DialogDetailRow
                       label="Meta Description"
                       value={productToView.metaDescription}
                       preWrap
                     />
-                  )}{" "}
+                  )}
                   {productToView.metaKeyword && (
                     <DialogDetailRow
                       label="Meta Keywords"
                       value={productToView.metaKeyword}
                     />
-                  )}{" "}
+                  )}
                 </Card>
-              )}{" "}
+              )}
               <Card>
-                {" "}
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
                   Timestamps
-                </h6>{" "}
+                </h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                  {" "}
                   <DialogDetailRow
                     label="Created At"
                     value={new Date(productToView.createdAt).toLocaleString()}
-                  />{" "}
+                  />
                   <DialogDetailRow
                     label="Last Updated At"
                     value={new Date(productToView.updatedAt).toLocaleString()}
-                  />{" "}
-                </div>{" "}
-              </Card>{" "}
-            </div>{" "}
+                  />
+                </div>
+              </Card>
+            </div>
             <div className="p-4 border-t border-slate-200 dark:border-slate-700 text-right sticky bottom-0 bg-white dark:bg-slate-800 z-10">
-              {" "}
-              <Button onClick={closeViewDetailModal}>Close</Button>{" "}
-            </div>{" "}
+              <Button onClick={closeViewDetailModal}>Close</Button>
+            </div>
           </div>
         ) : (
           <div className="p-8 text-center">
@@ -3067,11 +3183,7 @@ const Products = () => {
           </div>
         )}
       </Dialog>
-            {/* Render the main modal component */}
-      <ProductsModals
-        modalState={modalState}
-        onClose={handleCloseModal}
-      />
+      <ProductsModals modalState={modalState} onClose={handleCloseModal} />
     </>
   );
 };
