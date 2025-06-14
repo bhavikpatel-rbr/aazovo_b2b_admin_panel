@@ -611,6 +611,7 @@ const RolesListing = () => {
     filterFormMethods.reset({});
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     dispatch(getRolesAction());
+    setIsFilterDrawerOpen(false);
   };
 
   // --- Table Interaction Handlers ---
@@ -733,6 +734,7 @@ const RolesListing = () => {
       },
       {
         header: "Actions", id: "action", size: 120,
+        meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
@@ -939,52 +941,32 @@ const RolesListing = () => {
 
           {/* Audit Info - Only in edit mode */}
           {drawer.type === "edit" && editingRole && (
-            <div className="w-full">
+             <div className="absolute bottom-[14%] w-[92%]">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4">
                 <div>
-                  <b className="font-semibold text-primary">Latest Update:</b>
-                  <p className="text-sm font-semibold mt-1">
+                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                  <p className="text-sm font-semibold">
                     {editingRole.updated_by_user?.name || "N/A"}
                   </p>
                   <p className="text-xs">
                     {editingRole.updated_by_user?.roles?.[0]?.display_name || "N/A"}
                   </p>
                 </div>
-                <div className="text-sm">
+                <div>
+                  <br />
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingRole.created_at
-                      ? `${new Date(editingRole.created_at).getDate()} ${new Date(
-                          editingRole.created_at
-                        ).toLocaleString("en-US", {
-                          month: "short",
-                        })} ${new Date(editingRole.created_at).getFullYear()}, ${new Date(
-                          editingRole.created_at
-                        ).toLocaleTimeString("en-US", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}`
+                      ? `${new Date(editingRole.created_at).getDate()} ${new Date(editingRole.created_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingRole.created_at).getFullYear()}, ${new Date(editingRole.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingRole.updated_at
-                      ? `${new Date(editingRole.updated_at).getDate()} ${new Date(
-                          editingRole.updated_at
-                        ).toLocaleString("en-US", {
-                          month: "short",
-                        })} ${new Date(editingRole.updated_at).getFullYear()}, ${new Date(
-                          editingRole.updated_at
-                        ).toLocaleTimeString("en-US", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}`
+                      ? `${new Date(editingRole.updated_at).getDate()} ${new Date(editingRole.updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingRole.updated_at).getFullYear()}, ${new Date(editingRole.updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
                       : "N/A"}
                   </span>
-
                 </div>
               </div>
             </div>

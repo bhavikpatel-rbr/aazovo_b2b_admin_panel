@@ -2560,7 +2560,7 @@ export const getAutoEmailsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getAutoEmailAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
@@ -2784,7 +2784,7 @@ export const getAutoEmailTemplatesAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getAutoEmailTemplatesAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)

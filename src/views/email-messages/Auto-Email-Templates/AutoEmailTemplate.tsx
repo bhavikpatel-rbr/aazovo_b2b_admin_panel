@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui"; // Tag might be used if status is added
+import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
 
 // Icons
 import {
@@ -61,6 +61,7 @@ import {
   deleteAllAutoEmailTemplatesAction,
   getCategoriesAction, // Action to fetch categories for templates
   getDepartmentsAction, // Action to fetch departments for templates
+  submitExportReasonAction, // ADDED for export reason
 } from "@/reduxtool/master/middleware"; // Adjust path
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path
 import dayjs from "dayjs";
@@ -77,23 +78,33 @@ export type AutoEmailTemplateItem = { // Matches your API listing data
   template_key: string;
   category_id: string;
   department_id: string | null; // API might send null for empty department_id
+  status: "Active" | "Inactive"; // ADDED
   created_at: string;
   updated_at: string;
   category?: { id: number; name: string; } | null;
   department?: { id: number; name: string; } | null;
+  created_by_user?: { name: string; roles: { display_name: string }[] }; // ADDED
+  updated_by_user?: { name:string; roles: { display_name: string }[] }; // ADDED
   // For UI display convenience
   categoryNameDisplay?: string;
   departmentNameDisplay?: string;
 };
 
+// --- Status Options ---
+const statusOptions: SelectOption[] = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
+
+
 // --- Zod Schema for Add/Edit Form ---
-// Note: category_id and department_id will store IDs from fetched dropdowns
 const autoEmailTemplateFormSchema = z.object({
   email_type: z.string().min(1, "Email Type is required.").max(100, "Email Type too long."),
   template_key: z.string().min(1, "Template Key is required.").max(50, "Template Key too long.")
-    .regex(/^[A-Za-z0-9_.-]+$/, "Key can only contain alphanumeric, underscore, dot, or hyphen."), // Adjusted regex
+    .regex(/^[A-Za-z0-9_.-]+$/, "Key can only contain alphanumeric, underscore, dot, or hyphen."),
   category_id: z.string().min(1, "Please select a category."),
-  department_id: z.string().optional().or(z.literal("")), // Optional, can be empty string for "All"
+  department_id: z.string().optional().or(z.literal("")),
+  status: z.enum(["Active", "Inactive"], { required_error: "Status is required." }), // ADDED
 });
 type AutoEmailTemplateFormData = z.infer<typeof autoEmailTemplateFormSchema>;
 
@@ -103,24 +114,48 @@ const filterFormSchema = z.object({
   filterTemplateKeys: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterCategoryIds: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterDepartmentIds: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(), // ADDED
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
 // --- CSV Exporter ---
-const CSV_HEADERS_AET = ["ID", "Email Type", "Template Key", "Category", "Department", "Created At"];
-const CSV_KEYS_AET: (keyof Pick<AutoEmailTemplateItem, 'id' | 'email_type' | 'template_key' | 'created_at'> | 'categoryNameDisplay' | 'departmentNameDisplay')[] = [
-  "id", "email_type", "template_key", "categoryNameDisplay", "departmentNameDisplay", "created_at",
+const CSV_HEADERS_AET = ["ID", "Email Type", "Template Key", "Category", "Department", "Status", "Updated By", "Updated Role", "Updated At"];
+
+type AutoEmailTemplateExportItem = Omit<AutoEmailTemplateItem, "created_at" | "updated_at" | "created_by_user" | "updated_by_user" | "category" | "department" > & {
+    categoryNameDisplay?: string;
+    departmentNameDisplay?: string;
+    updated_by_name?: string;
+    updated_by_role?: string;
+    updated_at_formatted?: string;
+};
+
+const CSV_KEYS_AET: (keyof AutoEmailTemplateExportItem)[] = [
+  "id", "email_type", "template_key", "categoryNameDisplay", "departmentNameDisplay", "status", "updated_by_name", "updated_by_role", "updated_at_formatted",
 ];
 
 function exportAutoEmailTemplatesToCsv(filename: string, rows: AutoEmailTemplateItem[]) {
-  if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
-  const preparedRows = rows.map((row) => ({
+  if (!rows || !rows.length) { 
+      return false; 
+  }
+  const preparedRows: AutoEmailTemplateExportItem[] = rows.map((row) => ({
     id: row.id,
     email_type: row.email_type,
     template_key: row.template_key,
     categoryNameDisplay: row.category?.name || String(row.category_id),
     departmentNameDisplay: row.department?.name || (row.department_id ? String(row.department_id) : "N/A"),
-    created_at: row.created_at,
+    status: row.status,
+    updated_by_name: row.updated_by_user?.name || "N/A",
+    updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A",
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : 'N/A',
   }));
   const separator = ",";
   const csvContent = CSV_HEADERS_AET.join(separator) + "\n" + preparedRows.map((row: any) => CSV_KEYS_AET.map((k) => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ""; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join("\n");
@@ -131,7 +166,7 @@ function exportAutoEmailTemplatesToCsv(filename: string, rows: AutoEmailTemplate
 }
 
 // --- ActionColumn, Search, TableTools, SelectedFooter (UI remains same) ---
-const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => { // Removed onViewDetail if not used for now
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => {
   return (
     <div className="flex items-center justify-center gap-2">
       <Tooltip title="Edit">
@@ -154,7 +189,7 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
           <TbAlignBoxCenterBottom size={18} />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete"> 
+      <Tooltip title="Delete"> 
       <div 
         className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} 
         role="button" 
@@ -162,7 +197,7 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
       >
         <TbTrash />
       </div>
-    </Tooltip>  */}
+    </Tooltip> 
     </div>);
 };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
@@ -197,8 +232,12 @@ const AutoEmailTemplatesListing = () => {
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<AutoEmailTemplateItem[]>([]);
 
+  // State for export reason modal
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
   const categoryOptions = useMemo(() => Array.isArray(CategoriesData) ? CategoriesData.map((c: ApiAETCategory) => ({ value: String(c.id), label: c.name })) : [], [CategoriesData]);
-  const departmentOptions = useMemo(() => Array.isArray(departmentsData) ? departmentsData.map((d: ApiAETDepartment) => ({ value: String(d.id), label: d.name })) : [], [departmentsData]);
+  const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: ApiAETDepartment) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
 
   useEffect(() => {
     dispatch(getAutoEmailTemplatesAction());
@@ -216,12 +255,19 @@ const AutoEmailTemplatesListing = () => {
     defaultValues: filterCriteria,
   });
 
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
+
   const openAddDrawer = useCallback(() => {
     formMethods.reset({
       email_type: "",
       template_key: "",
       category_id: categoryOptions[0]?.value || "",
       department_id: departmentOptions[0]?.value || "",
+      status: "Active",
     });
     setEditingItem(null); setIsAddDrawerOpen(true);
   }, [formMethods, categoryOptions, departmentOptions]);
@@ -234,7 +280,8 @@ const AutoEmailTemplatesListing = () => {
       email_type: item.email_type,
       template_key: item.template_key,
       category_id: String(item.category_id),
-      department_id: String(item.department_id || ""), // Handle null department_id
+      department_id: String(item.department_id || ""),
+      status: item.status || "Active",
     });
     setIsEditDrawerOpen(true);
   }, [formMethods]
@@ -269,13 +316,45 @@ const AutoEmailTemplatesListing = () => {
 
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer, filterFormMethods]);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
   const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
+  
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "AutoEmailTemplates";
+    const timestamp = new Date().toISOString().split("T")[0];
+    const fileName = `auto_email_templates_export_${timestamp}.csv`;
+    try {
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      const exportSuccess = exportAutoEmailTemplatesToCsv(fileName, allFilteredAndSortedData);
+      if (exportSuccess) {
+        toast.push(<Notification title="Export Successful" type="success">Data exported to {fileName}.</Notification>);
+      } else if (allFilteredAndSortedData && allFilteredAndSortedData.length > 0) {
+        toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+      }
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message || "Could not submit export reason."}</Notification>);
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceDataWithDisplayNames: AutoEmailTemplateItem[] =
-      Array.isArray(autoEmailTemplatesData) ? autoEmailTemplatesData.map(item => ({
+      Array.isArray(autoEmailTemplatesData?.data) ? autoEmailTemplatesData?.data.map(item => ({
         ...item,
+        status: item.status || "Inactive",
         categoryNameDisplay: item.category?.name || categoryOptions.find(c => c.value === String(item.category_id))?.label || String(item.category_id),
         departmentNameDisplay: item.department?.name || departmentOptions.find(d => d.value === String(item.department_id))?.label || (item.department_id ? String(item.department_id) : "N/A"),
       })) : [];
@@ -285,25 +364,24 @@ const AutoEmailTemplatesListing = () => {
     if (filterCriteria.filterTemplateKeys?.length) { const v = filterCriteria.filterTemplateKeys.map(tk => tk.value.toLowerCase()); processedData = processedData.filter(item => v.includes(item.template_key.toLowerCase())); }
     if (filterCriteria.filterCategoryIds?.length) { const v = filterCriteria.filterCategoryIds.map(c => c.value); processedData = processedData.filter(item => v.includes(String(item.category_id))); }
     if (filterCriteria.filterDepartmentIds?.length) { const v = filterCriteria.filterDepartmentIds.map(d => d.value); processedData = processedData.filter(item => v.includes(String(item.department_id))); }
-
-    if (tableData.query) { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => String(item.id).toLowerCase().includes(q) || item.email_type.toLowerCase().includes(q) || item.template_key.toLowerCase().includes(q) || item.categoryNameDisplay?.toLowerCase().includes(q) || item.departmentNameDisplay?.toLowerCase().includes(q)); }
+    if (filterCriteria.filterStatus?.length) { const statuses = filterCriteria.filterStatus.map(s => s.value); processedData = processedData.filter(item => statuses.includes(item.status)); }
+    if (tableData.query) { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => String(item.id).toLowerCase().includes(q) || item.email_type.toLowerCase().includes(q) || item.template_key.toLowerCase().includes(q) || item.categoryNameDisplay?.toLowerCase().includes(q) || item.departmentNameDisplay?.toLowerCase().includes(q) || item.status.toLowerCase().includes(q)); }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedData.sort((a, b) => {
         let aVal: any, bVal: any;
         if (key === 'category_id') { aVal = a.categoryNameDisplay; bVal = b.categoryNameDisplay; }
         else if (key === 'department_id') { aVal = a.departmentNameDisplay; bVal = b.departmentNameDisplay; }
+        else if (key === 'updated_at') { return order === "asc" ? new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime() : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(); }
         else { aVal = a[key as keyof AutoEmailTemplateItem]; bVal = b[key as keyof AutoEmailTemplateItem]; }
-        if (key === "created_at" || key === "updated_at") { return order === "asc" ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime(); }
         const aStr = String(aVal ?? "").toLowerCase(); const bStr = String(bVal ?? "").toLowerCase();
         return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
       });
     }
     const dataToExport = [...processedData]; const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize;
     return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: dataToExport };
-  }, [autoEmailTemplatesData, tableData, filterCriteria, categoryOptions, departmentOptions]);
+  }, [autoEmailTemplatesData?.data, tableData, filterCriteria, categoryOptions, departmentOptions]);
 
-  const handleExportData = useCallback(() => { exportAutoEmailTemplatesToCsv("auto_email_templates.csv", allFilteredAndSortedData); }, [allFilteredAndSortedData]);
   const handlePaginationChange = useCallback((page: number) => setTableData(prev => ({ ...prev, pageIndex: page })), []);
   const handleSelectPageSizeChange = useCallback((value: number) => { setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 })); setSelectedItems([]); }, []);
   const handleSort = useCallback((sort: OnSortParam) => { setTableData(prev => ({ ...prev, sort: sort, pageIndex: 1 })); }, []);
@@ -312,26 +390,39 @@ const AutoEmailTemplatesListing = () => {
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AutoEmailTemplateItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
   const columns: ColumnDef<AutoEmailTemplateItem>[] = useMemo(() => [
-    // { header: "ID", accessorKey: "id", size: 80, enableSorting: true },
-
     { header: "Email Type", accessorKey: "email_type", size: 250, enableSorting: true },
-    // { header: "Template Key", accessorKey: "template_key", size: 250, enableSorting: true },
     { header: "Category", accessorKey: "category_id", size: 180, enableSorting: true, cell: props => props.row.original.category?.name || categoryOptions.find(c => c.value === String(props.getValue()))?.label || String(props.getValue()) },
     { header: "Department", accessorKey: "department_id", size: 180, enableSorting: true, cell: props => props.row.original.department?.name || departmentOptions.find(d => d.value === String(props.getValue()))?.label || (props.getValue() ? String(props.getValue()) : "N/A") },
-    { header: "Status", accessorKey: "status", enableSorting: true, size: 100, meta : {HeaderClass: "text-red-500"},
-      cell : ()=>{
-        return  (
-          <Tag className="bg-green-200 text-green-500">Active</Tag>
+    { header: "Status", accessorKey: "status", enableSorting: true, size: 100,
+      cell: (props) => {
+        const status = props.row.original.status;
+        return (
+          <Tag
+            className={classNames("capitalize font-semibold whitespace-nowrap",{
+                "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500": status === "Active",
+                "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500": status === "Inactive",
+              })}
+          >{status}</Tag>
         )
       }
     },
     {
-      header: "Created At", accessorKey: "created_at", size: 150,
-      cell: props =>
-        // props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : '-' 
-        props.getValue() ? <span className="text-xs"> {dayjs(props.getValue()).format("D MMM YYYY, h:mm A")}</span> : '-'
+      header: "Updated Info", accessorKey: "updated_at", size: 150, enableSorting: true,
+      cell: (props) => {
+        const { updated_at, updated_by_user } = props.row.original;
+        const formattedDate = updated_at ? dayjs(updated_at).format("D MMM YYYY, h:mm A") : "N/A";
+        return (
+          <div className="text-xs">
+            <span>
+              {updated_by_user?.name || "N/A"}
+              {updated_by_user?.roles?.[0]?.display_name && (<> <br /> <b>{updated_by_user.roles[0].display_name}</b></>)}
+            </span><br />
+            <span>{formattedDate}</span>
+          </div>
+        );
+      },
     },
-    { header: "Actions", id: "actions", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onViewDetail={() => { /* Implement if needed */ }} /> },
+    { header: "Actions", id: "actions", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
   ], [categoryOptions, departmentOptions, openEditDrawer, handleDeleteClick]);
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
@@ -346,7 +437,10 @@ const AutoEmailTemplatesListing = () => {
         <Controller name="category_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory2 />} />)} />
       </FormItem>
       <FormItem label="Department" invalid={!!currentFormMethods.formState.errors.department_id} errorMessage={currentFormMethods.formState.errors.department_id?.message}>
-        <Controller name="department_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Department (Optional)" options={[{ value: "", label: "None / All Departments" }, ...departmentOptions]} value={departmentOptions.find(o => o.value === field.value) || (field.value === "" ? { value: "", label: "None / All Departments" } : null)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingArch />} />)} />
+        <Controller name="department_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Department (Optional)" options={departmentOptions} value={departmentOptions.find(o => o.value === field.value) || (field.value === "" ? { value: "", label: "None / All Departments" } : null)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingArch />} />)} />
+      </FormItem>
+      <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message} className="md:col-span-2">
+        <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find((o) => o.value === field.value) || null} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
     </div>
   );
@@ -360,44 +454,12 @@ const AutoEmailTemplatesListing = () => {
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Template</Button>
           </div>
           <div className="grid grid-cols-4 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                <TbAlignBoxCenterBottom size={24} />
-              </div>
-              <div>
-                <h6 className="text-blue-500">12</h6>
-                <span className="font-semibold text-xs">Total</span>
-              </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                <TbBuildingCog size={24} />
-              </div>
-              <div>
-                <h6 className="text-violet-500">4</h6>
-                <span className="font-semibold text-xs">Active</span>
-              </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                <TbBuildingOff size={24} />
-              </div>
-              <div>
-                <h6 className="text-red-500">8</h6>
-                <span className="font-semibold text-xs">Inactive</span>
-              </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                <TbMailForward size={24} />
-              </div>
-              <div>
-                <h6 className="text-green-500">34</h6>
-                <span className="font-semibold text-xs">Count Used</span>
-              </div>
-            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbAlignBoxCenterBottom size={24} /></div><div><h6 className="text-blue-500">{autoEmailTemplatesData?.counts?.total}</h6><span className="font-semibold text-xs">Total</span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBuildingCog size={24} /></div><div><h6 className="text-violet-500">{autoEmailTemplatesData?.counts?.active}</h6><span className="font-semibold text-xs">Active</span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBuildingOff size={24} /></div><div><h6 className="text-red-500">{autoEmailTemplatesData?.counts?.inactive}</h6><span className="font-semibold text-xs">Inactive</span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailForward size={24} /></div><div><h6 className="text-green-500">{autoEmailTemplatesData?.counts?.count_used}</h6><span className="font-semibold text-xs">Count Used</span></div></Card>
           </div>
-          <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} />
           <div className="mt-4">
             <AutoEmailTemplatesTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
@@ -406,20 +468,46 @@ const AutoEmailTemplatesListing = () => {
       <AutoEmailTemplatesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       <Drawer title={editingItem ? "Edit Auto Email Template" : "Add New Auto Email Template"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={480}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="autoEmailTemplateForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div>} >
-        <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4"> {renderDrawerForm(formMethods)} </Form>
+        <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28"> 
+          {renderDrawerForm(formMethods)}
+        </Form>
+        {isEditDrawerOpen && editingItem && (
+          <div className="absolute bottom-[14%] w-[92%]">
+            <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+              <div>
+                <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
+                <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
+                <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+              </div>
+              <div>
+                <br />
+                <span className="font-semibold">Created At:</span>{" "}<span>{editingItem.created_at ? dayjs(editingItem.created_at).format("D MMM YYYY, h:mm A") : "N/A"}</span><br />
+                <span className="font-semibold">Updated At:</span>{" "}<span>{editingItem.updated_at ? dayjs(editingItem.updated_at).format("D MMM YYYY, h:mm A") : "N/A"}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </Drawer>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button> <Button size="sm" variant="solid" form="filterAutoEmailTemplateForm" type="submit">Apply</Button> </div>}
       >
         <Form id="filterAutoEmailTemplateForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Email Type"><Controller name="filterEmailTypes" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Email Type" options={autoEmailTemplatesData.map(t => ({ value: t.email_type, label: t.email_type })).filter((v, i, a) => a.findIndex(item => item.value === v.value) === i)} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="Template Key"><Controller name="filterTemplateKeys" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Template Key" options={autoEmailTemplatesData.map(t => ({ value: t.template_key, label: t.template_key })).filter((v, i, a) => a.findIndex(item => item.value === v.value) === i)} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Email Type"><Controller name="filterEmailTypes" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Email Type" options={autoEmailTemplatesData?.data.map(t => ({ value: t.email_type, label: t.email_type })).filter((v, i, a) => a.findIndex(item => item.value === v.value) === i)} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Template Key"><Controller name="filterTemplateKeys" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Template Key" options={autoEmailTemplatesData?.data.map(t => ({ value: t.template_key, label: t.template_key })).filter((v, i, a) => a.findIndex(item => item.value === v.value) === i)} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Category"><Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Category" options={categoryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Department"><Controller name="filterDepartmentIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Department" options={departmentOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={statusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])}/>)} /></FormItem>
         </Form>
       </Drawer>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Auto Email Template" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} >
         <p>Are you sure you want to delete the template "<strong>{itemToDelete?.email_type} - {itemToDelete?.template_key}</strong>"?</p>
+      </ConfirmDialog>
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
+        <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
+          <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3}/>)} />
+          </FormItem>
+        </Form>
       </ConfirmDialog>
     </>
   );

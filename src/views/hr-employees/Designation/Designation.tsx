@@ -100,7 +100,7 @@ const designationFormSchema = z.object({
     .min(1, "Designation name is required.")
     .max(150, "Designation name cannot exceed 150 characters."),
   department_id: z.string().min(1, "Department is required."),
-  reporting_to_id: z.string().min(1, "Reporting person is required."),
+  reporting_manager: z.string().min(1, "Reporting person is required."),
   status: z.enum(["Active", "Inactive"], {
     required_error: "Status is required.",
   }),
@@ -456,7 +456,7 @@ const DesignationListing = () => {
     formMethods.reset({
       name: "",
       department_id: "",
-      reporting_to_id: undefined,
+      reporting_manager: undefined,
       status: "Active",
     });
     setIsAddDrawerOpen(true);
@@ -470,7 +470,7 @@ const DesignationListing = () => {
       formMethods.reset({
         name: item.name,
         department_id: String(item.department?.id || ""),
-        reporting_to_id: item.reporting_manager || "",
+        reporting_manager: item.reporting_manager || "",
         status: item.status || "Active",
       });
       setIsEditDrawerOpen(true);
@@ -899,13 +899,13 @@ const DesignationListing = () => {
             Reporting To<span className="text-red-500"> *</span>
           </div>
         }
-        invalid={!!currentFormMethods.formState.errors.reporting_to_id}
+        invalid={!!currentFormMethods.formState.errors.reporting_manager}
         errorMessage={
-          currentFormMethods.formState.errors.reporting_to_id?.message
+          currentFormMethods.formState.errors.reporting_manager?.message
         }
       >
         <Controller
-          name="reporting_to_id"
+          name="reporting_manager"
           control={currentFormMethods.control}
           render={({ field }) => (
             <Select
@@ -1101,6 +1101,7 @@ const DesignationListing = () => {
         title="Edit Designation"
         isOpen={isEditDrawerOpen}
         onClose={closeEditDrawer}
+        width={480}
         onRequestClose={closeEditDrawer}
         footer={
           <div className="text-right w-full">
