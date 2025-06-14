@@ -707,7 +707,24 @@ const JobPostsListing = () => {
 
   const columns: ColumnDef<JobPostItem>[] = useMemo(
     () => [
-      { header: "Job Title", accessorKey: "job_title", size: 220, enableSorting: true, cell: props => <span className="font-semibold">{props.getValue<string>()}</span> },
+      {
+        header: "Job Title",
+        accessorKey: "job_title",
+        size: 150,
+        enableSorting: true,
+        cell: (props) => {
+          const value = props.getValue<string>() || "";
+          const maxLength = 7;
+          const isTrimmed = value.length > maxLength;
+          const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value;
+
+          return (
+            <Tooltip title={isTrimmed ? value : ""}>
+              <span className="font-semibold cursor-help">{displayValue}</span>
+            </Tooltip>
+          );
+        },
+      },
       {
         header: "Status", accessorKey: "status", size: 100, enableSorting: true,
         cell: props => {
@@ -730,7 +747,16 @@ const JobPostsListing = () => {
         header: "Updated Info", accessorKey: "updated_at", size: 150, enableSorting: true,
         cell: (props) => {
             const { updated_at, updated_by_user } = props.row.original;
-            const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : "N/A";
+                      const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
+            : "N/A";
             return (
                 <div className="text-xs">
                     <span>{updated_by_user?.name || "N/A"}</span>

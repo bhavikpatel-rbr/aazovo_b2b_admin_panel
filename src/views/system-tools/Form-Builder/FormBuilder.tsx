@@ -291,7 +291,7 @@ const FormBuilder = () => {
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
   const categoryFilterOptions = useMemo(() => CategoriesData.map((cat: GeneralCategoryListItem) => ({ value: String(cat.id), label: cat.name })), [CategoriesData]);
-  const departmentFilterOptions = useMemo(() => departmentsData.map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData]);
+  const departmentFilterOptions = useMemo(() => departmentsData?.data.map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData]);
   const statusFilterOptions = useMemo(() => FORM_STATUS_OPTIONS, []);
 
   useEffect(() => {

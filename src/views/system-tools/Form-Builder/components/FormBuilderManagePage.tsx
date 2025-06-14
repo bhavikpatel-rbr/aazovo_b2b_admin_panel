@@ -219,7 +219,7 @@ const FormBuilderManagePage = () => {
     departmentsData = [],
   } = useSelector(masterSelector);
 
-  const departmentOptionsForSelect = useMemo(() => departmentsData.map((d: DepartmentListItem) => ({ value: String(d.id), label: d.name })), [departmentsData]);
+  const departmentOptionsForSelect = useMemo(() => departmentsData?.data.map((d: DepartmentListItem) => ({ value: String(d.id), label: d.name })), [departmentsData]);
   const categoryOptionsForSelect = useMemo(() => CategoriesData.map((c: GeneralCategoryListItem) => ({ value: String(c.id), label: c.name })), [CategoriesData]);
 
   const formMethods = useForm<PageFormBuilderFormData>({

@@ -296,7 +296,7 @@ const CompanyProfile = () => {
         });
         setCurrentProfileUI(null);
         if (
-          masterLoadingStatus === "succeeded" &&
+          masterLoadingStatus === "idle" &&
           actualProfileData !== undefined
         ) {
           toast.push(

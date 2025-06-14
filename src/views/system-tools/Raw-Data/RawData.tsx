@@ -1751,7 +1751,7 @@ const RowDataListing = () => {
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">
-                    Latest Update By:
+                    Latest Update:
                   </b>
                   <br />
                   <p className="text-sm font-semibold">
@@ -1767,36 +1767,37 @@ const RowDataListing = () => {
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingItem.created_at
-                      ? new Date(editingItem.created_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? `${new Date(editingItem.created_at).getDate()} ${new Date(
+                          editingItem.created_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
+                          editingItem.created_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingItem.updated_at
-                      ? new Date(editingItem.updated_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
+                          editingItem.updated_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
+                          editingItem.updated_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
+
                 </div>
               </div>
             </div>
