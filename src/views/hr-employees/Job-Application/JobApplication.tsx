@@ -319,8 +319,6 @@ const JobApplicationListing = () => {
     departmentsData = { data: [] } as { data: DepartmentItem[] }, // Ensure departmentsData.data exists
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
-console.log("jobApplicationsData",jobApplicationsData?.data[0]?.status);
-
 
   const [dialogIsOpen, setIsOpen] = useState(false);
   const openDialog = () => setIsOpen(true);
