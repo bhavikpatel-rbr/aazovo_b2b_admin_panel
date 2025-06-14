@@ -634,7 +634,7 @@ const handleClearSearch = () => {
           ) : ( <span className="text-gray-500">No Link</span> ),
       },
       { header: "Status",  accessorKey: "status",  enableSorting: true, size: 80,
-              cell: (props) => (<Tag className={props.row.original.status == 'Active' ? `bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0` : `bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500`}>{props.row.original.status}</Tag>),
+              cell: (props) => (<Tag className={props.row.original.status == 'Active' ? `bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0` : `bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100  `}>{props.row.original.status}</Tag>),
       },
       {
         header: "Updated Info",
