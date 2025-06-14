@@ -3,7 +3,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit"
 import { AxiosResponse } from "axios"
 import { showMessage } from "../lem/lemSlice"
 import { defaultMessageObj } from "../lem/types"
-import { addAutoEmailAsync, addAutoEmailTemplatesAsync, addBlogsAsync, addBrandAsync, addBugReportAsync, addcategoryAsync, addCompanyAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDemandAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addEmailCampaignsAsync, addEmailTemplatesAsync, addFormBuilderAsync, addHomeCategoryAsync, addInquiriesAsync, addJobApplicationAsync, addJobDepartmentAsync, addJobPostsAsync, addLeadAsync, addMemberAsync, addNumberSystemsAsync, addOfferAsync, addpartnerAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addRequestFeedbacksAsync, addRowDataAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, addWallItemAsync, changeProductStatusAsync, deletBlogsAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcompanyAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllAutoEmailAsync, deleteAllAutoEmailTemplatesAsync, deleteAllBlogsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcompanyAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDemandAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentListAsync, deleteAllDocumentTypeAsync, deleteAllEmailCampaignsAsync, deleteAllEmailTemplatesAsync, deleteAllFormBuilderAsync, deleteAllHomeCategoryAsync, deleteAllInquiriesAsync, deleteAllJobApplicationAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllLeadAsync, deleteAllMemberAsync, deleteAllNumberSystemsAsync, deleteAllOfferAsync, deleteAllpartnerAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllRequestFeedbacksAsync, deleteAllRowDataAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteAllWallAsync, deleteAutoEmailAsync, deleteAutoEmailTemplatesAsync, deleteDemandAsync, deleteDomainsAsync, deleteEmailCampaignsAsync, deleteEmailTemplatesAsync, deleteFormBuilderAsync, deleteJobApplicationAsync, deleteLeadAsync, deleteMemberAsync, deleteOfferAsync, deletepartnerAsync, deletePriceListAsync, deleteRequestFeedbacksAsync, deletHomeCategoryAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductListAsync, deletProductSepecificationAsync, deletRowDataAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editAutoEmailAsync, editAutoEmailTemplatesAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editCompanyAsync, editCompanyProfileListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDemandAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editEmailCampaignsAsync, editEmailTemplatesAsync, editFormBuilderAsync, editGlobalSettingAsync, editHomeCategoryAsync, editInquiriesAsync, editJobApplicationAsync, editJobDepartmentAsync, editJobPostsAsync, editLeadAsync, editMemberAsync, editNumberSystemsAsync, editOfferAsync, editpartnerAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editRequestFeedbacksAsync, editRowDataAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getActivityLogAsync, getAllproductAsync, getAutoEmailAsync, getAutoEmailTemplatesAsync, getAutoMatchDataAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getBuyerListingsAsync, getcategoryAsync, getcompanyAsync, getCompanyByIdAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDemandByIdAsync, getDemandsAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getEmailCampaignsAsync, getEmailTemplatesAsync, getEmployeeAsync, getExportMappingsAsync, getFormBuilderAsync, getGlobalSettingAsync, getHomeCategoryAsync, getInquiriesAsync, getJobApplicationAsync, getJobDepartmentAsync, getJobPostsAsync, getLeadAsync, getLeadByIdAsync, getLeadMemberAsync, getMailTemplatesAsync, getMemberAsync, getMemberByIdAsync, getMembersAsync, getNumberSystemsAsync, getOfferByIdAsync, getOffersAsync, getOpportunitiesAsync, getParentcategoryAsync, getpartnerAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getpWallListingAsync, getRequestFeedbacksAsync, getRolesAsync, getRowDataAsync, getSalesPersonAsync, getSellerListingsAsync, getSlidersAsync, getSubcategoriesByCategoryIdAsync, getSubcategoriesByIdAsync, getSubscribersAsync, getSuppliersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getUsersAsync, getWallItemByIdAsync, getwallListingAsync, importRowDataAsync, submitResponseAsync } from "./services"
+import { addAutoEmailAsync, addAutoEmailTemplatesAsync, addBlogsAsync, addBrandAsync, addBugReportAsync, addcategoryAsync, addCompanyAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDemandAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addEmailCampaignsAsync, addEmailTemplatesAsync, addFormBuilderAsync, addHomeCategoryAsync, addInquiriesAsync, addJobApplicationAsync, addJobDepartmentAsync, addJobPostsAsync, addLeadAsync, addMemberAsync, addNumberSystemsAsync, addOfferAsync, addpartnerAsync, addPaymentTermAsync, addPriceListAsync, addProductSepecificationAsync, addRequestFeedbacksAsync, addRolesAsync, addRowDataAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, addWallItemAsync, changeProductStatusAsync, deletBlogsAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcompanyAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllAutoEmailAsync, deleteAllAutoEmailTemplatesAsync, deleteAllBlogsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcompanyAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDemandAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentListAsync, deleteAllDocumentTypeAsync, deleteAllEmailCampaignsAsync, deleteAllEmailTemplatesAsync, deleteAllFormBuilderAsync, deleteAllHomeCategoryAsync, deleteAllInquiriesAsync, deleteAllJobApplicationAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllLeadAsync, deleteAllMemberAsync, deleteAllNumberSystemsAsync, deleteAllOfferAsync, deleteAllpartnerAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllRequestFeedbacksAsync, deleteAllRolesAsync, deleteAllRowDataAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteAllWallAsync, deleteAutoEmailAsync, deleteAutoEmailTemplatesAsync, deleteDemandAsync, deleteDomainsAsync, deleteEmailCampaignsAsync, deleteEmailTemplatesAsync, deleteFormBuilderAsync, deleteJobApplicationAsync, deleteLeadAsync, deleteMemberAsync, deleteOfferAsync, deletepartnerAsync, deletePriceListAsync, deleteRequestFeedbacksAsync, deleteRolesAsync, deletHomeCategoryAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductListAsync, deletProductSepecificationAsync, deletRowDataAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editAutoEmailAsync, editAutoEmailTemplatesAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editCompanyAsync, editCompanyProfileListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDemandAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editEmailCampaignsAsync, editEmailTemplatesAsync, editFormBuilderAsync, editGlobalSettingAsync, editHomeCategoryAsync, editInquiriesAsync, editJobApplicationAsync, editJobDepartmentAsync, editJobPostsAsync, editLeadAsync, editMemberAsync, editNumberSystemsAsync, editOfferAsync, editpartnerAsync, editPaymentTermAsync, editPriceListAsync, editProductSepecificationAsync, editRequestFeedbacksAsync, editRolesAsync, editRowDataAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getActivityLogAsync, getAllproductAsync, getAutoEmailAsync, getAutoEmailTemplatesAsync, getAutoMatchDataAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getBuyerListingsAsync, getcategoryAsync, getcompanyAsync, getCompanyByIdAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDemandByIdAsync, getDemandsAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getEmailCampaignsAsync, getEmailTemplatesAsync, getEmployeeAsync, getExportMappingsAsync, getFormBuilderAsync, getGlobalSettingAsync, getHomeCategoryAsync, getInquiriesAsync, getJobApplicationAsync, getJobDepartmentAsync, getJobPostsAsync, getLeadAsync, getLeadByIdAsync, getLeadMemberAsync, getMailTemplatesAsync, getMemberAsync, getMemberByIdAsync, getMembersAsync, getNumberSystemsAsync, getOfferByIdAsync, getOffersAsync, getOpportunitiesAsync, getParentcategoryAsync, getpartnerAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getpWallListingAsync, getRequestFeedbacksAsync, getRolesAsync, getRowDataAsync, getSalesPersonAsync, getSellerListingsAsync, getSlidersAsync, getSubcategoriesByCategoryIdAsync, getSubcategoriesByIdAsync, getSubscribersAsync, getSuppliersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getUsersAsync, getWallItemByIdAsync, getwallListingAsync, importRowDataAsync, submitResponseAsync } from "./services"
 
 
 export const getLeadAction = createAsyncThunk(
@@ -3438,21 +3438,21 @@ export const deleteAllJobApplicationsAction = createAsyncThunk<any, any>(
   }
 );
 
-export const getRolesAction = createAsyncThunk(
-  "auth/getRoles",
-  async (_, { rejectWithValue, dispatch }) => {
-    try {
-      const response: AxiosResponse<any> = await getRolesAsync();
-      if (response?.data?.status) {
-        return response?.data?.roles;
-      }
+// export const getRolesAction = createAsyncThunk(
+//   "auth/getRoles",
+//   async (_, { rejectWithValue, dispatch }) => {
+//     try {
+//       const response: AxiosResponse<any> = await getRolesAsync();
+//       if (response?.data?.status) {
+//         return response?.data?.roles;
+//       }
 
-      return rejectWithValue(response);
-    } catch (error: unknown) {
-      return rejectWithValue(error as Error);
-    }
-  }
-)
+//       return rejectWithValue(response);
+//     } catch (error: unknown) {
+//       return rejectWithValue(error as Error);
+//     }
+//   }
+// )
 
 export const getSubcategoriesByIdAction = createAsyncThunk(
   "master/getSubcategoryById",
@@ -4365,3 +4365,91 @@ export const getEmployeesAction = createAsyncThunk(
     }
   }
 );
+
+export const getRolesAction = createAsyncThunk(
+  "auth/getRoles",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getRolesAsync()
+      if (response?.data?.status === true) {
+        return response?.data?.roles
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const addRolesAction = createAsyncThunk<any, any>(
+  "auth/addRoles",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addRolesAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getRolesAction())
+
+        return response?.data?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editRolesAction = createAsyncThunk<any, any>(
+  "auth/editRoles",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await editRolesAsync(data)
+      if (response?.data?.status) {
+        dispatch(getRolesAction())
+
+        return response?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteRolesAction = createAsyncThunk<any, any>(
+  "auth/deleteRoles",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteRolesAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getRolesAction())
+
+        return response?.data?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const deleteAllRolessAction = createAsyncThunk<any, any>(
+  "auth/deleteAllRoles", // Note: "Roles" is singular here, "Roless" might be more consistent with the function name
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllRolesAsync(data)
+      if (response?.data?.status === true) {
+        dispatch(getRolesAction())
+
+        return response?.data?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)

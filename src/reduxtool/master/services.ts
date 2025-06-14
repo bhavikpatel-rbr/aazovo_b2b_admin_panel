@@ -2525,3 +2525,48 @@ export const getEmployeeAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+export const addRolesAsync = async (RolesData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/roles/role`, RolesData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editRolesAsync = async (RolesData: any) => {
+  try {
+    const response = await axiosInstance.post(
+      `${config.apiURL}/roles/role/${RolesData?.id}`,
+      {
+        _method: "PUT",
+        ...RolesData.data, // flatten the data object
+      }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+
+export const deleteRolesAsync = async (RolesData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/roles/role/${RolesData}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteAllRolesAsync = async (RolesData: any) => {
+  try {
+    console.log("RolesData", RolesData);
+
+    const response = await axiosInstance.post(`${config.apiURL}/roles/role/delete`, RolesData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}

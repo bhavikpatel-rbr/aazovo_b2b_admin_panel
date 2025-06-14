@@ -1,13 +1,14 @@
 // src/views/your-path/RolesListing.tsx
 
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom'; // useNavigate replaced by drawer logic
 import cloneDeep from "lodash/cloneDeep";
 import classNames from "classnames";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Radio from '@/components/ui/Radio';
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
@@ -19,20 +20,15 @@ import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import {
-  Drawer,
-  Form,
-  FormItem,
-  Input,
-  Select as UiSelect,
-} from "@/components/ui"; // Added Textarea, UiSelect
+import Select from "@/components/ui/Select"; // RHF-compatible Select
+import Radio from '@/components/ui/Radio';
+import { Card, Drawer, Form, FormItem, Input } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
   TbEye,
   TbShieldLock,
-  TbShare,
   TbChecks,
   TbSearch,
   TbFilter,
@@ -41,38 +37,54 @@ import {
   TbUserShield,
   TbLockAccess,
   TbFileDescription,
-  TbCalendarTime,
-  TbReload, // Additional icons
+  TbReload,
+  TbUsersGroup,
+  TbUserCheck,
+  TbUserCancel,
+  TbBuilding,
+  TbHierarchy2,
 } from "react-icons/tb";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-} from "@/components/shared/DataTable";
+import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import { useNavigate } from "react-router-dom";
+
+// --- Redux Imports (Placeholder) ---
+// In a real app, these would come from your actual Redux setup
+import { useAppDispatch } from "@/reduxtool/store"; // Assuming you have this hook
+import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming this selector exists
+import {
+    getRolesAction,
+    addRolesAction,
+    editRolesAction,
+    deleteRolesAction,
+    deleteAllRolessAction,
+    submitExportReasonAction
+} from "@/reduxtool/master/middleware"; // Assuming these actions are created
 
 // --- Define Item Type ---
 export type RoleItem = {
-  id: string;
-  displayName: string;
-  roleName: string;
+  id: string; // Using name as ID
+  display_name: string;
+  name: string;
   description: string;
-  addedDate: Date;
-  isEmployee: boolean,
-  isDesignation: boolean,
-  isDepartment: boolean,
-  isRole: boolean,
-  // permissions?: string[]; // Keep for future, not in form for now
+  employee: boolean;
+  designation	: boolean;
+  department: boolean;
+  display_role: boolean;
+  created_at: string;
+  updated_at: string;
+  updated_by_user?: {
+      name: string;
+      roles: { display_name: string }[];
+  };
 };
 // --- End Item Type ---
 
 // --- Zod Schema for Add/Edit Role Form ---
 const roleFormSchema = z.object({
-  displayName: z.string().min(1, "Display Name is required.").max(100),
-  roleName: z
+  display_name: z.string().min(1, "Display Name is required.").max(100),
+  name: z
     .string()
     .min(1, "Role Name (system key) is required.")
     .max(50)
@@ -81,77 +93,102 @@ const roleFormSchema = z.object({
       "Role Name can only contain lowercase letters, numbers, and underscores."
     ),
   description: z.string().min(1, "Description is required.").max(500),
-  // addedDate is system-set
+  // employee: z.boolean().default(false),
+  // designation	: z.boolean().default(false),
+  // department: z.boolean().default(false),
+  // display_role: z.boolean().default(false),
 });
 type RoleFormData = z.infer<typeof roleFormSchema>;
 
 // --- Zod Schema for Filter Form ---
-// For roles, filtering might be simpler, e.g., by parts of display name or role name.
-// For now, let's keep it simple or allow search to handle most of it.
-// If complex filtering is needed, define schema here.
 const roleFilterFormSchema = z.object({
   filterDisplayName: z.string().optional(),
-  // Add more filters if needed, e.g., filterByPermission: z.array(...).optional()
 });
 type RoleFilterFormData = z.infer<typeof roleFilterFormSchema>;
 
-const initialDummyRoles: RoleItem[] = [
-  {
-    id: "admin",
-    displayName: "Administrator",
-    roleName: "admin",
-    description: "Full access to all system features and settings.",
-    addedDate: new Date(2022, 0, 1),
-    isEmployee: true,
-    isDesignation: true,
-    isDepartment: true,
-    isRole: true,
-  },
-  {
-    id: "editor",
-    displayName: "Content Editor",
-    roleName: "editor",
-    description: "Can create, edit, and publish content.",
-    addedDate: new Date(2022, 1, 15),
-    isEmployee: false,
-    isDesignation: true,
-    isDepartment: false,
-    isRole: true,
-  },
-  {
-    id: "support_agent",
-    displayName: "Support Agent",
-    roleName: "support_agent",
-    description: "Can view and respond to customer support tickets.",
-    addedDate: new Date(2022, 3, 10),
-    isEmployee: true,
-    isDesignation: false,
-    isDepartment: true,
-    isRole: false,
-  },
-  // Add more if needed...
-];
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- End Constants ---
+// --- Dummy Data (simulating a Redux store response) ---
+// const initialDummyRoles = {
+//     data: [
+//         {
+//           id: "admin",
+//           display_name: "Administrator",
+//           name: "admin",
+//           description: "Full access to all system features and settings.",
+//           created_at: new Date(2022, 0, 1).toISOString(),
+//           updated_at: new Date(2023, 4, 28).toISOString(),
+//           employee: true,
+//           designation	: true,
+//           department: true,
+//           display_role: true,
+//           updated_by_user: { name: "Tushar Joshi", roles: [{ display_name: "System Admin" }] },
+//         },
+//         {
+//           id: "editor",
+//           display_name: "Content Editor",
+//           name: "editor",
+//           description: "Can create, edit, and publish content.",
+//           created_at: new Date(2022, 1, 15).toISOString(),
+//           updated_at: new Date(2023, 3, 1).toISOString(),
+//           employee: false,
+//           designation	: true,
+//           department: false,
+//           display_role: true,
+//           updated_by_user: { name: "Jane Doe", roles: [{ display_name: "Lead Editor" }] },
+//         },
+//         {
+//           id: "support_agent",
+//           display_name: "Support Agent",
+//           name: "support_agent",
+//           description: "Can view and respond to customer support tickets.",
+//           created_at: new Date(2022, 3, 10).toISOString(),
+//           updated_at: new Date(2023, 5, 20).toISOString(),
+//           employee: true,
+//           designation	: false,
+//           department: true,
+//           display_role: false,
+//           updated_by_user: { name: "John Smith", roles: [{ display_name: "Support Lead" }] },
+//         },
+//     ],
+//     counts: {
+//         total: 3,
+//         employeeAccess: 2,
+//         designationAccess: 2,
+//         departmentAccess: 2,
+//         roleAccess: 2,
+//     }
+// };
 
 // --- ActionColumn Component ---
 const ActionColumn = ({
   onEdit,
-  onDelete,
-  onChangeStatus,
   onViewDetail,
 }: {
   onEdit: () => void;
-  onDelete: () => void;
-  onChangeStatus: () => void;
   onViewDetail: () => void;
 }) => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const iconButtonClass =
+    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
+
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Permissions">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+          )}
           role="button"
           onClick={() => navigate("/access-control/permission")}
         >
@@ -160,7 +197,11 @@ const ActionColumn = ({
       </Tooltip>
       <Tooltip title="Edit">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+          )}
           role="button"
           onClick={onEdit}
         >
@@ -169,7 +210,11 @@ const ActionColumn = ({
       </Tooltip>
       <Tooltip title="View">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`}
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+          )}
           role="button"
           onClick={onViewDetail}
         >
@@ -181,7 +226,7 @@ const ActionColumn = ({
 };
 
 
-// --- RoleSearch Component (Reused from your example) ---
+// --- RoleSearch Component ---
 type RoleSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -190,15 +235,16 @@ const RoleSearch = React.forwardRef<HTMLInputElement, RoleSearchProps>(
   ({ onInputChange }, ref) => (
     <DebouceInput
       ref={ref}
+      className="w-full"
       placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
   )
 );
-RoleSearch.displayName = "RoleSearch";
+RoleSearch.display_name = "RoleSearch";
 
-// --- RoleTableTools Component (Adapted) ---
+// --- RoleTableTools Component ---
 const RoleTableTools = ({
   onSearchChange,
   onFilter,
@@ -215,9 +261,11 @@ const RoleTableTools = ({
       <RoleSearch onInputChange={onSearchChange} />
     </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters">
-        <Button icon={<TbReload />} onClick={() => onClearFilters()} />
-      </Tooltip>
+      <Button
+        title="Clear Filters"
+        icon={<TbReload />}
+        onClick={onClearFilters}
+      />
       <Button
         icon={<TbFilter />}
         onClick={onFilter}
@@ -236,16 +284,25 @@ const RoleTableTools = ({
   </div>
 );
 
-// --- RoleSelectedFooter Component (Adapted from your example) ---
+// --- RoleSelectedFooter Component ---
 type RoleSelectedFooterProps = {
   selectedItems: RoleItem[];
   onDeleteSelected: () => void;
+  isDeleting: boolean;
 };
 const RoleSelectedFooter = ({
   selectedItems,
   onDeleteSelected,
+  isDeleting,
 }: RoleSelectedFooterProps) => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const handleDeleteClick = () => setDeleteConfirmOpen(true);
+  const handleCancelDelete = () => setDeleteConfirmOpen(false);
+  const handleConfirmDelete = () => {
+    onDeleteSelected();
+    setDeleteConfirmOpen(false);
+  };
+
   if (selectedItems.length === 0) return null;
   return (
     <>
@@ -267,7 +324,8 @@ const RoleSelectedFooter = ({
             size="sm"
             variant="plain"
             className="text-red-600 hover:text-red-500"
-            onClick={() => setDeleteConfirmOpen(true)}
+            onClick={handleDeleteClick}
+            loading={isDeleting}
           >
             Delete Selected
           </Button>
@@ -278,13 +336,11 @@ const RoleSelectedFooter = ({
         type="danger"
         title={`Delete ${selectedItems.length} Role${selectedItems.length > 1 ? "s" : ""
           }`}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onRequestClose={() => setDeleteConfirmOpen(false)}
-        onCancel={() => setDeleteConfirmOpen(false)}
-        onConfirm={() => {
-          onDeleteSelected();
-          setDeleteConfirmOpen(false);
-        }}
+        onClose={handleCancelDelete}
+        onRequestClose={handleCancelDelete}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        loading={isDeleting}
       >
         <p>
           Are you sure you want to delete the selected role
@@ -295,15 +351,18 @@ const RoleSelectedFooter = ({
   );
 };
 
-// CSV Export for Roles
+// --- CSV Exporter Utility ---
 const CSV_HEADERS_ROLE = [
-  "ID",
-  "Display Name",
-  "Role Name (System)",
-  "Description",
-  "Date Added",
+  "ID", "Display Name", "Role Name (System)", "Description",
+  "Has Employee Access", "Has Designation Access", "Has Department Access", "Has Role Access",
+  "Created At", "Updated By", "Updated Role", "Updated At",
 ];
-type RoleExportItem = Omit<RoleItem, "addedDate"> & { addedDateCsv: string };
+type RoleExportItem = Omit<RoleItem, "created_at" | "updated_at"> & {
+    created_at_formatted: string;
+    updated_at_formatted: string;
+    updated_by_name: string;
+    updated_by_role: string;
+};
 
 function exportToCsvRoles(filename: string, rows: RoleItem[]) {
   if (!rows || !rows.length) {
@@ -314,38 +373,43 @@ function exportToCsvRoles(filename: string, rows: RoleItem[]) {
     );
     return false;
   }
-  const transformedRows: RoleExportItem[] = rows.map((row) => ({
+  const preparedRows: RoleExportItem[] = rows.map((row) => ({
     ...row,
-    addedDateCsv: new Date(row.addedDate).toLocaleDateString(),
+    employee: row.employee ? 'Yes' : 'No',
+    designation	: row.designation	 ? 'Yes' : 'No',
+    department: row.department ? 'Yes' : 'No',
+    display_role: row.display_role ? 'Yes' : 'No',
+    updated_by_name: row.updated_by_user?.name || "N/A",
+    updated_by_role: row.updated_by_user?.roles[0]?.display_name || "N/A",
+    created_at_formatted: new Date(row.created_at).toLocaleString(),
+    updated_at_formatted: new Date(row.updated_at).toLocaleString(),
   }));
+
   const csvKeysRoleExport: (keyof RoleExportItem)[] = [
-    "id",
-    "displayName",
-    "roleName",
-    "description",
-    "addedDateCsv",
+    "id", "display_name", "name", "description",
+    "employee", "designation", "department", "display_role",
+    "created_at_formatted", "updated_by_name", "updated_by_role", "updated_at_formatted"
   ];
-  // ... (CSV export logic from previous examples) ...
   const separator = ",";
   const csvContent =
     CSV_HEADERS_ROLE.join(separator) +
     "\n" +
-    transformedRows
+    preparedRows
       .map((row) => {
         return csvKeysRoleExport
           .map((k) => {
-            let cell = row[k];
-            if (cell === null || cell === undefined) cell = "";
-            else cell = String(cell).replace(/"/g, '""');
-            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+            let cell = row[k as keyof RoleExportItem];
+            cell = cell === null || cell === undefined ? "" : String(cell);
+            cell = cell.replace(/"/g, '""');
+            if (cell.search(/("|,|\n)/g) >= 0) {
+                cell = `"${cell}"`;
+            }
             return cell;
           })
           .join(separator);
       })
       .join("\n");
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -368,20 +432,20 @@ function exportToCsvRoles(filename: string, rows: RoleItem[]) {
 
 // --- Main RolesListing Component ---
 const RolesListing = () => {
-  const pageTitle = "System Roles & Permissions"; // Or just "Roles Listing"
+  const pageTitle = "System Roles & Permissions";
+  const dispatch = useAppDispatch();
 
-  const [roles, setRoles] = useState<RoleItem[]>(initialDummyRoles);
-  const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "idle"
-  >("idle");
-
+  // Mock Redux state
+  const {
+      Roles = [], // Use dummy data as default
+      status: masterLoading,
+  } = useSelector(masterSelector); // In a real app, this is where you'd select from the store
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isPermissionsDrawerOpen, setIsPermissionsDrawerOpen] = useState(false); // For viewing/editing permissions
-  const [currentRoleForPermissions, setCurrentRoleForPermissions] =
-    useState<RoleItem | null>(null);
+  const [isPermissionsDrawerOpen, setIsPermissionsDrawerOpen] = useState(false);
+  const [currentRoleForPermissions, setCurrentRoleForPermissions] = useState<RoleItem | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -389,189 +453,149 @@ const RolesListing = () => {
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<RoleItem | null>(null);
 
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
   const [filterCriteria, setFilterCriteria] = useState<RoleFilterFormData>({});
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
-    sort: { order: "", key: "" },
+    sort: { order: "desc", key: "created_at" },
     query: "",
   });
   const [selectedItems, setSelectedItems] = useState<RoleItem[]>([]);
 
-  const addFormMethods = useForm<RoleFormData>({
-    resolver: zodResolver(roleFormSchema),
-    mode: "onChange",
-  });
-  const editFormMethods = useForm<RoleFormData>({
-    resolver: zodResolver(roleFormSchema),
-    mode: "onChange",
-  });
-  const filterFormMethods = useForm<RoleFilterFormData>({
-    resolver: zodResolver(roleFilterFormSchema),
-    defaultValues: filterCriteria,
-  });
+  const tableLoading = masterLoading === true || masterLoading === "loading" || isSubmitting || isDeleting;
+
+  // Fetch data on mount
+  useEffect(() => {
+    dispatch(getRolesAction()); // In a real app, you would dispatch this
+  }, [dispatch]);
+
+  // Handle Redux errors
+  // useEffect(() => {
+  //   if (error) {
+  //     toast.push(
+  //       <Notification title="Error" type="danger">
+  //         {error.message || "An error occurred"}
+  //       </Notification>
+  //     );
+  //   }
+  // }, [error]);
+
+  const defaultFormValues: RoleFormData = {
+    display_name: "", name: "", description: "",
+    employee: false, designation	: false, department: false, display_role: false,
+  };
+
+  const addFormMethods = useForm<RoleFormData>({ resolver: zodResolver(roleFormSchema), defaultValues: defaultFormValues, mode: "onChange" });
+  const editFormMethods = useForm<RoleFormData>({ resolver: zodResolver(roleFormSchema), defaultValues: defaultFormValues, mode: "onChange" });
+  const filterFormMethods = useForm<RoleFilterFormData>({ resolver: zodResolver(roleFilterFormSchema), defaultValues: filterCriteria });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), mode: "onChange" });
+
 
   // --- CRUD Handlers ---
   const openAddDrawer = () => {
-    addFormMethods.reset({ displayName: "", roleName: "", description: "" });
+    addFormMethods.reset(defaultFormValues);
     setIsAddDrawerOpen(true);
   };
-  const closeAddDrawer = () => {
-    addFormMethods.reset();
-    setIsAddDrawerOpen(false);
-  };
+  const closeAddDrawer = () => setIsAddDrawerOpen(false);
+
   const onAddRoleSubmit = async (data: RoleFormData) => {
     setIsSubmitting(true);
-    setMasterLoadingStatus("idle");
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // Ensure roleName (which is used as ID here) is unique
-    if (roles.some((r) => r.roleName === data.roleName)) {
-      addFormMethods.setError("roleName", {
-        type: "manual",
-        message: "This Role Name (system key) already exists.",
-      });
-      setIsSubmitting(false);
-      setMasterLoadingStatus("idle");
-      return;
+    // In real app, dispatch an action
+    const resultAction = await dispatch(addRolesAction(data));
+    // Simulating API call
+    // await new Promise(res => setTimeout(res, 500));
+    // const resultAction = { meta: { requestId: '123' }, type: 'master/addRole/fulfilled' }; // Mock success
+    
+    if (resultAction) {
+        toast.push(<Notification title="Role Added" type="success">{`Role "${data.display_name}" added.`}</Notification>);
+        closeAddDrawer();
+        dispatch(getRolesAction());
+    } else {
+        toast.push(<Notification title="Add Failed" type="danger">{"Could not add role."}</Notification>);
     }
-    const newRole: RoleItem = {
-      id: data.roleName,
-      ...data,
-      addedDate: new Date(),
-    }; // Using roleName as ID
-    setRoles((prev) => [newRole, ...prev]);
-    toast.push(
-      <Notification
-        title="Role Added"
-        type="success"
-      >{`Role "${data.displayName}" added.`}</Notification>
-    );
-    closeAddDrawer();
     setIsSubmitting(false);
-    setMasterLoadingStatus("idle");
   };
 
   const openEditDrawer = (role: RoleItem) => {
     setEditingRole(role);
     editFormMethods.reset({
-      displayName: role.displayName,
-      roleName: role.roleName,
+      display_name: role.display_name,
+      name: role.name,
       description: role.description,
+      employee: role.employee,
+      designation	: role.designation	,
+      department: role.department,
+      display_role: role.display_role,
     });
     setIsEditDrawerOpen(true);
   };
   const closeEditDrawer = () => {
     setEditingRole(null);
-    editFormMethods.reset();
     setIsEditDrawerOpen(false);
   };
+
   const onEditRoleSubmit = async (data: RoleFormData) => {
     if (!editingRole) return;
     setIsSubmitting(true);
-    setMasterLoadingStatus("idle");
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // If roleName (ID) is editable and changed, check for uniqueness again (excluding current role)
-    if (
-      data.roleName !== editingRole.roleName &&
-      roles.some((r) => r.roleName === data.roleName)
-    ) {
-      editFormMethods.setError("roleName", {
-        type: "manual",
-        message: "This Role Name (system key) already exists.",
-      });
-      setIsSubmitting(false);
-      setMasterLoadingStatus("idle");
-      return;
+    // In real app, dispatch an action
+    const resultAction = await dispatch(editRolesAction({ id: editingRole.id, data }));
+    // await new Promise(res => setTimeout(res, 500));
+    // const resultAction = { meta: { requestId: '123' }, type: 'master/editRole/fulfilled' }; // Mock success
+    // console.log(resultAction)
+    if (resultAction) {
+        toast.push(<Notification title="Role Updated" type="success">{`Role "${data.display_name}" updated.`}</Notification>);
+        closeEditDrawer();
+        dispatch(getRolesAction());
+    } else {
+        toast.push(<Notification title="Update Failed" type="danger">{"Could not update role."}</Notification>);
     }
-    const updatedRole: RoleItem = {
-      ...editingRole,
-      ...data,
-      id: data.roleName,
-    }; // Update ID if roleName changed
-    setRoles((prev) =>
-      prev.map((r) => (r.id === editingRole.id ? updatedRole : r))
-    );
-    toast.push(
-      <Notification
-        title="Role Updated"
-        type="success"
-      >{`Role "${data.displayName}" updated.`}</Notification>
-    );
-    closeEditDrawer();
     setIsSubmitting(false);
-    setMasterLoadingStatus("idle");
   };
 
   const handleDeleteClick = (role: RoleItem) => {
     setItemToDelete(role);
     setSingleDeleteConfirmOpen(true);
   };
+
   const onConfirmSingleDelete = async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
-    setMasterLoadingStatus("idle");
     setSingleDeleteConfirmOpen(false);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setRoles((prev) => prev.filter((r) => r.id !== itemToDelete!.id));
-    setSelectedItems((prev) =>
-      prev.filter((item) => item.id !== itemToDelete!.id)
-    );
-    toast.push(
-      <Notification
-        title="Role Deleted"
-        type="success"
-      >{`Role "${itemToDelete.displayName}" deleted.`}</Notification>
-    );
+    // await dispatch(deleteRolesAction({ id: itemToDelete.id }));
+    await new Promise(res => setTimeout(res, 500));
+    toast.push(<Notification title="Role Deleted" type="success">{`Role "${itemToDelete.display_name}" deleted.`}</Notification>);
+    dispatch(getRolesAction());
     setIsDeleting(false);
-    setMasterLoadingStatus("idle");
     setItemToDelete(null);
   };
 
   const handleDeleteSelected = async () => {
-    if (selectedItems.length === 0) {
-      toast.push(
-        <Notification title="No Selection" type="info">
-          Please select roles to delete.
-        </Notification>
-      );
-      return;
-    }
+    if (selectedItems.length === 0) return;
     setIsDeleting(true);
-    setMasterLoadingStatus("idle");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const idsToDelete = selectedItems.map((item) => item.id);
-    setRoles((prev) => prev.filter((r) => !idsToDelete.includes(r.id)));
-    toast.push(
-      <Notification
-        title="Deletion Successful"
-        type="success"
-      >{`${selectedItems.length} role(s) deleted.`}</Notification>
-    );
+    const idsToDelete = selectedItems.map((item) => item.id).join(",");
+    // await dispatch(deleteAllRolessAction({ ids: idsToDelete }));
+    await new Promise(res => setTimeout(res, 500));
+    toast.push(<Notification title="Deletion Successful" type="success">{`${selectedItems.length} role(s) deleted.`}</Notification>);
     setSelectedItems([]);
+    dispatch(getRolesAction());
     setIsDeleting(false);
-    setMasterLoadingStatus("idle");
   };
 
+  // --- Permissions Drawer ---
   const handleViewPermissions = (role: RoleItem) => {
     setCurrentRoleForPermissions(role);
     setIsPermissionsDrawerOpen(true);
-    // In a real app, you might fetch permissions for this role here
-    console.log("Viewing/Editing permissions for:", role.displayName);
   };
-  const closePermissionsDrawer = () => {
-    setIsPermissionsDrawerOpen(false);
-    setCurrentRoleForPermissions(null);
-  };
-  const onSavePermissions = async (/* permissionsData: any */) => {
-    // Placeholder for saving permissions
-    // Simulate saving
-    toast.push(
-      <Notification title="Permissions Updated (Simulated)" type="success" />
-    );
+  const closePermissionsDrawer = () => setIsPermissionsDrawerOpen(false);
+  const onSavePermissions = async () => {
+    toast.push(<Notification title="Permissions Updated (Simulated)" type="success" />);
     closePermissionsDrawer();
   };
 
-  // --- Filter Drawer Handlers ---
+  // --- Filter Drawer ---
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
@@ -583,151 +607,95 @@ const RolesListing = () => {
     closeFilterDrawer();
   };
   const onClearFilters = () => {
-    const defaultFilters = { filterDisplayName: "" };
-    filterFormMethods.reset(defaultFilters);
-    setFilterCriteria(defaultFilters);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+    setFilterCriteria({});
+    filterFormMethods.reset({});
+    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
   };
 
-  // --- Table Interaction Handlers (Reused) ---
-  const handleSetTableData = useCallback(
-    (data: Partial<TableQueries>) =>
-      setTableData((prev) => ({ ...prev, ...data })),
-    []
-  );
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleRowSelect = useCallback((checked: boolean, row: RoleItem) => {
-    setSelectedItems((prev) =>
-      checked
-        ? prev.some((item) => item.id === row.id)
-          ? prev
-          : [...prev, row]
-        : prev.filter((item) => item.id !== row.id)
-    );
-  }, []);
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<RoleItem>[]) => {
-      const originals = currentRows.map((r) => r.original);
-      if (checked)
-        setSelectedItems((prev) => {
-          const oldIds = new Set(prev.map((i) => i.id));
-          return [...prev, ...originals.filter((o) => !oldIds.has(o.id))];
-        });
-      else {
-        const currentIds = new Set(originals.map((o) => o.id));
-        setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id)));
-      }
-    },
-    []
-  );
+  // --- Table Interaction Handlers ---
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
+  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
+  const handleRowSelect = useCallback((checked: boolean, row: RoleItem) => { setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id)); }, []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<RoleItem>[]) => {
+    const originals = currentRows.map((r) => r.original);
+    if (checked) {
+      const newItems = originals.filter(o => !selectedItems.some(s => s.id === o.id));
+      setSelectedItems(prev => [...prev, ...newItems]);
+    } else {
+      const currentIds = new Set(originals.map((o) => o.id));
+      setSelectedItems(prev => prev.filter(i => !currentIds.has(i.id)));
+    }
+  }, [selectedItems]);
 
   // --- Data Processing ---
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: RoleItem[] = cloneDeep(roles);
-    if (
-      filterCriteria.filterDisplayName &&
-      filterCriteria.filterDisplayName.trim() !== ""
-    ) {
+    let processedData: RoleItem[] = cloneDeep(Roles || []);
+    if (filterCriteria.filterDisplayName?.trim()) {
       const q = filterCriteria.filterDisplayName.toLowerCase().trim();
-      processedData = processedData.filter(
-        (item) =>
-          item.displayName.toLowerCase().includes(q) ||
-          item.roleName.toLowerCase().includes(q)
-      );
+      processedData = processedData.filter(item => item.name.toLowerCase().includes(q));
     }
-    if (tableData.query && tableData.query.trim() !== "") {
+    if (tableData.query?.trim()) {
       const q = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(
-        (item) =>
-          item.id.toLowerCase().includes(q) ||
-          item.displayName.toLowerCase().includes(q) ||
-          item.roleName.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q)
-      );
+      processedData = processedData.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(q)));
     }
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key && processedData.length > 0) {
-      processedData.sort((a, b) => {
-        let aVal = a[key as keyof RoleItem] as any;
-        let bVal = b[key as keyof RoleItem] as any;
-        if (key === "addedDate") {
-          aVal = new Date(aVal).getTime();
-          bVal = new Date(bVal).getTime();
-          return order === "asc" ? aVal - bVal : bVal - aVal;
-        }
-        const aStr = String(aVal ?? "").toLowerCase();
-        const bStr = String(bVal ?? "").toLowerCase();
-        return order === "asc"
-          ? aStr.localeCompare(bStr)
-          : bStr.localeCompare(aStr);
-      });
+    if (order && key) {
+        processedData.sort((a, b) => {
+            const aVal = a[key as keyof RoleItem];
+            const bVal = b[key as keyof RoleItem];
+            if (key === 'created_at' || key === 'updated_at') {
+                return order === 'asc' ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
+            }
+            return order === 'asc' ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
+        });
     }
-    const dataToExport = [...processedData];
-    const currentTotal = processedData.length;
-    const pageIndex = tableData.pageIndex as number;
-    const pageSize = tableData.pageSize as number;
-    const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+    const totalCount = processedData.length;
+    const startIndex = (tableData.pageIndex - 1) * tableData.pageSize;
     return {
-      pageData: dataForPage,
-      total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      pageData: processedData.slice(startIndex, startIndex + tableData.pageSize),
+      total: totalCount,
+      allFilteredAndSortedData: processedData,
     };
-  }, [roles, tableData, filterCriteria]);
+  }, [Roles, tableData, filterCriteria]);
 
-  const handleExportData = () => {
-    const success = exportToCsvRoles(
-      "system_roles_export.csv",
-      allFilteredAndSortedData
-    );
-    if (success)
-      toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported.
-        </Notification>
-      );
+  // --- Export Handlers ---
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData.length) {
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
   };
-
-  const displayNameOptionsForFilter = useMemo(() => {
-    const unique = new Set(roles.map((item) => item.displayName));
-    return Array.from(unique).map((name) => ({ value: name, label: name }));
-  }, [roles]);
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const fileName = `system_roles_export_${new Date().toISOString().split('T')[0]}.csv`;
+    await dispatch(submitExportReasonAction({ reason: data.reason, module: "Roles", file_name: fileName })).unwrap();
+    // await new Promise(res => setTimeout(res, 500)); // Simulate API
+    toast.push(
+      <Notification title="Export Reason Submitted" type="success" />
+    );
+    exportToCsvRoles(fileName, allFilteredAndSortedData);
+    // Optional:
+    toast.push(
+      <Notification title="Data Exported" type="success">
+        Roles data exported.
+      </Notification>
+    );
+    setIsExportReasonModalOpen(false);
+    setIsSubmittingExportReason(false);
+  };
 
   const columns: ColumnDef<RoleItem>[] = useMemo(
     () => [
-      {
-        header: "ID / System Key",
-        accessorKey: "id",
-        enableSorting: true,
-        size: 180,
-      },
-      {
-        header: "Display Name",
-        accessorKey: "displayName",
-        enableSorting: true,
-      },
+      { header: "System Key", accessorKey: "name", enableSorting: true, size: 180 },
+      { header: "Display Name", accessorKey: "display_name", enableSorting: true },
       {
         header: "Description",
         accessorKey: "description",
-        enableSorting: false,
         cell: (props) => (
           <Tooltip title={props.row.original.description} wrapperClass="w-full">
             <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">
@@ -737,32 +705,53 @@ const RolesListing = () => {
         ),
       },
       {
-        header: "Date Added",
-        accessorKey: "addedDate",
+        header: "Updated Info",
+        accessorKey: "updated_at",
         enableSorting: true,
         size: 180,
-        cell: (props) => new Date(props.getValue<Date>()).toLocaleDateString(),
+        cell: (props) => {
+            const { updated_at, updated_by_user } = props.row.original;
+            return (
+                <div className="text-xs">
+                    <span>{updated_by_user?.name || "N/A"}</span><br />
+                    <b>{updated_by_user?.roles[0]?.display_name || "N/A"}</b><br />
+                    <span>{new Date(updated_at).toLocaleDateString()}</span>
+                </div>
+            );
+        },
       },
       {
-        header: "Actions",
-        id: "action",
-        size: 200,
-        meta: { HeaderClass: "text-center" },
+        header: "Actions", id: "action", size: 120,
         cell: (props) => (
-          <div className="flex items-center justify-center gap-2">
-            <ActionColumn
-              onEdit={() => openEditDrawer(props.row.original)}
-              onDelete={() => handleDeleteClick(props.row.original)}
-              onViewPermissions={() =>
-                handleViewPermissions(props.row.original)
-              }
-            />
-          </div>
+          <ActionColumn
+            onEdit={() => openEditDrawer(props.row.original)}
+            onViewDetail={() => handleViewPermissions(props.row.original)}
+          />
         ),
       },
     ],
-    [handleViewPermissions]
-  ); // openEditDrawer, handleDeleteClick are stable
+    []
+  );
+
+  const formDrawerConfig = [
+    {
+      type: 'add', title: 'Add New Role', isOpen: isAddDrawerOpen, closeFn: closeAddDrawer,
+      formId: 'addRoleForm', methods: addFormMethods, onSubmit: onAddRoleSubmit,
+      submitText: 'Save', submittingText: 'Saving...',
+    },
+    {
+      type: 'edit', title: 'Edit Role', isOpen: isEditDrawerOpen, closeFn: closeEditDrawer,
+      formId: 'editRoleForm', methods: editFormMethods, onSubmit: onEditRoleSubmit,
+      submitText: 'Save', submittingText: 'Saving...',
+    }
+  ];
+
+  const accessFields: { label: string; name: "employee" | "designation" | "department" | "display_role" }[] = [
+    { label: "Employee", name: "employee" },
+    { label: "Designation", name: "designation" },
+    { label: "Department", name: "department" },
+    { label: "Display Role", name: "display_role" },
+  ];
 
   return (
     <>
@@ -770,92 +759,97 @@ const RolesListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">{pageTitle}</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>
               Add New
             </Button>
           </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div>
+                  <div><h6 className="text-blue-500">{Roles?.counts?.total}</h6><span className="font-semibold text-xs">Total Roles</span></div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserCheck size={24} /></div>
+                  <div><h6 className="text-green-500">{Roles?.counts?.employeeAccess}</h6><span className="font-semibold text-xs">Employee Access</span></div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserCancel size={24} /></div>
+                  <div><h6 className="text-violet-500">{Roles?.counts?.designationAccess}</h6><span className="font-semibold text-xs">Designation Access</span></div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuilding size={24} /></div>
+                  <div><h6 className="text-orange-500">{Roles?.counts?.departmentAccess}</h6><span className="font-semibold text-xs">Department Access</span></div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbHierarchy2 size={24} /></div>
+                  <div><h6 className="text-red-500">{Roles?.counts?.roleAccess}</h6><span className="font-semibold text-xs">Role Access</span></div>
+              </Card>
+          </div>
+
           <RoleTableTools
             onClearFilters={onClearFilters}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
-            onExport={handleExportData}
+            onExport={handleOpenExportReasonModal}
           />
           <div className="mt-4 flex-grow overflow-auto">
             <DataTable
               selectable
               columns={columns}
               data={pageData}
-              loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
-              }
-              pagingData={{
-                total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              checkboxChecked={(row) =>
-                selectedItems.some((item) => item.id === row.id)
-              }
+              loading={tableLoading}
+              pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }}
+              checkboxChecked={(row) => selectedItems.some((item) => item.id === row.id)}
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
               onCheckBoxChange={handleRowSelect}
               onIndeterminateCheckBoxChange={handleAllRowSelect}
-              noData={!masterLoadingStatus && pageData.length === 0}
+              noData={!tableLoading && pageData.length === 0}
             />
           </div>
         </AdaptiveCard>
       </Container>
 
-      <RoleSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-      />
+      <RoleSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-      {/* Add Role Drawer */}
-      <Drawer
-        title="Add New Role"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        width={520}
-        footer={
-          <div className="text-right w-full">
-            {" "}
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>{" "}
-            <Button
-              size="sm"
-              variant="solid"
-              form="addRoleForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!addFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>{" "}
-          </div>
-        }
-      >
-        <Form
-          id="addRoleForm"
-          onSubmit={addFormMethods.handleSubmit(onAddRoleSubmit)}
-          className="flex flex-col gap-2"
+      {/* --- Add/Edit Drawers --- */}
+      {formDrawerConfig.map((drawer) => (
+        <Drawer
+          key={drawer.formId}
+          title={drawer.title}
+          isOpen={drawer.isOpen}
+          onClose={drawer.closeFn}
+          onRequestClose={drawer.closeFn}
+          width={520}
+          footer={
+            <div className="text-right w-full">
+              <Button size="sm" className="mr-2" onClick={drawer.closeFn} disabled={isSubmitting}>Cancel</Button>
+              <Button size="sm" variant="solid" form={drawer.formId} type="submit" loading={isSubmitting} disabled={!drawer.methods.formState.isValid || isSubmitting}>
+                {isSubmitting ? drawer.submittingText : drawer.submitText}
+              </Button>
+            </div>
+          }
         >
+        <Form
+          id={drawer.formId}
+          onSubmit={drawer.methods.handleSubmit(drawer.onSubmit as any)}
+          className="flex flex-col gap-4"
+        >
+          {/* Display Name */}
           <FormItem
-            label={<div>Display Name<span className="text-red-500"> * </span></div>}
-            invalid={!!addFormMethods.formState.errors.displayName}
-            errorMessage={addFormMethods.formState.errors.displayName?.message}
+            label={
+              <div>
+                Display Name<span className="text-red-500"> *</span>
+              </div>
+            }
+            invalid={!!drawer.methods.formState.errors.display_name}
+            errorMessage={drawer.methods.formState.errors.display_name?.message as string}
           >
             <Controller
-              name="displayName"
-              control={addFormMethods.control}
+              name="display_name"
+              control={drawer.methods.control}
               render={({ field }) => (
                 <Input
                   {...field}
@@ -865,31 +859,44 @@ const RolesListing = () => {
               )}
             />
           </FormItem>
+
+          {/* Role Name / System Key */}
           <FormItem
-            label={<div>Role Name / System Key<span className="text-red-500"> * </span></div>}
-            invalid={!!addFormMethods.formState.errors.roleName}
-            errorMessage={addFormMethods.formState.errors.roleName?.message}
+            label={
+              <div>
+                Role Name / System Key<span className="text-red-500"> *</span>
+              </div>
+            }
+            invalid={!!drawer.methods.formState.errors.name}
+            errorMessage={drawer.methods.formState.errors.name?.message as string}
           >
             <Controller
-              name="roleName"
-              control={addFormMethods.control}
+              name="name"
+              control={drawer.methods.control}
               render={({ field }) => (
                 <Input
                   {...field}
                   prefix={<TbLockAccess />}
-                  placeholder="e.g., content_manager (no spaces, lowercase)"
+                  placeholder="e.g., content_manager"
+                  disabled={drawer.type === "edit"}
                 />
               )}
             />
           </FormItem>
+
+          {/* Description */}
           <FormItem
-            label="Description"
-            invalid={!!addFormMethods.formState.errors.description}
-            errorMessage={addFormMethods.formState.errors.description?.message}
+            label={
+              <div>
+                Description<span className="text-red-500"> *</span>
+              </div>
+            }
+            invalid={!!drawer.methods.formState.errors.description}
+            errorMessage={drawer.methods.formState.errors.description?.message as string}
           >
             <Controller
               name="description"
-              control={addFormMethods.control}
+              control={drawer.methods.control}
               render={({ field }) => (
                 <Input
                   textArea
@@ -900,385 +907,125 @@ const RolesListing = () => {
               )}
             />
           </FormItem>
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormItem label="Employee" className="col-span-1">
-              <Controller
-                name="isEmployee"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <div className="flex space-x-4">
-                    <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
-                    <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
-                  </div>
-                )}
-              />
-            </FormItem>
 
-            <FormItem label="Designation" className="col-span-1">
-              <Controller
-                name="isDesignation"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <div className="flex space-x-4">
-                    <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
-                    <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
-                  </div>
-                )}
-              />
-            </FormItem>
-
-            <FormItem label="Department" className="col-span-1">
-              <Controller
-                name="isDepartment"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <div className="flex space-x-4">
-                    <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
-                    <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
-                  </div>
-                )}
-              />
-            </FormItem>
-
-            <FormItem label="Role" className="col-span-1">
-              <Controller
-                name="isRole"
-                control={addFormMethods.control}
-                render={({ field }) => (
-                  <div className="flex space-x-4">
-                    <Radio checked={field.value === true} onChange={() => field.onChange(true)}>Yes</Radio>
-                    <Radio checked={field.value === false} onChange={() => field.onChange(false)}>No</Radio>
-                  </div>
-                )}
-              />
-            </FormItem>
+          {/* Access Toggles */}
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+            {accessFields.map(({ label, name }) => (
+              <FormItem key={name} label={`${label} Access`} className="col-span-1">
+                <Controller
+                  name={name}
+                  control={drawer.methods.control}
+                  render={({ field }) => (
+                    <Radio.Group value={field.value} onChange={(val) => field.onChange(val)}>
+                      <Radio value={true}>Yes</Radio>
+                      <Radio value={false}>No</Radio>
+                    </Radio.Group>
+                  )}
+                />
+              </FormItem>
+            ))}
           </div> */}
-        </Form>
-      </Drawer>
 
-      {/* Edit Role Drawer */}
-      <Drawer
-        title="Edit Role"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        onRequestClose={closeEditDrawer}
-        width={520}
-        footer={
-          <div className="text-right w-full">
-            {" "}
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>{" "}
-            <Button
-              size="sm"
-              variant="solid"
-              form="editRoleForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!editFormMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>{" "}
-          </div>
-        }
-      >
-        <Form
-          id="editRoleForm"
-          onSubmit={editFormMethods.handleSubmit(onEditRoleSubmit)}
-          className="flex flex-col gap-2"
-        >
-          <FormItem
-            label={<div>Display Name<span className="text-red-500"> * </span></div>}
-            invalid={!!editFormMethods.formState.errors.displayName}
-            errorMessage={editFormMethods.formState.errors.displayName?.message}
-          >
-            <Controller
-              name="displayName"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} prefix={<TbUserShield />} />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label={<div>Role Name / System Key<span className="text-red-500"> * </span></div>}
-            invalid={!!editFormMethods.formState.errors.roleName}
-            errorMessage={editFormMethods.formState.errors.roleName?.message}
-          >
-            <Controller
-              name="roleName"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  prefix={<TbLockAccess />}
-                  disabled={
-                    true /* Usually, system key/ID is not editable after creation */
-                  }
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Description"
-            invalid={!!editFormMethods.formState.errors.description}
-            errorMessage={editFormMethods.formState.errors.description?.message}
-          >
-            <Controller
-              name="description"
-              control={editFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  textArea
-                  {...field}
-                  prefix={<TbFileDescription />}
-                />
-              )}
-            />
-          </FormItem>
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormItem label="Employee Access">
-              <div className="flex gap-6">
-                <Controller
-                  name="isEmployee"
-                  control={editFormMethods.control}
-                  render={({ field }) => (
-                    <>
-                      <Radio
-                        className="mr-4"
-                        checked={field.value === true}
-                        onChange={() => field.onChange(true)}
-                        name="isEmployee"
-                      >
-                        Yes
-                      </Radio>
-                      <Radio
-                        checked={field.value === false}
-                        onChange={() => field.onChange(false)}
-                        name="isEmployee"
-                      >
-                        No
-                      </Radio>
-                    </>
-                  )}
-                />
+          {/* Audit Info - Only in edit mode */}
+          {drawer.type === "edit" && editingRole && (
+            <div className="w-full">
+              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4 border">
+                <div>
+                  <b className="font-semibold text-primary">Latest Update:</b>
+                  <p className="text-sm font-semibold mt-1">
+                    {editingRole.updated_by_user?.name || "N/A"}
+                  </p>
+                  <p className="text-xs">
+                    {editingRole.updated_by_user?.roles?.[0]?.display_name || "N/A"}
+                  </p>
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>
+                    {editingRole.created_at
+                      ? new Date(editingRole.created_at).toLocaleString("en-US", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "N/A"}
+                  </span>
+                  <br />
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>
+                    {editingRole.updated_at
+                      ? new Date(editingRole.updated_at).toLocaleString("en-US", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "N/A"}
+                  </span>
+                </div>
               </div>
-            </FormItem>
-
-            <FormItem label="Designation Access">
-              <div className="flex gap-6">
-                <Controller
-                  name="isDesignation"
-                  control={editFormMethods.control}
-                  render={({ field }) => (
-                    <>
-                      <Radio
-                        className="mr-4"
-                        checked={field.value === true}
-                        onChange={() => field.onChange(true)}
-                        name="isDesignation"
-                      >
-                        Yes
-                      </Radio>
-                      <Radio
-                        checked={field.value === false}
-                        onChange={() => field.onChange(false)}
-                        name="isDesignation"
-                      >
-                        No
-                      </Radio>
-                    </>
-                  )}
-                />
-              </div>
-            </FormItem>
-
-            <FormItem label="Department Access">
-              <div className="flex gap-6">
-                <Controller
-                  name="isDepartment"
-                  control={editFormMethods.control}
-                  render={({ field }) => (
-                    <>
-                      <Radio
-                        className="mr-4"
-                        checked={field.value === true}
-                        onChange={() => field.onChange(true)}
-                        name="isDepartment"
-                      >
-                        Yes
-                      </Radio>
-                      <Radio
-                        checked={field.value === false}
-                        onChange={() => field.onChange(false)}
-                        name="isDepartment"
-                      >
-                        No
-                      </Radio>
-                    </>
-                  )}
-                />
-              </div>
-            </FormItem>
-
-            <FormItem label="Role Access">
-              <div className="flex gap-6">
-                <Controller
-                  name="isRole"
-                  control={editFormMethods.control}
-                  render={({ field }) => (
-                    <>
-                      <Radio
-                        className="mr-4"
-                        checked={field.value === true}
-                        onChange={() => field.onChange(true)}
-                        name="isRole"
-                      >
-                        Yes
-                      </Radio>
-                      <Radio
-                        checked={field.value === false}
-                        onChange={() => field.onChange(false)}
-                        name="isRole"
-                      >
-                        No
-                      </Radio>
-                    </>
-                  )}
-                />
-              </div>
-            </FormItem>
-          </div> */}
-        </Form>
-        <div className="relative w-full ">
-          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-              <p className="text-sm font-semibold">Tushar Joshi</p>
-              <p>System Admin</p>
             </div>
-            <div className="w-[210px]">
-              <br />
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
-              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
-            </div>
-          </div>
+          )}
+        </Form>
+        </Drawer>
+      ))}
+
+      {/* --- Filter Drawer --- */}
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={
+        <div className="text-right w-full">
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
+            <Button size="sm" variant="solid" form="filterRoleForm" type="submit">Apply</Button>
         </div>
-      </Drawer>
-
-      {/* Filter Drawer (Simple Example) */}
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterRoleForm"
-              type="submit"
-            >
-              Apply
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="filterRoleForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4"
-        >
+      }>
+        <Form id="filterRoleForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Display Name / Role Name">
-            <Controller
-              name="filterDisplayName"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter name to filter..." />
-              )}
-            />
+            <Controller name="filterDisplayName" control={filterFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter name to filter..." />)} />
           </FormItem>
-          {/* Add more complex filters here if needed, e.g., a multi-select for permissions */}
         </Form>
       </Drawer>
 
-      {/* Permissions Drawer (Placeholder Content) */}
-      <Drawer
-        title={`Permissions for ${currentRoleForPermissions?.displayName || "Role"
-          }`}
-        isOpen={isPermissionsDrawerOpen}
-        onClose={closePermissionsDrawer}
-        onRequestClose={closePermissionsDrawer}
-        width={700}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={closePermissionsDrawer}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              onClick={onSavePermissions /* Pass form ID if using form */}
-            >
-              Save Permissions
-            </Button>
-          </div>
-        }
-      >
+      {/* --- Permissions Drawer --- */}
+      <Drawer title={`Permissions for ${currentRoleForPermissions?.display_name || "Role"}`} isOpen={isPermissionsDrawerOpen} onClose={closePermissionsDrawer} onRequestClose={closePermissionsDrawer} width={700} footer={
+        <div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closePermissionsDrawer}>Cancel</Button><Button size="sm" variant="solid" onClick={onSavePermissions}>Save Permissions</Button></div>
+      }>
         <div className="p-4">
-          <p>
-            Configure permissions for the role:{" "}
-            <strong>{currentRoleForPermissions?.displayName}</strong> (
-            <code>{currentRoleForPermissions?.roleName}</code>)
-          </p>
+          <p>Configure permissions for the role: <strong>{currentRoleForPermissions?.display_name}</strong> (<code>{currentRoleForPermissions?.name}</code>)</p>
           <div className="mt-4 border p-4 rounded-md min-h-[200px] bg-gray-50 dark:bg-gray-700">
-            {/* Placeholder for a permissions tree or checklist */}
-            <p className="text-gray-400 dark:text-gray-500">
-              Permissions management UI would go here.
-            </p>
-            <p className="mt-2">For example, a tree of modules and actions:</p>
-            <ul className="list-disc list-inside ml-4 mt-2">
-              <li>Module A: View, Create, Edit, Delete</li>
-              <li>Module B: View, Export</li>
-              <li>Settings: Manage Users, Configure System</li>
-            </ul>
+            <p className="text-gray-400 dark:text-gray-500">Permissions management UI would go here.</p>
           </div>
         </div>
       </Drawer>
 
-      {/* Delete Confirmation Dialog */}
+      {/* --- Single Delete Confirmation --- */}
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Role"
+        onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
+        onConfirm={onConfirmSingleDelete} loading={isDeleting}>
+        <p>Are you sure you want to delete role "<strong>{itemToDelete?.display_name}</strong>"?</p>
+      </ConfirmDialog>
+      
+      {/* --- Export Reason Modal --- */}
       <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Role"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
-      >
-        <p>
-          Are you sure you want to delete role "
-          <strong>{itemToDelete?.displayName}</strong>"?
-        </p>
+        isOpen={isExportReasonModalOpen}
+        type="info" title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
+        <Form id="exportRolesReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
+            <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
+                <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+            </FormItem>
+        </Form>
       </ConfirmDialog>
     </>
   );
