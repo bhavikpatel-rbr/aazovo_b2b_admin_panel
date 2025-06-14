@@ -807,14 +807,14 @@ const DesignationListing = () => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
-            ? new Date(updated_at).toLocaleString("en-US", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
             : "N/A";
           return (
             <div className="text-xs">
@@ -1148,39 +1148,40 @@ const DesignationListing = () => {
                 </div>
                 <div className="text-right">
                   <br />
-                  <span className="font-semibold">Created:</span>{" "}
+                  <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingItem.created_at
-                      ? new Date(editingItem.created_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? `${new Date(editingItem.created_at).getDate()} ${new Date(
+                          editingItem.created_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
+                          editingItem.created_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
                   <br />
-                  <span className="font-semibold">Updated:</span>{" "}
+                  <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingItem.updated_at
-                      ? new Date(editingItem.updated_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
+                          editingItem.updated_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
+                          editingItem.updated_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
+
                 </div>
               </div>
             </div>

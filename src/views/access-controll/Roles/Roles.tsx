@@ -610,6 +610,7 @@ const RolesListing = () => {
     setFilterCriteria({});
     filterFormMethods.reset({});
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
+    dispatch(getRolesAction());
   };
 
   // --- Table Interaction Handlers ---
@@ -711,11 +712,21 @@ const RolesListing = () => {
         size: 180,
         cell: (props) => {
             const { updated_at, updated_by_user } = props.row.original;
+            const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+            updated_at
+            ).toLocaleString("en-US", { month: "long" })} ${new Date(
+            updated_at
+            ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+            "en-US",
+            { hour: "numeric", minute: "2-digit", hour12: true }
+            )}`
+            : "N/A";
             return (
                 <div className="text-xs">
                     <span>{updated_by_user?.name || "N/A"}</span><br />
                     <b>{updated_by_user?.roles[0]?.display_name || "N/A"}</b><br />
-                    <span>{new Date(updated_at).toLocaleDateString()}</span>
+                    <span>{formattedDate}</span>
                 </div>
             );
         },
@@ -764,7 +775,7 @@ const RolesListing = () => {
             </Button>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
+          {/* <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
               <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div>
                   <div><h6 className="text-blue-500">{Roles?.counts?.total}</h6><span className="font-semibold text-xs">Total Roles</span></div>
@@ -785,7 +796,7 @@ const RolesListing = () => {
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbHierarchy2 size={24} /></div>
                   <div><h6 className="text-red-500">{Roles?.counts?.roleAccess}</h6><span className="font-semibold text-xs">Role Access</span></div>
               </Card>
-          </div>
+          </div> */}
 
           <RoleTableTools
             onClearFilters={onClearFilters}
@@ -929,7 +940,7 @@ const RolesListing = () => {
           {/* Audit Info - Only in edit mode */}
           {drawer.type === "edit" && editingRole && (
             <div className="w-full">
-              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4 border">
+              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4">
                 <div>
                   <b className="font-semibold text-primary">Latest Update:</b>
                   <p className="text-sm font-semibold mt-1">
@@ -943,30 +954,37 @@ const RolesListing = () => {
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingRole.created_at
-                      ? new Date(editingRole.created_at).toLocaleString("en-US", {
-                          day: "2-digit",
+                      ? `${new Date(editingRole.created_at).getDate()} ${new Date(
+                          editingRole.created_at
+                        ).toLocaleString("en-US", {
                           month: "short",
-                          year: "numeric",
+                        })} ${new Date(editingRole.created_at).getFullYear()}, ${new Date(
+                          editingRole.created_at
+                        ).toLocaleTimeString("en-US", {
                           hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
-                        })
+                        })}`
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingRole.updated_at
-                      ? new Date(editingRole.updated_at).toLocaleString("en-US", {
-                          day: "2-digit",
+                      ? `${new Date(editingRole.updated_at).getDate()} ${new Date(
+                          editingRole.updated_at
+                        ).toLocaleString("en-US", {
                           month: "short",
-                          year: "numeric",
+                        })} ${new Date(editingRole.updated_at).getFullYear()}, ${new Date(
+                          editingRole.updated_at
+                        ).toLocaleTimeString("en-US", {
                           hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
-                        })
+                        })}`
                       : "N/A"}
                   </span>
+
                 </div>
               </div>
             </div>
