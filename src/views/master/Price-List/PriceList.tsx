@@ -1386,7 +1386,7 @@ const PriceList = () => {
             </div>}
           </Form>
           {drawerProps.isEdit && editingPriceListItem && (
-               <div className="absolute bottom-[14%] w-[92%]">
+               <div className="absolute bottom-[14%] w-[auto]">
               {/*
     - Replace 'grid-cols-2' with an arbitrary value for grid-template-columns.
     - 'grid-cols-[2fr_3fr]' means the first column gets 2 fractional units,

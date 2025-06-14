@@ -317,7 +317,7 @@ const AutoEmailTemplatesListing = () => {
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); }, [filterFormMethods]);
+  const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); dispatch(getAutoEmailTemplatesAction()); setIsFilterDrawerOpen(false); }, [filterFormMethods]);
   
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -451,7 +451,7 @@ const AutoEmailTemplatesListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Auto Email Templates</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Template</Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
           <div className="grid grid-cols-4 mb-4 gap-2">
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbAlignBoxCenterBottom size={24} /></div><div><h6 className="text-blue-500">{autoEmailTemplatesData?.counts?.total}</h6><span className="font-semibold text-xs">Total</span></div></Card>
@@ -472,7 +472,7 @@ const AutoEmailTemplatesListing = () => {
           {renderDrawerForm(formMethods)}
         </Form>
         {isEditDrawerOpen && editingItem && (
-          <div className="absolute bottom-[14%] w-[92%]">
+          <div className="absolute bottom-[14%] w-[auto]">
             <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
               <div>
                 <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />

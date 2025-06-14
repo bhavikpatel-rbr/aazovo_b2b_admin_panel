@@ -998,7 +998,7 @@ const Documents = () => {
         </Form>
 
         {editingDocument && (
-            <div className="absolute bottom-[14%] w-[92%]">
+            <div className="absolute bottom-[14%] w-[auto]">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">

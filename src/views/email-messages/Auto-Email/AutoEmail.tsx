@@ -366,7 +366,7 @@ const AutoEmailTemplatesListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Auto Email Templates</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New Template</Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4 gap-2">
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
@@ -398,7 +398,7 @@ const AutoEmailTemplatesListing = () => {
         <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 pb-28">
             {renderDrawerForm(formMethods)}
             {editingItem && (
-             <div className="absolute w-[96%] bottom-20">
+             <div className="absolute w-[auto] bottom-20">
               <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
