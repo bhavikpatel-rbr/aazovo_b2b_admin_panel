@@ -483,6 +483,7 @@ const TrendingImages = () => {
         setFilterCriteria(defaultFilters);
         handleSetTableData({ pageIndex: 1 });
         dispatch(getTrendingImagesAction());
+        setIsFilterDrawerOpen(false);
     };
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {

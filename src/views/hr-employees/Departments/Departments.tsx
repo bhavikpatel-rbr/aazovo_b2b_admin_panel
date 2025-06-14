@@ -475,6 +475,7 @@ const Departments = () => {
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
     dispatch(getDepartmentsAction());
+    setIsFilterDrawerOpen(false);
   }, [filterFormMethods, dispatch]); // Added handleSetTableData to dependencies
 
   const departmentNameOptions = useMemo(() => {

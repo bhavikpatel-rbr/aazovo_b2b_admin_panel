@@ -881,6 +881,7 @@ const RowDataListing = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
+    setIsFilterDrawerOpen(false);
   }, [filterFormMethods]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {

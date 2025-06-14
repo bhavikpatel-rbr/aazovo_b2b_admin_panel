@@ -607,6 +607,7 @@ const JobPostsListing = () => {
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
     dispatch(getJobPostsAction());
+    setIsFilterDrawerOpen(false);
   }, [filterFormMethods, dispatch, handleSetTableData]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -863,8 +864,40 @@ const JobPostsListing = () => {
                 </div>
                 <div>
                   <br />
-                  <span className="font-semibold">Created At:</span> <span>{currentEditingItem.created_at ? new Date(currentEditingItem.created_at).toLocaleString() : "N/A"}</span><br />
-                  <span className="font-semibold">Updated At:</span> <span>{currentEditingItem.updated_at ? new Date(currentEditingItem.updated_at).toLocaleString() : "N/A"}</span>
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>
+                    {currentEditingItem.created_at
+                      ? `${new Date(currentEditingItem.created_at).getDate()} ${new Date(
+                          currentEditingItem.created_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(currentEditingItem.created_at).getFullYear()}, ${new Date(
+                          currentEditingItem.created_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
+                      : "N/A"}
+                  </span>
+                  <br />
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>
+                    {currentEditingItem.updated_at
+                      ? `${new Date(currentEditingItem.updated_at).getDate()} ${new Date(
+                          currentEditingItem.updated_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(currentEditingItem.updated_at).getFullYear()}, ${new Date(
+                          currentEditingItem.updated_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
+                      : "N/A"}
+                  </span>
+
                 </div>
               </div>
             </div>
@@ -924,7 +957,7 @@ const JobPostsListing = () => {
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button>
             <Button size="sm" variant="solid" form="jobPostForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>
-              {isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save Changes" : "Create Post")}
+              {isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save" : "Save")}
             </Button>
           </div>
         }
