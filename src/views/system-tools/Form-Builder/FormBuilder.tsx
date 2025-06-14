@@ -101,9 +101,9 @@ export type FormSection = {
 export type FormBuilderItem = {
   id: number;
   form_name: string;
-  section: string;
-  department_ids: string;
-  category_ids: string;
+  section: string; // JSON string for FormSection[]
+  department_ids: string; // JSON string for (string | number)[]
+  category_ids: string;   // JSON string for (string | number)[]
   created_by: string;
   updated_by: string;
   created_at: string;
@@ -112,12 +112,12 @@ export type FormBuilderItem = {
   status: string;
   form_title: string | null;
   form_description: string | null;
-  created_by_user: {
+  created_by_user: { // Assuming this structure is always present, but properties might be null/missing
     id: number;
     name: string;
     roles: { id: number; display_name: string }[];
   };
-  updated_by_user: {
+  updated_by_user: { // Assuming this structure is always present, but properties might be null/missing
     id: number;
     name: string;
     roles: { id: number; display_name: string }[];
@@ -164,8 +164,9 @@ const CSV_KEYS_FORM_EXPORT: (keyof FormExportItem)[] = ["id", "form_name", "form
 
 const parseStringifiedArray = (str: string): (string | number)[] => {
   try {
+    if (!str) return []; // Handle empty or null string
     const parsed = JSON.parse(str);
-    return Array.isArray(parsed) ? parsed.map(String) : []; // Ensure IDs are strings for comparison
+    return Array.isArray(parsed) ? parsed.map(String) : [];
   } catch (e) {
     return [];
   }
@@ -173,11 +174,15 @@ const parseStringifiedArray = (str: string): (string | number)[] => {
 
 function exportFormsToCsvLogic(
   filename: string,
-  rows: FormBuilderItem[],
-  allDepartmentsMasterList: DepartmentListItem[], // Master list for fallback
-  allCategoriesMasterList: GeneralCategoryListItem[] // Master list for fallback
+  rowsInput: FormBuilderItem[],
+  allDepartmentsMasterListInput?: DepartmentListItem[],
+  allCategoriesMasterListInput?: GeneralCategoryListItem[]
 ) {
-  if (!rows || !rows.length) return false;
+  const rows = rowsInput || [];
+  if (!rows.length) return false;
+
+  const allDepartmentsMasterList = allDepartmentsMasterListInput || [];
+  const allCategoriesMasterList = allCategoriesMasterListInput || [];
 
   const preparedRows: FormExportItem[] = rows.map((row) => {
     let departmentNamesDisplay: string;
@@ -204,10 +209,10 @@ function exportFormsToCsvLogic(
       department_names_display: departmentNamesDisplay,
       category_names_display: categoryNamesDisplay,
       question_count: row.questionCount || 0,
-      created_at_formatted: new Date(row.created_at).toLocaleString(),
-      updated_by_name: row.updated_by_user.name,
-      updated_by_role: row.updated_by_user.roles[0]?.display_name || "N/A",
-      updated_at_formatted: new Date(row.updated_at).toLocaleString(),
+      created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : "N/A",
+      updated_by_name: row.updated_by_user?.name || "N/A",
+      updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A",
+      updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
     };
   });
 
@@ -271,8 +276,8 @@ const FormBuilder = () => {
   const {
     formsData: rawFormsData = [],
     status: masterLoadingStatus = "idle",
-    CategoriesData = [],
-    departmentsData = [],
+    CategoriesData = [], // Default to empty array
+    departmentsData = { data: [] }, // Default to object with empty data array
   } = useSelector(masterSelector, shallowEqual);
 
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -290,8 +295,14 @@ const FormBuilder = () => {
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
-  const categoryFilterOptions = useMemo(() => CategoriesData.map((cat: GeneralCategoryListItem) => ({ value: String(cat.id), label: cat.name })), [CategoriesData]);
-  const departmentFilterOptions = useMemo(() => departmentsData?.data.map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData?.data]);
+  const categoryFilterOptions = useMemo(() => 
+    (CategoriesData || []).map((cat: GeneralCategoryListItem) => ({ value: String(cat.id), label: cat.name })),
+  [CategoriesData]);
+
+  const departmentFilterOptions = useMemo(() => 
+    (departmentsData?.data || []).map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), 
+  [departmentsData?.data]);
+  
   const statusFilterOptions = useMemo(() => FORM_STATUS_OPTIONS, []);
 
   useEffect(() => {
@@ -301,9 +312,8 @@ const FormBuilder = () => {
   }, [dispatch]);
 
   const handleEdit = (id: number) => navigate(`/system-tools/formbuilder-edit/${id}`);
-  // const openViewDialog = (item: FormBuilderItem) => setViewingItem(item);
-
   const openViewDialog = (item: FormBuilderItem) => navigate(`/system-tools/formbuilder-edit/${item.id}?preview=true`);
+  // const openViewDialog = (item: FormBuilderItem) => setViewingItem(item); // Kept for reference if direct dialog is preferred later
   const closeViewDialog = () => setViewingItem(null);
   const handleDeleteClick = (item: FormBuilderItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
 
@@ -337,7 +347,6 @@ const FormBuilder = () => {
 
   const handleChangeStatus = async (item: FormBuilderItem, newStatus: string) => { /* ... */ };
   const handleCloneForm = (itemToClone: FormBuilderItem) => {
-    // Navigate to create page, passing the ID of the form to clone as a query parameter
     navigate(`/system-tools/formbuilder-create?cloneFrom=${itemToClone.id}`);
   };
   const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); };
@@ -352,7 +361,7 @@ const FormBuilder = () => {
     try {
       await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
-      exportFormsToCsvLogic(fileName, allFilteredAndSortedData, departmentsData?.data, CategoriesData); // Pass master lists
+      exportFormsToCsvLogic(fileName, allFilteredAndSortedData, departmentsData?.data, CategoriesData);
       toast.push(<Notification title="Data Exported" type="success">Forms data exported.</Notification>);
     } catch (error: any) {
       toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
@@ -374,13 +383,27 @@ const FormBuilder = () => {
   }, []);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const processedFormsData: FormBuilderItem[] = rawFormsData.map(form => {
+    const processedFormsData: FormBuilderItem[] = (rawFormsData || []).map(form => {
         let qCount = 0; let parsedSecs: FormSection[] = [];
         try {
-            const sections: FormSection[] = JSON.parse(form.section);
-            if(Array.isArray(sections)){ parsedSecs = sections; sections.forEach(sec => qCount += sec.questions?.length || 0); }
-        } catch (e) { /* ignore */ }
-        return { ...form, questionCount: qCount, parsedSections: parsedSecs, department_ids_array: parseStringifiedArray(form.department_ids), category_ids_array: parseStringifiedArray(form.category_ids) };
+            if (form.section) { // Check if section exists
+                const sections: FormSection[] = JSON.parse(form.section);
+                if(Array.isArray(sections)){ 
+                    parsedSecs = sections; 
+                    sections.forEach(sec => qCount += sec.questions?.length || 0); 
+                }
+            }
+        } catch (e) { /* ignore parsing errors */ }
+        return { 
+            ...form, 
+            questionCount: qCount, 
+            parsedSections: parsedSecs, 
+            department_ids_array: parseStringifiedArray(form.department_ids), 
+            category_ids_array: parseStringifiedArray(form.category_ids),
+            // Ensure user objects have default structure if API might omit them, though type implies they exist
+            // created_by_user: form.created_by_user || { id: 0, name: 'N/A', roles: [] },
+            // updated_by_user: form.updated_by_user || { id: 0, name: 'N/A', roles: [] },
+        };
     });
 
     let filteredData: FormBuilderItem[] = cloneDeep(processedFormsData);
@@ -399,22 +422,29 @@ const FormBuilder = () => {
     if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
       filteredData = filteredData.filter(item =>
-        String(item.id).toLowerCase().includes(query) ||
-        item.form_name.toLowerCase().includes(query) ||
+        String(item.id || '').toLowerCase().includes(query) ||
+        (item.form_name || '').toLowerCase().includes(query) ||
         (item.form_title?.toLowerCase() || "").includes(query) ||
-        item.status.toLowerCase().includes(query) ||
-        (item.updated_by_user.name?.toLowerCase() ?? "").includes(query) ||
-        (Array.isArray(item.departments) && item.departments.join(', ').toLowerCase().includes(query)) || // Search in pre-fetched names
-        (Array.isArray(item.categories) && item.categories.join(', ').toLowerCase().includes(query))    // Search in pre-fetched names
+        (item.status || '').toLowerCase().includes(query) ||
+        (item.updated_by_user?.name?.toLowerCase() ?? "").includes(query) ||
+        (Array.isArray(item.departments) && item.departments.join(', ').toLowerCase().includes(query)) ||
+        (Array.isArray(item.categories) && item.categories.join(', ').toLowerCase().includes(query))
       );
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
-      filteredData.sort((a, b) => {
+      filteredData?.sort((a, b) => {
         let aVal: any, bVal: any;
-        if (key === "created_at" || key === "updated_at") { aVal = new Date(a[key]!).getTime(); bVal = new Date(b[key]!).getTime(); }
+        if (key === "created_at" || key === "updated_at") { 
+            aVal = a[key] ? new Date(a[key]!).getTime() : 0; 
+            bVal = b[key] ? new Date(b[key]!).getTime() : 0; 
+        }
         else if (key === "questionCount") { aVal = a.questionCount || 0; bVal = b.questionCount || 0; }
         else { aVal = (a as any)[key] ?? ""; bVal = (b as any)[key] ?? ""; }
+        
+        if (aVal === null || aVal === undefined) aVal = order === "asc" ? Infinity : -Infinity; // Push nulls to end/start
+        if (bVal === null || bVal === undefined) bVal = order === "asc" ? Infinity : -Infinity;
+
         if (typeof aVal === "number" && typeof bVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal;
         return order === "asc" ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
       });
@@ -430,11 +460,11 @@ const FormBuilder = () => {
     () => [
       {
         header: "Form Name / Title", accessorKey: "form_name", size: 260, enableSorting: true,
-        cell: props => (<div onClick={() => openViewDialog(props.row.original)} className="cursor-pointer"><span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">{props.row.original.form_name}</span><br /><span className="text-xs text-gray-500">{props.row.original.form_title || "-"}</span></div>),
+        cell: props => (<div onClick={() => openViewDialog(props.row.original)} className="cursor-pointer"><span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">{props.row.original.form_name || "N/A"}</span><br /><span className="text-xs text-gray-500">{props.row.original.form_title || "-"}</span></div>),
       },
       {
         header: "Status", accessorKey: "status", size: 120, enableSorting: true,
-        cell: props => (<Tag className={classNames("capitalize", statusColors[props.row.original.status] || statusColors.Draft)}>{props.row.original.status}</Tag>),
+        cell: props => (<Tag className={classNames("capitalize", statusColors[props.row.original.status] || statusColors.Draft)}>{props.row.original.status || "N/A"}</Tag>),
       },
       {
         header: "Departments", id: "departments", size: 180, enableSorting: false,
@@ -445,7 +475,7 @@ const FormBuilder = () => {
             displayNames = item.departments;
           } else {
             const ids = item.department_ids_array || [];
-            displayNames = ids.map(id => departmentsData?.data.find(d => String(d.id) === String(id))?.name || `ID:${id}`);
+            displayNames = ids.map(id => (departmentsData?.data || []).find(d => String(d.id) === String(id))?.name || `ID:${id}`);
           }
           if (!displayNames.length) return <Tag>N/A</Tag>;
           return (<div className="flex flex-wrap gap-1">{displayNames.slice(0,2).map(name => <Tag key={name}>{name}</Tag>)}{displayNames.length > 2 && <Tag>+{displayNames.length-2}</Tag>}</div>);
@@ -460,7 +490,7 @@ const FormBuilder = () => {
             displayNames = item.categories;
           } else {
             const ids = item.category_ids_array || [];
-            displayNames = ids.map(id => CategoriesData.find(c => String(c.id) === String(id))?.name || `ID:${id}`);
+            displayNames = ids.map(id => (CategoriesData || []).find(c => String(c.id) === String(id))?.name || `ID:${id}`);
           }
           if (!displayNames.length) return <Tag>N/A</Tag>;
           return (<div className="flex flex-wrap gap-1">{displayNames.slice(0,2).map(name => <Tag key={name}>{name}</Tag>)}{displayNames.length > 2 && <Tag>+{displayNames.length-2}</Tag>}</div>);
@@ -472,14 +502,19 @@ const FormBuilder = () => {
       },
       {
         header: "Updated Info", accessorKey: "updated_at", size: 170, enableSorting: true,
-        cell: props => { const { updated_at, updated_by_user } = props.row.original; const date = new Date(updated_at); const formattedDate = `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`; return (<div className="text-xs"><span>{updated_by_user.name || "N/A"}<br /><b>{updated_by_user.roles[0]?.display_name || "N/A"}</b></span><br /><span>{formattedDate}</span></div>); },
+        cell: props => { 
+            const { updated_at, updated_by_user } = props.row.original; 
+            const date = updated_at ? new Date(updated_at) : null; 
+            const formattedDate = date ? `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"; 
+            return (<div className="text-xs"><span>{updated_by_user?.name || "N/A"}<br /><b>{updated_by_user?.roles?.[0]?.display_name || "N/A"}</b></span><br /><span>{formattedDate}</span></div>); 
+        },
       },
       {
         header: "Actions", id: "action", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" },
         cell: props => (
         <ActionColumn item={props.row.original} onEdit={handleEdit} onViewDetail={openViewDialog} onClone={handleCloneForm} />),
       },
-    ], [departmentsData?.data, CategoriesData] // Dependencies for name lookups
+    ], [departmentsData?.data, CategoriesData, openViewDialog, handleEdit, handleCloneForm] // Added dependencies
   );
 
   const tableLoading = masterLoadingStatus === "pending" || isProcessing;
@@ -503,22 +538,24 @@ const FormBuilder = () => {
           <div className="flex items-center gap-3"><Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteSelected} loading={isProcessing && selectedItems.length > 0}>Delete Selected</Button></div>
         </div>
       </StickyFooter>
-
+    {/* Dialog for viewing item details is removed as navigation is used instead for preview */}
+    {/* If you prefer the dialog, you can uncomment the Dialog component and its related state (viewingItem, openViewDialog, closeViewDialog) */}
+    {/* 
       <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={800} contentClassName="pb-0">
-        <Dialog.Header title={`Form Details: ${viewingItem?.form_name}`} />
+        <Dialog.Header title={`Form Details: ${viewingItem?.form_name || 'N/A'}`} />
         <Dialog.Body className="p-4 max-h-[70vh] overflow-y-auto">
           {viewingItem && (
             <div className="space-y-4">
               <p><strong>ID:</strong> {viewingItem.id}</p>
-              <p><strong>Form Name:</strong> {viewingItem.form_name}</p>
+              <p><strong>Form Name:</strong> {viewingItem.form_name || "N/A"}</p>
               <p><strong>Form Title:</strong> {viewingItem.form_title || "N/A"}</p>
               <p><strong>Form Description:</strong> {viewingItem.form_description || "N/A"}</p>
-              <p><strong>Status:</strong> <Tag className={classNames("capitalize", statusColors[viewingItem.status] || statusColors.Draft)}>{viewingItem.status}</Tag></p>
-              <p><strong>Departments:</strong> { (Array.isArray(viewingItem.departments) && viewingItem.departments.length > 0) ? viewingItem.departments.join(', ') : (viewingItem.department_ids_array || []).map(id => departmentsData?.data.find(d => String(d.id) === String(id))?.name || `ID:${id}`).join(', ') || "N/A" }</p>
-              <p><strong>Categories:</strong> { (Array.isArray(viewingItem.categories) && viewingItem.categories.length > 0) ? viewingItem.categories.join(', ') : (viewingItem.category_ids_array || []).map(id => CategoriesData.find(c => String(c.id) === String(id))?.name || `ID:${id}`).join(', ') || "N/A" }</p>
-              <p><strong>Created At:</strong> {new Date(viewingItem.created_at).toLocaleString()}</p>
-              <p><strong>Updated At:</strong> {new Date(viewingItem.updated_at).toLocaleString()}</p>
-              <p><strong>Updated By:</strong> {viewingItem.updated_by_user.name} ({viewingItem.updated_by_user.roles[0]?.display_name || "N/A"})</p>
+              <p><strong>Status:</strong> <Tag className={classNames("capitalize", statusColors[viewingItem.status] || statusColors.Draft)}>{viewingItem.status || "N/A"}</Tag></p>
+              <p><strong>Departments:</strong> { (Array.isArray(viewingItem.departments) && viewingItem.departments.length > 0) ? viewingItem.departments.join(', ') : (viewingItem.department_ids_array || []).map(id => (departmentsData?.data || []).find(d => String(d.id) === String(id))?.name || `ID:${id}`).join(', ') || "N/A" }</p>
+              <p><strong>Categories:</strong> { (Array.isArray(viewingItem.categories) && viewingItem.categories.length > 0) ? viewingItem.categories.join(', ') : (viewingItem.category_ids_array || []).map(id => (CategoriesData || []).find(c => String(c.id) === String(id))?.name || `ID:${id}`).join(', ') || "N/A" }</p>
+              <p><strong>Created At:</strong> {viewingItem.created_at ? new Date(viewingItem.created_at).toLocaleString() : "N/A"}</p>
+              <p><strong>Updated At:</strong> {viewingItem.updated_at ? new Date(viewingItem.updated_at).toLocaleString() : "N/A"}</p>
+              <p><strong>Updated By:</strong> {viewingItem.updated_by_user?.name || "N/A"} ({viewingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"})</p>
               <h6 className="font-semibold mt-3">Questions ({viewingItem.questionCount || 0}):</h6>
               {viewingItem.parsedSections && viewingItem.parsedSections.length > 0 ? (viewingItem.parsedSections.map((section, secIdx) => (<div key={`sec-${secIdx}`} className="mb-3 p-2 border rounded"><p className="font-medium">{section.title}</p>{section.description && <p className="text-sm text-gray-600">{section.description}</p>}<ul className="list-disc pl-5 space-y-1 mt-1">{section.questions.map((q, qIdx) => (<li key={`q-${secIdx}-${qIdx}`}>{q.question} <Tag className="ml-1 text-xs">{q.question_type}</Tag>{q.required && <span className="text-red-500 text-xs ml-1">(Required)</span>}{q.question_option && <span className="text-xs ml-1">Options: {q.question_option}</span>}</li>))}</ul></div>))) : <p>No questions defined.</p>}
             </div>
@@ -526,16 +563,16 @@ const FormBuilder = () => {
         </Dialog.Body>
         <Dialog.Footer><Button variant="solid" onClick={closeViewDialog}>Close</Button></Dialog.Footer>
       </Dialog>
-
+    */}
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} onRequestClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full flex justify-end gap-2"><Button size="sm" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterFormBuilderForm" type="submit">Apply</Button></div>}>
         <Form id="filterFormBuilderForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Status" options={statusFilterOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="Department"><Controller name="filterDepartmentIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Departments" options={departmentFilterOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} prefix={<TbBuildingCommunity />} />)} /></FormItem>
-          <FormItem label="Category"><Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Categories" options={categoryFilterOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} prefix={<TbCategory2 className="text-lg" />} />)} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Status" options={statusFilterOptions || []} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
+          <FormItem label="Department"><Controller name="filterDepartmentIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Departments" options={departmentFilterOptions || []} value={field.value || []} onChange={(val) => field.onChange(val || [])} prefix={<TbBuildingCommunity />} />)} /></FormItem>
+          <FormItem label="Category"><Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Categories" options={categoryFilterOptions || []} value={field.value || []} onChange={(val) => field.onChange(val || [])} prefix={<TbCategory2 className="text-lg" />} />)} /></FormItem>
         </Form>
       </Drawer>
 
-      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Form" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isProcessing && !!itemToDelete} confirmButtonColor="red-600"><p>Are you sure you want to delete the form "<strong>{itemToDelete?.form_name}</strong>"?</p></ConfirmDialog>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Form" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isProcessing && !!itemToDelete} confirmButtonColor="red-600"><p>Are you sure you want to delete the form "<strong>{itemToDelete?.form_name || 'this form'}</strong>"?</p></ConfirmDialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}><Form id="exportFormsReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2"><FormItem label="Reason:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
     </>
   );
