@@ -219,7 +219,7 @@ const FormBuilderManagePage = () => {
     departmentsData = [],
   } = useSelector(masterSelector);
 
-  const departmentOptionsForSelect = useMemo(() => departmentsData?.data.map((d: DepartmentListItem) => ({ value: String(d.id), label: d.name })), [departmentsData]);
+  const departmentOptionsForSelect = useMemo(() => departmentsData?.data.map((d: DepartmentListItem) => ({ value: String(d.id), label: d.name })), [departmentsData?.data]);
   const categoryOptionsForSelect = useMemo(() => CategoriesData.map((c: GeneralCategoryListItem) => ({ value: String(c.id), label: c.name })), [CategoriesData]);
 
   const formMethods = useForm<PageFormBuilderFormData>({
@@ -237,7 +237,7 @@ const FormBuilderManagePage = () => {
 
   useEffect(() => {
     // Fetch master data (categories, departments)
-    if (!departmentsData.length) dispatch(getDepartmentsAction());
+    if (!departmentsData?.data.length) dispatch(getDepartmentsAction());
     if (!CategoriesData.length) dispatch(getCategoriesAction());
 
     // Fetch all forms if data is needed for edit, preview, or clone and not already loaded
@@ -245,7 +245,7 @@ const FormBuilderManagePage = () => {
     if (idForLoadingCheck && !formsData.length) {
       dispatch(getFormBuilderAction());
     }
-  }, [dispatch, formIdFromParams, cloneFromId, formsData.length, departmentsData.length, CategoriesData.length]);
+  }, [dispatch, formIdFromParams, cloneFromId, formsData.length, departmentsData?.data.length, CategoriesData.length]);
 
   const parseStringifiedArray = (str: string | null | undefined): string[] => {
     if (!str) return [];

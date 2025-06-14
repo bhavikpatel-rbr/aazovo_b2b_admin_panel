@@ -429,13 +429,13 @@ const DesignationListing = () => {
   );
   const departmentOptions: SelectOption[] = useMemo(
     () =>
-      Array.isArray(departmentsData)
-        ? departmentsData.map((dep: GeneralListItem) => ({
+      Array.isArray(departmentsData?.data)
+        ? departmentsData?.data.map((dep: GeneralListItem) => ({
             value: String(dep.id),
             label: dep.name,
           }))
         : [],
-    [departmentsData]
+    [departmentsData?.data]
   );
 
   const formMethods = useForm<DesignationFormData>({
