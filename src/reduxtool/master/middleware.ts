@@ -2336,6 +2336,51 @@ export const getSubscribersAction = createAsyncThunk(
   }
 )
 
+export const addSubscriberAction = createAsyncThunk<any, any>(
+  "auth/addsubscriber",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await addSubscriberAsync(data)
+      if (response?.data?.status === true) {
+        // dispatch(getBugReportsAction()) // Corrected dispatch
+
+        return response?.data?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const editSubscriberAction = createAsyncThunk<
+  any,
+  { id: number | string; formData: FormData }
+>(
+  "auth/editsubscriber",
+  async (payload, { rejectWithValue, dispatch }) => {
+
+    try {
+      console.log("formData", payload.formData);
+
+      const response: AxiosResponse<any> = await editSubscriberAsync(payload.id, payload.formData);
+
+      console.log("response", response);
+
+      if (response?.data?.status === true) {
+        // dispatch(getBugReportsAction());
+
+        return response?.data?.data;
+      }
+
+      return rejectWithValue(response);
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error);
+    }
+  }
+);
+
 export const getHomeCategoryAction = createAsyncThunk(
   "auth/getHomeCategory",
   async (_, { rejectWithValue, dispatch }) => {
