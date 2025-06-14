@@ -94,6 +94,7 @@ import {
   editRequestFeedbackAction,
   deleteRequestFeedbackAction,
   deleteAllRequestFeedbacksAction,
+  submitExportReasonAction, // Added for export reason
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
@@ -139,6 +140,7 @@ export type RequestFeedbackItem = {
                                   // If it serves a different purpose, it can be kept.
                                   // For now, focusing on `attachment` for file handling.
   health_score?: number; // Added for modal consistency
+  updated_by_user?: { name: string, roles: [{ display_name: string }] }; // Added for consistency
 };
 
 // ============================================================================
@@ -863,7 +865,7 @@ const statusColors: Record<RequestFeedbackApiStatus, string> = {
   Unread:
     "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
   Read: "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100",
-  
+  "In Progress": "bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-100", // Added In Progress
   Resolved: "bg-teal-100 text-teal-600 dark:bg-teal-500/20 dark:text-teal-100",
   Closed:
     "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
@@ -917,6 +919,12 @@ const filterFormSchema = z.object({
     .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
+
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const CSV_HEADERS_RF = [
   "ID", "Name", "Email", "Mobile No", "Company", "Type", "Subject",
@@ -1077,7 +1085,7 @@ const RequestFeedbacksSelectedFooter = ({ selectedItems, onDeleteSelected, isDel
 
 const RequestAndFeedbackListing = () => {
   const dispatch = useAppDispatch();
-  const { requestFeedbacksData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+  const { requestFeedbacksData = { data: [], counts: {} }, status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -1095,6 +1103,10 @@ const RequestAndFeedbackListing = () => {
   const [removeExistingAttachment, setRemoveExistingAttachment] = useState(false);
 
   const [modalState, setModalState] = useState<RequestFeedbackModalState>({ isOpen: false, type: null, data: null });
+  // State for export reason modal
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
   const handleOpenModal = (type: RequestFeedbackModalType, itemData: RequestFeedbackItem) => setModalState({ isOpen: true, type, data: itemData });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
@@ -1105,6 +1117,11 @@ const RequestAndFeedbackListing = () => {
   const formMethods = useForm<RequestFeedbackFormData>({ resolver: zodResolver(requestFeedbackFormSchema), mode: "onChange" });
   const { control, handleSubmit, reset, formState: { errors, isValid } } = formMethods;
 
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
 
   const defaultFormValues: RequestFeedbackFormData = useMemo(() => ({
@@ -1216,25 +1233,9 @@ const RequestAndFeedbackListing = () => {
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
   const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); }, [filterFormMethods]);
 
-  const counts = useMemo(() => {
-    const data = Array.isArray(requestFeedbacksData) ? requestFeedbacksData : [];
-    if (data.length === 0) {
-        return { total: 0, Unread: 0, Resolved: 0, pending: 0, avgTime: 'N/A', avgRating: 'N/A' };
-    }
-    const total = data.length;
-    const Unread = data.filter(item => item.status === 'Unread').length;
-    const Resolved = data.filter(item => item.status === 'Resolved').length;
-    const pending = data.filter(item => item.status === 'In Progress' || item.status === 'Read').length;
-    
-    const ratings = data.filter(item => item.rating && !isNaN(Number(item.rating))).map(item => Number(item.rating));
-    const avgRatingValue = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length) : null;
-    const avgRating = avgRatingValue !== null ? avgRatingValue.toFixed(1) : 'N/A';
-    // Avg Time is complex and usually a backend calculation or requires more data.
-    return { total, Unread, Resolved, pending, avgRating, avgTime: 'N/A' }; // Placeholder for avgTime
-  }, [requestFeedbacksData]);
-
+  
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: RequestFeedbackItem[] = cloneDeep(Array.isArray(requestFeedbacksData) ? requestFeedbacksData : []);
+    let processedData: RequestFeedbackItem[] = cloneDeep(Array.isArray(requestFeedbacksData?.data) ? requestFeedbacksData?.data : []);
     if (filterCriteria.filterType?.length) { const v = filterCriteria.filterType.map((o) => o.value); processedData = processedData.filter((item) => v.includes(item.type)); }
     if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map((o) => o.value); processedData = processedData.filter((item) => v.includes(item.status)); }
     if (filterCriteria.filterRating?.length) { const v = filterCriteria.filterRating.map((o) => o.value); processedData = processedData.filter((item) => v.includes(String(item.rating || ""))); }
@@ -1262,9 +1263,32 @@ const RequestAndFeedbackListing = () => {
     const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
     return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: dataToExport };
-  }, [requestFeedbacksData, tableData, filterCriteria]);
+  }, [requestFeedbacksData?.data, tableData, filterCriteria]);
 
-  const handleExportData = useCallback(() => { exportRequestFeedbacksToCsv("request_feedbacks.csv", allFilteredAndSortedData); }, [allFilteredAndSortedData]);
+  const handleOpenExportReasonModal = useCallback(() => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  }, [allFilteredAndSortedData, exportReasonFormMethods]);
+
+  const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Request & Feedback";
+    const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `request_feedbacks_export_${timestamp}.csv`;
+    try {
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      exportRequestFeedbacksToCsv(fileName, allFilteredAndSortedData);
+      toast.push(<Notification title="Data Exported" type="success">Request & Feedback data exported.</Notification>);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" message={(error as Error).message || "Could not complete export."} />); }
+    finally { setIsSubmittingExportReason(false); }
+  }, [dispatch, allFilteredAndSortedData, exportReasonFormMethods]);
+
   const handlePaginationChange = useCallback((page: number) => setTableData((prev) => ({ ...prev, pageIndex: page })), []);
   const handleSelectPageSizeChange = useCallback((value: number) => { setTableData((prev) => ({ ...prev, pageSize: Number(value), pageIndex: 1 })); setSelectedItems([]); }, []);
   const handleSort = useCallback((sort: OnSortParam) => { setTableData((prev) => ({ ...prev, sort: sort, pageIndex: 1 })); }, []);
@@ -1291,7 +1315,41 @@ const RequestAndFeedbackListing = () => {
     { header: "Subject", accessorKey: "subject", size: 200, cell: props => <div className="truncate w-48" title={props.getValue() as string}>{(props.getValue() as string) || "N/A"}</div> },
     { header: "Status", accessorKey: "status", size: 110, cell: props => { const s = props.getValue<RequestFeedbackApiStatus>(); return <Tag className={classNames("capitalize whitespace-nowrap min-w-[90px] text-center", statusColors[s] || statusColors.default)}>{STATUS_OPTIONS_FORM.find(opt => opt.value === s)?.label || s || "N/A"}</Tag>; }},
     { header: "Rating", accessorKey: "rating", size: 90, cell: props => props.getValue() ? <span className="flex items-center gap-1"><TbStar className="text-amber-500" />{`${props.getValue()}`}</span> : "N/A" },
-    { header: "Date", accessorKey: "created_at", size: 100, cell: props => props.getValue() ? new Date(props.getValue<string>()).toLocaleDateString() : "N/A" },
+    {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+
+        size: 120,
+        cell: (props) => { const { updated_at, updated_by_user } =
+            props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_user?.name || "N/A"}
+                {updated_by_user?.roles?.[0]?.display_name && (
+                  <>
+                    <br />
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
+                  </>
+                )}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
+      },
     { header: "Actions", id: "actions", meta: { headerClass: "text-center", cellClass: "text-center" }, size: 100, cell: props => <ItemActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} /> },
   ], [openEditDrawer, openViewDialog, handleDeleteClick, handleOpenModal]);
 
@@ -1377,21 +1435,42 @@ const RequestAndFeedbackListing = () => {
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 dark:border-blue-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbUserQuestion size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-200">{counts.total}</h6><span className="font-semibold text-xs">Total</span></div></Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 dark:border-green-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbEyeClosed size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{counts.Unread}</h6><span className="font-semibold text-xs">Unread</span></div></Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200 dark:border-pink-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 dark:bg-pink-500/20 text-pink-500 dark:text-pink-200"><TbBellMinus size={24} /></div><div><h6 className="text-pink-500 dark:text-pink-200">{counts.Resolved}</h6><span className="font-semibold text-xs">Resolved</span></div></Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 dark:border-red-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbPencilPin size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{counts.pending}</h6><span className="font-semibold text-xs">Pending</span></div></Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300 dark:border-violet-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileTime size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{counts.avgTime}</h6><span className="font-semibold text-xs">Avg Time</span></div></Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200 dark:border-orange-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbStars size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{counts.avgRating}</h6><span className="font-semibold text-xs">Avg Rating </span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 dark:border-blue-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbUserQuestion size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-200">{requestFeedbacksData?.counts?.total}</h6><span className="font-semibold text-xs">Total</span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 dark:border-green-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbEyeClosed size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{requestFeedbacksData?.counts?.unread}</h6><span className="font-semibold text-xs">Unread</span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200 dark:border-pink-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 dark:bg-pink-500/20 text-pink-500 dark:text-pink-200"><TbBellMinus size={24} /></div><div><h6 className="text-pink-500 dark:text-pink-200">{requestFeedbacksData?.counts?.resolved}</h6><span className="font-semibold text-xs">Resolved</span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 dark:border-red-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbPencilPin size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{requestFeedbacksData?.counts?.pending}</h6><span className="font-semibold text-xs">Pending</span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300 dark:border-violet-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileTime size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{requestFeedbacksData?.counts?.avg_time}</h6><span className="font-semibold text-xs">Avg Time</span></div></Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200 dark:border-orange-700/60"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbStars size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{requestFeedbacksData?.counts?.avg_rating}</h6><span className="font-semibold text-xs">Avg Rating </span></div></Card>
           </div>
-          <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} />
           <div className="mt-4"><RequestFeedbacksTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
         </AdaptiveCard>
       </Container>
       <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       <Drawer title={editingItem ? "Edit Entry" : "Add New Entry"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520}
         footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="requestFeedbackForm" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>{isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save Changes" : "Submit Entry")}</Button></div>}
-      ><Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 pb-2">{renderDrawerForm(formMethods)}</Form></Drawer>
+      ><Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 pb-28"> {/* Increased pb for footer space */}
+        {renderDrawerForm(formMethods)}
+         {editingItem && (
+             <div className="absolute bottom-0 left-0 right-0 px-6 py-4"> {/* Ensure full width and padding consistency */}
+                <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                    <div>
+                        <b className="mt-3 mb-3 font-semibold text-primary-600 dark:text-primary-400">Latest Update:</b><br />
+                        <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
+                        <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+                    </div>
+                    <div>
+                        <br />
+                        <span className="font-semibold">Created At:</span>{" "}
+                        <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                        <br />
+                        <span className="font-semibold">Updated At:</span>{" "}
+                        <span>{editingItem.updated_at ? new Date(editingItem.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                    </div>
+                </div>
+            </div>
+          )}
+        </Form></Drawer>
       <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={600}>
         <div className="p-1">
           <h5 className="mb-6 border-b pb-4 dark:border-gray-600">Details: {viewingItem?.subject || `Entry by ${viewingItem?.name}`}</h5>
@@ -1423,6 +1502,33 @@ const RequestAndFeedbackListing = () => {
       </Form></Drawer>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Entry" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}>
         <p>Are you sure you want to delete the entry from "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p>
+      </ConfirmDialog>
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
+      >
+        <Form
+          id="exportRequestFeedbackReasonForm"
+          onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+          </FormItem>
+        </Form>
       </ConfirmDialog>
       <RequestFeedbackModals modalState={modalState} onClose={handleCloseModal} />
     </>

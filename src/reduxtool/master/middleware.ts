@@ -2977,7 +2977,7 @@ export const getRequestFeedbacksAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getRequestFeedbacksAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
