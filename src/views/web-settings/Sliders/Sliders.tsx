@@ -675,7 +675,9 @@ const Sliders = () => {
         domainIds: Number(apiItem.domain_ids) || null,
         sliderColor: apiItem.slider_color || null,
         indexPosition:
-          apiItem.index_position === undefined ? null : apiItem.index_position, // Handle undefined
+    apiItem.index_position === undefined || apiItem.index_position === null
+      ? null
+      : Number(apiItem.index_position), // Handle undefined
         created_at: apiItem.created_at,
         updated_at: apiItem.updated_at,
         // CHANGED: Extract data from the nested object, with fallbacks to the old flat properties
@@ -701,6 +703,26 @@ const Sliders = () => {
 
   const onAddSliderSubmit = async (data: SliderFormData) => {
     setIsSubmitting(true);
+
+    if (data.index_position !== null && data.index_position !== undefined) {
+      const isDuplicateIndex = mappedSliders.some(
+        (slider) => slider.indexPosition === data.index_position
+      );
+      if (isDuplicateIndex) {
+        addFormMethods.setError("index_position", {
+          type: "manual",
+          message: `Index position ${data.index_position} is already in use`,
+        });
+        toast.push(
+          <Notification title="Validation Error" type="warning" duration={4000}>
+            Index position {data.index_position} is already in use.
+          </Notification>
+        );
+        setIsSubmitting(false);
+        return; // Stop submission
+      }
+    }
+    
     const formData = new FormData();
     (Object.keys(data) as Array<keyof SliderFormData>).forEach((key) => {
       const value = data[key];

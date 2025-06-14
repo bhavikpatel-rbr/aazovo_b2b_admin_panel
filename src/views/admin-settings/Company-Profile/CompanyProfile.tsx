@@ -814,12 +814,12 @@ const CompanyProfile = () => {
 
   return (
     <>
-      <Container className="h-auto">
+      <Container>
         <Form
           id="companyProfileForm"
           onSubmit={formMethods.handleSubmit(onUpdateProfile)}
         >
-          <AdaptiveCard className="h-full" bodyClass="p-0 md:p-0">
+          <AdaptiveCard bodyClass="p-0 md:p-0">
             <div className="p-4 pt-2 md:p-6 md:pt-2 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold">
                 Company Profile Settings
@@ -830,10 +830,8 @@ const CompanyProfile = () => {
             </div>
 
             <div
-              className="p-4 md:p-6 space-y-6 overflow-y-auto"
-              style={{
-                maxHeight: "calc(100vh - 200px)" /* Adjust as needed */,
-              }}
+              className="p-4 md:p-6 space-y-6 "
+             
             >
               {renderLogoFields()}
               {renderCompanyInfoFields()}
@@ -841,9 +839,7 @@ const CompanyProfile = () => {
             </div>
           </AdaptiveCard>
         </Form>
-      </Container>
-
-      <StickyFooter
+          <StickyFooter
         className="flex items-center justify-end py-4 px-6 bg-white dark:bg-gray-800"
         stickyClass="border-t border-gray-200 dark:border-gray-700"
       >
@@ -859,6 +855,9 @@ const CompanyProfile = () => {
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </StickyFooter>
+      </Container>
+
+    
     </>
   );
 };
