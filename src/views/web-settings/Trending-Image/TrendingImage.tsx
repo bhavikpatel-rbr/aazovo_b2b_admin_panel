@@ -46,6 +46,7 @@ import {
     deleteMultipleTrendingImagesAction,
     getProductsAction,
     submitExportReasonAction,
+    getAllProductAction,
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { Link } from 'react-router-dom'
@@ -265,7 +266,7 @@ const TrendingImages = () => {
         productsMasterData = [],
         status: masterLoadingStatus = 'idle'
     } = useSelector(masterSelector);
-
+    console.log("productsMasterData", productsMasterData)
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<TrendingPageImageItem | null>(null);
@@ -285,16 +286,21 @@ const TrendingImages = () => {
 
     useEffect(() => {
         dispatch(getTrendingImagesAction());
-        dispatch(getProductsAction());
+        dispatch(getAllProductAction());
     }, [dispatch]);
 
-    const productSelectOptions: ProductOption[] = useMemo(() => {
+    // const productSelectOptions: ProductOption[] = useMemo(() => {
+    //     if (!Array.isArray(productsMasterData)) return [];
+    //     return productsMasterData.map((p: { id: string | number; name: string; sku_code?: string }) => ({
+    //         value: String(p.id),
+    //         label: `${p.name} ${p.sku_code ? `(${p.sku_code})` : ''}`.trim(),
+    //     }));
+    // }, [productsMasterData]);
+
+      const productSelectOptions = useMemo(() => {
         if (!Array.isArray(productsMasterData)) return [];
-        return productsMasterData.map((p: { id: string | number; name: string; sku_code?: string }) => ({
-            value: String(p.id),
-            label: `${p.name} ${p.sku_code ? `(${p.sku_code})` : ''}`.trim(),
-        }));
-    }, [productsMasterData]);
+        return productsMasterData.map((cat: ProductOption) => ({ value: String(cat.id), label: cat.name, }));
+      }, [productsMasterData]);
 
     const productNameMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -477,6 +483,7 @@ const TrendingImages = () => {
         setFilterCriteria(defaultFilters);
         handleSetTableData({ pageIndex: 1 });
         dispatch(getTrendingImagesAction());
+        setIsFilterDrawerOpen(false);
     };
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {

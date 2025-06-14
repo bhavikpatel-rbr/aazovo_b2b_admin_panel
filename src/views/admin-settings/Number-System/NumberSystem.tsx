@@ -624,6 +624,7 @@ const NumberSystems = () => {
     setFilterCriteria(defaultFilters);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     dispatch(getNumberSystemsAction());
+    setIsFilterDrawerOpen(false);
   }, [filterFormMethods]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -821,15 +822,15 @@ const NumberSystems = () => {
         cell: (props) => {
           const { updated_at, updated_by_name, updated_by_role } =
             props.row.original;
-          const formattedDate = updated_at
-            ? new Date(updated_at).toLocaleString("en-US", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })
+            const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+                updated_at
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(
+                updated_at
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
             : "N/A";
           return (
             <div className="text-xs">

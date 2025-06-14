@@ -528,6 +528,7 @@ filterStatuses: data.filterStatuses || [],
      filterFormMethods.reset(defaults); setFilterCriteria(defaults)
       handleSetTableData({ pageIndex: 1 });
       dispatch(getHomeCategoryAction());
+      setIsFilterDrawerOpen(false);
     };
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: HomeCategoryItem[] = Array.isArray(categoryData)

@@ -486,6 +486,7 @@ const DomainManagementListing = () => {
     setFilterCriteria(defaultFilters);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); // Reset query as well
     dispatch(getDomainsAction()); // Re-fetch all data
+    setIsFilterDrawerOpen(false);
   };
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -750,10 +751,39 @@ const DomainManagementListing = () => {
                     <div>
                         <br />
                         <span className="font-semibold">Created At:</span>{" "}
-                        <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                        <span>
+                          {editingItem.created_at
+                            ? `${new Date(editingItem.created_at).getDate()} ${new Date(
+                                editingItem.created_at
+                              ).toLocaleString("en-US", {
+                                month: "short",
+                              })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
+                                editingItem.created_at
+                              ).toLocaleTimeString("en-US", {
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}`
+                            : "N/A"}
+                        </span>
                         <br />
                         <span className="font-semibold">Updated At:</span>{" "}
-                        <span>{editingItem.updated_at ? new Date(editingItem.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>
+                        <span>
+                          {editingItem.updated_at
+                            ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
+                                editingItem.updated_at
+                              ).toLocaleString("en-US", {
+                                month: "short",
+                              })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
+                                editingItem.updated_at
+                              ).toLocaleTimeString("en-US", {
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}`
+                            : "N/A"}
+                        </span>
+
                     </div>
                 </div>
             </div>

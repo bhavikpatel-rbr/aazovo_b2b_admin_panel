@@ -871,6 +871,7 @@ const Blogs = () => {
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
     dispatch(getBlogsAction());
+    setFilterDrawerOpen(false);
   };
 
   // const handleImportData = () => setImportDialogOpen(true); // Commented out

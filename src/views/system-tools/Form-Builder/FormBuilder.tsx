@@ -291,7 +291,7 @@ const FormBuilder = () => {
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
   const categoryFilterOptions = useMemo(() => CategoriesData.map((cat: GeneralCategoryListItem) => ({ value: String(cat.id), label: cat.name })), [CategoriesData]);
-  const departmentFilterOptions = useMemo(() => departmentsData.map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData]);
+  const departmentFilterOptions = useMemo(() => departmentsData?.data.map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData]);
   const statusFilterOptions = useMemo(() => FORM_STATUS_OPTIONS, []);
 
   useEffect(() => {
@@ -342,7 +342,7 @@ const FormBuilder = () => {
   };
   const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); };
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); setIsFilterDrawerOpen(false); };
-  const onClearFilters = () => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); dispatch(getFormBuilderAction()); };
+  const onClearFilters = () => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); dispatch(getFormBuilderAction()); setIsFilterDrawerOpen(false); };
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData?.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);

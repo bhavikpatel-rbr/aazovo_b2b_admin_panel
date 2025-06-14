@@ -720,6 +720,7 @@ const BugReportListing = () => {
     formMethods.reset({ filterStatus: [], filterReportedBy: "" });
     handleSetTableData({ query: "", pageIndex: 1 });
     dispatch(getBugReportsAction());
+    setIsFilterDrawerOpen(false);
   }, [formMethods]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -1531,57 +1532,47 @@ const BugReportListing = () => {
           {editingItem && (
             <div className="absolute bottom-[4%] w-full left-1/2 transform -translate-x-1/2">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4">
-                <div>
-                  <b className="mt-3 mb-3 font-semibold text-primary">
-                    Latest Update:
-                  </b>
-                  <br />
-                  <p className="text-sm font-medium mt-1">
-                    {editingItem.updated_by_name || "N/A"}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {editingItem.updated_by_role || "N/A"}
-                  </p>
+                                <div>
+                  <b className="font-semibold text-primary">Latest Update:</b>
+                  <p className="text-sm font-semibold mt-1">{editingItem.updated_by_user?.name || "N/A"}</p>
+                  <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                 </div>
                 <div className="text-right">
                   <br />
-                  <span className="font-semibold text-gray-700 dark:text-gray-200">
-                    Created:
-                  </span>{" "}
-                  <span className="text-gray-600 dark:text-gray-300">
+                  <span className="font-semibold">Created At:</span>{" "}
+                  <span>
                     {editingItem.created_at
-                      ? new Date(editingItem.created_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? `${new Date(editingItem.created_at).getDate()} ${new Date(
+                          editingItem.created_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
+                          editingItem.created_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
                   <br />
-                  <span className="font-semibold text-gray-700 dark:text-gray-200">
-                    Updated:
-                  </span>{" "}
-                  <span className="text-gray-600 dark:text-gray-300">
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  <span>
                     {editingItem.updated_at
-                      ? new Date(editingItem.updated_at).toLocaleString(
-                          "en-US",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )
+                      ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
+                          editingItem.updated_at
+                        ).toLocaleString("en-US", {
+                          month: "short",
+                        })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
+                          editingItem.updated_at
+                        ).toLocaleTimeString("en-US", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}`
                       : "N/A"}
                   </span>
+
                 </div>
               </div>
             </div>
@@ -1607,7 +1598,7 @@ const BugReportListing = () => {
       </Drawer>
 
       <Drawer
-        title="Filter Bug Reports"
+        title="Filters"
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
@@ -1627,7 +1618,7 @@ const BugReportListing = () => {
               form="filterBugReportForm"
               type="submit"
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         }

@@ -608,6 +608,7 @@ const DesignationListing = () => {
     setFilterCriteria({});
     handleSetTableData({ pageIndex: 1, query: "" });
     dispatch(getDesignationsAction());
+    setIsFilterDrawerOpen(false);
   }, [filterFormMethods, handleSetTableData]);
 
   const designationNameOptions = useMemo(
@@ -1195,7 +1196,7 @@ const DesignationListing = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear All
+              Clear
             </Button>
             <Button
               size="sm"
