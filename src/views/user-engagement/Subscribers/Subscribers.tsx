@@ -207,8 +207,6 @@ const SubscribersListing = () => {
         error: masterError = null,
     } = useSelector(masterSelector);
 
-    console.log("rawApiSubscribers", rawApiSubscribers);
-
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
         filterFormSchema.parse({})
@@ -232,8 +230,8 @@ const SubscribersListing = () => {
     }, [masterLoadingStatus, masterError]);
 
     const mappedSubscribers = useMemo((): SubscriberItem[] => {
-        if (!Array.isArray(rawApiSubscribers) || rawApiSubscribers.length === 0) return [];
-        return rawApiSubscribers.map((apiItem: ApiSubscriberItem): SubscriberItem | null => {
+        if (!Array.isArray(rawApiSubscribers?.data) || rawApiSubscribers?.data.length === 0) return [];
+        return rawApiSubscribers?.data.map((apiItem: ApiSubscriberItem): SubscriberItem | null => {
             if (!apiItem || !apiItem.created_at) return null; // Basic validation
             return {
                 id: apiItem.id,
@@ -244,7 +242,7 @@ const SubscribersListing = () => {
                 rawSource: apiItem.source,
             };
         }).filter(item => item !== null) as SubscriberItem[];
-    }, [rawApiSubscribers]);
+    }, [rawApiSubscribers?.data]);
 
     const filterFormMethods = useForm<FilterFormData>({
         resolver: zodResolver(filterFormSchema),
@@ -467,7 +465,7 @@ const SubscribersListing = () => {
                                 <TbCaravan size={24} />
                             </div>
                             <div>
-                                <h6 className="text-blue-500">12</h6>
+                                <h6 className="text-blue-500">{rawApiSubscribers?.counts?.total}</h6>
                                 <span className="font-semibold text-xs">Total</span>
                             </div>
                         </Card>
@@ -476,7 +474,7 @@ const SubscribersListing = () => {
                                 <TbUserStar size={24} />
                             </div>
                             <div>
-                                <h6 className="text-violet-500">4</h6>
+                                <h6 className="text-violet-500">{rawApiSubscribers?.counts?.new}</h6>
                                 <span className="font-semibold text-xs">New</span>
                             </div>
                         </Card>
@@ -485,7 +483,7 @@ const SubscribersListing = () => {
                                 <TbMailForward size={24} />
                             </div>
                             <div>
-                                <h6 className="text-green-500">34</h6>
+                                <h6 className="text-green-500">{rawApiSubscribers?.counts?.active}</h6>
                                 <span className="font-semibold text-xs">Active</span>
                             </div>
                         </Card>
@@ -494,7 +492,7 @@ const SubscribersListing = () => {
                                 <TbCalendarCancel size={24} />
                             </div>
                             <div>
-                                <h6 className="text-red-500">34</h6>
+                                <h6 className="text-red-500">{rawApiSubscribers?.counts?.unsubscribed}</h6>
                                 <span className="font-semibold text-xs">Unsubscribed</span>
                             </div>
                         </Card>
