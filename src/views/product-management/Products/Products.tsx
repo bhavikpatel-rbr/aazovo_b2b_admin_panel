@@ -61,6 +61,7 @@ import {
   TbMail,
   TbFileSpreadsheet,
   TbCloudUpload,
+  TbReload,
 } from "react-icons/tb";
 
 // Types
@@ -103,7 +104,7 @@ type ApiProductItem = {
   brand_id: string | number | null;
   sku_code: string | null;
   name: string;
-  unit: string | number | null;
+  unit_id: string | number | null;
   country_id: string | number | null;
   color: string | null;
   hsn_code: string | null;
@@ -536,7 +537,7 @@ const ProductSearch = React.memo(
     <DebouceInput
       ref={ref}
       className="w-full"
-      placeholder="Search Product Name, SKU..."
+      placeholder="Quick Search..."
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -548,15 +549,18 @@ const ProductTableTools = React.memo(
   ({
     onSearchChange,
     onFilter,
+    onClearFilters
   }: {
     onSearchChange: (query: string) => void;
     onFilter: () => void;
+    onClearFilters: () => void;
   }) => (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
       <div className="flex-grow">
         <ProductSearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -690,13 +694,12 @@ const Products = () => {
     ProductsData = [],
     domainsData = [],
     CategoriesData: GlobalCategoriesData = [],
-    SubcategoriesData = [],
+    subCategoriesForSelectedCategoryData = [],
     BrandData = [],
     unitData = [],
     CountriesData = [],
     status: masterLoadingStatus,
   } = useSelector(masterSelector);
-
   useEffect(() => {
     dispatch(getProductsAction());
     dispatch(getDomainsAction());
@@ -836,17 +839,17 @@ const Products = () => {
   useEffect(() => {
     if (masterLoadingStatus !== "loading") {
       setSubcategoryOptions(
-        SubcategoriesData?.map((sc: any) => ({
+        subCategoriesForSelectedCategoryData?.map((sc: any) => ({
           value: sc.id,
           label: sc.name,
         })) || []
       );
     }
-  }, [SubcategoriesData, masterLoadingStatus]);
-
+  }, [subCategoriesForSelectedCategoryData, masterLoadingStatus]);
+  // console.log("subCategoriesForSelectedCategoryData", subCategoriesForSelectedCategoryData)
   const watchedFormCategoryId = watchForm("category_id");
   const isInitializingFormRef = useRef(false);
-
+  console.log("watchedFormCategoryId", watchedFormCategoryId)
   useEffect(() => {
     const currentSubCatIdInForm = getFormValues("sub_category_id");
 
@@ -857,6 +860,7 @@ const Products = () => {
     ) {
       if (!isInitializingFormRef.current) {
         dispatch(getSubcategoriesByCategoryIdAction(watchedFormCategoryId));
+
         if (
           currentSubCatIdInForm !== undefined &&
           currentSubCatIdInForm !== null
@@ -937,8 +941,8 @@ const Products = () => {
   }, [thumbImagePreviewUrl, galleryImages]);
 
   const mappedProducts: ProductItem[] = useMemo(() => {
-    if (!Array.isArray(ProductsData)) return [];
-    return ProductsData.map((apiItem: ApiProductItem): ProductItem => {
+    if (!Array.isArray(ProductsData?.data)) return [];
+    return ProductsData?.data.map((apiItem: ApiProductItem): ProductItem => {
       let iconFullPath: string | null = null;
       if (apiItem.icon_full_path) iconFullPath = apiItem.icon_full_path;
       else if (apiItem.icon)
@@ -966,11 +970,10 @@ const Products = () => {
         Array.isArray(apiItem.product_images_array)
       ) {
         apiItem.product_images_array.forEach((imgObj) => {
-          if (imgObj && imgObj.image_full_path) {
+          if (imgObj && imgObj) {
             gallery.push({
-              id: imgObj.id,
-              serverPath: imgObj.image,
-              previewUrl: imgObj.image_full_path,
+              serverPath: imgObj,
+              previewUrl: imgObj,
               isNew: false,
               isDeleted: false,
             });
@@ -1016,7 +1019,7 @@ const Products = () => {
       }
 
       const localSubcategoryOptions =
-        SubcategoriesData?.map((sc: any) => ({
+        subCategoriesForSelectedCategoryData?.map((sc: any) => ({
           value: sc.id,
           label: sc.name,
         })) || [];
@@ -1047,10 +1050,10 @@ const Products = () => {
         brandName:
           apiItem.brand?.name ||
           brandOptions.find((b) => b.value === Number(apiItem.brand_id))?.label,
-        unitId: apiItem.unit ? Number(apiItem.unit) : null,
+        unitId: apiItem.unit_id ? Number(apiItem.unit_id) : null,
         unitName:
           apiItem.unit_obj?.name ||
-          unitOptions.find((u) => u.value === Number(apiItem.unit))?.label,
+          unitOptions.find((u) => u.value === Number(apiItem.unit_id))?.label,
         countryId: apiItem.country_id ? Number(apiItem.country_id) : null,
         countryName:
           apiItem.country_obj?.name ||
@@ -1083,13 +1086,13 @@ const Products = () => {
       };
     });
   }, [
-    ProductsData,
+    ProductsData?.data,
     domainOptions,
     categoryOptions,
     brandOptions,
     unitOptions,
     countryOptions,
-    SubcategoriesData,
+    subCategoriesForSelectedCategoryData,
   ]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -1098,7 +1101,8 @@ const Products = () => {
     // Filter by tab first
     if (currentListTab === TABS.PENDING) {
       processedData = processedData.filter(
-        (p) => p.status === "pending" || p.status === "draft"
+        (p) => p.status === "pending"
+        //  || p.status === "draft"
       );
     }
 
@@ -1316,7 +1320,7 @@ const Products = () => {
     setEditingProduct(null);
     resetForm();
   }, [resetForm]);
-
+  // const onClearFilters = () => { const defaultFilters = { filterNames: [], filterStatuses: [], filterParentIds: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1 }); };
   const onProductFormSubmit = useCallback(
     async (data: ProductFormData) => {
       setIsSubmittingForm(true);
@@ -1704,6 +1708,7 @@ const Products = () => {
     setFilterFormValue("filterSubCategoryIds", []);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     closeFilterDrawer();
+    dispatch(getProductsAction());
   }, [resetFilterForm, setFilterFormValue, closeFilterDrawer]);
 
   const columns: ColumnDef<ProductItem>[] = useMemo(
@@ -1720,19 +1725,14 @@ const Products = () => {
         size: 300,
         cell: (props: CellContext<ProductItem, any>) => (
           <div className="flex items-center gap-3">
-            <Avatar
-              size="md"
-              shape="circle"
-              src={props.row.original.thumbImageFullPath || undefined}
-              icon={<TbBox />}
-              className={
-                props.row.original.thumbImageFullPath ? "cursor-pointer" : ""
-              }
-              onClick={() =>
+                          <Avatar
+                            size={30} shape="circle" src={props.row.original.thumbImageFullPath || undefined} icon={<TbBox />}
+                            className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                                          onClick={() =>
                 props.row.original.thumbImageFullPath &&
                 openImageViewer(props.row.original.thumbImageFullPath)
               }
-            />
+                          ></Avatar>
             <Tooltip title={props.row.original.name}>
               <div className="truncate">
                 <span
@@ -1808,7 +1808,7 @@ const Products = () => {
     masterLoadingStatus === "pending" || masterLoadingStatus === "loading";
   const tableIsProcessing = isSubmittingForm || isImporting;
 
-  if (isLoadingData && !ProductsData.length) {
+  if (isLoadingData && !ProductsData?.data.length) {
     return (
       <Container className="h-full">
         <div className="h-full flex flex-col items-center justify-center">
@@ -1876,12 +1876,13 @@ const Products = () => {
           <ProductTableTools
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
+            onClearFilters={onClearFilters}
           />
           <div className="mt-4 flex-grow overflow-y-auto">
             <DataTable
               columns={columns}
               data={pageData}
-              loading={isLoadingData && ProductsData.length > 0}
+              loading={isLoadingData && ProductsData?.data.length > 0}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
@@ -2447,7 +2448,7 @@ const Products = () => {
                         shape="rounded"
                         className="w-full h-full"
                       />
-                      <Button
+                      {/* <Button
                         size="xs"
                         shape="circle"
                         variant="solid"
@@ -2470,7 +2471,7 @@ const Products = () => {
                             shouldDirty: true,
                           });
                         }}
-                      />
+                      /> */}
                     </div>
                   )}
                 </FormItem>
@@ -2487,7 +2488,7 @@ const Products = () => {
                       (img) => !img.isDeleted
                     ).length;
                     const newImages = files
-                      .slice(0, 5 - currentNonDeletedCount)
+                      // .slice(0, 5 - currentNonDeletedCount)
                       .map((file) => ({
                         file,
                         previewUrl: URL.createObjectURL(file),
@@ -2521,7 +2522,7 @@ const Products = () => {
                           shape="rounded"
                           className="w-full h-full"
                         />
-                        <Button
+                        {/* <Button
                           shape="circle"
                           size="xs"
                           icon={<TbX />}
@@ -2545,7 +2546,7 @@ const Products = () => {
                               shouldDirty: true,
                             });
                           }}
-                        />
+                        /> */}
                       </div>
                     ))}
                 </div>
@@ -2804,23 +2805,7 @@ const Products = () => {
           </div>
         </div>
       </Dialog>
-      <Dialog
-        isOpen={isImageViewerOpen}
-        onClose={closeImageViewer}
-        title="View Image"
-        width={600}
-        footer={<Button onClick={closeImageViewer}>Close</Button>}
-      >
-        <div className="p-4 flex justify-center items-center">
-          {imageToView && (
-            <img
-              src={imageToView}
-              alt="Product view"
-              className="max-w-full max-h-[80vh] object-contain"
-            />
-          )}
-        </div>
-      </Dialog>
+
       <Dialog
         isOpen={importModalType !== null}
         onClose={closeImportModal}
@@ -2920,6 +2905,7 @@ const Products = () => {
         </Form>
       </ConfirmDialog>
       <Dialog
+        width={837}
         isOpen={isViewDetailModalOpen}
         onClose={closeViewDetailModal}
         size="lg"
@@ -2927,7 +2913,7 @@ const Products = () => {
         contentClassName="!p-0 bg-white dark:bg-slate-800 rounded-lg shadow-xl overflow-hidden"
       >
         {productToView ? (
-          <div className="max-h-[90vh] flex flex-col">
+          <div className="max-h-[79vh] flex flex-col">
             <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3 sticky top-0 bg-white dark:bg-slate-800 z-10">
               {productToView.thumbImageFullPath && (
                 <Avatar
@@ -3182,6 +3168,24 @@ const Products = () => {
             </div>
           </div>
         )}
+      </Dialog>
+            <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        title="View Image"
+        width={600}
+        style={{ zIndex: 100 }}
+        footer={<Button onClick={closeImageViewer}>Close</Button>}
+      >
+        <div className="p-4 flex justify-center items-center">
+          {imageToView && (
+            <img
+              src={imageToView}
+              alt="Product view"
+              className="max-w-full max-h-[80vh] object-contain"
+            />
+          )}
+        </div>
       </Dialog>
       <ProductsModals modalState={modalState} onClose={handleCloseModal} />
     </>

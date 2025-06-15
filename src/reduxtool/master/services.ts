@@ -415,8 +415,6 @@ export const addBrandAsync = async (unitData: FormData) => {
 };
 
 export const editBrandListAsync = async (brandId: number | string, formData: FormData) => {
-  console.log("editBrandListAsync - brandId:", brandId);
-  console.log("editBrandListAsync - formData to be sent:");
   for (const pair of formData.entries()) {
     console.log(pair[0] + ': ' + pair[1]);
   }
@@ -461,7 +459,7 @@ export const deleteAllBrandListAsync = async (unitData: any) => {
 }
 export const getProductAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/master/product?page=1`)
+    const response = await axiosInstance.post(`${config.apiURL}/master/product/get?page=1`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -482,17 +480,13 @@ export const addProductAsync = async (unitData: FormData) => {
   }
 };
 
-export const editProductListAsync = async (brandId: number | string, formData: FormData) => {
-  for (const pair of formData.entries()) {
-    console.log(pair[0] + ': ' + pair[1]);
-  }
-
+export const editProductListAsync = async (productId: number | string, formData: FormData) => {
   try {
     // The formData already contains _method: 'PUT'
     // Axios will automatically set 'Content-Type': 'multipart/form-data'
     // when the second argument to post/put is a FormData instance.
     const response = await axiosInstance.post(
-      `${config.apiURL}/master/brand/${brandId}`, // Use brandId in the URL
+      `${config.apiURL}/master/product/${productId}`, // Use brandId in the URL
       formData,
       {
         headers: {
