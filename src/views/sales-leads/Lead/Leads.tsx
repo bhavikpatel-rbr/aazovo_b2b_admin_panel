@@ -616,7 +616,7 @@ const LeadsListing = () => {
         leadNumber: apiLead.lead_number || `LD-${apiLead.id}`,
         status: apiLead.status || "New",
         enquiryType: apiLead.enquiry_type || "Other",
-        productName: apiLead.product.name,
+        productName: apiLead?.product && apiLead.product.name != null ? apiLead.product.name : "",
         memberId: String(apiLead.member_id || apiLead.user_id || "N/A"),
         memberName: apiLead.member_name || apiLead.user?.name,
         intent: apiLead.intent,

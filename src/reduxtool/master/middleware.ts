@@ -3190,8 +3190,9 @@ export const getUnitsAction = createAsyncThunk(
 
 export const changeProductStatusAction = createAsyncThunk(
   "master/changeProductStatus",
-  async (payload: { id: string; status: boolean }, { rejectWithValue, dispatch }) => {
+  async (payload: { id: number; status: string }, { rejectWithValue, dispatch }) => {
     try {
+      console.log("payload", payload)
       const response: AxiosResponse<any> = await changeProductStatusAsync(payload)
       if (response?.data?.status === true) {
         // Consider dispatching an action to refresh product list if needed
@@ -3231,7 +3232,7 @@ export const getInquiriesAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getInquiriesAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data?.data?.data
       }
 
       return rejectWithValue(response)

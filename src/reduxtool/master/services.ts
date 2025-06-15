@@ -1938,9 +1938,10 @@ export const getUnitsAsync = async () => {
   }
 }
 
-export const changeProductStatusAsync = async ({ id, status }: { id: string; status: boolean }) => {
+export const changeProductStatusAsync = async ({ id, status }: { id: number; status: string }) => {
   try {
-    const response = await axiosInstance.put(`${config.apiURL}/master/product/status/${id}`, {
+    console.log("ididid", id)
+    const response = await axiosInstance.post(`${config.apiURL}/master/product/status/${id}`, {
       status,
     })
     return response

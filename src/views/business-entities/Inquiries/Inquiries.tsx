@@ -80,6 +80,7 @@ import { useSelector } from "react-redux";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- API Inquiry Item Type (from API response) ---
+// UPDATED: This type now matches the structure of an item within the `data.data` array of your API response.
 export type ApiInquiryItem = {
   id: number;
   name: string | null;
@@ -92,18 +93,23 @@ export type ApiInquiryItem = {
   inquiry_description: string | null;
   inquiry_priority: string | null;
   inquiry_status: string | null;
-  assigned_to: string | null;
-  department?: string | null;
+  assigned_to: number | string | null; // The raw ID or null
   inquiry_date: string | null;
   response_date: string | null;
   resolution_date: string | null;
   follow_up_date: string | null;
   feedback_status: string | null;
   inquiry_resolution: string | null;
-  inquiry_attachments_array: string[] | null;
+  inquiry_attachments: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  inquiry_id: string;
+  inquiry_department: string | null;
+  inquiry_from: string | null;
+  inquiry_attachments_array: string[];
+  assigned_to_name: string; // The display name for the assignee
+  inquiry_department_name: string; // The display name for the department
 };
 
 // --- InquiryItem Type for UI (your preferred structure) ---
@@ -245,13 +251,14 @@ const FormattedDateDisplay = ({
 };
 
 // --- Data Processing Function ---
+// UPDATED: This function now maps fields from the new API response structure.
 const processApiDataToInquiryItems = (
   apiData: ApiInquiryItem[]
 ): InquiryItem[] => {
   if (!Array.isArray(apiData)) return []; // Important check
   return apiData.map((apiItem) => ({
     id: String(apiItem.id),
-    inquiry_id: `INQ-${String(apiItem.id).padStart(3, "0")}`,
+    inquiry_id: apiItem.inquiry_id || `INQ-${apiItem.id}`, // Use API provided ID, fallback to generated
     company_name: apiItem.company_name || "N/A",
     contact_person_name: apiItem.name || "N/A",
     contact_person_email: apiItem.email || "N/A",
@@ -262,9 +269,9 @@ const processApiDataToInquiryItems = (
       apiItem.requirements || apiItem.inquiry_description || "N/A", // Prioritize requirements
     inquiry_priority: apiItem.inquiry_priority || "N/A",
     inquiry_status: apiItem.inquiry_status || "N/A",
-    assigned_to: apiItem.assigned_to || "N/A",
-    department: apiItem.department || undefined, // Keep as undefined if null/empty
-    inquiry_date: apiItem.inquiry_date || apiItem.created_at || "N/A",
+    assigned_to: apiItem.assigned_to_name || "Unassigned", // Use the name field from the API
+    department: apiItem.inquiry_department_name || undefined, // Use the department name field
+    inquiry_date: apiItem.inquiry_date || apiItem.created_at || "N/A", // Fallback to created_at
     response_date: apiItem.response_date || "N/A",
     resolution_date: apiItem.resolution_date || "N/A",
     follow_up_date: apiItem.follow_up_date || "N/A",
@@ -306,6 +313,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
     departmentsData,
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
+console.log("inquiryList1", inquiryList1);
 
   // Initialize with empty arrays, data will come from Redux
   const [inquiryList, setInquiryList] = useState<InquiryItem[]>([]);
@@ -316,6 +324,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // Dispatch actions to fetch initial data
     dispatch(getDepartmentsAction());
+    dispatch(getInquiriesAction());
   }, [dispatch]);
 
   // This useEffect handles updates from Redux store
@@ -323,9 +332,9 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(false);
 
     if (masterLoadingStatus === "idle") {
-      // Ensure inquiryList1 is an array before processing
-      const inquiryDataFromApi = Array.isArray(inquiryList1?.data)
-        ? inquiryList1?.data
+      // UPDATED: Correctly access the nested `data.data` array from the API response
+      const inquiryDataFromApi = Array.isArray(inquiryList1)
+        ? inquiryList1
         : [];
 
       setInquiryList(
@@ -344,8 +353,6 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({
       // toast.push(<Notification type="danger" title="Error">Failed to load data.</Notification>);
     }
   }, [inquiryList1, departmentsData, masterLoadingStatus]);
-
-  // console.log("inquiryList (processed from Redux):", inquiryList); // For debugging purposes
 
   return (
     <InquiryListContext.Provider
@@ -1505,7 +1512,3 @@ const Inquiries = () => (
 );
 
 export default Inquiries;
-
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//   return classes.filter(Boolean).join(" ");
-// }

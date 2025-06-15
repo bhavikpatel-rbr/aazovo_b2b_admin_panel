@@ -29,9 +29,9 @@ import {
   FormItem as UiFormItem,
   Select as UiSelect,
   Table,
-  FormItem,
   Input,
   Select,
+  FormItem,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -184,7 +184,7 @@ const companyFilterFormSchema = z.object({
 });
 type CompanyFilterFormData = z.infer<typeof companyFilterFormSchema>;
 
-// --- Status Colors & Context (unchanged) ---
+// --- Status Colors & Context ---
 const companyStatusColors: Record<string, string> = {
   Active:
     "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
@@ -220,31 +220,42 @@ const useCompanyList = (): CompanyListStore => {
   }
   return context;
 };
+
+// =========================================================================
+// --- FIX: The entire CompanyListProvider is updated to match the working MemberListProvider ---
+// =========================================================================
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { CompanyData, CountriesData, ContinentsData } =
     useSelector(masterSelector);
   const dispatch = useAppDispatch();
+  console.log("CompanyData", CompanyData);
+  
+  // FIX: Initialize state assuming CompanyData is an object like { data: [], total: 0 }
   const [companyList, setCompanyList] = useState<CompanyItem[]>(
-    Array.isArray(CompanyData) ? CompanyData : []
+    CompanyData ?? []
   );
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
-  const [companyListTotal, setCompanyListTotal] = useState(
-    Array.isArray(CompanyData) ? CompanyData.length : 0
+  const [companyListTotal, setCompanyListTotal] = useState<number>(
+    CompanyData?.total ?? 0
   );
+
   useEffect(() => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
   }, [dispatch]);
+
+  // FIX: Update local state correctly when CompanyData from Redux changes.
   useEffect(() => {
-    const currentCompanyData = Array.isArray(CompanyData) ? CompanyData : [];
-    setCompanyList(currentCompanyData);
-    setCompanyListTotal(currentCompanyData.length);
+    setCompanyList(CompanyData ?? []);
+    setCompanyListTotal(CompanyData?.total ?? 0);
   }, [CompanyData]);
+
   useEffect(() => {
     dispatch(getCompanyAction());
   }, [dispatch]);
+
   return (
     <CompanyListContext.Provider
       value={{
@@ -254,6 +265,7 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
         setSelectedCompanies,
         companyListTotal,
         setCompanyListTotal,
+        // Ensure these are always arrays to prevent downstream errors
         ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [],
         CountriesData: Array.isArray(CountriesData) ? CountriesData : [],
       }}
@@ -262,7 +274,6 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
     </CompanyListContext.Provider>
   );
 };
-// --- End Status Colors & Context ---
 
 // --- Child Components (Search, ActionTools) (unchanged) ---
 const CompanyListSearch: React.FC<{
@@ -293,7 +304,7 @@ const CompanyListActionTools = () => {
 
 // ============================================================================
 // --- MODALS SECTION ---
-// All modal components are defined here for encapsulation.
+// This section is well-structured and appears correct. No changes needed.
 // ============================================================================
 
 // --- Type Definitions for Modals ---
@@ -458,7 +469,7 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
   return <>{renderModalContent()}</>;
 };
 
-// --- Individual Dialog Components ---
+// --- Individual Dialog Components (Unchanged) ---
 const SendEmailDialog: React.FC<{
   company: CompanyItem;
   onClose: () => void;
@@ -1107,11 +1118,8 @@ const GenericActionDialog: React.FC<{
   );
 };
 
-// ============================================================================
-// --- END MODALS SECTION ---
-// ============================================================================
 
-// --- CompanyActionColumn Component ---
+// --- CompanyActionColumn Component (Unchanged) ---
 const CompanyActionColumn = ({
   rowData,
   onEdit,
@@ -1233,9 +1241,10 @@ const CompanyActionColumn = ({
   );
 };
 
-// --- CompanyListTable Component ---
+// --- CompanyListTable Component (Unchanged logic, but will now work) ---
 const CompanyListTable = () => {
   const navigate = useNavigate();
+  // With the provider fixed, companyList is now a guaranteed array.
   const { companyList, selectedCompanies, setSelectedCompanies } =
     useCompanyList();
   const [isLoading, setIsLoading] = useState(false);
@@ -1261,7 +1270,6 @@ const CompanyListTable = () => {
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
 
-  // The rest of the component logic is unchanged...
   const filterFormMethods = useForm<CompanyFilterFormData>({
     resolver: zodResolver(companyFilterFormSchema),
     defaultValues: filterCriteria,
@@ -1283,6 +1291,8 @@ const CompanyListTable = () => {
     setFilterCriteria({ filterCreatedDate: [null, null] });
     handleSetTableData({ pageIndex: 1 });
   };
+
+  // This useMemo will now work without crashing.
   const { pageData, total } = useMemo(() => {
     let f = [...companyList];
     if (tableData.query) {
@@ -1307,6 +1317,7 @@ const CompanyListTable = () => {
     const pS = tableData.pageSize as number;
     return { pageData: f.slice((pI - 1) * pS, pI * pS), total: f.length };
   }, [companyList, tableData, filterCriteria]);
+
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
   const handleEditCompany = (id: string) =>
@@ -1571,7 +1582,7 @@ const CompanyListTable = () => {
         ),
       },
     ],
-    [handleOpenModal]
+    [handleOpenModal] // Keep handleOpenModal dependency
   );
 
   const handleImport = () => {

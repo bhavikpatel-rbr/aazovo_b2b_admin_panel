@@ -1487,7 +1487,7 @@ const Products = () => {
     try {
       await dispatch(
         changeProductStatusAction({
-          productId: productForStatusChange.id,
+          id: productForStatusChange.id,
           status: apiStatus,
         })
       ).unwrap();
