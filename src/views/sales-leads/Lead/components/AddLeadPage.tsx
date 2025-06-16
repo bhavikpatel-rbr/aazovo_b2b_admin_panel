@@ -48,7 +48,7 @@ import {
   getProductSpecificationsAction,
   getPaymentTermAction,
   addLeadAction,
-  getLeadMemberAction,
+  getMembersAction,
   getSalesPersonAction,
   getSuppliersAction,
 } from "@/reduxtool/master/middleware";
@@ -112,12 +112,12 @@ const AddLeadPage = () => {
     productsMasterData = [],
     ProductSpecificationsData = [],
     PaymentTermsData = [],
-    leadMember = [],
+    memberData = [],
     salesPerson = [],
     suppliers = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
-
+  
   const {
     control,
     handleSubmit,
@@ -127,7 +127,7 @@ const AddLeadPage = () => {
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
-      member_id: "",
+      member_id: null,
       enquiry_type: "",
       lead_intent: null,
       product_id: null,
@@ -162,7 +162,7 @@ const AddLeadPage = () => {
   }, [leadIntentValue]);
 
   const sourceMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Soruce Member (Supplier)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Buy") return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
     if (leadIntentValue === "Sell") return <div>Source Member (Buyer)<span className="text-red-500"> * </span></div>;
     return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
   }, [leadIntentValue]);
@@ -180,7 +180,7 @@ const AddLeadPage = () => {
           dispatch(getAllProductAction()),
           dispatch(getProductSpecificationsAction()),
           dispatch(getSalesPersonAction()),
-          dispatch(getLeadMemberAction()),
+          dispatch(getMembersAction()),
           dispatch(getSuppliersAction()),
           dispatch(getPaymentTermAction()),
         ]);
@@ -226,12 +226,12 @@ const AddLeadPage = () => {
   }, [PaymentTermsData]);
 
   const leadMemberOptions = useMemo(() => {
-    if (!Array.isArray(leadMember)) return [];
-    return leadMember.map((product: ApiLookupItem) => ({
-      value: product.id,
-      label: product.name,
+    if (!Array.isArray(memberData)) return [];
+    return memberData.map((member: ApiLookupItem) => ({
+      value: member.id,
+      label: member.name,
     }));
-  }, [leadMember]);
+  }, [memberData]);
 
   const salesPersonOption = useMemo(() => {
     if (!Array.isArray(salesPerson)) return [];
@@ -305,6 +305,27 @@ const AddLeadPage = () => {
           <AdaptableCard className="mb-4">
             <h5 className="mb-6 font-semibold">Lead Information</h5>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
+                            <FormItem
+                label="Lead Intent"
+                invalid={!!errors.lead_intent}
+                errorMessage={errors.lead_intent?.message}
+              >
+                <Controller
+                  name="lead_intent"
+                  control={control}
+                  render={({ field }) => (
+                    <UiSelect
+                      placeholder="Select Intent"
+                      options={leadIntentOptions}
+                      value={leadIntentOptions.find(
+                        (o) => o.value === field.value
+                      )}
+                      onChange={(opt) => field.onChange(opt?.value)}
+                      isClearable
+                    />
+                  )}
+                />
+              </FormItem>
               <FormItem
                 label={leadMemberLabel}
                 invalid={!!errors.member_id}
@@ -346,27 +367,7 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Lead Intent"
-                invalid={!!errors.lead_intent}
-                errorMessage={errors.lead_intent?.message}
-              >
-                <Controller
-                  name="lead_intent"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Intent"
-                      options={leadIntentOptions}
-                      value={leadIntentOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem>
+
               <FormItem
                 label={<div>Product Name (Interest)<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.product_id}
@@ -513,8 +514,8 @@ const AddLeadPage = () => {
                   render={({ field }) => (
                     <UiSelect
                       placeholder="Select Supplier"
-                      options={suppliersOption}
-                      value={suppliersOption.find(
+                      options={leadMemberOptions}
+                      value={leadMemberOptions.find(
                         (o) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}

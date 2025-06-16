@@ -1,6 +1,6 @@
 // src/views/sales-leads/LeadsListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +23,6 @@ import Tooltip from "@/components/ui/Tooltip";
 import Tag from "@/components/ui/Tag";
 import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
-import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -47,7 +46,6 @@ import {
   TbPencil,
   TbTrash,
   TbAlertTriangle,
-  TbCalendarTime,
   TbSubtask,
   TbSearch,
   TbCloudUpload,
@@ -58,12 +56,10 @@ import {
   TbArrowsExchange,
   TbRocket,
   TbInfoCircle,
-  TbBulb,
   TbReload,
   TbMail,
   TbBrandWhatsapp,
   TbBell,
-  TbUser,
   TbTagStarred,
   TbCalendarEvent,
   TbAlarm,
@@ -71,6 +67,7 @@ import {
   TbMessageReport,
   TbClipboardText,
   TbFileZip,
+  TbFileText,
 } from "react-icons/tb";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
@@ -85,7 +82,7 @@ import type { TableQueries } from "@/@types/common";
 import type {
   LeadStatus,
   EnquiryType,
-  LeadListItem,
+  LeadIntent,
 } from "./types";
 import {
   leadStatusOptions as leadStatusOptionsConst,
@@ -100,10 +97,36 @@ import {
   getLeadAction,
   deleteLeadAction,
   deleteAllLeadsAction,
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-// --- Zod Schema for Filter Form (remains the same) ---
+// --- Internal Flattened Type for component use ---
+type LeadListItem = {
+    id: string | number;
+    lead_number: string;
+    lead_status: LeadStatus;
+    enquiry_type: EnquiryType;
+    productId?: number;
+    productName: string;
+    customerId: string | number;
+    customerName: string;
+    lead_intent: LeadIntent;
+    qty?: number | null;
+    target_price?: number | null;
+    assigned_sales_person_id?: string | number | null;
+    salesPersonName?: string;
+    createdAt: Date;
+    updatedAt?: Date;
+    source_supplier_id?: string | number | null;
+    sourceSupplierName?: string;
+    // Keep the raw object for the detailed view dialog
+    rawApiData: any;
+    buyer: any;
+    supplier: any;
+};
+
+// --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
   filterStatuses: z.array(z.string()).optional().default([]),
   filterEnquiryTypes: z.array(z.string()).optional().default([]),
@@ -117,7 +140,17 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// --- UI Constants (Colors remain, options imported or fetched) ---
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+
+// --- UI Constants ---
 const leadStatusColor: Record<LeadStatus | "default", string> = {
   New: "bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200",
   Contacted: "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200",
@@ -137,16 +170,15 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   Partnership: "bg-lime-100 text-lime-700 dark:bg-lime-700/30 dark:text-lime-200",
   Sourcing: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-700/30 dark:text-fuchsia-200",
   Other: "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200",
+  "Wall Listing": "bg-gray-100 text-gray-700",
+  "Manual Lead": "bg-blue-100 text-blue-700",
+  "From Inquiry": "bg-indigo-100 text-indigo-700",
   default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
 };
 
-// --- Dummy Data (used by filters, view dialog, and NEW MODALS) ---
-const dummySuppliers = [{ id: "SUP001", name: "Supplier Alpha" }, { id: "SUP002", name: "Supplier Beta" }];
+// --- Dummy Data ---
 const dummyProducts = [{ id: 1, name: "iPhone 15 Pro" }, { id: 2, name: "Galaxy S24 Ultra" }];
 const dummySalesPersons = [{ id: "SP001", name: "Alice Wonder" }, { id: "SP002", name: "Bob Builder" }];
-const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Box" }];
-const dummyPaymentTerms = [{ id: 1, name: "Net 30" }, { id: 2, name: "COD" }];
-// --- Helper Data for Modal Demos (From Partner Module) ---
 const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }];
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }];
 const eventTypeOptions = [{ value: "meeting", label: "Meeting" }, { value: "call", label: "Follow-up Call" }, { value: "deadline", label: "Project Deadline" }];
@@ -154,10 +186,9 @@ const dummyAlerts = [{ id: 1, severity: "danger", message: "Follow-up for Lead #
 const dummyDocs = [{ id: "doc1", name: "Product_Quote_LD-1023.pdf", type: "pdf", size: "1.2 MB" }, { id: "doc2", name: "Lead_Requirements.zip", type: "zip", size: "8.4 MB" }];
 const dummyFeedback = [{ id: "f1", type: "Question", subject: "Inquiry about bulk pricing", status: "Open" }, { id: "f2", type: "Comment", subject: "Positive interaction with sales", status: "Closed" }];
 
-
-// CSV Exporter (Keep your existing function)
-const CSV_LEAD_HEADERS = ["ID", "Lead Number", "Status", "Enquiry Type", "Product Name", "Member ID", "Member Name", "Intent", "Qty", "Target Price", "Sales Person", "Created At"];
-const CSV_LEAD_KEYS: (keyof LeadListItem)[] = ["id", "leadNumber", "status", "enquiryType", "productName", "memberId", "memberName", "intent", "qty", "targetPrice", "salesPersonName", "createdAt"];
+// --- CSV Exporter ---
+const CSV_LEAD_HEADERS = ["ID", "Lead Number", "Status", "Enquiry Type", "Product Name", "Customer ID", "Customer Name", "Intent", "Qty", "Target Price", "Sales Person", "Created At"];
+const CSV_LEAD_KEYS: (keyof LeadListItem)[] = ["id", "lead_number", "lead_status", "enquiry_type", "productName", "customerId", "customerName", "lead_intent", "qty", "target_price", "salesPersonName", "createdAt"];
 function exportLeadsToCsv(filename: string, rows: LeadListItem[]) {
   if (!rows || !rows.length) {
     toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
@@ -194,16 +225,12 @@ function exportLeadsToCsv(filename: string, rows: LeadListItem[]) {
 }
 
 // ============================================================================
-// --- MODALS SECTION ---
-// All modal components for Leads, adapted from the Partner module.
+// --- MODALS SECTION (Unchanged) ---
 // ============================================================================
-
-// --- Type Definitions for Modals ---
 export type LeadModalType = | "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "alert" | "document" | "feedback";
 export interface LeadModalState { isOpen: boolean; type: LeadModalType | null; data: LeadListItem | null; }
 interface LeadModalsProps { modalState: LeadModalState; onClose: () => void; }
 
-// --- LeadModals Manager Component ---
 const LeadModals: React.FC<LeadModalsProps> = ({ modalState, onClose }) => {
   const { type, data: lead, isOpen } = modalState;
   if (!isOpen || !lead) return null;
@@ -224,15 +251,12 @@ const LeadModals: React.FC<LeadModalsProps> = ({ modalState, onClose }) => {
   return <>{renderModalContent()}</>;
 };
 
-// --- Individual Dialog Components for Leads ---
 const SendEmailDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> = ({ lead, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { subject: `Regarding Lead: ${lead.leadNumber}`, message: "" } });
+  const { control, handleSubmit } = useForm({ defaultValues: { subject: `Regarding Lead: ${lead.lead_number}`, message: "" } });
   const onSendEmail = (data: { subject: string; message: string }) => {
     setIsLoading(true);
-    // NOTE: LeadListItem does not have a direct email. This is a simulation.
-    // In a real app, you'd fetch the member's email via their ID.
-    console.log("Simulating email to member of", lead.leadNumber, "with data:", data);
+    console.log("Simulating email to member of", lead.lead_number, "with data:", data);
     setTimeout(() => {
       toast.push(<Notification type="success" title="Email Sent Successfully" />);
       setIsLoading(false);
@@ -241,7 +265,7 @@ const SendEmailDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> = 
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send Email for {lead.leadNumber}</h5>
+      <h5 className="mb-4">Send Email for {lead.lead_number}</h5>
       <form onSubmit={handleSubmit(onSendEmail)}>
         <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => <RichTextEditor value={field.value} onChange={field.onChange} />} /></FormItem>
@@ -254,10 +278,8 @@ const SendEmailDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> = 
   );
 };
 const SendWhatsAppDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> = ({ lead, onClose }) => {
-  const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi, regarding your enquiry for ${lead.productName} (Lead: ${lead.leadNumber})...` } });
+  const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi, regarding your enquiry for ${lead.productName} (Lead: ${lead.lead_number})...` } });
   const onSendMessage = (data: { message: string }) => {
-    // NOTE: LeadListItem does not have a contact number. This is a simulation.
-    // In a real app, you'd fetch the member's contact number via their ID.
     const phone = "1234567890"; // Dummy phone number
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(data.message)}`;
     window.open(url, "_blank");
@@ -266,7 +288,7 @@ const SendWhatsAppDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }>
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send WhatsApp for {lead.leadNumber}</h5>
+      <h5 className="mb-4">Send WhatsApp for {lead.lead_number}</h5>
       <form onSubmit={handleSubmit(onSendMessage)}>
         <FormItem label="Message Template"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
         <div className="text-right mt-6">
@@ -282,7 +304,7 @@ const AddNotificationDialog: React.FC<{ lead: LeadListItem; onClose: () => void;
   const { control, handleSubmit } = useForm({ defaultValues: { title: "", users: [], message: "" } });
   const onSend = (data: any) => {
     setIsLoading(true);
-    console.log("Sending in-app notification for", lead.leadNumber, "with data:", data);
+    console.log("Sending in-app notification for", lead.lead_number, "with data:", data);
     setTimeout(() => {
       toast.push(<Notification type="success" title="Notification Sent" />);
       setIsLoading(false);
@@ -291,7 +313,7 @@ const AddNotificationDialog: React.FC<{ lead: LeadListItem; onClose: () => void;
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Notification for {lead.leadNumber}</h5>
+      <h5 className="mb-4">Add Notification for {lead.lead_number}</h5>
       <form onSubmit={handleSubmit(onSend)}>
         <FormItem label="Notification Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <FormItem label="Send to Users"><Controller name="users" control={control} render={({ field }) => <UiSelect isMulti placeholder="Select Users" options={dummyUsers} {...field} />} /></FormItem>
@@ -306,10 +328,10 @@ const AddNotificationDialog: React.FC<{ lead: LeadListItem; onClose: () => void;
 };
 const AssignTaskDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> = ({ lead, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: `Follow up on lead ${lead.leadNumber}`, assignee: null, dueDate: null, priority: null, description: "" } });
+  const { control, handleSubmit } = useForm({ defaultValues: { title: `Follow up on lead ${lead.lead_number}`, assignee: null, dueDate: null, priority: null, description: "" } });
   const onAssignTask = (data: any) => {
     setIsLoading(true);
-    console.log("Assigning task for", lead.leadNumber, "with data:", data);
+    console.log("Assigning task for", lead.lead_number, "with data:", data);
     setTimeout(() => {
       toast.push(<Notification type="success" title="Task Assigned" />);
       setIsLoading(false);
@@ -318,7 +340,7 @@ const AssignTaskDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> =
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Assign Task for {lead.leadNumber}</h5>
+      <h5 className="mb-4">Assign Task for {lead.lead_number}</h5>
       <form onSubmit={handleSubmit(onAssignTask)}>
         <FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -337,10 +359,10 @@ const AssignTaskDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> =
 };
 const AddScheduleDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> = ({ lead, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: `Call with member for ${lead.leadNumber}`, eventType: null, startDate: null, notes: "" } });
+  const { control, handleSubmit } = useForm({ defaultValues: { title: `Call with member for ${lead.lead_number}`, eventType: null, startDate: null, notes: "" } });
   const onAddEvent = (data: any) => {
     setIsLoading(true);
-    console.log("Adding event for", lead.leadNumber, "with data:", data);
+    console.log("Adding event for", lead.lead_number, "with data:", data);
     setTimeout(() => {
       toast.push(<Notification type="success" title="Event Scheduled" />);
       setIsLoading(false);
@@ -349,7 +371,7 @@ const AddScheduleDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> 
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Schedule for {lead.leadNumber}</h5>
+      <h5 className="mb-4">Add Schedule for {lead.lead_number}</h5>
       <form onSubmit={handleSubmit(onAddEvent)}>
         <FormItem label="Event Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -369,7 +391,7 @@ const ViewAlertDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }> = 
   const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue" };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-      <h5 className="mb-4">Alerts for {lead.leadNumber}</h5>
+      <h5 className="mb-4">Alerts for {lead.lead_number}</h5>
       <div className="mt-4 flex flex-col gap-3">
         {dummyAlerts.length > 0 ? (
           dummyAlerts.map((alert) => (
@@ -393,7 +415,7 @@ const DownloadDocumentDialog: React.FC<{ lead: LeadListItem; onClose: () => void
   const iconMap: Record<string, React.ReactElement> = { pdf: <TbFileText className="text-red-500" />, zip: <TbFileZip className="text-amber-500" /> };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Documents for {lead.leadNumber}</h5>
+      <h5 className="mb-4">Documents for {lead.lead_number}</h5>
       <div className="flex flex-col gap-3 mt-4">
         {dummyDocs.map((doc) => (
           <div key={doc.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
@@ -416,7 +438,7 @@ const ViewRequestFeedbackDialog: React.FC<{ lead: LeadListItem; onClose: () => v
   const statusColors: Record<string, string> = { Open: "bg-emerald-500", Closed: "bg-red-500" };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={700}>
-      <h5 className="mb-4">Requests & Feedback for {lead.leadNumber}</h5>
+      <h5 className="mb-4">Requests & Feedback for {lead.lead_number}</h5>
       <div className="max-h-[400px] overflow-y-auto">
         <Table>
           <Table.THead><Table.Tr><Table.Th>Type</Table.Th><Table.Th>Subject</Table.Th><Table.Th>Status</Table.Th></Table.Tr></Table.THead>
@@ -440,7 +462,7 @@ const GenericActionDialog: React.FC<{ type: LeadModalType | null; lead: LeadList
   const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
   const handleConfirm = () => {
     setIsLoading(true);
-    console.log(`Performing action '${type}' for lead ${lead.leadNumber}`);
+    console.log(`Performing action '${type}' for lead ${lead.lead_number}`);
     setTimeout(() => {
       toast.push(<Notification type="success" title="Action Completed" />);
       setIsLoading(false);
@@ -450,7 +472,7 @@ const GenericActionDialog: React.FC<{ type: LeadModalType | null; lead: LeadList
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-2">{title}</h5>
-      <p>Are you sure you want to perform this action for <span className="font-semibold">{lead.leadNumber}</span>?</p>
+      <p>Are you sure you want to perform this action for <span className="font-semibold">{lead.lead_number}</span>?</p>
       <div className="text-right mt-6">
         <Button className="mr-2" onClick={onClose}>Cancel</Button>
         <Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button>
@@ -518,20 +540,28 @@ const LeadActionColumn = ({
   );
 };
 
-
-const LeadSearch = React.forwardRef<HTMLInputElement, any>((props, ref) => (
-  <DebouceInput {...props} ref={ref} />
+const LeadSearch = React.forwardRef<
+  HTMLInputElement,
+  { onInputChange: (value: string) => void; placeholder?: string }
+>(({ onInputChange, ...rest }, ref) => (
+  <DebouceInput
+    ref={ref}
+    {...rest}
+    suffix={<TbSearch className="text-lg" />}
+    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)}
+  />
 ));
 LeadSearch.displayName = "LeadSearch";
+
 const LeadTableTools = (
   { onSearchChange, onFilter, onExport, onClearFilters }: any
 ) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
-      <LeadSearch onInputChange={onSearchChange} placeholder="Search leads..." />
+      <LeadSearch onInputChange={onSearchChange} placeholder="Quick Search..." />
     </div>
     <div className="flex gap-1">
-      <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip>
+      <Button icon={<TbReload />} onClick={onClearFilters}></Button>
       <Button icon={<TbFilter />} onClick={onFilter}>Filter</Button>
       <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
     </div>
@@ -550,23 +580,9 @@ const LeadSelectedFooter = ({ selectedItems, onDeleteSelected }: any) => {
         </div>
       </StickyFooter>
       <ConfirmDialog isOpen={open} type="danger" onConfirm={() => { onDeleteSelected(); setOpen(false); }} onClose={() => setOpen(false)} title="Delete Selected">
-        <p>Sure?</p>
+        <p>Are you sure you want to delete the selected items?</p>
       </ConfirmDialog>
     </>
-  );
-};
-const DialogDetailRow: React.FC<any> = ({ label, value, isLink, preWrap, breakAll, labelClassName, valueClassName, className }) => {
-  const defaultLabelClass = "text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider";
-  const defaultValueClass = "text-sm text-slate-700 dark:text-slate-100 mt-0.5";
-  return (
-    <div className={`py-1.5 ${className || ""}`}>
-      <p className={`${labelClassName || defaultLabelClass}`}>{label}</p>
-      {isLink ? (
-        <a href={typeof value === "string" && (value.startsWith("http") ? value : `/${value}`)} target="_blank" rel="noopener noreferrer" className={`${valueClassName || defaultValueClass} hover:underline text-blue-600 dark:text-blue-400 ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</a>
-      ) : (
-        <div className={`${valueClassName || defaultValueClass} ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</div>
-      )}
-    </div>
   );
 };
 
@@ -575,21 +591,21 @@ const LeadsListing = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { LeadsData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
-
+  
   // States for Drawers & Dialogs
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState(false);
   const [isChangeStatusDrawerOpen, setIsChangeStatusDrawerOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [editingLeadForDrawer, setEditingLeadForDrawer] = useState<LeadListItem | null>(null);
   const [leadToView, setLeadToView] = useState<LeadListItem | null>(null);
+  const [editingLeadForDrawer, setEditingLeadForDrawer] = useState<LeadListItem | null>(null);
   const [isSubmittingDrawer, setIsSubmittingDrawer] = useState(false);
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
 
   // --- MODAL STATE AND HANDLERS ---
   const [modalState, setModalState] = useState<LeadModalState>({ isOpen: false, type: null, data: null });
   const handleOpenModal = (type: LeadModalType, leadData: LeadListItem) => setModalState({ isOpen: true, type, data: leadData });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
-  // --- END MODAL STATE AND HANDLERS ---
 
   // States for table and delete operations
   const [isProcessingDelete, setIsProcessingDelete] = useState(false);
@@ -599,10 +615,14 @@ const LeadsListing = () => {
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "createdAt" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<LeadListItem[]>([]);
 
-  // Form methods for drawers
+  // Form methods
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const assignFormMethods = useForm<{ salesPersonId: string | number | null }>({ defaultValues: { salesPersonId: null } });
   const statusFormMethods = useForm<{ newStatus: LeadStatus }>({ defaultValues: { newStatus: "New" } });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+  });
 
   useEffect(() => {
     dispatch(getLeadAction());
@@ -613,26 +633,31 @@ const LeadsListing = () => {
     return LeadsData.map(
       (apiLead: any): LeadListItem => ({
         id: apiLead.id,
-        leadNumber: apiLead.lead_number || `LD-${apiLead.id}`,
-        status: apiLead.status || "New",
-        enquiryType: apiLead.enquiry_type || "Other",
-        productName: apiLead?.product && apiLead.product.name != null ? apiLead.product.name : "",
-        memberId: String(apiLead.member_id || apiLead.user_id || "N/A"),
-        memberName: apiLead.member_name || apiLead.user?.name,
-        intent: apiLead.intent,
+        lead_number: apiLead.lead_number || `LD-${apiLead.id}`,
+        lead_status: apiLead.lead_status || "New",
+        enquiry_type: apiLead.enquiry_type || "Other",
+        productId: apiLead.product?.id,
+        productName: apiLead.product?.name ?? "N/A",
+        customerId: String(apiLead.customer?.id ?? (apiLead.member_id || "N/A")),
+        customerName: apiLead.customer?.name ?? "N/A",
+        lead_intent: apiLead.lead_intent || "Buy",
         qty: apiLead.qty,
-        targetPrice: apiLead.target_price,
-        salesPersonId: apiLead.sales_person_id,
+        target_price: apiLead.target_price,
+        assigned_sales_person_id: apiLead.assigned_sales_person_id,
         salesPersonName: apiLead.sales_person?.name,
         createdAt: new Date(apiLead.created_at),
         updatedAt: apiLead.updated_at ? new Date(apiLead.updated_at) : undefined,
-        sourcingDetails: apiLead.sourcing_details ? typeof apiLead.sourcing_details === "string" ? JSON.parse(apiLead.sourcing_details) : apiLead.sourcing_details : undefined,
+        source_supplier_id: apiLead.source_supplier_id,
+        sourceSupplierName: apiLead.source_supplier?.name,
+        rawApiData: apiLead,
       })
     );
   }, [LeadsData]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo((): { pageData: LeadListItem[]; total: number; allFilteredAndSortedData: LeadListItem[]; } => {
     let processedData: LeadListItem[] = cloneDeep(mappedLeads);
+    
+    // --- FILTERS ---
     if (filterCriteria.dateRange?.[0] || filterCriteria.dateRange?.[1]) {
       const [start, end] = filterCriteria.dateRange.map((d) => d ? dayjs(d) : null);
       processedData = processedData.filter((item) => {
@@ -645,41 +670,64 @@ const LeadsListing = () => {
     }
     if (filterCriteria.filterStatuses?.length) {
       const statuses = new Set(filterCriteria.filterStatuses);
-      processedData = processedData.filter((item) => statuses.has(item.status));
+      processedData = processedData.filter((item) => statuses.has(item.lead_status));
     }
     if (filterCriteria.filterEnquiryTypes?.length) {
       const types = new Set(filterCriteria.filterEnquiryTypes);
-      processedData = processedData.filter((item) => types.has(item.enquiryType));
+      processedData = processedData.filter((item) => types.has(item.enquiry_type));
     }
     if (filterCriteria.filterIntents?.length) {
       const intents = new Set(filterCriteria.filterIntents);
-      processedData = processedData.filter((item) => !!item.intent && intents.has(item.intent));
+      processedData = processedData.filter((item) => !!item.lead_intent && intents.has(item.lead_intent));
     }
     if (filterCriteria.filterProductIds?.length) {
       const productIds = new Set(filterCriteria.filterProductIds);
-      processedData = processedData.filter((item) => !!item.sourcingDetails?.productId && productIds.has(item.sourcingDetails.productId));
+      processedData = processedData.filter((item) => !!item.productId && productIds.has(item.productId));
     }
     if (filterCriteria.filterSalesPersonIds?.length) {
       const spIds = new Set(filterCriteria.filterSalesPersonIds);
-      processedData = processedData.filter((item) => !!item.salesPersonId && spIds.has(String(item.salesPersonId)));
+      processedData = processedData.filter((item) => !!item.assigned_sales_person_id && spIds.has(String(item.assigned_sales_person_id)));
     }
-    if (tableData.query) {
-      const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query)));
+    
+    // --- Search Logic ---
+    if (tableData.query && tableData.query.trim() !== "") {
+        const query = tableData.query.toLowerCase().trim();
+        processedData = processedData.filter((item) =>
+            String(item.id).toLowerCase().includes(query) ||
+            String(item.lead_number).toLowerCase().includes(query) ||
+            String(item.productName).toLowerCase().includes(query) ||
+            String(item.customerName).toLowerCase().includes(query) ||
+            String(item.customerId).toLowerCase().includes(query) ||
+            String(item.salesPersonName).toLowerCase().includes(query) ||
+            String(item.lead_status).toLowerCase().includes(query) ||
+            String(item.enquiry_type).toLowerCase().includes(query)
+        );
     }
+    
+    // --- SORTING ---
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedData.sort((a, b) => {
         let aVal = a[key as keyof LeadListItem] as any;
         let bVal = b[key as keyof LeadListItem] as any;
-        if (key === "createdAt" || key === "updatedAt") return order === "asc" ? dayjs(aVal).valueOf() - dayjs(bVal).valueOf() : dayjs(bVal).valueOf() - dayjs(aVal).valueOf();
-        if (typeof aVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal;
-        return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? ""));
+        if (key === "createdAt" || key === "updatedAt") {
+            const dateA = aVal ? dayjs(aVal).valueOf() : 0;
+            const dateB = bVal ? dayjs(bVal).valueOf() : 0;
+            return order === "asc" ? dateA - dateB : dateB - dateA;
+        }
+        if (typeof aVal === "number" && typeof bVal === 'number') {
+            return order === "asc" ? aVal - bVal : bVal - aVal;
+        }
+        return order === "asc" 
+            ? String(aVal ?? "").localeCompare(String(bVal ?? "")) 
+            : String(bVal ?? "").localeCompare(String(aVal ?? ""));
       });
     }
+    
     const currentTotal = processedData.length;
     const { pageIndex = 1, pageSize = 10 } = tableData;
     const startIndex = (pageIndex - 1) * pageSize;
+
     return {
       pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
@@ -688,11 +736,10 @@ const LeadsListing = () => {
   }, [mappedLeads, tableData, filterCriteria]);
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
-
   const handleOpenAddLeadPage = useCallback(() => { navigate("/sales-leads/lead/add"); }, [navigate]);
   const handleOpenEditLeadPage = useCallback((lead: LeadListItem) => { navigate(`/sales-leads/lead/edit/${lead.id}`); }, [navigate]);
-
   const handleDeleteClick = useCallback((item: LeadListItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
+  
   const onConfirmSingleDelete = useCallback(async () => {
     if (!itemToDelete) return;
     setIsProcessingDelete(true);
@@ -728,11 +775,12 @@ const LeadsListing = () => {
 
   const openAssignDrawer = useCallback((lead: LeadListItem) => {
     setEditingLeadForDrawer(lead);
-    assignFormMethods.reset({ salesPersonId: lead.salesPersonId || null });
+    assignFormMethods.reset({ salesPersonId: lead.assigned_sales_person_id || null });
     setIsAssignDrawerOpen(true);
   }, [assignFormMethods]);
   const closeAssignDrawer = useCallback(() => { setIsAssignDrawerOpen(false); setEditingLeadForDrawer(null); }, []);
-  const onAssignSubmit = useCallback(async (data: { salesPersonId: string | number | null }) => {
+  
+  const onAssignSubmit = useCallback(async () => {
     if (!editingLeadForDrawer) return;
     setIsSubmittingDrawer(true);
     try {
@@ -750,11 +798,12 @@ const LeadsListing = () => {
 
   const openChangeStatusDrawer = useCallback((lead: LeadListItem) => {
     setEditingLeadForDrawer(lead);
-    statusFormMethods.reset({ newStatus: lead.status });
+    statusFormMethods.reset({ newStatus: lead.lead_status });
     setIsChangeStatusDrawerOpen(true);
   }, [statusFormMethods]);
   const closeChangeStatusDrawer = useCallback(() => { setIsChangeStatusDrawerOpen(false); setEditingLeadForDrawer(null); }, []);
-  const onChangeStatusSubmit = useCallback(async (data: { newStatus: LeadStatus }) => {
+  
+  const onChangeStatusSubmit = useCallback(async () => {
     if (!editingLeadForDrawer) return;
     setIsSubmittingDrawer(true);
     try {
@@ -771,9 +820,52 @@ const LeadsListing = () => {
   }, [dispatch, editingLeadForDrawer, closeChangeStatusDrawer]);
 
   const handleConvertToOpportunity = useCallback((lead: LeadListItem) => { toast.push(<Notification title="Info" type="info">Convert to Opportunity: Not Implemented</Notification>); }, []);
-  const openViewDialog = useCallback((lead: LeadListItem) => { setLeadToView(lead); setIsViewDialogOpen(true); }, []);
-  const closeViewDialog = useCallback(() => { setIsViewDialogOpen(false); setLeadToView(null); }, []);
-  const handleExportData = useCallback(() => exportLeadsToCsv("leads_export.csv", allFilteredAndSortedData), [allFilteredAndSortedData]);
+  
+  const openViewDialog = useCallback((lead: LeadListItem) => setLeadToView(lead), []);
+  const closeViewDialog = useCallback(() => setLeadToView(null), []);
+
+  const handleOpenExportModal = useCallback(() => {
+    if (!allFilteredAndSortedData || allFilteredAndSortedData.length === 0) {
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  }, [allFilteredAndSortedData, exportReasonFormMethods]);
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Leads"; // Module name for logging
+    const date = new Date().toISOString().split("T")[0];
+    const fileName = `leads_export_${date}.csv`; // Dynamic filename
+    try {
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName , file_name:fileName })).unwrap();
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
+      exportLeadsToCsv(
+        fileName,
+        allFilteredAndSortedData,
+      );
+      toast.push(
+        <Notification title="Data Exported" type="success">
+          Leads data exported.
+        </Notification>
+      );
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          title="Operation Failed"
+          type="danger"
+          message={error.message || "Could not complete export."}
+        />
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
+  
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handlePageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
   const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
@@ -781,70 +873,69 @@ const LeadsListing = () => {
   const handleRowSelect = useCallback((checked: boolean, row: LeadListItem) => setSelectedItems((prev) => checked ? (prev.some((i) => i.id === row.id) ? prev : [...prev, row]) : prev.filter((i) => i.id !== row.id)), []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<LeadListItem>[]) => {
     const originals = currentRows.map((r) => r.original);
-    if (checked) setSelectedItems((prev) => { const oldIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; });
-    else { const currentIds = new Set(originals.map((o) => o.id)); setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); }
+    if (checked) {
+      setSelectedItems((prev) => { 
+        const oldIds = new Set(prev.map((i) => i.id)); 
+        return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; 
+      });
+    } else { 
+      const currentIds = new Set(originals.map((o) => o.id)); 
+      setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); 
+    }
   }, []);
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+  const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ pageIndex: 1, query: '' }); dispatch(getLeadAction()); setIsFilterDrawerOpen(false); }, [filterFormMethods, handleSetTableData, dispatch]);
 
   const columns: ColumnDef<LeadListItem>[] = useMemo(
     () => [
       {
-        header: "Status",
-        accessorKey: "status",
-        size: 120,
-        cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag>),
+        header: "Status", accessorKey: "lead_status", size: 120,
+        cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.lead_status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.lead_status}</Tag>),
       },
       {
-        header: "Lead",
-        accessorKey: "leadNumber",
-        size: 130,
+        header: "Lead", accessorKey: "lead_number", size: 130,
         cell: (props) => (
           <div className="flex flex-col gap-0.5 text-xs">
-            <span>{props.getValue()}</span>
-            <div><Tag className={`${enquiryTypeColor[props.row.original.enquiryType] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiryType}</Tag></div>
+            <span>{props.getValue() as string}</span>
+            <div><Tag className={`${enquiryTypeColor[props.row.original.enquiry_type] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiry_type}</Tag></div>
           </div>
         ),
       },
       {
-        header: "Product",
-        accessorKey: "productName",
-        size: 200,
+        header: "Product", accessorKey: "productName", size: 200,
         cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || "-",
       },
       {
-        header: "Member",
-        accessorKey: "memberName",
-        size: 150,
-        cell: (props: CellContext<LeadListItem, any>) => (
-          <div className="flex flex-col gap-0.5 text-xs">
-            <b>Buyer: {props.row.original.memberId}</b>
-            <span>Dharmesh Soni</span>
-            <b>Seller: 7022359</b>
-            <span>Mahesh Bhatt</span>
-          </div>
-        ),
+        header: "Member", accessorKey: "customerName", size: 150,
+        cell: (props: CellContext<LeadListItem, any>) => {
+            const supplier = LeadsData[0]?.supplier;
+            const buyer = LeadsData[0]?.buyer;
+            return (
+              <div className="flex flex-col gap-0.5 text-xs">
+                <b>Buyer: {buyer.id}</b>
+                <span>{buyer.name}</span>
+                <b>Seller: {supplier.id}</b>
+                <span>{supplier.name}</span>
+              </div>
+            );
+        },
       },
       {
-        header: "Want To",
-        size: 220,
+        header: "Details", size: 220,
         cell: (props) => (
           <div className="flex flex-col gap-0.5 text-xs">
-            <div><Tag>Buy</Tag></div>
-            <span>Qty: 400</span>
-            <span>Target Price: 5000</span>
-            <span>Sales Person : {props.row.original.salesPersonName || "Mukesh"}</span>
+            <div><Tag>{props.row.original.lead_intent || "Buy"}</Tag></div>
+            <span>Qty: {props.row.original.qty ?? "-"}</span>
+            <span>Target Price: {props.row.original.target_price ?? "-"}</span>
+            <span>Sales Person : {props.row.original.salesPersonName || "Unassigned"}</span>
             <b>{dayjs(props.row.original.createdAt).format("DD MMM, YYYY HH:mm")}</b>
           </div>
         ),
       },
       {
-        header: "Actions",
-        id: "action",
-        meta: { HeaderClass: "text-center" },
-        size: 80,
+        header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80,
         cell: (props: CellContext<LeadListItem, any>) => (
           <LeadActionColumn
             onViewDetail={() => openViewDialog(props.row.original)}
@@ -858,15 +949,7 @@ const LeadsListing = () => {
         ),
       },
     ],
-    [
-      openViewDialog,
-      handleOpenEditLeadPage,
-      handleDeleteClick,
-      openAssignDrawer,
-      openChangeStatusDrawer,
-      handleConvertToOpportunity,
-      handleOpenModal, // Add dependency here
-    ]
+    [openViewDialog, handleOpenEditLeadPage, handleDeleteClick, openAssignDrawer, openChangeStatusDrawer, handleConvertToOpportunity, handleOpenModal]
   );
 
   const tableIsLoading = masterLoadingStatus === "loading" || masterLoadingStatus === "pending" || isSubmittingDrawer || isProcessingDelete;
@@ -879,14 +962,14 @@ const LeadsListing = () => {
             <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={handleOpenAddLeadPage}>Add New</Button>
           </div>
-          <LeadTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleExportData} />
+          <LeadTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportModal} />
           <div className="mt-4 flex-grow overflow-y-auto">
             <LeadTable
               columns={columns}
               data={pageData}
               loading={tableIsLoading}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-              selectedItems={selectedItems}
+              selectable
               onPaginationChange={handlePaginationChange}
               onSelectChange={handlePageSizeChange}
               onSort={handleSort}
@@ -897,97 +980,77 @@ const LeadsListing = () => {
         </AdaptiveCard>
       </Container>
       <LeadSelectedFooter selectedItems={selectedItems} onDeleteSelected={onDeleteSelected} />
+      
+      <Dialog
+          isOpen={!!leadToView}
+          onClose={closeViewDialog}
+          onRequestClose={closeViewDialog}
+          width={700}
+      >
+          <h5 className="mb-4 text-lg font-semibold">
+              Lead Details - {leadToView?.lead_number}
+          </h5>
+          {leadToView ? (
+              <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                  {(Object.keys(leadToView.rawApiData) as Array<keyof any>).map((key) => {
+                      const label = key
+                          .replace(/_/g, ' ')
+                          .replace(/([A-Z])/g, ' $1')
+                          .trim()
+                          .replace(/\b\w/g, l => l.toUpperCase());
+                      
+                      let value: any = leadToView.rawApiData[key];
 
-      {/* View Dialog (Existing) */}
-      <Dialog isOpen={isViewDialogOpen} onClose={closeViewDialog} onRequestClose={closeViewDialog} size="max-w-2xl" title="" contentClassName="!p-0 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-2xl overflow-hidden">
-        {leadToView ? (
-          <div className="flex flex-col" style={{ maxHeight: "85vh" }}>
-            <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 rounded-t-xl">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-100">Lead: {leadToView.leadNumber}</h2>
-                <Tooltip title="Edit Lead">
-                  <Button shape="circle" variant="ghost" size="sm" icon={<TbPencil className="text-slate-500 hover:text-blue-600" />} onClick={() => { closeViewDialog(); handleOpenEditLeadPage(leadToView); }} />
-                </Tooltip>
+                      if ((key === "created_at" || key === "updated_at") && value) {
+                          value = dayjs(value).format('DD MMM, YYYY h:mm A');
+                      } else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
+                          value = <pre className="whitespace-pre-wrap text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded-md"><code>{JSON.stringify(value, null, 2)}</code></pre>;
+                      } else {
+                          value = value === null || value === undefined || value === '' 
+                              ? <span className="text-gray-400">-</span> 
+                              : String(value);
+                      }
+
+                      return (
+                          <div key={key} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                              <span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span>
+                              <div className="w-2/3 text-gray-900 dark:text-gray-100 break-words">{value}</div>
+                          </div>
+                      );
+                  })}
               </div>
-            </div>
-            <div className="flex-grow p-5 overflow-y-auto custom-scrollbar">
-              <div className="pr-4 md:pr-6 space-y-5">
-                <div> {/* Lead Overview Section */}
-                  <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Lead Overview</h6>
-                  <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm space-y-2.5">
-                    <DialogDetailRow label="Lead ID" value={String(leadToView.id)} />
-                    <DialogDetailRow label="Member" value={leadToView.memberName || leadToView.memberId} />
-                    <DialogDetailRow label="Status" value={<Tag className={`${leadStatusColor[leadToView.status] || leadStatusColor.default} capitalize font-semibold text-[10px] px-2 py-0.5 rounded-full`}>{leadToView.status}</Tag>} />
-                    <DialogDetailRow label="Enquiry Type" value={<Tag className={`${enquiryTypeColor[leadToView.enquiryType] || enquiryTypeColor.default} capitalize text-[10px] px-2 py-0.5 rounded-md`}>{leadToView.enquiryType}</Tag>} />
-                    <DialogDetailRow label="Intent" value={leadToView.intent || "-"} />
-                    <DialogDetailRow label="Product Interest" value={leadToView.productName || "-"} />
-                    <DialogDetailRow label="Quantity" value={leadToView.qty?.toString() || "-"} />
-                    <DialogDetailRow label="Target Price" value={leadToView.targetPrice ? `$${leadToView.targetPrice.toFixed(2)}` : "-"} />
-                    <DialogDetailRow label="Assigned To" value={leadToView.salesPersonName || "Unassigned"} />
-                  </div>
-                </div>
-                {leadToView.sourcingDetails && (
-                  <div> {/* Sourcing Specifics Section */}
-                    <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 mt-4">Sourcing Specifics</h6>
-                    <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm space-y-2.5">
-                      {leadToView.sourcingDetails.supplierId && (<DialogDetailRow label="Supplier" value={dummySuppliers.find((s) => s.id === leadToView.sourcingDetails?.supplierId)?.name || String(leadToView.sourcingDetails.supplierId)} />)}
-                      {leadToView.sourcingDetails.productId && (<DialogDetailRow label="Sourced Product" value={dummyProducts.find((p) => p.id === leadToView.sourcingDetails?.productId)?.name || `ID: ${leadToView.sourcingDetails.productId}`} />)}
-                      {leadToView.sourcingDetails.qty && (<DialogDetailRow label="Sourced Qty" value={String(leadToView.sourcingDetails.qty)} />)}
-                      {leadToView.sourcingDetails.price && (<DialogDetailRow label="Sourced Price" value={`$${leadToView.sourcingDetails.price.toFixed(2)}`} />)}
-                      {leadToView.sourcingDetails.productStatus && (<DialogDetailRow label="Product Status" value={leadToView.sourcingDetails.productStatus} />)}
-                      {leadToView.sourcingDetails.deviceCondition && (<DialogDetailRow label="Device Condition" value={leadToView.sourcingDetails.deviceCondition} />)}
-                      {leadToView.sourcingDetails.color && (<DialogDetailRow label="Color" value={leadToView.sourcingDetails.color} />)}
-                      {leadToView.sourcingDetails.cartoonTypeId && (<DialogDetailRow label="Cartoon Type" value={dummyCartoonTypes.find((c) => c.id === leadToView.sourcingDetails?.cartoonTypeId)?.name || "-"} />)}
-                      {leadToView.sourcingDetails.dispatchStatus && (<DialogDetailRow label="Dispatch Status" value={leadToView.sourcingDetails.dispatchStatus} />)}
-                      {leadToView.sourcingDetails.paymentTermId && (<DialogDetailRow label="Payment Term" value={dummyPaymentTerms.find((p) => p.id === leadToView.sourcingDetails?.paymentTermId)?.name || "-"} />)}
-                      {leadToView.sourcingDetails.eta && (<DialogDetailRow label="ETA" value={leadToView.sourcingDetails.eta ? (dayjs(leadToView.sourcingDetails.eta).isValid() ? dayjs(leadToView.sourcingDetails.eta).format("MMM D, YYYY") : String(leadToView.sourcingDetails.eta)) : "-"} />)}
-                      {leadToView.sourcingDetails.location && (<DialogDetailRow label="Location" value={leadToView.sourcingDetails.location} />)}
-                      {leadToView.sourcingDetails.deviceType && (<DialogDetailRow label="Device Type" value={leadToView.sourcingDetails.deviceType} />)}
-                      {leadToView.sourcingDetails.internalRemarks && (<DialogDetailRow label="Internal Remarks" value={leadToView.sourcingDetails.internalRemarks} preWrap />)}
-                    </div>
-                  </div>
-                )}
-                <AdaptiveCard className="!mt-5 bg-white dark:bg-slate-700/60 border-slate-200 dark:border-slate-600 p-4 shadow-sm">
-                  <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Activity Log</h6>
-                  <div className="space-y-1.5">
-                    <DialogDetailRow label="Created On" value={<><span className="text-sm">{dayjs(leadToView.createdAt).format("MMM D, YYYY")}</span><span className="text-slate-500 dark:text-slate-400 text-[10px] ml-1">{dayjs(leadToView.createdAt).format("h:mm A")}</span></>} />
-                    {leadToView.updatedAt && (<DialogDetailRow label="Last Updated" value={<><span className="text-sm">{dayjs(leadToView.updatedAt).format("MMM D, YYYY")}</span><span className="text-slate-500 dark:text-slate-400 text-[10px] ml-1">{dayjs(leadToView.updatedAt).format("h:mm A")}</span></>} />)}
-                  </div>
-                </AdaptiveCard>
+          ) : (
+              <div className="p-10 text-center">
+                  <TbInfoCircle size={32} className="mx-auto mb-2 text-gray-400" />
+                  <p>No lead data to display.</p>
               </div>
-            </div>
-            <div className="px-5 py-3 bg-slate-100 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end items-center gap-2 rounded-b-xl">
-              <Button variant="solid" color="blue-600" onClick={closeViewDialog} size="sm" className="font-medium min-w-[80px]">Close</Button>
-            </div>
+          )}
+          <div className="text-right mt-6">
+              <Button variant="solid" onClick={closeViewDialog}>Close</Button>
           </div>
-        ) : (
-          <div className="p-10 text-center">
-            <TbInfoCircle size={32} className="mx-auto mb-2 text-gray-400" /><p>Loading lead details...</p>
-          </div>
-        )}
       </Dialog>
       
-      {/* Assign Lead Drawer (Existing) */}
+      {/* Assign Lead Drawer */}
       <Drawer title="Assign Lead" isOpen={isAssignDrawerOpen} onClose={closeAssignDrawer} width={400} footer={<div className="text-right p-4 border-t"><Button size="sm" className="mr-2" onClick={closeAssignDrawer}>Cancel</Button><Button size="sm" variant="solid" form="assignLeadForm" type="submit" loading={isSubmittingDrawer}>Assign</Button></div>}>
         <Form id="assignLeadForm" onSubmit={assignFormMethods.handleSubmit(onAssignSubmit)} className="p-4">
-          <p className="mb-4">Assign lead <strong>{editingLeadForDrawer?.leadNumber}</strong>.</p>
+          <p className="mb-4">Assign lead <strong>{editingLeadForDrawer?.lead_number}</strong>.</p>
           <FormItem label="Sales Person" error={assignFormMethods.formState.errors.salesPersonId?.message}>
             <Controller name="salesPersonId" control={assignFormMethods.control} render={({ field }) => <UiSelect options={dummySalesPersons.map((sp) => ({ value: sp.id, label: sp.name }))} value={dummySalesPersons.find((sp) => sp.id === field.value)} onChange={(opt) => field.onChange(opt?.value)} placeholder="Select Sales Person" />} />
           </FormItem>
         </Form>
       </Drawer>
 
-      {/* Change Status Drawer (Existing) */}
+      {/* Change Status Drawer */}
       <Drawer title="Change Lead Status" isOpen={isChangeStatusDrawerOpen} onClose={closeChangeStatusDrawer} width={400} footer={<div className="text-right p-4 border-t"><Button size="sm" className="mr-2" onClick={closeChangeStatusDrawer}>Cancel</Button><Button size="sm" variant="solid" form="changeStatusForm" type="submit" loading={isSubmittingDrawer}>Update</Button></div>}>
         <Form id="changeStatusForm" onSubmit={statusFormMethods.handleSubmit(onChangeStatusSubmit)} className="p-4">
-          <p className="mb-4">Change status for <strong>{editingLeadForDrawer?.leadNumber}</strong>.</p>
+          <p className="mb-4">Change status for <strong>{editingLeadForDrawer?.lead_number}</strong>.</p>
           <FormItem label="New Status" error={statusFormMethods.formState.errors.newStatus?.message}>
             <Controller name="newStatus" control={statusFormMethods.control} render={({ field }) => <UiSelect options={leadStatusOptionsConst} value={leadStatusOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt?.value as LeadStatus)} placeholder="Select New Status" />} />
           </FormItem>
         </Form>
       </Drawer>
 
-      {/* Filter Drawer (Existing) */}
+      {/* Filter Drawer */}
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button></div>}>
         <Form id="filterLeadForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 h-full">
           <FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti options={leadStatusOptionsConst} value={leadStatusOptionsConst.filter((o) => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map((o) => o.value) || [])} />} /></FormItem>
@@ -1000,11 +1063,46 @@ const LeadsListing = () => {
       </Drawer>
 
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Lead" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isProcessingDelete} onCancel={() => setSingleDeleteConfirmOpen(false)}>
-        <p>Delete <strong>{itemToDelete?.leadNumber}</strong>?</p>
+        <p>Are you sure you want to delete lead <strong>{itemToDelete?.lead_number}</strong>? This action cannot be undone.</p>
       </ConfirmDialog>
 
-      {/* --- RENDER NEWLY ADDED MODALS --- */}
       <LeadModals modalState={modalState} onClose={handleCloseModal} />
+
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? "Exporting..." : "Submit & Export"}
+        cancelText="Cancel"
+        confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
+      >
+        <Form
+          id="exportLeadsReasonForm"
+          onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input textArea {...field} placeholder="e.g., Weekly sales report..." rows={3} />
+              )}
+            />
+          </FormItem>
+        </Form>
+      </ConfirmDialog>
     </>
   );
 };

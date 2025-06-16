@@ -1844,7 +1844,7 @@ export const deleteAllRequestFeedbacksAsync = async (leadData: any) => {
 
 export const getSellerListingsAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/opportunity/seller`)
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity/seller`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -1853,7 +1853,7 @@ export const getSellerListingsAsync = async () => {
 
 export const getBuyerListingsAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/opportunity/buyer`)
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity/buyer`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2531,7 +2531,7 @@ export const getSalesPersonAsync = async () => {
 
 export const getSuppliersAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/suppliers`)
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity/seller`)
     return response.data
   } catch (err) {
     return isAxiosError(err)

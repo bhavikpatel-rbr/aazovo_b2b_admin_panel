@@ -234,7 +234,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Delete">
+      {/* <Tooltip title="Delete">
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
           role="button"
@@ -242,7 +242,7 @@ const ActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
     </div>
   );
 };
@@ -534,7 +534,7 @@ const DesignationListing = () => {
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      await dispatch(deleteDesignationAction({ id: itemToDelete.id })).unwrap();
+      // await dispatch(deleteDesignationAction({ id: itemToDelete.id })).unwrap();
       toast.push(
         <Notification
           title="Designation Deleted"
@@ -562,9 +562,9 @@ const DesignationListing = () => {
     setIsDeleting(true);
     const idsToDelete = selectedItems.map((item) => String(item.id));
     try {
-      await dispatch(
-        deleteAllDesignationsAction({ ids: idsToDelete.join(",") })
-      ).unwrap();
+      // await dispatch(
+      //   deleteAllDesignationsAction({ ids: idsToDelete.join(",") })
+      // ).unwrap();
       toast.push(
         <Notification
           title="Deletion Successful"

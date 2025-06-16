@@ -4225,7 +4225,7 @@ export const getSalesPersonAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getSalesPersonAsync()
       if (response?.data) { // Assuming response.data itself contains the relevant structure
-        return response?.data.data
+        return response?.data
       }
 
       return rejectWithValue(response)

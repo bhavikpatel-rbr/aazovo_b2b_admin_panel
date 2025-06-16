@@ -92,7 +92,6 @@ const EditLeadPage = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
-  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
   // Dummy data for the new Matched Opportunity table
   const [matchedOpportunities] = useState([
@@ -116,7 +115,7 @@ const EditLeadPage = () => {
     productsMasterData = [],
     ProductSpecificationsData = [],
     PaymentTermsData = [],
-    leadMember = [],
+    memberData = [],
     salesPerson = [],
     suppliers = [],
     currentLead,
@@ -133,6 +132,13 @@ const EditLeadPage = () => {
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
     mode: "onChange",
+    defaultValues: { // Set default values to prevent uncontrolled component warnings
+        member_id: null,
+        enquiry_type: '',
+        lead_intent: null,
+        product_id: null,
+        qty: null,
+    }
   });
 
   // Watch lead_intent to dynamically update labels
@@ -146,79 +152,79 @@ const EditLeadPage = () => {
   }, [leadIntentValue]);
 
   const sourceMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Soruce Member (Supplier)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Buy") return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
     if (leadIntentValue === "Sell") return <div>Source Member (Buyer)<span className="text-red-500"> * </span></div>;
     return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
   }, [leadIntentValue]);
 
   // Fetch all dropdown and specific lead data
   useEffect(() => {
-    const fetchAllData = async () => {
-      if (!id) {
-        toast.push(
-          <Notification title="Error" type="danger">
-            Lead ID missing.
-          </Notification>
-        );
-        navigate("/sales/leads");
-        return;
-      }
-      try {
-        await Promise.all([
-          dispatch(getLeadById(id)),
-          dispatch(getAllProductAction()),
-          dispatch(getProductSpecificationsAction()),
-          dispatch(getPaymentTermAction()),
-          dispatch(getLeadMemberAction()),
-          dispatch(getSalesPersonAction()),
-          dispatch(getSuppliersAction()),
-        ]);
-      } catch (error) {
-        console.error("Failed to fetch data for Edit Lead:", error);
-        toast.push(
-          <Notification title="Data Load Error" type="danger">
-            Could not load required data.
-          </Notification>
-        );
-      } finally {
-        setInitialDataLoaded(true);
-      }
-    };
-    fetchAllData();
+    if (!id) {
+      toast.push(
+        <Notification title="Error" type="danger">
+          Lead ID missing.
+        </Notification>
+      );
+      navigate("/sales/leads");
+      return;
+    }
+
+    // Fetch master data for dropdowns
+    dispatch(getAllProductAction());
+    dispatch(getProductSpecificationsAction());
+    dispatch(getPaymentTermAction());
+    dispatch(getLeadMemberAction());
+    dispatch(getSalesPersonAction());
+    dispatch(getSuppliersAction());
+
+    // Fetch the specific lead data by its ID
+    dispatch(getLeadById(id));
+
   }, [dispatch, id, navigate]);
 
-  // Populate form when data is ready
+  // ======== 🚀 POPULATE FORM WHEN DATA IS READY (UPDATED) 🚀 ========
   useEffect(() => {
-    if (currentLeadStatus === "succeeded" && currentLead && initialDataLoaded) {
+    if (currentLeadStatus === "idle" && currentLead) {
+        // Helper to convert string to number, returning null if invalid
+        const toNumber = (val: any) => {
+            const num = parseFloat(val);
+            return isNaN(num) ? null : num;
+        };
+      
       reset({
-        member_id: currentLead.member_id ?? null,
+        // Lead Information
+        member_id: toNumber(currentLead.member_id),
         enquiry_type: currentLead.enquiry_type ?? "",
         lead_intent: currentLead.lead_intent ?? null,
-        product_id: currentLead.product_id ?? null,
-        product_spec_id: currentLead.product_spec_id ?? null,
-        qty: currentLead.qty ?? null,
-        target_price: currentLead.target_price ?? null,
+        product_id: toNumber(currentLead.product_id),
+        product_spec_id: toNumber(currentLead.product_spec_id),
+        qty: toNumber(currentLead.qty),
+        target_price: toNumber(currentLead.target_price),
         lead_status: currentLead.lead_status ?? "New",
-        assigned_sales_person_id: currentLead.assigned_sales_person_id ?? null,
-        source_supplier_id: currentLead.source_supplier_id ?? null,
-        source_qty: currentLead.source_qty ?? null,
-        source_price: currentLead.source_price ?? null,
+        assigned_sales_person_id: toNumber(currentLead.assigned_sales_person_id),
+
+        // Sourcing Details
+        source_supplier_id: toNumber(currentLead.source_supplier_id),
+        source_qty: toNumber(currentLead.source_qty),
+        source_price: toNumber(currentLead.source_price),
         source_product_status: currentLead.source_product_status ?? null,
         source_device_condition: currentLead.source_device_condition ?? null,
         source_device_type: currentLead.source_device_type ?? null,
         source_color: currentLead.source_color ?? null,
-        source_cartoon_type_id: currentLead.source_cartoon_type_id ?? null,
+        source_cartoon_type_id: toNumber(currentLead.source_cartoon_type_id),
         source_dispatch_status: currentLead.source_dispatch_status ?? null,
-        source_payment_term_id: currentLead.source_payment_term_id ?? null,
+        source_payment_term_id: toNumber(currentLead.source_payment_term_id),
         source_location: currentLead.source_location ?? null,
         source_internal_remarks: currentLead.source_internal_remarks ?? null,
+        
+        // Handle date conversion carefully
         source_eta:
           currentLead.source_eta && dayjs(currentLead.source_eta).isValid()
             ? dayjs(currentLead.source_eta).toDate()
             : null,
       });
     }
-  }, [currentLead, currentLeadStatus, initialDataLoaded, reset]);
+  }, [currentLead, currentLeadStatus, reset]);
 
   // Memoized options from Redux store
   const productOptions = useMemo(
@@ -247,8 +253,8 @@ const EditLeadPage = () => {
   );
   const leadMemberOptions = useMemo(
     () =>
-      leadMember.map((m: ApiLookupItem) => ({ value: m.id, label: m.name })),
-    [leadMember]
+      memberData.map((m: ApiLookupItem) => ({ value: m.id, label: m.name })),
+    [memberData]
   );
   const salesPersonOptions = useMemo(
     () =>
@@ -273,11 +279,13 @@ const EditLeadPage = () => {
       return;
     }
     setIsSubmitting(true);
+    // Add the lead ID to the payload for the update action
     const payload = {
       ...data,
-      id: currentLead.id,
+      id: currentLead.id, 
       source_eta: data.source_eta ? dayjs(data.source_eta).toISOString() : null,
     };
+
     try {
       await dispatch(editLeadAction(payload)).unwrap();
       toast.push(
@@ -302,9 +310,9 @@ const EditLeadPage = () => {
     else navigate("/sales/leads");
   };
 
-  const isLoadingPage = !initialDataLoaded || currentLeadStatus === "loading";
+  const isLoadingPage = masterDataLoadingStatus === 'loading' || currentLeadStatus === 'loading';
 
-  if (isLoadingPage) {
+  if (currentLeadStatus === 'loading') {
     return (
       <Container className="h-full flex justify-center items-center">
         <Spinner size="xl" />
@@ -341,6 +349,27 @@ const EditLeadPage = () => {
           <AdaptableCard className="mb-4">
             <h5 className="mb-6 font-semibold">Lead Information</h5>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
+                            <FormItem
+                label="Lead Intent"
+                invalid={!!errors.lead_intent}
+                errorMessage={errors.lead_intent?.message}
+              >
+                <Controller
+                  name="lead_intent"
+                  control={control}
+                  render={({ field }) => (
+                    <UiSelect
+                      placeholder="Select Intent"
+                      options={leadIntentOptions}
+                      value={leadIntentOptions.find(
+                        (o) => o.value === field.value
+                      )}
+                      onChange={(opt) => field.onChange(opt?.value)}
+                      isClearable
+                    />
+                  )}
+                />
+              </FormItem>
               <FormItem
                 label={leadMemberLabel}
                 invalid={!!errors.member_id}
@@ -354,7 +383,7 @@ const EditLeadPage = () => {
                       placeholder="Select Member"
                       options={leadMemberOptions}
                       value={leadMemberOptions.find(
-                        (o) => o.value === field.value
+                        (o: any) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isLoading={masterDataLoadingStatus === "loading"}
@@ -383,27 +412,6 @@ const EditLeadPage = () => {
                 />
               </FormItem>
               <FormItem
-                label="Lead Intent"
-                invalid={!!errors.lead_intent}
-                errorMessage={errors.lead_intent?.message}
-              >
-                <Controller
-                  name="lead_intent"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Intent"
-                      options={leadIntentOptions}
-                      value={leadIntentOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
                 label={<div>Product Name (Interest)<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.product_id}
                 errorMessage={errors.product_id?.message}
@@ -416,7 +424,7 @@ const EditLeadPage = () => {
                       placeholder="Select Product"
                       options={productOptions}
                       value={productOptions.find(
-                        (o) => o.value === field.value
+                        (o: any) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isLoading={masterDataLoadingStatus === "loading"}
@@ -495,7 +503,7 @@ const EditLeadPage = () => {
                       placeholder="Select Sales Person"
                       options={salesPersonOptions}
                       value={salesPersonOptions.find(
-                        (o) => o.value === field.value
+                        (o: any) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isLoading={masterDataLoadingStatus === "loading"}
@@ -517,7 +525,7 @@ const EditLeadPage = () => {
                       placeholder="Select Specification"
                       options={productSpecOptions}
                       value={productSpecOptions.find(
-                        (o) => o.value === field.value
+                        (o: any) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isLoading={masterDataLoadingStatus === "loading"}
@@ -543,9 +551,9 @@ const EditLeadPage = () => {
                   render={({ field }) => (
                     <UiSelect
                       placeholder="Select Supplier"
-                      options={suppliersOptions}
-                      value={suppliersOptions.find(
-                        (o) => o.value === field.value
+                      options={leadMemberOptions}
+                      value={leadMemberOptions.find(
+                        (o: any) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isLoading={masterDataLoadingStatus === "loading"}
@@ -718,7 +726,7 @@ const EditLeadPage = () => {
                       placeholder="Select Payment Term"
                       options={paymentTermOptions}
                       value={paymentTermOptions.find(
-                        (o) => o.value === field.value
+                        (o: any) => o.value === field.value
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isLoading={masterDataLoadingStatus === "loading"}
@@ -788,68 +796,6 @@ const EditLeadPage = () => {
                 />
               </FormItem>
             </div>
-          </AdaptableCard>
-
-          <AdaptableCard>
-            <h5 className="mb-6 font-semibold">Matched Opportunity</h5>
-            <Table>
-              <Table.THead>
-                <Table.Tr>
-                  <Table.Th>Company & Member</Table.Th>
-                  <Table.Th>Key Details</Table.Th>
-                  <Table.Th>Timestamp</Table.Th>
-                  <Table.Th>Action</Table.Th>
-                </Table.Tr>
-              </Table.THead>
-              <Table.TBody>
-                {matchedOpportunities.map((op) => {
-                  const iconButtonClass =
-                    "text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-                  const hoverBgClass =
-                    "hover:bg-gray-100 dark:hover:bg-gray-700";
-                  return (
-                    <Table.Tr key={op.id}>
-                      <Table.Td>
-                        <div className="font-semibold">{op.company}</div>
-                        <div className="text-xs text-gray-500">{op.member}</div>
-                      </Table.Td>
-                      <Table.Td>{op.details}</Table.Td>
-                      <Table.Td>{op.timestamp}</Table.Td>
-                      <Table.Td>
-                        <div className="flex items-center justify-start gap-2">
-                          <Tooltip title="Edit">
-                            <div
-                              className={classNames(
-                                iconButtonClass,
-                                hoverBgClass,
-                                "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
-                              )}
-                              role="button"
-                              onClick={() => alert(`Editing item ${op.id}`)}
-                            >
-                              <TbPencil />
-                            </div>
-                          </Tooltip>
-                          <Tooltip title="Remove">
-                            <div
-                              className={classNames(
-                                iconButtonClass,
-                                hoverBgClass,
-                                "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                              )}
-                              role="button"
-                              onClick={() => alert(`Removing item ${op.id}`)}
-                            >
-                              <TbTrash />
-                            </div>
-                          </Tooltip>
-                        </div>
-                      </Table.Td>
-                    </Table.Tr>
-                  );
-                })}
-              </Table.TBody>
-            </Table>
           </AdaptableCard>
 
           <div className="mt-6 flex justify-end gap-2">
