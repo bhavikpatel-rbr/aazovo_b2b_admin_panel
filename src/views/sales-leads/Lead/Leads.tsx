@@ -991,6 +991,7 @@ const LeadsListing = () => {
               loading={tableIsLoading}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectable
+              noData={!tableIsLoading && pageData.length === 0}
               onPaginationChange={handlePaginationChange}
               onSelectChange={handlePageSizeChange}
               onSort={handleSort}
