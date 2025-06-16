@@ -1135,7 +1135,7 @@ const CompanyDetailsSection = ({
             name="company_code"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Company Code" {...field} readOnly />
+              <Input placeholder="Company Code" {...field} />
             )}
           />
         </FormItem>
