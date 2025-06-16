@@ -644,7 +644,7 @@ const LeadsListing = () => {
         qty: apiLead.qty,
         target_price: apiLead.target_price,
         assigned_sales_person_id: apiLead.assigned_sales_person_id,
-        salesPersonName: apiLead.sales_person?.name,
+        salesPersonName: apiLead.sales_person_name,
         createdAt: new Date(apiLead.created_at),
         updatedAt: apiLead.updated_at ? new Date(apiLead.updated_at) : undefined,
         source_supplier_id: apiLead.source_supplier_id,
