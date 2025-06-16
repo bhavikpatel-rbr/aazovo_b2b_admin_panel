@@ -945,15 +945,28 @@ const LeadsListing = () => {
       },
       {
         header: "Details", size: 220,
-        cell: (props) => (
+        cell: (props: CellContext<LeadListItem, any>) => {
+          const formattedDate = props.row.original.createdAt
+            ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(
+                props.row.original.createdAt
+              ).toLocaleString("en-US", { month: "short" })} ${new Date(
+                props.row.original.createdAt
+              ).getFullYear()}, ${new Date(props.row.original.createdAt).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
+            : "N/A";
+
+            return(
           <div className="flex flex-col gap-0.5 text-xs">
             <div><Tag>{props.row.original.lead_intent || "Buy"}</Tag></div>
             <span>Qty: {props.row.original.qty ?? "-"}</span>
             <span>Target Price: {props.row.original.target_price ?? "-"}</span>
             <span>Sales Person : {props.row.original.salesPersonName || "Unassigned"}</span>
-            <b>{dayjs(props.row.original.createdAt).format("DD MMM, YYYY HH:mm")}</b>
+            <b>{formattedDate}</b>
           </div>
-        ),
+            );
+        },
       },
       {
         header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80,
@@ -1014,32 +1027,47 @@ const LeadsListing = () => {
           </h5>
           {leadToView ? (
               <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                  {/* --- MODIFICATION START --- */}
                   {(Object.keys(leadToView.rawApiData) as Array<keyof any>).map((key) => {
-                      const label = key
+                      const label = String(key)
                           .replace(/_/g, ' ')
                           .replace(/([A-Z])/g, ' $1')
                           .trim()
                           .replace(/\b\w/g, l => l.toUpperCase());
                       
-                      let value: any = leadToView.rawApiData[key];
+                      const value: any = leadToView.rawApiData[key];
+                      let displayValue: React.ReactNode;
+
+                      // Keys for objects where we want to display the 'name' property
+                      const nameDisplayKeys = ['buyer', 'supplier', 'product', 'customer', 'created_by_user', 'updated_by_user'];
 
                       if ((key === "created_at" || key === "updated_at") && value) {
-                          value = dayjs(value).format('DD MMM, YYYY h:mm A');
+                          displayValue = dayjs(value).format('DD MMM, YYYY h:mm A');
+                      } else if (nameDisplayKeys.includes(String(key))) {
+                          // Handle specific objects: if it's an object with a name, show the name. If null/undefined, show hyphen.
+                          if (value && typeof value === 'object' && 'name' in value) {
+                              displayValue = String(value.name);
+                          } else {
+                              displayValue = <span className="text-gray-400">-</span>;
+                          }
                       } else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
-                          value = <pre className="whitespace-pre-wrap text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded-md"><code>{JSON.stringify(value, null, 2)}</code></pre>;
+                          // For any other object, we skip rendering the row as per the request to "remove objects"
+                          return null; 
                       } else {
-                          value = value === null || value === undefined || value === '' 
+                          // For primitive values (string, number, boolean) or null/undefined
+                          displayValue = value === null || value === undefined || value === '' 
                               ? <span className="text-gray-400">-</span> 
                               : String(value);
                       }
 
                       return (
-                          <div key={key} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                          <div key={key as string} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                               <span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span>
-                              <div className="w-2/3 text-gray-900 dark:text-gray-100 break-words">{value}</div>
+                              <div className="w-2/3 text-gray-900 dark:text-gray-100 break-words">{displayValue}</div>
                           </div>
                       );
                   })}
+                   {/* --- MODIFICATION END --- */}
               </div>
           ) : (
               <div className="p-10 text-center">
