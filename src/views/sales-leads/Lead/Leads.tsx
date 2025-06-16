@@ -650,6 +650,8 @@ const LeadsListing = () => {
         source_supplier_id: apiLead.source_supplier_id,
         sourceSupplierName: apiLead.source_supplier?.name,
         rawApiData: apiLead,
+        buyer: apiLead.buyer,
+        supplier: apiLead.supplier,
       })
     );
   }, [LeadsData]);
@@ -908,16 +910,35 @@ const LeadsListing = () => {
         cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || "-",
       },
       {
-        header: "Member", accessorKey: "customerName", size: 150,
+        header: "Member", accessorKey: "customerName", size: 180, // Increased size a bit
         cell: (props: CellContext<LeadListItem, any>) => {
-            const supplier = LeadsData[0]?.supplier;
-            const buyer = LeadsData[0]?.buyer;
-            return (
-              <div className="flex flex-col gap-0.5 text-xs">
-                <b>Buyer: {buyer.id}</b>
-                <span>{buyer.name}</span>
-                <b>Seller: {supplier.id}</b>
+            // Correctly access buyer and supplier from the current row's data
+            const { buyer, supplier } = props.row.original;
+
+            // Safely render buyer information
+            const buyerInfo = buyer ? (
+              <>
+                  <b>Buyer: {buyer.id}</b>
+                  <span>{buyer.name}</span>
+                  </>
+            ) : (
+                <span>Buyer: N/A</span>
+            );
+
+            // Safely render supplier information
+            const supplierInfo = supplier ? (
+                <>
+                    <b>Seller: {supplier.id}</b>
                 <span>{supplier.name}</span>
+                </>
+            ) : (
+                <span>Seller: N/A</span>
+            );
+            
+            return (
+              <div className="flex flex-col gap-1 text-xs">
+                {buyerInfo}
+                {supplierInfo}
               </div>
             );
         },
