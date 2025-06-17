@@ -51,6 +51,8 @@ interface MemberItem {
   designation?: string;
   person_name?: string;
   contact_number?: string;
+  type?: string;
+  team_name?: string;
 }
 
 interface SpotVerificationItemFE {
@@ -488,6 +490,7 @@ const transformApiToFormSchema = (
         : undefined,
       designation: m.designation,
       person_name: m.name,
+      team_name: m.team_name,
       contact_number: m.mobile,
     })),
     status: apiData.status
@@ -2718,6 +2721,7 @@ const MemberManagementSection = ({
             icon={<TbPlus />}
             onClick={() =>
               append({
+                type: "member",
                 member: undefined,
                 designation: "",
                 person_name: "",
@@ -2731,6 +2735,16 @@ const MemberManagementSection = ({
             type="button"
             size="sm"
             icon={<TbPlus />}
+            onClick={() =>
+              append({
+                type: "team",
+                member: undefined, // ignored for team
+                designation: "",
+                person_name: "",
+                contact_number: "",
+              })
+            }
+
           >
             Add Team
           </Button>
@@ -2744,17 +2758,21 @@ const MemberManagementSection = ({
       {fields.map((item, index) => (
         <Card key={item.id} className="mb-4 p-4 border">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
-            <FormItem label="Member">
+            <FormItem label={item.type === "team" ? "Team Name" : "Member"}>
               <Controller
-                name={`members.${index}.member`}
+                name={`members.${index}.${item.type === "team" ? "team_name" : "member"}`}
                 control={control}
-                render={({ field }) => (
-                  <Select
-                    placeholder="Select Member"
-                    options={memberOptions}
-                    {...field}
-                  />
-                )}
+                render={({ field }) =>
+                  item.type === "team" ? (
+                    <Input placeholder="Team Name" {...field} />
+                  ) : (
+                    <Select
+                      placeholder="Select Member"
+                      options={memberOptions}
+                      {...field}
+                    />
+                  )
+                }
               />
             </FormItem>
             <FormItem label="Designation">

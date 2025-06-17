@@ -180,6 +180,7 @@ export interface MemberFormSchema {
     member_type?: { label: string; value: string };
     brands?: Array<{ label: string; value: string }>;
     sub_categories?: Array<{ label: string; value: string }>;
+    categories?: Array<{ label: string; value: string }>;
   }[];
 }
 export interface FormSectionBaseProps {
@@ -1790,7 +1791,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
             )}
           />
         </FormItem>
-        <FormItem
+        {/* <FormItem
           label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
           invalid={!!errors.interested_category_ids}
           errorMessage={errors.interested_category_ids?.message as string}
@@ -1808,8 +1809,8 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               />
             )}
           />
-        </FormItem>
-        <FormItem
+        </FormItem> */}
+        {/* <FormItem
           label="Interested Sub Categories"
           invalid={!!errors.interested_subcategory_ids}
           errorMessage={errors.interested_subcategory_ids?.message as string}
@@ -1827,8 +1828,8 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               />
             )}
           />
-        </FormItem>
-        <FormItem
+        </FormItem> */}
+        {/* <FormItem
           label="Favourite Brands"
           invalid={!!errors.favourite_brands}
           errorMessage={errors.favourite_brands?.message as string}
@@ -1846,7 +1847,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               />
             )}
           />
-        </FormItem>
+        </FormItem> */}
         <FormItem
           label="Member Grade"
           invalid={!!errors.member_grade}
@@ -1982,6 +1983,29 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
                       isMulti
                       placeholder="Select brands"
                       options={brandOptions}
+                      isClearable
+                    />
+                  )}
+                />
+              </FormItem>
+              {/* Category */}
+              <FormItem
+                label="Select Category(s)"
+                invalid={!!errors.member_profiles?.[index]?.categories}
+                errorMessage={
+                  errors.member_profiles?.[index]?.categories
+                    ?.message as string
+                }
+              >
+                <Controller
+                  name={`member_profiles.${index}.categories`}
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      isMulti
+                      placeholder="Select categories"
+                      options={categoryOptions}
                       isClearable
                     />
                   )}
