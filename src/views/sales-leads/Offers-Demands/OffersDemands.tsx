@@ -12,6 +12,7 @@ import classNames from "classnames";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import dayjs from 'dayjs';
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -112,6 +113,16 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
+const filterFormSchema = z.object({
+  createdDateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
+  updatedDateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
+  itemType: z.enum(["Offer", "Demand"]).nullable().optional(),
+  creatorIds: z.array(z.string()).optional().default([]),
+  assigneeIds: z.array(z.string()).optional().default([]),
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
+
+
 // --- API Item Types (Actual shapes from API response.data.data) ---
 export type ActualApiCreatorShape = {
   id: number;
@@ -173,7 +184,6 @@ export type OfferDemandItem = {
   createdByInfo: {
     userId: string;
     userName: string;
-    // Mocked email for modal functionality
     email: string;
   };
   assignedToInfo?: {
@@ -188,7 +198,6 @@ export type OfferDemandItem = {
   updated_by_name?: string;
   updated_by_role?: string;
   originalApiItem: ActualApiOfferShape | ActualApiDemandShape;
-  // Added for modal consistency
   health_score?: number;
 };
 
@@ -197,10 +206,7 @@ const TABS = { ALL: "all", OFFER: "offer", DEMAND: "demand" };
 
 // ============================================================================
 // --- MODALS SECTION ---
-// All modal components for Offers & Demands are defined here.
 // ============================================================================
-
-// --- Type Definitions for Modals ---
 export type OfferDemandModalType =
   | "email"
   | "whatsapp"
@@ -225,7 +231,6 @@ interface OfferDemandModalsProps {
   onClose: () => void;
 }
 
-// --- Helper Data for Modal Demos ---
 const dummyUsers = [
   { value: "user1", label: "Alice Johnson" },
   { value: "user2", label: "Bob Williams" },
@@ -320,7 +325,6 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
         return <ViewEngagementDialog item={item} onClose={onClose} />;
       case "document":
         return <DownloadDocumentDialog item={item} onClose={onClose} />;
-      // Add other cases as needed
       default:
         return (
           <GenericActionDialog type={type} item={item} onClose={onClose} />
@@ -330,7 +334,6 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({
   return <>{renderModalContent()}</>;
 };
 
-// --- Individual Dialog Components (Adapted for OfferDemandItem) ---
 const SendEmailDialog: React.FC<{
   item: OfferDemandItem;
   onClose: () => void;
@@ -398,7 +401,7 @@ const SendWhatsAppDialog: React.FC<{
     },
   });
   const onSendMessage = (data: { message: string }) => {
-    const phone = "1234567890"; // Mock phone number
+    const phone = "1234567890";
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(
       data.message
     )}`;
@@ -440,12 +443,7 @@ const AddNotificationDialog: React.FC<{
   });
   const onSend = (data: any) => {
     setIsLoading(true);
-    console.log(
-      "Sending in-app notification for",
-      item.name,
-      "with data:",
-      data
-    );
+    console.log("Sending in-app notification for", item.name, "with data:", data);
     setTimeout(() => {
       toast.push(<Notification type="success" title="Notification Sent" />);
       setIsLoading(false);
@@ -883,6 +881,7 @@ const GenericActionDialog: React.FC<{
     </Dialog>
   );
 };
+
 // ============================================================================
 // --- END MODALS SECTION ---
 // ============================================================================
@@ -972,10 +971,9 @@ function exportToCsvOffersDemands(filename: string, rows: OfferDemandItem[]) {
             if (String(cell).search(/("|,|\n)/g) >= 0) {
               cell = `"${cell}"`;
             }
-
             return cell;
           }).join(separator);
-        })
+        }).join("\n");
 
 
   const blob = new Blob(["\ufeff" + csvContent], {
@@ -1001,7 +999,6 @@ function exportToCsvOffersDemands(filename: string, rows: OfferDemandItem[]) {
   return false;
 }
 
-// Helper to transform API Offer to OfferDemandItem
 const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
   const offerGroups: ApiGroupItem[] = [];
   if (apiOffer.groupA)
@@ -1020,7 +1017,6 @@ const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
         typeof apiOffer.created_by.name === "string"
           ? `${apiOffer.created_by.name.replace(/\s+/g, ".").toLowerCase()}@example.com`
           : "unknown@example.com",
-
     },
     assignedToInfo: apiOffer.assign_user
       ? {
@@ -1039,7 +1035,6 @@ const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
   };
 };
 
-// Helper to transform API Demand to OfferDemandItem
 const transformApiDemand = (
   apiDemand: ActualApiDemandShape
 ): OfferDemandItem => {
@@ -1104,7 +1099,6 @@ const transformApiDemand = (
     originalApiItem: apiDemand,
   };
 };
-// --- Start of Component and Hooks ---
 
 const ActionColumn = React.memo(
   ({
@@ -1128,15 +1122,6 @@ const ActionColumn = React.memo(
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete">
-        <div
-          role="button"
-          onClick={onDelete}
-          className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-        >
-          <TbTrash />
-        </div>
-      </Tooltip> */}
       <Dropdown
         renderTitle={
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
@@ -1307,15 +1292,15 @@ const ItemTableTools = React.memo(
 ItemTableTools.displayName = "ItemTableTools";
 
 const ItemActionTools = React.memo(
-  ({ onRefresh }: { onRefresh: () => void }) => {
+  ({ onRefresh, onOpenFilter }: { onRefresh: () => void; onOpenFilter: () => void }) => {
     const navigate = useNavigate();
     return (
       <div className="flex flex-col md:flex-row gap-2">
         <Button icon={<TbRefresh />} onClick={onRefresh} title="Refresh Data">
           Refresh
         </Button>
-        <Button icon={<TbFilter />} block>
-          Filter (Not Implemented)
+        <Button icon={<TbFilter />} onClick={onOpenFilter} block>
+          Filter
         </Button>
         <Button
           variant="solid"
@@ -1459,7 +1444,6 @@ const OffersDemands = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
-  // --- MODAL STATE AND HANDLERS ---
   const [modalState, setModalState] = useState<OfferDemandModalState>({
     isOpen: false,
     type: null,
@@ -1471,12 +1455,21 @@ const OffersDemands = () => {
   ) => setModalState({ isOpen: true, type, data: itemData });
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
-  // --- END MODAL STATE AND HANDLERS ---
 
   const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
     defaultValues: { reason: "" },
     mode: "onChange",
+  });
+
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
+    filterFormSchema.parse({})
+  );
+
+  const filterFormMethods = useForm<FilterFormData>({
+    resolver: zodResolver(filterFormSchema),
+    defaultValues: filterCriteria,
   });
 
   const currentTableConfig = useMemo(() => {
@@ -1554,13 +1547,50 @@ const OffersDemands = () => {
     }
 
     let processedData = [...transformedData];
+
+    if (filterCriteria.createdDateRange?.[0] || filterCriteria.createdDateRange?.[1]) {
+        const [start, end] = filterCriteria.createdDateRange.map((d) => d ? new Date(new Date(d).setHours(0,0,0,0)) : null);
+        const endOfDay = end ? new Date(new Date(end).setHours(23,59,59,999)) : null;
+        processedData = processedData.filter((item) => {
+          const itemDate = item.createdDate;
+          if (start && endOfDay) return itemDate >= start && itemDate <= endOfDay;
+          if (start) return itemDate >= start;
+          if (endOfDay) return itemDate <= endOfDay;
+          return true;
+        });
+    }
+    if (filterCriteria.updatedDateRange?.[0] || filterCriteria.updatedDateRange?.[1]) {
+        const [start, end] = filterCriteria.updatedDateRange.map((d) => d ? new Date(new Date(d).setHours(0,0,0,0)) : null);
+        const endOfDay = end ? new Date(new Date(end).setHours(23,59,59,999)) : null;
+        processedData = processedData.filter((item) => {
+          const itemDate = item.updated_at;
+          if (!itemDate) return false;
+          if (start && endOfDay) return itemDate >= start && itemDate <= endOfDay;
+          if (start) return itemDate >= start;
+          if (endOfDay) return itemDate <= endOfDay;
+          return true;
+        });
+    }
+    if (filterCriteria.itemType) {
+        processedData = processedData.filter(item => item.type === filterCriteria.itemType);
+    }
+    if (filterCriteria.creatorIds?.length) {
+        const creatorIdSet = new Set(filterCriteria.creatorIds);
+        processedData = processedData.filter(item => creatorIdSet.has(item.createdByInfo.userId));
+    }
+    if (filterCriteria.assigneeIds?.length) {
+        const assigneeIdSet = new Set(filterCriteria.assigneeIds);
+        processedData = processedData.filter(item => item.assignedToInfo && assigneeIdSet.has(item.assignedToInfo.userId));
+    }
+
     if (currentTableConfig.query) {
       const query = currentTableConfig.query.toLowerCase();
       processedData = processedData.filter(
         (item) =>
           item.id.toLowerCase().includes(query) ||
           item.name.toLowerCase().includes(query) ||
-          item.createdByInfo.userName.toLowerCase().includes(query)
+          item.createdByInfo.userName.toLowerCase().includes(query) ||
+          (item.assignedToInfo?.userName.toLowerCase().includes(query) ?? false)
       );
     }
 
@@ -1612,7 +1642,7 @@ const OffersDemands = () => {
       total: dataTotal,
       allFilteredAndSortedData: allData,
     };
-  }, [rawOffers, rawDemands, currentTab, currentTableConfig]);
+  }, [rawOffers, rawDemands, currentTab, currentTableConfig, filterCriteria]);
 
   const handleSetTableConfig = useCallback(
     (data: Partial<TableQueries>) => {
@@ -1624,6 +1654,30 @@ const OffersDemands = () => {
     },
     [setCurrentTableConfig]
   );
+
+  const openFilterDrawer = useCallback(() => {
+    filterFormMethods.reset(filterCriteria);
+    setIsFilterDrawerOpen(true);
+  }, [filterFormMethods, filterCriteria]);
+
+  const closeFilterDrawer = useCallback(() => {
+    setIsFilterDrawerOpen(false);
+  }, []);
+
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
+    setFilterCriteria(data);
+    handleSetTableConfig({ pageIndex: 1 });
+    closeFilterDrawer();
+  }, [handleSetTableConfig, closeFilterDrawer]);
+
+  const onClearFilters = useCallback(() => {
+    const defaults = filterFormSchema.parse({});
+    filterFormMethods.reset(defaults);
+    setFilterCriteria(defaults);
+    handleSetTableConfig({ pageIndex: 1, query: '' });
+    closeFilterDrawer();
+  }, [filterFormMethods, handleSetTableConfig, closeFilterDrawer]);
+
 
   const handlePaginationChange = useCallback(
     (page: number) => handleSetTableConfig({ pageIndex: page }),
@@ -1681,7 +1735,7 @@ const OffersDemands = () => {
   const handleEdit = useCallback(
     (item: OfferDemandItem) => {
       const basePath = item.type === "Offer" ? "offers" : "demands";
-      navigate(`/sales-leads/${basePath}/edit/${item.id}`);
+      navigate(`/sales-leads/${basePath}/edit/${item.originalApiItem.id}`);
     },
     [navigate]
   );
@@ -1696,11 +1750,13 @@ const OffersDemands = () => {
     setIsDeleting(true);
 
     try {
-      const { id, type, name } = itemToDeleteConfirm;
+      const { originalApiItem, type, name } = itemToDeleteConfirm;
+      const idToDelete = originalApiItem.id;
+
       if (type === "Offer") {
-        await dispatch(deleteOfferAction(id)).unwrap();
+        await dispatch(deleteOfferAction(idToDelete)).unwrap();
       } else if (type === "Demand") {
-        await dispatch(deleteDemandAction(id)).unwrap();
+        await dispatch(deleteDemandAction(idToDelete)).unwrap();
       }
 
       toast.push(
@@ -1710,7 +1766,7 @@ const OffersDemands = () => {
         >{`${name} has been deleted.`}</Notification>
       );
       fetchData();
-      setCurrentSelectedItems((prev) => prev.filter((i) => i.id !== id));
+      setCurrentSelectedItems((prev) => prev.filter((i) => i.id !== itemToDeleteConfirm.id));
     } catch (error: any) {
       const errorMessage =
         error?.message || `Failed to delete ${itemToDeleteConfirm.type}.`;
@@ -1729,12 +1785,13 @@ const OffersDemands = () => {
     if (currentSelectedItems.length === 0) return;
     setIsDeleting(true);
 
-    const offersToDelete = currentSelectedItems.filter(
-      (item) => item.type === "Offer"
-    );
-    const demandsToDelete = currentSelectedItems.filter(
-      (item) => item.type === "Demand"
-    );
+    const offersToDelete = currentSelectedItems
+      .filter((item) => item.type === "Offer")
+      .map(item => ({...item.originalApiItem, id: Number(item.originalApiItem.id)} as ActualApiOfferShape));
+    const demandsToDelete = currentSelectedItems
+      .filter((item) => item.type === "Demand")
+      .map(item => ({...item.originalApiItem, id: Number(item.originalApiItem.id)} as ActualApiDemandShape));
+
 
     const deletePromises: Promise<any>[] = [];
 
@@ -1777,18 +1834,22 @@ const OffersDemands = () => {
     (tabKey: string) => {
       if (tabKey === currentTab) return;
       setCurrentTab(tabKey);
+      const defaults = filterFormSchema.parse({});
+      filterFormMethods.reset(defaults);
+      setFilterCriteria(defaults);
+
       if (tabKey === TABS.ALL) {
         setSelectedAll([]);
-        setAllTableConfig((prev) => ({ ...prev, pageIndex: 1, query: "" }));
+        setAllTableConfig({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
       } else if (tabKey === TABS.OFFER) {
         setSelectedOffers([]);
-        setOfferTableConfig((prev) => ({ ...prev, pageIndex: 1, query: "" }));
+        setOfferTableConfig({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
       } else if (tabKey === TABS.DEMAND) {
         setSelectedDemands([]);
-        setDemandTableConfig((prev) => ({ ...prev, pageIndex: 1, query: "" }));
+        setDemandTableConfig({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
       }
     },
-    [currentTab]
+    [currentTab, filterFormMethods]
   );
 
   const handleOpenExportReasonModal = useCallback(() => {
@@ -1808,15 +1869,17 @@ const OffersDemands = () => {
     async (data: ExportReasonFormData) => {
       setIsSubmittingExportReason(true);
       const moduleName = "Offers & Demands";
+      const date = dayjs().format('YYYYMMDD');
+      const filename = `offers_demands_export_${date}.csv`;
       try {
         await dispatch(
-          submitExportReasonAction({ reason: data.reason, module: moduleName })
+          submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: filename })
         ).unwrap();
       } catch (error) {
         /* Optional error handling */
       }
       const success = exportToCsvOffersDemands(
-        "offers_demands_export.csv",
+        filename,
         allFilteredAndSortedData
       );
       if (success) {
@@ -1940,32 +2003,29 @@ const OffersDemands = () => {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        meta: { HeaderClass: "text-red-500" },
-        size: 180,
+
+        size: 120,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } =
+          const { updated_at, updated_by_user, updated_by_role } =
             props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
-              ).toLocaleString("en-US", {
-                month: "short",
-              })} ${new Date(updated_at).getFullYear()}, ${new Date(
+              ).toLocaleString("en-US", { month: "long" })} ${new Date(
                 updated_at
-              ).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
+              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
+                "en-US",
+                { hour: "numeric", minute: "2-digit", hour12: true }
+              )}`
             : "N/A";
           return (
             <div className="text-xs">
               <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && (
+                {updated_by_user?.name || "N/A"}
+                {updated_by_user?.roles[0]?.display_name && (
                   <>
                     <br />
-                    <b>{updated_by_role}</b>
+                    <b>{updated_by_user?.roles[0]?.display_name}</b>
                   </>
                 )}
               </span>
@@ -1999,6 +2059,24 @@ const OffersDemands = () => {
     offersStatus === "idle" ||
     demandsStatus === "idle";
 
+  const dummyUserOptions = useMemo(() => {
+    const users = new Map<string, string>();
+    rawOffers.forEach(o => {
+        if (o.created_by) users.set(String(o.created_by.id), o.created_by.name);
+        if (o.assign_user) users.set(String(o.assign_user.id), o.assign_user.name);
+    });
+    rawDemands.forEach(d => {
+        if (d.created_by) users.set(String(d.created_by.id), d.created_by.name);
+        if (d.assign_user) users.set(String(d.assign_user.id), d.assign_user.name);
+    });
+    return Array.from(users.entries()).map(([id, name]) => ({ value: id, label: name }));
+  }, [rawOffers, rawDemands]);
+
+  const itemTypeOptions = [
+    { value: "Offer" as const, label: "Offer" },
+    { value: "Demand" as const, label: "Demand" },
+  ];
+
   if (isOverallLoading && !pageData.length) {
     return (
       <Container className="h-full">
@@ -2016,7 +2094,7 @@ const OffersDemands = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
-            <ItemActionTools onRefresh={fetchData} />
+            <ItemActionTools onRefresh={fetchData} onOpenFilter={openFilterDrawer} />
           </div>
 
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
@@ -2138,7 +2216,99 @@ const OffersDemands = () => {
         </Form>
       </ConfirmDialog>
 
-      {/* Render the main modal component */}
+      <Drawer
+        title="Filter"
+        isOpen={isFilterDrawerOpen}
+        onClose={closeFilterDrawer}
+        onRequestClose={closeFilterDrawer}
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <Button size="sm" onClick={onClearFilters}>Clear All</Button>
+            <Button size="sm" variant="solid" form="filterForm" type="submit">Apply Filters</Button>
+          </div>
+        }
+    >
+        <Form
+            id="filterForm"
+            onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+            className="flex flex-col gap-y-6 p-4 h-full overflow-y-auto" // Added overflow-y-auto
+        >
+            <FormItem label="Filter by Type">
+                <Controller
+                    name="itemType"
+                    control={filterFormMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            placeholder="Select Type (Offer/Demand)"
+                            options={itemTypeOptions}
+                            value={itemTypeOptions.find(opt => opt.value === field.value)}
+                            onChange={(option) => field.onChange(option?.value || null)}
+                            isClearable
+                        />
+                    )}
+                />
+            </FormItem>
+            <FormItem label="Created Date Range">
+                <Controller
+                    name="createdDateRange"
+                    control={filterFormMethods.control}
+                    render={({ field }) => (
+                        <DatePicker.DatePickerRange
+                            value={field.value as any}
+                            onChange={field.onChange}
+                            placeholder="Start Date - End Date"
+                            inputFormat="DD MMM YYYY"
+                        />
+                    )}
+                />
+            </FormItem>
+             <FormItem label="Updated Date Range">
+                <Controller
+                    name="updatedDateRange"
+                    control={filterFormMethods.control}
+                    render={({ field }) => (
+                        <DatePicker.DatePickerRange
+                            value={field.value as any}
+                            onChange={field.onChange}
+                            placeholder="Start Date - End Date"
+                            inputFormat="DD MMM YYYY"
+                        />
+                    )}
+                />
+            </FormItem>
+            <FormItem label="Filter by Creator">
+                <Controller
+                    name="creatorIds"
+                    control={filterFormMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            isMulti
+                            placeholder="Select Creator(s)"
+                            options={dummyUserOptions}
+                            value={dummyUserOptions.filter(opt => field.value?.includes(opt.value))}
+                            onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])}
+                        />
+                    )}
+                />
+            </FormItem>
+            <FormItem label="Filter by Assignee">
+                <Controller
+                    name="assigneeIds"
+                    control={filterFormMethods.control}
+                    render={({ field }) => (
+                        <Select
+                            isMulti
+                            placeholder="Select Assignee(s)"
+                            options={dummyUserOptions}
+                            value={dummyUserOptions.filter(opt => field.value?.includes(opt.value))}
+                            onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])}
+                        />
+                    )}
+                />
+            </FormItem>
+        </Form>
+    </Drawer>
+
       <OfferDemandModals modalState={modalState} onClose={handleCloseModal} />
     </>
   );

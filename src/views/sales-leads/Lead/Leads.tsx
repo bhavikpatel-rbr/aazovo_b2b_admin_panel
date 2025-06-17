@@ -892,10 +892,7 @@ const LeadsListing = () => {
 
   const columns: ColumnDef<LeadListItem>[] = useMemo(
     () => [
-      {
-        header: "Status", accessorKey: "lead_status", size: 120,
-        cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.lead_status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.lead_status}</Tag>),
-      },
+     
       {
         header: "Lead", accessorKey: "lead_number", size: 130,
         cell: (props) => (
@@ -908,6 +905,10 @@ const LeadsListing = () => {
       {
         header: "Product", accessorKey: "productName", size: 200,
         cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || "-",
+      },
+       {
+        header: "Status", accessorKey: "lead_status", size: 120,
+        cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.lead_status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.lead_status}</Tag>),
       },
       {
         header: "Member", accessorKey: "customerName", size: 180, // Increased size a bit
@@ -959,8 +960,8 @@ const LeadsListing = () => {
 
             return(
           <div className="flex flex-col gap-0.5 text-xs">
-            <div><Tag>{props.row.original.lead_intent || "Buy"}</Tag></div>
-            <span>Qty: {props.row.original.qty ?? "-"}</span>
+            <div><Tag>{props.row.original.lead_intent || "Buy"}</Tag><span>Qty: {props.row.original.qty ?? "-"}</span></div>
+            
             <span>Target Price: {props.row.original.target_price ?? "-"}</span>
             <span>Sales Person : {props.row.original.salesPersonName || "Unassigned"}</span>
             <b>{formattedDate}</b>
@@ -1028,12 +1029,12 @@ const LeadsListing = () => {
           {leadToView ? (
               <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                   {/* --- MODIFICATION START --- */}
-                  {(Object.keys(leadToView.rawApiData) as Array<keyof any>).map((key) => {
+                 {(Object.keys(leadToView.rawApiData) as Array<keyof any>).map((key) => {
                       const label = String(key)
                           .replace(/_/g, ' ')
-                          .replace(/([A-Z])/g, ' $1')
+                          .replace(/([A-Z])/g, ' $1') // Converts camelCase to spaced words
                           .trim()
-                          .replace(/\b\w/g, l => l.toUpperCase());
+                          .replace(/\b\w/g, l => l.toUpperCase()); // Title cases each word
                       
                       const value: any = leadToView.rawApiData[key];
                       let displayValue: React.ReactNode;
@@ -1044,17 +1045,19 @@ const LeadsListing = () => {
                       if ((key === "created_at" || key === "updated_at") && value) {
                           displayValue = dayjs(value).format('DD MMM, YYYY h:mm A');
                       } else if (nameDisplayKeys.includes(String(key))) {
-                          // Handle specific objects: if it's an object with a name, show the name. If null/undefined, show hyphen.
-                          if (value && typeof value === 'object' && 'name' in value) {
+                          // Handle specific objects: if it's an object with a name, show the name. 
+                          // If it's null, undefined, or an object without a 'name' property, show hyphen.
+                          if (value && typeof value === 'object' && 'name' in value && value.name !== null && value.name !== undefined) {
                               displayValue = String(value.name);
                           } else {
                               displayValue = <span className="text-gray-400">-</span>;
                           }
                       } else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
-                          // For any other object, we skip rendering the row as per the request to "remove objects"
+                          // For any other object (that is not a Date and not in nameDisplayKeys),
+                          // we skip rendering the row.
                           return null; 
                       } else {
-                          // For primitive values (string, number, boolean) or null/undefined
+                          // For primitive values (string, number, boolean) or null/undefined/empty string
                           displayValue = value === null || value === undefined || value === '' 
                               ? <span className="text-gray-400">-</span> 
                               : String(value);

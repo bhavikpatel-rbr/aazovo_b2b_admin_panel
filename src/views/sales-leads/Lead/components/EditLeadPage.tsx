@@ -293,7 +293,7 @@ const EditLeadPage = () => {
           Lead updated successfully.
         </Notification>
       );
-      navigate("/sales/leads");
+      navigate("/sales-leads/lead");
     } catch (error: any) {
       toast.push(
         <Notification title="Error" type="danger">
