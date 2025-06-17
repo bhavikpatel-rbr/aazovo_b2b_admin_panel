@@ -51,7 +51,6 @@ interface MemberItem {
   designation?: string;
   person_name?: string;
   contact_number?: string;
-  is_team?: boolean; // ADD THIS LINE
 }
 
 interface SpotVerificationItemFE {

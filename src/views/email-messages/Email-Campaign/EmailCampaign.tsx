@@ -587,7 +587,7 @@ const RecipientFilterModal = ({
     [CategoriesData]
   );
   const productOptions = useMemo(() =>
-      (ProductsData || []).map((p: any) => ({ value: String(p.id), label: p.name })),
+      (ProductsData?.data || [])?.map((p: any) => ({ value: String(p.id), label: p.name })),
     [ProductsData]
   );
   const continentOptions = useMemo(() =>
@@ -1357,18 +1357,17 @@ const EmailCampaignListing = () => {
   }, [filterFormMethods, handleSetTableData]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const sourceData: EmailCampaignItem[] = Array.isArray(
-      emailCampaignsData.data
-    )
-      ? emailCampaignsData.data.map((item) => ({
-          ...item,
-          campaignNameDisplay:
-            item.campaign_name ||
-            item.mail_template?.name ||
-            `Campaign ${item.id}`,
-          dateTimeDisplay: new Date(item.created_at),
-        }))
-      : [];
+    const sourceData: EmailCampaignItem[] = (
+      emailCampaignsData?.data || []
+    ).map((item) => ({
+      ...item,
+      campaignNameDisplay:
+        item.campaign_name ||
+        item.mail_template?.name ||
+        `Campaign ${item.id}`,
+      dateTimeDisplay: new Date(item.created_at),
+    }));
+
     let processedData = cloneDeep(sourceData);
     if (tableData.query) {
       const q = tableData.query.toLowerCase().trim();
@@ -1444,7 +1443,7 @@ const EmailCampaignListing = () => {
       total: currentTotal,
       allFilteredAndSortedData: processedData,
     };
-  }, [emailCampaignsData.data, tableData, filterCriteria]);
+  }, [emailCampaignsData, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = useCallback(() => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
