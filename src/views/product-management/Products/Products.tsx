@@ -764,8 +764,8 @@ const Products = () => {
   );
 
   const domainOptions = useMemo(
-    () => domainsData?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
-    [domainsData]
+    () => domainsData?.data?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
+    [domainsData?.data]
   );
   const categoryOptions = useMemo(
     () =>
@@ -779,8 +779,8 @@ const Products = () => {
     [BrandData]
   );
   const unitOptions = useMemo(
-    () => unitData?.map((u: any) => ({ value: u.id, label: u.name })) || [],
-    [unitData]
+    () => unitData?.data?.map((u: any) => ({ value: u.id, label: u.name })) || [],
+    [unitData?.data]
   );
   const countryOptions = useMemo(
     () =>

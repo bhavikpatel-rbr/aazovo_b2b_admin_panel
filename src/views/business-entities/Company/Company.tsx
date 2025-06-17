@@ -1479,27 +1479,27 @@ const CompanyListTable = () => {
           );
         },
       },
-      {
-        header: "Preferences",
-        size: 180,
-        cell: ({ row }) => {
-          const { brands, category, interested_in } = row.original;
-          return (
-            <div className="flex flex-col gap-1 text-xs">
-              {" "}
-              <span>
-                <b>Brands:</b> {brands || "N/A"}
-              </span>{" "}
-              <span>
-                <b>Category:</b> {category || "N/A"}
-              </span>{" "}
-              <span>
-                <b>Interested In:</b> {interested_in}
-              </span>{" "}
-            </div>
-          );
-        },
-      },
+      // {
+      //   header: "Preferences",
+      //   size: 180,
+      //   cell: ({ row }) => {
+      //     const { brands, category, interested_in } = row.original;
+      //     return (
+      //       <div className="flex flex-col gap-1 text-xs">
+      //         {" "}
+      //         <span>
+      //           <b>Brands:</b> {brands || "N/A"}
+      //         </span>{" "}
+      //         <span>
+      //           <b>Category:</b> {category || "N/A"}
+      //         </span>{" "}
+      //         <span>
+      //           <b>Interested In:</b> {interested_in}
+      //         </span>{" "}
+      //       </div>
+      //     );
+      //   },
+      // },
       {
         header: "Profile & Scores",
         size: 190,
