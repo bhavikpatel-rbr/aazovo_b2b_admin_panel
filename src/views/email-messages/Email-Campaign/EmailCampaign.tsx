@@ -587,8 +587,8 @@ const RecipientFilterModal = ({
     [CategoriesData]
   );
   const productOptions = useMemo(() =>
-      (ProductsData?.data || [])?.map((p: any) => ({ value: String(p.id), label: p.name })),
-    [ProductsData]
+      (ProductsData?.data || []).map((p: any) => ({ value: String(p.id), label: p.name })),
+    [ProductsData?.data]
   );
   const continentOptions = useMemo(() =>
       (ContinentsData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
@@ -960,14 +960,14 @@ const EmailCampaignListing = () => {
   );
   const productOptions = useMemo(
     (): ProductOption[] =>
-      Array.isArray(ProductsData)
-        ? ProductsData.map((p: ApiProduct) => ({
+      Array.isArray(ProductsData?.data)
+        ? ProductsData.data.map((p: ApiProduct) => ({
             value: String(p.id),
             label: p.name,
             imageUrl: p.image_url,
           }))
         : [],
-    [ProductsData]
+    [ProductsData?.data]
   );
 
   const campaignFormMethods = useForm<CampaignCreationFormData>({
@@ -1357,17 +1357,18 @@ const EmailCampaignListing = () => {
   }, [filterFormMethods, handleSetTableData]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const sourceData: EmailCampaignItem[] = (
-      emailCampaignsData?.data || []
-    ).map((item) => ({
-      ...item,
-      campaignNameDisplay:
-        item.campaign_name ||
-        item.mail_template?.name ||
-        `Campaign ${item.id}`,
-      dateTimeDisplay: new Date(item.created_at),
-    }));
-
+    const sourceData: EmailCampaignItem[] = Array.isArray(
+      emailCampaignsData.data
+    )
+      ? emailCampaignsData.data.map((item) => ({
+          ...item,
+          campaignNameDisplay:
+            item.campaign_name ||
+            item.mail_template?.name ||
+            `Campaign ${item.id}`,
+          dateTimeDisplay: new Date(item.created_at),
+        }))
+      : [];
     let processedData = cloneDeep(sourceData);
     if (tableData.query) {
       const q = tableData.query.toLowerCase().trim();
@@ -1443,7 +1444,7 @@ const EmailCampaignListing = () => {
       total: currentTotal,
       allFilteredAndSortedData: processedData,
     };
-  }, [emailCampaignsData, tableData, filterCriteria]);
+  }, [emailCampaignsData.data, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = useCallback(() => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
