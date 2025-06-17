@@ -960,20 +960,23 @@ function exportToCsvOffersDemands(filename: string, rows: OfferDemandItem[]) {
     "\n" +
     transformedRows
       .map((row) => {
-        return CSV_KEYS_OFFERS_DEMANDS_EXPORT.map((k) => {
-          let cell = row[k as keyof OfferDemandExportItem] as any;
-          if (cell === null || cell === undefined) {
-            cell = "";
-          } else {
-            cell = String(cell).replace(/"/g, '""');
-          }
-          if (String(cell).search(/("|,|\n)/g) >= 0) {
-            cell = `"${cell}"`;
-          }
-          return cell;
-        }).join(separator);
-      })
-      .join("\n");
+          return CSV_KEYS_OFFERS_DEMANDS_EXPORT.map((k) => {
+            let cell = row?.[k as keyof OfferDemandExportItem];
+
+            if (cell === null || cell === undefined) {
+              cell = "";
+            } else {
+              cell = String(cell).replace(/"/g, '""');
+            }
+
+            if (String(cell).search(/("|,|\n)/g) >= 0) {
+              cell = `"${cell}"`;
+            }
+
+            return cell;
+          }).join(separator);
+        })
+
 
   const blob = new Blob(["\ufeff" + csvContent], {
     type: "text/csv;charset=utf-8;",
@@ -1013,9 +1016,11 @@ const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
     createdByInfo: {
       userId: String(apiOffer.created_by.id),
       userName: apiOffer.created_by.name,
-      email: `${apiOffer.created_by.name
-        .replace(/\s+/g, ".")
-        .toLowerCase()}@example.com`,
+      email:
+        typeof apiOffer.created_by.name === "string"
+          ? `${apiOffer.created_by.name.replace(/\s+/g, ".").toLowerCase()}@example.com`
+          : "unknown@example.com",
+
     },
     assignedToInfo: apiOffer.assign_user
       ? {
@@ -1076,9 +1081,10 @@ const transformApiDemand = (
     createdByInfo: {
       userId: String(apiDemand.created_by.id),
       userName: apiDemand.created_by.name,
-      email: `${apiDemand.created_by.name
-        .replace(/\s+/g, ".")
-        .toLowerCase()}@example.com`,
+      email:
+        typeof apiDemand.created_by?.name === "string"
+          ? `${apiDemand.created_by.name.replace(/\s+/g, ".").toLowerCase()}@example.com`
+          : "unknown@example.com",
     },
     assignedToInfo: apiDemand.assign_user
       ? {

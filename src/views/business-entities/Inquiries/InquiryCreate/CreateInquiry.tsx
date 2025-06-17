@@ -155,7 +155,7 @@ const CreateInquiry = () => {
     // status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
-  const departmentFilterOptions = departmentsData.map((c: any) => ({
+  const departmentFilterOptions = departmentsData?.data?.map((c: any) => ({
     value: String(c.id),
     label: c.name,
   }));

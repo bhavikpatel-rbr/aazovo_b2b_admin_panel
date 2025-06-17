@@ -1703,7 +1703,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
   });
 
   // Mock options if data not available, replace with real data from selectors
-  const productOptions = ProductsData.map((p: any) => ({
+  const productOptions = ProductsData?.data?.map((p: any) => ({
     value: String(p.id),
     label: p.name,
   }));
