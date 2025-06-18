@@ -230,15 +230,15 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   const { CompanyData, CountriesData, ContinentsData } =
     useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  console.log("CompanyData", CompanyData);
+  console.log("CompanyData?.data", CompanyData?.data);
   
-  // FIX: Initialize state assuming CompanyData is an object like { data: [], total: 0 }
+  // FIX: Initialize state assuming CompanyData?.data is an object like { data: [], total: 0 }
   const [companyList, setCompanyList] = useState<CompanyItem[]>(
-    CompanyData ?? []
+    CompanyData?.data ?? []
   );
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
   const [companyListTotal, setCompanyListTotal] = useState<number>(
-    CompanyData?.total ?? 0
+    CompanyData?.data?.total ?? 0
   );
 
   useEffect(() => {
@@ -246,11 +246,11 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch(getContinentsAction());
   }, [dispatch]);
 
-  // FIX: Update local state correctly when CompanyData from Redux changes.
+  // FIX: Update local state correctly when CompanyData?.data from Redux changes.
   useEffect(() => {
-    setCompanyList(CompanyData ?? []);
-    setCompanyListTotal(CompanyData?.total ?? 0);
-  }, [CompanyData]);
+    setCompanyList(CompanyData?.data ?? []);
+    setCompanyListTotal(CompanyData?.data?.total ?? 0);
+  }, [CompanyData?.data]);
 
   useEffect(() => {
     dispatch(getCompanyAction());
