@@ -37,7 +37,8 @@ import {
   TbSearch, TbFilter, TbUserCircle, TbBriefcase, TbLink, TbClipboardCopy,
   TbReload, TbMail, TbMailSpark, TbMailUp, TbMailSearch, TbMailCheck,
   TbMailHeart, TbMailX, TbUserShare, TbBrandWhatsapp, TbUser,
-  TbUserCheck, TbCalendarTime, TbDownload, TbBell
+  TbUserCheck, TbCalendarTime, TbDownload, TbBell,
+  TbTagStarred
 } from "react-icons/tb";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
@@ -127,14 +128,15 @@ const ActionColumn = ({
       <Tooltip title="View Details"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400")} role="button" onClick={onView}><TbEye /></div></Tooltip>
       <Tooltip title="Edit Application"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs"> Send Email</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span></Dropdown.Item>
+        <Dropdown.Item onClick={onScheduleInterview} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Schedule Interview</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
         <Dropdown.Item onClick={onAddJobLink} className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Generate Job Link</span></Dropdown.Item>
         <Dropdown.Item onClick={onDownloadResume} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Resume</span></Dropdown.Item>
-        <Dropdown.Item onClick={onScheduleInterview} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Schedule Interview</span></Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2"><TbUserShare size={18} /> <span className="text-xs">Convert to Employee</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs"> Send Email</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
       </Dropdown>
     </div>
   );

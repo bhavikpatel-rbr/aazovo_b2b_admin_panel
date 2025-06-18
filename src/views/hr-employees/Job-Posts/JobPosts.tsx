@@ -332,7 +332,7 @@ const ActionColumn = ({
                     <TbPencil />
                 </div>
             </Tooltip>
-            <Tooltip title="Delete Job Post">
+            {/* <Tooltip title="Delete Job Post">
                 <div
                     className={classNames(
                         iconButtonClass,
@@ -344,7 +344,7 @@ const ActionColumn = ({
                 >
                     <TbTrash />
                 </div>
-            </Tooltip>
+            </Tooltip> */}
             <Dropdown
                 renderTitle={
                     <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-lg" />
