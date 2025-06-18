@@ -748,7 +748,7 @@ const DomainManagementListing = () => {
                         <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
                         <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                     </div>
-                    <div>
+                    <div className='text-right'>
                         <br />
                         <span className="font-semibold">Created At:</span>{" "}
                         <span>

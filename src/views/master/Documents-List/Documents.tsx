@@ -905,7 +905,8 @@ const Documents = () => {
         isOpen={isEditDrawerOpen}
         onClose={closeEditDrawer}
         onRequestClose={closeEditDrawer}
-        width={460}
+        width={480}
+        bodyClass="relative"
         footer={
           <div className="text-right w-full">
             <Button
@@ -998,7 +999,7 @@ const Documents = () => {
         </Form>
 
         {editingDocument && (
-            <div className="absolute bottom-[14%] w-[auto]">
+            <div className="absolute bottom-[3%] w-[90%]">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">
@@ -1010,7 +1011,7 @@ const Documents = () => {
                   </p>
                   <p>{editingDocument.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
                 </div>
-                <div>
+                <div className="text-right">
                   <br />
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>

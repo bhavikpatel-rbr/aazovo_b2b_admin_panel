@@ -1449,7 +1449,7 @@ const RequestAndFeedbackListing = () => {
       <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       <Drawer title={editingItem ? "Edit Entry" : "Add New Entry"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520}
         footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="requestFeedbackForm" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>{isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save Changes" : "Submit Entry")}</Button></div>}
-      ><Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 pb-28"> {/* Increased pb for footer space */}
+      ><Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4"> {/* Increased pb for footer space */}
         {renderDrawerForm(formMethods)}
          {editingItem && (
              <div className=""> {/* Ensure full width and padding consistency */}
@@ -1459,7 +1459,7 @@ const RequestAndFeedbackListing = () => {
                         <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
                         <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                     </div>
-                    <div>
+                    <div className="text-right">
                         <br />
                         <span className="font-semibold">Created At:</span>{" "}
                         <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>

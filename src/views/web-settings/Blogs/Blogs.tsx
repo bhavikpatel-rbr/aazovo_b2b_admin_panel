@@ -1668,7 +1668,7 @@ const Blogs = () => {
                         "N/A"}
                     </p>
                   </div>
-                  <div>
+                  <div className='text-right'>
                     <br />
                     <span className="font-semibold">Created At:</span>{" "}
                     <span>

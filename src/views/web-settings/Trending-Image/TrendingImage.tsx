@@ -703,9 +703,9 @@ const TrendingImages = () => {
                 </Form>
             </Drawer>
 
-            <Drawer title="Edit Trending Image Group" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={480}
+            <Drawer title="Edit Trending Image Group" bodyClass='relative' isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={480}
                 footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="editPageImageForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</Button></div>}>
-                <Form id="editPageImageForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-4 relative pb-28">
+                <Form id="editPageImageForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-4 relative">
                     <FormItem label={<div>Page Name<span className="text-red-500"> *</span></div>} invalid={!!editFormMethods.formState.errors.page_name} errorMessage={editFormMethods.formState.errors.page_name?.message}>
                         <Controller name="page_name" control={editFormMethods.control} render={({ field }) => (<Select placeholder="Select page" options={pageNameOptionsConst} value={pageNameOptionsConst.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                     </FormItem>
@@ -717,7 +717,7 @@ const TrendingImages = () => {
                     </FormItem>
 
                     {editingItem && (
-                        <div className="absolute bottom-0 w-full">
+                        <div className="">
                             <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                                 <div>
                                 <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b>
@@ -725,7 +725,7 @@ const TrendingImages = () => {
                                 <p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p>
                                 <p>{editingItem.updated_by_role || "N/A"}</p>
                                 </div>
-                                <div>
+                                <div className='text-right'>
                                 <br />
                                 <span className="font-semibold">Created At:</span>{" "}
                                 <span>
