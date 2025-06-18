@@ -449,7 +449,7 @@ const InquiryActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      {onShare && (
+      {/* {onShare && (
         <Tooltip title="Share">
           <div
             className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
@@ -459,8 +459,8 @@ const InquiryActionColumn = ({
             <TbShare />
           </div>
         </Tooltip>
-      )}
-      <Tooltip title="Delete">
+      )} */}
+      {/* <Tooltip title="Delete">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
           role="button"
@@ -468,7 +468,7 @@ const InquiryActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Tooltip title="More">
           <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
             <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
