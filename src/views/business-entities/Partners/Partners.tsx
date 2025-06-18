@@ -981,7 +981,7 @@ const PartnerActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      {/* <Tooltip title="Share">
         <div
           className="text-xl cursor-pointer select-none hover:text-orange-600 dark:hover:text-orange-400"
           role="button"
@@ -989,25 +989,12 @@ const PartnerActionColumn = ({
         >
           <TbShare />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Dropdown
         renderTitle={
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item
-          onClick={() => onOpenModal("email", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbMail size={18} /> <span className="text-xs">Send Email</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("whatsapp", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbBrandWhatsapp size={18} />{" "}
-          <span className="text-xs">Send on Whatsapp</span>
-        </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("notification", rowData)}
           className="flex items-center gap-2"
@@ -1016,17 +1003,11 @@ const PartnerActionColumn = ({
           <span className="text-xs">Add as Notification</span>
         </Dropdown.Item>
         <Dropdown.Item
-          onClick={() => onOpenModal("task", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
-        </Dropdown.Item>
-        <Dropdown.Item
           onClick={() => onOpenModal("active", rowData)}
           className="flex items-center gap-2"
         >
           <TbTagStarred size={18} />{" "}
-          <span className="text-xs">Add to Active</span>
+          <span className="text-xs">Mark as Active</span>
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("calendar", rowData)}
@@ -1034,6 +1015,12 @@ const PartnerActionColumn = ({
         >
           <TbCalendarEvent size={18} />{" "}
           <span className="text-xs">Add to Calendar</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("alert", rowData)}
@@ -1049,11 +1036,17 @@ const PartnerActionColumn = ({
           <span className="text-xs">Download Document</span>
         </Dropdown.Item>
         <Dropdown.Item
-          onClick={() => onOpenModal("feedback", rowData)}
+          onClick={() => onOpenModal("email", rowData)}
           className="flex items-center gap-2"
         >
-          <TbMessageReport size={18} />{" "}
-          <span className="text-xs">View Request & Feedback</span>
+          <TbMail size={18} /> <span className="text-xs">Send Email</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("whatsapp", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBrandWhatsapp size={18} />{" "}
+          <span className="text-xs">Send on Whatsapp</span>
         </Dropdown.Item>
       </Dropdown>
     </div>

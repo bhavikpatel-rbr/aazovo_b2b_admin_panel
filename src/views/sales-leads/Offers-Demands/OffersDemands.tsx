@@ -51,7 +51,11 @@ import {
   TbBuilding,
   TbCalendar,
   TbCalendarEvent,
+  TbCancel,
   TbChecks,
+  TbCircleCheck,
+  TbCircleLetterX,
+  TbCircleX,
   TbClipboardText,
   TbCloudDownload,
   TbCloudUpload,
@@ -75,6 +79,7 @@ import {
   TbShare,
   TbTagStarred,
   TbTrash,
+  TbUpload,
   TbUser,
   TbUserCircle,
   TbUserSearch,
@@ -1112,7 +1117,7 @@ const ActionColumn = React.memo(
     onDelete: () => void;
     onOpenModal: (type: OfferDemandModalType, data: OfferDemandItem) => void;
   }) => (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center justify-center gap-0">
       <Tooltip title="Edit / View">
         <div
           role="button"
@@ -1122,11 +1127,93 @@ const ActionColumn = React.memo(
           <TbPencil />
         </div>
       </Tooltip>
+      <Tooltip title="Edit / View">
+        <div
+          role="button"
+          className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+        >
+          <TbEye />
+        </div>
+      </Tooltip>
       <Dropdown
         renderTitle={
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
+        
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBell size={18} />{" "}
+          <span className="text-xs">Add as Notification</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbTagStarred size={18} />{" "}
+          <span className="text-xs">Mark as Active</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbCalendarEvent size={18} />{" "}
+          <span className="text-xs">Add to Calendar</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("trackRecord", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbCircleCheck size={18} />{" "}
+          <span className="text-xs">Accept</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("trackRecord", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbCancel size={18} />{" "}
+          <span className="text-xs">Reject</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("engagement", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUserSearch size={18} /> <span className="text-xs">Convert to Lead</span>
+        </Dropdown.Item>
+        {/* <Dropdown.Item
+          onClick={() => onOpenModal("document", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUpload size={18} />{" "}
+          <span className="text-xs">Upload Document</span>
+        </Dropdown.Item> */}
+        {/* <Dropdown.Item
+          onClick={() => onOpenModal("feedback", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbMessageReport size={18} />{" "}
+          <span className="text-xs">View Request & Feedback</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("wallLink", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbLink size={18} /> <span className="text-xs">Add Wall Link</span>
+        </Dropdown.Item> */}
         <Dropdown.Item
           onClick={() => onOpenModal("email", rowData)}
           className="flex items-center gap-2"
@@ -1139,72 +1226,6 @@ const ActionColumn = React.memo(
         >
           <TbBrandWhatsapp size={18} />{" "}
           <span className="text-xs">Send on Whatsapp</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("notification", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbBell size={18} />{" "}
-          <span className="text-xs">Add as Notification</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("task", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("active", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbTagStarred size={18} />{" "}
-          <span className="text-xs">Add to Active</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("calendar", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbCalendarEvent size={18} />{" "}
-          <span className="text-xs">Add to Calendar</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("alert", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("trackRecord", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbFileSearch size={18} />{" "}
-          <span className="text-xs">Track Record</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("engagement", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbUserSearch size={18} /> <span className="text-xs">Engagement</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("document", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbDownload size={18} />{" "}
-          <span className="text-xs">Download Document</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("feedback", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbMessageReport size={18} />{" "}
-          <span className="text-xs">View Request & Feedback</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("wallLink", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbLink size={18} /> <span className="text-xs">Add Wall Link</span>
         </Dropdown.Item>
       </Dropdown>
     </div>

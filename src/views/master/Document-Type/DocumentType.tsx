@@ -803,7 +803,8 @@ const Documentmaster = () => {
           isOpen={drawerProps.isOpen}
           onClose={drawerProps.closeFn}
           onRequestClose={drawerProps.closeFn}
-          width={460}
+          width={480}
+          bodyClass="relative"
           footer={
             <div className="text-right w-full">
               <Button
@@ -883,14 +884,9 @@ const Documentmaster = () => {
             </FormItem>
           </Form>
           {drawerProps.isEdit && editingDocumentType && (
-           <div className="absolute bottom-[14%] w-[auto]">
-  {/*
-    - Replace 'grid-cols-2' with an arbitrary value for grid-template-columns.
-    - 'grid-cols-[2fr_3fr]' means the first column gets 2 fractional units,
-      and the second column gets 3 fractional units of the available space.
-    - Removed the style={{flex:1}} from the grid container as it's not standard for grid.
-  */}
-  <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+           <div className="absolute bottom-[3%] w-[90%]">
+  
+  <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
     {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
     <div>
       <b className="mt-3 mb-3 font-semibold text-primary">
@@ -903,7 +899,7 @@ const Documentmaster = () => {
       <p>{editingDocumentType.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
     </div>
     {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
-    <div>
+    <div className='text-right'>
       <br /> {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
       <span className="font-semibold">Created At:</span>{" "}
       <span>

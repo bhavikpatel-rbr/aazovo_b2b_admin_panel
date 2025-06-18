@@ -395,17 +395,17 @@ const AutoEmailTemplatesListing = () => {
       <AutoEmailTemplatesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       <Drawer title={editingItem ? "Edit Auto Email Template" : "Add New Auto Email Template"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={480}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="autoEmailTemplateForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div>} >
-        <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 pb-28">
+        <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
             {renderDrawerForm(formMethods)}
             {editingItem && (
-             <div className="absolute w-[auto] bottom-20">
+             <div className="">
               <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
                   <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
                   <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                 </div>
-                <div><br />
+                <div className="text-right"><br />
                   <span className="font-semibold">Created At:</span>{" "}<span>{editingItem.created_at ? dayjs(editingItem.created_at).format("D MMM YYYY, h:mm A") : "N/A"}</span><br />
                   <span className="font-semibold">Updated At:</span>{" "}<span>{editingItem.updated_at ? dayjs(editingItem.updated_at).format("D MMM YYYY, h:mm A") : "N/A"}</span>
                 </div>

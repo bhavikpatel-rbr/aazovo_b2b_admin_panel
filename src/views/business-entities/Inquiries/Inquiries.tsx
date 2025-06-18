@@ -40,8 +40,10 @@ import {
   TbAlarm,
   TbBell,
   TbBrandWhatsapp,
+  TbBuilding,
   TbCalendarEvent,
   TbChecks,
+  TbClipboardText,
   TbCloudUpload,
   TbDotsVertical,
   TbDownload,
@@ -50,8 +52,10 @@ import {
   TbFilter,
   TbMail,
   TbMessageReport,
+  TbNotebook,
   TbPencil,
   TbPlus,
+  TbReceipt,
   TbReload,
   TbSearch,
   TbShare,
@@ -445,7 +449,7 @@ const InquiryActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      {onShare && (
+      {/* {onShare && (
         <Tooltip title="Share">
           <div
             className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400"
@@ -455,8 +459,8 @@ const InquiryActionColumn = ({
             <TbShare />
           </div>
         </Tooltip>
-      )}
-      <Tooltip title="Delete">
+      )} */}
+      {/* <Tooltip title="Delete">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
           role="button"
@@ -464,18 +468,19 @@ const InquiryActionColumn = ({
         >
           <TbTrash />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Tooltip title="More">
           <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+            <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span></Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2"><TbClipboardText size={18} /> <span className="text-xs">Convert to Wall listing</span></Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2"><TbNotebook size={18} /> <span className="text-xs">Add Notes</span></Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbMessageReport size={18} /> <span className="text-xs">View Request & Feedback</span></Dropdown.Item>
           </Dropdown>
       </Tooltip>
     </div>

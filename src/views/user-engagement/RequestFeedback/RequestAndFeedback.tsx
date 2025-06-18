@@ -1002,18 +1002,18 @@ const ItemActionColumn = ({
       <div className="text-xl p-1 cursor-pointer text-gray-500 hover:text-blue-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" role="button" onClick={onViewDetail}><TbEye /></div>
     </Tooltip>
     <Dropdown renderTitle={<BsThreeDotsVertical className="text-xl p-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+      <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
+      {/* <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("trackRecord", rowData)} className="flex items-center gap-2"><TbFileSearch size={18} /> <span className="text-xs">Track Record</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("engagement", rowData)} className="flex items-center gap-2"><TbUserSearch size={18} /> <span className="text-xs">Engagement</span></Dropdown.Item> */}
+      <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add to Active</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("trackRecord", rowData)} className="flex items-center gap-2"><TbFileSearch size={18} /> <span className="text-xs">Track Record</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("engagement", rowData)} className="flex items-center gap-2"><TbUserSearch size={18} /> <span className="text-xs">Engagement</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("feedback", rowData)} className="flex items-center gap-2"><TbMessageReport size={18} /> <span className="text-xs">View Request & Feedback</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("wallLink", rowData)} className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Add Wall Link</span></Dropdown.Item>
+      {/* <Dropdown.Item onClick={() => onOpenModal("feedback", rowData)} className="flex items-center gap-2"><TbMessageReport size={18} /> <span className="text-xs">View Request & Feedback</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("wallLink", rowData)} className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Add Wall Link</span></Dropdown.Item> */}
       
     </Dropdown>
   </div>
@@ -1449,7 +1449,7 @@ const RequestAndFeedbackListing = () => {
       <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       <Drawer title={editingItem ? "Edit Entry" : "Add New Entry"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520}
         footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="requestFeedbackForm" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>{isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save Changes" : "Submit Entry")}</Button></div>}
-      ><Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 pb-28"> {/* Increased pb for footer space */}
+      ><Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4"> {/* Increased pb for footer space */}
         {renderDrawerForm(formMethods)}
          {editingItem && (
              <div className=""> {/* Ensure full width and padding consistency */}
@@ -1459,7 +1459,7 @@ const RequestAndFeedbackListing = () => {
                         <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
                         <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                     </div>
-                    <div>
+                    <div className="text-right">
                         <br />
                         <span className="font-semibold">Created At:</span>{" "}
                         <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"}</span>

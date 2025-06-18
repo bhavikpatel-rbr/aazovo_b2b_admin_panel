@@ -407,17 +407,17 @@ const EmailTemplatesListing = () => {
       <EmailTemplatesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       <Drawer title={editingTemplate ? "Edit Email Template" : "Add New Email Template"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingTemplate ? closeEditDrawer : closeAddDrawer} onRequestClose={editingTemplate ? closeEditDrawer : closeAddDrawer} width={600}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingTemplate ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="emailTemplateForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div>} >
-        <Form id="emailTemplateForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28">
+        <Form id="emailTemplateForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative">
           {renderDrawerForm(formMethods, variablesFieldArray)}
           {isEditDrawerOpen && editingTemplate && (
-            <div className="absolute bottom-[14%] w-[92%]">
+            <div className="">
               <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
                   <p className="text-sm font-semibold">{editingTemplate.updated_by_user?.name || "N/A"}</p>
                   <p>{editingTemplate.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                 </div>
-                <div>
+                <div className="text-right">
                   <br />
                   <span className="font-semibold">Created At:</span>{" "}<span>{editingTemplate.created_at ? dayjs(editingTemplate.created_at).format("D MMM YYYY, h:mm A") : "N/A"}</span><br />
                   <span className="font-semibold">Updated At:</span>{" "}<span>{editingTemplate.updated_at ? dayjs(editingTemplate.updated_at).format("D MMM YYYY, h:mm A") : "N/A"}</span>

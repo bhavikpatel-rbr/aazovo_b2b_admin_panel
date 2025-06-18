@@ -854,6 +854,7 @@ const Departments = () => {
           onClose={drawerProps.closeFn}
           onRequestClose={drawerProps.closeFn}
           width={480}
+          bodyClass="relative"
           footer={
             <div className="text-right w-full">
               <Button
@@ -924,14 +925,14 @@ const Departments = () => {
             </FormItem>
           </Form>
           {drawerProps.isEdit && editingItem && (
-             <div className="absolute bottom-[14%] w-[auto]">
-              <div className="grid grid-cols-[2fr_3fr] text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+             <div className="absolute bottom-[3%] w-[90%]">
+              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                 <div>
                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
                   <p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
                   <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                 </div>
-                <div>
+                <div className="text-right">
                   <br />
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
