@@ -81,6 +81,9 @@ import {
   TbTrash,
   TbUser,
   TbUsers,
+  TbBulb,
+  TbNotebook,
+  TbDiscount,
 } from "react-icons/tb";
 
 // Types
@@ -1492,26 +1495,38 @@ const MainRowActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
+        <Dropdown.Item onClick={() => onOpenModal("notification", item)} className="flex items-center gap-2">
+          <TbBell size={18} /> <span className="text-xs">Add as Notification</span>
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("active", item)} className="flex items-center gap-2">
+          <TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span>
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("calendar", item)} className="flex items-center gap-2">
+          <TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span>
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("task", item)} className="flex items-center gap-2">
+          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+          <TbBulb size={18} /> <span className="text-xs">View Opportunity</span>
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+          <TbUser size={18} /> <span className="text-xs">View Buyer/Seller</span>
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+          <TbDiscount size={18} /> <span className="text-xs">Create Offer/Demand</span>
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+          <TbNotebook size={18} /> <span className="text-xs">Add Notes</span>
+        </Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("email", item)} className="flex items-center gap-2">
           <TbMail size={18} /> <span className="text-xs">Send Email</span>
         </Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("whatsapp", item)} className="flex items-center gap-2">
           <TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span>
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("notification", item)} className="flex items-center gap-2">
-          <TbBell size={18} /> <span className="text-xs">Add as Notification</span>
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("task", item)} className="flex items-center gap-2">
-          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("active", item)} className="flex items-center gap-2">
-          <TbTagStarred size={18} /> <span className="text-xs">Add to Active</span>
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("calendar", item)} className="flex items-center gap-2">
-          <TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span>
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
-          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
         </Dropdown.Item>
       </Dropdown>
     </div>
