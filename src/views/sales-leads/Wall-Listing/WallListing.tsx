@@ -1082,12 +1082,7 @@ const StyledActionColumn = ({
       >
         <TbBulb size={18} /> <span className="text-xs">Match Opportunity</span>
       </Dropdown.Item>
-      <Dropdown.Item
-        onClick={() => onOpenModal("alert", rowData)}
-        className="flex items-center gap-2"
-      >
-        <TbBuilding size={18} /> <span className="text-xs">View Company</span>
-      </Dropdown.Item>
+      
       <Dropdown.Item
         onClick={() => onOpenModal("alert", rowData)}
         className="flex items-center gap-2"

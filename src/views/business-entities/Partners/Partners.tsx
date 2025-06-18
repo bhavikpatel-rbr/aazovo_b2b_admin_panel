@@ -981,7 +981,7 @@ const PartnerActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Share">
+      {/* <Tooltip title="Share">
         <div
           className="text-xl cursor-pointer select-none hover:text-orange-600 dark:hover:text-orange-400"
           role="button"
@@ -989,7 +989,7 @@ const PartnerActionColumn = ({
         >
           <TbShare />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Dropdown
         renderTitle={
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
@@ -1027,13 +1027,6 @@ const PartnerActionColumn = ({
           className="flex items-center gap-2"
         >
           <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("feedback", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbMessageReport size={18} />{" "}
-          <span className="text-xs">View Request & Feedback</span>
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("document", rowData)}

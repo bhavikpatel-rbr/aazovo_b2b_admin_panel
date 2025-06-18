@@ -526,15 +526,15 @@ const LeadActionColumn = ({
         <Dropdown.Item onClick={onAssign} className="flex items-center gap-2 text-xs"><TbUserPlus size={18} /> Assign Lead</Dropdown.Item>
         <Dropdown.Item onClick={onChangeStatus} className="flex items-center gap-2 text-xs"><TbArrowsExchange size={18} /> Change Status</Dropdown.Item>
         <Dropdown.Item onClick={onConvertToOpportunity} className="flex items-center gap-2 text-xs"><TbRocket size={18} /> Convert to Deal</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("email")} className="flex items-center gap-2 text-xs"><TbMail size={18} /> Send Email</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("whatsapp")} className="flex items-center gap-2 text-xs"><TbBrandWhatsapp size={18} /> Send on Whatsapp</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("notification")} className="flex items-center gap-2 text-xs"><TbBell size={18} /> Add as Notification</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("task")} className="flex items-center gap-2 text-xs"><TbSubtask size={18} /> Assign Task</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("active")} className="flex items-center gap-2 text-xs"><TbTagStarred size={18} /> Add to Active</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("calendar")} className="flex items-center gap-2 text-xs"><TbCalendarEvent size={18} /> Add to Calendar</Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("task")} className="flex items-center gap-2 text-xs"><TbSubtask size={18} /> Assign Task</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("alert")} className="flex items-center gap-2 text-xs"><TbAlarm size={18} /> View Alert</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("document")} className="flex items-center gap-2 text-xs"><TbDownload size={18} /> Download Document</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("feedback")} className="flex items-center gap-2 text-xs"><TbMessageReport size={18} /> View Feedback</Dropdown.Item>
+        {/* <Dropdown.Item onClick={() => onOpenModal("document")} className="flex items-center gap-2 text-xs"><TbDownload size={18} /> Download Document</Dropdown.Item> */}
+        {/* <Dropdown.Item onClick={() => onOpenModal("feedback")} className="flex items-center gap-2 text-xs"><TbMessageReport size={18} /> View Feedback</Dropdown.Item> */}
+        <Dropdown.Item onClick={() => onOpenModal("email")} className="flex items-center gap-2 text-xs"><TbMail size={18} /> Send Email</Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("whatsapp")} className="flex items-center gap-2 text-xs"><TbBrandWhatsapp size={18} /> Send on Whatsapp</Dropdown.Item>
       </Dropdown>
     </div>
   );

@@ -475,12 +475,9 @@ const InquiryActionColumn = ({
             <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbBuilding size={18} /> <span className="text-xs">Assign to Company</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbReceipt size={18} /> <span className="text-xs">View Inquiry</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbClipboardText size={18} /> <span className="text-xs">Convert to Wall listing</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbNotebook size={18} /> <span className="text-xs">Add Notes</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbMessageReport size={18} /> <span className="text-xs">View Request & Feedback</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
             <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>

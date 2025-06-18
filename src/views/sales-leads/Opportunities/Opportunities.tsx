@@ -1513,9 +1513,9 @@ const MainRowActionColumn = ({
         <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
           <TbBulb size={18} /> <span className="text-xs">View Opportunity</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+        {/* <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
           <TbUser size={18} /> <span className="text-xs">View Buyer/Seller</span>
-        </Dropdown.Item>
+        </Dropdown.Item> */}
         <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
           <TbDiscount size={18} /> <span className="text-xs">Create Offer/Demand</span>
         </Dropdown.Item>
