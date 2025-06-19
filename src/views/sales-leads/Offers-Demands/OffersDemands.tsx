@@ -217,7 +217,7 @@ export type OfferDemandItem = {
   health_score?: number; 
 };
 
-const TABS = { ALL: "all", OFFER: "offer", DEMAND: "demand" };
+const TABS = { OFFER: "offer", DEMAND: "demand" };
 
 // ============================================================================
 // --- MODALS SECTION (ASSUMED UNCHANGED as per instructions) ---
@@ -863,7 +863,7 @@ const OffersDemands = () => {
     { header: "Name", accessorKey: "name", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => (<div><div className="font-semibold">{props.row.original.name}</div>{(props.row.original.numberOfBuyers !== undefined || props.row.original.numberOfSellers !== undefined) && (<><div className="text-xs text-gray-600 dark:text-gray-300">Buyers: {props.row.original.numberOfBuyers ?? "N/A"}</div><div className="text-xs text-gray-600 dark:text-gray-300">Sellers: {props.row.original.numberOfSellers ?? "N/A"}</div></>)}</div>), },
     { header: "Section Details", id: "sectionDetails", size: 220, cell: ({ row }: CellContext<OfferDemandItem, any>) => { const { groups } = row.original; if (!groups || groups.length === 0) return (<span className="text-xs text-gray-500">No group details</span>); return (<div className="space-y-1">{groups.map((group, index) => (<div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><div className="pl-2 flex flex-col gap-0.5 text-gray-600 dark:text-gray-400">{group.items.slice(0, 3).map((item, itemIdx) => (<span key={itemIdx}>{item}</span>))}{group.items.length > 3 && (<span className="italic">...and {group.items.length - 3} more</span>)}</div></div>))}</div>); }, },
     { header: "Created By / Assigned", accessorKey: "createdByInfo.userName", id: "createdBy", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => { const item = props.row.original; const fCD = dayjs(item.createdDate).format('D MMM YYYY, h:mm A'); return (<div className="flex flex-col gap-1"><div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span className="font-semibold">{item.createdByInfo.userName}</span></div>{item.assignedToInfo && (<div className="text-xs text-gray-600 dark:text-gray-300"><b>Assigned: </b> {item.assignedToInfo.userName}</div>)}<div className="text-xs text-gray-500 dark:text-gray-400"><span>{fCD}</span></div></div>); }, },
-    { header: "Updated Info", accessorKey: "updated_at", id: "updatedInfo", enableSorting: true, size: 120, cell: (props) => { const { updated_at, updated_by_name, updated_by_role } = props.row.original; const fD = updated_at ? dayjs(updated_at).format('D MMM YYYY, h:mm A') : "N/A"; return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span> <br /><span>{fD}</span></div>); }, },
+    { header: "Updated Info", accessorKey: "created_by", id: "updatedInfo", enableSorting: true, size: 120, cell: (props) => { const { updated_at, name, updated_by_role } = props.row.original; const fD = updated_at ? dayjs(updated_at).format('D MMM YYYY, h:mm A') : "N/A"; return (<div className="text-xs"><span>{name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span> <br /><span>{fD}</span></div>); }, },
     { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 120, cell: (props: CellContext<OfferDemandItem, any>) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
   ], [handleEdit, handleDeleteClick, handleOpenModal]);
 
@@ -900,8 +900,13 @@ const OffersDemands = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4"><h5 className="mb-4 lg:mb-0">Offers & Demands</h5><ItemActionTools onRefresh={() => fetchData()} onOpenFilter={openFilterDrawer} /></div>
-          <div className="mb-4 border-b border-gray-200 dark:border-gray-700"><nav className="-mb-px flex space-x-8" aria-label="Tabs">{[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) => (<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize", currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>{tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}</button>))}</nav></div>
-          <div className="mb-4"><ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchQuery={currentTableConfig.query}/></div>
+          <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
+            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+              {[ TABS.OFFER, TABS.DEMAND].map((tabKey) => 
+              (<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize",
+                 currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>{tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}</button>))}</nav></div>
+          <div className="mb-4">
+            <ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchQuery={currentTableConfig.query}/></div>
           <div className="flex-grow overflow-auto">
             <ItemTable columns={columns} data={pageData} loading={isOverallLoading || dataForExportLoading}
               pagingData={{ total: totalItems, pageIndex: currentTableConfig.pageIndex as number, pageSize: currentTableConfig.pageSize as number }}
