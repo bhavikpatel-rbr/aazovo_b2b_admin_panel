@@ -2371,15 +2371,15 @@ const SpotVerificationSection = ({
           `company_spot_verification_data.${index}.photo_upload`
         );
         return (
-          <Card key={item.id} className="mb-4 p-4 border">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <Card key={item.id} className="mb-4 border-black rounded-md relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 items-start">
               <div className="flex items-center gap-4">
                 <Controller
                   name={`company_spot_verification_data.${index}.is_verified`}
                   control={control}
                   render={({ field }) => (
                     <Checkbox checked={!!field.value} onChange={field.onChange}>
-                      Verified
+                     
                     </Checkbox>
                   )}
                 />
@@ -2423,7 +2423,6 @@ const SpotVerificationSection = ({
                   control={control}
                   render={({ field }) => (
                     <Input
-                      textArea
                       placeholder="Add remarks here..."
                       {...field}
                     />
@@ -2431,15 +2430,15 @@ const SpotVerificationSection = ({
                 />
               </FormItem>
             </div>
-            <div className="flex justify-end mt-2">
+            <div className="flex justify-center absolute top-2 right-0">
               <Button
                 type="button"
-                shape="circle"
+                variant="plain"
                 size="sm"
-                icon={<TbTrash />}
+                icon={<TbTrash size={16}/>}
                 onClick={() => remove(index)}
-                danger
-              />
+              > Remove
+                </Button>
             </div>
           </Card>
         );
