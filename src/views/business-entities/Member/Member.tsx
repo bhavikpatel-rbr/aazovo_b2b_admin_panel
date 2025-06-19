@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { CSVLink } from "react-csv";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
@@ -53,6 +53,7 @@ import {
   TbBuilding,
   TbCalendar,
   TbCalendarEvent,
+  TbCheck,
   TbChecks,
   TbClipboardText,
   TbCloudDownload,
@@ -65,6 +66,7 @@ import {
   TbFileText,
   TbFileZip,
   TbFilter,
+  TbInfoCircle,
   TbKey,
   TbLink,
   TbMail,
@@ -96,6 +98,7 @@ import {
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
+import { MdCheckCircle } from "react-icons/md";
 
 // --- MemberData Type (FormItem) ---
 export type FormItem = {
@@ -1315,26 +1318,26 @@ const FormListTable = () => {
         cell: (props) => (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
-              <Avatar
+              {/* <Avatar
                 size={32}
                 shape="circle"
                 src={props.row.original.member_photo}
                 icon={<TbUserCircle />}
-              />
+              /> */}
               <div className="text-xs">
-                <h6 className="text-xs">{props.row.original.id}</h6>
-                <span>{props.row.original.member_name}</span>
+                <b className="text-xs text-blue-500"><em>70892{props.row.original.id}</em></b> <br />
+                <b className="texr-xs">{props.row.original.member_name || "Ajay Patel"}</b>
               </div>
             </div>
-            <div className="ml-2 mr-2 text-xs">
+            <div className="text-xs">
               <div className="text-xs text-gray-500">
-                {props.row.original.member_email_id}
+                {props.row.original.member_email_id || "xyz@gmail.com"}
               </div>
               <div className="text-xs text-gray-500">
-                {props.row.original.member_contact_number}
+                {props.row.original.member_contact_number || "+91 8972940112"}
               </div>
               <div className="text-xs text-gray-500">
-                {props.row.original.member_location}
+                {props.row.original.member_location || "India"}
               </div>
             </div>
           </div>
@@ -1346,11 +1349,13 @@ const FormListTable = () => {
         size: 200,
         cell: (props) => (
           <div className="ml-2 rtl:mr-2 text-xs">
-            <b className="text-xs text-gray-500">
-              {props.row.original.company_id}
+            <b className="text-xs ">
+              <em className="text-blue-500">{props.row.original.company_id || 5067892}</em>
+              
             </b>
-            <div className="text-xs text-gray-500">
-              {props.row.original.company_name}
+            <div className="text-xs flex gap-1">
+              <MdCheckCircle size={20} className="text-green-500"/>
+              <b className="">{props.row.original.company_name}</b>
             </div>
           </div>
         ),
@@ -1400,6 +1405,14 @@ const FormListTable = () => {
             <span>
               <b>Grade: </b>A
             </span>
+            <span>
+              <b>Business Opportunity: </b> 
+              <span>Indian Buyer</span>
+              {/* Can be Multiple , below are the options */}
+              {/* <span>Indian Supplier</span>
+              <span>Global Buyer</span>
+              <span>Global Buyer</span> */}
+            </span>
             <Tooltip
               title={`Profile: ${props.row.original.profile_completion}%`}
             >
@@ -1422,7 +1435,17 @@ const FormListTable = () => {
         cell: (props) => (
           <div className="flex flex-col gap-1">
             <span className="text-xs">
-              <b className="text-xs">Brands: </b>
+              <b className="text-xs">Business Type: </b>
+              <span className="text-[11px]">
+                Manufacturer 
+              </span>
+            </span>
+            <span className="text-xs">
+              <div className="flex gap-1">
+                {/* <span className="h-4 w-4 flex items-center justify-center rounded-full bg-blue-500 text-white">i</span> */}
+                <TbInfoCircle size={16} className="text-blue-500"/>
+                <b className="text-xs">Brands: </b>
+              </div>
               <span className="text-[11px]">
                 {props.row.original.associated_brands}
               </span>
@@ -1442,24 +1465,24 @@ const FormListTable = () => {
           </div>
         ),
       },
-      {
-        header: "Ratio",
-        accessorKey: "trust_score",
-        size: 110,
-        cell: (props) => (
-          <div className="flex flex-col gap-1">
-            <Tag className="flex gap-1 text-[10px]">
-              <b>Success:</b> {props.row.original.success_score}%
-            </Tag>
-            <Tag className="flex gap-1 text-[10px]">
-              <b>Trust:</b> {props.row.original.trust_score}%
-            </Tag>
-            <Tag className="flex gap-1 text-[10px] flex-wrap">
-              <b>Activity:</b> {props.row.original.activity_score}%
-            </Tag>
-          </div>
-        ),
-      },
+      // {
+      //   header: "Ratio",
+      //   accessorKey: "trust_score",
+      //   size: 110,
+      //   cell: (props) => (
+      //     <div className="flex flex-col gap-1">
+      //       <Tag className="flex gap-1 text-[10px]">
+      //         <b>Success:</b> {props.row.original.success_score}%
+      //       </Tag>
+      //       <Tag className="flex gap-1 text-[10px]">
+      //         <b>Trust:</b> {props.row.original.trust_score}%
+      //       </Tag>
+      //       <Tag className="flex gap-1 text-[10px] flex-wrap">
+      //         <b>Activity:</b> {props.row.original.activity_score}%
+      //       </Tag>
+      //     </div>
+      //   ),
+      // },
       {
         header: "Actions",
         id: "action",
