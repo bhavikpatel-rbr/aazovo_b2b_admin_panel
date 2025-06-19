@@ -1,6 +1,20 @@
 import axiosInstance, { isAxiosError } from "../../services/api/api"
 import { config } from "../../utils/config"
-
+interface ApiParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  created_from?: string;
+  created_to?: string;
+  updated_from?: string;
+  updated_to?: string;
+  created_by?: string; // Comma-separated IDs
+  assign_user?: string; // Comma-separated IDs
+  fetch_all?: boolean;
+  // Add any other specific filter params your API might expect
+}
 export const getLeadAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/lead/lead`)
@@ -2348,24 +2362,62 @@ export const getWallItemByIdAsync = async (id: string | number) => {
   }
 }
 
-export const getOffersAsync = async () => {
+export const getOffersAsync = async (params?: ApiParams) => { // Accept params
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/offer`)
-    return response.data
+    let url = `${config.apiURL}/offer`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      for (const key in params) {
+        if (Object.prototype.hasOwnProperty.call(params, key)) {
+          const value = params[key as keyof ApiParams];
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            queryParams.append(key, String(value));
+          }
+        }
+      }
+      if (queryParams.toString()) {
+        url += `?${queryParams.toString()}`;
+      }
+    }
+    // console.log("Fetching Offers with URL:", url); // Optional: for debugging
+    const response = await axiosInstance.get(url);
+    // IMPORTANT: The original thunk expects `response.data` to be returned here.
+    // If `response.data` contains { status: true, data: { actual_payload } },
+    // and your thunk's `if (response?.data)` check is on this outer structure,
+    // then `return response.data` is correct.
+    return response.data;
   } catch (err) {
-    return isAxiosError(err)
+    // The original thunk expects the error object itself if it's an AxiosError,
+    // or just the error for other types.
+    // Let's keep it simple and rethrow, `createAsyncThunk` will handle it.
+    throw err;
   }
-}
+};
 
-export const getDemandsAsync = async () => {
+export const getDemandsAsync = async (params?: ApiParams) => { // Accept params
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/demand`)
-    return response.data
+    let url = `${config.apiURL}/demand`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      for (const key in params) {
+        if (Object.prototype.hasOwnProperty.call(params, key)) {
+          const value = params[key as keyof ApiParams];
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            queryParams.append(key, String(value));
+          }
+        }
+      }
+      if (queryParams.toString()) {
+        url += `?${queryParams.toString()}`;
+      }
+    }
+    // console.log("Fetching Demands with URL:", url); // Optional: for debugging
+    const response = await axiosInstance.get(url);
+    return response.data;
   } catch (err) {
-    return isAxiosError(err)
+    throw err;
   }
-}
-
+};
 
 export const addOfferAsync = async (offerData: any) => {
   try {

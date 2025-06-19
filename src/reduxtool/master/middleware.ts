@@ -5,7 +5,21 @@ import { showMessage } from "../lem/lemSlice"
 import { defaultMessageObj } from "../lem/types"
 import { addAutoEmailAsync, addAutoEmailTemplatesAsync, addBlogsAsync, addBrandAsync, addBugReportAsync, addcategoryAsync, addCompanyAsync, addcontinentAsync, addcountryAsync, addCurrencyAsync, addDemandAsync, addDepartmentAsync, addDesignationAsync, addDocumentListAsync, addDocumentTypeAsync, addDomainsAsync, addEmailCampaignsAsync, addEmailTemplatesAsync, addFormBuilderAsync, addHomeCategoryAsync, addInquiriesAsync, addJobApplicationAsync, addJobDepartmentAsync, addJobPostsAsync, addLeadAsync, addMemberAsync, addNumberSystemsAsync, addOfferAsync, addpartnerAsync, addPaymentTermAsync, addPriceListAsync, addProductAsync, addProductSepecificationAsync, addRequestFeedbacksAsync, addRolesAsync, addRowDataAsync, addSlidersAsync, addTrandingCarouselAsync, addTrandingImageAsync, addUnitAsync, addWallItemAsync, changeProductStatusAsync, deletBlogsAsync, deletBrandListAsync, deletBugReportAsync, deletcategoryListAsync, deletcompanyAsync, deletcontinentAsync, deletcountryAsync, deletCurrencyAsync, deletDepartmentAsync, deletDesignationAsync, deletDocumentListAsync, deletDocumentTypeAsync, deletDomainsAsync, deleteAllAutoEmailAsync, deleteAllAutoEmailTemplatesAsync, deleteAllBlogsAsync, deleteAllBrandListAsync, deleteAllBugReportAsync, deleteAllcategoryListAsync, deleteAllcompanyAsync, deleteAllcontinentAsync, deleteAllcountryAsync, deleteAllCurrencyAsync, deleteAllDemandAsync, deleteAllDepartmentAsync, deleteAllDesignationAsync, deleteAllDocumentListAsync, deleteAllDocumentTypeAsync, deleteAllEmailCampaignsAsync, deleteAllEmailTemplatesAsync, deleteAllFormBuilderAsync, deleteAllHomeCategoryAsync, deleteAllInquiriesAsync, deleteAllJobApplicationAsync, deleteAllJobDepartmentAsync, deleteAllJobPostsAsync, deleteAllLeadAsync, deleteAllMemberAsync, deleteAllNumberSystemsAsync, deleteAllOfferAsync, deleteAllpartnerAsync, deleteAllPaymentTermAsync, deleteAllPriceListAsync, deleteAllProductSepecificationAsync, deleteAllRequestFeedbacksAsync, deleteAllRolesAsync, deleteAllRowDataAsync, deleteAllSlidersListAsync, deleteAllTrandingCarouselAsync, deleteAllTrandingImageAsync, deleteAllUnitAsync, deleteAllWallAsync, deleteAutoEmailAsync, deleteAutoEmailTemplatesAsync, deleteDemandAsync, deleteDomainsAsync, deleteEmailCampaignsAsync, deleteEmailTemplatesAsync, deleteFormBuilderAsync, deleteJobApplicationAsync, deleteLeadAsync, deleteMemberAsync, deleteOfferAsync, deletepartnerAsync, deletePriceListAsync, deleteRequestFeedbacksAsync, deleteRolesAsync, deletHomeCategoryAsync, deletJobDepartmentAsync, deletJobPostsAsync, deletNumberSystemsAsync, deletPaymentTermAsync, deletProductListAsync, deletProductSepecificationAsync, deletRowDataAsync, deletSlidersListAsync, deletTrandingCarouselAsync, deletTrandingImageAsync, deletUnitAsync, editAutoEmailAsync, editAutoEmailTemplatesAsync, editBlogsAsync, editBrandListAsync, editBugReportAsync, editcategoryListAsync, editCompanyAsync, editCompanyProfileListAsync, editcontinentAsync, editcountryAsync, editCurrencyAsync, editDemandAsync, editDepartmentAsync, editDesignationAsync, editDocumentListAsync, editDocumentTypeAsync, editDomainsAsync, editEmailCampaignsAsync, editEmailTemplatesAsync, editFormBuilderAsync, editGlobalSettingAsync, editHomeCategoryAsync, editInquiriesAsync, editJobApplicationAsync, editJobDepartmentAsync, editJobPostsAsync, editLeadAsync, editMemberAsync, editNumberSystemsAsync, editOfferAsync, editpartnerAsync, editPaymentTermAsync, editPriceListAsync, editProductListAsync, editProductSepecificationAsync, editRequestFeedbacksAsync, editRolesAsync, editRowDataAsync, editSlidersListAsync, editTrandingCarouselAsync, editTrandingImageAsync, editUnitAsync, getActivityLogAsync, getAllproductAsync, getAutoEmailAsync, getAutoEmailTemplatesAsync, getAutoMatchDataAsync, getBlogsAsync, getBrandAsync, getBugReportAsync, getBuyerListingsAsync, getcategoryAsync, getcompanyAsync, getCompanyByIdAsync, getCompanyProfileAsync, getcontinentAsync, getcountryAsync, getCurrencyAsync, getDemandByIdAsync, getDemandsAsync, getDepartmentAsync, getDesignationAsync, getDocumentListAsync, getDocumentTypeAsync, getDomainsAsync, getEmailCampaignsAsync, getEmailTemplatesAsync, getEmployeeAsync, getExportMappingsAsync, getFormBuilderAsync, getGlobalSettingAsync, getHomeCategoryAsync, getInquiriesAsync, getJobApplicationAsync, getJobDepartmentAsync, getJobPostsAsync, getLeadAsync, getLeadByIdAsync, getLeadMemberAsync, getMailTemplatesAsync, getMemberAsync, getMemberByIdAsync, getMembersAsync, getNumberSystemsAsync, getOfferByIdAsync, getOffersAsync, getOpportunitiesAsync, getParentcategoryAsync, getpartnerAsync, getPaymentTermAsync, getPriceListAsync, getProductAsync, getProductSepecificationAsync, getpWallListingAsync, getRequestFeedbacksAsync, getRolesAsync, getRowDataAsync, getSalesPersonAsync, getSellerListingsAsync, getSlidersAsync, getSubcategoriesByCategoryIdAsync, getSubcategoriesByIdAsync, getSubscribersAsync, getSuppliersAsync, getTrandingCarouseAsync, getTrandingImageAsync, getUnitAsync, getUsersAsync, getWallItemByIdAsync, getwallListingAsync, importRowDataAsync, sendCampaignNowAsync, submitResponseAsync } from "./services"
 
-
+interface ApiParams {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  created_from?: string;
+  created_to?: string;
+  updated_from?: string;
+  updated_to?: string;
+  created_by?: string; // Comma-separated IDs
+  assign_user?: string; // Comma-separated IDs
+  fetch_all?: boolean;
+  // Add any other specific filter params your API might expect
+}
 export const getLeadAction = createAsyncThunk(
   "auth/getLead",
   async (_, { rejectWithValue, dispatch }) => {
@@ -3945,35 +3959,45 @@ export const getWallItemById = createAsyncThunk(
 
 export const getOffersAction = createAsyncThunk(
   "auth/getOffersAction",
-  async (_, { rejectWithValue, dispatch }) => {
+  async (params: ApiParams | undefined, { rejectWithValue, dispatch }) => { // Changed _ to params
     try {
-      const response: AxiosResponse<any> = await getOffersAsync()
-      if (response?.data) { // Assuming response.data itself contains the relevant structure
-        return response?.data.data
-      }
+      // Pass params to the async function
+      const responseData = await getOffersAsync(params); // getOffersAsync now returns response.data directly
 
-      return rejectWithValue(response)
+      // The original thunk logic for checking responseData:
+      // if (response?.data) { return response?.data }
+      // This implies responseData IS what was previously response.data
+      if (responseData?.data) {
+        return responseData?.data;
+      }
+      // If responseData is not satisfactory (e.g., falsy), reject.
+      // The original code was `rejectWithValue(response)`, but `response` is not available here.
+      // We should reject with the `responseData` if it's considered an error by this logic.
+      return rejectWithValue(responseData || { message: "Invalid response from getOffersAsync" });
     } catch (error: unknown) {
-      return rejectWithValue(error as Error)
+      // The original code `return rejectWithValue(error as Error)`
+      // This is okay, but more specific Axios error handling is often better.
+      // For strict adherence to "no change" beyond params:
+      return rejectWithValue(error as Error);
     }
   }
-)
+);
 
 export const getDemandsAction = createAsyncThunk(
-  "auth/getDemandsAction",
-  async (_, { rejectWithValue, dispatch }) => {
+  "auth/getDemandsAction", // Assuming you'll keep "auth/" namespace for now
+  async (params: ApiParams | undefined, { rejectWithValue, dispatch }) => { // Changed _ to params
     try {
-      const response: AxiosResponse<any> = await getDemandsAsync()
-      if (response?.data) { // Assuming response.data itself contains the relevant structure
-        return response?.data.data
-      }
+      const responseData = await getDemandsAsync(params);
 
-      return rejectWithValue(response)
+      if (responseData?.data) {
+        return responseData?.data;
+      }
+      return rejectWithValue(responseData || { message: "Invalid response from getDemandsAsync" });
     } catch (error: unknown) {
-      return rejectWithValue(error as Error)
+      return rejectWithValue(error as Error);
     }
   }
-)
+);
 
 
 export const addOfferAction = createAsyncThunk<any, any>(
