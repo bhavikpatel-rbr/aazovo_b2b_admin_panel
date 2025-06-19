@@ -221,8 +221,8 @@ const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [
 const statusColor: Record<SliderItem["status"], string> = {
   // Use SliderItem["status"]
   Active:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
+    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500 border-2",
+  Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500 border-2",
 };
 
 // --- CSV Exporter Utility ---
@@ -1596,7 +1596,7 @@ const Sliders = () => {
                   clickFeedback={false}
                   customColorClass={({ active, unclickable }) =>
                     classNames(
-                      "hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0",
+                      "hover:text-gray-800 dark:hover:bg-gray-600 border-1 hover:ring-0",
                       active ? "bg-gray-200" : "bg-gray-100",
                       unclickable && "opacity-50 cursor-not-allowed",
                       !active && !unclickable && "hover:bg-gray-200"

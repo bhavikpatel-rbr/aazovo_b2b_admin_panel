@@ -10,14 +10,14 @@ import classNames from '@/utils/classNames'
 import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { options } from '../constants'
 import { NumericFormat } from 'react-number-format'
-import { TbCoin, TbShoppingBagCheck, TbEye } from 'react-icons/tb'
+import { TbCoin, TbShoppingBagCheck, TbEye, TbSearch } from 'react-icons/tb'
 import type { ReactNode } from 'react'
 import type { StatisticData, Period, StatisticCategory } from '../types'
 import { COLORS } from '@/constants/chart.constant'
 import { Tag } from '@/components/ui'
 import IndiaIcon from "/img/countries/IN.png"
 import { MdCancel, MdCheckCircle, MdOutlineBusinessCenter } from 'react-icons/md'
-import { DataTable } from '@/components/shared'
+import { DataTable, DebouceInput } from '@/components/shared'
 import { FaBookmark, FaCircle } from 'react-icons/fa'
 import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
 import { BsCake } from 'react-icons/bs'
@@ -268,11 +268,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             cell: props => (
                 <div className='flex flex-col gap-1'>
                     <h6 className="text-xs">{props.getValue()}</h6>
+                    {/* <span className="text-xs flex gap-1">
+                        ({"Phone | Email"})
+                    </span> */}
                     <span className="text-xs flex gap-1">
-                        ({"Phone/Email"})
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Type :</h6> {props.row.original.type}
+                        <h6 className="text-xs">Ownership Type : <span className='font-normal'>{props.row.original.type}</span></h6> 
                     </span>
                     <span className="text-xs flex gap-1">
                         <h6 className="text-xs">Country:</h6> {props.row.original.country}
@@ -284,32 +284,38 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 </div>
             )
         },
-        {
-            header: 'Preferences',
-            accessorKey: 'brands',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-                            return <span>{val}, </span>
-                        })}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
-                    </span>
-                </div>
-            )
-        },
+        // {
+        //     header: 'Preferences',
+        //     accessorKey: 'brands',
+        //     cell: props => (
+        //         <div className='flex flex-col gap-1'>
+        //             <span className="text-xs flex gap-1">
+        //                 <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
+        //                     return <span>{val}, </span>
+        //                 })}
+        //             </span>
+        //             <span className="text-xs flex gap-1">
+        //                 <h6 className="text-xs">Category:</h6> {props.row.original.category}
+        //             </span>
+        //             <span className="text-xs flex gap-1">
+        //                 <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
+        //             </span>
+        //         </div>
+        //     )
+        // },
         {
             header: 'Verified', accessorKey: 'verified',
-            size:100,
+            size:120,
             cell: props => (
                 <div className='flex flex-col gap-1'>
+                    <span className="flex flex-wrap gap-1 text-xs items-center">
+                        <h6 className="text-sm">Members: <span className='font-normal'>{props.row.original.noOfMember}</span></h6> 
+                    </span>
                     <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-sm">Members:</h6> {props.row.original.noOfMember}/43 (34%)
+                        <h6 className="text-sm">GST: <span className='font-normal'>AZXRFDRDSDDADA</span></h6>
+                    </span>
+                    <span className="flex flex-wrap gap-1 text-xs">
+                        <h6 className="text-sm">PAN: <span className='font-normal'>AZXRFDRDSD</span></h6> 
                     </span>
                     <div className='flex gap-1 items-center'>
                         <Tooltip title="KYC Verification : 48%" className='text-xs'>
@@ -331,51 +337,73 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             )
         },
         {
-            header: 'Walls', accessorKey: 'wallCount',
+            header: 'Business', accessorKey: 'wallCount',
+            size:180,
+            meta:{HeaderClass:'text-center'},
             cell: props => (
-                <div>
+                <div className='flex flex-col gap-4 text-center items-center '>
                     <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            13 | 12 | 25
+                            inline'>
+                            Wall Listing: 13 | 12 | 25
                         </div>
                     </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Opportunities', accessorKey: 'opportunity',
-            size:170,
-            cell: props => (
-                <div>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
+                             inline'>
+                            Opportunities: 34 | 12 | 46
                         </div>
                     </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Leads', accessorKey: 'leads',
-            size:180,
-            cell: props => (
-                <div>
-                    <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
-                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
-                        </div>
+                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
+                         <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+                             inline'>
+                             Leads: 34 | 12 | 46
+                         </div>
+                    </Tooltip>
+                    <Tooltip title="PO:7 | PI: 02 | E-way: 46" className='text-xs'>
+                         <div className=' bg-red-100 text-red-600 rounded-md p-1.5 text-xs 
+                             inline'>
+                             PO:7 | PI: 02 | E-way: 46
+                         </div>
                     </Tooltip>
                 </div>
+                
             )
         },
+        // {
+        //     header: 'Opportunities', accessorKey: 'opportunity',
+        //     size:170,
+        //     cell: props => (
+        //         <div>
+        //             <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
+        //                 <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
+        //                     shadow-md inline'>
+        //                     34 | 12 | 46
+        //                 </div>
+        //             </Tooltip>
+        //         </div>
+        //     )
+        // },
+        // {
+        //     header: 'Leads', accessorKey: 'leads',
+        //     size:180,
+        //     cell: props => (
+        //         <div>
+        //             <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
+        //                 <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+        //                     shadow-md inline'>
+        //                     34 | 12 | 46
+        //                 </div>
+        //             </Tooltip>
+        //         </div>
+        //     )
+        // },
         {
             header: 'Ratio', accessorKey: 'trustRatio',
-            size: 180,
+            size: 100,
+            meta:{HeaderClass:'text-center'},
             cell: props => (
-                <div className='flex flex-col gap-1'>
+                <div className='flex flex-col gap-1 text-center items-center'>
                     <Tag className="flex gap-1 text-[10px]">
                         <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
                     </Tag>
@@ -1418,7 +1446,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
             <section className='block  gap-4 w-full'>
                 <section >
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-2 rounded-2xl py-3 mt-4 ">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2 rounded-2xl py-3 mt-4 ">
                         <StatisticCard
                             title="Companies"
                             value={
@@ -1475,7 +1503,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             activeBgColor="bg-blue-200"
                             iconBg="bg-blue-400"
                         />
-                        <StatisticCard
+                        {/* <StatisticCard
                             title="Wall Listings"
                             value={
                                 <NumericFormat
@@ -1495,7 +1523,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             colorClass="bg-violet-100"
                             activeBgColor="bg-violet-200"
                             iconBg="bg-violet-400"
-                        />
+                        /> */}
                         <StatisticCard
                             title="Partners"
                             value={
@@ -1575,60 +1603,60 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
-                                        <Bar
+                                        {/* <Bar
                                             field="Active"
                                             percent={20}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
-                                        />
-                                        <Bar
+                                        /> */}
+                                        {/* <Bar
                                             field="Inactive"
                                             percent={28}
                                             color='text-[#6c757d]'
                                             className="bg-[#6c757d] dark:opacity-70"
-                                        />
-                                        <Bar
+                                        /> */}
+                                        {/* <Bar
                                             field="Pending"
                                             percent={32}
                                             color='text-[#ffc107]'
                                             className="bg-[#ffc107] dark:opacity-70"
-                                        />
+                                        /> */}
                                         <Bar
                                             field="Verified"
-                                            percent={20}
-                                            color='text-[#2ecc71]'
-                                            className="bg-[#2ecc71] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Unverified"
-                                            percent={20}
-                                            color='text-[#e74c3c]'
-                                            className="bg-[#e74c3c] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Offerer"
-                                            percent={20}
-                                            color='text-[#007bff]'
-                                            className="bg-[#007bff] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Seller"
-                                            percent={20}
-                                            color='text-[#fd7e14]'
-                                            className="bg-[#fd7e14] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Both"
                                             percent={20}
                                             color='text-[#20c997]'
                                             className="bg-[#20c997] dark:opacity-70"
                                         />
                                         <Bar
+                                            field="Non Verified"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                        {/* <Bar
+                                            field="Offerer"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        /> */}
+                                        <Bar
+                                            field="Eligible"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Not Eligible"
+                                            percent={20}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        {/* <Bar
                                             field="Avg Score"
                                             percent={20}
                                             color='text-gray-500'
                                             className="bg-gray-500 dark:opacity-70"
-                                        />
+                                        /> */}
                                     </div>
                                 </div>
 
@@ -1650,6 +1678,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             />
                                         </div>
                                     </div>
+                                    <DebouceInput
+                                            // ref={ref}
+                                            className="w-full mb-3 mt-3"
+                                            placeholder="Quick Search..."
+                                            suffix={<TbSearch className="text-lg" />}
+                                          />
                                     <DataTable
                                         columns={companyColumns}
                                         data={companyData}

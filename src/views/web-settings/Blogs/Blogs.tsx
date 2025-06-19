@@ -152,10 +152,10 @@ const blogStatusOptions = [
 
 const blogStatusColor: Record<BlogItem["status"], string> = {
   Published:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500 border-1",
   Unpublished:
-    "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
-  Draft: "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100",
+    "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100 border-amber-300 dark:border-amber-500 border-1",
+  Draft: "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-gray-300 dark:border-gray-500 border-1",
 };
 
 // --- CSV Exporter Utility ---
