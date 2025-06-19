@@ -22,6 +22,7 @@ import { FaBookmark, FaCircle } from 'react-icons/fa'
 import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
 import { BsCake } from 'react-icons/bs'
 import { IoMdShare } from 'react-icons/io'
+import { Link } from 'react-router-dom'
 
 type StatisticCardProps = {
     title: string
@@ -267,7 +268,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             size: 230,
             cell: props => (
                 <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs">{props.getValue()}</h6>
+                    <h6 className="text-xs"><Link to=""><em className='text-blue-500'>700056</em></Link> | {props.getValue()}</h6>
                     {/* <span className="text-xs flex gap-1">
                         ({"Phone | Email"})
                     </span> */}
