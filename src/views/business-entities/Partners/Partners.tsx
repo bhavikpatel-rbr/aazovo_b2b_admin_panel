@@ -77,9 +77,13 @@ import {
   TbSearch,
   TbTagStarred,
   TbUser,
+  TbUserCancel,
+  TbUserCheck,
   TbUserCircle,
+  TbUserMinus,
   TbUserSearch,
   TbUsersGroup,
+  TbUserX,
 } from "react-icons/tb";
 
 // Types
@@ -2089,60 +2093,61 @@ const Partner = () => {
               <CompanyListActionTools />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
-              <Card bodyClass="flex gap-2 p-2">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                  <TbBuilding size={24} />
+                  <TbUsersGroup size={24} />
                 </div>
                 <div>
                   <h6>8</h6>
                   <span className="text-xs font-semibold">Total</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                  <TbBuildingBank size={24} />
+                  <TbUser size={24} />
                 </div>
                 <div>
                   <h6>2</h6>
-                  <span className="text-xs font-semibold">Registered</span>
+                  <span className="text-xs font-semibold">Active</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                  <TbBuildingCarousel size={24} />
+                  <TbUserX size={24} />
                 </div>
                 <div>
                   <h6>34</h6>
                   <span className="text-xs font-semibold">Unregistered</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbUserCancel size={24} />
+                </div>
+                <div>
+                  <h6>20</h6>
+                  <span className="text-xs font-semibold">Disabled</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                  <TbBuildingArch size={24} />
+                  <TbUserCheck size={24} />
                 </div>
                 <div>
                   <h6>4</h6>
                   <span className="text-xs font-semibold">Verified</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2">
+              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
                 <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                  <TbBuildingMinus size={24} />
+                  <TbUserMinus size={24} />
                 </div>
                 <div>
                   <h6>4</h6>
                   <span className="text-xs font-semibold">Unverified</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                  <TbBuildingCommunity size={24} />
-                </div>
-                <div>
-                  <h6>20</h6>
-                  <span className="text-xs font-semibold">Members</span>
-                </div>
-              </Card>
+              
             </div>
             <CompanyListTable />
           </div>

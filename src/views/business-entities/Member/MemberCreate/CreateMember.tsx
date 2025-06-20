@@ -1651,7 +1651,7 @@ const memberNavigationList = [
   { label: "Member Profile", link: "memberProfile" },
   { label: "Accessibilities", link: "memberAccessibility" },
   { label: "Membership Details", link: "membershipPlanDetails" },
-  { label: "Feedback / Requests", link: "requestAndFeedbacks" },
+  // { label: "Feedback / Requests", link: "requestAndFeedbacks" },
 ];
 const NavigatorComponent = (props: {
   activeSection: string;
@@ -2208,11 +2208,11 @@ const PersonalDetailsComponent = ({
             name="company_name_temp"
             control={control}
             render={({ field }) => (
-              <Select
-                placeholder="Select temporary company"
-                options={companyOptions}
+              <Input
+                placeholder="Enter temporary company"
+                // options={companyOptions}
                 {...field}
-                isClearable
+                // isClearable
               />
             )}
           />
@@ -2369,13 +2369,27 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
           invalid={!!errors.whatsapp_number}
           errorMessage={errors.whatsapp_number?.message}
         >
-          <Controller
-            name="whatsapp_number"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Enter WhatsApp number" {...field} />
-            )}
-          />
+          <div className="flex items-center gap-2">
+            <Controller
+                name="whatsapp_country_code"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    placeholder="Code"
+                    className="w-28"
+                    options={countryCodeOptions}
+                    {...field}
+                  />
+                )}
+              />
+            <Controller
+              name="whatsapp_number"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="Enter WhatsApp number" {...field} />
+              )}
+            />
+          </div>
         </FormItem>
         <FormItem
           label="Alternate Contact Number"
@@ -2395,7 +2409,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
               render={({ field }) => (
                 <Select
                   placeholder="Code"
-                  className="w-32"
+                  className="w-28"
                   options={countryCodeOptions}
                   {...field}
                 />
@@ -2550,7 +2564,7 @@ const MemberAccessibilityComponent = ({
   return (
     <Card id="memberAccessibility">
       <h4 className="mb-6">Member Accessibility</h4>
-      <div className="grid md:grid-cols-3 gap-4 items-start">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
         <FormItem
           label="Product Upload Permission"
           invalid={!!errors.product_upload_permission}
@@ -2614,6 +2628,18 @@ const MemberAccessibilityComponent = ({
             name="trade_inquiry_allowed"
             control={control}
             render={({ field }) => (
+              <Checkbox
+                checked={!!field.value}
+                onChange={(checked) => field.onChange(checked)}
+              >
+                Enabled
+              </Checkbox>
+            )}
+          />
+          {/* <Controller
+            name="trade_inquiry_allowed"
+            control={control}
+            render={({ field }) => (
               <Select
                 {...field}
                 placeholder="Select"
@@ -2621,7 +2647,7 @@ const MemberAccessibilityComponent = ({
                 isClearable
               />
             )}
-          />
+          /> */}
         </FormItem>
       </div>
     </Card>
@@ -2792,8 +2818,8 @@ const MemberFormComponent = (props: {
         return <MemberAccessibilityComponent {...sectionProps} />;
       case "membershipPlanDetails":
         return <MembershipPlanComponent {...sectionProps} />;
-      case "requestAndFeedbacks":
-        return <RequestAndFeedbacksComponent {...sectionProps} />;
+      // case "requestAndFeedbacks":
+      //   return <RequestAndFeedbacksComponent {...sectionProps} />;
       case "memberProfile":
         return <MemberProfileComponent {...sectionProps} />;
       default:
