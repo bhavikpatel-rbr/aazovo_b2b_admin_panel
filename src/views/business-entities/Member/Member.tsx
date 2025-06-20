@@ -1190,39 +1190,7 @@ const FormListTable = () => {
   };
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
-  const fetchPageData = useCallback(
-    async (pageIdx: number, limit: number) => {
-      setIsLoading(true);
-      const params = new URLSearchParams();
-      params.append("page", String(pageIdx));
-      params.append("limit", String(limit));
 
-      try {
-        const response = await axiosInstance.get(
-          `/customer?${params.toString()}`
-        );
-        setMemberList(response.data?.data?.data ?? []);
-        setMemberListTotal(response.data?.data?.total ?? 0);
-      } catch (error) {
-        console.error("Failed to fetch member data:", error);
-        toast.push(
-          <Notification title="Error" type="danger" duration={3000}>
-            Failed to load members.
-          </Notification>
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [setMemberList, setMemberListTotal]
-  );
-
-  useEffect(() => {
-    fetchPageData(
-      tableData.pageIndex as number,
-      tableData.pageSize as number,
-    );
-  }, [tableData.pageIndex, tableData.pageSize, fetchPageData]);
 
   const handleQueryChange = (newQuery: string) => {
     setTableData((prev) => ({ ...prev, query: newQuery, pageIndex: 1 }));
