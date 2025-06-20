@@ -374,108 +374,221 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- Helper Functions ---
 const transformApiToFormSchema = (
-  formData
+  formData: any // Use `any` or a more accurate type reflecting the API response's 'data' object
 ): Partial<MemberFormSchema> => {
-  console.log(formData, "formDataformDataformData");
+  console.log(formData, "API data for form transformation");
 
-  /* Full Implementation from previous steps */ return {
-    name: formData?.name || "",
-    mobile_no: formData?.number || "",
-    email: formData?.email || "",
-    password: formData?.password || "",
-    state: formData?.state || "",
-    city: formData?.city || "",
-    pincode: formData?.pincode || "",
-    address: formData?.address || "",
-    alternate_contact_number: formData?.alternate_contact_number || "",
-    alternate_contact_number_code: formData?.alternate_contact_number_code || "",
-    landline_number: formData?.landline_number || "",
-    fax_number: formData?.fax_number || "",
-    alternate_email: formData?.alternate_email || "",
-    botim_id: formData?.botim_id || "",
-    skype_id: formData?.skype_id || "",
-    linkedin_profile: formData?.linkedIn_profile || "",
-    facebook_profile: formData?.facebook_profile || "",
-    instagram_handle: formData?.instagram_handle || "",
-    website: formData?.website || "",
-    favourite_product_id: formData?.favourite_product_id || "",
-    dealing_in_bulk: formData?.dealing_in_bulk || "No",
-    product_upload_permission: formData?.product_upload_permission || false,
-    wall_enquiry_permission: formData?.wall_enquiry_permission || false,
-    enquiry_permission: formData?.enquiry_permission || false,
-    trade_inquiry_allowed: formData?.trade_inquiry_allowed || false,
-    dynamic_member_profiles: formData?.dynamic_member_profiles || "",
-    company_name_temp: formData?.company_name_temp || "",
-    remarks: formData?.remarks || "",
-    contact_country_code: { value: formData?.number_code, label: formData?.number_code } || "",
-    company_name_temp: formData?.company_temp || "",
-    company_name: formData?.company_actual || "",
+  // Helper to create {value, label} for Selects from simple string API values
+  const toSelectOption = (value: string | undefined | null) =>
+    value ? { value: value, label: value } : undefined;
 
-    status: { value: formData?.status } || "",
-    continent_id: formData?.continent_id.value || "",
-    country_id: formData?.country_id.value || "",
-    whatsApp_no: formData?.whatsapp_number || "",
-    business_opportunity: formData?.business_opportunity?.value || "",
-    member_grade: formData?.member_grade?.value || "",
-    interested_in: formData?.interested_in?.value || "",
-    upgrade_your_plan: formData?.upgrade_plan?.value || "",
-    wechat_id: formData?.we_chat || "",
-    business_type: formData?.business_type?.value || "",
-    relationship_manager_id: formData?.relationship_manager?.value || "",
-    membership_plan_current: formData?.membership_plan_text || "",
+  // Helper to normalize country codes (e.g., "++263" to "+263")
+  const normalizeCountryCode = (code: string | undefined | null) =>
+    code ? code.replace(/^\+\+/, "+") : undefined;
+  
+  const createCountryCodeOption = (code: string | undefined | null) => {
+    const normalized = normalizeCountryCode(code);
+    return normalized ? { value: normalized, label: normalized } : undefined;
+  };
+
+  return {
+    id: formData.id,
+    name: formData.name || "",
+    email: formData.email || "",
+    // password: "", // সাধারণত এডিট মোডে পাসওয়ার্ড খালি রাখা হয় যদি না পরিবর্তন করা হয়
+
+    // Personal Details
+    mobile_no: formData.number || "",
+    contact_country_code: createCountryCodeOption(formData.number_code),
+    company_name_temp: formData.company_temp || "",
+    company_name: formData.company_actual || "", // Assuming company_name is actual
+    status: toSelectOption(formData.status),
+    continent_id: formData.continent
+      ? { value: String(formData.continent.id), label: formData.continent.name }
+      : undefined,
+    country_id: formData.country
+      ? { value: String(formData.country.id), label: formData.country.name }
+      : undefined,
+    state: formData.state || "",
+    city: formData.city || "",
+    pincode: formData.pincode || "",
+    address: formData.address || "",
+
+    // Contact Info
+    whatsapp_number: formData.whatsApp_no || "",
+    whatsapp_country_code: createCountryCodeOption(formData.number_code), // Assuming same as main number_code if not specified otherwise
+    alternate_contact_number: formData.alternate_contact_number || "",
+    alternate_contact_country_code: createCountryCodeOption(formData.alternate_contact_number_code),
+    landline_number: formData.landline_number || "",
+    fax_number: formData.fax_number || "",
+    alternate_email: formData.alternate_email || "",
+    botim_id: formData.botim_id || "",
+    skype_id: formData.skype_id || "",
+    we_chat: formData.wechat_id || "", // Form uses we_chat, API has wechat_id
+    linkedin_profile: formData.linkedIn_profile || "",
+    facebook_profile: formData.facebook_profile || "",
+    instagram_handle: formData.instagram_handle || "",
+    website: formData.website || "",
+
+    // Member Profile
+    business_opportunity: toSelectOption(formData.business_opportunity),
+    business_type: toSelectOption(formData.business_type),
+    favourite_product_ids: formData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
+    interested_in: toSelectOption(formData.interested_in), // Form uses interested_in
+    // interested_category_ids: formData.interested_categories_list?.map((c: any) => ({ value: String(c.id), label: c.name })) || [], // Example if API had this
+    // interested_subcategory_ids: formData.interested_subcategories_list?.map((sc: any) => ({ value: String(sc.id), label: sc.name })) || [], // Example
+    // favourite_brands: formData.favourite_brands_list?.map((b: any) => ({ value: String(b.id), label: b.name })) || [], // Example
+    member_grade: toSelectOption(formData.member_grade),
+    relationship_manager: formData.relationship_manager
+      ? { value: String(formData.relationship_manager.id), label: formData.relationship_manager.name }
+      : undefined,
+    dealing_in_bulk: formData.dealing_in_bulk || "No", // For Radio group
+    remarks: formData.remarks || "",
+    member_profiles: formData.dynamic_member_profiles?.map((profile: any) => {
+        // Deeper transformation needed here if dynamic_member_profiles has complex structure
+        // For now, if it's just an array of simple objects or needs {value, label} for its fields:
+        return {
+            ...profile, // Basic pass-through, adjust as needed
+            member_type: toSelectOption(profile.member_type), // Example
+            // brands: profile.brands?.map((b: any) => ({value: b.id, label: b.name})), // Example
+            // categories: profile.categories?.map((c: any) => ({value: c.id, label: c.name})), // Example
+            // sub_categories: profile.sub_categories?.map((sc: any) => ({value: sc.id, label: sc.name})), // Example
+        };
+    }) || [],
+
+
+    // Accessibilities
+    product_upload_permission: formData.product_upload_permission ?? false,
+    wall_enquiry_permission: formData.wall_enquiry_permission ?? false,
+    enquiry_permission: formData.enquiry_permission ?? false,
+    trade_inquiry_allowed: formData.trade_inquiry_allowed ?? false, // For Checkbox
+
+    // Membership Details
+    membership_plan_text: formData.membership_plan_current || "", // API provides URL here
+    upgrade_plan: toSelectOption(formData.upgrade_your_plan), // Form uses upgrade_plan
+
+    // Other fields from your schema if they have corresponding API data
+    is_blacklisted: formData.is_blacklisted ?? false, // Assuming API might send this
+    // ... any other fields
   };
 };
 
 const preparePayloadForApi = (
   formData: Partial<MemberFormSchema>,
-  isEditMode: boolean
+  isEditMode: boolean // id is not used here, but isEditMode is
 ): any => {
-  /* Full Implementation from previous steps */
-  return {
-    name: formData?.name || "",
-    number: formData?.mobile_no || "",
-    number_code: formData?.contact_country_code?.value || "",
-    email: formData?.email || "",
-    password: formData?.password || "",
-    company_temp: formData?.company_name_temp || "",
-    company_actual: formData?.company_name || "",
-    status: formData?.status?.value || "",
-    continent_id: formData?.continent_id.value || "",
-    country_id: formData?.country_id.value || "",
-    state: formData?.state || "",
-    city: formData?.city || "",
-    pincode: formData?.pincode || "",
-    address: formData?.address || "",
-    whatsApp_no: formData?.whatsapp_number || "",
-    alternate_contact_number: formData?.alternate_contact_number || "",
-    alternate_contact_number_code: formData?.alternate_contact_number_code || "",
-    landline_number: formData?.landline_number || "",
-    fax_number: formData?.fax_number || "",
-    alternate_email: formData?.alternate_email || "",
-    botim_id: formData?.botim_id || "",
-    skype_id: formData?.skype_id || "",
-    linkedIn_profile: formData?.linkedin_profile || "",
-    facebook_profile: formData?.facebook_profile || "",
-    instagram_handle: formData?.instagram_handle || "",
-    website: formData?.website || "",
-    favourite_product_id: formData?.favourite_product_id || "",
-    business_opportunity: formData?.business_opportunity?.value || "",
-    member_grade: formData?.member_grade?.value || "",
-    dealing_in_bulk: formData?.dealing_in_bulk || "No",
-    product_upload_permission: formData?.product_upload_permission || false,
-    wall_enquiry_permission: formData?.wall_enquiry_permission || false,
-    enquiry_permission: formData?.enquiry_permission || false,
-    trade_inquiry_allowed: formData?.trade_inquiry_allowed || false,
-    dynamic_member_profiles: formData?.dynamic_member_profiles || "",
-    interested_in: formData?.interested_in?.value || "",
-    upgrade_your_plan: formData?.upgrade_plan?.value || "",
-    company_name_temp: formData?.company_name_temp || "",
-    wechat_id: formData?.we_chat || "",
-    business_type: formData?.business_type?.value || "",
-    relationship_manager_id: formData?.relationship_manager?.value || "",
-    remarks: formData?.remarks || "",
-    membership_plan_current: formData?.membership_plan_text || "",
+  const getValue = (field: any) => (typeof field === 'object' && field !== null ? field.value : field);
+
+  const payload: any = {
+    // Personal Details
+    name: formData.name || "",
+    number: formData.mobile_no || "",
+    number_code: getValue(formData.contact_country_code) || null, // API expects string or null
+    email: formData.email || "",
+    company_temp: formData.company_name_temp || "",
+    company_actual: formData.company_name || "", // Assuming company_name is string from Input
+    status: getValue(formData.status) || null,
+    continent_id: getValue(formData.continent_id) || null,
+    country_id: getValue(formData.country_id) || null,
+    state: formData.state || "",
+    city: formData.city || "",
+    pincode: formData.pincode || "",
+    address: formData.address || "",
+
+    // Contact Info
+    whatsApp_no: formData.whatsapp_number || "",
+    // If whatsapp_country_code is part of API payload, add it:
+    // whatsapp_number_code: getValue(formData.whatsapp_country_code) || null, 
+    alternate_contact_number: formData.alternate_contact_number || "",
+    alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
+    landline_number: formData.landline_number || "",
+    fax_number: formData.fax_number || "",
+    alternate_email: formData.alternate_email || "",
+    botim_id: formData.botim_id || "",
+    skype_id: formData.skype_id || "",
+    wechat_id: formData.we_chat || "", // API expects wechat_id
+    linkedIn_profile: formData.linkedin_profile || "",
+    facebook_profile: formData.facebook_profile || "",
+    instagram_handle: formData.instagram_handle || "",
+    website: formData.website || "",
+
+    // Member Profile
+    business_opportunity: getValue(formData.business_opportunity) || null,
+    business_type: getValue(formData.business_type) || null,
+    // For arrays like favourite_product_ids, map back to array of IDs if API expects that
+    favourite_product_ids: formData.favourite_product_ids?.map(p => p.value) || [], // Example, if API expects array of IDs
+    interested_in: getValue(formData.interested_in) || null, // API expects interested_in
+    // interested_category_ids: formData.interested_category_ids?.map(c => c.value) || [], // Example
+    // interested_subcategory_ids: formData.interested_subcategory_ids?.map(sc => sc.value) || [], // Example
+    // favourite_brands: formData.favourite_brands?.map(b => b.value) || [], // Example
+    member_grade: getValue(formData.member_grade) || null,
+    relationship_manager_id: getValue(formData.relationship_manager) || null, // API expects relationship_manager_id
+    dealing_in_bulk: formData.dealing_in_bulk || "No",
+    remarks: formData.remarks || "",
+    // dynamic_member_profiles: formData.member_profiles?.map(profile => ({ // API expects dynamic_member_profiles
+    //     ...profile,
+    //     member_type: getValue(profile.member_type), // Example
+    //     // brands: profile.brands?.map(b => b.value), // Example
+    // })) || [],
+
+    // Accessibilities
+    product_upload_permission: formData.product_upload_permission || false,
+    wall_enquiry_permission: formData.wall_enquiry_permission || false,
+    enquiry_permission: formData.enquiry_permission || false,
+    trade_inquiry_allowed: formData.trade_inquiry_allowed || false,
+
+    // Membership Details
+    membership_plan_current: formData.membership_plan_text || "", // API expects membership_plan_current
+    upgrade_your_plan: getValue(formData.upgrade_plan) || null, // API expects upgrade_your_plan
+
+    is_blacklisted: formData.is_blacklisted || false,
+    // ... any other fields
   };
+
+  if (!isEditMode && formData.password) { // Only include password for new members if provided
+    payload.password = formData.password;
+  } else if (isEditMode && formData.password) { // For existing members, only include if changed
+     payload.password = formData.password; // Or your API might have a specific way to update password
+  }
+  
+  // Clean up null values if API prefers undefined/omitted keys
+  // Object.keys(payload).forEach(key => (payload[key] === null && delete payload[key]));
+
+
+  // The API response example for `favourite_product_id` is null, not an array.
+  // If `favourite_product_id` is supposed to be a single selection:
+  // favourite_product_id: getValue(formData.favourite_product_id_singular_select) || null, // if it was a single select
+  // If `favourite_product_ids` from form is an array of selected product IDs and API expects `favourite_product_id` as comma-separated string:
+  // favourite_product_id: formData.favourite_product_ids?.map(p => p.value).join(',') || null,
+
+  // Based on your initial API example for `favourite_product_id: null`
+  // and `favourite_products_list: []` which maps to `favourite_product_ids: []` in form.
+  // If API expects a single ID for `favourite_product_id` from a multi-select, you might take the first one:
+  // favourite_product_id: formData.favourite_product_ids?.[0]?.value || null,
+  // This part needs clarification based on API expectation for favourite_product_id vs favourite_product_ids.
+  // For now, I'm assuming if form has `favourite_product_ids` (array), API might expect an array of IDs.
+  // The provided API structure `favourite_product_id: null` suggests it's a single value, not an array.
+  // Let's stick to the form structure and assume API can handle array of IDs for `favourite_product_ids`.
+  // If `favourite_product_id` is a specific single field:
+  payload.favourite_product_id = null; // As per API structure, if it's not directly mapped from a form multi-select.
+
+
+  // For dynamic_member_profiles, ensure the key matches what API expects
+  if (formData.member_profiles) {
+    payload.dynamic_member_profiles = formData.member_profiles.map(profile => {
+      // Transform back from {value, label} to simple values if needed
+      const apiProfile: any = {};
+      if (profile.member_type) apiProfile.member_type = getValue(profile.member_type);
+      if (profile.brands) apiProfile.brands = profile.brands.map(b => getValue(b)); // Assuming API wants array of brand IDs
+      if (profile.categories) apiProfile.categories = profile.categories.map(c => getValue(c));
+      if (profile.sub_categories) apiProfile.sub_categories = profile.sub_categories.map(sc => getValue(sc));
+      // Add other fields from profile as needed
+      return apiProfile;
+    });
+  }
+
+
+  return payload;
 };
 
 const CSV_HEADERS_RF = [
