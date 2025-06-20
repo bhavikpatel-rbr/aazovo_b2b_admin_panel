@@ -153,6 +153,11 @@ const filterFormSchema = z.object({
   filterKycVerified: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
+  // Add new fields from the filter drawer here
+  filterBusinessOpportunity: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterCountry: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterDealing: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  memberGrade: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 // --- End Filter Schema ---
@@ -238,15 +243,6 @@ const dummyTimeline = [
     title: "Member Joined",
     desc: "Initial registration completed.",
     time: "2023-10-27",
-  },
-];
-const dummyTransactions = [
-  {
-    id: "tx1",
-    date: "2023-10-15",
-    desc: "Membership Fee",
-    amount: "$1,200.00",
-    status: "Paid",
   },
 ];
 const dummyDocs = [
@@ -542,7 +538,7 @@ const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
             render={({ field }) => (
               <DatePicker
                 placeholder="Select date"
-                value={field.value}
+                value={field.value as any}
                 onChange={field.onChange}
               />
             )}
@@ -622,7 +618,7 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void }> =
                 render={({ field }) => (
                   <DatePicker.DateTimepicker
                     placeholder="Select date and time"
-                    value={field.value}
+                    value={field.value as any}
                     onChange={field.onChange}
                   />
                 )}
@@ -909,11 +905,6 @@ const interestedForOptions = [
   { value: "Sell", label: "Sell" },
   { value: "Both", label: "Both" },
 ];
-const kycStatusOptions = [
-  { value: "Verified", label: "Verified" },
-  { value: "Pending", label: "Pending" },
-  { value: "Not Submitted", label: "Not Submitted" },
-];
 // --- END MOCK FILTER OPTIONS ---
 
 // --- Simplified Member List Store ---
@@ -953,8 +944,9 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   useEffect(() => {
-    
-    setMemberList(MemberData?.data);
+    if(MemberData?.data) {
+        setMemberList(MemberData?.data);
+    }
     setMemberListTotal(MemberData?.total ?? 0);
   }, [MemberData]);
 
@@ -987,7 +979,7 @@ const FormListSearch: React.FC<FormListSearchProps> = ({ onInputChange }) => {
   return (
     <DebouceInput
       placeholder="Quick Search..."
-      onChange={(e) => onInputChange(e.target.value)}
+      onChange={(e) => onInputChange((e.target as HTMLInputElement).value)}
       suffix={<TbSearch />}
     />
   );
@@ -1003,14 +995,7 @@ const FormListActionTools = () => {
         className="mr-2"
         icon={<TbEye />}
         clickFeedback={false}
-        customColorClass={({ active, unclickable }) =>
-          classNames(
-            "hover:text-green-800 dark:hover:bg-green-600 border-0 hover:ring-0",
-            active ? "bg-green-200" : "bg-green-100",
-            unclickable && "opacity-50 cursor-not-allowed",
-            !active && !unclickable && "hover:bg-green-200"
-          )
-        }
+        color="green-600"
       >
         View Bit Route
       </Button>
@@ -1099,7 +1084,6 @@ const ActionColumn = ({
           <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
         </Dropdown.Item>
 
-        {/* Replace Track Record with View Company */}
         <Dropdown.Item
           onClick={() => onOpenModal("trackRecord", rowData)}
           className="flex items-center gap-2"
@@ -1199,7 +1183,7 @@ const FormListTable = () => {
 
   useEffect(() => {
     filterFormMethods.reset(filterCriteria);
-  }, [filterCriteria, filterFormMethods.reset]);
+  }, [filterCriteria, filterFormMethods]);
 
   const openFilterDrawer = () => {
     setFilterDrawerOpen(true);
@@ -1207,7 +1191,7 @@ const FormListTable = () => {
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
   const fetchPageData = useCallback(
-    async (pageIdx: number, limit: number, currentSort?: OnSortParam) => {
+    async (pageIdx: number, limit: number) => {
       setIsLoading(true);
       const params = new URLSearchParams();
       params.append("page", String(pageIdx));
@@ -1237,9 +1221,8 @@ const FormListTable = () => {
     fetchPageData(
       tableData.pageIndex as number,
       tableData.pageSize as number,
-      tableData.sort as OnSortParam
     );
-  }, [tableData.pageIndex, tableData.pageSize, tableData.sort, fetchPageData]);
+  }, [tableData.pageIndex, tableData.pageSize, fetchPageData]);
 
   const handleQueryChange = (newQuery: string) => {
     setTableData((prev) => ({ ...prev, query: newQuery, pageIndex: 1 }));
@@ -1266,7 +1249,7 @@ const FormListTable = () => {
     if (tableData.query) {
       const query = tableData.query.toLowerCase();
       processedData = processedData.filter(
-        (form) =>
+        (form: any) =>
           form.member_name?.toLowerCase().includes(query) ||
           form.member_email_id?.toLowerCase().includes(query) ||
           form.company_name?.toLowerCase().includes(query)
@@ -1320,26 +1303,20 @@ const FormListTable = () => {
         cell: (props) => (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
-              {/* <Avatar
-                size={32}
-                shape="circle"
-                src={props.row.original.member_photo}
-                icon={<TbUserCircle />}
-              /> */}
               <div className="text-xs">
-                <b className="text-xs text-blue-500"><em>70892{props?.row?.original?.id || ""}</em></b> <br />
-                <b className="texr-xs">{props?.row?.original?.name || ""}</b>
+                <b className="text-xs text-blue-500"><em>70892{(props?.row?.original as any)?.id || ""}</em></b> <br />
+                <b className="texr-xs">{(props?.row?.original as any)?.name || ""}</b>
               </div>
             </div>
             <div className="text-xs">
               <div className="text-xs text-gray-500">
-                {props?.row?.original?.alternate_email || ""}
+                {(props?.row?.original as any)?.alternate_email || ""}
               </div>
               <div className="text-xs text-gray-500">
-                {props?.row?.original?.number || ""}
+                {(props?.row?.original as any)?.number || ""}
               </div>
               <div className="text-xs text-gray-500">
-                {props?.row?.original?.country?.name || ""}
+                {(props?.row?.original as any)?.country?.name || ""}
               </div>
             </div>
           </div>
@@ -1352,7 +1329,7 @@ const FormListTable = () => {
         cell: (props) => (
           <div className="ml-2 rtl:mr-2 text-xs">
             <b className="text-xs ">
-              <em className="text-blue-500">{props?.row?.original?.company_id_actual || ""}</em>
+              <em className="text-blue-500">{(props?.row?.original as any)?.company_id_actual || ""}</em>
 
             </b>
             <div className="text-xs flex gap-1">
@@ -1367,15 +1344,15 @@ const FormListTable = () => {
         accessorKey: "member_status",
         size: 140,
         cell: (props) => {
-          const { status: member_status, created_at } = props.row.original || {};
+          const { status: member_status, created_at } = props.row.original as any;
           return (
             <div className="flex flex-col text-xs">
-              <Tag className={`${statusColor[member_status]} inline capitalize`}>
+              <Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>
                 {member_status || ""}
               </Tag>
               <span className="mt-0.5">
                 <div className="text-[10px] text-gray-500 mt-0.5">
-                  Joined Date:    {" "}
+                  Joined Date:     {" "}
                   {new Date(created_at)
                     .toLocaleDateString("en-GB", {
                       day: "numeric",
@@ -1397,31 +1374,27 @@ const FormListTable = () => {
           <div className="text-xs flex flex-col">
             <div>
               <Tag className="text-[10px] mb-1 bg-orange-100 text-orange-400">
-                {props?.row?.original?.status || ""}
+                {(props?.row?.original as any)?.status || ""}
               </Tag>
             </div>
             <span>
               <b>RM: </b>
-              {props?.row?.original?.name || ""}
+              {(props?.row?.original as any)?.name || ""}
             </span>
             <span>
-              <b>Grade: {props?.row?.original?.member_grade || ""}</b>
+              <b>Grade: {(props?.row?.original as any)?.member_grade || ""}</b>
             </span>
             <span>
-              <b>Business Opportunity: {props?.row?.original?.business_opportunity || ""}</b>
-              {/* Can be Multiple , below are the options */}
-              {/* <span>Indian Supplier</span>
-              <span>Global Buyer</span>
-              <span>Global Buyer</span> */}
+              <b>Business Opportunity: {(props?.row?.original as any)?.business_opportunity || ""}</b>
             </span>
             <Tooltip
-              title={`Profile: ${props?.row?.original?.profile_completion || 0}%`}
+              title={`Profile: ${(props?.row?.original as any)?.profile_completion || 0}%`}
             >
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
                 <div
                   className="bg-blue-500 h-1.5 rounded-full"
                   style={{
-                    width: `${props?.row?.original?.profile_completion || 0}%`,
+                    width: `${(props?.row?.original as any)?.profile_completion || 0}%`,
                   }}
                 ></div>
               </div>
@@ -1440,24 +1413,12 @@ const FormListTable = () => {
           return (
             <div className="flex flex-col gap-1">
               <span className="text-xs">
-                <b className="text-xs">Business Type: {props?.row?.original?.business_type || ""}</b>
+                <b className="text-xs">Business Type: {(props?.row?.original as any)?.business_type || ""}</b>
               </span>
-              <span className="text-xs">
+              <span className="text-xs flex items-center gap-1">
                 <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span>
-                <div className="flex gap-1">
-                  {/* <span className="h-4 w-4 flex items-center justify-center rounded-full bg-blue-500 text-white">i</span> */}
-                  {/* <b className="text-xs">Brands: : {props?.row?.original?.brand_name || ""}</b> */}
-                </div>
-                {/* <span className="text-[11px]">
-                  {props.row.original.associated_brands}
-                </span> */}
+                <b className="text-xs">Brands: {(props?.row?.original as any)?.brand_name || ""}</b>
               </span>
-              {/* <span className="text-xs">
-                <b className="text-xs">Category: </b>
-                <span className="text-[11px]">
-                  {props.row.original.business_category}
-                </span>
-              </span> */}
               <span className="text-xs">
                 <span className="text-[11px]">
                   <b className="text-xs">Interested: </b>
@@ -1467,41 +1428,27 @@ const FormListTable = () => {
               <Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}>
                 <h6>Dynamic Profile</h6>
                 <Table className="mt-6">
-                  <Tr className="bg-gray-100">
-                    <Td width={130}>Member Type</Td>
-                    <Td>Brands</Td>
-                    <Td>Category</Td>
-                    <Td>Sub Category</Td>
-                  </Tr>
-                  <Tr className="">
-                    <Td>INS - PREMIUM</Td>
-                    <Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td>
-                    <Td><Tag>Electronics</Tag></Td>
-                    <Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td>
-                  </Tr>
+                    <thead className="bg-gray-100 rounded-md">
+                        <Tr>
+                            <Td width={130}>Member Type</Td>
+                            <Td>Brands</Td>
+                            <Td>Category</Td>
+                            <Td>Sub Category</Td>
+                        </Tr>
+                    </thead>
+                    <tbody>
+                        <Tr>
+                            <Td>INS - PREMIUM</Td>
+                            <Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td>
+                            <Td><Tag>Electronics</Tag></Td>
+                            <Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td>
+                        </Tr>
+                    </tbody>
                 </Table>
               </Dialog>
             </div>)
         },
       },
-      // {
-      //   header: "Ratio",
-      //   accessorKey: "trust_score",
-      //   size: 110,
-      //   cell: (props) => (
-      //     <div className="flex flex-col gap-1">
-      //       <Tag className="flex gap-1 text-[10px]">
-      //         <b>Success:</b> {props.row.original.success_score}%
-      //       </Tag>
-      //       <Tag className="flex gap-1 text-[10px]">
-      //         <b>Trust:</b> {props.row.original.trust_score}%
-      //       </Tag>
-      //       <Tag className="flex gap-1 text-[10px] flex-wrap">
-      //         <b>Activity:</b> {props.row.original.activity_score}%
-      //       </Tag>
-      //     </div>
-      //   ),
-      // },
       {
         header: "Actions",
         id: "action",
@@ -1572,17 +1519,13 @@ const FormListTable = () => {
     [setSelectedMembers]
   );
 
-  const handleImport = () => {
-    console.log("Import clicked");
-  };
-
   const csvData = useMemo(() => {
     if (!forms || forms.length === 0) return [];
     return forms.map((form) => {
       const newForm: Record<string, any> = { ...form };
       Object.keys(newForm).forEach((key) => {
         if (Array.isArray(newForm[key])) {
-          newForm[key] = (newForm[key] as string[]);
+          newForm[key] = (newForm[key] as string[]).join(', ');
         }
       });
       return newForm;
@@ -1605,9 +1548,6 @@ const FormListTable = () => {
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
           </Button>
-          {/* <Button icon={<TbCloudDownload />} onClick={handleImport}>
-            Import
-          </Button> */}
           {forms && forms.length > 0 ? (
             <CSVLink data={csvData} filename="members_export.csv">
               <Button icon={<TbCloudUpload />}>Export</Button>
@@ -1630,16 +1570,27 @@ const FormListTable = () => {
           pageIndex: tableData.pageIndex as number,
           pageSize: tableData.pageSize as number,
         }}
-        checkboxChecked={(row) =>
-          selectedMembers.some((selected) => selected.id === row.original.id)
-        }
-        onPaginationChange={handlePaginationChange}
-        onSelectChange={handleSelectChange}
+        onPagingChange={({ pageIndex, pageSize }) => {
+            handlePaginationChange(pageIndex);
+            handleSelectChange(pageSize);
+        }}
         onSort={handleSort}
-        onCheckBoxChange={(checked, row) =>
-          handleRowSelect(checked, row.original)
+        onCheckBoxChange={(rows) => {
+            const isAllChecked = rows.every((row:any) => row.getIsSelected());
+            const isIndeterminate = rows.some((row:any) => row.getIsSelected()) && !isAllChecked;
+            const originalRows = rows.map((row:any) => row.original);
+
+            if(isAllChecked) {
+                handleAllRowSelect(false, originalRows);
+            } else if (isIndeterminate) {
+                handleAllRowSelect(true, originalRows);
+            } else {
+                 handleAllRowSelect(true, originalRows);
+            }
+        }}
+        onIndeterminateCheckBoxChange={(checked, row) =>
+            handleRowSelect(checked, row.original)
         }
-        onIndeterminateCheckBoxChange={handleAllRowSelect}
       />
       <Drawer
         title="Filters"
@@ -1859,21 +1810,6 @@ const FormListTable = () => {
                 )}
               />
             </UiFormItem>
-            {/* <UiFormItem label="KYC Verified">
-              <Controller
-                name="filterKycVerified"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Status"
-                    options={kycStatusOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem> */}
           </div>
         </UiForm>
       </Drawer>
@@ -1977,9 +1913,7 @@ const FormListSelected = () => {
                 size="sm"
                 className="ltr:mr-3 rtl:ml-3"
                 type="button"
-                customColorClass={() =>
-                  "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
-                }
+                color="red-600"
                 onClick={handleDelete}
               >
                 Delete
@@ -2033,7 +1967,6 @@ const FormListSelected = () => {
                 size={30}
                 src={member.member_photo || undefined}
                 icon={!member.member_photo ? <TbUserCircle /> : undefined}
-                alt={member.member_name}
               />
             </Tooltip>
           ))}
