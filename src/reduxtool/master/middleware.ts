@@ -3294,6 +3294,7 @@ export const addInquiriesAction = createAsyncThunk<any, any>("auth/addInquiries"
 export const editInquiriesAction = createAsyncThunk<any, any>("auth/editInquiries",
   async (data, { rejectWithValue, dispatch }) => {
     try {
+     
       const response: AxiosResponse<any> = await editInquiriesAsync(data)
       if (response?.data?.status === true) {
         dispatch(getInquiriesAction())

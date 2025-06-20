@@ -2236,21 +2236,50 @@ export const deleteAllWallAsync = async (unitData: any) => {
 
 export const addInquiriesAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/inquiry`, unitData)
+    const response = await axiosInstance.post(`${config.apiURL}/inquiry`, unitData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
     return response
   } catch (err) {
     return isAxiosError(err)
   }
 }
 
-export const editInquiriesAsync = async (unitData: any) => {
+export const editInquiriesAsync = async (params: { id: string | number; data: FormData }) => {
+  // params.data is the FormData object from the React component.
+  // We will ensure _method: 'PUT' is appended here.
+  // If it was already appended by the component, appending again might lead to duplicate _method fields
+  // depending on how the backend handles it. It's usually better to have it set in one place.
+  // However, to fulfill the request of adding it here:
+
+  const formDataToSend = params.data; // Use the FormData passed in
+
+  // Check if _method is already there; if not, or if you want to ensure it's specifically 'PUT'
+  // Note: FormData doesn't have a simple 'has' or 'get' for all browsers/environments
+  // in a way that's easy to check without iterating or if it can have multiple values.
+  // For simplicity and to ensure it's present as per your request, we'll just append it.
+  // If the backend picks the first or last _method, this might be fine.
+  // A cleaner way is for the React component to be solely responsible for adding it.
+  formDataToSend.append('_method', 'PUT');
+
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/inquiry/${unitData?.id}`, { _method: "PUT", ...unitData })
-    return response
+    const response = await axiosInstance.post(
+      `${config.apiURL}/inquiry/${params.id}`,
+      formDataToSend, // Send the FormData object
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return { error: false, data: response.data };
   } catch (err) {
-    return isAxiosError(err)
+    return isAxiosError(err);
   }
-}
+};
 
 export const submitResponseAsync = async (unitData: any) => {
   try {

@@ -1,793 +1,462 @@
+import React, { useState, useEffect, useMemo } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { shallowEqual, useSelector } from "react-redux";
+
+// UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
-import { Notification, toast } from "@/components/ui";
 import { Button } from "@/components/ui/button";
-import Card from "@/components/ui/Card"; // Keep Card
 import DatePicker from "@/components/ui/DatePicker";
 import { FormItem } from "@/components/ui/Form";
 import { Input } from "@/components/ui/input";
+import { Notification, toast } from "@/components/ui";
 import { Select } from "@/components/ui/select";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { addInquiriesAction, editInquiriesAction, getDepartmentsAction } from "@/reduxtool/master/middleware";
-import { useAppDispatch } from "@/reduxtool/store";
-import axiosInstance from '@/services/api/api';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import Spinner from "@/components/ui/Spinner";
+
+// Icons
 import { BiChevronRight } from "react-icons/bi";
-import { useSelector } from "react-redux";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { z } from "zod";
+
+// Redux
+import { useAppDispatch } from "@/reduxtool/store";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import {
+  addInquiriesAction,
+  editInquiriesAction,
+  getDepartmentsAction,
+  getSalesPersonAction,
+} from "@/reduxtool/master/middleware";
+
+// Services
+import axiosInstance from '@/services/api/api';
+
+// --- Helper to format Date object to "YYYY-MM-DD" string ---
+const formatDateForApi = (date: Date | string | null | undefined): string | null => {
+  if (!date) return null;
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null; // Invalid date
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    return null;
+  }
+};
+
+// --- Zod Schema for the Form Data ---
+const inquiryFormSchema = z.object({
+  id: z.number().optional().nullable(),
+  company_name: z.string().trim().min(1, "Company Name is Required!"),
+  name: z.string().trim().min(1, "Contact Person Name is Required!"),
+  email: z.string().trim().min(1, "Email is required!").email("Invalid email address"),
+  mobile_no: z.string().trim().min(1, "Mobile number is required!")
+    .regex(/^\+?[1-9]\d{1,14}$/, "Invalid mobile number (e.g., +1234567890)"),
+  inquiry_type: z.string().min(1, "Inquiry Type is required."),
+  inquiry_subject: z.string().trim().min(1, "Inquiry Subject is required."),
+  inquiry_priority: z.string().min(1, "Priority is required."),
+  inquiry_description: z.string().trim().optional().nullable(),
+  inquiry_status: z.string().min(1, "Status is required."),
+  assigned_to: z.union([z.string(), z.number()]).nullable().optional(),
+  department: z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()]))]).nullable().optional(),
+  inquiry_date: z.date({ required_error: "Inquiry date is required." }).nullable(),
+  response_date: z.date().optional().nullable(),
+  resolution_date: z.date().optional().nullable(),
+  follow_up_date: z.date().optional().nullable(),
+  inquiry_resolution: z.string().trim().optional().nullable(),
+  feedback_status: z.string().optional().nullable(),
+  inquiry_from: z.string().optional().nullable(),
+  inquiry_attachments: z.any().optional(),
+});
+type InquiryFormData = z.infer<typeof inquiryFormSchema>;
+
+// --- Default values for a new form ---
+const formDefaultValues: InquiryFormData = {
+  id: null,
+  company_name: "",
+  name: "",
+  email: "",
+  mobile_no: "",
+  inquiry_type: "",
+  inquiry_subject: "",
+  inquiry_priority: "Medium",
+  inquiry_description: null,
+  inquiry_status: "Open",
+  assigned_to: null,
+  department: null,
+  inquiry_date: new Date(),
+  response_date: null,
+  resolution_date: null,
+  follow_up_date: null,
+  inquiry_resolution: null,
+  feedback_status: null,
+  inquiry_from: null,
+  inquiry_attachments: [],
+};
+
+// --- Transform API data to Form Data ---
+const transformApiDataToForm = (apiData: any): InquiryFormData => {
+  const safeNewDate = (dateStr: string | null | undefined): Date | null => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
+  return {
+    id: apiData.id || null,
+    company_name: apiData.company_name || "",
+    name: apiData.contact_person_name || apiData.name || "",
+    email: apiData.contact_person_email || apiData.email || "",
+    mobile_no: apiData.contact_person || apiData.mobile_no || "",
+    inquiry_type: apiData.inquiry_type || "",
+    inquiry_subject: apiData.inquiry_subject || "",
+    inquiry_priority: apiData.priority || apiData.inquiry_priority || "Medium",
+    inquiry_description: apiData.inquiry_description || null,
+    inquiry_status: apiData.status || apiData.inquiry_status || "Open",
+    assigned_to: apiData.assigned_to !== undefined && apiData.assigned_to !== null ? String(apiData.assigned_to) : null,
+    department: apiData.department_id || apiData.inquiry_department || null,
+    inquiry_date: safeNewDate(apiData.inquiry_date) || new Date(),
+    response_date: safeNewDate(apiData.response_date),
+    resolution_date: safeNewDate(apiData.resolution_date),
+    follow_up_date: safeNewDate(apiData.last_follow_up_date || apiData.follow_up_date),
+    inquiry_resolution: apiData.resolution_notes || apiData.inquiry_resolution || null,
+    feedback_status: apiData.feedback_status || null,
+    inquiry_from: apiData.inquiry_from || null,
+    inquiry_attachments: [], // Existing attachments are not part of this form field's state for new uploads
+  };
+};
+
+type ApiLookupItem = { id: string | number; name: string; [key: string]: any; };
 
 const CreateInquiry = () => {
-  const transformApiToFormSchema = (apiData) => {
-    // ... (same as your previous definition, ensure it's complete) ...
-    return {
-      "id": 1,
-      "inquiry_type": apiData.inquiry_type,
-      "inquiry_subject": apiData.inquiry_subject,
-      "inquiry_description": apiData.inquiry_description,
-      "inquiry_priority": apiData.inquiry_priority,
-      "inquiry_status": apiData.inquiry_status,
-      "assigned_to": apiData.assigned_to,
-      "inquiry_date": apiData.inquiry_date,
-      "response_date": apiData.response_date,
-      "resolution_date": apiData.resolution_date,
-      "follow_up_date": apiData.follow_up_date,
-      "feedback_status": apiData.feedback_status,
-      "inquiry_resolution": apiData.inquiry_resolution,
-      "inquiry_attachments": apiData.inquiry_attachments,
-      "name": apiData.name,
-      "email": apiData.email,
-      "mobile_no": apiData.mobile_no,
-      "company_name": apiData.company_name,
-      "requirements": apiData.requirements,
-      "created_at": apiData.created_at,
-      "updated_at": apiData.updated_at,
-      "deleted_at": apiData.deleted_at,
-      "inquiry_id": apiData.inquiry_id,
-      "inquiry_department": apiData.inquiry_department,
-      "inquiry_from": apiData.inquiry_from,
-      "inquiry_attachments_array": apiData.inquiry_attachments_array,
-      "assigned_to_name": apiData.assigned_to_name,
-      "inquiry_department_name": apiData.inquiry_department_name
-    }
-  };
-  const optionsType = [
-    { value: "Sales Inquiry", label: "Sales Inquiry" },
-    { value: "Buy Inquiry", label: "Buy Inquiry" },
-    { value: "Product Support", label: "Product Support" },
-    { value: "Service Support", label: "Service Support" },
-    { value: "Technical Support", label: "Technical Support" },
-    { value: "Complaint", label: "Complaint" },
-    { value: "Others", label: "Others" },
-  ]
-  const [formdata, setformdata] = useState({
-    "id": 1,
-    "inquiry_type": '',
-    "inquiry_subject": '',
-    "inquiry_description": '',
-    "inquiry_priority": '',
-    "inquiry_status": '',
-    "assigned_to": '',
-    "inquiry_date": '',
-    "response_date": '',
-    "resolution_date": '',
-    "follow_up_date": '',
-    "feedback_status": '',
-    "inquiry_resolution": '',
-    "inquiry_attachments": '',
-    "name": '',
-    "email": '',
-    "mobile_no": '',
-    "company_name": '',
-    "requirements": '',
-    "created_at": '',
-    "updated_at": '',
-    "deleted_at": '',
-    "inquiry_id": '',
-    "inquiry_department": '',
-    "inquiry_from": '',
-    "inquiry_attachments_array": '',
-    "assigned_to_name": '',
-    "inquiry_department_name": ''
-  });
-  // Only email, mobile_no, and company_name are required. Others are optional or nullable.
-  // Update the zod schema accordingly:
-  const inquirySchema = z.object({
-    id: z.any().optional().nullable(),
-    inquiry_type: z.string().optional().nullable(),
-    inquiry_subject: z.string().optional().nullable(),
-    inquiry_description: z.string().optional().nullable(),
-    inquiry_priority: z.string().optional().nullable(),
-    inquiry_status: z.string().optional().nullable(),
-    assigned_to: z.string().optional().nullable(),
-    inquiry_date: z.string().optional().nullable(),
-    response_date: z.string().optional().nullable(),
-    resolution_date: z.string().optional().nullable(),
-    follow_up_date: z.string().optional().nullable(),
-    feedback_status: z.string().optional().nullable(),
-    inquiry_resolution: z.string().optional().nullable(),
-    inquiry_attachments: z.any().optional().nullable(),
-    name: z.string().optional().nullable(),
-    email: z.string()
-      .trim()
-      .min(1, { message: "Email is required!" })
-      .email({ message: "Invalid email address" }),
-    mobile_no: z.string()
-      .trim()
-      .min(1, { message: "Mobile number is required!" })
-      .regex(/^\+?[1-9]\d{1,14}$/, {
-        message: "Invalid international mobile number",
-      }),
-    company_name: z
-      .string()
-      .trim()
-      .min(1, { message: "Company Name is Required!" }),
-    requirements: z.string().optional().nullable(),
-    created_at: z.string().optional().nullable(),
-    updated_at: z.string().optional().nullable(),
-    deleted_at: z.string().optional().nullable(),
-    inquiry_id: z.string().optional().nullable(),
-    inquiry_department: z.string().optional().nullable(),
-    inquiry_from: z.string().optional().nullable(),
-    inquiry_attachments_array: z.any().optional().nullable(),
-    assigned_to_name: z.string().optional().nullable(),
-    inquiry_department_name: z.string().optional().nullable(),
-    department: z.optional().nullable(),
-  });
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm({
-    defaultValues: formdata,
-    resolver: zodResolver(inquirySchema)
-  });
-
-  const dispatch = useAppDispatch(); // Initialize dispatch
+  const dispatch = useAppDispatch();
   const location = useLocation();
   const navigate = useNavigate();
-  const inquiryID = location.state ? location.state : undefined
-  const isEditMode = Boolean(location.state ? true : false);
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const {
-    // inquiryList1,
-    departmentsData,
-    // status: masterLoadingStatus = "idle",
-  } = useSelector(masterSelector);
-
-  const departmentFilterOptions = departmentsData?.data?.map((c: any) => ({
-    value: String(c.id),
-    label: c.name,
-  }));
-
-  useEffect(() => {
-    // Dispatch actions to fetch initial data
-    dispatch(getDepartmentsAction());
-  }, [dispatch]);
   
+  const inquiryIDFromState = location.state ? (location.state as string | number) : undefined;
+  const isEditMode = Boolean(inquiryIDFromState);
+
+  const [isConfirmCancelDialogOpen, setIsConfirmCancelDialogOpen] = useState(false);
+  const [initialDataFetched, setInitialDataFetched] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { departmentsData, salesPerson = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+
+  const departmentOptions = useMemo(() => departmentsData?.data?.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) || [], [departmentsData]);
+  const salesPersonOptions = useMemo(() => Array.isArray(salesPerson) ? salesPerson.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: sp.name })) : [], [salesPerson]);
+
+  const inquiryTypeOptions = [ { value: "Sales Inquiry", label: "Sales Inquiry" }, { value: "Buy Inquiry", label: "Buy Inquiry" }, { value: "Product Support", label: "Product Support" }, { value: "Service Support", label: "Service Support" }, { value: "Technical Support", label: "Technical Support" }, { value: "Complaint", label: "Complaint" }, { value: "Others", label: "Others" }];
+  const priorityOptions = [ { value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }];
+  const statusOptions = [ { value: "Open", label: "Open" }, { value: "In Progress", label: "In Progress" }, { value: "Resolved", label: "Resolved" }, { value: "On Hold", label: "On Hold" }, { value: "Rejected", label: "Rejected" }, { value: "Closed", label: "Closed" }];
+  const feedbackStatusOptions = [ { value: "Received", label: "Received" }, { value: "Pending", label: "Pending" }, { value: "Positive", label: "Positive" }, { value: "Neutral", label: "Neutral" }, { value: "Negative", label: "Negative" }];
+  const inquiryFromOptions = [ { value: "Website", label: "Website (Inquiry Form)" }, { value: "Call", label: "Call" }, { value: "Email", label: "Email" }, { value: "Whatsapp", label: "Whatsapp" }, { value: "Manual", label: "Manual Entry" }, { value: "Partner", label: "Partner Referral" }, { value: "Others", label: "Others" }];
+
+  const { control, handleSubmit, formState: { errors, isDirty }, reset } = useForm<InquiryFormData>({
+    defaultValues: formDefaultValues,
+    resolver: zodResolver(inquiryFormSchema),
+  });
+
   useEffect(() => {
-    if (isEditMode && inquiryID) {
-      const fetchMemberData = async () => {
+    const fetchDropdownData = async () => {
+      setInitialDataFetched(false);
+      try {
+        await Promise.all([dispatch(getDepartmentsAction()), dispatch(getSalesPersonAction())]);
+      } catch (error: any) {
+        console.error("Failed to fetch dropdown data:", error);
+        toast.push(<Notification title="Data Load Error" type="danger" duration={4000}>{error?.message || "Could not load selection options."}</Notification>);
+      } finally {
+        setInitialDataFetched(true);
+      }
+    };
+    fetchDropdownData();
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isEditMode && inquiryIDFromState && initialDataFetched) {
+      const fetchInquiryData = async () => {
         try {
-          const response = await axiosInstance.get(`/inquiry/${inquiryID}`);
-          if (response.data && response.data.status === true && response.data.data) {
-            const transformed = transformApiToFormSchema(response.data.data);
-            console.log(transformed, 'transformed')
-            reset(transformed)
-            setformdata(transformed)
+          const response = await axiosInstance.get(`/inquiry/${inquiryIDFromState}`);
+          if (response.data?.status === true && response.data.data) {
+            reset(transformApiDataToForm(response.data.data));
           } else {
-            toast.push(<Notification type="danger" title="Fetch Error">{response.data?.message || 'Failed to load inquiries data.'}</Notification>);
+            toast.push(<Notification type="danger" title="Fetch Error" duration={4000}>{response.data?.message || 'Failed to load inquiry data.'}</Notification>);
             navigate('/business-entities/inquiries');
           }
         } catch (error: any) {
-          toast.push(<Notification type="danger" title="Fetch Error">{error.message || 'Error fetching inquiries.'}</Notification>);
+          toast.push(<Notification type="danger" title="Fetch Error" duration={4000}>{error?.response?.data?.message || error.message || 'Error fetching inquiry details.'}</Notification>);
           navigate('/business-entities/inquiries');
-        } finally {
-
         }
       };
-      fetchMemberData();
-    } else {
-      reset({});
-
+      fetchInquiryData();
+    } else if (!isEditMode && initialDataFetched) {
+      reset(formDefaultValues);
     }
-  }, [inquiryID, isEditMode, navigate]);
+  }, [inquiryIDFromState, isEditMode, reset, navigate, initialDataFetched, dispatch]);
 
-  const onSubmit = async (data: any) => {
-    // Ensure all fields are included, including files
-    const payload = {
-      ...formdata,
-      ...data,
-      inquiry_attachments: Array.isArray(data.inquiry_attachments)
-        ? data.inquiry_attachments.map((file: File) => file.name)
-        : [],
-      inquiry_status: typeof data.inquiry_status === "object" && data.inquiry_status?.value
-        ? data.inquiry_status.value
-        : data.inquiry_status,
-      assigned_to: typeof data.assigned_to === "object" && data.assigned_to?.value
-        ? data.assigned_to.value
-        : data.assigned_to,
-      department:
-        data.department && typeof data.department === "object" && "value" in data.department
-          ? data.department.value
-          : data.department || "",
-      inquiry_type: typeof data.inquiry_type === "object" && data.inquiry_type?.value
-        ? data.inquiry_type.value
-        : data.inquiry_type,
-      inquiry_priority: typeof data.inquiry_priority === "object" && data.inquiry_priority?.value
-        ? data.inquiry_priority.value
-        : data.inquiry_priority,
-      feedback_status: typeof data.feedback_status === "object" && data.feedback_status?.value
-        ? data.feedback_status.value
-        : data.feedback_status,
-      inquiry_from: typeof data.inquiry_from === "object" && data.inquiry_from?.value
-        ? data.inquiry_from.value
-        : data.inquiry_from,
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isDirty && !isSubmitting) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty, isSubmitting]);
+
+  const handleCancel = () => {
+    if (isDirty) setIsConfirmCancelDialogOpen(true);
+    else navigate("/business-entities/inquiries");
+  };
+
+  const confirmNavigateAway = () => {
+    setIsConfirmCancelDialogOpen(false);
+    reset(formDefaultValues);
+    navigate("/business-entities/inquiries");
+  };
+
+  const onSubmit = async (data: InquiryFormData) => {
+    setIsSubmitting(true);
+
+    const apiPayloadObject: any = {
+      // id: data.id, // ID will be part of URL for edit or appended to FormData later if needed
+      company_id: 1, // Placeholder
+      company_name: data.company_name,
+      contact_person_name: data.name,
+      contact_person_email: data.email,
+      contact_person: data.mobile_no,
+      inquiry_type: data.inquiry_type,
+      inquiry_subject: data.inquiry_subject,
+      priority: data.inquiry_priority,
+      inquiry_description: data.inquiry_description?.trim() || null,
+      status: data.inquiry_status,
+      assigned_to: data.assigned_to ? Number(data.assigned_to) : null,
+      department_id: Array.isArray(data.department)
+        ? (data.department.length > 0 ? Number(data.department[0]) : null)
+        : (data.department ? Number(data.department) : null),
+      inquiry_date: formatDateForApi(data.inquiry_date),
+      response_date: formatDateForApi(data.response_date),
+      resolution_date: formatDateForApi(data.resolution_date),
+      resolution_notes: data.inquiry_resolution?.trim() || null,
+      last_follow_up_date: formatDateForApi(data.follow_up_date),
+      feedback_status: data.feedback_status || null,
+      inquiry_from: data.inquiry_from || null,
     };
 
-    try {
-      if (isEditMode && inquiryID) {
-        await dispatch(editInquiriesAction(payload)).unwrap();
-        toast.push(
-          <Notification type="success" title="Inquiry Updated">
-            Inquiry updated successfully.
-          </Notification>
-        );
-        reset({});
-        navigate("/business-entities/inquiries");
-      } else {
-        await dispatch(addInquiriesAction(payload)).unwrap();
-        toast.push(
-          <Notification type="success" title="Inquiry Created">
-            New Inquiry created successfully.
-          </Notification>
-        );
-        reset({});
-        navigate("/business-entities/inquiries", { replace: true });
+    const formDataPayload = new FormData();
+
+    // Append all defined, non-null fields from apiPayloadObject to formDataPayload
+    for (const key in apiPayloadObject) {
+      if (Object.prototype.hasOwnProperty.call(apiPayloadObject, key)) {
+        const value = apiPayloadObject[key];
+        if (value !== undefined && value !== null) {
+          formDataPayload.append(key, String(value)); // Convert all to string for FormData
+        } else if (value === null) {
+          // If your API expects an empty string for null values when using FormData:
+          // formDataPayload.append(key, '');
+          // Otherwise, omitting it (as done by `value !== undefined && value !== null`) is often fine.
+        }
       }
-    } catch (error: any) {
-      const errorMessage =
-        error?.message ||
-        `Failed to ${isEditMode ? "update" : "create"} inquiry.`;
-      toast.push(
-        <Notification
-          type="danger"
-          title={`${isEditMode ? "Update" : "Creation"} Failed`}
-        >
-          {errorMessage}
-        </Notification>
-      );
-      console.error("Submit Inquiry Error:", error);
     }
-    setAttachments([]);
+    
+    // Handle NEW attachments
+    if (Array.isArray(data.inquiry_attachments) && data.inquiry_attachments.length > 0) {
+      data.inquiry_attachments.forEach((file: any) => { // Use 'any' if it could be File or other object
+        if (file instanceof File) { // Important: only append actual File objects
+          formDataPayload.append('inquiry_attachments[]', file, file.name);
+        }
+      });
+    }
+    // Note: No special handling for 'inquiry_attachments' being empty in edit mode here.
+    // If no new files are selected, 'inquiry_attachments[]' won't be appended.
+    // This typically means "no changes to existing attachments" for the backend.
+
+    try {
+      if (isEditMode && data.id) {
+        formDataPayload.append('id', String(data.id)); // Ensure ID is part of the payload for edit action
+
+        // VERY IMPORTANT: If your backend uses POST to handle PUT/PATCH with FormData,
+        // you might need to append a _method field:
+        // formDataPayload.append('_method', 'PUT'); // Or 'PATCH'
+
+        await dispatch(editInquiriesAction({ id: data.id, data: formDataPayload })).unwrap();
+        toast.push(<Notification type="success" title="Inquiry Updated" duration={3000}>Inquiry updated successfully.</Notification>);
+      } else {
+        await dispatch(addInquiriesAction(formDataPayload)).unwrap();
+        toast.push(<Notification type="success" title="Inquiry Created" duration={3000}>New Inquiry created successfully.</Notification>);
+      }
+      reset(formDefaultValues);
+      navigate("/business-entities/inquiries", { replace: true });
+    } catch (error: any) {
+      // Improved error message extraction
+      const rejectedValue = error?.payload || error; // error from unwrap() is often the rejectedValue
+      const errorMessage = rejectedValue?.message || 
+                           (typeof rejectedValue === 'string' ? rejectedValue : 
+                           `Failed to ${isEditMode ? "update" : "create"} inquiry.`);
+      toast.push(<Notification type="danger" title={`${isEditMode ? "Update" : "Creation"} Failed`} duration={4000}>{errorMessage}</Notification>);
+      console.error("Submit Inquiry Error:", error, "Rejected Value:", rejectedValue);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachments(Array.from(e.target.files));
-    }
-  };
+  const isLoadingInitialForm = masterLoadingStatus === "loading" && !initialDataFetched;
+
+  if (isLoadingInitialForm && !isEditMode) {
+    return <Container className="h-full flex justify-center items-center"><Spinner size="xl" /></Container>;
+  }
 
   return (
     <>
       <Container>
-        <div className="flex gap-1 items-end mb-3 ">
-          <NavLink to="/business-entities/inquiries">
-            <h6 className="font-semibold hover:text-primary">Inquiries</h6>
-          </NavLink>
-          <BiChevronRight size={22} color="black" />
-          <h6 className="font-semibold text-primary">Add New Inquiry</h6>
+        <div className="flex gap-1 items-center mb-3">
+          <NavLink to="/business-entities/inquiries"><h6 className="font-semibold hover:text-primary">Inquiries</h6></NavLink>
+          <BiChevronRight size={22} />
+          <h6 className="font-semibold text-primary">{isEditMode ? 'Edit Inquiry' : 'Add New Inquiry'}</h6>
         </div>
         <AdaptiveCard>
-          <div className="flex flex-col gap-6">
-            <h5>New Inquiry</h5>
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2"
-            >
-              {/* Basic Info */}
-              {/* <FormItem
-                label="Inquiry ID"
-                invalid={!!errors.inquiry_id}
-                errorMessage={
-                  typeof errors.inquiry_id === "object" && errors.inquiry_id
-                    ? (errors.inquiry_id as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} placeholder="Enter Inquiry ID" />
-                  )}
-                />
-              </FormItem> */}
-              <FormItem
-                label="Inquiry Date"
-                invalid={!!errors.inquiry_date}
-                errorMessage={
-                  typeof errors.inquiry_date === "object" && errors.inquiry_date
-                    ? (errors.inquiry_date as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_date"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      labelFormat={{
-                        month: "MMMM",
-                        year: "YY",
-                      }}
-                      defaultValue={new Date()}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Status"
-                invalid={!!errors.inquiry_status}
-                errorMessage={
-                  typeof errors.inquiry_status === "object" &&
-                    errors.inquiry_status
-                    ? (errors.inquiry_status as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_status"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={[
-                        { value: "Open", label: "Open" },
-                        { value: "In Progress", label: "In Progress" },
-                        { value: "Resolved", label: "Resolved" },
-                        { value: "On Hold", label: "On Hold" },
-                        { value: "Rejected", label: "Rejected" },
-                        { value: "Closed", label: "Closed" },
-                      ]}
-                      placeholder="Select status"
-                    />
-                  )}
-                />
-              </FormItem>
-              
-               <FormItem
-                label="Inquiry From"
-                invalid={!!errors.inquiry_from}
-                errorMessage={
-                  typeof errors.inquiry_from === "object" && errors.inquiry_from
-                    ? (errors.inquiry_from as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_from"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={[
-                        { value: "Website", label: "Inquiry Form" },
-                        { value: "Call", label: "Call" },
-                        { value: "Email", label: "Email" },
-                        { value: "Whatsapp", label: "Whatsapp" },
-                        { value: "Manual", label: "Manual" },
-                        { value: "Partner", label: "Partner" },
-                        { value: "Others       ", label: "Others       " },
-                      ]}
-                      placeholder="Select inquiry source"
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Inquiry Type"
-                invalid={!!errors.inquiry_type}
-                errorMessage={
-                  typeof errors.inquiry_type === "object" && errors.inquiry_type
-                    ? (errors.inquiry_type as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_type"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={optionsType}
-                      placeholder="Select Inquiry Type"
-                      value={optionsType.filter((option) => option?.value === field?.value)}
-                      onChange={(value) => {
-                        field.onChange(value?.value)
-                      }}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Department"
-                invalid={!!errors.department}
-                errorMessage={
-                  typeof errors.department === "object" && errors.department
-                    ? (errors.department as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="department"
-                  control={control}
-                  render={({ field }) => (
-                  <Select
+          <h5>{isEditMode ? 'Edit Inquiry Details' : 'New Inquiry Details'}</h5>
+          {isLoadingInitialForm && isEditMode ? ( // Show spinner inside card for edit mode initial data load
+             <div className="flex justify-center items-center py-10"> <Spinner size="lg" /></div>
+          ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-6">
+            {/* Row 1: Dates and Types */}
+            <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
+              <Controller name="inquiry_date" control={control} render={({ field }) => ( <DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" /> )} />
+            </FormItem>
+            <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_status} errorMessage={errors.inquiry_status?.message} >
+              <Controller name="inquiry_status" control={control} render={({ field }) => ( <Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )} />
+            </FormItem>
+            <FormItem label="Inquiry From" invalid={!!errors.inquiry_from} errorMessage={errors.inquiry_from?.message} >
+              <Controller name="inquiry_from" control={control} render={({ field }) => ( <Select placeholder="Select Inquiry Source" options={inquiryFromOptions} value={inquiryFromOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable /> )} />
+            </FormItem>
+            <FormItem label={<>Inquiry Type <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_type} errorMessage={errors.inquiry_type?.message} >
+              <Controller name="inquiry_type" control={control} render={({ field }) => ( <Select placeholder="Select Inquiry Type" options={inquiryTypeOptions} value={inquiryTypeOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )} />
+            </FormItem>
+
+            {/* Row 2: Assignment and Priority */}
+            <FormItem label="Department" invalid={!!errors.department} errorMessage={errors.department?.message as string} >
+              <Controller name="department" control={control} render={({ field }) => (
+                <Select
                   isMulti
-                  placeholder="Select Department"
-                  options={departmentFilterOptions} // must be [{ value, label }, ...]
-                  value={departmentFilterOptions.filter(opt =>
-                  field.value?.includes(opt.value)
-                  )}
-                  onChange={(selectedOptions) =>
-                  field.onChange(selectedOptions.map((opt) => opt.value))
-                  }
+                  placeholder="Select Department(s)"
+                  options={departmentOptions}
+                  isLoading={masterLoadingStatus === "loading" && departmentOptions.length === 0}
+                  value={ Array.isArray(field.value) ? departmentOptions.filter(opt => field.value.includes(opt.value)) : departmentOptions.find(opt => opt.value === field.value) || null }
+                  onChange={(selectedOptions) => field.onChange( Array.isArray(selectedOptions) ? selectedOptions.map(opt => opt.value) : selectedOptions?.value || null )}
+                  isClearable
                 />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Assigned To"
-                invalid={!!errors.assigned_to}
-                errorMessage={
-                  typeof errors.assigned_to === "object" && errors.assigned_to
-                    ? (errors.assigned_to as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="assigned_to"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={[
-                        { value: "John Doe", label: "John Doe" },
-                        { value: "Jane Smith", label: "Jane Smith" },
-                        { value: "Support Team", label: "Support Team" },
-                        { value: "Sales Team", label: "Sales Team" },
-                      ]}
-                      placeholder="Select person or team"
-                    />
-                  )}
-                />
-              </FormItem>
+              )} />
+            </FormItem>
+            <FormItem label="Assigned To" invalid={!!errors.assigned_to} errorMessage={errors.assigned_to?.message as string} >
+              <Controller name="assigned_to" control={control} render={({ field }) => ( 
+                <Select 
+                  placeholder="Select Assignee" 
+                  options={salesPersonOptions} 
+                  isLoading={masterLoadingStatus === "loading" && salesPersonOptions.length === 0}
+                  value={salesPersonOptions.find(o => o.value === field.value) || null} 
+                  onChange={opt => field.onChange(opt ? opt.value : null)} 
+                  isClearable
+                /> 
+              )} />
+            </FormItem>
+            <FormItem label={<>Priority <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_priority} errorMessage={errors.inquiry_priority?.message} >
+              <Controller name="inquiry_priority" control={control} render={({ field }) => ( <Select placeholder="Select Priority" options={priorityOptions} value={priorityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )} />
+            </FormItem>
+            <FormItem label="Response Date" invalid={!!errors.response_date} errorMessage={errors.response_date?.message as string} >
+              <Controller name="response_date" control={control} render={({ field }) => ( <DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Response Date" /> )} />
+            </FormItem>
 
-              
-              <FormItem
-                label="Priority"
-                invalid={!!errors.inquiry_priority}
-                errorMessage={
-                  typeof errors.inquiry_priority === "object" &&
-                    errors.inquiry_priority
-                    ? (errors.inquiry_priority as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_priority"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      options={[
-                        { value: "Low", label: "Low" },
-                        { value: "Medium", label: "Medium" },
-                        { value: "High", label: "High" },
-                      ]}
-                      placeholder="Select priority"
-                      value={
-                        [
-                          { value: "Low", label: "Low" },
-                          { value: "Medium", label: "Medium" },
-                          { value: "High", label: "High" },
-                        ].find((option) => option.value === field.value) || null
-                      }
-                      onChange={(option) => field.onChange(option ? option.value : "")}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Response Date"
-                invalid={!!errors.response_date}
-                errorMessage={
-                  typeof errors.response_date === "object" &&
-                    errors.response_date
-                    ? (errors.response_date as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="response_date"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      labelFormat={{
-                        month: "MMMM",
-                        year: "YY",
-                      }}
-                      defaultValue={new Date()}
-                    />
-                  )}
-                />
-              </FormItem>
-              
-              <FormItem
-                label="Company Name"
-                invalid={!!errors.company_name}
-                errorMessage={
-                  typeof errors.company_name === "object" && errors.company_name
-                    ? (errors.company_name as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="company_name"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} placeholder="Company Name" />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label="Contact Person Name"
-                invalid={!!errors.name}
-                errorMessage={
-                  typeof errors.name === "object" &&
-                    errors.name
-                    ? (errors.name as { message?: string })
-                      .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="name"
-                  control={control}
-                  render={({ field }) => (
-                    <Input  {...field} placeholder="Full Name" />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label={<div>Contact Person Email<span className="text-red-500"> * </span></div>}
-                invalid={!!errors.email}
-                errorMessage={
-                  typeof errors.email === "object" &&
-                    errors.email
-                    ? (errors.email as { message?: string })
-                      .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="email"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      type="email"
-                      placeholder="Email Address"
-                    />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label={<div>Contact Person Mobile<span className="text-red-500"> * </span></div>}
-                invalid={!!errors.mobile_no}
-                errorMessage={
-                  typeof errors.mobile_no === "object" &&
-                    errors.mobile_no
-                    ? (errors.mobile_no as { message?: string })
-                      .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="mobile_no"
-                  control={control}
-                  render={({ field }) => (
-                    <Input  {...field} placeholder="Phone Number" />
-                  )}
-                />
-              </FormItem>
-
-              
-
-              <FormItem
-                label="Inquiry Subject"
-                invalid={!!errors.inquiry_subject}
-                className="md:col-span-2 lg:col-span-4"
-                errorMessage={
-                  typeof errors.inquiry_subject === "object" &&
-                    errors.inquiry_subject
-                    ? (errors.inquiry_subject as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_subject"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} placeholder="Subject" />
-                  )}
-                />
-              </FormItem>
+            {/* Row 3: Company & Contact Info */}
+            <FormItem label={<>Company Name <span className="text-red-500">*</span></>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message} >
+              <Controller name="company_name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Company Name" />} />
+            </FormItem>
+            <FormItem label={<>Contact Person Name <span className="text-red-500">*</span></>} invalid={!!errors.name} errorMessage={errors.name?.message} >
+              <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Full Name" />} />
+            </FormItem>
+            <FormItem label={<>Contact Person Email <span className="text-red-500">*</span></>} invalid={!!errors.email} errorMessage={errors.email?.message} >
+              <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="Enter Email Address" />} />
+            </FormItem>
+            <FormItem label={<>Contact Person Mobile <span className="text-red-500">*</span></>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message} >
+              <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} placeholder="Enter Phone Number (e.g. +1...)" />} />
+            </FormItem>
             
-              {/* <FormItem
-                label="Resolution Date"
-                invalid={!!errors.resolution_date}
-                errorMessage={
-                  typeof errors.resolution_date === "object" &&
-                    errors.resolution_date
-                    ? (errors.resolution_date as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="resolution_date"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      labelFormat={{
-                        month: "MMMM",
-                        year: "YY",
-                      }}
-                      defaultValue={new Date()}
-                    />
-                  )}
-                />
-              </FormItem>
-               <FormItem
-                label="Last Follow-Up Date"
-                invalid={!!errors.follow_up_date}
-                errorMessage={
-                  typeof errors.follow_up_date === "object" &&
-                    errors.follow_up_date
-                    ? (errors.follow_up_date as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="follow_up_date"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      labelFormat={{
-                        month: "MMMM",
-                        year: "YY",
-                      }}
-                      defaultValue={new Date()}
-                    />
-                  )}
-                />
-              </FormItem>
+            {/* Row 4: Inquiry Subject (Full Width) */}
+            <FormItem label={<>Inquiry Subject <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_subject} errorMessage={errors.inquiry_subject?.message} className="lg:col-span-4" >
+              <Controller name="inquiry_subject" control={control} render={({ field }) => <Input {...field} placeholder="Enter Subject of Inquiry" />} />
+            </FormItem>
 
-              <FormItem
-                label="Feedback Status"
-                invalid={!!errors.feedback_status}
-                errorMessage={
-                  typeof errors.feedback_status === "object" &&
-                    errors.feedback_status
-                    ? (errors.feedback_status as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="feedback_status"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={[
-                        { value: "Positive", label: "Positive" },
-                        { value: "Neutral", label: "Neutral" },
-                        { value: "Negative", label: "Negative" },
-                      ]}
-                      placeholder="Select feedback"
+            {/* Row 5: Resolution Notes & Attachments */}
+            <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-3" >
+              <Controller name="inquiry_resolution" control={control} render={({ field }) => <Input textArea rows={3} {...field} value={field.value || ''} placeholder="Enter Resolution Notes" />} />
+            </FormItem>
+            <FormItem label="Attachments" className="lg:col-span-1">
+              <Controller
+                name="inquiry_attachments"
+                control={control}
+                render={({ field: { onChange, value, name, ref } }) => (
+                  <>
+                    <Input 
+                        type="file" 
+                        multiple 
+                        name={name}
+                        ref={ref}
+                        onChange={(e) => { 
+                            const files = e.target.files; 
+                            onChange(files ? Array.from(files) : []); 
+                        }} 
                     />
-                  )}
-                />
-              </FormItem> */}
+                    {Array.isArray(value) && value.length > 0 && (
+                      <ul className="mt-2 text-xs text-gray-500 list-disc list-inside">
+                        {value.map((file: any, index: number) => ( 
+                           <li key={index} className="truncate" title={file.name}>{file.name}</li> 
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              />
+            </FormItem>
 
-              <FormItem
-                label="Resolution (Notes)"
-                invalid={!!errors.inquiry_resolution}
-                className="md:col-span-2 lg:col-span-3"
-                errorMessage={
-                  typeof errors.inquiry_resolution === "object" &&
-                    errors.inquiry_resolution
-                    ? (errors.inquiry_resolution as { message?: string })
-                      .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_resolution"
-                  control={control}
-                  render={({ field }) => (
-                    <Input placeholder="Enter resolution" {...field}  />
-                  )}
-                />
-              </FormItem>
-              <FormItem label="Attachments" className="">
-                <Controller
-                  name="inquiry_attachments"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      <Input
-                        type="file"
-                        multiple
-                        onChange={(e) => {
-                          const files = (e.target as HTMLInputElement).files;
-                          const fileList = files ? Array.from(files) : [];
-                          field.onChange(fileList); // Pass the list of files to form state
-                        }}
-                      />
-                      {Array.isArray(field.value) && field.value.length > 0 && (
-                        <ul className="mt-2 text-sm text-gray-600">
-                          {field.value.map((file: File, index: number) => (
-                            <li key={index}>{file.name}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Inquiry Description"
-                invalid={!!errors.inquiry_description}
-                className="md:col-span-2 lg:col-span-4"
-                errorMessage={
-                  typeof errors.inquiry_description === "object" &&
-                    errors.inquiry_description
-                    ? (errors.inquiry_description as { message?: string })
-                      .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_description"
-                  control={control}
-                  render={({ field }) => (
-                    <Input textArea placeholder="Description" {...field} />
-                  )}
-                />
-              </FormItem>
-
-              {/* Footer with Save and Cancel buttons */}
-            </form>
-          </div>
+            {/* Row 6: Inquiry Description (Full Width) */}
+            <FormItem label="Inquiry Description" invalid={!!errors.inquiry_description} errorMessage={errors.inquiry_description?.message} className="lg:col-span-4" >
+              <Controller name="inquiry_description" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Detailed Description of the Inquiry" />} />
+            </FormItem>
+            
+            <div className="lg:col-span-4 flex justify-end gap-2 mt-4">
+                <Button size="sm" className="mr-2" onClick={handleCancel} disabled={isSubmitting}>
+                    Cancel
+                </Button>
+                <Button
+                    size="sm"
+                    variant="solid"
+                    type="submit"
+                    loading={isSubmitting} // This prop should handle showing spinner & disabling
+                    disabled={(!isDirty && isEditMode) || (masterLoadingStatus === 'loading' && !initialDataFetched) || isSubmitting}
+                >
+                    {isEditMode ? "Update Inquiry" : "Save Inquiry"}
+                </Button>
+            </div>
+          </form>
+          )}
         </AdaptiveCard>
-        <Card 
-          bodyClass="flex justify-end gap-2"
-          className="sticky bottom-0 mt-3 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <Button type="button" className="px-4 py-2" onClick={() => navigate("/business-entities/inquiries")}>
-            Cancel
-          </Button>
-          <Button type="submit" className="px-4 py-2" variant="solid">
-            Save
-          </Button>
-        </Card>
       </Container>
+
+      <ConfirmDialog 
+        isOpen={isConfirmCancelDialogOpen} 
+        type="warning" 
+        title="Unsaved Changes" 
+        onClose={() => setIsConfirmCancelDialogOpen(false)} 
+        onRequestClose={() => setIsConfirmCancelDialogOpen(false)} 
+        onCancel={() => setIsConfirmCancelDialogOpen(false)} 
+        onConfirm={confirmNavigateAway} 
+      >
+        <p>You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.</p>
+      </ConfirmDialog>
     </>
   );
 };
