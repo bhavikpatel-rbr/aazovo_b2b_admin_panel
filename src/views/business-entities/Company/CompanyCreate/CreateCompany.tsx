@@ -102,12 +102,12 @@ export interface CompanyFormSchema {
   id?: string | number;
   company_profile_settings_id?: any;
 
-  name?: string;
-  company_primary_contact_number?: string;
-  primary_contact_country_code?: { label: string; value: string };
+  company_name?: string;
+  primary_contact_number?: string;
+  primary_contact_number_code?: { label: string; value: string };
   alternate_contact_number?: string;
   alternate_contact_country_code?: { label: string; value: string };
-  company_primary_email_id?: string;
+  primary_email_id?: string;
   alternate_email_id?: string;
   ownership_type?: string | { label: string; value: string };
   owner_director_proprietor_name?: string;
@@ -115,7 +115,7 @@ export interface CompanyFormSchema {
   city?: string | { label: string; value: string };
   state?: string | { label: string; value: string };
   zip_postal_code?: string;
-  country?: string | { label: string; value: string };
+  country_id?: string | { label: string; value: string };
   continent_name?: string | { label: string; value: string };
   gst_number?: string;
   pan_number?: string;
@@ -174,7 +174,7 @@ export interface CompanyFormSchema {
   secondary_bank_verification_photo?: File | string;
   additional_bank_details?: CompanyBankDetailItemFE[];
 
-  KYC_FIELD?: boolean;
+  USER_ACCESS?: boolean;
   BILLING_FIELD?: boolean;
   billing_documents?: BillingDocItemFE[];
   DOMAIN_MANAGEMENT_FIELD?: Array<{ label: string; value: string }>;
@@ -182,7 +182,7 @@ export interface CompanyFormSchema {
   members?: MemberItem[];
 
   status?: string | { label: string; value: string };
-  company_code?: string;
+  // company_code?: string;
   brands?: Array<{ label: string; value: string }>;
   category?: Array<{ label: string; value: string }>;
   support_email?: string;
@@ -208,15 +208,15 @@ export interface FormSectionBaseProps {
 
 interface ApiSingleCompanyItem {
   id: number;
-  name?: string;
+  company_name?: string;
   company_profile_settings_id?: any;
   status?: string;
-  company_code?: string;
-  company_primary_contact_number?: string;
-  primary_contact_country_code?: string;
+  // company_code?: string;
+  primary_contact_number?: string;
+  primary_contact_number_code?: string;
   alternate_contact_number?: string;
   alternate_contact_country_code?: string;
-  company_primary_email_id?: string;
+  primary_email_id?: string;
   alternate_email_id?: string;
   ownership_type?: string;
   owner_director_proprietor_name?: string;
@@ -224,14 +224,14 @@ interface ApiSingleCompanyItem {
   city?: string;
   state?: string;
   zip_postal_code?: string;
-  country?: string;
+  country_id?: string;
   continent_name?: string;
   brands?: string;
   category?: string;
   sub_category?: string;
   interested_in?: string;
-  kyc_verification?: boolean | "Yes" | "No";
-  billing_enabled?: boolean | "Yes" | "No";
+  kyc_verified?: boolean | "Yes" | "No";
+  enable_billing?: boolean | "Yes" | "No";
   billing_documents?: any[];
   domain_id?: string;
   primary_bank_account_number?: string;
@@ -266,31 +266,31 @@ interface ApiSingleCompanyItem {
   declaration_206AB_verify?: boolean | string;
   declaration_206AB_remark?: string;
   declaration_194Q_url?: string;
-  declaration_194Q_verify?: boolean | string;
+  ABCQ_declaration_verified?: boolean | string;
   declaration_194Q_remark?: string;
   office_photo_url?: string;
-  office_photo_verify?: boolean | string;
+  office_photo_verified?: boolean | string;
   office_photo_remark?: string;
   gst_certificate_url?: string;
-  gst_certificate_verify?: boolean | string;
+  gst_certificate_verified?: boolean | string;
   gst_certificate_remark?: string;
   authority_letter_url?: string;
-  authority_letter_verify?: boolean | string;
+  authority_letter_verified?: boolean | string;
   authority_letter_remark?: string;
   visiting_card_url?: string;
-  visiting_card_verify?: boolean | string;
+  visiting_card_verified?: boolean | string;
   visiting_card_remark?: string;
   cancel_cheque_url?: string;
-  cancel_cheque_verify?: boolean | string;
+  cancel_cheque_verified?: boolean | string;
   cancel_cheque_remark?: string;
   aadhar_card_url?: string;
-  aadhar_card_verify?: boolean | string;
+  aadhar_card_verified?: boolean | string;
   aadhar_card_remark?: string;
   pan_card_url?: string;
-  pan_card_verify?: boolean | string;
+  pan_card_verified?: boolean | string;
   pan_card_remark?: string;
   other_document_url?: string;
-  other_document_verify?: boolean | string;
+  other_document_verified?: boolean | string;
   other_document_remark?: string;
 
   company_spot_verification?: any[];
@@ -328,12 +328,12 @@ const transformApiToFormSchema = (
   };
   return {
     id: apiData.id,
-    name: apiData.name,
-    company_primary_contact_number: apiData.company_primary_contact_number,
-    primary_contact_country_code: apiData.primary_contact_country_code
+    company_name: apiData.company_name,
+    primary_contact_number: apiData.primary_contact_number,
+    primary_contact_number_code: apiData.primary_contact_number_code
       ? {
-        label: apiData.primary_contact_country_code,
-        value: apiData.primary_contact_country_code,
+        label: apiData.primary_contact_number_code,
+        value: apiData.primary_contact_number_code,
       }
       : undefined,
     alternate_contact_number: apiData.alternate_contact_number,
@@ -343,7 +343,7 @@ const transformApiToFormSchema = (
         value: apiData.alternate_contact_country_code,
       }
       : undefined,
-    company_primary_email_id: apiData.company_primary_email_id,
+    primary_email_id: apiData.primary_email_id,
     alternate_email_id: apiData.alternate_email_id,
     ownership_type: apiData.ownership_type
       ? { label: apiData.ownership_type, value: apiData.ownership_type }
@@ -357,8 +357,8 @@ const transformApiToFormSchema = (
       ? { label: apiData.state, value: apiData.state }
       : undefined,
     zip_postal_code: apiData.zip_postal_code,
-    country: apiData.country
-      ? { label: apiData.country, value: apiData.country }
+    country_id: apiData.country_id
+      ? { label: apiData.country_id, value: apiData.country_id }
       : undefined,
     continent_name: apiData.continent_name
       ? { label: apiData.continent_name, value: apiData.continent_name }
@@ -409,43 +409,43 @@ const transformApiToFormSchema = (
     declaration_206ab_remark: apiData.declaration_206AB_remark,
     declaration_194q: apiData.declaration_194Q_url,
     declaration_194q_remark_enabled: kycVerifyToBoolean(
-      apiData.declaration_194Q_verify
+      apiData.ABCQ_declaration_verified
     ),
     declaration_194q_remark: apiData.declaration_194Q_remark,
     office_photo: apiData.office_photo_url,
     office_photo_remark_enabled: kycVerifyToBoolean(
-      apiData.office_photo_verify
+      apiData.office_photo_verified
     ),
     office_photo_remark: apiData.office_photo_remark,
     gst_certificate: apiData.gst_certificate_url,
     gst_certificate_remark_enabled: kycVerifyToBoolean(
-      apiData.gst_certificate_verify
+      apiData.gst_certificate_verified
     ),
     gst_certificate_remark: apiData.gst_certificate_remark,
     authority_letter: apiData.authority_letter_url,
     authority_letter_remark_enabled: kycVerifyToBoolean(
-      apiData.authority_letter_verify
+      apiData.authority_letter_verified
     ),
     authority_letter_remark: apiData.authority_letter_remark,
     visiting_card: apiData.visiting_card_url,
     visiting_card_remark_enabled: kycVerifyToBoolean(
-      apiData.visiting_card_verify
+      apiData.visiting_card_verified
     ),
     visiting_card_remark: apiData.visiting_card_remark,
     cancel_cheque: apiData.cancel_cheque_url,
     cancel_cheque_remark_enabled: kycVerifyToBoolean(
-      apiData.cancel_cheque_verify
+      apiData.cancel_cheque_verified
     ),
     cancel_cheque_remark: apiData.cancel_cheque_remark,
     aadhar_card: apiData.aadhar_card_url,
-    aadhar_card_remark_enabled: kycVerifyToBoolean(apiData.aadhar_card_verify),
+    aadhar_card_remark_enabled: kycVerifyToBoolean(apiData.aadhar_card_verified),
     aadhar_card_remark: apiData.aadhar_card_remark,
     pan_card: apiData.pan_card_url,
-    pan_card_remark_enabled: kycVerifyToBoolean(apiData.pan_card_verify),
+    pan_card_remark_enabled: kycVerifyToBoolean(apiData.pan_card_verified),
     pan_card_remark: apiData.pan_card_remark,
     other_document: apiData.other_document_url,
     other_document_remark_enabled: kycVerifyToBoolean(
-      apiData.other_document_verify
+      apiData.other_document_verified
     ),
     other_document_remark: apiData.other_document_remark,
     primary_account_number: apiData.primary_bank_account_number,
@@ -465,6 +465,7 @@ const transformApiToFormSchema = (
     secondary_ifsc_code: apiData.secondary_ifsc_code,
     secondary_bank_verification_photo:
       apiData.secondary_bank_verification_photo_url,
+
     additional_bank_details: apiData.company_bank_details?.map((b) => ({
       bank_account_number: b.bank_account_number,
       bank_name: b.bank_name
@@ -477,8 +478,8 @@ const transformApiToFormSchema = (
       bank_verification_photo:
         b.primary_bank_verification_photo_url || b.bank_verification_photo,
     })),
-    KYC_FIELD: kycVerifyToBoolean(apiData.kyc_verification),
-    BILLING_FIELD: kycVerifyToBoolean(apiData.billing_enabled),
+    USER_ACCESS: kycVerifyToBoolean(apiData.kyc_verified),
+    BILLING_FIELD: kycVerifyToBoolean(apiData.enable_billing),
     billing_documents: apiData.billing_documents?.map((doc) => ({
       document_name: doc.document_name,
       document_file: doc.document_url,
@@ -496,7 +497,6 @@ const transformApiToFormSchema = (
     status: apiData.status
       ? { label: apiData.status, value: apiData.status }
       : undefined,
-    company_code: apiData.company_code,
     brands: stringToSelectArray(apiData.brands),
     category: stringToSelectArray(apiData.category),
     support_email: apiData.support_email,
@@ -571,23 +571,23 @@ const preparePayloadForApi = (
       apiPayload.append(backendKey, "");
     }
   };
-  appendField("name", dataToProcess.name);
+  appendField("company_name", dataToProcess.company_name);
   appendField("address", dataToProcess.company_address);
   appendField("support_email", dataToProcess.support_email);
   appendField("status", dataToProcess.status);
-  appendField("company_code", dataToProcess.company_code);
-  appendField("country", dataToProcess.country);
+  // appendField("company_code", dataToProcess.company_code);
+  appendField("country_id", dataToProcess.country_id);
   appendField("brands", dataToProcess.brands);
   appendField("category", dataToProcess.category);
   appendField("sub_category", dataToProcess.sub_category);
   appendField("interested_in", dataToProcess.interested_in);
   appendField(
-    "company_primary_contact_number",
-    dataToProcess.company_primary_contact_number
+    "primary_contact_number",
+    dataToProcess.primary_contact_number
   );
   appendField(
-    "primary_contact_country_code",
-    dataToProcess.primary_contact_country_code
+    "primary_contact_number_code",
+    dataToProcess.primary_contact_number_code
   );
   appendField(
     "alternate_contact_number",
@@ -598,8 +598,8 @@ const preparePayloadForApi = (
     dataToProcess.alternate_contact_country_code
   );
   appendField(
-    "company_primary_email_id",
-    dataToProcess.company_primary_email_id
+    "primary_email_id",
+    dataToProcess.primary_email_id
   );
   appendField("alternate_email_id", dataToProcess.alternate_email_id);
   appendField("ownership_type", dataToProcess.ownership_type);
@@ -621,10 +621,7 @@ const preparePayloadForApi = (
   appendField("no_of_employees", dataToProcess.no_of_employees);
   appendField("company_website", dataToProcess.company_website);
   appendField("primary_business_type", dataToProcess.primary_business_type);
-  appendField(
-    "primary_business_category",
-    dataToProcess.primary_business_category
-  );
+  appendField("primary_business_category", dataToProcess.primary_business_category);
   appendField("company_type", dataToProcess.company_type);
   appendField("notification_email", dataToProcess.notification_email);
   appendField("facebook", dataToProcess.facebook);
@@ -632,13 +629,10 @@ const preparePayloadForApi = (
   appendField("linkedin", dataToProcess.linkedin);
   appendField("youtube", dataToProcess.youtube);
   appendField("twitter", dataToProcess.twitter);
-  appendField("kyc_verification", dataToProcess.KYC_FIELD);
-  appendField("billing_enabled", dataToProcess.BILLING_FIELD);
+  appendField("kyc_verified", dataToProcess.USER_ACCESS);
+  appendField("enable_billing", dataToProcess.BILLING_FIELD);
   appendField("domain_id", dataToProcess.DOMAIN_MANAGEMENT_FIELD);
-  appendField(
-    "company_profile_settings_id",
-    dataToProcess.company_profile_settings_id
-  );
+  appendField("company_profile_settings_id", dataToProcess.company_profile_settings_id);
   appendField("logo", dataToProcess.company_logo_brochure, true);
   if (
     dataToProcess.billing_documents &&
@@ -714,27 +708,42 @@ const preparePayloadForApi = (
       }
     );
   }
+  console.log(allBankDetailsForApi, apiPayload);
   if (allBankDetailsForApi.length > 0) {
+    const list: any = []
     allBankDetailsForApi.forEach((bank) => {
-      apiPayload.append(
-        `company_bank_details[bank_account_number][]`,
-        bank.bank_account_number
-      );
-      apiPayload.append(`company_bank_details[bank_name][]`, bank.bank_name);
-      apiPayload.append(`company_bank_details[ifsc_code][]`, bank.ifsc_code);
-      apiPayload.append(`company_bank_details[type][]`, bank.type);
-      if (bank.photo_to_upload instanceof File) {
-        apiPayload.append(
-          `company_bank_details[primary_bank_verification_photo][]`,
-          bank.photo_to_upload
-        );
-      }
+      list.push({
+        "bank_account_number": bank.bank_account_number,
+        "bank_name": bank.bank_name,
+        "account_number": bank.bank_account_number,
+        "ifsc_code": bank.ifsc_code,
+        "verification_photo": bank.photo_to_upload
+      })
+      // apiPayload.append(`company_bank_details[bank_account_number][]`, bank.bank_account_number);
+      // apiPayload.append(`company_bank_details[bank_name][]`, bank.bank_name);
+      // apiPayload.append(`company_bank_details[ifsc_code][]`, bank.ifsc_code);
+      // apiPayload.append(`company_bank_details[type][]`, bank.type);
+      // if (bank.photo_to_upload instanceof File) {
+      //   apiPayload.append(
+      //     `company_bank_details[primary_bank_verification_photo][]`,
+      //     bank.photo_to_upload
+      //   );
+      // }
+
     });
+    appendField(`company_bank_details`, list)
   } else {
-    apiPayload.append(`company_bank_details[bank_account_number][]`, "");
-    apiPayload.append(`company_bank_details[bank_name][]`, "");
-    apiPayload.append(`company_bank_details[ifsc_code][]`, "");
-    apiPayload.append(`company_bank_details[type][]`, "");
+    appendField(`company_bank_details`, [{
+        "bank_account_number": '',
+        "bank_name": '',
+        "account_number": '',
+        "ifsc_code": '',
+        "verification_photo": ''
+      }])
+    // apiPayload.append(`company_bank_details[bank_account_number][]`, "");
+    // apiPayload.append(`company_bank_details[bank_name][]`, "");
+    // apiPayload.append(`company_bank_details[ifsc_code][]`, "");
+    // apiPayload.append(`company_bank_details[type][]`, "");
   }
   if (
     dataToProcess.company_branches &&
@@ -866,7 +875,7 @@ const preparePayloadForApi = (
       feFile: "declaration_194q",
       beFile: "declaration_194Q",
       feVerify: "declaration_194q_remark_enabled",
-      beVerify: "declaration_194Q_verify",
+      beVerify: "ABCQ_declaration_verified",
       feRemark: "declaration_194q_remark",
       beRemark: "declaration_194Q_remark",
     },
@@ -874,7 +883,7 @@ const preparePayloadForApi = (
       feFile: "office_photo",
       beFile: "office_photo",
       feVerify: "office_photo_remark_enabled",
-      beVerify: "office_photo_verify",
+      beVerify: "office_photo_verified",
       feRemark: "office_photo_remark",
       beRemark: "office_photo_remark",
     },
@@ -882,7 +891,7 @@ const preparePayloadForApi = (
       feFile: "gst_certificate",
       beFile: "gst_certificate",
       feVerify: "gst_certificate_remark_enabled",
-      beVerify: "gst_certificate_verify",
+      beVerify: "gst_certificate_verified",
       feRemark: "gst_certificate_remark",
       beRemark: "gst_certificate_remark",
     },
@@ -890,7 +899,7 @@ const preparePayloadForApi = (
       feFile: "authority_letter",
       beFile: "authority_letter",
       feVerify: "authority_letter_remark_enabled",
-      beVerify: "authority_letter_verify",
+      beVerify: "authority_letter_verified",
       feRemark: "authority_letter_remark",
       beRemark: "authority_letter_remark",
     },
@@ -898,7 +907,7 @@ const preparePayloadForApi = (
       feFile: "visiting_card",
       beFile: "visiting_card",
       feVerify: "visiting_card_remark_enabled",
-      beVerify: "visiting_card_verify",
+      beVerify: "visiting_card_verified",
       feRemark: "visiting_card_remark",
       beRemark: "visiting_card_remark",
     },
@@ -906,7 +915,7 @@ const preparePayloadForApi = (
       feFile: "cancel_cheque",
       beFile: "cancel_cheque",
       feVerify: "cancel_cheque_remark_enabled",
-      beVerify: "cancel_cheque_verify",
+      beVerify: "cancel_cheque_verified",
       feRemark: "cancel_cheque_remark",
       beRemark: "cancel_cheque_remark",
     },
@@ -914,7 +923,7 @@ const preparePayloadForApi = (
       feFile: "aadhar_card",
       beFile: "aadhar_card",
       feVerify: "aadhar_card_remark_enabled",
-      beVerify: "aadhar_card_verify",
+      beVerify: "aadhar_card_verified",
       feRemark: "aadhar_card_remark",
       beRemark: "aadhar_card_remark",
     },
@@ -922,7 +931,7 @@ const preparePayloadForApi = (
       feFile: "pan_card",
       beFile: "pan_card",
       feVerify: "pan_card_remark_enabled",
-      beVerify: "pan_card_verify",
+      beVerify: "pan_card_verified",
       feRemark: "pan_card_remark",
       beRemark: "pan_card_remark",
     },
@@ -930,7 +939,7 @@ const preparePayloadForApi = (
       feFile: "other_document",
       beFile: "other_document",
       feVerify: "other_document_remark_enabled",
-      beVerify: "other_document_verify",
+      beVerify: "other_document_verified",
       feRemark: "other_document_remark",
       beRemark: "other_document_remark",
     },
@@ -1048,8 +1057,8 @@ const CompanyDetailsSection = ({
     label: value.name,
   }));
   const countryCodeOptions = CountriesData.map((c: any) => ({
-    value: `+${c.phonecode}`,
-    label: `+${c.phonecode} (${c.iso2})`,
+    value: `+${c.phone_code}`,
+    label: `+${c.phone_code} (${c.iso_code})`,
   }));
   const stateOptions = [
     { value: "MH", label: "Maharashtra" },
@@ -1067,8 +1076,8 @@ const CompanyDetailsSection = ({
     { value: "Sole Proprietorship", label: "Sole Proprietorship" },
     { value: "Partner", label: "Partner" },
     { value: "LLC", label: "LLC" },
-    { value: "Corporate", label: "Corporate" }, 
-    { value: "Others", label: "Others" }, 
+    { value: "Corporate", label: "Corporate" },
+    { value: "Others", label: "Others" },
   ];
   const primaryBusinessTypeOptions = [
     { value: "LLP", label: "LLP" },
@@ -1084,8 +1093,8 @@ const CompanyDetailsSection = ({
     { value: "Foreign Company", label: "Foreign Company" },
   ];
   const statusOptions = [
-    { value: "active", label: "Active" },
-    { value: "Disabled", label: "Disabled" },
+    { value: "Verified", label: "Verified" },
+    { value: "Unverified", label: "Unverified" },
   ];
   const companyTypeOptions = [
     { value: "TypeA", label: "Type A" },
@@ -1168,12 +1177,12 @@ const CompanyDetailsSection = ({
         </FormItem>
         <FormItem
           label={<div>Company Name<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.name}
+          invalid={!!errors.company_name}
           className=""
-          errorMessage={errors.name?.message as string}
+          errorMessage={errors.company_name?.message as string}
         >
           <Controller
-            name="name"
+            name="company_name"
             control={control}
             render={({ field }) => (
               <Input placeholder="Company Name" {...field} />
@@ -1214,8 +1223,8 @@ const CompanyDetailsSection = ({
         </FormItem>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-        
-        
+
+
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
         <FormItem
@@ -1237,11 +1246,11 @@ const CompanyDetailsSection = ({
         </FormItem>
         <FormItem
           label={<div>Country<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.country}
-          errorMessage={errors.country?.message as string}
+          invalid={!!errors.country_id}
+          errorMessage={errors.country_id?.message as string}
         >
           <Controller
-            name="country"
+            name="country_id"
             control={control}
             render={({ field }) => (
               <Select
@@ -1253,7 +1262,7 @@ const CompanyDetailsSection = ({
           />
         </FormItem>
         <FormItem
-          label="State"
+          label={<div>State<span className="text-red-500"> * </span></div>}
           invalid={!!errors.state}
           errorMessage={errors.state?.message as string}
         >
@@ -1266,7 +1275,7 @@ const CompanyDetailsSection = ({
           />
         </FormItem>
         <FormItem
-          label="City"
+          label={<div>City<span className="text-red-500"> * </span></div>}
           invalid={!!errors.city}
           errorMessage={errors.city?.message as string}
         >
@@ -1299,7 +1308,7 @@ const CompanyDetailsSection = ({
             name="company_address"
             control={control}
             render={({ field }) => (
-              <Input  placeholder="Company Address" {...field} />
+              <Input placeholder="Company Address" {...field} />
             )}
           />
         </FormItem>
@@ -1309,11 +1318,11 @@ const CompanyDetailsSection = ({
         <FormItem
           className="sm:col-span-6 lg:col-span-3"
           label={<div>Primary Email ID<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.company_primary_email_id}
-          errorMessage={errors.company_primary_email_id?.message as string}
+          invalid={!!errors.primary_email_id}
+          errorMessage={errors.primary_email_id?.message as string}
         >
           <Controller
-            name="company_primary_email_id"
+            name="primary_email_id"
             control={control}
             render={({ field }) => (
               <Input type="email" placeholder="Primary Email" {...field} />
@@ -1368,14 +1377,14 @@ const CompanyDetailsSection = ({
         <FormItem
           className="sm:col-span-6 lg:col-span-4"
           label={<div>Primary Contact Number<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.company_primary_contact_number}
+          invalid={!!errors.primary_contact_number}
           errorMessage={
-            errors.company_primary_contact_number?.message as string
+            errors.primary_contact_number?.message as string
           }
         >
           <div className="flex items-center gap-2">
             <Controller
-              name="primary_contact_country_code"
+              name="primary_contact_number_code"
               control={control}
               render={({ field }) => (
                 <Select
@@ -1386,7 +1395,7 @@ const CompanyDetailsSection = ({
               )}
             />
             <Controller
-              name="company_primary_contact_number"
+              name="primary_contact_number"
               control={control}
               render={({ field }) => (
                 <Input placeholder="Primary Contact" {...field} />
@@ -1416,7 +1425,7 @@ const CompanyDetailsSection = ({
             />
           </div>
         </FormItem>
-        
+
         <FormItem className="sm:col-span-6 lg:col-span-4" label="General Mobile">
           <div className="flex items-center gap-2">
             <Controller
@@ -1439,7 +1448,7 @@ const CompanyDetailsSection = ({
             />
           </div>
         </FormItem>{" "}
-        
+
       </div>
 
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>{" "}
@@ -1530,7 +1539,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>{" "}
-        
+
         <FormItem
           label="Company Website"
           invalid={!!errors.company_website}
@@ -1646,7 +1655,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>{" "} */}
-        
+
         {/* <FormItem label="Brands">
           <Controller
             name="brands"
@@ -1857,7 +1866,7 @@ const CompanyDetailsSection = ({
                 />
               </FormItem>
             </div>
-            
+
             <FormItem label="Address" className="md:col-span-3">
               <Controller
                 name={`company_branches.${index}.branch_address`}
@@ -1873,7 +1882,7 @@ const CompanyDetailsSection = ({
                 size="sm"
                 variant="plain"
                 className="text-xs"
-                icon={<TbTrash size={16}/>}
+                icon={<TbTrash size={16} />}
                 onClick={() => removeBranch(index)}
               >
                 Remove
@@ -1894,7 +1903,7 @@ const KYCDetailSection = ({
 }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const kycDocs = [
-     {
+    {
       label: "Aadhar Card",
       name: "aadhar_card" as const,
       remarkName: "aadhar_card_remark" as const,
@@ -1912,7 +1921,7 @@ const KYCDetailSection = ({
       remarkName: "gst_certificate_remark" as const,
       enabledName: "gst_certificate_remark_enabled" as const,
     },
-    
+
     {
       label: "Visiting Card",
       name: "visiting_card" as const,
@@ -1925,7 +1934,7 @@ const KYCDetailSection = ({
       remarkName: "office_photo_remark" as const,
       enabledName: "office_photo_remark_enabled" as const,
     },
-    
+
     {
       label: "Authority Letter",
       name: "authority_letter" as const,
@@ -1982,7 +1991,7 @@ const KYCDetailSection = ({
                   render={({ field }) => (
                     <Checkbox checked={!!field.value} onChange={field.onChange}>
                       {" "}
-                      {doc.label} (Verified){" "}
+                      {doc.label} (Verified){" "}<span className="text-red-500"> * </span>
                     </Checkbox>
                   )}
                 />{" "}
@@ -2318,7 +2327,7 @@ const BankDetailsSection = ({
                   size="sm"
                   variant="plain"
                   className="text-xs"
-                  icon={<TbTrash size={16}/>}
+                  icon={<TbTrash size={16} />}
                   onClick={() => remove(index)}
                 >Remove
                 </Button>
@@ -2376,7 +2385,7 @@ const SpotVerificationSection = ({
                   control={control}
                   render={({ field }) => (
                     <Checkbox checked={!!field.value} onChange={field.onChange}>
-                     
+
                     </Checkbox>
                   )}
                 />
@@ -2432,10 +2441,10 @@ const SpotVerificationSection = ({
                 type="button"
                 variant="plain"
                 size="sm"
-                icon={<TbTrash size={16}/>}
+                icon={<TbTrash size={16} />}
                 onClick={() => remove(index)}
               > Remove
-                </Button>
+              </Button>
             </div>
           </Card>
         );
@@ -2523,7 +2532,7 @@ const ReferenceSection = ({
               type="button"
               variant="plain"
               size="sm"
-              icon={<TbTrash size={16}/>}
+              icon={<TbTrash size={16} />}
               onClick={() => remove(index)}
             >Remove
             </Button>
@@ -2568,7 +2577,7 @@ const AccessibilitySection = ({
               )}
             />
           </FormItem>{" "} */}
-          <FormItem label="Enable Billing">
+          <FormItem label={<div>Enable Billing<span className="text-red-500"> * </span></div>}>
             <Controller
               name="BILLING_FIELD"
               control={control}
@@ -2579,7 +2588,7 @@ const AccessibilitySection = ({
               )}
             />
           </FormItem>{" "}
-          <FormItem label="User Access">
+          <FormItem label={<div>User Access<span className="text-red-500"> * </span></div>}>
             <Controller
               name="USER_ACCESS"
               control={control}
@@ -2869,7 +2878,7 @@ const MemberManagementSection = ({
                 variant="plain"
                 size="sm"
                 className="text-xs"
-                icon={<TbTrash size={16}/>}
+                icon={<TbTrash size={16} />}
                 onClick={() => remove(index)}
               >
                 Remove
@@ -2901,12 +2910,17 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   );
   const companySchema = z
     .object({
-      name: z.string().trim().min(1, { message: "Name is Required!" }),
-      company_code: z
-        .string()
-        .trim()
-        .min(1, { message: "Company code is required!" }),
-      company_primary_email_id: z
+      company_name: z.string().trim().min(1, { message: "Company Name is Required!" }),
+      owner_director_proprietor_name: z.string().trim().min(1, { message: "Owner/Director Name is Required!" }),
+      gst_number: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, {
+        message: "Invalid GST number format",
+      }),
+      pan_number: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, {
+        message: "Invalid PAN card number format",
+      }),
+      city: z.string().trim().min(1, { message: "City Name is Required!" }),
+      state: z.string().trim().min(1, { message: "State Name is Required!" }),
+      primary_email_id: z
         .string()
         .trim()
         .min(1, { message: "Email is Required !" })
@@ -2915,7 +2929,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         .object({ value: z.string(), label: z.string() })
         .optional()
         .nullable(),
-      company_primary_contact_number: z
+      primary_contact_number: z
         .string()
         .trim()
         .min(1, { message: "Primary contact number is required!" })
@@ -2957,6 +2971,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     reset(fullInitialValues);
   }, [defaultValues, reset]);
   const internalFormSubmit = (values: CompanyFormSchema) => {
+    console.log(values);
+
     onFormSubmit?.(values, formMethods);
   };
   const navigationKeys = companyNavigationList.map((item) => item.link);
@@ -3081,13 +3097,13 @@ const CompanyCreate = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getEmptyFormValues = (): Partial<CompanyFormSchema> => ({
-    name: "",
-    company_primary_contact_number: "",
-    primary_contact_country_code: undefined,
+    company_name: "",
+    primary_contact_number: "",
+    primary_contact_number_code: undefined,
     company_profile_settings_id: "",
     alternate_contact_number: "",
     alternate_contact_country_code: undefined,
-    company_primary_email_id: "",
+    primary_email_id: "",
     alternate_email_id: "",
     ownership_type: undefined,
     owner_director_proprietor_name: "",
@@ -3095,7 +3111,7 @@ const CompanyCreate = () => {
     city: undefined,
     state: undefined,
     zip_postal_code: "",
-    country: undefined,
+    country_id: undefined,
     continent_name: undefined,
     gst_number: "",
     pan_number: "",
@@ -3150,13 +3166,13 @@ const CompanyCreate = () => {
     secondary_ifsc_code: "",
     secondary_bank_verification_photo: undefined,
     additional_bank_details: [],
-    KYC_FIELD: false,
+    USER_ACCESS: false,
     BILLING_FIELD: false,
     billing_documents: [],
     DOMAIN_MANAGEMENT_FIELD: [],
     members: [],
     status: undefined,
-    company_code: "",
+    // company_code: "",
     brands: [],
     category: [],
     support_email: "",
@@ -3179,6 +3195,7 @@ const CompanyCreate = () => {
     dispatch(getCategoriesAction());
     dispatch(getMembersAction());
   }, [dispatch]);
+
   useEffect(() => {
     const emptyForm = getEmptyFormValues();
     if (isEditMode && id) {
@@ -3216,16 +3233,16 @@ const CompanyCreate = () => {
       setPageLoading(false);
     }
   }, [id, isEditMode, navigate, dispatch]);
-  const handleFormSubmit = async (
-    formValues: CompanyFormSchema,
-    formMethods: UseFormReturn<CompanyFormSchema>
-  ) => {
+
+  const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
     const payload = preparePayloadForApi(
       formValues,
       isEditMode,
       initialData || {}
     );
+    console.log(payload, 'payload');
+
     try {
       if (isEditMode && id) {
         await dispatch(editCompanyAction({ id: id, payload })).unwrap();
