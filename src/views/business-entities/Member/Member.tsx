@@ -33,6 +33,7 @@ import {
   FormItem,
   Input,
   Select,
+  Card,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -79,7 +80,10 @@ import {
   TbShare,
   TbTagStarred,
   TbUser,
+  TbUserCancel,
+  TbUserCheck,
   TbUserCircle,
+  TbUserExclamation,
   TbUserSearch,
   TbUsersGroup,
 } from "react-icons/tb";
@@ -99,6 +103,8 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 import { MdCheckCircle } from "react-icons/md";
+import Tr from "@/components/ui/Table/Tr";
+import Td from "@/components/ui/Table/Td";
 
 // --- MemberData Type (FormItem) ---
 export type FormItem = {
@@ -872,7 +878,8 @@ const statusColor: Record<FormItem["member_status"], string> = {
 // --- MOCK FILTER OPTIONS (Replace with dynamic/actual data) ---
 const memberStatusOptions = [
   { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
+  { value: "disbled", label: "Disabled" },
+  { value: "unregistered", label: "Unregistered" },
 ];
 const continentOptions = [
   { value: "Asia", label: "Asia" },
@@ -893,6 +900,12 @@ const businessTypeOptions = [
   { value: "IT Services", label: "IT Services" },
   { value: "FinTech", label: "FinTech" },
 ];
+ const businessOpportunityOptions = [
+    { value: "Indian Buyer", label: "Indian Buyer" },
+    { value: "Indian Supplier", label: "Indian Supplier" },
+    { value: "Global Buyer", label: "Global Buyer" },
+    { value: "Global Supplier", label: "Global Supplier" },
+  ];
 const stateOptions = [
   { value: "NY", label: "New York" },
   { value: "CA", label: "California" },
@@ -1355,7 +1368,7 @@ const FormListTable = () => {
             </b>
             <div className="text-xs flex gap-1">
               <MdCheckCircle size={20} className="text-green-500"/>
-              <b className="">{props.row.original.company_name}</b>
+              <b className="">{props.row.original.company_name || "Unique Enterprise"}</b>
             </div>
           </div>
         ),
@@ -1369,7 +1382,7 @@ const FormListTable = () => {
           return (
             <div className="flex flex-col text-xs">
               <Tag className={`${statusColor[member_status]} inline capitalize`}>
-                {member_status}
+                {member_status || "Active"}
               </Tag>
               <span className="mt-0.5">
                 <div className="text-[10px] text-gray-500 mt-0.5">
@@ -1432,7 +1445,11 @@ const FormListTable = () => {
         header: "Preferences",
         accessorKey: "associated_brands",
         size: 300,
-        cell: (props) => (
+        cell: (props) => {
+          const [isOpen , setIsOpen] = useState<boolean>(false)
+          const openDialog = ()=> setIsOpen(true)
+          const closeDialog = ()=> setIsOpen(false)
+          return (
           <div className="flex flex-col gap-1">
             <span className="text-xs">
               <b className="text-xs">Business Type: </b>
@@ -1443,7 +1460,7 @@ const FormListTable = () => {
             <span className="text-xs">
               <div className="flex gap-1">
                 {/* <span className="h-4 w-4 flex items-center justify-center rounded-full bg-blue-500 text-white">i</span> */}
-                <TbInfoCircle size={16} className="text-blue-500"/>
+                <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer"/></span>
                 <b className="text-xs">Brands: </b>
               </div>
               <span className="text-[11px]">
@@ -1462,8 +1479,25 @@ const FormListTable = () => {
                 {props.row.original.interested_in}
               </span>
             </span>
-          </div>
-        ),
+            <Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}>
+                <h6>Dynamic Profile</h6>
+                <Table className="mt-6">
+                  <Tr className="bg-gray-100">
+                    <Td width={130}>Member Type</Td>
+                    <Td>Brands</Td>
+                    <Td>Category</Td>
+                    <Td>Sub Category</Td>
+                  </Tr>
+                  <Tr className="">
+                    <Td>INS - PREMIUM</Td>
+                    <Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td>
+                    <Td><Tag>Electronics</Tag></Td>
+                    <Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td>
+                  </Tr>
+                </Table>
+            </Dialog>
+          </div>)
+        },
       },
       // {
       //   header: "Ratio",
@@ -1586,9 +1620,9 @@ const FormListTable = () => {
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
           </Button>
-          <Button icon={<TbCloudDownload />} onClick={handleImport}>
+          {/* <Button icon={<TbCloudDownload />} onClick={handleImport}>
             Import
-          </Button>
+          </Button> */}
           {forms && forms.length > 0 ? (
             <CSVLink data={csvData} filename="members_export.csv">
               <Button icon={<TbCloudUpload />}>Export</Button>
@@ -1664,21 +1698,6 @@ const FormListTable = () => {
                 )}
               />
             </UiFormItem>
-            <UiFormItem label="Continent">
-              <Controller
-                name="filterContinent"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Continent"
-                    options={continentOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem>
             <UiFormItem label="Business Type">
               <Controller
                 name="filterBusinessType"
@@ -1694,6 +1713,55 @@ const FormListTable = () => {
                 )}
               />
             </UiFormItem>
+            <UiFormItem label="Business Opportunity">
+              <Controller
+                name="filterBusinessOpportunity"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Opportunity"
+                    options={businessOpportunityOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="Continent">
+              <Controller
+                name="filterContinent"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Continent"
+                    options={continentOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            
+            <UiFormItem label="Country">
+              <Controller
+                name="filterCountry"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Country"
+                    options={[
+                      {label: "India", value: "India"}
+                    ]}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            
             <UiFormItem label="State">
               <Controller
                 name="filterState"
@@ -1769,7 +1837,44 @@ const FormListTable = () => {
                 )}
               />
             </UiFormItem>
-            <UiFormItem label="KYC Verified">
+            <UiFormItem label="Dealing in Bulk">
+              <Controller
+                name="filterDealing"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select"
+                    options={[
+                      {label:"Yes", value: "Yes"},
+                      {label:"No", value: "No"},
+                    ]}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            <UiFormItem label="Grade">
+              <Controller
+                name="memberGrade"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Grade"
+                    options={[
+                      {label:"A", value: "A"},
+                      {label:"B", value: "B"},
+                      {label:"C", value: "C"},
+                    ]}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
+            </UiFormItem>
+            {/* <UiFormItem label="KYC Verified">
               <Controller
                 name="filterKycVerified"
                 control={filterFormMethods.control}
@@ -1783,7 +1888,7 @@ const FormListTable = () => {
                   />
                 )}
               />
-            </UiFormItem>
+            </UiFormItem> */}
           </div>
         </UiForm>
       </Drawer>
@@ -1981,6 +2086,44 @@ const Member = () => {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <h5>Member</h5>
                 <FormListActionTools />
+              </div>
+              <div className="grid grid-cols-4 mb-4 gap-2">
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                    <TbUsersGroup size={24}/>
+                  </div>
+                  <div>
+                    <h6 className="text-blue-500">12</h6>
+                    <span className="font-semibold text-xs">Total</span>
+                  </div>
+                </Card>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                    <TbUserCheck size={24}/>
+                  </div>
+                  <div>
+                    <h6 className="text-green-500">12</h6>
+                    <span className="font-semibold text-xs">Active</span>
+                  </div>
+                </Card>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                    <TbUserCancel size={24}/>
+                  </div>
+                  <div>
+                    <h6 className="text-red-500">12</h6>
+                    <span className="font-semibold text-xs">Disabled</span>
+                  </div>
+                </Card>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                    <TbUserExclamation size={24}/>
+                  </div>
+                  <div>
+                    <h6 className="text-pink-500">12</h6>
+                    <span className="font-semibold text-xs">Unregistered</span>
+                  </div>
+                </Card>
               </div>
               <FormListTable />
             </div>

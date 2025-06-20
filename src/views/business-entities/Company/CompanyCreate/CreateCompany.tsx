@@ -1085,10 +1085,7 @@ const CompanyDetailsSection = ({
   ];
   const statusOptions = [
     { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-    { value: "verified", label: "Verified" },
-    { value: "unverified", label: "Unverified" },
-    { value: "unregistered", label: "Unregistered" },
+    { value: "Disabled", label: "Disabled" },
   ];
   const companyTypeOptions = [
     { value: "TypeA", label: "Type A" },
