@@ -313,12 +313,12 @@ const STATUS_OPTIONS_FORM: {
   value: RequestFeedbackFormStatus;
   label: string;
 }[] = [
-  { value: "unread", label: "Unread" },
-  { value: "read", label: "Read" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "resolved", label: "Resolved" },
-  { value: "closed", label: "Closed" },
-];
+    { value: "unread", label: "Unread" },
+    { value: "read", label: "Read" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "resolved", label: "Resolved" },
+    { value: "closed", label: "Closed" },
+  ];
 const statusFormValues = STATUS_OPTIONS_FORM.map((s) => s.value) as [
   RequestFeedbackFormStatus,
   ...RequestFeedbackFormStatus[]
@@ -393,7 +393,52 @@ const preparePayloadForApi = (
   formData: Partial<MemberFormSchema>,
   isEditMode: boolean
 ): any => {
-  /* Full Implementation from previous steps */ return {};
+  /* Full Implementation from previous steps */
+  return {
+    name: formData?.name || "",
+    number: formData?.mobile_no || "",
+    number_code: formData?.contact_country_code?.value || "",
+    email: formData?.email || "",
+    password: formData?.password || "",
+    company_temp: formData?.company_name_temp || "",
+    company_actual: formData?.company_name || "",
+    status: formData?.status?.value || "",
+    continent_id: formData?.continent_id.value || "",
+    country_id: formData?.country_id.value || "",
+    state: formData?.state || "",
+    city: formData?.city || "",
+    pincode: formData?.pincode || "",
+    address: formData?.address || "",
+    whatsApp_no: formData?.whatsapp_number || "",
+    alternate_contact_number: formData?.alternate_contact_number || "",
+    alternate_contact_number_code: formData?.alternate_contact_number_code || "",
+    landline_number: formData?.landline_number || "",
+    fax_number: formData?.fax_number || "",
+    alternate_email: formData?.alternate_email || "",
+    botim_id: formData?.botim_id || "",
+    skype_id: formData?.skype_id || "",
+    linkedIn_profile: formData?.linkedin_profile || "",
+    facebook_profile: formData?.facebook_profile || "",
+    instagram_handle: formData?.instagram_handle || "",
+    website: formData?.website || "",
+    favourite_product_id: formData?.favourite_product_id || "",
+    business_opportunity: formData?.business_opportunity?.value || "",
+    member_grade: formData?.member_grade?.value || "",
+    dealing_in_bulk: formData?.dealing_in_bulk || "No",
+    product_upload_permission: formData?.product_upload_permission || false,
+    wall_enquiry_permission: formData?.wall_enquiry_permission || false,
+    enquiry_permission: formData?.enquiry_permission || false,
+    trade_inquiry_allowed: formData?.trade_inquiry_allowed || false,
+    dynamic_member_profiles: formData?.dynamic_member_profiles || "",
+    interested_in: formData?.interested_in?.value || "",
+    upgrade_your_plan: formData?.upgrade_plan?.value || "",
+    company_name_temp: formData?.company_name_temp || "",
+    wechat_id: formData?.we_chat || "",
+    business_type: formData?.business_type?.value || "",
+    relationship_manager_id: formData?.relationship_manager?.value || "",
+    remarks: formData?.remarks || "",
+    membership_plan_current: formData?.membership_plan_text || "",
+  };
 };
 
 const CSV_HEADERS_RF = [
@@ -425,19 +470,19 @@ const CSV_KEYS_RF: (keyof Pick<
   | "attachment"
   | "created_at"
 >)[] = [
-  "id",
-  "name",
-  "email",
-  "mobile_no",
-  "company_name",
-  "type",
-  "subject",
-  "feedback_details",
-  "rating",
-  "status",
-  "attachment",
-  "created_at",
-];
+    "id",
+    "name",
+    "email",
+    "mobile_no",
+    "company_name",
+    "type",
+    "subject",
+    "feedback_details",
+    "rating",
+    "status",
+    "attachment",
+    "created_at",
+  ];
 function exportRequestFeedbacksToCsv(
   filename: string,
   rows: RequestFeedbackItem[]
@@ -1024,9 +1069,9 @@ const RequestAndFeedbackListing = () => {
         if (key === "created_at" || key === "updated_at") {
           return order === "asc"
             ? new Date(aVal as string).getTime() -
-                new Date(bVal as string).getTime()
+            new Date(bVal as string).getTime()
             : new Date(bVal as string).getTime() -
-                new Date(aVal as string).getTime();
+            new Date(aVal as string).getTime();
         }
         const aStr = String(aVal ?? "").toLowerCase();
         const bStr = String(bVal ?? "").toLowerCase();
@@ -1741,6 +1786,11 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "Yes", label: "Yes" },
     { value: "No", label: "No" },
   ];
+  const interestedinOption = [
+    { value: "For Sell", label: "For Sell" },
+    { value: "For Buy", label: "For Buy" },
+    { value: "Both", label: "Both" },
+  ];
   const memberTypeOptions = [
     { value: "INS - PREMIUM", label: "INS - PREMIUM" },
     { value: "INS - SUPER", label: "INS - SUPER" },
@@ -1756,7 +1806,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     <Card id="memberProfile">
       <h4 className="mb-6">Additional Member Profile</h4>
       <div className="grid md:grid-cols-3 gap-4">
-        
+
         <FormItem
           label="Business Opportunity"
           invalid={!!errors.business_opportunity}
@@ -1788,11 +1838,11 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
                 {...field}
                 placeholder="Select Business Type"
                 options={[
-                  {label: "Manufacturer", value:"Manufacturer"},
-                  {label: "Distributor", value:"Distributor"},
-                  {label: "Wholesaler", value:"Wholesaler"},
-                  {label: "Retailer", value:"Retailer"},
-                  {label: "Corporate", value:"Corporate"},
+                  { label: "Manufacturer", value: "Manufacturer" },
+                  { label: "Distributor", value: "Distributor" },
+                  { label: "Wholesaler", value: "Wholesaler" },
+                  { label: "Retailer", value: "Retailer" },
+                  { label: "Corporate", value: "Corporate" },
                 ]}
                 isClearable
               />
@@ -1818,6 +1868,24 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
             )}
           />
         </FormItem>
+        <FormItem
+          label={<div>Interested Categories</div>}
+          invalid={!!errors.interested_in}
+          errorMessage={errors.interested_in?.message as string}
+        >
+          <Controller
+            name="interested_in"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select interested categories"
+                options={interestedinOption}
+                isClearable
+              />
+            )}
+          />
+        </FormItem>
         {/* <FormItem
           label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
           invalid={!!errors.interested_category_ids}
@@ -1829,7 +1897,6 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
             render={({ field }) => (
               <Select
                 {...field}
-                isMulti
                 placeholder="Select interested categories"
                 options={categoryOptions}
                 isClearable
@@ -1970,14 +2037,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
       </div>{" "}
       <div className="flex flex-col gap-y-6">
         {fields.map((item, index) => (
-          <Card key={item.id} className="border-black rounded-md"  bodyClass="relative">
+          <Card key={item.id} className="border-black rounded-md" bodyClass="relative">
             <div className="absolute top-2 right-2 z-10">
               <Button
                 type="button"
                 variant="plain"
                 size="sm"
                 className="text-xs"
-                icon={<TbTrash size={16}/>}
+                icon={<TbTrash size={16} />}
                 onClick={() => remove(index)}
               >Remove
               </Button>
@@ -2091,23 +2158,25 @@ const PersonalDetailsComponent = ({
     CompanyData = [],
   } = useSelector(masterSelector);
 
+
   const countryOptions = CountriesData.map((country: any) => ({
     value: String(country.id),
     label: country.name,
   }));
-  const countryCodeOptions = CountriesData.filter((c: any) => c.phonecode)
+  const countryCodeOptions = CountriesData
     .map((c: any) => ({
-      value: `+${c.phonecode}`,
-      label: `${c.iso_code} (+${c.phonecode})`,
-    }))
-    .filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
+      value: `+${c.phone_code}`,
+      label: `${c.iso_code} (${c.phone_code})`,
+    })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
+
   const continentOptions = ContinentsData.map((continent: any) => ({
     value: String(continent.id),
     label: continent.name,
   }));
-  const companyOptions = CompanyData.map((c: any) => ({
+
+  const companyOptions = CompanyData.data.map((c: any) => ({
     value: String(c.id),
-    label: c.name,
+    label: c.company_name,
   })); // Assumes structure {id, name}
   const statusOptions = [
     { label: "Active", value: "Active" },
@@ -2179,7 +2248,7 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
-        
+
         <FormItem
           label="Password (leave blank to keep current)"
           invalid={!!errors.password}
@@ -2212,7 +2281,7 @@ const PersonalDetailsComponent = ({
                 placeholder="Enter temporary company"
                 // options={companyOptions}
                 {...field}
-                // isClearable
+              // isClearable
               />
             )}
           />
@@ -2227,11 +2296,11 @@ const PersonalDetailsComponent = ({
             name="company_name"
             control={control}
             render={({ field }) => (
-              <Select
-                placeholder="Select official company"
-                options={companyOptions}
+              <Input
+                placeholder="Enter company name"
+                // options={companyOptions}
                 {...field}
-                isClearable
+                // isClearable
               />
             )}
           />
@@ -2316,9 +2385,9 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
-        
-        
-        
+
+
+
         <FormItem
           label="Pincode"
           invalid={!!errors.pincode}
@@ -2371,17 +2440,17 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
         >
           <div className="flex items-center gap-2">
             <Controller
-                name="whatsapp_country_code"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    placeholder="Code"
-                    className="w-28"
-                    options={countryCodeOptions}
-                    {...field}
-                  />
-                )}
-              />
+              name="whatsapp_country_code"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Code"
+                  className="w-28"
+                  options={countryCodeOptions}
+                  {...field}
+                />
+              )}
+            />
             <Controller
               name="whatsapp_number"
               control={control}
@@ -2762,7 +2831,19 @@ const MemberFormComponent = (props: {
           message: "Password must be at least 6 characters if provided",
         }),
       mobile_no: z.string().trim().min(1, "Mobile number is required"),
-      company_name: z
+      whatsapp_number: z.string().trim().min(1, "Whatsapp is required"),
+      // company_name: z
+      //   .union([
+      //     z.string(),
+      //     z.object({ value: z.string().min(1), label: z.string() }),
+      //   ])
+      //   .refine(
+      //     (val) =>
+      //       (typeof val === "string" && val.trim() !== "") ||
+      //       (typeof val === "object" && !!val?.value),
+      //     { message: "Company Name is required" }
+      //   ),
+      country_id: z
         .union([
           z.string(),
           z.object({ value: z.string().min(1), label: z.string() }),
@@ -2771,9 +2852,9 @@ const MemberFormComponent = (props: {
           (val) =>
             (typeof val === "string" && val.trim() !== "") ||
             (typeof val === "object" && !!val?.value),
-          { message: "Company Name is required" }
+          { message: "Country is required" }
         ),
-      address: z.string().trim().min(1, "Address is required"),
+      // address: z.string().trim().min(1, "Address is required"),
     })
     .passthrough();
   const formMethods = useForm<MemberFormSchema>({
@@ -2883,7 +2964,7 @@ const MemberFormComponent = (props: {
               disabled={
                 isSubmitting ||
                 navigationKeys.indexOf(activeSection) ===
-                  navigationKeys.length - 1
+                navigationKeys.length - 1
               }
             >
               Next
@@ -3048,6 +3129,9 @@ const MemberCreate = () => {
       formValues as Partial<MemberFormSchema>,
       isEditMode
     );
+
+    console.log(payload, "Payload to be sent to API", formValues);
+
     try {
       if (isEditMode && id) {
         await dispatch(editMemberAction(payload)).unwrap();
@@ -3064,7 +3148,7 @@ const MemberCreate = () => {
           </Notification>
         );
       }
-      navigate("/business-entities/member");
+      // navigate("/business-entities/member");
     } catch (error: any) {
       const errorMessage =
         error?.message ||
