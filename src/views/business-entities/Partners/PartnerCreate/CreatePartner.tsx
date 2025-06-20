@@ -1888,7 +1888,7 @@ const CompanyDetailsSection = ({
                 name={`company_branches.${index}.branch_address`}
                 control={control}
                 render={({ field }) => (
-                  <Input textArea placeholder="Full Address" {...field} />
+                  <Input placeholder="Full Address" {...field} />
                 )}
               />
             </FormItem>
@@ -2508,7 +2508,7 @@ const ReferenceSection = ({
                 )}
               />
             </FormItem>
-            <FormItem label="Partner Name">
+            <FormItem label="Company Name">
               <Controller
                 name={`references.${index}.company_name`}
                 control={control}
