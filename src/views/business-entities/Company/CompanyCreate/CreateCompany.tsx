@@ -465,6 +465,7 @@ const transformApiToFormSchema = (
     secondary_ifsc_code: apiData.secondary_ifsc_code,
     secondary_bank_verification_photo:
       apiData.secondary_bank_verification_photo_url,
+
     additional_bank_details: apiData.company_bank_details?.map((b) => ({
       bank_account_number: b.bank_account_number,
       bank_name: b.bank_name
@@ -620,10 +621,7 @@ const preparePayloadForApi = (
   appendField("no_of_employees", dataToProcess.no_of_employees);
   appendField("company_website", dataToProcess.company_website);
   appendField("primary_business_type", dataToProcess.primary_business_type);
-  appendField(
-    "primary_business_category",
-    dataToProcess.primary_business_category
-  );
+  appendField("primary_business_category", dataToProcess.primary_business_category);
   appendField("company_type", dataToProcess.company_type);
   appendField("notification_email", dataToProcess.notification_email);
   appendField("facebook", dataToProcess.facebook);
@@ -634,10 +632,7 @@ const preparePayloadForApi = (
   appendField("kyc_verified", dataToProcess.USER_ACCESS);
   appendField("enable_billing", dataToProcess.BILLING_FIELD);
   appendField("domain_id", dataToProcess.DOMAIN_MANAGEMENT_FIELD);
-  appendField(
-    "company_profile_settings_id",
-    dataToProcess.company_profile_settings_id
-  );
+  appendField("company_profile_settings_id", dataToProcess.company_profile_settings_id);
   appendField("logo", dataToProcess.company_logo_brochure, true);
   if (
     dataToProcess.billing_documents &&
@@ -713,24 +708,42 @@ const preparePayloadForApi = (
       }
     );
   }
+  console.log(allBankDetailsForApi, apiPayload);
   if (allBankDetailsForApi.length > 0) {
+    const list: any = []
     allBankDetailsForApi.forEach((bank) => {
-      apiPayload.append(`company_bank_details[bank_account_number][]`,bank.bank_account_number);
-      apiPayload.append(`company_bank_details[bank_name][]`, bank.bank_name);
-      apiPayload.append(`company_bank_details[ifsc_code][]`, bank.ifsc_code);
-      apiPayload.append(`company_bank_details[type][]`, bank.type);
-      if (bank.photo_to_upload instanceof File) {
-        apiPayload.append(
-          `company_bank_details[primary_bank_verification_photo][]`,
-          bank.photo_to_upload
-        );
-      }
+      list.push({
+        "bank_account_number": bank.bank_account_number,
+        "bank_name": bank.bank_name,
+        "account_number": bank.bank_account_number,
+        "ifsc_code": bank.ifsc_code,
+        "verification_photo": bank.photo_to_upload
+      })
+      // apiPayload.append(`company_bank_details[bank_account_number][]`, bank.bank_account_number);
+      // apiPayload.append(`company_bank_details[bank_name][]`, bank.bank_name);
+      // apiPayload.append(`company_bank_details[ifsc_code][]`, bank.ifsc_code);
+      // apiPayload.append(`company_bank_details[type][]`, bank.type);
+      // if (bank.photo_to_upload instanceof File) {
+      //   apiPayload.append(
+      //     `company_bank_details[primary_bank_verification_photo][]`,
+      //     bank.photo_to_upload
+      //   );
+      // }
+
     });
+    appendField(`company_bank_details`, list)
   } else {
-    apiPayload.append(`company_bank_details[bank_account_number][]`, "");
-    apiPayload.append(`company_bank_details[bank_name][]`, "");
-    apiPayload.append(`company_bank_details[ifsc_code][]`, "");
-    apiPayload.append(`company_bank_details[type][]`, "");
+    appendField(`company_bank_details`, [{
+        "bank_account_number": '',
+        "bank_name": '',
+        "account_number": '',
+        "ifsc_code": '',
+        "verification_photo": ''
+      }])
+    // apiPayload.append(`company_bank_details[bank_account_number][]`, "");
+    // apiPayload.append(`company_bank_details[bank_name][]`, "");
+    // apiPayload.append(`company_bank_details[ifsc_code][]`, "");
+    // apiPayload.append(`company_bank_details[type][]`, "");
   }
   if (
     dataToProcess.company_branches &&
@@ -2958,7 +2971,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     reset(fullInitialValues);
   }, [defaultValues, reset]);
   const internalFormSubmit = (values: CompanyFormSchema) => {
-console.log(values);
+    console.log(values);
 
     onFormSubmit?.(values, formMethods);
   };

@@ -235,15 +235,14 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   const { CompanyData, CountriesData, ContinentsData } =
     useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  console.log("CompanyData?.data", CompanyData);
 
   // FIX: Initialize state assuming CompanyData?.data is an object like { data: [], total: 0 }
   const [companyList, setCompanyList] = useState<CompanyItem[]>(
-    CompanyData?.data ?? []
+    CompanyData ?? []
   );
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
   const [companyListTotal, setCompanyListTotal] = useState<number>(
-    CompanyData?.data?.total ?? 0
+    CompanyData?.length ?? 0
   );
 
   useEffect(() => {
@@ -253,8 +252,9 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // FIX: Update local state correctly when CompanyData?.data from Redux changes.
   useEffect(() => {
-    setCompanyList(CompanyData?.data ?? []);
-    setCompanyListTotal(CompanyData?.data?.total ?? 0);
+
+    setCompanyList(CompanyData ?? []);
+    setCompanyListTotal(CompanyData?.length ?? 0);
   }, [CompanyData?.data]);
 
   useEffect(() => {
@@ -1316,6 +1316,13 @@ const CompanyListTable = () => {
         return 0;
       });
     }
+    for (let index = 0; index < f.length; index++) {
+      delete f[index]['created_by_user']
+      delete f[index]['updated_by_user']
+      delete f[index]['continent']
+      delete f[index]['country']
+    }
+    
     const pI = tableData.pageIndex as number;
     const pS = tableData.pageSize as number;
     return { pageData: f.slice((pI - 1) * pS, pI * pS), total: f.length };
@@ -1364,7 +1371,6 @@ const CompanyListTable = () => {
       })),
     [companyList]
   );
-
   const columns: ColumnDef<CompanyItem>[] = useMemo(
     () => [
       {
@@ -1411,6 +1417,77 @@ const CompanyListTable = () => {
           );
         },
       },
+      {
+        header: "Contact",
+        accessorKey: "company_owner",
+        size: 180,
+        cell: (props) => {
+          const {
+            company_owner,
+            company_contact_number,
+            company_email,
+            company_website,
+          } = props.row.original;
+          return (
+            <div className="text-xs flex flex-col gap-0.5">
+              {" "}
+              {company_owner && (
+                <span>
+                  <b>Owner: </b> {company_owner}
+                </span>
+              )}{" "}
+              {company_contact_number && <span>{company_contact_number}</span>}{" "}
+              {company_email && (
+                <a
+                  href={`mailto:${company_email}`}
+                  className="text-blue-600 hover:underline"
+                >
+                  {company_email}
+                </a>
+              )}{" "}
+              {company_website && (
+                <a
+                  href={company_website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline truncate"
+                >
+                  {company_website}
+                </a>
+              )}{" "}
+            </div>
+          );
+        },
+      },
+      {
+        header: "Legal IDs & Status",
+        size: 180,
+        cell: ({ row }) => {
+          const { gst_number, pan_number, status } = row.original;
+          return (
+            <div className="flex flex-col gap-1 text-[10px]">
+              {" "}
+              {gst_number && (
+                <div>
+                  <b>GST:</b> <span className="break-all">{gst_number}</span>
+                </div>
+              )}{" "}
+              {pan_number && (
+                <div>
+                  <b>PAN:</b> <span className="break-all">{pan_number}</span>
+                </div>
+              )}{" "}
+              <Tag
+                className={`${getCompanyStatusClass(
+                  status
+                )} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}
+              >
+                {status}
+              </Tag>{" "}
+            </div>
+          );
+        },
+      },
       // {
       //   header: "Preferences",
       //   size: 180,
@@ -1432,7 +1509,87 @@ const CompanyListTable = () => {
       //     );
       //   },
       // },
-
+      {
+        header: "Profile & Scores",
+        size: 190,
+        cell: ({ row }) => {
+          const {
+            total_members = 0,
+            member_participation = 0,
+            progress = 0,
+            success_score = 0,
+            trust_score = 0,
+            health_score = 0,
+            kyc_verified,
+            enable_billing,
+          } = row.original;
+          return (
+            <div className="flex flex-col gap-1.5 text-xs">
+              {" "}
+              <span>
+                <b>Members:</b> {total_members} ({member_participation}%)
+              </span>{" "}
+              <div className="flex gap-1 items-center">
+                {" "}
+                <Tooltip title={`KYC: ${kyc_verified}`}>
+                  {kyc_verified === "Yes" ? (
+                    <MdCheckCircle className="text-green-500 text-lg" />
+                  ) : (
+                    <MdCancel className="text-red-500 text-lg" />
+                  )}
+                </Tooltip>{" "}
+                <Tooltip title={`Billing: ${enable_billing}`}>
+                  {enable_billing === "Yes" ? (
+                    <MdCheckCircle className="text-green-500 text-lg" />
+                  ) : (
+                    <MdCancel className="text-red-500 text-lg" />
+                  )}
+                </Tooltip>{" "}
+              </div>{" "}
+              <Tooltip title={`Profile Completion ${progress}%`}>
+                <div className="h-1.5 w-full rounded-full bg-gray-300">
+                  <div
+                    className="rounded-full h-1.5 bg-blue-500"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+              </Tooltip>{" "}
+              <div className="grid grid-cols-3 gap-x-1 text-center mt-1">
+                {" "}
+                <Tooltip title={`Success: ${success_score}%`}>
+                  <div className="bg-green-100 dark:bg-green-500/20 text-green-700 p-0.5 rounded text-[10px]">
+                    S: {success_score}%
+                  </div>
+                </Tooltip>{" "}
+                <Tooltip title={`Trust: ${trust_score}%`}>
+                  <div className="bg-blue-100 dark:bg-blue-500/20 text-blue-700 p-0.5 rounded text-[10px]">
+                    T: {trust_score}%
+                  </div>
+                </Tooltip>{" "}
+                <Tooltip title={`Health: ${health_score}%`}>
+                  <div className="bg-purple-100 dark:bg-purple-500/20 text-purple-700 p-0.5 rounded text-[10px]">
+                    H: {health_score}%
+                  </div>
+                </Tooltip>{" "}
+              </div>{" "}
+            </div>
+          );
+        },
+      },
+      {
+        header: "Actions",
+        id: "action",
+        meta: { HeaderClass: "text-center" },
+        size: 80,
+        cell: (props) => (
+          <CompanyActionColumn
+            rowData={props.row.original}
+            onEdit={handleEditCompany}
+            onViewDetail={handleViewCompanyDetails}
+            onOpenModal={handleOpenModal}
+          />
+        ),
+      },
     ],
     [handleOpenModal] // Keep handleOpenModal dependency
   );
