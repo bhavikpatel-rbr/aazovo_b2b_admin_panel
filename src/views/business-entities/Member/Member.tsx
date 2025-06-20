@@ -681,11 +681,9 @@ const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
           dummyAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${
-                alertColors[alert.severity]
-              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
-                alertColors[alert.severity]
-              }-500/10`}
+              className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]
+                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]
+                }-500/10`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -900,12 +898,12 @@ const businessTypeOptions = [
   { value: "IT Services", label: "IT Services" },
   { value: "FinTech", label: "FinTech" },
 ];
- const businessOpportunityOptions = [
-    { value: "Indian Buyer", label: "Indian Buyer" },
-    { value: "Indian Supplier", label: "Indian Supplier" },
-    { value: "Global Buyer", label: "Global Buyer" },
-    { value: "Global Supplier", label: "Global Supplier" },
-  ];
+const businessOpportunityOptions = [
+  { value: "Indian Buyer", label: "Indian Buyer" },
+  { value: "Indian Supplier", label: "Indian Supplier" },
+  { value: "Global Buyer", label: "Global Buyer" },
+  { value: "Global Supplier", label: "Global Supplier" },
+];
 const stateOptions = [
   { value: "NY", label: "New York" },
   { value: "CA", label: "California" },
@@ -1074,7 +1072,7 @@ const ActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        
+
         <Dropdown.Item
           onClick={() => onOpenModal("notification", rowData)}
           className="flex items-center gap-2"
@@ -1082,7 +1080,7 @@ const ActionColumn = ({
           <TbBell size={18} />{" "}
           <span className="text-xs">Add as Notification</span>
         </Dropdown.Item>
-        
+
         <Dropdown.Item
           onClick={() => onOpenModal("active", rowData)}
           className="flex items-center gap-2"
@@ -1338,19 +1336,19 @@ const FormListTable = () => {
                 icon={<TbUserCircle />}
               /> */}
               <div className="text-xs">
-                <b className="text-xs text-blue-500"><em>70892{props.row.original.id}</em></b> <br />
-                <b className="texr-xs">{props.row.original.member_name || "Ajay Patel"}</b>
+                <b className="text-xs text-blue-500"><em>70892{props?.row?.original?.id || ""}</em></b> <br />
+                <b className="texr-xs">{props?.row?.original?.name || ""}</b>
               </div>
             </div>
             <div className="text-xs">
               <div className="text-xs text-gray-500">
-                {props.row.original.member_email_id || "xyz@gmail.com"}
+                {props?.row?.original?.alternate_email || ""}
               </div>
               <div className="text-xs text-gray-500">
-                {props.row.original.member_contact_number || "+91 8972940112"}
+                {props?.row?.original?.number || ""}
               </div>
               <div className="text-xs text-gray-500">
-                {props.row.original.member_location || "India"}
+                {props?.row?.original?.country?.name || ""}
               </div>
             </div>
           </div>
@@ -1363,11 +1361,11 @@ const FormListTable = () => {
         cell: (props) => (
           <div className="ml-2 rtl:mr-2 text-xs">
             <b className="text-xs ">
-              <em className="text-blue-500">{props.row.original.company_id || 5067892}</em>
-              
+              <em className="text-blue-500">{props?.row?.original?.company_id_actual || ""}</em>
+
             </b>
             <div className="text-xs flex gap-1">
-              <MdCheckCircle size={20} className="text-green-500"/>
+              <MdCheckCircle size={20} className="text-green-500" />
               <b className="">{props.row.original.company_name || "Unique Enterprise"}</b>
             </div>
           </div>
@@ -1378,7 +1376,7 @@ const FormListTable = () => {
         accessorKey: "member_status",
         size: 140,
         cell: (props) => {
-          const { member_status, member_join_date } = props.row.original;
+          const { status: member_status, created_at } = props.row.original || {};
           return (
             <div className="flex flex-col text-xs">
               <Tag className={`${statusColor[member_status]} inline capitalize`}>
@@ -1387,13 +1385,13 @@ const FormListTable = () => {
               <span className="mt-0.5">
                 <div className="text-[10px] text-gray-500 mt-0.5">
                   Joined Date:    {" "}
-                  {new Date(member_join_date)
+                  {new Date(created_at)
                     .toLocaleDateString("en-GB", {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
                     })
-                    .replace(/ /g, "/")}
+                    .replace(/ /g, "/") || "N/A"}
                 </div>
               </span>
             </div>
@@ -1408,18 +1406,18 @@ const FormListTable = () => {
           <div className="text-xs flex flex-col">
             <div>
               <Tag className="text-[10px] mb-1 bg-orange-100 text-orange-400">
-                {props.row.original.membership_stats}
+                {props?.row?.original?.status || ""}
               </Tag>
             </div>
             <span>
               <b>RM: </b>
-              {props.row.original.member_name}
+              {props?.row?.original?.name || ""}
             </span>
             <span>
-              <b>Grade: </b>A
+              <b>Grade: {props?.row?.original?.member_grade || ""}</b>
             </span>
             <span>
-              <b>Business Opportunity: </b> 
+              <b>Business Opportunity: {props?.row?.original?.business_opportunity || ""}</b>
               <span>Indian Buyer</span>
               {/* Can be Multiple , below are the options */}
               {/* <span>Indian Supplier</span>
@@ -1427,13 +1425,13 @@ const FormListTable = () => {
               <span>Global Buyer</span> */}
             </span>
             <Tooltip
-              title={`Profile: ${props.row.original.profile_completion}%`}
+              title={`Profile: ${props?.row?.original?.profile_completion || 0}%`}
             >
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
                 <div
                   className="bg-blue-500 h-1.5 rounded-full"
                   style={{
-                    width: `${props.row.original.profile_completion}%`,
+                    width: `${props?.row?.original?.profile_completion || 0}%`,
                   }}
                 ></div>
               </div>
@@ -1446,40 +1444,40 @@ const FormListTable = () => {
         accessorKey: "associated_brands",
         size: 300,
         cell: (props) => {
-          const [isOpen , setIsOpen] = useState<boolean>(false)
-          const openDialog = ()=> setIsOpen(true)
-          const closeDialog = ()=> setIsOpen(false)
+          const [isOpen, setIsOpen] = useState<boolean>(false)
+          const openDialog = () => setIsOpen(true)
+          const closeDialog = () => setIsOpen(false)
           return (
-          <div className="flex flex-col gap-1">
-            <span className="text-xs">
-              <b className="text-xs">Business Type: </b>
-              <span className="text-[11px]">
-                Manufacturer 
+            <div className="flex flex-col gap-1">
+              <span className="text-xs">
+                <b className="text-xs">Business Type: </b>
+                <span className="text-[11px]">
+                  Manufacturer
+                </span>
               </span>
-            </span>
-            <span className="text-xs">
-              <div className="flex gap-1">
-                {/* <span className="h-4 w-4 flex items-center justify-center rounded-full bg-blue-500 text-white">i</span> */}
-                <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer"/></span>
-                <b className="text-xs">Brands: </b>
-              </div>
-              <span className="text-[11px]">
-                {props.row.original.associated_brands}
+              <span className="text-xs">
+                <div className="flex gap-1">
+                  {/* <span className="h-4 w-4 flex items-center justify-center rounded-full bg-blue-500 text-white">i</span> */}
+                  <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span>
+                  <b className="text-xs">Brands: : {props?.row?.original?.brand_name || ""}</b>
+                </div>
+                <span className="text-[11px]">
+                  {props.row.original.associated_brands}
+                </span>
               </span>
-            </span>
-            <span className="text-xs">
-              <b className="text-xs">Category: </b>
-              <span className="text-[11px]">
-                {props.row.original.business_category}
+              <span className="text-xs">
+                <b className="text-xs">Category: </b>
+                <span className="text-[11px]">
+                  {props.row.original.business_category}
+                </span>
               </span>
-            </span>
-            <span className="text-xs">
-              <span className="text-[11px]">
-                <b className="text-xs">Interested: </b>
-                {props.row.original.interested_in}
+              <span className="text-xs">
+                <span className="text-[11px]">
+                  <b className="text-xs">Interested: </b>
+                  {props.row.original.interested_in}
+                </span>
               </span>
-            </span>
-            <Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}>
+              <Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}>
                 <h6>Dynamic Profile</h6>
                 <Table className="mt-6">
                   <Tr className="bg-gray-100">
@@ -1495,8 +1493,8 @@ const FormListTable = () => {
                     <Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td>
                   </Tr>
                 </Table>
-            </Dialog>
-          </div>)
+              </Dialog>
+            </div>)
         },
       },
       // {
@@ -1743,7 +1741,7 @@ const FormListTable = () => {
                 )}
               />
             </UiFormItem>
-            
+
             <UiFormItem label="Country">
               <Controller
                 name="filterCountry"
@@ -1753,7 +1751,7 @@ const FormListTable = () => {
                     isMulti
                     placeholder="Select Country"
                     options={[
-                      {label: "India", value: "India"}
+                      { label: "India", value: "India" }
                     ]}
                     value={field.value || []}
                     onChange={(val) => field.onChange(val || [])}
@@ -1761,7 +1759,7 @@ const FormListTable = () => {
                 )}
               />
             </UiFormItem>
-            
+
             <UiFormItem label="State">
               <Controller
                 name="filterState"
@@ -1846,8 +1844,8 @@ const FormListTable = () => {
                     isMulti
                     placeholder="Select"
                     options={[
-                      {label:"Yes", value: "Yes"},
-                      {label:"No", value: "No"},
+                      { label: "Yes", value: "Yes" },
+                      { label: "No", value: "No" },
                     ]}
                     value={field.value || []}
                     onChange={(val) => field.onChange(val || [])}
@@ -1864,9 +1862,9 @@ const FormListTable = () => {
                     isMulti
                     placeholder="Select Grade"
                     options={[
-                      {label:"A", value: "A"},
-                      {label:"B", value: "B"},
-                      {label:"C", value: "C"},
+                      { label: "A", value: "A" },
+                      { label: "B", value: "B" },
+                      { label: "C", value: "C" },
                     ]}
                     value={field.value || []}
                     onChange={(val) => field.onChange(val || [])}
@@ -2090,7 +2088,7 @@ const Member = () => {
               <div className="grid grid-cols-4 mb-4 gap-2">
                 <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                    <TbUsersGroup size={24}/>
+                    <TbUsersGroup size={24} />
                   </div>
                   <div>
                     <h6 className="text-blue-500">12</h6>
@@ -2099,7 +2097,7 @@ const Member = () => {
                 </Card>
                 <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                    <TbUserCheck size={24}/>
+                    <TbUserCheck size={24} />
                   </div>
                   <div>
                     <h6 className="text-green-500">12</h6>
@@ -2108,7 +2106,7 @@ const Member = () => {
                 </Card>
                 <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                    <TbUserCancel size={24}/>
+                    <TbUserCancel size={24} />
                   </div>
                   <div>
                     <h6 className="text-red-500">12</h6>
@@ -2117,7 +2115,7 @@ const Member = () => {
                 </Card>
                 <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                    <TbUserExclamation size={24}/>
+                    <TbUserExclamation size={24} />
                   </div>
                   <div>
                     <h6 className="text-pink-500">12</h6>
