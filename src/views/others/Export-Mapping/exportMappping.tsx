@@ -516,8 +516,7 @@ const ExportMapping = () => {
   useEffect(() => {
     if (masterLoadingStatus === "idle") {
       
-      const transformedData = (apiExportMappings?.data as ApiExportMapping[])
-        .map(transformApiDataToExportMappingItem)
+      const transformedData = (apiExportMappings?.data as ApiExportMapping[])?.map(transformApiDataToExportMappingItem)
         .filter((item): item is ExportMappingItem => item !== null);
       
       setExportMappings(transformedData);

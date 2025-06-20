@@ -3246,7 +3246,7 @@ export const getInquiriesAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getInquiriesAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data?.data
+        return response?.data?.data
       }
 
       return rejectWithValue(response)
@@ -3294,7 +3294,7 @@ export const addInquiriesAction = createAsyncThunk<any, any>("auth/addInquiries"
 export const editInquiriesAction = createAsyncThunk<any, any>("auth/editInquiries",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-     
+
       const response: AxiosResponse<any> = await editInquiriesAsync(data)
       if (response?.data?.status === true) {
         dispatch(getInquiriesAction())
