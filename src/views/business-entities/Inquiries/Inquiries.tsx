@@ -737,8 +737,7 @@ const InquiryListTable = () => {
             <FormItem label="Feedback Status" className="col-span-2"><Controller name="filterFeedbackStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={feedbackStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
             <FormItem label="Inquiry Date Range" className="col-span-2"><Controller name="filterInquiryDate" control={filterFormMethods.control} render={({ field }) => (<DatePickerRange placeholder="Select Inquiry Dates" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></FormItem>
             <FormItem label="Response Date Range" className="col-span-2"><Controller name="filterResponseDate" control={filterFormMethods.control} render={({ field }) => (<DatePickerRange placeholder="Select Response Dates" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></FormItem>
-            <FormItem label="Resolution Date Range" className="col-span-2"><Controller name="filterResolutionDate" control={filterFormMethods.control} render={({ field }) => (<DatePickerRange placeholder="Select Resolution Dates" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></FormItem>
-            <FormItem label="Follow-up Date Range" className="col-span-2"><Controller name="filterFollowUpDate" control={filterFormMethods.control} render={({ field }) => (<DatePickerRange placeholder="Select Follow-up Dates" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></FormItem>
+           
           </div>
         </UiForm>
       </Drawer>
