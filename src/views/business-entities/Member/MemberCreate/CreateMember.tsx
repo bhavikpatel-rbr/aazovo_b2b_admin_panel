@@ -400,8 +400,8 @@ const preparePayloadForApi = (
     number_code: formData?.contact_country_code?.value || "",
     email: formData?.email || "",
     password: formData?.password || "",
-    company_id_temp: formData?.company_name_temp?.value || "",
-    company_id_actual: formData?.company_name?.value || "",
+    company_temp: formData?.company_name_temp || "",
+    company_actual: formData?.company_name || "",
     status: formData?.status?.value || "",
     continent_id: formData?.continent_id.value || "",
     country_id: formData?.country_id.value || "",
@@ -417,24 +417,27 @@ const preparePayloadForApi = (
     alternate_email: formData?.alternate_email || "",
     botim_id: formData?.botim_id || "",
     skype_id: formData?.skype_id || "",
-    wechat_id: formData?.wechat_id || "",
-    linkedIn_profile: formData?.linkedIn_profile || "",
+    linkedIn_profile: formData?.linkedin_profile || "",
     facebook_profile: formData?.facebook_profile || "",
     instagram_handle: formData?.instagram_handle || "",
     website: formData?.website || "",
     favourite_product_id: formData?.favourite_product_id || "",
-    business_opportunity: formData?.business_opportunity || "",
-    member_grade: formData?.member_grade || "",
-    relationship_manager_id: formData?.relationship_manager_id || "",
-    dealing_in_bulk: formData?.dealing_in_bulk || "",
-    remarks: formData?.remarks || "",
+    business_opportunity: formData?.business_opportunity?.value || "",
+    member_grade: formData?.member_grade?.value || "",
+    dealing_in_bulk: formData?.dealing_in_bulk || "No",
     product_upload_permission: formData?.product_upload_permission || false,
     wall_enquiry_permission: formData?.wall_enquiry_permission || false,
     enquiry_permission: formData?.enquiry_permission || false,
     trade_inquiry_allowed: formData?.trade_inquiry_allowed || false,
-    membership_plan_current: formData?.membership_plan_current || "",
-    upgrade_your_plan: formData?.upgrade_your_plan || "",
     dynamic_member_profiles: formData?.dynamic_member_profiles || "",
+    interested_in: formData?.interested_in?.value || "",
+    upgrade_your_plan: formData?.upgrade_plan?.value || "",
+    company_name_temp: formData?.company_name_temp || "",
+    wechat_id: formData?.we_chat || "",
+    business_type: formData?.business_type?.value || "",
+    relationship_manager_id: formData?.relationship_manager?.value || "",
+    remarks: formData?.remarks || "",
+    membership_plan_current: formData?.membership_plan_text || "",
   };
 };
 
@@ -1783,6 +1786,11 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "Yes", label: "Yes" },
     { value: "No", label: "No" },
   ];
+  const interestedinOption = [
+    { value: "For Sell", label: "For Sell" },
+    { value: "For Buy", label: "For Buy" },
+    { value: "Both", label: "Both" },
+  ];
   const memberTypeOptions = [
     { value: "INS - PREMIUM", label: "INS - PREMIUM" },
     { value: "INS - SUPER", label: "INS - SUPER" },
@@ -1860,6 +1868,24 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
             )}
           />
         </FormItem>
+        <FormItem
+          label={<div>Interested Categories</div>}
+          invalid={!!errors.interested_in}
+          errorMessage={errors.interested_in?.message as string}
+        >
+          <Controller
+            name="interested_in"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select interested categories"
+                options={interestedinOption}
+                isClearable
+              />
+            )}
+          />
+        </FormItem>
         {/* <FormItem
           label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
           invalid={!!errors.interested_category_ids}
@@ -1871,7 +1897,6 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
             render={({ field }) => (
               <Select
                 {...field}
-                isMulti
                 placeholder="Select interested categories"
                 options={categoryOptions}
                 isClearable
@@ -2150,7 +2175,7 @@ const PersonalDetailsComponent = ({
   }));
 
   const companyOptions = CompanyData.data.map((c: any) => ({
-    value: String(c.company_id),
+    value: String(c.id),
     label: c.company_name,
   })); // Assumes structure {id, name}
   const statusOptions = [
@@ -2271,11 +2296,11 @@ const PersonalDetailsComponent = ({
             name="company_name"
             control={control}
             render={({ field }) => (
-              <Select
-                placeholder="Select official company"
-                options={companyOptions}
+              <Input
+                placeholder="Enter company name"
+                // options={companyOptions}
                 {...field}
-                isClearable
+                // isClearable
               />
             )}
           />
@@ -3104,6 +3129,9 @@ const MemberCreate = () => {
       formValues as Partial<MemberFormSchema>,
       isEditMode
     );
+
+    console.log(payload, "Payload to be sent to API", formValues);
+
     try {
       if (isEditMode && id) {
         await dispatch(editMemberAction(payload)).unwrap();
@@ -3120,7 +3148,7 @@ const MemberCreate = () => {
           </Notification>
         );
       }
-      navigate("/business-entities/member");
+      // navigate("/business-entities/member");
     } catch (error: any) {
       const errorMessage =
         error?.message ||
