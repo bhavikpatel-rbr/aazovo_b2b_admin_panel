@@ -115,12 +115,12 @@ export type CompanyItem = {
   brands: string[];
   country: string;
   status:
-    | "Active"
-    | "Pending"
-    | "Inactive"
-    | "Verified"
-    | "active"
-    | "inactive";
+  | "Active"
+  | "Pending"
+  | "Inactive"
+  | "Verified"
+  | "active"
+  | "inactive";
   progress: number;
   gst_number?: string;
   pan_number?: string;
@@ -235,8 +235,8 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   const { CompanyData, CountriesData, ContinentsData } =
     useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  console.log("CompanyData?.data", CompanyData?.data);
-  
+  console.log("CompanyData?.data", CompanyData);
+
   // FIX: Initialize state assuming CompanyData?.data is an object like { data: [], total: 0 }
   const [companyList, setCompanyList] = useState<CompanyItem[]>(
     CompanyData?.data ?? []
@@ -883,11 +883,9 @@ const ViewAlertDialog: React.FC<{
           dummyAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${
-                alertColors[alert.severity]
-              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
-                alertColors[alert.severity]
-              }-500/10`}
+              className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]
+                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]
+                }-500/10`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -1434,7 +1432,7 @@ const CompanyListTable = () => {
       //     );
       //   },
       // },
-      
+
     ],
     [handleOpenModal] // Keep handleOpenModal dependency
   );
@@ -1948,7 +1946,7 @@ const Company = () => {
                   <TbBuilding size={16} />
                 </div>
                 <div className="flex flex-col gap-0">
-                  <b className="text-sm ">8</b> 
+                  <b className="text-sm ">8</b>
                   <span className="text-[9px] font-semibold">Total</span>
                 </div>
               </Card>
