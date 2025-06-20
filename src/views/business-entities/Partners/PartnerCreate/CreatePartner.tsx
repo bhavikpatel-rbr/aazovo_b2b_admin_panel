@@ -1064,10 +1064,11 @@ const CompanyDetailsSection = ({
     label: value.name,
   }));
   const ownershipTypeOptions = [
-    { value: "Proprietorship", label: "Proprietorship" },
-    { value: "Partnership", label: "Partnership" },
-    { value: "Private Limited", label: "Private Limited" },
-    { value: "Public Limited", label: "Public Limited" },
+    { value: "Sole Proprietorship", label: "Sole Proprietorship" },
+    { value: "Partner", label: "Partner" },
+    { value: "LLC", label: "LLC" },
+    { value: "Corporate", label: "Corporate" }, 
+    { value: "Others", label: "Others" },
   ];
   const primaryBusinessTypeOptions = [
     { value: "manufacturer", label: "Manufacturer" },
@@ -1202,7 +1203,7 @@ const CompanyDetailsSection = ({
               render={({ field }) => (
                 <Select
                   options={countryCodeOptions}
-                  className="w-40"
+                  className="w-28"
                   {...field}
                 />
               )}
@@ -1224,7 +1225,7 @@ const CompanyDetailsSection = ({
               render={({ field }) => (
                 <Select
                   options={countryCodeOptions}
-                  className="w-40"
+                  className="w-28"
                   {...field}
                 />
               )}
@@ -1283,20 +1284,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>
-        <FormItem
-          label="Partner Address"
-          invalid={!!errors.company_address}
-          errorMessage={errors.company_address?.message as string}
-          className="md:col-span-3"
-        >
-          <Controller
-            name="company_address"
-            control={control}
-            render={({ field }) => (
-              <Input textArea placeholder="Partner Address" {...field} />
-            )}
-          />
-        </FormItem>
+       
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
         <FormItem
@@ -1371,6 +1359,20 @@ const CompanyDetailsSection = ({
           />
         </FormItem>
       </div>
+      <FormItem
+        label="Partner Address"
+        invalid={!!errors.company_address}
+        errorMessage={errors.company_address?.message as string}
+        className="md:col-span-3"
+      >
+        <Controller
+          name="company_address"
+          control={control}
+          render={({ field }) => (
+            <Input placeholder="Partner Address" {...field} />
+          )}
+        />
+      </FormItem>
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>{" "}
       <div className="grid md:grid-cols-4 gap-3">
         {" "}
