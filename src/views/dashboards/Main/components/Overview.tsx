@@ -124,7 +124,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     )
 
     const statusColor = {
-        Active: "bg-green-200 text-green-600",
+        Active: "bg-green-200 text-green-600 ",
         Verified: "bg-blue-200 text-blue-600",
         Pending: "bg-orange-200 text-orange-600",
         Inactive: "bg-red-200 text-red-600",
@@ -310,13 +310,13 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             cell: props => (
                 <div className='flex flex-col gap-1'>
                     <span className="flex flex-wrap gap-1 text-xs items-center">
-                        <h6 className="text-sm">Members: <span className='font-normal'>{props.row.original.noOfMember}</span></h6> 
+                        <h6 className="text-xs">Members: <span className='font-normal'>{props.row.original.noOfMember}</span></h6> 
                     </span>
                     <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-sm">GST: <span className='font-normal'>AZXRFDRDSDDADA</span></h6>
+                        <h6 className="text-xs">GST: <span className='font-normal'>AZXRFDRDSDDADA</span></h6>
                     </span>
                     <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-sm">PAN: <span className='font-normal'>AZXRFDRDSD</span></h6> 
+                        <h6 className="text-xs">PAN: <span className='font-normal'>AZXRFDRDSD</span></h6> 
                     </span>
                     <div className='flex gap-1 items-center'>
                         <Tooltip title="KYC Verification : 48%" className='text-xs'>
