@@ -778,7 +778,7 @@ const Products = () => {
     [GlobalCategoriesData]
   );
   const brandOptions = useMemo(
-    () => BrandData?.map((b: any) => ({ value: b.id, label: b.name })) || [],
+    () => BrandData.length > 0 && BrandData?.map((b: any) => ({ value: b.id, label: b.name })) || [],
     [BrandData]
   );
   const unitOptions = useMemo(
