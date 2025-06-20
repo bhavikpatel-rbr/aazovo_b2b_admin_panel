@@ -789,7 +789,7 @@ const InquiryListTable = () => {
                 {d.inquiry_id}
               </span>
               <span className="text-xs text-gray-700 dark:text-gray-300">
-                {d.company_name}
+                {d.company_name || "Company Name"}
               </span>
               <Tooltip title={d.inquiry_subject}>
                 <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
@@ -798,7 +798,7 @@ const InquiryListTable = () => {
               </Tooltip>
               <div className="flex items-center gap-2 mt-1">
                 <Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
-                  {d.inquiry_type}
+                  {d.inquiry_type || "Inquiry Type"}
                 </Tag>
                 <Tag
                   className={`${

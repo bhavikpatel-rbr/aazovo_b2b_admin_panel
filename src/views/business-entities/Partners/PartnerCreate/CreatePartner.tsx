@@ -989,10 +989,10 @@ const companyNavigationList = [
   { label: "Partner Details", link: "companyDetails" },
   { label: "KYC Documents", link: "kycDocuments" },
   { label: "Bank Details", link: "bankDetails" },
-  { label: "Spot Verification", link: "spotVerification" },
+  // { label: "Spot Verification", link: "spotVerification" },
   { label: "Reference", link: "reference" },
   { label: "Accessibility", link: "accessibility" },
-  { label: "Member Management", link: "memberManagement" },
+  { label: "Team Management", link: "memberManagement" },
 ];
 type NavigatorComponentProps = {
   activeSection: string;
@@ -1064,10 +1064,11 @@ const CompanyDetailsSection = ({
     label: value.name,
   }));
   const ownershipTypeOptions = [
-    { value: "Proprietorship", label: "Proprietorship" },
-    { value: "Partnership", label: "Partnership" },
-    { value: "Private Limited", label: "Private Limited" },
-    { value: "Public Limited", label: "Public Limited" },
+    { value: "Sole Proprietorship", label: "Sole Proprietorship" },
+    { value: "Partner", label: "Partner" },
+    { value: "LLC", label: "LLC" },
+    { value: "Corporate", label: "Corporate" }, 
+    { value: "Others", label: "Others" }, 
   ];
   const primaryBusinessTypeOptions = [
     { value: "manufacturer", label: "Manufacturer" },
@@ -1075,9 +1076,7 @@ const CompanyDetailsSection = ({
   ];
   const statusOptions = [
     { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-    { value: "verified", label: "Verified" },
-    { value: "unverified", label: "Unverified" },
+    { value: "disabled", label: "Disabled" },
     { value: "unregistered", label: "Unregistered" },
   ];
   const companyTypeOptions = [
@@ -1128,8 +1127,8 @@ const CompanyDetailsSection = ({
   return (
     <Card id="companyDetails">
       <h4 className="mb-4">Primary Information</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-        <FormItem
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+        {/* <FormItem
           label="Partner Code"
           invalid={!!errors.company_code}
           errorMessage={errors.company_code?.message as string}
@@ -1141,21 +1140,7 @@ const CompanyDetailsSection = ({
               <Input placeholder="Partner Code" {...field} />
             )}
           />
-        </FormItem>
-        <FormItem
-          label={<div>Partner Name<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.name}
-          className="md:col-span-2"
-          errorMessage={errors.name?.message as string}
-        >
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Partner Name" {...field} />
-            )}
-          />
-        </FormItem>
+        </FormItem> */}
         <FormItem
           label={<div>Status<span className="text-red-500"> * </span></div>}
           invalid={!!errors.status}
@@ -1173,81 +1158,32 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
         <FormItem
-          label={<div>Primary Email ID<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.company_primary_email_id}
-          errorMessage={errors.company_primary_email_id?.message as string}
+          label={<div>Partner Name<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.name}
+          // className="md:col-span-2"
+          errorMessage={errors.name?.message as string}
         >
           <Controller
-            name="company_primary_email_id"
+            name="name"
             control={control}
             render={({ field }) => (
-              <Input type="email" placeholder="Primary Email" {...field} />
+              <Input placeholder="Partner Name" {...field} />
             )}
           />
         </FormItem>
         <FormItem
-          label={<div>Primary Contact Number<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.company_primary_contact_number}
+          label="Owner/Director Name"
+          invalid={!!errors.owner_director_proprietor_name}
           errorMessage={
-            errors.company_primary_contact_number?.message as string
+            errors.owner_director_proprietor_name?.message as string
           }
         >
-          <div className="flex items-center gap-2">
-            <Controller
-              name="primary_contact_country_code"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  options={countryCodeOptions}
-                  className="w-40"
-                  {...field}
-                />
-              )}
-            />
-            <Controller
-              name="company_primary_contact_number"
-              control={control}
-              render={({ field }) => (
-                <Input placeholder="Primary Contact" {...field} />
-              )}
-            />
-          </div>
-        </FormItem>
-        <FormItem label="Alternate Contact Number">
-          <div className="flex items-center gap-2">
-            <Controller
-              name="alternate_contact_country_code"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  options={countryCodeOptions}
-                  className="w-40"
-                  {...field}
-                />
-              )}
-            />
-            <Controller
-              name="alternate_contact_number"
-              control={control}
-              render={({ field }) => (
-                <Input placeholder="Alternate Contact" {...field} />
-              )}
-            />
-          </div>
-        </FormItem>
-        <FormItem
-          label="Alternate E-mail ID"
-          invalid={!!errors.alternate_email_id}
-          errorMessage={errors.alternate_email_id?.message as string}
-        >
           <Controller
-            name="alternate_email_id"
+            name="owner_director_proprietor_name"
             control={control}
             render={({ field }) => (
-              <Input type="email" placeholder="Alternate Email" {...field} />
+              <Input placeholder="Owner/Director Name" {...field} />
             )}
           />
         </FormItem>
@@ -1269,35 +1205,59 @@ const CompanyDetailsSection = ({
           />
         </FormItem>
         <FormItem
-          label="Owner/Director Name"
-          invalid={!!errors.owner_director_proprietor_name}
-          errorMessage={
-            errors.owner_director_proprietor_name?.message as string
-          }
+          label="Industrial Expertise"
         >
           <Controller
-            name="owner_director_proprietor_name"
+            name="industrial_expertise"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Owner/Director Name" {...field} />
+              <Select
+                placeholder="Select Expertise"
+                options={[
+                  {label:"Logistics", value:"Logistics"},
+                  {label:"CHA", value:"CHA"},
+                  {label:"Account", value:"Account"},
+                  {label:"CA", value:"CA"},
+                  {label:"Sales Consultant", value:"Sales Consultant"},
+                  {label:"HR Related Services", value:"HR Related Services"},
+                  {label:"Finance", value:"Finance"},
+                  {label:"Banking", value:"Banking"},
+                  {label:"IT", value:"IT"},
+                  {label:"Non IT Hardware", value:"Non IT Hardware"},
+                  {label:"Retail", value:"Retail"},
+                  {label:"Non Profit", value:"Non Profit"},
+                  {label:"Others", value:"Others"},
+                ]}
+                {...field}
+              />
             )}
           />
         </FormItem>
         <FormItem
-          label="Partner Address"
-          invalid={!!errors.company_address}
-          errorMessage={errors.company_address?.message as string}
-          className="md:col-span-3"
+          label="Join Us As"
         >
           <Controller
-            name="company_address"
+            name="join_us_as"
             control={control}
             render={({ field }) => (
-              <Input textArea placeholder="Partner Address" {...field} />
+              <Select
+                placeholder="Select Join us as"
+                options={[
+                  {label:"Team", value:"Team"},
+                  {label:"Remote Partner", value:"Remote Partner"},
+                  {label:"Consultant", value:"Consultant"},
+                  {label:"Auditor", value:"Auditor"},
+                  {label:"Other", value:"Other"},
+                ]}
+                {...field}
+              />
             )}
           />
         </FormItem>
       </div>
+
+      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
         <FormItem
           label="Continent"
@@ -1371,11 +1331,162 @@ const CompanyDetailsSection = ({
           />
         </FormItem>
       </div>
+      <FormItem
+        label="Partner Address"
+        invalid={!!errors.company_address}
+        errorMessage={errors.company_address?.message as string}
+        className="md:col-span-3"
+      >
+        <Controller
+          name="company_address"
+          control={control}
+          render={({ field }) => (
+            <Input placeholder="Partner Address" {...field} />
+          )}
+        />
+      </FormItem>
+
+      <hr className="my-6" /> <h4 className="mb-4">Contact Information</h4>{" "}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4  gap-2">
+        <FormItem
+          label={<div>Primary Email ID<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.company_primary_email_id}
+          errorMessage={errors.company_primary_email_id?.message as string}
+        >
+          <Controller
+            name="company_primary_email_id"
+            control={control}
+            render={({ field }) => (
+              <Input type="email" placeholder="Primary Email" {...field} />
+            )}
+          />
+        </FormItem>
+       
+        <FormItem
+          label="Alternate E-mail ID"
+          invalid={!!errors.alternate_email_id}
+          errorMessage={errors.alternate_email_id?.message as string}
+        >
+          <Controller
+            name="alternate_email_id"
+            control={control}
+            render={({ field }) => (
+              <Input type="email" placeholder="Alternate Email" {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Support Email"
+          invalid={!!errors.support_email}
+          errorMessage={errors.support_email?.message as string}
+        >
+          <Controller
+            name="support_email"
+            control={control}
+            render={({ field }) => (
+              <Input
+                type="email"
+                placeholder="support@example.com"
+                {...field}
+              />
+            )}
+          />
+        </FormItem>{" "}
+        
+        <FormItem label="Notification Email">
+          <Controller
+            name="notification_email"
+            control={control}
+            render={({ field }) => (
+              <Input
+                type="email"
+                placeholder="notifications@example.com"
+                {...field}
+              />
+            )}
+          />
+        </FormItem>{" "}
+      </div>
+      <div className="grid md:grid-cols-3 gap-3">
+        <FormItem
+          label={<div>Primary Contact Number<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.company_primary_contact_number}
+          errorMessage={
+            errors.company_primary_contact_number?.message as string
+          }
+        >
+          <div className="flex items-center gap-2">
+            <Controller
+              name="primary_contact_country_code"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  options={countryCodeOptions}
+                  className="w-28"
+                  {...field}
+                />
+              )}
+            />
+            <Controller
+              name="company_primary_contact_number"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="Primary Contact" {...field} />
+              )}
+            />
+          </div>
+        </FormItem>
+        <FormItem label="Alternate Contact Number">
+          <div className="flex items-center gap-2">
+            <Controller
+              name="alternate_contact_country_code"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  options={countryCodeOptions}
+                  className="w-28"
+                  {...field}
+                />
+              )}
+            />
+            <Controller
+              name="alternate_contact_number"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="Alternate Contact" {...field} />
+              )}
+            />
+          </div>
+        </FormItem>
+        <FormItem label="General Mobile">
+          <div className="flex items-center gap-2">
+            <Controller
+              name="general_mobile_country_code"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  options={countryCodeOptions}
+                  className="w-28"
+                  {...field}
+                />
+              )}
+            />
+            <Controller
+              name="mobile"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="General Mobile" {...field} />
+              )}
+            />
+          </div>
+        </FormItem>
+      </div>
+
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>{" "}
       <div className="grid md:grid-cols-4 gap-3">
         {" "}
         <FormItem
-          label="GST Number"
+          label={<div>GST Number<span className="text-red-500"> * </span></div>}
           invalid={!!errors.gst_number}
           errorMessage={errors.gst_number?.message as string}
         >
@@ -1388,7 +1499,7 @@ const CompanyDetailsSection = ({
           />
         </FormItem>{" "}
         <FormItem
-          label="PAN Number"
+          label={<div>PAN Number<span className="text-red-500"> * </span></div>}
           invalid={!!errors.pan_number}
           errorMessage={errors.pan_number?.message as string}
         >
@@ -1428,7 +1539,7 @@ const CompanyDetailsSection = ({
         </FormItem>{" "}
       </div>{" "}
       <hr className="my-6" /> <h4 className="mb-4">Partner Information</h4>{" "}
-      <div className="grid md:grid-cols-3 gap-3">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
         {" "}
         <FormItem
           label="Establishment Year"
@@ -1443,23 +1554,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>{" "}
-        <FormItem
-          label="No. of Employees"
-          invalid={!!errors.no_of_employees}
-          errorMessage={errors.no_of_employees?.message as string}
-        >
-          <Controller
-            name="no_of_employees"
-            control={control}
-            render={({ field }) => (
-              <NumericInput
-                placeholder="e.g., 100"
-                {...field}
-                onChange={(value) => field.onChange(value)}
-              />
-            )}
-          />
-        </FormItem>{" "}
+        
         <FormItem
           label="Partner Website"
           invalid={!!errors.company_website}
@@ -1499,6 +1594,23 @@ const CompanyDetailsSection = ({
             )}
         </FormItem>{" "}
         <FormItem
+          label="No. of Employees"
+          invalid={!!errors.no_of_employees}
+          errorMessage={errors.no_of_employees?.message as string}
+        >
+          <Controller
+            name="no_of_employees"
+            control={control}
+            render={({ field }) => (
+              <NumericInput
+                placeholder="e.g., 100"
+                {...field}
+                onChange={(value) => field.onChange(value)}
+              />
+            )}
+          />
+        </FormItem>{" "}
+        {/* <FormItem
           label="Primary Business Type"
           invalid={!!errors.primary_business_type}
           errorMessage={errors.primary_business_type?.message as string}
@@ -1514,7 +1626,7 @@ const CompanyDetailsSection = ({
               />
             )}
           />
-        </FormItem>{" "}
+        </FormItem>{" "} */}
         {/* <FormItem
           label="Primary Business Category"
           invalid={!!errors.primary_business_category}
@@ -1575,45 +1687,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>{" "} */}
-        <FormItem
-          label="Support Email"
-          invalid={!!errors.support_email}
-          errorMessage={errors.support_email?.message as string}
-        >
-          <Controller
-            name="support_email"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="email"
-                placeholder="support@example.com"
-                {...field}
-              />
-            )}
-          />
-        </FormItem>{" "}
-        <FormItem label="General Mobile">
-          <Controller
-            name="mobile"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Partner Mobile" {...field} />
-            )}
-          />
-        </FormItem>{" "}
-        <FormItem label="Notification Email">
-          <Controller
-            name="notification_email"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="email"
-                placeholder="notifications@example.com"
-                {...field}
-              />
-            )}
-          />
-        </FormItem>{" "}
+        
         {/* <FormItem label="Brands">
           <Controller
             name="brands"
@@ -1666,18 +1740,18 @@ const CompanyDetailsSection = ({
           `company_certificates.${index}.upload_certificate`
         );
         return (
-          <Card key={item.id} className="mb-4 p-4 border">
-            <div className="grid md:grid-cols-7 gap-3 items-end">
-              <FormItem label="Certificate ID" className="col-span-2">
+          <Card key={item.id} className="mb-4 rounded-md border-black dark:border-gray-100 relative">
+            <div className="grid md:grid-cols-10 gap-3 items-center">
+              <FormItem label="Certificate ID" className="col-span-3">
                 <Controller
                   name={`company_certificates.${index}.certificate_id`}
                   control={control}
                   render={({ field }) => (
-                    <Input placeholder="e.g., 12345" {...field} />
+                    <Input placeholder="e.g., 1345" {...field} />
                   )}
                 />
               </FormItem>
-              <FormItem label="Certificate Name" className="col-span-2">
+              <FormItem label="Certificate Name" className="col-span-3">
                 <Controller
                   name={`company_certificates.${index}.certificate_name`}
                   control={control}
@@ -1686,7 +1760,7 @@ const CompanyDetailsSection = ({
                   )}
                 />
               </FormItem>
-              <FormItem label="Upload Certificate" className="col-span-2">
+              <FormItem label="Upload Certificate" className="col-span-3">
                 <Controller
                   name={`company_certificates.${index}.upload_certificate`}
                   control={control}
@@ -1711,12 +1785,12 @@ const CompanyDetailsSection = ({
                   )}
               </FormItem>
               <Button
+                className="border mt-2"
                 type="button"
                 shape="circle"
                 size="sm"
                 icon={<TbTrash />}
                 onClick={() => removeCert(index)}
-                danger
               />
             </div>
           </Card>
@@ -1745,8 +1819,8 @@ const CompanyDetailsSection = ({
         </Button>
       </div>{" "}
       {branchFields.map((item, index) => (
-        <Card key={item.id} className="mb-4 p-4 border">
-          <div className="grid md:grid-cols-3 gap-3">
+        <Card key={item.id} className="mb-4 rounded-md border-black dark:border-gray-100 relative">
+          <div className="grid md:grid-cols-3 gap-x-3 gap-y-1">
             <FormItem label="Office Type">
               <Controller
                 name={`company_branches.${index}.office_type`}
@@ -1814,20 +1888,18 @@ const CompanyDetailsSection = ({
                 name={`company_branches.${index}.branch_address`}
                 control={control}
                 render={({ field }) => (
-                  <Input textArea placeholder="Full Address" {...field} />
+                  <Input placeholder="Full Address" {...field} />
                 )}
               />
             </FormItem>
-            <div className="md:col-span-3 flex justify-end">
               <Button
+                className="absolute top-2 right-2 text-xs"
                 type="button"
-                shape="circle"
+                variant="plain"
                 size="sm"
                 icon={<TbTrash />}
                 onClick={() => removeBranch(index)}
-                danger
-              />
-            </div>
+              >Remove</Button>
           </div>
         </Card>
       ))}{" "}
@@ -1844,22 +1916,16 @@ const KYCDetailSection = ({
   const { watch } = formMethods;
   const kycDocs = [
     {
-      label: "206AB Declaration",
-      name: "declaration_206ab" as const,
-      remarkName: "declaration_206ab_remark" as const,
-      enabledName: "declaration_206ab_remark_enabled" as const,
+      label: "Aadhar Card",
+      name: "aadhar_card" as const,
+      remarkName: "aadhar_card_remark" as const,
+      enabledName: "aadhar_card_remark_enabled" as const,
     },
     {
-      label: "194Q Declaration",
-      name: "declaration_194q" as const,
-      remarkName: "declaration_194q_remark" as const,
-      enabledName: "declaration_194q_remark_enabled" as const,
-    },
-    {
-      label: "Office Photo",
-      name: "office_photo" as const,
-      remarkName: "office_photo_remark" as const,
-      enabledName: "office_photo_remark_enabled" as const,
+      label: "PAN Card",
+      name: "pan_card" as const,
+      remarkName: "pan_card_remark" as const,
+      enabledName: "pan_card_remark_enabled" as const,
     },
     {
       label: "GST Certificate",
@@ -1885,17 +1951,29 @@ const KYCDetailSection = ({
       remarkName: "cancel_cheque_remark" as const,
       enabledName: "cancel_cheque_remark_enabled" as const,
     },
+    // {
+    //   label: "206AB Declaration",
+    //   name: "declaration_206ab" as const,
+    //   remarkName: "declaration_206ab_remark" as const,
+    //   enabledName: "declaration_206ab_remark_enabled" as const,
+    // },
+    // {
+    //   label: "194Q Declaration",
+    //   name: "declaration_194q" as const,
+    //   remarkName: "declaration_194q_remark" as const,
+    //   enabledName: "declaration_194q_remark_enabled" as const,
+    // },
     {
-      label: "Aadhar Card",
-      name: "aadhar_card" as const,
-      remarkName: "aadhar_card_remark" as const,
-      enabledName: "aadhar_card_remark_enabled" as const,
+      label: "Agreement / Quotation",
+      name: "agreement" as const,
+      remarkName: "agreement_remark" as const,
+      enabledName: "agreement_remark_enabled" as const,
     },
     {
-      label: "PAN Card",
-      name: "pan_card" as const,
-      remarkName: "pan_card_remark" as const,
-      enabledName: "pan_card_remark_enabled" as const,
+      label: "Office Photo",
+      name: "office_photo" as const,
+      remarkName: "office_photo_remark" as const,
+      enabledName: "office_photo_remark_enabled" as const,
     },
     {
       label: "Other Document",
@@ -1908,7 +1986,7 @@ const KYCDetailSection = ({
     <Card id="kycDocuments">
       {" "}
       <h5 className="mb-4">Current Documents</h5>{" "}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
         {" "}
         {kycDocs.map((doc) => {
           const isVerified = watch(doc.enabledName);
@@ -1921,7 +1999,7 @@ const KYCDetailSection = ({
           return (
             <div key={doc.name}>
               {" "}
-              <label className="flex items-center gap-2 mb-1">
+              <label className="flex items-center gap-2 mb-2">
                 {" "}
                 <Controller
                   name={doc.enabledName}
@@ -1998,7 +2076,6 @@ const KYCDetailSection = ({
                   control={control}
                   render={({ field }) => (
                     <Input
-                      textArea
                       placeholder={`Remark for ${doc.label}`}
                       {...field}
                     />
@@ -2189,8 +2266,8 @@ const BankDetailsSection = ({
           `additional_bank_details.${index}.bank_verification_photo`
         );
         return (
-          <Card key={item.id} className="mb-4 p-4 border">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-start">
+          <Card key={item.id} className="mb-4 border-black rounded-md relative">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
               <FormItem label={`Type`}>
                 <Controller
                   name={`additional_bank_details.${index}.type`}
@@ -2260,16 +2337,14 @@ const BankDetailsSection = ({
                   />
                 )}
               </FormItem>
-              <div className="md:col-span-3 flex justify-end">
-                <Button
-                  type="button"
-                  shape="circle"
-                  size="sm"
-                  icon={<TbTrash />}
-                  onClick={() => remove(index)}
-                  danger
-                />
-              </div>
+              <Button
+                type="button"
+                variant="plain"
+                className="absolute text-xs right-2 top-2"
+                size="sm"
+                icon={<TbTrash size={16}/>}
+                onClick={() => remove(index)}
+              >Remove</Button>
             </div>
           </Card>
         );
@@ -2315,15 +2390,14 @@ const SpotVerificationSection = ({
           `company_spot_verification_data.${index}.photo_upload`
         );
         return (
-          <Card key={item.id} className="mb-4 p-4 border">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <Card key={item.id} className="mb-4 border-black rounded-md relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 items-start">
               <div className="flex items-center gap-4">
                 <Controller
                   name={`company_spot_verification_data.${index}.is_verified`}
                   control={control}
                   render={({ field }) => (
                     <Checkbox checked={!!field.value} onChange={field.onChange}>
-                      Verified
                     </Checkbox>
                   )}
                 />
@@ -2367,7 +2441,6 @@ const SpotVerificationSection = ({
                   control={control}
                   render={({ field }) => (
                     <Input
-                      textArea
                       placeholder="Add remarks here..."
                       {...field}
                     />
@@ -2375,15 +2448,15 @@ const SpotVerificationSection = ({
                 />
               </FormItem>
             </div>
-            <div className="flex justify-end mt-2">
+            <div className="flex justify-center absolute top-2 right-2">
               <Button
                 type="button"
-                shape="circle"
+                variant="plain"
                 size="sm"
-                icon={<TbTrash />}
+                className="text-xs"
+                icon={<TbTrash size={16}/>}
                 onClick={() => remove(index)}
-                danger
-              />
+              >Remove</Button>
             </div>
           </Card>
         );
@@ -2424,8 +2497,8 @@ const ReferenceSection = ({
         </Button>
       </div>
       {fields.map((item, index) => (
-        <Card key={item.id} className="mb-4 p-4 border">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+        <Card key={item.id} className="mb-4 border-black rounded-md relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 items-start">
             <FormItem label="Person Name">
               <Controller
                 name={`references.${index}.person_name`}
@@ -2435,7 +2508,7 @@ const ReferenceSection = ({
                 )}
               />
             </FormItem>
-            <FormItem label="Partner Name">
+            <FormItem label="Company Name">
               <Controller
                 name={`references.${index}.company_name`}
                 control={control}
@@ -2459,7 +2532,6 @@ const ReferenceSection = ({
                 control={control}
                 render={({ field }) => (
                   <Input
-                    textArea
                     placeholder="Add remarks here..."
                     {...field}
                   />
@@ -2467,15 +2539,16 @@ const ReferenceSection = ({
               />
             </FormItem>
           </div>
-          <div className="flex justify-end mt-2">
+          <div className="flex justify-center absolute top-2 right-2">
             <Button
               type="button"
-              shape="circle"
+              variant="plain"
               size="sm"
-              icon={<TbTrash />}
+              className="text-xs"
+              icon={<TbTrash size={16}/>}
               onClick={() => remove(index)}
-              danger
-            />
+            > Remove
+              </Button>
           </div>
         </Card>
       ))}
@@ -2502,7 +2575,7 @@ const AccessibilitySection = ({
     <Card id="accessibility">
       {" "}
       <h4 className="mb-6">Accessibility & Configuration</h4>{" "}
-      <div className="grid grid-cols-1 gap-y-6">
+      <div className="grid grid-cols-1 gap-y-4">
         {" "}
         <div className="flex items-center gap-x-8">
           {" "}
@@ -2531,7 +2604,7 @@ const AccessibilitySection = ({
         </div>{" "}
         <hr />{" "}
         <div className="flex justify-between items-center mb-2">
-          <h5 className="mb-0">Billing Documents</h5>
+          <h5 className="mb-0">Transaction Documents</h5>
           <Button
             type="button"
             icon={<TbPlus />}
@@ -2540,7 +2613,7 @@ const AccessibilitySection = ({
               append({ document_name: "", document_file: undefined })
             }
           >
-            Add Billing Doc
+            Add Transaction Doc
           </Button>
         </div>{" "}
         {fields.map((item, index) => {
@@ -2548,9 +2621,9 @@ const AccessibilitySection = ({
             `billing_documents.${index}.document_file`
           );
           return (
-            <Card key={item.id} className="p-4 border">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
-                <FormItem label="Document Name" className="md:col-span-3">
+            <Card key={item.id} className="border-black rounded-md ">
+              <div className="grid grid-cols-1 md:grid-cols-9 gap-4 items-center">
+                <FormItem label="Document Name" className="md:col-span-4">
                   <Controller
                     name={`billing_documents.${index}.document_name`}
                     control={control}
@@ -2559,7 +2632,7 @@ const AccessibilitySection = ({
                     )}
                   />
                 </FormItem>
-                <FormItem label="Upload Document" className="md:col-span-2">
+                <FormItem label="Upload Document" className="md:col-span-4">
                   <Controller
                     name={`billing_documents.${index}.document_file`}
                     control={control}
@@ -2587,15 +2660,14 @@ const AccessibilitySection = ({
                   type="button"
                   shape="circle"
                   size="sm"
-                  icon={<TbTrash />}
+                  className="mt-2"
+                  icon={<TbTrash size={16} />}
                   onClick={() => remove(index)}
-                  danger
                 />
               </div>
             </Card>
           );
         })}{" "}
-        <hr />{" "}
         {/* <FormItem label="Domain Management">
           <Controller
             name="DOMAIN_MANAGEMENT_FIELD"
@@ -2610,7 +2682,7 @@ const AccessibilitySection = ({
             )}
           />
         </FormItem>{" "} */}
-        <Card className="mt-4 col-span-full">
+        {/* <Card className="mt-4 col-span-full">
           <hr className="my-6" />
           <h4 className="mb-4">Social Media Links</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -2680,7 +2752,7 @@ const AccessibilitySection = ({
               />
             </FormItem>
           </div>
-        </Card>{" "}
+        </Card>{" "} */}
       </div>{" "}
     </Card>
   );
@@ -2713,24 +2785,8 @@ const MemberManagementSection = ({
     <Card id="memberManagement">
       {" "}
       <div className="flex justify-between items-center mb-4">
-        <h4 className="mb-0">Member Management</h4>
+        <h4 className="mb-0">Team Management</h4>
         <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            icon={<TbPlus />}
-            onClick={() =>
-              append({
-                type: "member",
-                member: undefined,
-                designation: "",
-                person_name: "",
-                contact_number: "",
-              })
-            }
-          >
-            Add Member
-          </Button>
           <Button
             type="button"
             size="sm"
@@ -2748,16 +2804,33 @@ const MemberManagementSection = ({
           >
             Add Team
           </Button>
-          <Button type="button" size="sm" icon={<TbPlus />}>
+          {/* <Button
+            type="button"
+            size="sm"
+            icon={<TbPlus />}
+            onClick={() =>
+              append({
+                type: "member",
+                member: undefined,
+                designation: "",
+                person_name: "",
+                contact_number: "",
+              })
+            }
+          >
+            Add Member
+          </Button> */}
+          
+          {/* <Button type="button" size="sm" icon={<TbPlus />}>
             <NavLink to="/business-entities/member-create">
               Create New Member
             </NavLink>
-          </Button>
+          </Button> */}
         </div>
       </div>{" "}
       {fields.map((item, index) => (
-        <Card key={item.id} className="mb-4 p-4 border">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
+        <Card key={item.id} className="border-black relative rounded-md">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 items-center">
             <FormItem label={item.type === "team" ? "Team Name" : "Member"}>
               <Controller
                 name={`members.${index}.${item.type === "team" ? "team_name" : "member"}`}
@@ -2805,12 +2878,12 @@ const MemberManagementSection = ({
             <div className="md:col-span-4 flex justify-end">
               <Button
                 type="button"
-                shape="circle"
+                variant="plain"
                 size="sm"
-                icon={<TbTrash />}
+                className="absolute top-2 right-2 text-xs"
+                icon={<TbTrash size={16} />}
                 onClick={() => remove(index)}
-                danger
-              />
+              >Remove</Button>
             </div>
           </div>
         </Card>
@@ -2915,8 +2988,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         return <KYCDetailSection {...sectionProps} />;
       case "bankDetails":
         return <BankDetailsSection {...sectionProps} />;
-      case "spotVerification":
-        return <SpotVerificationSection {...sectionProps} />;
+      // case "spotVerification":
+      //   return <SpotVerificationSection {...sectionProps} />;
       case "reference":
         return <ReferenceSection {...sectionProps} />;
       case "accessibility":

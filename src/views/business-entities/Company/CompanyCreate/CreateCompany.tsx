@@ -1085,10 +1085,7 @@ const CompanyDetailsSection = ({
   ];
   const statusOptions = [
     { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-    { value: "verified", label: "Verified" },
-    { value: "unverified", label: "Unverified" },
-    { value: "unregistered", label: "Unregistered" },
+    { value: "Disabled", label: "Disabled" },
   ];
   const companyTypeOptions = [
     { value: "TypeA", label: "Type A" },
@@ -1866,7 +1863,7 @@ const CompanyDetailsSection = ({
                 name={`company_branches.${index}.branch_address`}
                 control={control}
                 render={({ field }) => (
-                  <Input textArea placeholder="Full Address" {...field} />
+                  <Input placeholder="Full Address" {...field} />
                 )}
               />
             </FormItem>
