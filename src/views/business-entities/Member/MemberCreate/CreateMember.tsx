@@ -1,8 +1,10 @@
 // src/views/members/MemberFormPage.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import { useAppDispatch } from "@/reduxtool/store";
+import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
+import cloneDeep from "lodash/cloneDeep";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Control,
   Controller,
@@ -11,11 +13,9 @@ import {
   useForm,
   UseFormReturn,
 } from "react-hook-form";
-import { NavLink, useNavigate, useParams, Link } from "react-router-dom";
 import { shallowEqual, useSelector } from "react-redux";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
-import cloneDeep from "lodash/cloneDeep";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -23,7 +23,6 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import StickyFooter from "@/components/shared/StickyFooter";
-import Button from "@/components/ui/Button";
 import {
   Card,
   Dialog,
@@ -35,77 +34,67 @@ import {
   Radio,
   Tag,
 } from "@/components/ui";
+import Button from "@/components/ui/Button";
+import Checkbox from "@/components/ui/Checkbox";
 import Notification from "@/components/ui/Notification";
 import Select from "@/components/ui/Select";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
-import Checkbox from "@/components/ui/Checkbox";
 
 // Icons
-import { BsThreeDotsVertical } from "react-icons/bs";
 import { BiChevronRight } from "react-icons/bi";
-import { HiPlus, HiTrash } from "react-icons/hi";
+import { BsThreeDotsVertical } from "react-icons/bs";
+import { HiPlus } from "react-icons/hi";
 import {
-  TbPencil,
-  TbTrash,
-  TbChecks,
-  TbEye,
-  TbSearch,
-  TbFilter,
-  TbPlus,
-  TbCloudUpload,
-  TbUserCircle,
-  TbMail,
-  TbPhone,
-  TbBuilding,
-  TbMessageDots,
-  TbClipboardText,
-  TbStar,
-  TbPaperclip,
-  TbToggleRight,
-  TbReload,
-  TbMailShare,
-  TbBrandWhatsapp,
   TbBell,
-  TbTagStarred,
+  TbBrandWhatsapp,
+  TbBuilding,
   TbCalendarClock,
-  TbUserQuestion,
-  TbEyeClosed,
-  TbBellMinus,
-  TbPencilPin,
-  TbFileTime,
-  TbStars,
+  TbChecks,
+  TbClipboardText,
+  TbEye,
+  TbMail,
+  TbMailShare,
+  TbMessageDots,
+  TbPaperclip,
+  TbPencil,
+  TbPhone,
+  TbSearch,
+  TbStar,
+  TbTagStarred,
+  TbToggleRight,
+  TbTrash,
   TbUser,
+  TbUserCircle
 } from "react-icons/tb";
 
 // Redux Actions & Selectors
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addMemberAction,
+  addRequestFeedbackAction,
+  deleteAllRequestFeedbacksAction,
+  deleteRequestFeedbackAction,
   editMemberAction,
-  getMemberByIdAction,
-  getContinentsAction,
-  getCountriesAction,
-  getCompanyAction,
+  editRequestFeedbackAction,
   getBrandAction,
   getCategoriesAction,
-  getSubcategoriesByIdAction,
-  // Actions for the listing component
-  getRequestFeedbacksAction,
-  addRequestFeedbackAction,
-  editRequestFeedbackAction,
-  deleteRequestFeedbackAction,
-  deleteAllRequestFeedbacksAction,
+  getCompanyAction,
+  getContinentsAction,
+  getCountriesAction,
   getEmployeesAction,
+  getMemberByIdAction,
+  // Actions for the listing component
+  getRequestFeedbacksAction
 } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // Types
+import type { TableQueries } from "@/@types/common";
 import type {
-  OnSortParam,
   ColumnDef,
+  OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
 
 // --- Type Definitions (Main Member Form) ---
 export interface MemberFormSchema {
@@ -385,10 +374,58 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- Helper Functions ---
 const transformApiToFormSchema = (
-  apiData: ApiSingleCustomerItem
+  formData
 ): Partial<MemberFormSchema> => {
-  /* Full Implementation from previous steps */ return {};
+  console.log(formData, "formDataformDataformData");
+
+  /* Full Implementation from previous steps */ return {
+    name: formData?.name || "",
+    mobile_no: formData?.number || "",
+    email: formData?.email || "",
+    password: formData?.password || "",
+    state: formData?.state || "",
+    city: formData?.city || "",
+    pincode: formData?.pincode || "",
+    address: formData?.address || "",
+    alternate_contact_number: formData?.alternate_contact_number || "",
+    alternate_contact_number_code: formData?.alternate_contact_number_code || "",
+    landline_number: formData?.landline_number || "",
+    fax_number: formData?.fax_number || "",
+    alternate_email: formData?.alternate_email || "",
+    botim_id: formData?.botim_id || "",
+    skype_id: formData?.skype_id || "",
+    linkedin_profile: formData?.linkedIn_profile || "",
+    facebook_profile: formData?.facebook_profile || "",
+    instagram_handle: formData?.instagram_handle || "",
+    website: formData?.website || "",
+    favourite_product_id: formData?.favourite_product_id || "",
+    dealing_in_bulk: formData?.dealing_in_bulk || "No",
+    product_upload_permission: formData?.product_upload_permission || false,
+    wall_enquiry_permission: formData?.wall_enquiry_permission || false,
+    enquiry_permission: formData?.enquiry_permission || false,
+    trade_inquiry_allowed: formData?.trade_inquiry_allowed || false,
+    dynamic_member_profiles: formData?.dynamic_member_profiles || "",
+    company_name_temp: formData?.company_name_temp || "",
+    remarks: formData?.remarks || "",
+    contact_country_code: { value: formData?.number_code, label: formData?.number_code } || "",
+    company_name_temp: formData?.company_temp || "",
+    company_name: formData?.company_actual || "",
+
+    status: { value: formData?.status } || "",
+    continent_id: formData?.continent_id.value || "",
+    country_id: formData?.country_id.value || "",
+    whatsApp_no: formData?.whatsapp_number || "",
+    business_opportunity: formData?.business_opportunity?.value || "",
+    member_grade: formData?.member_grade?.value || "",
+    interested_in: formData?.interested_in?.value || "",
+    upgrade_your_plan: formData?.upgrade_plan?.value || "",
+    wechat_id: formData?.we_chat || "",
+    business_type: formData?.business_type?.value || "",
+    relationship_manager_id: formData?.relationship_manager?.value || "",
+    membership_plan_current: formData?.membership_plan_text || "",
+  };
 };
+
 const preparePayloadForApi = (
   formData: Partial<MemberFormSchema>,
   isEditMode: boolean
@@ -2174,7 +2211,7 @@ const PersonalDetailsComponent = ({
     label: continent.name,
   }));
 
-  const companyOptions = CompanyData.data.map((c: any) => ({
+  const companyOptions = CompanyData?.data?.map((c: any) => ({
     value: String(c.id),
     label: c.company_name,
   })); // Assumes structure {id, name}
@@ -2300,7 +2337,7 @@ const PersonalDetailsComponent = ({
                 placeholder="Enter company name"
                 // options={companyOptions}
                 {...field}
-                // isClearable
+              // isClearable
               />
             )}
           />
@@ -2316,9 +2353,9 @@ const PersonalDetailsComponent = ({
             control={control}
             render={({ field }) => (
               <Select
+                {...field}
                 placeholder="Please Select"
                 options={statusOptions}
-                {...field}
               />
             )}
           />
@@ -2990,6 +3027,8 @@ const MemberCreate = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { id } = useParams<{ id?: string }>();
+  console.log(id, "ididididididididididid");
+
   const isEditMode = Boolean(id);
 
   const [initialData, setInitialData] =
@@ -3086,6 +3125,8 @@ const MemberCreate = () => {
         setPageLoading(true);
         try {
           const response = await dispatch(getMemberByIdAction(id)).unwrap();
+          console.log(response, "Fetched Member Data");
+
           if (response) {
             const apiMemberData: ApiSingleCustomerItem = response;
             const transformed = transformApiToFormSchema(apiMemberData);

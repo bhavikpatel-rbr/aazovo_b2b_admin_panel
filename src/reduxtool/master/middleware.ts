@@ -3525,7 +3525,7 @@ export const getMemberAction = createAsyncThunk("auth/Member",
     try {
       const response: AxiosResponse<any> = await getMemberAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)

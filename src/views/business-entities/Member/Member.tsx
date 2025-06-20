@@ -7,9 +7,9 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Controller, useForm } from "react-hook-form";
 import { CSVLink } from "react-csv";
-import { Link, useNavigate } from "react-router-dom";
+import { Controller, useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
@@ -22,18 +22,17 @@ import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
+  Card,
   DatePicker,
   Drawer,
   Dropdown,
-  Form as UiForm,
-  FormItem as UiFormItem,
-  Input as UiInput,
-  Select as UiSelect,
-  Table,
   FormItem,
   Input,
   Select,
-  Card,
+  Table,
+  Form as UiForm,
+  FormItem as UiFormItem,
+  Select as UiSelect
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -46,23 +45,17 @@ import axiosInstance from "@/services/api/api";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAffiliate,
   TbAlarm,
   TbAlertTriangle,
   TbBell,
   TbBrandWhatsapp,
-  TbBuilding,
   TbCalendar,
   TbCalendarEvent,
-  TbCheck,
   TbChecks,
   TbClipboardText,
-  TbCloudDownload,
   TbCloudUpload,
-  TbDotsVertical,
   TbDownload,
   TbEye,
-  TbEyeDollar,
   TbFileSearch,
   TbFileText,
   TbFileZip,
@@ -71,13 +64,10 @@ import {
   TbKey,
   TbLink,
   TbMail,
-  TbMessageCircle,
   TbMessageReport,
   TbPencil,
   TbPlus,
-  TbReceipt,
   TbSearch,
-  TbShare,
   TbTagStarred,
   TbUser,
   TbUserCancel,
@@ -85,7 +75,7 @@ import {
   TbUserCircle,
   TbUserExclamation,
   TbUserSearch,
-  TbUsersGroup,
+  TbUsersGroup
 } from "react-icons/tb";
 
 // Types
@@ -95,16 +85,16 @@ import type {
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
+import Td from "@/components/ui/Table/Td";
+import Tr from "@/components/ui/Table/Tr";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   deleteAllMemberAction,
   getMemberAction,
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from "react-redux";
 import { MdCheckCircle } from "react-icons/md";
-import Tr from "@/components/ui/Table/Tr";
-import Td from "@/components/ui/Table/Td";
+import { useSelector } from "react-redux";
 
 // --- MemberData Type (FormItem) ---
 export type FormItem = {
@@ -963,7 +953,8 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   useEffect(() => {
-    setMemberList(MemberData?.data ?? []);
+    
+    setMemberList(MemberData?.data);
     setMemberListTotal(MemberData?.total ?? 0);
   }, [MemberData]);
 
@@ -1314,7 +1305,7 @@ const FormListTable = () => {
   }, [forms, tableData, filterCriteria, memberListTotal]);
 
   const handleEdit = (form: FormItem) => {
-    navigate(`/business-entities/member-edit/${form.id}`);
+    navigate(`/business-entities/member-edit/${form.id}`, { state: form });
   };
   const handleViewDetails = (form: FormItem) => {
     navigate("/business-entities/member-create", { state: form });
@@ -1380,7 +1371,7 @@ const FormListTable = () => {
           return (
             <div className="flex flex-col text-xs">
               <Tag className={`${statusColor[member_status]} inline capitalize`}>
-                {member_status || "Active"}
+                {member_status || ""}
               </Tag>
               <span className="mt-0.5">
                 <div className="text-[10px] text-gray-500 mt-0.5">
@@ -1418,7 +1409,6 @@ const FormListTable = () => {
             </span>
             <span>
               <b>Business Opportunity: {props?.row?.original?.business_opportunity || ""}</b>
-              <span>Indian Buyer</span>
               {/* Can be Multiple , below are the options */}
               {/* <span>Indian Supplier</span>
               <span>Global Buyer</span>
@@ -1450,27 +1440,24 @@ const FormListTable = () => {
           return (
             <div className="flex flex-col gap-1">
               <span className="text-xs">
-                <b className="text-xs">Business Type: </b>
-                <span className="text-[11px]">
-                  Manufacturer
-                </span>
+                <b className="text-xs">Business Type: {props?.row?.original?.business_type || ""}</b>
               </span>
               <span className="text-xs">
+                <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span>
                 <div className="flex gap-1">
                   {/* <span className="h-4 w-4 flex items-center justify-center rounded-full bg-blue-500 text-white">i</span> */}
-                  <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span>
-                  <b className="text-xs">Brands: : {props?.row?.original?.brand_name || ""}</b>
+                  {/* <b className="text-xs">Brands: : {props?.row?.original?.brand_name || ""}</b> */}
                 </div>
-                <span className="text-[11px]">
+                {/* <span className="text-[11px]">
                   {props.row.original.associated_brands}
-                </span>
+                </span> */}
               </span>
-              <span className="text-xs">
+              {/* <span className="text-xs">
                 <b className="text-xs">Category: </b>
                 <span className="text-[11px]">
                   {props.row.original.business_category}
                 </span>
-              </span>
+              </span> */}
               <span className="text-xs">
                 <span className="text-[11px]">
                   <b className="text-xs">Interested: </b>
