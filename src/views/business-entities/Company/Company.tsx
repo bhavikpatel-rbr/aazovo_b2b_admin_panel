@@ -56,8 +56,11 @@ import {
   TbBuildingMinus,
   TbCalendar,
   TbCalendarEvent,
+  TbCancel,
   TbCheck,
   TbChecks,
+  TbCircleCheck,
+  TbCircleX,
   TbClipboardText,
   TbClock,
   TbCloudDownload,
@@ -75,6 +78,8 @@ import {
   TbReceipt,
   TbReportMoney,
   TbSearch,
+  TbShieldCheck,
+  TbShieldX,
   TbTagStarred,
   TbUser,
   TbUserCircle,
@@ -1538,9 +1543,9 @@ const CompanyListTable = () => {
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
           </Button>
-          <Button icon={<TbCloudDownload />} onClick={handleImport}>
+          {/* <Button icon={<TbCloudDownload />} onClick={handleImport}>
             Import
-          </Button>
+          </Button> */}
           {companyList.length > 0 ? (
             <CSVLink data={csvData} filename="companies_export.csv">
               <Button icon={<TbCloudUpload />}>Export</Button>
@@ -1610,7 +1615,7 @@ const CompanyListTable = () => {
                 )}
               />
             </UiFormItem>
-            <UiFormItem label="Business Type">
+            {/* <UiFormItem label="Business Type">
               <Controller
                 name="filterBusinessType"
                 control={filterFormMethods.control}
@@ -1624,8 +1629,8 @@ const CompanyListTable = () => {
                   />
                 )}
               />
-            </UiFormItem>
-            <UiFormItem label="Company Type">
+            </UiFormItem> */}
+            <UiFormItem label="Ownership Type">
               <Controller
                 name="filterCompanyType"
                 control={filterFormMethods.control}
@@ -1700,7 +1705,7 @@ const CompanyListTable = () => {
                 )}
               />
             </UiFormItem>
-            <UiFormItem label="Interested In">
+            {/* <UiFormItem label="Interested In">
               <Controller
                 name="filterInterestedIn"
                 control={filterFormMethods.control}
@@ -1744,7 +1749,7 @@ const CompanyListTable = () => {
                   />
                 )}
               />
-            </UiFormItem>
+            </UiFormItem> */}
             <UiFormItem label="KYC Verified">
               <Controller
                 name="filterKycVerified"
@@ -1937,59 +1942,77 @@ const Company = () => {
               <h5>Company</h5>
               <CompanyListActionTools />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
-              <Card bodyClass="flex gap-2 p-2">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                  <TbBuilding size={24} />
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
+              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-blue-200">
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                  <TbBuilding size={16} />
                 </div>
-                <div>
-                  <h6>8</h6>
-                  <span className="text-xs font-semibold">Total</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                  <TbBuildingBank size={24} />
-                </div>
-                <div>
-                  <h6>2</h6>
-                  <span className="text-xs font-semibold">Registered</span>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm ">8</b> 
+                  <span className="text-[9px] font-semibold">Total</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                  <TbBuildingCarousel size={24} />
+              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-green-200">
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                  <TbBuildingBank size={16} />
                 </div>
-                <div>
-                  <h6>34</h6>
-                  <span className="text-xs font-semibold">Unregistered</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                  <TbBuildingArch size={24} />
-                </div>
-                <div>
-                  <h6>4</h6>
-                  <span className="text-xs font-semibold">Verified</span>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">2</b>
+                  <span className="text-[9px] font-semibold">Active</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                  <TbBuildingMinus size={24} />
+              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbCancel size={16} />
                 </div>
-                <div>
-                  <h6>4</h6>
-                  <span className="text-xs font-semibold">Unverified</span>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">34</b>
+                  <span className="text-[9px] font-semibold">Disabled</span>
                 </div>
               </Card>
-              <Card bodyClass="flex gap-2 p-2">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                  <TbBuildingCommunity size={24} />
+              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-emerald-200">
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
+                  <TbCircleCheck size={16} />
                 </div>
-                <div>
-                  <h6>20</h6>
-                  <span className="text-xs font-semibold">Members</span>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">4</b>
+                  <span className="text-[9px] font-semibold">Verified</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbCircleX size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">4</b>
+                  <span className="text-[9px] font-semibold">Non Verified</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-violet-200">
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                  <TbShieldCheck size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">4</b>
+                  <span className="text-[9px] font-semibold">Eligible</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                  <TbShieldX size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">4</b>
+                  <span className="text-[9px] font-semibold">Not Eligible</span>
+                </div>
+              </Card>
+              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-orange-200">
+                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                  <TbBuildingCommunity size={16} />
+                </div>
+                <div className="flex flex-col gap-0">
+                  <b className="text-sm pb-0 mb-0">20</b>
+                  <span className="text-[9px] font-semibold">Members</span>
                 </div>
               </Card>
             </div>

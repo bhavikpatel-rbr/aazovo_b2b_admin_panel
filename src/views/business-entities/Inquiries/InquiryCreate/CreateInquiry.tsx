@@ -54,10 +54,13 @@ const CreateInquiry = () => {
     }
   };
   const optionsType = [
-    { value: "General", label: "General" },
-    { value: "Product", label: "Product" },
-    { value: "Service", label: "Service" },
-    { value: "Support", label: "Support" },
+    { value: "Sales Inquiry", label: "Sales Inquiry" },
+    { value: "Buy Inquiry", label: "Buy Inquiry" },
+    { value: "Product Support", label: "Product Support" },
+    { value: "Service Support", label: "Service Support" },
+    { value: "Technical Support", label: "Technical Support" },
+    { value: "Complaint", label: "Complaint" },
+    { value: "Others", label: "Others" },
   ]
   const [formdata, setformdata] = useState({
     "id": 1,
@@ -283,7 +286,7 @@ const CreateInquiry = () => {
             <h5>New Inquiry</h5>
             <form
               onSubmit={handleSubmit(onSubmit)}
-              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2"
             >
               {/* Basic Info */}
               {/* <FormItem
@@ -303,7 +306,226 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem> */}
+              <FormItem
+                label="Inquiry Date"
+                invalid={!!errors.inquiry_date}
+                errorMessage={
+                  typeof errors.inquiry_date === "object" && errors.inquiry_date
+                    ? (errors.inquiry_date as { message?: string }).message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="inquiry_date"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      labelFormat={{
+                        month: "MMMM",
+                        year: "YY",
+                      }}
+                      defaultValue={new Date()}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem
+                label="Status"
+                invalid={!!errors.inquiry_status}
+                errorMessage={
+                  typeof errors.inquiry_status === "object" &&
+                    errors.inquiry_status
+                    ? (errors.inquiry_status as { message?: string }).message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="inquiry_status"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={[
+                        { value: "Open", label: "Open" },
+                        { value: "In Progress", label: "In Progress" },
+                        { value: "Resolved", label: "Resolved" },
+                        { value: "On Hold", label: "On Hold" },
+                        { value: "Rejected", label: "Rejected" },
+                        { value: "Closed", label: "Closed" },
+                      ]}
+                      placeholder="Select status"
+                    />
+                  )}
+                />
+              </FormItem>
+              
+               <FormItem
+                label="Inquiry From"
+                invalid={!!errors.inquiry_from}
+                errorMessage={
+                  typeof errors.inquiry_from === "object" && errors.inquiry_from
+                    ? (errors.inquiry_from as { message?: string }).message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="inquiry_from"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={[
+                        { value: "Website", label: "Inquiry Form" },
+                        { value: "Call", label: "Call" },
+                        { value: "Email", label: "Email" },
+                        { value: "Whatsapp", label: "Whatsapp" },
+                        { value: "Manual", label: "Manual" },
+                        { value: "Partner", label: "Partner" },
+                        { value: "Others       ", label: "Others       " },
+                      ]}
+                      placeholder="Select inquiry source"
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem
+                label="Inquiry Type"
+                invalid={!!errors.inquiry_type}
+                errorMessage={
+                  typeof errors.inquiry_type === "object" && errors.inquiry_type
+                    ? (errors.inquiry_type as { message?: string }).message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="inquiry_type"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={optionsType}
+                      placeholder="Select Inquiry Type"
+                      value={optionsType.filter((option) => option?.value === field?.value)}
+                      onChange={(value) => {
+                        field.onChange(value?.value)
+                      }}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem
+                label="Department"
+                invalid={!!errors.department}
+                errorMessage={
+                  typeof errors.department === "object" && errors.department
+                    ? (errors.department as { message?: string }).message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="department"
+                  control={control}
+                  render={({ field }) => (
+                  <Select
+                  isMulti
+                  placeholder="Select Department"
+                  options={departmentFilterOptions} // must be [{ value, label }, ...]
+                  value={departmentFilterOptions.filter(opt =>
+                  field.value?.includes(opt.value)
+                  )}
+                  onChange={(selectedOptions) =>
+                  field.onChange(selectedOptions.map((opt) => opt.value))
+                  }
+                />
+                  )}
+                />
+              </FormItem>
+              <FormItem
+                label="Assigned To"
+                invalid={!!errors.assigned_to}
+                errorMessage={
+                  typeof errors.assigned_to === "object" && errors.assigned_to
+                    ? (errors.assigned_to as { message?: string }).message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="assigned_to"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={[
+                        { value: "John Doe", label: "John Doe" },
+                        { value: "Jane Smith", label: "Jane Smith" },
+                        { value: "Support Team", label: "Support Team" },
+                        { value: "Sales Team", label: "Sales Team" },
+                      ]}
+                      placeholder="Select person or team"
+                    />
+                  )}
+                />
+              </FormItem>
 
+              
+              <FormItem
+                label="Priority"
+                invalid={!!errors.inquiry_priority}
+                errorMessage={
+                  typeof errors.inquiry_priority === "object" &&
+                    errors.inquiry_priority
+                    ? (errors.inquiry_priority as { message?: string }).message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="inquiry_priority"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      options={[
+                        { value: "Low", label: "Low" },
+                        { value: "Medium", label: "Medium" },
+                        { value: "High", label: "High" },
+                      ]}
+                      placeholder="Select priority"
+                      value={
+                        [
+                          { value: "Low", label: "Low" },
+                          { value: "Medium", label: "Medium" },
+                          { value: "High", label: "High" },
+                        ].find((option) => option.value === field.value) || null
+                      }
+                      onChange={(option) => field.onChange(option ? option.value : "")}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem
+                label="Response Date"
+                invalid={!!errors.response_date}
+                errorMessage={
+                  typeof errors.response_date === "object" &&
+                    errors.response_date
+                    ? (errors.response_date as { message?: string }).message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="response_date"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      labelFormat={{
+                        month: "MMMM",
+                        year: "YY",
+                      }}
+                      defaultValue={new Date()}
+                    />
+                  )}
+                />
+              </FormItem>
+              
               <FormItem
                 label="Company Name"
                 invalid={!!errors.company_name}
@@ -367,7 +589,7 @@ const CreateInquiry = () => {
               </FormItem>
 
               <FormItem
-                label={<div>Contact Person <span className="text-red-500"> * </span></div>}
+                label={<div>Contact Person Mobile<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.mobile_no}
                 errorMessage={
                   typeof errors.mobile_no === "object" &&
@@ -386,36 +608,12 @@ const CreateInquiry = () => {
                 />
               </FormItem>
 
-              <FormItem
-                label="Inquiry Type"
-                invalid={!!errors.inquiry_type}
-                errorMessage={
-                  typeof errors.inquiry_type === "object" && errors.inquiry_type
-                    ? (errors.inquiry_type as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_type"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={optionsType}
-                      placeholder="Select Inquiry Type"
-                      value={optionsType.filter((option) => option?.value === field?.value)}
-                      onChange={(value) => {
-                        field.onChange(value?.value)
-                      }}
-                    />
-                  )}
-                />
-              </FormItem>
+              
 
               <FormItem
                 label="Inquiry Subject"
                 invalid={!!errors.inquiry_subject}
-                className="md:col-span-2"
+                className="md:col-span-2 lg:col-span-4"
                 errorMessage={
                   typeof errors.inquiry_subject === "object" &&
                     errors.inquiry_subject
@@ -431,215 +629,8 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-
-              <FormItem
-                label="Priority"
-                invalid={!!errors.inquiry_priority}
-                errorMessage={
-                  typeof errors.inquiry_priority === "object" &&
-                    errors.inquiry_priority
-                    ? (errors.inquiry_priority as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_priority"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      options={[
-                        { value: "Low", label: "Low" },
-                        { value: "Medium", label: "Medium" },
-                        { value: "High", label: "High" },
-                      ]}
-                      placeholder="Select priority"
-                      value={
-                        [
-                          { value: "Low", label: "Low" },
-                          { value: "Medium", label: "Medium" },
-                          { value: "High", label: "High" },
-                        ].find((option) => option.value === field.value) || null
-                      }
-                      onChange={(option) => field.onChange(option ? option.value : "")}
-                    />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label="Inquiry Description"
-                invalid={!!errors.inquiry_description}
-                className="md:col-span-3"
-                errorMessage={
-                  typeof errors.inquiry_description === "object" &&
-                    errors.inquiry_description
-                    ? (errors.inquiry_description as { message?: string })
-                      .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_description"
-                  control={control}
-                  render={({ field }) => (
-                    <Input textArea placeholder="Description" {...field} />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label="Status"
-                invalid={!!errors.inquiry_status}
-                errorMessage={
-                  typeof errors.inquiry_status === "object" &&
-                    errors.inquiry_status
-                    ? (errors.inquiry_status as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_status"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={[
-                        { value: "Open", label: "Open" },
-                        { value: "In Progress", label: "In Progress" },
-                        { value: "Closed", label: "Closed" },
-                      ]}
-                      placeholder="Select status"
-                    />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label="Assigned To"
-                invalid={!!errors.assigned_to}
-                errorMessage={
-                  typeof errors.assigned_to === "object" && errors.assigned_to
-                    ? (errors.assigned_to as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="assigned_to"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={[
-                        { value: "John Doe", label: "John Doe" },
-                        { value: "Jane Smith", label: "Jane Smith" },
-                        { value: "Support Team", label: "Support Team" },
-                        { value: "Sales Team", label: "Sales Team" },
-                      ]}
-                      placeholder="Select person or team"
-                    />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label="Department"
-                invalid={!!errors.department}
-                errorMessage={
-                  typeof errors.department === "object" && errors.department
-                    ? (errors.department as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="department"
-                  control={control}
-                  render={({ field }) => (
-<Select
-  isMulti
-  placeholder="Select Department"
-  options={departmentFilterOptions} // must be [{ value, label }, ...]
-  value={departmentFilterOptions.filter(opt =>
-    field.value?.includes(opt.value)
-  )}
-  onChange={(selectedOptions) =>
-    field.onChange(selectedOptions.map((opt) => opt.value))
-  }
-/>
-
-                    // <Select
-                    //   options={[
-                    //     { value: "Sales", label: "Sales" },
-                    //     { value: "Support", label: "Support" },
-                    //     { value: "HR", label: "HR" },
-                    //     { value: "IT", label: "IT" },
-                    //     { value: "Finance", label: "Finance" },
-                    //   ]}
-                    //   placeholder="Select department"
-                    //   value={
-                    //     [
-                    //       { value: "Sales", label: "Sales" },
-                    //       { value: "Support", label: "Support" },
-                    //       { value: "HR", label: "HR" },
-                    //       { value: "IT", label: "IT" },
-                    //       { value: "Finance", label: "Finance" },
-                    //     ].find((option) => option.value === field.value) || null
-                    //   }
-                    //   onChange={(option) => field.onChange(option ? option.value : "")}
-                    // />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label="Inquiry Date"
-                invalid={!!errors.inquiry_date}
-                errorMessage={
-                  typeof errors.inquiry_date === "object" && errors.inquiry_date
-                    ? (errors.inquiry_date as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_date"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      labelFormat={{
-                        month: "MMMM",
-                        year: "YY",
-                      }}
-                      defaultValue={new Date()}
-                    />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
-                label="Response Date"
-                invalid={!!errors.response_date}
-                errorMessage={
-                  typeof errors.response_date === "object" &&
-                    errors.response_date
-                    ? (errors.response_date as { message?: string }).message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="response_date"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      labelFormat={{
-                        month: "MMMM",
-                        year: "YY",
-                      }}
-                      defaultValue={new Date()}
-                    />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
+            
+              {/* <FormItem
                 label="Resolution Date"
                 invalid={!!errors.resolution_date}
                 errorMessage={
@@ -663,29 +654,7 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
-
-              <FormItem
-                label="Resolution (Notes)"
-                invalid={!!errors.inquiry_resolution}
-                className="md:col-span-3"
-                errorMessage={
-                  typeof errors.inquiry_resolution === "object" &&
-                    errors.inquiry_resolution
-                    ? (errors.inquiry_resolution as { message?: string })
-                      .message
-                    : undefined
-                }
-              >
-                <Controller
-                  name="inquiry_resolution"
-                  control={control}
-                  render={({ field }) => (
-                    <Input placeholder="Enter resolution" {...field} textArea />
-                  )}
-                />
-              </FormItem>
-
-              <FormItem
+               <FormItem
                 label="Last Follow-Up Date"
                 invalid={!!errors.follow_up_date}
                 errorMessage={
@@ -735,36 +704,29 @@ const CreateInquiry = () => {
                     />
                   )}
                 />
-              </FormItem>
+              </FormItem> */}
 
               <FormItem
-                label="Inquiry From"
-                invalid={!!errors.inquiry_from}
+                label="Resolution (Notes)"
+                invalid={!!errors.inquiry_resolution}
+                className="md:col-span-2 lg:col-span-3"
                 errorMessage={
-                  typeof errors.inquiry_from === "object" && errors.inquiry_from
-                    ? (errors.inquiry_from as { message?: string }).message
+                  typeof errors.inquiry_resolution === "object" &&
+                    errors.inquiry_resolution
+                    ? (errors.inquiry_resolution as { message?: string })
+                      .message
                     : undefined
                 }
               >
                 <Controller
-                  name="inquiry_from"
+                  name="inquiry_resolution"
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      {...field}
-                      options={[
-                        { value: "Call", label: "Call" },
-                        { value: "Manual", label: "Manual" },
-                        { value: "Email", label: "Email" },
-                        { value: "Inquiry Form", label: "Inquiry Form" },
-                      ]}
-                      placeholder="Select inquiry source"
-                    />
+                    <Input placeholder="Enter resolution" {...field}  />
                   )}
                 />
               </FormItem>
-
-              <FormItem label="Attachments" className="md:col-span-3">
+              <FormItem label="Attachments" className="">
                 <Controller
                   name="inquiry_attachments"
                   control={control}
@@ -790,19 +752,41 @@ const CreateInquiry = () => {
                   )}
                 />
               </FormItem>
+              <FormItem
+                label="Inquiry Description"
+                invalid={!!errors.inquiry_description}
+                className="md:col-span-2 lg:col-span-4"
+                errorMessage={
+                  typeof errors.inquiry_description === "object" &&
+                    errors.inquiry_description
+                    ? (errors.inquiry_description as { message?: string })
+                      .message
+                    : undefined
+                }
+              >
+                <Controller
+                  name="inquiry_description"
+                  control={control}
+                  render={({ field }) => (
+                    <Input textArea placeholder="Description" {...field} />
+                  )}
+                />
+              </FormItem>
 
               {/* Footer with Save and Cancel buttons */}
-              <Card bodyClass="flex justify-end gap-2" className="mt-4 col-span-3">
-                <Button type="button" className="px-4 py-2" onClick={() => navigate("/business-entities/inquiries")}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="px-4 py-2" variant="solid">
-                  Save
-                </Button>
-              </Card>
             </form>
           </div>
         </AdaptiveCard>
+        <Card 
+          bodyClass="flex justify-end gap-2"
+          className="sticky bottom-0 mt-3 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <Button type="button" className="px-4 py-2" onClick={() => navigate("/business-entities/inquiries")}>
+            Cancel
+          </Button>
+          <Button type="submit" className="px-4 py-2" variant="solid">
+            Save
+          </Button>
+        </Card>
       </Container>
     </>
   );

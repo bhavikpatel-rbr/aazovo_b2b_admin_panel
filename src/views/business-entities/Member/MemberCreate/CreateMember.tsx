@@ -32,6 +32,7 @@ import {
   Form,
   FormItem,
   Input,
+  Radio,
   Tag,
 } from "@/components/ui";
 import Notification from "@/components/ui/Notification";
@@ -1650,7 +1651,7 @@ const memberNavigationList = [
   { label: "Member Profile", link: "memberProfile" },
   { label: "Accessibilities", link: "memberAccessibility" },
   { label: "Membership Details", link: "membershipPlanDetails" },
-  { label: "Feedback / Requests", link: "requestAndFeedbacks" },
+  // { label: "Feedback / Requests", link: "requestAndFeedbacks" },
 ];
 const NavigatorComponent = (props: {
   activeSection: string;
@@ -1722,9 +1723,10 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
   }));
 
   const opportunityOptions = [
-    { value: "For Sell", label: "For Sell" },
-    { value: "For Buy", label: "For Buy" },
-    { value: "Both", label: "Both" },
+    { value: "Indian Buyer", label: "Indian Buyer" },
+    { value: "Indian Supplier", label: "Indian Supplier" },
+    { value: "Global Buyer", label: "Global Buyer" },
+    { value: "Global Supplier", label: "Global Supplier" },
   ];
   const gradeOptions = [
     { value: "A", label: "A" },
@@ -1754,6 +1756,49 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     <Card id="memberProfile">
       <h4 className="mb-6">Additional Member Profile</h4>
       <div className="grid md:grid-cols-3 gap-4">
+        
+        <FormItem
+          label="Business Opportunity"
+          invalid={!!errors.business_opportunity}
+          errorMessage={errors.business_opportunity?.message as string}
+        >
+          <Controller
+            name="business_opportunity"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select opportunity"
+                options={opportunityOptions}
+                isClearable
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Business Type"
+          invalid={!!errors.business_type}
+          errorMessage={errors.business_type?.message as string}
+        >
+          <Controller
+            name="business_type"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select Business Type"
+                options={[
+                  {label: "Manufacturer", value:"Manufacturer"},
+                  {label: "Distributor", value:"Distributor"},
+                  {label: "Wholesaler", value:"Wholesaler"},
+                  {label: "Retailer", value:"Retailer"},
+                  {label: "Corporate", value:"Corporate"},
+                ]}
+                isClearable
+              />
+            )}
+          />
+        </FormItem>
         <FormItem
           label="Favourite Product(s)"
           invalid={!!errors.favourite_product_ids}
@@ -1768,24 +1813,6 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
                 isMulti
                 placeholder="Select favourite products"
                 options={productOptions}
-                isClearable
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Business Opportunity"
-          invalid={!!errors.business_opportunity}
-          errorMessage={errors.business_opportunity?.message as string}
-        >
-          <Controller
-            name="business_opportunity"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select opportunity"
-                options={opportunityOptions}
                 isClearable
               />
             )}
@@ -1889,7 +1916,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
           invalid={!!errors.dealing_in_bulk}
           errorMessage={errors.dealing_in_bulk?.message as string}
         >
-          <Controller
+          {/* <Controller
             name="dealing_in_bulk"
             control={control}
             render={({ field }) => (
@@ -1899,6 +1926,16 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
                 options={yesNoOptions}
                 isClearable
               />
+            )}
+          /> */}
+          <Controller
+            name="dealing_in_bulk"
+            control={control}
+            render={({ field }) => (
+              <Radio.Group {...field} className="flex gap-4 mt-2">
+                <Radio value="Yes">Yes</Radio>
+                <Radio value="No">No</Radio>
+              </Radio.Group>
             )}
           />
         </FormItem>
@@ -1912,7 +1949,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
             name="remarks"
             control={control}
             render={({ field }) => (
-              <Input textArea {...field} placeholder="Enter internal remarks" />
+              <Input {...field} placeholder="Enter internal remarks" />
             )}
           />
         </FormItem>
@@ -1933,19 +1970,20 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
       </div>{" "}
       <div className="flex flex-col gap-y-6">
         {fields.map((item, index) => (
-          <Card key={item.id} bordered bodyClass="p-4 relative">
-            <div className="absolute top-2 right-2 z-10 mb-4">
+          <Card key={item.id} className="border-black rounded-md"  bodyClass="relative">
+            <div className="absolute top-2 right-2 z-10">
               <Button
                 type="button"
-                shape="circle"
+                variant="plain"
                 size="sm"
-                icon={<TbTrash />}
+                className="text-xs"
+                icon={<TbTrash size={16}/>}
                 onClick={() => remove(index)}
-                danger
-              />
+              >Remove
+              </Button>
               {/* <Button size="sm" type="button" shape="circle" variant="plain" icon={<HiTrash className="text-red-500" />} onClick={() => remove(index)} /> */}
             </div>
-            <div className="grid md:grid-cols-3 gap-4 mt-4">
+            <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
               <FormItem
                 label={`Member Type ${index + 1}`}
                 invalid={!!errors.member_profiles?.[index]?.member_type}
@@ -2073,8 +2111,8 @@ const PersonalDetailsComponent = ({
   })); // Assumes structure {id, name}
   const statusOptions = [
     { label: "Active", value: "Active" },
-    { label: "Inactive", value: "Inactive" },
-    { label: "Pending", value: "Pending" },
+    { label: "Unregistered", value: "Unregistered" },
+    { label: "Disabled", value: "Disabled" },
   ];
 
   return (
@@ -2170,11 +2208,11 @@ const PersonalDetailsComponent = ({
             name="company_name_temp"
             control={control}
             render={({ field }) => (
-              <Select
-                placeholder="Select temporary company"
-                options={companyOptions}
+              <Input
+                placeholder="Enter temporary company"
+                // options={companyOptions}
                 {...field}
-                isClearable
+                // isClearable
               />
             )}
           />
@@ -2304,7 +2342,7 @@ const PersonalDetailsComponent = ({
             name="address"
             control={control}
             render={({ field }) => (
-              <Input textArea placeholder="Full Address" {...field} />
+              <Input placeholder="Full Address" {...field} />
             )}
           />
         </FormItem>
@@ -2331,13 +2369,27 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
           invalid={!!errors.whatsapp_number}
           errorMessage={errors.whatsapp_number?.message}
         >
-          <Controller
-            name="whatsapp_number"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="Enter WhatsApp number" {...field} />
-            )}
-          />
+          <div className="flex items-center gap-2">
+            <Controller
+                name="whatsapp_country_code"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    placeholder="Code"
+                    className="w-28"
+                    options={countryCodeOptions}
+                    {...field}
+                  />
+                )}
+              />
+            <Controller
+              name="whatsapp_number"
+              control={control}
+              render={({ field }) => (
+                <Input placeholder="Enter WhatsApp number" {...field} />
+              )}
+            />
+          </div>
         </FormItem>
         <FormItem
           label="Alternate Contact Number"
@@ -2357,7 +2409,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
               render={({ field }) => (
                 <Select
                   placeholder="Code"
-                  className="w-32"
+                  className="w-28"
                   options={countryCodeOptions}
                   {...field}
                 />
@@ -2512,7 +2564,7 @@ const MemberAccessibilityComponent = ({
   return (
     <Card id="memberAccessibility">
       <h4 className="mb-6">Member Accessibility</h4>
-      <div className="grid md:grid-cols-3 gap-4 items-start">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
         <FormItem
           label="Product Upload Permission"
           invalid={!!errors.product_upload_permission}
@@ -2576,6 +2628,18 @@ const MemberAccessibilityComponent = ({
             name="trade_inquiry_allowed"
             control={control}
             render={({ field }) => (
+              <Checkbox
+                checked={!!field.value}
+                onChange={(checked) => field.onChange(checked)}
+              >
+                Enabled
+              </Checkbox>
+            )}
+          />
+          {/* <Controller
+            name="trade_inquiry_allowed"
+            control={control}
+            render={({ field }) => (
               <Select
                 {...field}
                 placeholder="Select"
@@ -2583,7 +2647,7 @@ const MemberAccessibilityComponent = ({
                 isClearable
               />
             )}
-          />
+          /> */}
         </FormItem>
       </div>
     </Card>
@@ -2754,8 +2818,8 @@ const MemberFormComponent = (props: {
         return <MemberAccessibilityComponent {...sectionProps} />;
       case "membershipPlanDetails":
         return <MembershipPlanComponent {...sectionProps} />;
-      case "requestAndFeedbacks":
-        return <RequestAndFeedbacksComponent {...sectionProps} />;
+      // case "requestAndFeedbacks":
+      //   return <RequestAndFeedbacksComponent {...sectionProps} />;
       case "memberProfile":
         return <MemberProfileComponent {...sectionProps} />;
       default:

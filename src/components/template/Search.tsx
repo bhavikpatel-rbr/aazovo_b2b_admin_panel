@@ -445,9 +445,14 @@ const _Search = ({ className }: { className?: string }) => {
                                 onChange={handleSearch}
                             />
                         </div>
-                        <Button size="xs" onClick={handleSearchClose}>
-                            Esc
-                        </Button>
+                        <div className='flex gap-1'>
+                            <Button size="xs" onClick={handleSearchClose}>
+                                Esc
+                            </Button>
+                            <Button size="xs" onClick={handleSearchClose}>
+                                <Link to="#">View</Link>
+                            </Button>
+                        </div>
                     </div>
                     <div className="py-6 px-5">
                         <ScrollBar className=" max-h-[350px] overflow-y-auto">

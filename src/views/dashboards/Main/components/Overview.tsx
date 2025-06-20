@@ -10,7 +10,7 @@ import classNames from '@/utils/classNames'
 import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { options } from '../constants'
 import { NumericFormat } from 'react-number-format'
-import { TbCoin, TbShoppingBagCheck, TbEye, TbSearch } from 'react-icons/tb'
+import { TbCoin, TbShoppingBagCheck, TbEye, TbSearch, TbUserCircle, TbCube3dSphere, TbHeartHandshake, TbUsersGroup } from 'react-icons/tb'
 import type { ReactNode } from 'react'
 import type { StatisticData, Period, StatisticCategory } from '../types'
 import { COLORS } from '@/constants/chart.constant'
@@ -124,7 +124,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     )
 
     const statusColor = {
-        Active: "bg-green-200 text-green-600",
+        Active: "bg-green-200 text-green-600 ",
         Verified: "bg-blue-200 text-blue-600",
         Pending: "bg-orange-200 text-orange-600",
         Inactive: "bg-red-200 text-red-600",
@@ -310,13 +310,13 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             cell: props => (
                 <div className='flex flex-col gap-1'>
                     <span className="flex flex-wrap gap-1 text-xs items-center">
-                        <h6 className="text-sm">Members: <span className='font-normal'>{props.row.original.noOfMember}</span></h6> 
+                        <h6 className="text-xs">Members: <span className='font-normal'>{props.row.original.noOfMember}</span></h6> 
                     </span>
                     <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-sm">GST: <span className='font-normal'>AZXRFDRDSDDADA</span></h6>
+                        <h6 className="text-xs">GST: <span className='font-normal'>AZXRFDRDSDDADA</span></h6>
                     </span>
                     <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-sm">PAN: <span className='font-normal'>AZXRFDRDSD</span></h6> 
+                        <h6 className="text-xs">PAN: <span className='font-normal'>AZXRFDRDSD</span></h6> 
                     </span>
                     <div className='flex gap-1 items-center'>
                         <Tooltip title="KYC Verification : 48%" className='text-xs'>
@@ -1477,7 +1477,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 />
                             }
                             iconClass="bg-emerald-200"
-                            icon={<TbShoppingBagCheck className='h-5' />}
+                            icon={<TbUserCircle className='h-5' />}
                             label="Members"
                             active={selectedCategory === 'Members'}
                             onClick={() => setSelectedCategory('Members')}
@@ -1496,7 +1496,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 />
                             }
                             iconClass="bg-purple-200"
-                            icon={<TbEye className='h-5' />}
+                            icon={<TbCube3dSphere className='h-5' />}
                             label="Products"
                             active={selectedCategory === 'Products'}
                             onClick={() => setSelectedCategory('Products')}
@@ -1536,7 +1536,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             }
                             // growShrink={data.totalOrder[selectedPeriod].growShrink}
                             iconClass="bg-emerald-200"
-                            icon={<TbShoppingBagCheck className='h-5' />}
+                            icon={<TbHeartHandshake className='h-5' />}
                             label="Partners"
                             active={selectedCategory === 'Partners'}
                             // compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
@@ -1557,7 +1557,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             }
                             // growShrink={data.totalImpression[selectedPeriod].growShrink}
                             iconClass="bg-purple-200"
-                            icon={<TbEye className='h-5' />}
+                            icon={<TbUsersGroup className='h-5' />}
                             label="Teams"
                             active={selectedCategory === 'Teams'}
                             // compareFrom={data.totalProfit[selectedPeriod].comparePeriod}
