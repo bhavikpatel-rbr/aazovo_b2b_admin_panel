@@ -64,13 +64,14 @@ export type CountryItem = {
     id: string | number
     continent_id: string | number
     name: string
-    iso: string
-    phonecode: string
+    iso_code: string
+    phone_code: string
     status: 'Active' | 'Inactive' // Added status field
     continent?: {
         id: string | number
         name: string
     }
+    region?: string // Optional region field
     created_at?: string
     updated_at?: string
     updated_by_name?: string
@@ -93,11 +94,11 @@ const countryFormSchema = z.object({
         .string()
         .min(1, 'Country name is required.')
         .max(100, 'Name cannot exceed 100 characters.'),
-    iso: z
+    iso_code: z
         .string()
         .min(1, 'ISO code is required.')
         .max(3, 'ISO code max 3 characters.'),
-    phonecode: z
+    phone_code: z
         .string()
         .min(1, 'Phone code is required.')
         .max(5, 'Phone code max 10 characters.'),
@@ -164,8 +165,8 @@ const CSV_KEYS_COUNTRY_EXPORT: (keyof CountryExportItem)[] = [
     'id',
     'continentName',
     'name',
-    'iso',
-    'phonecode',
+    'iso_code',
+    'phone_code',
     'status', // Added Status
     'updated_by_name',
     'updated_by_role',
@@ -184,8 +185,8 @@ function exportToCsvCountry(filename: string, rows: CountryItem[]) {
     const transformedRows: CountryExportItem[] = rows.map((row) => ({
         id: row.id,
         name: row.name,
-        iso: row.iso,
-        phonecode: row.phonecode,
+        iso_code: row.iso_code,
+        phone_code: row.phone_code,
         status: row.status, // Added status
         continentName: row.continent?.name || String(row.continent_id) || 'N/A',
         updated_by_name: row.updated_by_name || 'N/A',
@@ -421,8 +422,8 @@ const Countries = () => {
         () => ({
             continent_id: continentOptions[0]?.value || '',
             name: '',
-            iso: '',
-            phonecode: '',
+            iso_code: '',
+            phone_code: '',
             status: 'Active', // Default status
         }),
         [continentOptions],
@@ -497,8 +498,8 @@ const Countries = () => {
             editFormMethods.reset({
                 continent_id: country.continent_id,
                 name: country.name,
-                iso: country.iso,
-                phonecode: country.phonecode,
+                iso_code: country.iso_code,
+                phone_code: country.phone_code,
                 status: country.status || 'Active', // Set status, default to Active
             })
             setIsEditDrawerOpen(true)
@@ -636,10 +637,10 @@ const Countries = () => {
 
     const countryIsoOptions = useMemo(() => {
         if (!Array.isArray(CountriesData)) return []
-        const uniqueIsos = new Set(CountriesData.map((country) => country.iso))
-        return Array.from(uniqueIsos).map((iso) => ({
-            value: iso,
-            label: iso,
+        const uniqueIsos = new Set(CountriesData.map((country) => country.iso_code))
+        return Array.from(uniqueIsos).map((iso_code) => ({
+            value: iso_code,
+            label: iso_code,
         }))
     }, [CountriesData])
 
@@ -673,7 +674,7 @@ const Countries = () => {
                 opt.value.toLowerCase(),
             )
             processedData = processedData.filter((item) =>
-                selectedIsos.includes(item.iso?.trim().toLowerCase() ?? ''),
+                selectedIsos.includes(item.iso_code?.trim().toLowerCase() ?? ''),
             )
         }
         if (filterCriteria.filterStatus?.length) {
@@ -689,8 +690,8 @@ const Countries = () => {
             processedData = processedData.filter(
                 (item) =>
                     (item.name?.trim().toLowerCase() ?? '').includes(query) ||
-                    (item.iso?.trim().toLowerCase() ?? '').includes(query) ||
-                    (item.phonecode?.trim().toLowerCase() ?? '').includes(
+                    (item.iso_code?.trim().toLowerCase() ?? '').includes(query) ||
+                    (item.phone_code?.trim().toLowerCase() ?? '').includes(
                         query,
                     ) ||
                     (item.status?.trim().toLowerCase() ?? '').includes(query) || // Search by status
@@ -713,8 +714,8 @@ const Countries = () => {
             [
                 'id',
                 'name',
-                'iso',
-                'phonecode',
+                'iso_code',
+                'phone_code',
                 'status',
                 'continent.name',
                 'updated_at',
@@ -840,7 +841,7 @@ const Countries = () => {
                 accessorKey: 'continent.name',
                 enableSorting: true,
                 size: 120,
-                cell: (props) => props.row.original.continent?.name || 'N/A',
+                cell: (props) => props.row.original.region || 'N/A',
             },
             {
                 header: 'Country Name',
@@ -850,13 +851,13 @@ const Countries = () => {
             },
             {
                 header: 'ISO Code',
-                accessorKey: 'iso',
+                accessorKey: 'iso_code',
                 enableSorting: true,
                 size: 100,
             },
             {
                 header: 'Phone Code',
-                accessorKey: 'phonecode',
+                accessorKey: 'phone_code',
                 enableSorting: true,
                 size: 130,
             },
@@ -1151,15 +1152,15 @@ const Countries = () => {
                                     }
                                     invalid={
                                         !!drawerProps.formMethods.formState
-                                            .errors.iso
+                                            .errors.iso_code
                                     }
                                     errorMessage={
                                         drawerProps.formMethods.formState.errors
-                                            .iso?.message as string | undefined
+                                            .iso_code?.message as string | undefined
                                     }
                                 >
                                     <Controller
-                                        name="iso"
+                                        name="iso_code"
                                         control={
                                             drawerProps.formMethods.control
                                         }
@@ -1183,17 +1184,17 @@ const Countries = () => {
                                     }
                                     invalid={
                                         !!drawerProps.formMethods.formState
-                                            .errors.phonecode
+                                            .errors.phone_code
                                     }
                                     errorMessage={
                                         drawerProps.formMethods.formState.errors
-                                            .phonecode?.message as
+                                            .phone_code?.message as
                                             | string
                                             | undefined
                                     }
                                 >
                                     <Controller
-                                        name="phonecode"
+                                        name="phone_code"
                                         control={
                                             drawerProps.formMethods.control
                                         }
@@ -1508,7 +1509,7 @@ const Countries = () => {
                 <p>
                     Are you sure you want to delete the country "
                     <strong>
-                        {countryToDelete?.name} ({countryToDelete?.iso})
+                        {countryToDelete?.name} ({countryToDelete?.iso_code})
                     </strong>
                     "? This action cannot be undone.
                 </p>
