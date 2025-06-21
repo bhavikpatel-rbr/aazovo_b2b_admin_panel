@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams, NavLink } from "react-router-dom";
-import { useForm, Controller, useFieldArray } from "react-hook-form"; // Import useFieldArray
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -10,12 +10,14 @@ import { z } from "zod";
 import Card from "@/components/ui/Card";
 import { Input, Select as UiSelect, Button } from "@/components/ui";
 import { Form, FormItem } from "@/components/ui/Form";
-import { BiChevronRight } from "react-icons/bi";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import { TbCopy, TbPlus, TbTrash } from "react-icons/tb";
 import Spinner from "@/components/ui/Spinner";
 import Container from "@/components/shared/Container";
+
+// Icons
+import { BiChevronRight } from "react-icons/bi";
+import { TbCopy } from "react-icons/tb";
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
@@ -24,6 +26,8 @@ import {
     getOfferById,
     editOfferAction,
     getUsersAction,
+    getAllProductAction, // Import new action
+    getMembersAction,   // Import new action
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 
@@ -33,13 +37,14 @@ export type ApiUserObject = {
     name: string;
 };
 
-// **IMPORTANT**: Updated to reflect the new data structure with arrays of IDs
+// Updated to reflect a cleaner API response with arrays of numbers
 export type ApiFetchedOffer = {
   id: number;
   generate_id: string;
   name: string;
-  seller_section: string[] | null; // Assuming API now returns an array of string IDs
-  buyer_ids: string[] | null;  // Assuming API now returns an array of string IDs
+  product_ids: number[] | null;
+  seller_section: number[] | null;
+  buyer_section: number[] | null;
   groupA: string | null;
   groupB: string | null;
   assign_user: ApiUserObject | null;
@@ -48,23 +53,19 @@ export type ApiFetchedOffer = {
   updated_at: string;
 };
 
-// **IMPORTANT**: Updated Zod schema to handle arrays
+// Updated Zod schema for multi-select dropdowns
 const offerFormSchema = z.object({
   name: z.string().min(1, "Offer Name is required."),
-  assignedUserId: z.number().min(1, "Assigned User is required.").nullable(), // Use number for consistency
-  sellers: z.array(z.object({
-    sellerId: z.string().optional().nullable(),
-  })).min(1, "At least one seller is required."),
+  assignedUserId: z.number().min(1, "Assigned User is required.").nullable(),
+  productIds: z.array(z.number()).min(1, "At least one product is required."),
+  sellers: z.array(z.number()).min(1, "At least one seller is required."),
   groupA_notes: z.string().optional().nullable(),
-  buyers: z.array(z.object({
-    buyerId: z.string().optional().nullable(),
-  })).min(1, "At least one buyer is required."),
+  buyers: z.array(z.number()).min(1, "At least one buyer is required."),
   groupB_notes: z.string().optional().nullable(),
 });
+
 type OfferEditFormData = z.infer<typeof offerFormSchema>;
-
-type UserOptionType = { value: string; label: string; id: number; name: string };
-
+type OptionType = { value: number; label: string };
 
 const EditOffer = () => {
   const navigate = useNavigate();
@@ -77,43 +78,45 @@ const EditOffer = () => {
     currentOffer,
     currentOfferStatus = 'idle',
     usersData = [],
+    productsMasterData = [],
+    memberData = [],
+    status: masterLoadingStatus = 'idle',
   } = useSelector(masterSelector);
 
-  const formMethods = useForm<OfferEditFormData>({
+  const { control, handleSubmit, reset, getValues, formState: { errors, isDirty } } = useForm<OfferEditFormData>({
     resolver: zodResolver(offerFormSchema),
     defaultValues: {
       name: "",
       assignedUserId: null,
-      sellers: [{ sellerId: "" }], // Default to one empty field
+      productIds: [],
+      sellers: [],
       groupA_notes: "",
-      buyers: [{ buyerId: "" }], // Default to one empty field
+      buyers: [],
       groupB_notes: "",
     }
   });
-  const { control, handleSubmit, reset, getValues, formState: { errors, isDirty } } = formMethods;
-  
-  // --- Field Array Hooks ---
-  const { fields: sellerFields, append: appendSeller, remove: removeSeller } = useFieldArray({
-    control,
-    name: "sellers",
-  });
 
-  const { fields: buyerFields, append: appendBuyer, remove: removeBuyer } = useFieldArray({
-    control,
-    name: "buyers",
-  });
-
+  // --- Memoized Options for Dropdowns ---
   const userOptions = useMemo(() => {
     if (!Array.isArray(usersData)) return [];
-    return usersData.map((u: UserOptionType) => ({
-      value: u.id,
-      label: u.name,
-    }));
+    return usersData.map((u: ApiUserObject) => ({ value: u.id, label: u.name }));
   }, [usersData]);
 
-  // --- Fetch Initial Data (Users and Offer) ---
+  const productOptions = useMemo(() => {
+    if (!Array.isArray(productsMasterData)) return [];
+    return productsMasterData.map((p: any) => ({ value: p.id, label: p.name }));
+  }, [productsMasterData]);
+
+  const memberOptions = useMemo(() => {
+    if (!Array.isArray(memberData)) return [];
+    return memberData.map((m: any) => ({ value: m.id, label: m.name }));
+  }, [memberData]);
+
+  // --- Fetch Initial Data ---
   useEffect(() => {
     dispatch(getUsersAction());
+    dispatch(getAllProductAction());
+    dispatch(getMembersAction());
     if (offerIdFromParams) {
       dispatch(getOfferById(offerIdFromParams));
     } else {
@@ -122,50 +125,22 @@ const EditOffer = () => {
     }
   }, [dispatch, offerIdFromParams, navigate]);
 
+  // --- Populate Form with Fetched Offer Data ---
   useEffect(() => {
-    if (currentOfferStatus === 'idle' && currentOffer) {
-      // Parse seller_section and buyer_section from JSON strings
-      let sellerIds: string[] = [];
-      let buyerIds: string[] = [];
-
-      try {
-        sellerIds = currentOffer.seller_section ? JSON.parse(currentOffer.seller_section) : [];
-      } catch (e) {
-        console.warn("Failed to parse seller_section:", e);
-      }
-
-      try {
-        buyerIds = currentOffer.buyer_section ? JSON.parse(currentOffer.buyer_section) : [];
-      } catch (e) {
-        console.warn("Failed to parse buyer_section:", e);
-      }
-
-      // Transform IDs into field array objects
-      const sellersToSet = sellerIds.length > 0
-        ? sellerIds.map((id: string) => ({ sellerId: id }))
-        : [{ sellerId: "" }];
-
-      const buyersToSet = buyerIds.length > 0
-        ? buyerIds.map((id: string) => ({ buyerId: id }))
-        : [{ buyerId: "" }];
-
+    if (currentOfferStatus === 'succeeded' && currentOffer) {
       reset({
         name: currentOffer.name || "",
-        assignedUserId: Number(currentOffer.assign_user || null), // Directly a string
-        sellers: sellersToSet,
-        buyers: buyersToSet,
+        assignedUserId: currentOffer.assign_user?.id || null,
+        productIds: currentOffer.product_ids || [],
+        sellers: currentOffer.seller_section || [],
+        buyers: currentOffer.buyer_section || [],
         groupA_notes: currentOffer.groupA || "",
         groupB_notes: currentOffer.groupB || "",
       });
     } else if (currentOfferStatus === 'failed') {
-      toast.push(
-        <Notification title="Load Error" type="danger">
-          Failed to load offer details.
-        </Notification>
-      );
+      toast.push(<Notification title="Load Error" type="danger">Failed to load offer details.</Notification>);
     }
   }, [currentOffer, currentOfferStatus, reset]);
-
 
   const onFormSubmit = useCallback(
     async (formData: OfferEditFormData) => {
@@ -176,21 +151,15 @@ const EditOffer = () => {
       setIsSubmitting(true);
 
       const apiPayload = {
-        id: currentOffer.id, // The numeric ID of the offer to update
+        id: currentOffer.id,
         name: formData.name,
         assign_user: formData.assignedUserId,
+        product_ids: formData.productIds,
+        seller_section: formData.sellers,
+        buyer_section: formData.buyers,
         groupA: formData.groupA_notes,
         groupB: formData.groupB_notes,
-        // Filter out empty IDs before sending
-        seller_section: formData.sellers
-            .map(seller => seller.sellerId)
-            .filter(id => id && id.trim() !== ''),
-        buyer_ids: formData.buyers
-            .map(buyer => buyer.buyerId)
-            .filter(id => id && id.trim() !== ''),
       };
-
-      console.log("--- EditOffer API Payload for Update ---", apiPayload);
 
       try {
         await dispatch(editOfferAction(apiPayload)).unwrap();
@@ -210,9 +179,9 @@ const EditOffer = () => {
     navigate("/sales-leads/offers-demands");
   };
 
-  const isLoadingPage = currentOfferStatus === 'loading';
+  const isLoading = currentOfferStatus === 'loading' || masterLoadingStatus === 'loading';
 
-  if (isLoadingPage) {
+  if (isLoading && !currentOffer) {
     return (
       <Container className="flex justify-center items-center h-full">
         <Spinner size={40} />
@@ -242,12 +211,16 @@ const EditOffer = () => {
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
         <h6 className='font-semibold text-primary'>Edit Offer (ID: {currentOffer?.generate_id || offerIdFromParams})</h6>
       </div>
-      <Form
-        id="editOfferForm"
-        onSubmit={handleSubmit(onFormSubmit)}
-      >
+
+      <Form id="editOfferForm" onSubmit={handleSubmit(onFormSubmit)}>
         <Card>
-          <h4 className="mb-6">Edit Offer Details</h4>
+          <div className="flex justify-between items-center mb-6">
+            <h4>Edit Offer Details</h4>
+            <Button type="button" variant="solid" onClick={() => toast.push(<Notification title="Info" type="info">Price List feature coming soon!</Notification>)}>
+              View Price List
+            </Button>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-4">
             <FormItem label="Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
               <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Offer Name" />} />
@@ -255,9 +228,18 @@ const EditOffer = () => {
             <FormItem label="Assign User" invalid={!!errors.assignedUserId} errorMessage={errors.assignedUserId?.message}>
               <Controller name="assignedUserId" control={control} render={({ field }) => (
                   <UiSelect placeholder="Select Employee" options={userOptions}
-                    value={userOptions.find(opt => opt.value === field.value)}
-                    onChange={option => field.onChange(option ? option.value : null)}
+                    value={userOptions.find((opt: OptionType) => opt.value === field.value)}
+                    onChange={(option: OptionType | null) => field.onChange(option ? option.value : null)}
                     isClearable />
+                )} />
+            </FormItem>
+            
+            <FormItem label="Products" invalid={!!errors.productIds} errorMessage={errors.productIds?.message} className="md:col-span-2">
+                <Controller name="productIds" control={control} render={({ field }) => (
+                    <UiSelect isMulti placeholder="Select Products" options={productOptions}
+                        value={productOptions.filter((opt: OptionType) => field.value?.includes(opt.value))}
+                        onChange={(options: OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
+                        isLoading={isLoading} />
                 )} />
             </FormItem>
 
@@ -265,22 +247,15 @@ const EditOffer = () => {
             <div className="flex flex-col gap-4">
               <Card>
                 <h5>Seller Section</h5>
-                <div className="flex flex-col gap-4 mt-4">
-                  {sellerFields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                      <FormItem label={index === 0 ? "Seller ID" : ""} className="w-full" invalid={!!errors.sellers?.[index]?.sellerId} errorMessage={errors.sellers?.[index]?.sellerId?.message}>
-                        <Controller name={`sellers.${index}.sellerId`} control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Seller ID" />} />
-                      </FormItem>
-                      {sellerFields.length > 1 && (
-                        <Button type="button" shape="circle" size="sm" icon={<TbTrash size={18} />} className="self-end mb-1" onClick={() => removeSeller(index)} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="text-right mt-2">
-                  <Button type="button" icon={<TbPlus />} onClick={() => appendSeller({ sellerId: '' })}>
-                    Add Another Seller
-                  </Button>
+                <div className="mt-4">
+                  <FormItem label="Sellers" invalid={!!errors.sellers} errorMessage={errors.sellers?.message}>
+                    <Controller name="sellers" control={control} render={({ field }) => (
+                      <UiSelect isMulti placeholder="Select Sellers" options={memberOptions}
+                        value={memberOptions.filter((opt: OptionType) => field.value?.includes(opt.value))}
+                        onChange={(options: OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
+                        isLoading={isLoading} />
+                    )} />
+                  </FormItem>
                 </div>
               </Card>
               <Card>
@@ -300,22 +275,15 @@ const EditOffer = () => {
             <div className="flex flex-col gap-4">
               <Card>
                 <h5>Buyer Section</h5>
-                <div className="flex flex-col gap-4 mt-4">
-                  {buyerFields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                      <FormItem label={index === 0 ? "Buyer ID" : ""} className="w-full" invalid={!!errors.buyers?.[index]?.buyerId} errorMessage={errors.buyers?.[index]?.buyerId?.message}>
-                        <Controller name={`buyers.${index}.buyerId`} control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="Search Buyer ID" />} />
-                      </FormItem>
-                      {buyerFields.length > 1 && (
-                        <Button type="button" shape="circle" size="sm" icon={<TbTrash size={18} />} className="self-end mb-1" onClick={() => removeBuyer(index)} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="text-right mt-2">
-                  <Button type="button" icon={<TbPlus />} onClick={() => appendBuyer({ buyerId: '' })}>
-                    Add Another Buyer
-                  </Button>
+                <div className="mt-4">
+                  <FormItem label="Buyers" invalid={!!errors.buyers} errorMessage={errors.buyers?.message}>
+                    <Controller name="buyers" control={control} render={({ field }) => (
+                      <UiSelect isMulti placeholder="Select Buyers" options={memberOptions}
+                        value={memberOptions.filter((opt: OptionType) => field.value?.includes(opt.value))}
+                        onChange={(options: OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
+                        isLoading={isLoading} />
+                    )} />
+                  </FormItem>
                 </div>
               </Card>
               <Card>
@@ -335,7 +303,7 @@ const EditOffer = () => {
         
         <Card bodyClass="flex justify-end gap-2" className='mt-4'>
           <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" form="editOfferForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !isDirty}>
+          <Button type="submit" form="editOfferForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !isDirty || isLoading}>
             {isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
         </Card>
