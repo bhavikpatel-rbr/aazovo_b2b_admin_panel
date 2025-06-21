@@ -782,8 +782,8 @@ const Products = () => {
     [BrandData]
   );
   const unitOptions = useMemo(
-    () => unitData?.data?.map((u: any) => ({ value: u.id, label: u.name })) || [],
-    [unitData?.data]
+    () => unitData?.map((u: any) => ({ value: u.id, label: u.name })) || [],
+    [unitData]
   );
   const countryOptions = useMemo(
     () =>
@@ -1721,6 +1721,7 @@ const Products = () => {
         accessorKey: "id",
         size: 60,
         meta: { tdClass: "text-center", thClass: "text-center" },
+        cell: ({ getValue }) => getValue().toString().padStart(6, '0'),
       },
       {
         header: "Product",

@@ -868,7 +868,13 @@ const Categories = () => {
   const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
   const columns: ColumnDef<CategoryItem>[] = useMemo(() => [
-    { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
+    {
+      header: "ID",
+      accessorKey: "id",
+      size: 60,
+      meta: { tdClass: "text-center", thClass: "text-center" },
+      cell: ({ getValue }) => getValue().toString().padStart(6, '0'),
+    },
     {
       header: "Name", accessorKey: "name", enableSorting: true,
       cell: (props) => {
