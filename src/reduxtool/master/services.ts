@@ -281,7 +281,7 @@ export const editcontinentAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", name: unitData?.name, region: unitData?.region, iso: unitData?.iso, phonecode: unitData?.phonecode, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/continent/${unitData?.id}`, { _method: "PUT", name: unitData?.name, region: unitData?.region, iso_code: unitData?.iso_code, phone_code: unitData?.phone_code, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -325,10 +325,8 @@ export const addcountryAsync = async (unitData: any) => {
 }
 
 export const editcountryAsync = async (unitData: any) => {
-  console.log(`${config.apiURL}/master/country/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
-
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/country/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, region: unitData?.region, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/country/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso_code: unitData?.iso_code, phone_code: unitData?.phone_code, region: unitData?.region, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -562,7 +560,7 @@ export const addBlogsAsync = async (unitData: FormData) => {
 //   console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
 //   try {
-//     const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso: unitData?.iso, phonecode: unitData?.phonecode, region: unitData?.region })
+//     const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso_code: unitData?.iso_code, phone_code: unitData?.phone_code, region: unitData?.region })
 //     return response
 //   } catch (err) {
 //     return isAxiosError(err)

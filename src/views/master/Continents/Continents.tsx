@@ -751,17 +751,17 @@ const Continents = () => {
                     )
                 },
             },
-            {
-                header: 'Actions',
-                id: 'action',
-                meta: { HeaderClass: 'text-center', cellClass: 'text-center' },
-                size: 60,
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)}
-                    />
-                ),
-            },
+            // {
+            //     header: 'Actions',
+            //     id: 'action',
+            //     meta: { HeaderClass: 'text-center', cellClass: 'text-center' },
+            //     size: 60,
+            //     cell: (props) => (
+            //         <ActionColumn
+            //             onEdit={() => openEditDrawer(props.row.original)}
+            //         />
+            //     ),
+            // },
         ],
         [openEditDrawer],
     )
