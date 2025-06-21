@@ -88,10 +88,15 @@ export type LeadFormData = z.infer<typeof leadFormSchema>;
 
 // --- UI Constants for Selects (Unchanged) ---
 export const leadStatusOptions: { value: LeadStatus, label: string }[] = [
-  { value: "New", label: "New" }, { value: "Contacted", label: "Contacted" },
-  { value: "Qualified", label: "Qualified" }, { value: "Proposal Sent", label: "Proposal Sent" },
-  { value: "Negotiation", label: "Negotiation" }, { value: "Follow Up", label: "Follow Up" },
-  { value: "Lost", label: "Lost" }, { value: "Won", label: "Won" },
+  { value: "New", label: "New" },
+  { value: "Assigned", label: "Assigned" },
+  { value: "Accepted", label: "Accepted" },
+  { value: "Approval Waiting", label: "Approval Waiting" },
+  { value: "Approved", label: "Approved" },
+  { value: "Deal done", label: "Deal done" },
+  { value: "Rejected", label: "Rejected" },
+  { value: "Cancelled", label: "Cancelled" },
+  { value: "Completed", label: "Completed" },
 ];
 
 export const enquiryTypeOptions: { value: EnquiryType, label: string }[] = [

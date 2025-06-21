@@ -67,8 +67,8 @@ type ApiLookupItem = {
 };
 
 const productStatusOptions = [
+  { value: "Non-active", label: "Non-active" },
   { value: "Active", label: "Active" },
-  { value: "Inactive", label: "Inactive" },
 ];
 
 const cartoonTypeOptions = [
