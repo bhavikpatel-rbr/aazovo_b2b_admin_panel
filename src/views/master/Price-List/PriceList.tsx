@@ -1151,7 +1151,7 @@ const PriceList = () => {
             return
         }
         const worksheetData = data.map((item) => ({
-            'Product Name': item.product.name,
+            'Product Name': item.product?.name,
             'Sales Price': item.sales_price,
             'Base Price': item.base_price,
             Status: item.status,
@@ -1194,7 +1194,7 @@ const PriceList = () => {
         let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n`
         message += '-----------------------------------\n'
         todayPriceListData.forEach((item) => {
-            message += `*Product:* ${item.product.name}\n`
+            message += `*Product:* ${item.product?.name}\n`
             message += `*Price:* ₹${item.sales_price}\n`
             message += `*Status:* ${item.status}\n`
             message += '-----------------------------------\n'
@@ -1885,7 +1885,7 @@ const PriceList = () => {
                             <Table.TBody>
                                 {todayPriceListData?.map((item) => (
                                     <Table.Tr key={item.id}>
-                                        <Table.Td>{item.product.name}</Table.Td>
+                                        <Table.Td>{item.product?.name}</Table.Td>
                                         <Table.Td>₹{item.sales_price}</Table.Td>
                                         <Table.Td>
                                             <Tag
