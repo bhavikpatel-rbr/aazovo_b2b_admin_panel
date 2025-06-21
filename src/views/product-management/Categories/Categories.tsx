@@ -54,7 +54,13 @@ import {
   TbBoxOff,
   TbCloudDownload,
   TbPhoto,
-  TbReload, // Generic photo icon
+  TbReload,
+  TbBrandProducthunt,
+  TbCircleCheck,
+  TbCancel,
+  TbCategory2,
+  TbCalendar,
+  TbBlocks, // Generic photo icon
 } from "react-icons/tb";
 
 // Types for Categories
@@ -918,6 +924,62 @@ const Categories = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Categories</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddCategoryDrawer}>Add New</Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbCategory size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">12</h6>
+                <span className="font-semibold text-[11px]">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbCircleCheck size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">12</h6>
+                <span className="font-semibold text-[11px]">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbCancel size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">12</h6>
+                <span className="font-semibold text-[11px]">Inactive</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbCategory2 size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">12</h6>
+                <span className="font-semibold text-[11px]">Main Category</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbBlocks size={24} />
+              </div>
+              <div>
+                <h6 className=" text-pink-500">12</h6>
+                <span className="font-semibold text-[11px]">Sub Category</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbCalendar size={24} />
+              </div>
+              <div>
+                <h6 className="text-orange-500">12</h6>
+                <span className="font-semibold text-[11px]">Coming Soon</span>
+              </div>
+            </Card>
           </div>
           <CategoryTableTools
             onClearFilters={onClearFilters}

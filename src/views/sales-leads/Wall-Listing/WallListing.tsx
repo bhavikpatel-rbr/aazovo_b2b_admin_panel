@@ -31,6 +31,7 @@ import {
   Input,
   Select as UiSelect,
   Table,
+  Card,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
@@ -48,11 +49,16 @@ import {
   TbAlertTriangle,
   TbBell,
   TbBookmark,
+  TbBox,
+  TbBoxOff,
   TbBrandWhatsapp,
   TbBuilding,
   TbBulb,
+  TbCalendar,
   TbCalendarEvent,
+  TbCancel,
   TbChecks,
+  TbCircleCheck,
   TbClipboardText,
   TbCloudDownload,
   TbCloudUpload,
@@ -65,11 +71,15 @@ import {
   TbFileText,
   TbFileZip,
   TbFilter,
+  TbListCheck,
+  TbListDetails,
   TbMail,
   TbMessageCircle,
+  TbPackageExport,
   TbPencil,
   TbPhoto,
   TbPlus,
+  TbProgress,
   TbReceipt,
   TbReload,
   TbSearch,
@@ -2130,6 +2140,80 @@ const WallListing = () => {
                 Add Multiple
               </Button>
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-blue-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbListDetails size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-blue-500">12</b>
+                <span className="font-semibold text-[11px]">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-emerald-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
+                <TbCalendar size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-emerald-500">12</b>
+                <span className="font-semibold text-[11px]">Today</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-violet-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbBox size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-violet-500">12</b>
+                <span className="font-semibold text-[11px]">Buy</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-pink-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbPackageExport size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-pink-500">12</b>
+                <span className="font-semibold text-[11px]">Sell</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-green-300" >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbCircleCheck size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-green-500">12</b>
+                <span className="font-semibold text-[11px]">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-red-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbCancel size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-red-500">12</b>
+                <span className="font-semibold text-[11px]">Non Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-orange-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbProgress size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-orange-500">12</b>
+                <span className="font-semibold text-[11px]">Pending</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-red-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbBoxOff size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-red-500">12</b>
+                <span className="font-semibold text-[11px]">Rejected</span>
+              </div>
+            </Card>
           </div>
           <WallTableTools
             onSearchChange={handleSearchChange}

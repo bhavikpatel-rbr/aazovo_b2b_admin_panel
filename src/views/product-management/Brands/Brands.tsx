@@ -42,6 +42,10 @@ TbTrash,
   TbBuildingStore,
   TbBox,
   TbReload,
+  TbBrandReact,
+  TbCircleCheck,
+  TbCancel,
+  TbBrandRedux,
 } from "react-icons/tb";
 
 // Types
@@ -997,6 +1001,36 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Brands</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 mb-4 gap-2">
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbBrandRedux size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">12</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbCircleCheck size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">12</h6>
+                <span className="font-semibold text-xs">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbCancel size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">12</h6>
+                <span className="font-semibold text-xs">Inactive</span>
+              </div>
+            </Card>
+            
           </div>
           <BrandTableTools
             onClearFilters={onClearFilters}
