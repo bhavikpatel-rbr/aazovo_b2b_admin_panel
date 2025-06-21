@@ -767,8 +767,8 @@ const Products = () => {
   );
 
   const domainOptions = useMemo(
-    () => domainsData?.data?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
-    [domainsData?.data]
+    () => domainsData?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
+    [domainsData]
   );
   const categoryOptions = useMemo(
     () =>
