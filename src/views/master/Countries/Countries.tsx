@@ -68,7 +68,7 @@ export type CountryItem = {
     phone_code: string
     status: 'Active' | 'Inactive' // Added status field
     continent?: {
-        // id: string | number
+        id: string | number
         name: string
     }
     region?: string // Optional region field
@@ -86,10 +86,8 @@ const statusOptions: SelectOption[] = [
 
 // --- Zod Schema for Add/Edit Country Form ---
 const countryFormSchema = z.object({
-    continent_id: z.union([
-        z.string().min(1, 'Continent is required.'),
-        z.number().min(1, 'Continent is required.'),
-    ]),
+    // MODIFIED: Renamed 'continent_id' to 'region' and it expects a string (the continent name)
+    region: z.string().min(1, 'Continent is required.'),
     name: z
         .string()
         .min(1, 'Country name is required.')
@@ -101,10 +99,10 @@ const countryFormSchema = z.object({
     phone_code: z
         .string()
         .min(1, 'Phone code is required.')
-        .max(5, 'Phone code max 10 characters.'),
+        .max(10, 'Phone code max 10 characters.'),
     status: z.enum(['Active', 'Inactive'], {
         required_error: 'Status is required.',
-    }), // Added status
+    }),
 })
 type CountryFormData = z.infer<typeof countryFormSchema>
 
@@ -188,7 +186,8 @@ function exportToCsvCountry(filename: string, rows: CountryItem[]) {
         iso_code: row.iso_code,
         phone_code: row.phone_code,
         status: row.status, // Added status
-        continentName: row.continent?.name || String(row.continent_id) || 'N/A',
+        // MODIFIED: Prioritize the 'region' field for consistency with the table display.
+        continentName: row.region || 'N/A',
         updated_by_name: row.updated_by_name || 'N/A',
         updated_by_role: row.updated_by_role || 'N/A',
         updated_at_formatted: row.updated_at
@@ -412,27 +411,30 @@ const Countries = () => {
         if (!Array.isArray(ContinentsData)) return []
         return ContinentsData.map(
             (continent: { id: string | number; name: string }) => ({
-                value: continent.name,
+                value: continent.id,
                 label: continent.name,
             }),
         )
     }, [ContinentsData])
 
+    // MODIFIED: Default form values now use 'region' instead of 'continent_id'
     const defaultFormValues: CountryFormData = useMemo(
         () => ({
-            continent_id: continentOptions[0]?.value || '',
+            region: '',
             name: '',
             iso_code: '',
             phone_code: '',
-            status: 'Active', // Default status
+            status: 'Active',
         }),
-        [continentOptions],
+        [],
     )
 
     useEffect(() => {
         dispatch(getCountriesAction())
         dispatch(getContinentsAction())
     }, [dispatch])
+
+
 
     const addFormMethods = useForm<CountryFormData>({
         resolver: zodResolver(countryFormSchema),
@@ -465,7 +467,8 @@ const Countries = () => {
     const onAddCountrySubmit = async (data: CountryFormData) => {
         setIsSubmitting(true)
         try {
-            await dispatch(addCountryAction(data)).unwrap() // data includes status
+            // The `data` object now contains 'region' instead of 'continent_id'
+            await dispatch(addCountryAction(data)).unwrap()
             toast.push(
                 <Notification
                     title="Country Added"
@@ -492,15 +495,16 @@ const Countries = () => {
         }
     }
 
+    // MODIFIED: Set form's 'region' field from country.region
     const openEditDrawer = useCallback(
         (country: CountryItem) => {
             setEditingCountry(country)
             editFormMethods.reset({
-                continent_id: country.continent_id,
+                region: country.region || '', // Use region (continent name)
                 name: country.name,
                 iso_code: country.iso_code,
                 phone_code: country.phone_code,
-                status: country.status || 'Active', // Set status, default to Active
+                status: country.status || 'Active',
             })
             setIsEditDrawerOpen(true)
         },
@@ -517,8 +521,9 @@ const Countries = () => {
         if (!editingCountry?.id) return
         setIsSubmitting(true)
         try {
+            // The `data` object now contains 'region' instead of 'continent_id'
             await dispatch(
-                editCountryAction({ id: editingCountry.id, ...data }), // data includes status
+                editCountryAction({ id: editingCountry.id, ...data }),
             ).unwrap()
             toast.push(
                 <Notification
@@ -1068,44 +1073,51 @@ const Countries = () => {
                                             </span>
                                         </div>
                                     }
+                                    // MODIFIED: Use 'region' for error validation
                                     invalid={
                                         !!drawerProps.formMethods.formState
-                                            .errors.continent_id
+                                            .errors.region
                                     }
                                     errorMessage={
                                         drawerProps.formMethods.formState.errors
-                                            .continent_id?.message as
+                                            .region?.message as
                                             | string
                                             | undefined
                                     }
                                 >
+                                    {/* MODIFIED: Controller now controls the 'region' field */}
                                     <Controller
-                                        name="continent_id"
+                                        name="region"
                                         control={
                                             drawerProps.formMethods.control
                                         }
-                                        render={({ field }) => (
-                                            <Select
-                                                placeholder="Select Continent"
-                                                options={continentOptions}
-                                                value={
-                                                    continentOptions.find(
-                                                        (option) =>
-                                                            String(
-                                                                option.value,
-                                                            ) ===
-                                                            String(field.value),
-                                                    ) || null
-                                                }
-                                                onChange={(option) =>
-                                                    field.onChange(
-                                                        option
-                                                            ? option.value
-                                                            : '',
-                                                    )
-                                                }
-                                            />
-                                        )}
+                                        render={({ field }) => {
+                                            const nameBasedOptions =
+                                                continentOptions.map((c) => ({
+                                                    value: c.label,
+                                                    label: c.label,
+                                                }))
+                                            return (
+                                                <Select
+                                                    placeholder="Select Continent"
+                                                    options={nameBasedOptions}
+                                                    value={
+                                                        nameBasedOptions.find(
+                                                            (c) =>
+                                                                c.value ===
+                                                                field.value,
+                                                        ) || null
+                                                    }
+                                                    onChange={(option) =>
+                                                        field.onChange(
+                                                            option
+                                                                ? option.value
+                                                                : '',
+                                                        )
+                                                    }
+                                                />
+                                            )
+                                        }}
                                     />
                                 </FormItem>
                                 <FormItem
