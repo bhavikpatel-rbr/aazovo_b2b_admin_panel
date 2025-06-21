@@ -318,7 +318,7 @@ const EditOffer = () => {
           
             {/* --- Price List Table View (Moved) --- */}
             <Card className="mt-4">
-              <h5 className="mb-4">Price List Details</h5>
+              {/* <h5 className="mb-4">Price List Details</h5> */}
 
               <div className="grid lg:grid-cols-3 gap-4 mb-4">
                 <FormItem label="Add Product">
