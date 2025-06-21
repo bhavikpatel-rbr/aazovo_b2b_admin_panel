@@ -68,6 +68,7 @@ import {
   TbCancel,
   TbRefresh,
   TbProgress,
+  TbCircleX,
 } from "react-icons/tb";
 
 // Types
@@ -1864,7 +1865,7 @@ const Products = () => {
               </Button>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 mb-2 mt-4 gap-2 ">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 mb-2 mt-4 gap-2 ">
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                 <TbBrandProducthunt size={24} />
@@ -1889,7 +1890,7 @@ const Products = () => {
               </div>
               <div>
                 <h6 className="text-red-500">12</h6>
-                <span className="font-semibold text-[11px]">Inactive</span>
+                <span className="font-semibold text-[11px]">Disabled</span>
               </div>
             </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
@@ -1901,13 +1902,22 @@ const Products = () => {
                 <span className="font-semibold text-[11px]">Pending</span>
               </div>
             </Card>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbCircleX size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">12</h6>
+                <span className="font-semibold text-[11px]">Rejected</span>
+              </div>
+            </Card>
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
                 <TbRefresh size={24} />
               </div>
               <div>
                 <h6 className="text-violet-500">12</h6>
-                <span className="font-semibold text-[11px]">Coming Soon</span>
+                <span className="font-semibold text-[11px]">Draft</span>
               </div>
             </Card>
           </div>

@@ -37,6 +37,7 @@ import {
   DatePicker,
   FormItem,
   Table,
+  Card,
 } from "@/components/ui";
 import Dropdown from "@/components/ui/Dropdown";
 import classNames from "classnames";
@@ -68,6 +69,14 @@ import {
   TbClipboardText,
   TbFileZip,
   TbFileText,
+  TbTrophy,
+  TbCalendar,
+  TbCircleCheck,
+  TbFlag,
+  TbFlagX,
+  TbBox,
+  TbListDetails,
+  TbPennant,
 } from "react-icons/tb";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
@@ -996,6 +1005,80 @@ const LeadsListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={handleOpenAddLeadPage}>Add New</Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-8 mb-4 gap-2 ">
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-blue-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbTrophy size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-blue-500">12</b>
+                <span className="font-semibold text-[10px]">Total</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-violet-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbCalendar size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-violet-500">12</b>
+                <span className="font-semibold text-[10px]">Today</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-green-300" >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbCircleCheck size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-green-500">12</b>
+                <span className="font-semibold text-[10px]">Active</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-green-300" >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbFlag size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-green-500">12</b>
+                <span className="font-semibold text-[10px]">Deal Done</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-red-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbFlagX size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-red-500">12</b>
+                <span className="font-semibold text-[10px]">Cancelled</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-violet-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbBox size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-violet-500">12</b>
+                <span className="font-semibold text-[10px]">Product Lead</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-pink-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbListDetails size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-pink-500">12</b>
+                <span className="font-semibold text-[10px]">Wall Lead</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-orange-200">
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbPennant size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-orange-500">12</b>
+                <span className="font-semibold text-[10px]">Manual Lead</span>
+              </div>
+            </Card>
           </div>
           <LeadTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportModal} />
           <div className="mt-4 flex-grow overflow-y-auto">
