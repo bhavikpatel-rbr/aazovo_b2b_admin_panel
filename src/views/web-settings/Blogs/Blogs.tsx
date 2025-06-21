@@ -100,7 +100,6 @@ const blogFormSchema = z.object({
   slug: z
     .string()
     .max(255, "Slug cannot exceed 255 characters.")
-    .url("Must be a valid URL")
     .optional()
     .nullable(),
   blog_descr: z.string().optional().nullable(),

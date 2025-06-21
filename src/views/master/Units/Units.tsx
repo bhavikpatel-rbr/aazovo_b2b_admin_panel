@@ -716,7 +716,7 @@ const Units = () => {
                 accessorKey: 'updated_at',
                 enableSorting: true,
 
-                size: 120,
+                size: 250,
                 cell: (props) => {
                     const { updated_at, updated_by_user, updated_by_role } =
                         props.row.original

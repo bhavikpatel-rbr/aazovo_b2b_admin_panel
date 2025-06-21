@@ -24,6 +24,7 @@ import {
   Select as UiSelect,
   Tag,
   Dialog,
+  Card,
 } from "@/components/ui";
 
 // Icons
@@ -41,6 +42,10 @@ import {
   TbPhoto,
   TbReload,
   TbUser,
+  TbMessageStar,
+  TbMessageShare,
+  TbMessageCheck,
+  TbMessage2X,
 } from "react-icons/tb";
 
 // Types
@@ -219,11 +224,13 @@ const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [
   { value: "Inactive", label: "Inactive" },
 ];
 const statusColor: Record<SliderItem["status"], string> = {
-  // Use SliderItem["status"]
   Active:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500 border-2",
-  Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500 border-2",
+    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500 border",
+  Inactive:
+    "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500 border",
 };
+
+
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS_SLIDER = [
@@ -1194,16 +1201,21 @@ const Sliders = () => {
         accessorKey: "status",
         enableSorting: true,
         size: 80,
-        cell: (props) => (
-          <Tag
-            className={`${
-              statusColor[props.row.original.status]
-            } capitalize font-semibold border-0`}
-          >
-            {props.row.original.status}
-          </Tag>
-        ),
+        cell: (props) => {
+          const status = props.row.original.status;
+          return (
+            <Tag
+              className={classNames(
+                "capitalize font-semibold", // keep this
+                statusColor[status] || statusColor.Inactive // fallback
+              )}
+            >
+              {status}
+            </Tag>
+          );
+        },
       },
+
       {
         header: "Updated Info",
         accessorKey: "updated_at",
@@ -1615,6 +1627,60 @@ const Sliders = () => {
                 Add New
               </Button>
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-blue-200"
+            >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbMessageStar size={24} />
+              </div>
+              <div>
+                <h6 className="text-blue-500">{rawSlidersData?.counts?.total ?? 0}</h6>
+                <span className="font-semibold text-xs">Total</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-violet-200"
+            >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbMessageShare size={24} />
+              </div>
+              <div>
+                <h6 className="text-violet-500">{rawSlidersData?.counts?.today ?? 0}</h6>
+                <span className="font-semibold text-xs">Today</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-green-300"
+            >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbMessageCheck size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500">
+                  {rawSlidersData?.counts?.published ?? 0}{" "}
+                </h6>
+                <span className="font-semibold text-xs">Published</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-red-200"
+            >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbMessage2X size={24} />
+              </div>
+              <div>
+                <h6 className="text-red-500">
+                  {rawSlidersData?.counts?.unpublished ?? 0}
+                </h6>
+                <span className="font-semibold text-xs">Unpublished</span>
+              </div>
+            </Card>
           </div>
           <SlidersTableTools
             onSearchChange={handleSearchChange}
