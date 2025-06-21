@@ -1369,7 +1369,7 @@ const PriceList = () => {
                                     ).toFixed(2)}
                                 </h6>
                                 <span className="font-semibold text-xs">
-                                    Avg NLC (₹)
+                                    Avg NLC ($)
                                 </span>
                             </div>
                         </Card>
@@ -1886,7 +1886,7 @@ const PriceList = () => {
                                 {todayPriceListData?.map((item) => (
                                     <Table.Tr key={item.id}>
                                         <Table.Td>{item.product?.name}</Table.Td>
-                                        <Table.Td>₹{item.sales_price}</Table.Td>
+                                        <Table.Td>${item.sales_price}</Table.Td>
                                         <Table.Td>
                                             <Tag
                                                 className={classNames(

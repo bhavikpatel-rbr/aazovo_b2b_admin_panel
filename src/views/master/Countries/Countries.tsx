@@ -68,7 +68,7 @@ export type CountryItem = {
     phone_code: string
     status: 'Active' | 'Inactive' // Added status field
     continent?: {
-        id: string | number
+        // id: string | number
         name: string
     }
     region?: string // Optional region field
@@ -412,7 +412,7 @@ const Countries = () => {
         if (!Array.isArray(ContinentsData)) return []
         return ContinentsData.map(
             (continent: { id: string | number; name: string }) => ({
-                value: continent.id,
+                value: continent.name,
                 label: continent.name,
             }),
         )
