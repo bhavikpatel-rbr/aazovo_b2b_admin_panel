@@ -29,6 +29,7 @@ import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
+  Card,
   DatePicker,
   Drawer,
   Dropdown,
@@ -52,17 +53,22 @@ import {
   // TbAffiliate, // Not used
   TbAlarm,
   TbAlertTriangle,
+  TbArrowDownLeft,
+  TbArrowUpRight,
   TbBell,
   TbBrandWhatsapp,
   // TbBuilding, // Not used
   TbCalendar,
+  TbCalendarDown,
   TbCalendarEvent,
+  TbCalendarUp,
   TbCancel,
   TbChecks,
   TbCircleCheck,
   // TbCircleLetterX, // Not used
   // TbCircleX, // Not used
   TbClipboardText,
+  TbClockHour4,
   // TbCloudDownload, // Not used directly
   TbCloudUpload,
   // TbDotsVertical, // Not used
@@ -73,6 +79,7 @@ import {
   TbFileText,
   TbFileZip,
   TbFilter,
+  TbListDetails,
   // TbLink, // Not used
   TbMail,
   // TbMessageCircle, // Not used
@@ -215,6 +222,15 @@ export type OfferDemandItem = {
   updated_by_role?: string;
   originalApiItem: ActualApiOfferShape | ActualApiDemandShape; 
   health_score?: number; 
+};
+
+const offerDemandCounts = {
+    total: 1250,
+    offer: 720,
+    demand: 530,
+    todayTotal: 45,
+    todayOffer: 25,
+    todayDemand: 20,
 };
 
 const TABS = { OFFER: "offer", DEMAND: "demand" };
@@ -900,6 +916,101 @@ const OffersDemands = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4"><h5 className="mb-4 lg:mb-0">Offers & Demands</h5><ItemActionTools onRefresh={() => fetchData()} onOpenFilter={openFilterDrawer} /></div>
+           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+            {/* Card 1: Total */}
+            <Card
+                bodyClass="flex gap-2 p-2"
+                className="rounded-md border border-blue-200"
+            >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                    <TbListDetails size={24} />
+                </div>
+                <div>
+                    <h6 className="text-blue-500">{offerDemandCounts?.total ?? 0}</h6>
+                    <span className="font-semibold text-xs">Total</span>
+                </div>
+            </Card>
+
+            {/* Card 2: Offer */}
+            <Card
+                bodyClass="flex gap-2 p-2"
+                className="rounded-md border border-green-300"
+            >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                    <TbArrowUpRight size={24} />
+                </div>
+                <div>
+                    <h6 className="text-green-500">
+                        {offerDemandCounts?.offer ?? 0}
+                    </h6>
+                    <span className="font-semibold text-xs">Offers</span>
+                </div>
+            </Card>
+
+            {/* Card 3: Demand */}
+            <Card
+                bodyClass="flex gap-2 p-2"
+                className="rounded-md border border-violet-200"
+            >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                    <TbArrowDownLeft size={24} />
+                </div>
+                <div>
+                    <h6 className="text-violet-500">
+                        {offerDemandCounts?.demand ?? 0}
+                    </h6>
+                    <span className="font-semibold text-xs">Demands</span>
+                </div>
+            </Card>
+
+            {/* Card 4: Today Total */}
+            <Card
+                bodyClass="flex gap-2 p-2"
+                className="rounded-md border border-amber-300"
+            >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500">
+                    <TbClockHour4 size={24} />
+                </div>
+                <div>
+                    <h6 className="text-amber-500">
+                        {offerDemandCounts?.todayTotal ?? 0}
+                    </h6>
+                    <span className="font-semibold text-xs">Today</span>
+                </div>
+            </Card>
+            
+            {/* Card 5: Today Offers */}
+            <Card
+                bodyClass="flex gap-2 p-2"
+                className="rounded-md border border-teal-200"
+            >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500">
+                    <TbCalendarUp size={24} />
+                </div>
+                <div>
+                    <h6 className="text-teal-500">
+                        {offerDemandCounts?.todayOffer ?? 0}
+                    </h6>
+                    <span className="font-semibold text-xs">Today Offers</span>
+                </div>
+            </Card>
+
+            {/* Card 6: Today Demands */}
+            <Card
+                bodyClass="flex gap-2 p-2"
+                className="rounded-md border border-rose-200"
+            >
+                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500">
+                    <TbCalendarDown size={24} />
+                </div>
+                <div>
+                    <h6 className="text-rose-500">
+                        {offerDemandCounts?.todayDemand ?? 0}
+                    </h6>
+                    <span className="font-semibold text-xs">Today Demands</span>
+                </div>
+            </Card>
+        </div>
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
               {[ TABS.OFFER, TABS.DEMAND].map((tabKey) => 
