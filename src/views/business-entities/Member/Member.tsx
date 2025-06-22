@@ -1066,8 +1066,8 @@ const cityOptions = [
   { value: "Bengaluru", label: "Bengaluru" },
 ];
 const interestedForOptions = [
-  { value: "Buy", label: "Buy" },
-  { value: "Sell", label: "Sell" },
+  { value: "For Sell", label: "For Sell" },
+  { value: "For Buy", label: "For Buy" },
   { value: "Both", label: "Both" },
 ];
 // --- END MOCK FILTER OPTIONS ---
