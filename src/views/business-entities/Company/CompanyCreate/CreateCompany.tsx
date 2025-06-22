@@ -36,6 +36,7 @@ import {
   getCategoriesAction,
   getMembersAction,
   getCompanyAction,
+  getMemberAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import axiosInstance from "@/services/api/api";
@@ -51,7 +52,7 @@ interface MemberItem {
   member?: string | { label: string; value: string };
   designation?: string;
   person_name?: string;
-  contact_number?: string;
+  number?: string;
   type?: string;
   team_name?: string;
 }
@@ -95,7 +96,7 @@ interface BillingDocItemFE {
 
 interface ReferenceItemFE {
   person_name?: string;
-  company_id?: string;
+  company_id?: string | { label: string; value: string };
   number?: string;
   remark?: string;
 }
@@ -107,6 +108,8 @@ export interface CompanyFormSchema {
   company_name?: string;
   primary_contact_number?: string;
   primary_contact_number_code?: { label: string; value: string };
+  general_contact_number?: string;
+  general_contact_number_code?: { label: string; value: string };
   alternate_contact_number?: string;
   alternate_contact_number_code?: { label: string; value: string };
   primary_email_id?: string;
@@ -216,6 +219,8 @@ interface ApiSingleCompanyItem {
   // company_code?: string;
   primary_contact_number?: string;
   primary_contact_number_code?: string;
+  general_contact_number?: string;
+  general_contact_number_code?: string;
   alternate_contact_number?: string;
   alternate_contact_number_code?: string;
   primary_email_id?: string;
@@ -297,6 +302,7 @@ interface ApiSingleCompanyItem {
   other_document_remark?: string;
 
   company_spot_verification?: any[];
+  company_team_members?: any[],
   company_member_management?: any[];
   company_bank_details?: any[];
   office_info?: any[];
@@ -305,9 +311,7 @@ interface ApiSingleCompanyItem {
 }
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
-const transformApiToFormSchema = (
-  apiData: ApiSingleCompanyItem
-): Partial<CompanyFormSchema> => {
+const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Partial<CompanyFormSchema> => {
   const kycVerifyToBoolean = (verifyValue: boolean | string = "false"): boolean => {
     if (typeof verifyValue === "string") {
       return (
@@ -331,6 +335,7 @@ const transformApiToFormSchema = (
       .map((s) => ({ label: s, value: s }));
   };
 
+
   return {
     id: apiData.id,
     company_name: apiData.company_name,
@@ -339,6 +344,13 @@ const transformApiToFormSchema = (
       ? {
         label: apiData.primary_contact_number_code,
         value: apiData.primary_contact_number_code,
+      }
+      : undefined,
+    general_contact_number: apiData.general_contact_number,
+    general_contact_number_code: apiData.general_contact_number_code
+      ? {
+        label: apiData.general_contact_number_code,
+        value: apiData.general_contact_number_code,
       }
       : undefined,
     alternate_contact_number: apiData.alternate_contact_number,
@@ -474,16 +486,16 @@ const transformApiToFormSchema = (
     member: [...apiData.company_member_management?.map((m: any) => ({
       member: m.member_id ? { label: `Member ${m.member_id}`, value: String(m.member_id) } : undefined,
       designation: m.designation,
-      person_name: m.name,
+      person_name: m.person_name,
       team_name: m.team_name,
-      contact_number: m.mobile,
+      number: m.number,
     })), ...apiData.company_team_members?.map((m) => ({
       type: "team",
       member: m.member_id ? { label: `Member ${m.member_id}`, value: String(m.member_id) } : undefined,
       designation: m.designation,
-      person_name: m.name,
+      person_name: m.person_name,
       team_name: m.team_name,
-      contact_number: m.mobile,
+      number: m.number,
     }))],
     status: apiData.status
       ? { label: apiData.status, value: apiData.status }
@@ -511,7 +523,7 @@ const transformApiToFormSchema = (
     ),
     company_references: apiData.company_references?.map((ref) => ({
       person_name: ref.person_name,
-      company_id: ref.company_id.value,
+      company_id: data.find((value: any) => value.value == ref.company_id) ?? ref.company_id,
       number: ref.number,
       remark: ref.remark,
     })),
@@ -550,6 +562,8 @@ const preparePayloadForApi = (
   if (isEditMode && data.id) {
     apiPayload.append("id", String(data.id));
   }
+  console.log(data, 'data');
+
   append("company_name", data.company_name);
   append("owner_name", data.owner_name);
   append("company_address", data.company_address);
@@ -565,6 +579,8 @@ const preparePayloadForApi = (
   append("primary_email_id", data.primary_email_id);
   append("primary_contact_number", data.primary_contact_number);
   append("primary_contact_number_code", data.primary_contact_number_code);
+  append("general_contact_number", data.general_contact_number);
+  append("general_contact_number_code", data.general_contact_number_code);
   append("alternate_email_id", data.alternate_email_id);
   append("alternate_contact_number", data.alternate_contact_number);
   append("alternate_contact_number_code", data.alternate_contact_number_code);
@@ -631,11 +647,19 @@ const preparePayloadForApi = (
   // Members
   if (data.member) {
     data.member.forEach((member, index) => {
-      apiPayload.append(`company_member_management[${index}][member_id]`, member.member?.value || '');
-      apiPayload.append(`company_member_management[${index}][designation]`, member.designation || '');
-      apiPayload.append(`company_member_management[${index}][name]`, member.person_name || '');
-      apiPayload.append(`company_member_management[${index}][mobile]`, member.contact_number || '');
+      if (member.team_name) {
+        apiPayload.append(`company_team_members[${index}][team_name]`, member.team_name || '');
+        apiPayload.append(`company_team_members[${index}][designation]`, member.designation || '');
+        apiPayload.append(`company_team_members[${index}][person_name]`, member.person_name || '');
+        apiPayload.append(`company_team_members[${index}][number]`, member.number || '');
+      } else {
+        apiPayload.append(`company_member_management[${index}][member_id]`, member.member?.value || '');
+        apiPayload.append(`company_member_management[${index}][designation]`, member.designation || '');
+        apiPayload.append(`company_member_management[${index}][person_name]`, member.person_name || '');
+        apiPayload.append(`company_member_management[${index}][number]`, member.number || '');
+      }
     });
+
   }
 
   // Spot Verifications
@@ -652,7 +676,7 @@ const preparePayloadForApi = (
   if (data.company_references) {
     data.company_references.forEach((ref, index) => {
       apiPayload.append(`company_references[${index}][person_name]`, ref.person_name || "");
-      apiPayload.append(`company_references[${index}][company_id]`, (typeof ref.company_id === 'object' ? ref.company_id?.value : ref.company_id)  || "");
+      apiPayload.append(`company_references[${index}][company_id]`, (typeof ref.company_id === 'object' ? ref.company_id?.value : ref.company_id) || "");
       apiPayload.append(`company_references[${index}][number]`, ref.number || "");
       apiPayload.append(`company_references[${index}][remark]`, ref.remark || "");
     });
@@ -693,17 +717,11 @@ const preparePayloadForApi = (
   ];
 
   kycDocsConfig.forEach((doc) => {
-    if (data[doc.feFile] instanceof File) {
-    }
     apiPayload.append(doc.feFile, data[doc.feFile]);
     apiPayload.append(doc.beVerify, data[doc.feVerify] ? "1" : "0");
     apiPayload.append(doc.beRemark, data[doc.feRemark] || "");
   });
 
-  // For debugging:
-  for (let [key, value] of apiPayload.entries()) {
-    console.log(`${key}:`, value);
-  }
 
   return apiPayload;
 };
@@ -775,14 +793,6 @@ const CompanyDetailsSection = ({
     value: `${c.phone_code}`,
     label: `${c.phone_code} (${c.iso_code})`,
   }));
-  const stateOptions = [
-    { value: "MH", label: "Maharashtra" },
-    { value: "CA", label: "California" },
-  ];
-  const cityOptions = [
-    { value: "Mumbai", label: "Mumbai" },
-    { value: "Los Angeles", label: "Los Angeles" },
-  ];
   const continentOptions = ContinentsData.map((value: any) => ({
     value: value.id,
     label: value.name,
@@ -810,15 +820,6 @@ const CompanyDetailsSection = ({
   const statusOptions = [
     { value: "verified", label: "Verified" },
     { value: "unverified", label: "Non verified" },
-  ];
-  const companyTypeOptions = [
-    { value: "TypeA", label: "Type A" },
-    { value: "TypeB", label: "Type B" },
-  ];
-  const interestedInOptions = [
-    { value: "For Sell", label: "For Sell" },
-    { value: "For Buy", label: "For Buy" },
-    { value: "Both", label: "Both" },
   ];
   const officeTypeOptions = [
     { label: "Head Office", value: "Head Office" },
@@ -1143,7 +1144,7 @@ const CompanyDetailsSection = ({
         <FormItem className="sm:col-span-6 lg:col-span-4" label="General Mobile">
           <div className="flex items-center gap-2">
             <Controller
-              name="general_mobile_country_code"
+              name="general_contact_number_code"
               control={control}
               render={({ field }) => (
                 <Select
@@ -1154,7 +1155,7 @@ const CompanyDetailsSection = ({
               )}
             />
             <Controller
-              name="mobile"
+              name="general_contact_number"
               control={control}
               render={({ field }) => (
                 <Input placeholder="Company Mobile" {...field} />
@@ -2342,9 +2343,7 @@ const AccessibilitySection = ({
           </Button>
         </div>
         {fields.map((item, index) => {
-          const docFileValue = watch(
-            `billing_documents.${index}.document`
-          );
+          const docFileValue = watch(`billing_documents.${index}.document`);
           return (
             <Card key={item.id} className=" border-black rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-center">
@@ -2489,6 +2488,7 @@ const MemberManagementSection = ({
   errors,
   formMethods,
 }: FormSectionBaseProps) => {
+    const dispatch = useAppDispatch();
   const { memberData } = useSelector(masterSelector);
   const { fields, append, remove } = useFieldArray({
     control,
@@ -2496,7 +2496,9 @@ const MemberManagementSection = ({
   });
 
   // Correctly access nested data for paginated results
+  console.log(memberData, 'memberData');
   const memberOptions = useMemo(() => {
+
     const data = memberData?.data?.data || memberData;
     return Array.isArray(data)
       ? data.map((m: any) => ({
@@ -2506,6 +2508,9 @@ const MemberManagementSection = ({
       : [];
   }, [memberData]);
 
+    useEffect(() => {
+      dispatch(getMemberAction());
+    }, [dispatch]);
   return (
     <Card id="memberManagement">
       {" "}
@@ -2522,7 +2527,7 @@ const MemberManagementSection = ({
                 member: undefined,
                 designation: "",
                 person_name: "",
-                contact_number: "",
+                number: "",
               })
             }
           >
@@ -2538,7 +2543,7 @@ const MemberManagementSection = ({
                 member: undefined, // ignored for team
                 designation: "",
                 person_name: "",
-                contact_number: "",
+                number: "",
               })
             }
 
@@ -2592,7 +2597,7 @@ const MemberManagementSection = ({
             </FormItem>
             <FormItem label="Contact Number">
               <Controller
-                name={`member.${index}.contact_number`}
+                name={`member.${index}.number`}
                 control={control}
                 render={({ field }) => (
                   <Input type="tel" placeholder="Contact Number" {...field} />
@@ -2699,8 +2704,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     reset(fullInitialValues);
   }, [defaultValues, reset]);
   const internalFormSubmit = (values: CompanyFormSchema) => {
-    console.log(values);
-
     onFormSubmit?.(values, formMethods);
   };
   const navigationKeys = companyNavigationList.map((item) => item.link);
@@ -2828,6 +2831,8 @@ const CompanyCreate = () => {
     company_name: "",
     primary_contact_number: "",
     primary_contact_number_code: undefined,
+    general_contact_number: "",
+    general_contact_number_code: undefined,
     company_profile_settings_id: "",
     alternate_contact_number: "",
     alternate_contact_number_code: undefined,
@@ -2923,7 +2928,11 @@ const CompanyCreate = () => {
     dispatch(getCategoriesAction());
     dispatch(getMembersAction());
   }, [dispatch]);
-
+  const { CompanyData = [] } = useSelector(masterSelector);
+  const companyOptions = CompanyData?.data?.map((c: any) => ({
+    value: String(c.id),
+    label: c.company_name,
+  }));
   useEffect(() => {
     const emptyForm = getEmptyFormValues();
     if (isEditMode && id) {
@@ -2934,7 +2943,7 @@ const CompanyCreate = () => {
             getCompanyByIdAction(id)
           ).unwrap();
           if (actionResult) {
-            const transformed = transformApiToFormSchema(actionResult);
+            const transformed = transformApiToFormSchema(actionResult, companyOptions);
             setInitialData({ ...emptyForm, ...transformed });
           } else {
             toast.push(
