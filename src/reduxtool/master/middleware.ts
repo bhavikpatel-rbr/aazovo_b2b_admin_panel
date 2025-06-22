@@ -26,7 +26,7 @@ export const getLeadAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getLeadAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
@@ -3160,7 +3160,7 @@ export const getMembersAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getMembersAsync();
       if (response?.data?.status === true) {
-        return response?.data?.data?.data;
+        return response?.data?.data;
       }
 
       return rejectWithValue(response);

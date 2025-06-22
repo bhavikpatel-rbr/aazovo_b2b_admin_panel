@@ -638,8 +638,8 @@ const LeadsListing = () => {
   }, [dispatch]);
 
   const mappedLeads: LeadListItem[] = useMemo(() => {
-    if (!Array.isArray(LeadsData)) return [];
-    return LeadsData.map(
+    if (!Array.isArray(LeadsData?.data?.data)) return [];
+    return LeadsData?.data?.data.map(
       (apiLead: any): LeadListItem => ({
         id: apiLead.id,
         lead_number: apiLead.lead_number || `LD-${apiLead.id}`,
@@ -663,7 +663,7 @@ const LeadsListing = () => {
         supplier: apiLead.supplier,
       })
     );
-  }, [LeadsData]);
+  }, [LeadsData?.data?.data]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo((): { pageData: LeadListItem[]; total: number; allFilteredAndSortedData: LeadListItem[]; } => {
     let processedData: LeadListItem[] = cloneDeep(mappedLeads);
@@ -1012,7 +1012,7 @@ const LeadsListing = () => {
                 <TbTrophy size={20} />
               </div>
               <div className="flex flex-col">
-                <b className="text-blue-500">12</b>
+                <b className="text-blue-500">{LeadsData?.counts?.total}</b>
                 <span className="font-semibold text-[10px]">Total</span>
               </div>
             </Card>
@@ -1021,7 +1021,7 @@ const LeadsListing = () => {
                 <TbCalendar size={20} />
               </div>
               <div className="flex flex-col">
-                <b className="text-violet-500">12</b>
+                <b className="text-violet-500">{LeadsData?.counts?.today}</b>
                 <span className="font-semibold text-[10px]">Today</span>
               </div>
             </Card>
@@ -1030,7 +1030,7 @@ const LeadsListing = () => {
                 <TbCircleCheck size={20} />
               </div>
               <div className="flex flex-col">
-                <b className="text-green-500">12</b>
+                <b className="text-green-500">{LeadsData?.counts?.active}</b>
                 <span className="font-semibold text-[10px]">Active</span>
               </div>
             </Card>
@@ -1039,7 +1039,7 @@ const LeadsListing = () => {
                 <TbFlag size={20} />
               </div>
               <div className="flex flex-col">
-                <b className="text-green-500">12</b>
+                <b className="text-green-500">{LeadsData?.counts?.deal_done}</b>
                 <span className="font-semibold text-[10px]">Deal Done</span>
               </div>
             </Card>
@@ -1048,7 +1048,7 @@ const LeadsListing = () => {
                 <TbFlagX size={20} />
               </div>
               <div className="flex flex-col">
-                <b className="text-red-500">12</b>
+                <b className="text-red-500">{LeadsData?.counts?.cancelled}</b>
                 <span className="font-semibold text-[10px]">Cancelled</span>
               </div>
             </Card>
@@ -1057,7 +1057,7 @@ const LeadsListing = () => {
                 <TbBox size={20} />
               </div>
               <div className="flex flex-col">
-                <b className="text-violet-500">12</b>
+                <b className="text-violet-500">{LeadsData?.counts?.product_lead}</b>
                 <span className="font-semibold text-[10px]">Product Lead</span>
               </div>
             </Card>
@@ -1066,7 +1066,7 @@ const LeadsListing = () => {
                 <TbListDetails size={20} />
               </div>
               <div className="flex flex-col">
-                <b className="text-pink-500">12</b>
+                <b className="text-pink-500">{LeadsData?.counts?.wall_lead}</b>
                 <span className="font-semibold text-[10px]">Wall Lead</span>
               </div>
             </Card>
@@ -1075,7 +1075,7 @@ const LeadsListing = () => {
                 <TbPennant size={20} />
               </div>
               <div className="flex flex-col">
-                <b className="text-orange-500">12</b>
+                <b className="text-orange-500">{LeadsData?.counts?.manual_lead}</b>
                 <span className="font-semibold text-[10px]">Manual Lead</span>
               </div>
             </Card>
