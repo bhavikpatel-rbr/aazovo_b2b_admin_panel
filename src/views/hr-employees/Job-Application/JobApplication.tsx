@@ -505,7 +505,9 @@ const JobApplicationListing = () => {
   }, [dispatch]);
 
   const openEditDrawer = useCallback((item: JobApplicationItemInternal) => {
-   navigate('/hr-employees/job-applications/edit/'+ item.id)
+    console.log(item, "item in openEditDrawer ");
+    
+   navigate(`/hr-employees/job-applications/add`, { state: item });
   }, [editFormMethods]); // Add departmentOptionsForFilter if used directly here
 
   const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingApplication(null); editFormMethods.reset(); }, [editFormMethods]);
