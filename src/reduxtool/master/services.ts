@@ -2299,6 +2299,14 @@ export const deleteAllWallAsync = async (unitData: any) => {
 }
 
 
+export const editWallAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/wall/enquiry/${unitData.id}`, { _method: 'PUT', ...unitData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 export const addInquiriesAsync = async (unitData: any) => {
   try {
