@@ -2261,7 +2261,7 @@ export const deleteAllpartnerAsync = async (unitData: any) => {
   }
 }
 
-export const getpWallListingAsync = async (params: WallApiRequestParams = {}) => { // <-- ACCEPTS PARAMS
+export const getpWallListingAsync = async (params: any = {}) => { // <-- ACCEPTS PARAMS
   const queryParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && String(value).trim() !== '') {
