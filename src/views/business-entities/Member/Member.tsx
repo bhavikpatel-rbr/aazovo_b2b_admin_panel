@@ -341,7 +341,9 @@ export type MemberModalType =
   | "engagement"
   | "document"
   | "feedback"
-  | "wallLink";
+  | "wallLink"
+  |"viewDetail"
+  |"resetPassword";
 
 export interface MemberModalState {
   isOpen: boolean;
@@ -448,6 +450,8 @@ const MemberModals: React.FC<MemberModalsProps> = ({
         return <ViewEngagementDialog member={member} onClose={onClose} />;
       case "document":
         return <DownloadDocumentDialog member={member} onClose={onClose} />;
+      case "viewDetail": // ADDED
+        return <ViewMemberDetailDialog member={member} onClose={onClose} />;
       // Add other cases as needed
       default:
         return (
@@ -1016,6 +1020,281 @@ const GenericActionDialog: React.FC<{
 // --- END MODALS SECTION ---
 // ============================================================================
 
+const ViewMemberDetailDialog: React.FC<{
+  member: any;
+  onClose: () => void;
+}> = ({ member, onClose }) => {
+  const getDisplayValue = (value: any, fallback = "N/A") =>
+    value || fallback;
+  const joinDate =
+    member.member_join_date || member.created_at || "N/A";
+  const formattedJoinDate =
+    joinDate !== "N/A"
+      ? new Date(joinDate).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "N/A";
+
+  const renderDetailItem = (label: string, value: React.ReactNode) => (
+    <div className="mb-3">
+      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="text-sm font-semibold">
+        {value === "" || value === undefined || value === null ? "N/A" : value}
+      </p>
+    </div>
+  );
+
+  const renderListAsTags = (list: (string | number)[] | undefined | null, itemClassName = "text-xs") => {
+  if (!list || list.length === 0) return "N/A";
+  return (
+    <div className="flex flex-wrap gap-1">
+      {list.map((item, idx) => (
+        <Tag key={idx} className={itemClassName}>
+          {getDisplayValue(item)}
+        </Tag>
+      ))}
+    </div>
+  );
+};
+
+
+
+// Helper to format dates
+const formatDate = (dateString: string | undefined | null, includeTime = false) => {
+  if (!dateString) return "N/A";
+  try {
+    const options: Intl.DateTimeFormatOptions = {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    };
+    if (includeTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+      // options.timeZoneName = 'short'; // Optional: if you want to show timezone
+    }
+    return new Date(dateString).toLocaleDateString("en-GB", options);
+  } catch (error) {
+    console.error("Error formatting date:", dateString, error);
+    return "Invalid Date";
+  }
+};
+
+// Helper to render boolean values as "Yes"/"No"
+const renderBoolean = (value: boolean | undefined | null) => {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "N/A";
+};
+
+// Helper to render links, or plain text if not a valid URL format
+const renderLink = (url: string | undefined | null, text?: string) => {
+  const displayUrl = getDisplayValue(url);
+  if (displayUrl === "N/A") return "N/A";
+
+  const isUrl = typeof displayUrl === 'string' && (displayUrl.startsWith('http://') || displayUrl.startsWith('https://'));
+  
+  if (isUrl) {
+    return (
+      <a href={displayUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+        {text || displayUrl}
+      </a>
+    );
+  }
+  return displayUrl; // Display as plain text if not a URL
+};
+
+
+
+// Status color mapping (ensure keys are lowercase)
+const statusColorMap: Record<string, string> = {
+    active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    blocked: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+    inactive: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
+    unregistered: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+};
+ const currentStatus = (member.status || "inactive").toLowerCase();
+
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={700}
+    >
+  
+      <div className="p-1"> {/* Container for padding and structure */}
+        <h5 className="mb-6 text-xl font-semibold">
+          Member Details: {getDisplayValue(member.name)}
+        </h5>
+        
+        <div className="max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar"> {/* Scrollable content area */}
+          
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Basic Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Member ID", getDisplayValue(member.id))}
+            {renderDetailItem("Name", getDisplayValue(member.name))}
+            {renderDetailItem(
+              "Status",
+              <Tag
+                className={`${
+                  statusColorMap[currentStatus] || statusColorMap["inactive"]
+                } capitalize`}
+              >
+                {getDisplayValue(member.status)}
+              </Tag>
+            )}
+            {renderDetailItem("Interested In", getDisplayValue(member.interested_in))}
+            {renderDetailItem("Joined Date", formattedJoinDate)}
+            {renderDetailItem("Last Updated At", formatDate(member.updated_at, true))}
+            {renderDetailItem(
+              "Profile Completion",
+              <div className="flex items-center gap-2">
+                <span>{getDisplayValue(member.profile_completion, 0)}%</span>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 flex-grow">
+                  <div
+                    className="bg-blue-500 h-1.5 rounded-full"
+                    style={{
+                      width: `${getDisplayValue(member.profile_completion, 0)}%`,
+                    }}
+                  ></div>
+                </div>
+              </div>
+            )}
+            {renderDetailItem("Profile Picture", member.full_profile_pic ? renderLink(member.full_profile_pic, "View Image") : "N/A")}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Contact Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Primary Number", `${getDisplayValue(member.number_code)} ${getDisplayValue(member.number)}`)}
+            {renderDetailItem("Email", getDisplayValue(member.email))}
+            {renderDetailItem("WhatsApp Number", getDisplayValue(member.whatsApp_no))}
+            {renderDetailItem("Alternate Contact Number", `${getDisplayValue(member.alternate_contact_number_code)} ${getDisplayValue(member.alternate_contact_number)}`)}
+            {renderDetailItem("Landline Number", getDisplayValue(member.landline_number))}
+            {renderDetailItem("Fax Number", getDisplayValue(member.fax_number))}
+            {renderDetailItem("Alternate Email", getDisplayValue(member.alternate_email))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Company Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Temporary Company Name", getDisplayValue(member.company_temp))}
+            {renderDetailItem("Actual Company Name", getDisplayValue(member.company_actual))}
+            {renderDetailItem("Business Type", getDisplayValue(member.business_type))}
+          </div>
+          
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Address & Location</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Address", getDisplayValue(member.address))}
+            {renderDetailItem("City", getDisplayValue(member.city))}
+            {renderDetailItem("State", getDisplayValue(member.state))}
+            {renderDetailItem("Pincode", getDisplayValue(member.pincode))}
+            {renderDetailItem("Country", getDisplayValue(member.country?.name))}
+            {renderDetailItem("Continent", getDisplayValue(member.continent?.name))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Social & Web Presence</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Website", renderLink(member.website))}
+            {renderDetailItem("LinkedIn Profile", renderLink(member.linkedIn_profile))}
+            {renderDetailItem("Facebook Profile", renderLink(member.facebook_profile))}
+            {renderDetailItem("Instagram Handle", renderLink(member.instagram_handle))}
+            {renderDetailItem("Botim ID", renderLink(member.botim_id))}
+            {renderDetailItem("Skype ID", renderLink(member.skype_id))}
+            {renderDetailItem("WeChat ID", renderLink(member.wechat_id))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Business & Membership</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Business Opportunity", getDisplayValue(member.business_opportunity))}
+            {renderDetailItem("Member Grade", getDisplayValue(member.member_grade))}
+            {renderDetailItem("Dealing in Bulk", getDisplayValue(member.dealing_in_bulk))}
+            {renderDetailItem("Current Membership Plan", getDisplayValue(member.membership_plan_current))}
+            {renderDetailItem("Upgrade Plan Suggestion", getDisplayValue(member.upgrade_your_plan))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Permissions</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Product Upload Permission", renderBoolean(member.product_upload_permission))}
+            {renderDetailItem("Wall Enquiry Permission", renderBoolean(member.wall_enquiry_permission))}
+            {renderDetailItem("Enquiry Permission", renderBoolean(member.enquiry_permission))}
+            {renderDetailItem("Trade Inquiry Allowed", renderBoolean(member.trade_inquiry_allowed))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Preferences & Miscellaneous</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem(
+              "Favourite Products",
+              member.favourite_products_list && member.favourite_products_list.length > 0
+                ? (
+                  <ul className="list-disc list-inside">
+                    {member.favourite_products_list.map((product: any) => (
+                      <li key={product.id}>{getDisplayValue(product.name)}</li>
+                    ))}
+                  </ul>
+                )
+                : "N/A"
+            )}
+            {renderDetailItem(
+              "Favourite Brands",
+              member.favourite_brands_list && member.favourite_brands_list.length > 0
+                ? renderListAsTags(member.favourite_brands_list.map((brand: any) => brand.name || brand))
+                : "N/A"
+            )}
+             {renderDetailItem("Top-level Brand Name", getDisplayValue(member.brand_name))}
+             {renderDetailItem("Top-level Category", getDisplayValue(member.category))}
+             {renderDetailItem("Top-level Subcategory", getDisplayValue(member.subcategory))}
+             {renderDetailItem("Remarks", getDisplayValue(member.remarks))}
+          </div>
+          
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Administrative Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Created By", getDisplayValue(member.created_by_user?.name))}
+            {renderDetailItem("Updated By", getDisplayValue(member.updated_by_user?.name))}
+            {renderDetailItem("Relationship Manager", getDisplayValue(member.relationship_manager?.name))}
+          </div>
+
+          {member.dynamic_member_profiles && member.dynamic_member_profiles.length > 0 && (
+            <>
+              <hr className="my-6" />
+              <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Dynamic Member Profiles</h6>
+              {member.dynamic_member_profiles.map((profile: any, index: number) => (
+                <div key={profile.id || index} className="mb-6 p-4 border rounded-md dark:border-gray-700">
+                  <h5 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">
+                    Profile {index + 1}: {getDisplayValue(profile.member_type?.name)}
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    {renderDetailItem("Member Type", getDisplayValue(profile.member_type?.name))}
+                    {renderDetailItem("Brands", renderListAsTags(profile.brand_names))}
+                    {renderDetailItem("Categories", renderListAsTags(profile.category_names))}
+                    {renderDetailItem("Sub-categories", renderListAsTags(profile.sub_category_names))}
+                    {renderDetailItem("Profile Created At", formatDate(profile.created_at, true))}
+                    {renderDetailItem("Profile Updated At", formatDate(profile.updated_at, true))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div className="text-right mt-8">
+          <Button variant="solid" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+};
 // --- Status Colors ---
 const statusColor: Record<string, string> = {
   active: "bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600",
@@ -1196,7 +1475,7 @@ const ActionColumn = ({
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
           role="button"
-          onClick={onViewDetail}
+           onClick={() => onOpenModal("viewDetail", rowData)}
         >
           <TbEye />
         </div>
