@@ -85,6 +85,7 @@ import {
   getCountriesAction,
   getEmployeesAction,
   getMemberByIdAction,
+  getMemberTypeAction,
   // Actions for the listing component
   getRequestFeedbacksAction
 } from "@/reduxtool/master/middleware";
@@ -456,16 +457,18 @@ const transformApiToFormSchema = (
           return [];
         }
       };
+      
+console.log("apiProfile.member_type",apiProfile.member_type.id);
 
       return {
         db_id: apiProfile.id, // Store the database ID for updates
-        member_type: apiProfile.member_type_id
-          ? { value: parseInt(apiProfile.member_type_id, 10), label: apiProfile.member_type }
-          : undefined,
+        member_type: {value: apiProfile.member_type.id,label:  apiProfile.member_type.name},
         brands: createSelectOptions(apiProfile.brand_id, apiProfile.brand_names),
         categories: createSelectOptions(apiProfile.category_id, apiProfile.category_names),
         sub_categories: createSelectOptions(apiProfile.sub_category_id, apiProfile.sub_category_names),
       };
+      
+      
     }) || [],
     // --- END: CORRECTED DYNAMIC MEMBER PROFILE TRANSFORMATION ---
 
@@ -1865,7 +1868,9 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     subCategoriesData = [],
     ProductsData = [],
     Employees = [],
-    AllProducts = []
+    AllProducts = [],
+    MemberTypeData = []
+
   } = useSelector(masterSelector);
 
   const { fields, append, remove } = useFieldArray({
@@ -1923,17 +1928,20 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "For Buy", label: "For Buy" },
     { value: "Both", label: "Both" },
   ];
-  const memberTypeOptions = [
-    { value: 1, label: "INS - PREMIUM" },
-    { value: 2, label: "INS - SUPER" },
-    { value: 3, label: "INS - TOP" },
-    { value: 4, label: "INS - SUPPLIER" },
-    { value: 5, label: "GLB - PREMIUM" },
-    { value: 6, label: "GLB - BUYER" },
-    { value: 7, label: "INDIAN" },
-    { value: 8, label: "GLOBAL SUPPLIER" },
-  ];
-
+  // const memberTypeOptions = [
+  //   { value: 1, label: "INS - PREMIUM" },
+  //   { value: 2, label: "INS - SUPER" },
+  //   { value: 3, label: "INS - TOP" },
+  //   { value: 4, label: "INS - SUPPLIER" },
+  //   { value: 5, label: "GLB - PREMIUM" },
+  //   { value: 6, label: "GLB - BUYER" },
+  //   { value: 7, label: "INDIAN" },
+  //   { value: 8, label: "GLOBAL SUPPLIER" },
+  // ];
+const memberTypeOptions = MemberTypeData.map((m: any) => ({
+    value: m.id,
+    label: m.name,
+  }));
   return (
     <Card id="memberProfile">
       <h4 className="mb-6">Additional Member Profile</h4>
@@ -3219,6 +3227,7 @@ const MemberCreate = () => {
     // dispatch(getSubcategoriesByIdAction());
     dispatch(getEmployeesAction());
     dispatch(getAllProductsAction());
+    dispatch(getMemberTypeAction());
   }, [dispatch]);
 
   useEffect(() => {

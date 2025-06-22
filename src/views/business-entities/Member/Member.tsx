@@ -1108,7 +1108,7 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({
     if (MemberData?.data) {
       setMemberList(MemberData.data);
     }
-  }, [MemberData]);
+  }, [MemberData?.data]);
 
   useEffect(() => {
     dispatch(getMemberAction());
@@ -1874,10 +1874,8 @@ const FormListTable = () => {
           pageIndex: tableData.pageIndex as number,
           pageSize: tableData.pageSize as number,
         }}
-        onPagingChange={({ pageIndex, pageSize }) => {
-          handlePaginationChange(pageIndex);
-          if (pageSize) handleSelectChange(pageSize);
-        }}
+         onPaginationChange={handlePaginationChange}
+       
         onSort={handleSort}
         onCheckBoxChange={(rows) => {
           const isAllChecked = rows.every((row: any) => row.getIsSelected());
@@ -2370,7 +2368,7 @@ const Member = () => {
     ).length;
 
     return { total, active, disabled, unregistered };
-  }, [MemberData]);
+  }, [MemberData?.data]);
   // --- END: Added logic to get member counts ---
 
   return (
