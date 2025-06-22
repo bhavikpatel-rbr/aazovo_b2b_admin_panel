@@ -45,7 +45,7 @@ export type WallIntent = "Buy" | "Sell" | "Exchange";
 const wallItemFormSchema = z.object({
   // Core Product & Company Info
   product_name: z.string().min(1, "Product Name is required."),
-  company_name: z.string().min(1, "Company Name is required."),
+  company_name: z.string().min(1, "Member Name is required."),
   
   // Quantity, Price, Intent
   qty: z
@@ -75,6 +75,7 @@ const wallItemFormSchema = z.object({
   visibility: z.string().min(1, "Visibility is required."),
   priority: z.string().min(1, "Priority is required.").optional().nullable(), // New: Select
   adminStatus: z.string().min(1, "Admin Status is required.").optional().nullable(), // New: Select
+  status: z.string().min(1, "Status is required."), // NEW: Added status field
   assignedTeamId: z.number().nullable().optional(), // New: Select
   activeHours: z.string().optional().nullable(),
   productUrl: z.string().url("Invalid URL format.").or(z.literal("")).optional().nullable(), // New
@@ -107,14 +108,22 @@ const intentOptions: { value: WallIntent; label: string }[] = [
 ];
 const productStatusOptions = [
   { value: "Active", label: "Active" },
-  { value: "In-Active", label: "In-Active" },
-  { value: "In Stock", label: "In Stock"},
-  { value: "Out of Stock", label: "Out of Stock"},
+  { value: "Non-active", label: "Non-active" },
+  // { value: "In Stock", label: "In Stock"},
+  // { value: "Out of Stock", label: "Out of Stock"},
 ];
+
+const statusOptions = [
+    { value: "Active", label: "Active" },
+    { value: "Rejected", label: "Rejected" },
+    { value: "Pending", label: "Pending" },
+    { value: "inactive", label: "Inactive" }, // CORRECTED: Typo fixed
+];
+
 const dummyCartoonTypes = [ // Keep if not from API, otherwise fetch similarly
-  { id: 1, name: "Master Carton" },
-  { id: 2, name: "Inner Carton" },
-  { id: 3, name: "Pallet" },
+  { id: "Master Carton", name: "Master Carton" },
+  { id: "Non Masster Cartoon", name: "Non Masster Cartoon" },
+  // { id: 3, name: "Pallet" },
 ];
 const deviceConditionRadioOptions = [
     { value: "New", label: "New" },
@@ -193,6 +202,7 @@ const WallItemAdd = () => {
       visibility: visibilityOptions[0]?.value,
       priority: priorityOptions[1]?.value,
       adminStatus: adminStatusOptions[0]?.value,
+      status: statusOptions[2]?.value, // NEW: Default to 'Pending'
       assignedTeamId: null,
       productUrl: "",
       warrantyInfo: "",
@@ -303,7 +313,7 @@ const WallItemAdd = () => {
         created_from: "FormUI-Add",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        status: formData.adminStatus,
+        status: formData.status, // MODIFIED: Using the new status field from the form
         source: "in",
         is_wall_manual: "0",
         return_policy: formData.returnPolicy,
@@ -383,7 +393,7 @@ const WallItemAdd = () => {
                 />
             </FormItem>
             <FormItem
-                label={<div>Company Name<span className="text-red-500"> * </span></div>}
+                label={<div>Member Name<span className="text-red-500"> * </span></div>}
                 invalid={!!formMethods.formState.errors.company_name}
                 errorMessage={formMethods.formState.errors.company_name?.message}
             >
@@ -590,6 +600,26 @@ const WallItemAdd = () => {
                 onChange={opt => field.onChange(opt ? opt.value : null)}
                 placeholder="Select Admin Status" /> )} />
             </FormItem>
+            {/* --- NEW STATUS DROPDOWN --- */}
+            <FormItem
+                label={<div>Status<span className="text-red-500"> * </span></div>}
+                invalid={!!formMethods.formState.errors.status}
+                errorMessage={formMethods.formState.errors.status?.message}
+            >
+                <Controller
+                    name="status"
+                    control={formMethods.control}
+                    render={({ field }) => (
+                        <UiSelect
+                            {...field}
+                            options={statusOptions}
+                            value={statusOptions.find(opt => opt.value === field.value)}
+                            onChange={opt => field.onChange(opt ? opt.value : null)}
+                            placeholder="Select Status"
+                        />
+                    )}
+                />
+            </FormItem>
             <FormItem
               label="Assigned Team"
               invalid={!!formMethods.formState.errors.assignedTeamId}
@@ -604,6 +634,8 @@ const WallItemAdd = () => {
                   />
                 )} />
             </FormItem>
+            
+            {/* Row 8 */}
              <FormItem
               label="Active Hours"
               invalid={!!formMethods.formState.errors.activeHours}
@@ -611,8 +643,6 @@ const WallItemAdd = () => {
             >
               <Controller name="activeHours" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM, 24/7 (Optional)" /> )} />
             </FormItem>
-            
-            {/* Row 8: URL and Policies */}
              <FormItem
               label="Product URL"
               className="md:col-span-1"
