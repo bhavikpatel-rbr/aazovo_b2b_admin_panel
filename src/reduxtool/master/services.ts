@@ -2223,9 +2223,19 @@ export const addpartnerAsync = async (unitData: any) => {
   }
 }
 
-export const editpartnerAsync = async (unitData: any) => {
+export const editpartnerAsync = async (id: string | number, formData: FormData) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/partner/${unitData?.id}`, { _method: "PUT", ...unitData })
+      formData.append("_method", "PUT");
+    const response = await axiosInstance.post(
+      `${config.apiURL}/partner/${id}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      }
+    );
+    // const response = await axiosInstance.post(`${config.apiURL}/partner/${unitData?.id}`, { _method: "PUT", ...unitData })
     return response
   } catch (err) {
     return isAxiosError(err)

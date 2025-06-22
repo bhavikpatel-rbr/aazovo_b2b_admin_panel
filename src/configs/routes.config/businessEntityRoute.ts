@@ -69,6 +69,15 @@ const businessEntityRoute: Routes = [
     },
     {
         key: 'businessEntities.partner',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/partner-edit/:id`,
+        component: lazy(() => import('@/views/business-entities/Partners/PartnerCreate/CreatePartner')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+     {
+        key: 'businessEntities.partner',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/create-partner`,
         component: lazy(() => import('@/views/business-entities/Partners/PartnerCreate/CreatePartner')),
         authority: [ADMIN, USER],

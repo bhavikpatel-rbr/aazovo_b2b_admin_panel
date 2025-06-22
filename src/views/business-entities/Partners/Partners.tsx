@@ -96,24 +96,24 @@ import { useSelector } from "react-redux";
 // --- CompanyItem Type (Data Structure) ---
 export type CompanyItem = {
   id: string;
-  name: string;
-  company_code?: string;
+  partner_name: string;
+  partner_code?: string;
   type: string;
   interested_in: string;
   category: string[];
   brands: string[];
   country: string;
   status:
-    | "Active"
-    | "Pending"
-    | "Inactive"
-    | "Verified"
-    | "active"
-    | "inactive";
+  | "Active"
+  | "Pending"
+  | "Inactive"
+  | "Verified"
+  | "active"
+  | "inactive";
   progress: number;
   gst_number?: string;
   pan_number?: string;
-  company_photo?: string;
+  partner_logo?: string;
   total_members?: number;
   member_participation?: number;
   success_score?: number;
@@ -197,6 +197,7 @@ const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
 interface CompanyListStore {
   companyList: CompanyItem[];
   selectedCompanies: CompanyItem[];
+  partnercount: {},
   CountriesData: any[];
   ContinentsData: any[];
   companyListTotal: number;
@@ -221,19 +222,16 @@ const useCompanyList = (): CompanyListStore => {
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { partnerData, CountriesData, ContinentsData } =
-    useSelector(masterSelector);
+  const { partnerData, CountriesData, ContinentsData } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  console.log("partnerData?.data", partnerData);
-  
+
   // FIX: Initialize state assuming partnerData?.data is an object like { data: [], total: 0 }
   const [companyList, setCompanyList] = useState<CompanyItem[]>(
-    partnerData ?? []
+    partnerData?.data ?? []
   );
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
-  const [companyListTotal, setCompanyListTotal] = useState<number>(
-    partnerData?.length ?? 0
-  );
+  const [partnercount, setpartnercount] = useState<CompanyItem[]>([]);
+  const [companyListTotal, setCompanyListTotal] = useState<number>(partnerData?.data?.length ?? 0);
 
   useEffect(() => {
     dispatch(getCountriesAction());
@@ -242,8 +240,9 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // FIX: Update local state correctly when partnerData?.data from Redux changes.
   useEffect(() => {
-    setCompanyList(partnerData ?? []);
-    setCompanyListTotal(partnerData?.length ?? 0);
+    setCompanyList(partnerData?.data ?? []);
+    setCompanyListTotal(partnerData?.data?.length ?? 0);
+    setpartnercount(partnerData?.counts ?? {})
   }, [partnerData?.data]);
 
   useEffect(() => {
@@ -259,6 +258,7 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
         setSelectedCompanies,
         companyListTotal,
         setCompanyListTotal,
+        partnercount,
         // Ensure these are always arrays to prevent downstream errors
         ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [],
         CountriesData: Array.isArray(CountriesData) ? CountriesData : [],
@@ -872,11 +872,9 @@ const ViewAlertDialog: React.FC<{
           dummyAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${
-                alertColors[alert.severity]
-              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
-                alertColors[alert.severity]
-              }-500/10`}
+              className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]
+                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]
+                }-500/10`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -1239,7 +1237,7 @@ const CompanyActionColumn = ({
 const CompanyListTable = () => {
   const navigate = useNavigate();
   // With the provider fixed, companyList is now a guaranteed array.
-  const { companyList, selectedCompanies, setSelectedCompanies } =
+  const { companyList, selectedCompanies, setSelectedCompanies, partnercount } =
     useCompanyList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
@@ -1314,10 +1312,8 @@ const CompanyListTable = () => {
 
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
-  const handleEditCompany = (id: string) =>
-    navigate(`/business-entities/partner-edit/${id}`);
-  const handleViewCompanyDetails = (id: string) =>
-    navigate("/business-entities/partner-create", { state: id });
+  const handleEditCompany = (id: string) => navigate(`/business-entities/partner-edit/${id}`);
+  const handleViewCompanyDetails = (id: string) => navigate("/business-entities/partner-create", { state: id });
   const handleSetTableData = useCallback(
     (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d })),
     []
@@ -1364,13 +1360,13 @@ const CompanyListTable = () => {
         size: 220,
         cell: ({ row }) => {
           const {
-            name,
+            partner_name,
             type,
             country,
             city,
             state,
-            company_photo,
-            company_code,
+            partner_logo,
+            partner_code,
           } = row.original;
           return (
             <div className="flex flex-col">
@@ -1378,15 +1374,15 @@ const CompanyListTable = () => {
               <div className="flex items-center gap-2">
                 {" "}
                 <Avatar
-                  src={company_photo}
+                  src={partner_logo}
                   size="md"
                   shape="circle"
                   icon={<TbUserCircle />}
                 />{" "}
                 <div>
                   {" "}
-                  <h6 className="text-xs font-semibold">{company_code}</h6>{" "}
-                  <span className="text-xs font-semibold">{name}</span>{" "}
+                  <h6 className="text-xs font-semibold">{partner_code}</h6>{" "}
+                  <span className="text-xs font-semibold">{partner_name}</span>{" "}
                 </div>{" "}
               </div>{" "}
               <span className="text-xs mt-1">
@@ -1673,6 +1669,63 @@ const CompanyListTable = () => {
 
   return (
     <>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+            <TbUsersGroup size={24} />
+          </div>
+          <div>
+            <h6>{partnercount?.total ?? 0}</h6>
+            <span className="text-xs font-semibold">Total</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+            <TbUser size={24} />
+          </div>
+          <div>
+            <h6>{partnercount?.registered ?? 0}</h6>
+            <span className="text-xs font-semibold">Active</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+            <TbUserX size={24} />
+          </div>
+          <div>
+            <h6>{partnercount?.unregistered ?? 0}</h6>
+            <span className="text-xs font-semibold">Unregistered</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+            <TbUserCancel size={24} />
+          </div>
+          <div>
+            <h6>{partnercount?.total ?? 0}</h6>
+            <span className="text-xs font-semibold">Disabled</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+            <TbUserCheck size={24} />
+          </div>
+          <div>
+            <h6>{partnercount?.verified ?? 0}</h6>
+            <span className="text-xs font-semibold">Verified</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+            <TbUserMinus size={24} />
+          </div>
+          <div>
+            <h6>{partnercount?.unverified ?? 0}</h6>
+            <span className="text-xs font-semibold">Unverified</span>
+          </div>
+        </Card>
+
+      </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <CompanyListSearch
           onInputChange={(val) =>
@@ -2082,63 +2135,7 @@ const Partner = () => {
               <h5>Partner</h5>
               <CompanyListActionTools />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                  <TbUsersGroup size={24} />
-                </div>
-                <div>
-                  <h6>8</h6>
-                  <span className="text-xs font-semibold">Total</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                  <TbUser size={24} />
-                </div>
-                <div>
-                  <h6>2</h6>
-                  <span className="text-xs font-semibold">Active</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                  <TbUserX size={24} />
-                </div>
-                <div>
-                  <h6>34</h6>
-                  <span className="text-xs font-semibold">Unregistered</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                  <TbUserCancel size={24} />
-                </div>
-                <div>
-                  <h6>20</h6>
-                  <span className="text-xs font-semibold">Disabled</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                  <TbUserCheck size={24} />
-                </div>
-                <div>
-                  <h6>4</h6>
-                  <span className="text-xs font-semibold">Verified</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                  <TbUserMinus size={24} />
-                </div>
-                <div>
-                  <h6>4</h6>
-                  <span className="text-xs font-semibold">Unverified</span>
-                </div>
-              </Card>
-              
-            </div>
+
             <CompanyListTable />
           </div>
         </AdaptiveCard>

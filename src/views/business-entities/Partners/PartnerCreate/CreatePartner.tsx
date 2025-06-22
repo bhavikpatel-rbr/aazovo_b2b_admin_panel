@@ -88,7 +88,7 @@ interface BillingDocItemFE {
 
 interface ReferenceItemFE {
   person_name?: string;
-  company_id?: string | { label: string; value: string };
+  referenced_partner_id?: string | { label: string; value: string };
   number?: string;
   remark?: string;
 }
@@ -114,6 +114,8 @@ export interface CompanyFormSchema {
   zip_code?: string;
   country_id?: string | { label: string; value: string };
   continent_id?: string | { label: string; value: string };
+  join_us_as?: string | { label: string; value: string },
+  industrial_expertise?: string | { label: string; value: string },
   gst_number?: string;
   pan_number?: string;
   trn_number?: string;
@@ -133,33 +135,33 @@ export interface CompanyFormSchema {
   declaration_206ab?: File | string;
   declaration_206ab_remark?: string;
   declaration_206ab_remark_enabled?: boolean;
-  ABCQ_file?: File | string;
-  ABCQ_remark?: string;
-  ABCQ_remark_enabled?: boolean;
+  agreement_file?: File | string;
+  agreement_remark?: string;
+  agreement_verified?: boolean;
   office_photo_file?: File | string;
   office_photo_remark?: string;
-  office_photo_remark_enabled?: boolean;
+  office_photo_verified?: boolean;
   gst_certificate_file?: File | string;
   gst_certificate_remark?: string;
-  gst_certificate_remark_enabled?: boolean;
+  gst_certificate_verified?: boolean;
   authority_letter_file?: File | string;
   authority_letter_remark?: string;
-  authority_letter_remark_enabled?: boolean;
+  authority_letter_verified?: boolean;
   visiting_card_file?: File | string;
   visiting_card_remark?: string;
-  visiting_card_remark_enabled?: boolean;
+  visiting_card_verified?: boolean;
   cancel_cheque_file?: File | string;
   cancel_cheque_remark?: string;
-  cancel_cheque_remark_enabled?: boolean;
+  cancel_cheque_verified?: boolean;
   aadhar_card_file?: File | string;
   aadhar_card_remark?: string;
-  aadhar_card_remark_enabled?: boolean;
+  aadhar_card_verified?: boolean;
   pan_card_file?: File | string;
   pan_card_remark?: string;
-  pan_card_remark_enabled?: boolean;
+  pan_card_verified?: boolean;
   other_document_file?: File | string;
   other_document_remark?: string;
-  other_document_remark_enabled?: boolean;
+  other_document_verified?: boolean;
 
   primary_account_number?: any;
   primary_bank_name?: string | { label: string; value: string };
@@ -224,6 +226,8 @@ interface ApiSingleCompanyItem {
   zip_code?: string;
   country_id?: string;
   continent_id?: string;
+  industrial_expertise?: string;
+  join_us_as?: string;
   continent?: any | {};
   brands?: string;
   category?: string;
@@ -264,9 +268,9 @@ interface ApiSingleCompanyItem {
   declaration_206AB_url?: string;
   declaration_206AB_verify?: boolean | string;
   declaration_206AB_remark?: string;
-  ABCQ_file?: string;
-  ABCQ_declaration_verified?: boolean | string;
-  ABCQ_remark?: string;
+  agreement_file?: string;
+  agreement_verified?: boolean | string;
+  agreement_remark?: string;
   office_photo_file?: string;
   office_photo_verified?: boolean | string;
   office_photo_remark?: string;
@@ -293,7 +297,7 @@ interface ApiSingleCompanyItem {
   other_document_remark?: string;
 
   company_spot_verification?: any[];
-  team_members?: any[],
+  partner_team_members?: any[],
   company_member_management?: any[];
   partner_bank_details?: any[];
   office_info?: any[];
@@ -302,8 +306,8 @@ interface ApiSingleCompanyItem {
 }
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
-const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Partial<CompanyFormSchema> => {
-  const kycVerifyToBoolean = (verifyValue: boolean | string = "false"): boolean => {
+const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any = []): Partial<CompanyFormSchema> => {
+  const kycVerifyToBoolean = (verifyValue: boolean | string = false): boolean => {
     if (typeof verifyValue === "string") {
       return (
         verifyValue.toLowerCase() !== "" ||
@@ -364,8 +368,14 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Par
     country_id: apiData.country_id
       ? { label: apiData.country_id, value: apiData.country_id }
       : undefined,
-    continent_id: apiData.continent_id
+    continent_id: apiData.continent_id  
       ? { label: apiData?.continent?.name, value: apiData.continent_id }
+      : undefined,
+    join_us_as: apiData.join_us_as
+      ? { label: apiData?.continent?.name, value: apiData.join_us_as }
+      : undefined,
+    industrial_expertise: apiData.industrial_expertise
+      ? { label: apiData?.continent?.name, value: apiData.industrial_expertise }
       : undefined,
     gst_number: apiData.gst_number,
     pan_number: apiData.pan_number,
@@ -401,57 +411,37 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Par
       zip_code: b.zip_code,
       gst_number: b.gst_number,
     })),
-    declaration_206ab: apiData.declaration_206AB_url,
-    declaration_206ab_remark_enabled: kycVerifyToBoolean(
-      apiData.declaration_206AB_verify
-    ),
-    declaration_206ab_remark: apiData.declaration_206AB_remark,
-    ABCQ_file: apiData.ABCQ_file,
-    ABCQ_remark_enabled: kycVerifyToBoolean(
-      apiData.ABCQ_declaration_verified
-    ),
-    ABCQ_remark: apiData.ABCQ_remark,
+    agreement_file: apiData.agreement_file,
+    agreement_verified: kycVerifyToBoolean(apiData.agreement_verified),
+    agreement_remark: apiData.agreement_remark,
     office_photo_file: apiData.office_photo_file,
-    office_photo_remark_enabled: kycVerifyToBoolean(
-      apiData.office_photo_verified
-    ),
+    office_photo_verified: kycVerifyToBoolean(apiData.office_photo_verified),
     office_photo_remark: apiData.office_photo_remark,
     gst_certificate_file: apiData.gst_certificate_file,
-    gst_certificate_remark_enabled: kycVerifyToBoolean(
-      apiData.gst_certificate_verified
-    ),
+    gst_certificate_verified: kycVerifyToBoolean(apiData.gst_certificate_verified),
     gst_certificate_remark: apiData.gst_certificate_remark,
     authority_letter_file: apiData.authority_letter_file,
-    authority_letter_remark_enabled: kycVerifyToBoolean(
-      apiData.authority_letter_verified
-    ),
+    authority_letter_verified: kycVerifyToBoolean(apiData.authority_letter_verified),
     authority_letter_remark: apiData.authority_letter_remark,
     visiting_card_file: apiData.visiting_card_file,
-    visiting_card_remark_enabled: kycVerifyToBoolean(
-      apiData.visiting_card_verified
-    ),
+    visiting_card_verified: kycVerifyToBoolean(apiData.visiting_card_verified),
     visiting_card_remark: apiData.visiting_card_remark,
     cancel_cheque_file: apiData.cancel_cheque_file,
-    cancel_cheque_remark_enabled: kycVerifyToBoolean(
-      apiData.cancel_cheque_verified
-    ),
+    cancel_cheque_verified: kycVerifyToBoolean(apiData.cancel_cheque_verified),
     cancel_cheque_remark: apiData.cancel_cheque_remark,
     aadhar_card_file: apiData.aadhar_card_file,
-    aadhar_card_remark_enabled: kycVerifyToBoolean(apiData.aadhar_card_verified),
+    aadhar_card_verified: kycVerifyToBoolean(apiData.aadhar_card_verified),
     aadhar_card_remark: apiData.aadhar_card_remark,
     pan_card_file: apiData.pan_card_file,
-    pan_card_remark_enabled: kycVerifyToBoolean(apiData.pan_card_verified),
+    pan_card_verified: kycVerifyToBoolean(apiData.pan_card_verified),
     pan_card_remark: apiData.pan_card_remark,
     other_document_file: apiData.other_document_file,
-    other_document_remark_enabled: kycVerifyToBoolean(
-      apiData.other_document_verified
-    ),
+    other_document_verified: kycVerifyToBoolean(apiData.other_document_verified),
     other_document_remark: apiData.other_document_remark,
     primary_account_number: apiData.primary_account_number,
     primary_bank_name: apiData.primary_bank_name,
     primary_ifsc_code: apiData.primary_ifsc_code,
-    primary_bank_verification_photo:
-      apiData.primary_bank_verification_photo,
+    primary_bank_verification_photo: apiData.primary_bank_verification_photo,
     secondary_account_number: apiData.secondary_account_number,
     secondary_bank_name: apiData.secondary_bank_name,
     secondary_ifsc_code: apiData.secondary_ifsc_code,
@@ -474,7 +464,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Par
       document: doc.document,
     })),
     DOMAIN_MANAGEMENT_FIELD: stringToSelectArray(apiData.domain_id),
-    member: apiData.team_members?.map((m) => ({
+    member: apiData.partner_team_members?.map((m) => ({
       type: "team",
       member: m.member_id ? { label: `Member ${m.member_id}`, value: String(m.member_id) } : undefined,
       designation: m.designation,
@@ -508,7 +498,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Par
     // ),
     partner_references: apiData.partner_references?.map((ref) => ({
       person_name: ref.person_name,
-      company_id: data.find((value: any) => value.value == ref.company_id) ?? ref.company_id,
+      referenced_partner_id: data?.find((value: any) => value.value == ref.referenced_partner_id) ?? ref.referenced_partner_id,
       number: ref.number,
       remark: ref.remark,
     })),
@@ -556,7 +546,9 @@ const preparePayloadForApi = (
   append("gst_number", data.gst_number);
   append("pan_number", data.pan_number);
   append("country_id", data.country_id);
+  append("join_us_as", data.join_us_as);
   append("continent_id", data.continent_id);
+  append("industrial_expertise", data.industrial_expertise);
   append("state", data.state);
   append("city", data.city);
   append("zip_code", data.zip_code);
@@ -579,7 +571,7 @@ const preparePayloadForApi = (
   append("enable_billing", data.BILLING_FIELD);
 
   // Handle file upload for logo
-    append("partner_logo", data.partner_logo);
+  append("partner_logo", data.partner_logo);
 
   // Handle multi-selects explicitly
   append("brands", data.brands);
@@ -598,6 +590,7 @@ const preparePayloadForApi = (
   append("secondary_bank_name", data.secondary_bank_name);
   append("secondary_ifsc_code", data.secondary_ifsc_code);
   append("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
+
   const allBankDetails: any = [];
   if (data.partner_bank_details) {
     data.partner_bank_details.forEach(bank => {
@@ -624,32 +617,23 @@ const preparePayloadForApi = (
       }
     });
   }
+
   // Members
   if (data.member) {
     data.member.forEach((member, index) => {
-        apiPayload.append(`team_members[${index}][team_name]`, member.team_name || '');
-        apiPayload.append(`team_members[${index}][designation]`, member.designation || '');
-        apiPayload.append(`team_members[${index}][person_name]`, member.person_name || '');
-        apiPayload.append(`team_members[${index}][number]`, member.number || '');
+      apiPayload.append(`partner_team_members[${index}][team_name]`, member.team_name || '');
+      apiPayload.append(`partner_team_members[${index}][designation]`, member.designation || '');
+      apiPayload.append(`partner_team_members[${index}][person_name]`, member.person_name || '');
+      apiPayload.append(`partner_team_members[${index}][number]`, member.number || '');
     });
 
-  }
-
-  // Spot Verifications
-  if (data.company_spot_verification) {
-    data.company_spot_verification.forEach((item, index) => {
-      apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
-      apiPayload.append(`company_spot_verification[${index}][verified_by_name]`, item.verified_by_name || "");
-      apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
-      apiPayload.append(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
-    });
   }
 
   // References
   if (data.partner_references) {
     data.partner_references.forEach((ref, index) => {
       apiPayload.append(`partner_references[${index}][person_name]`, ref.person_name || "");
-      apiPayload.append(`partner_references[${index}][company_id]`, (typeof ref.company_id === 'object' ? ref.company_id?.value : ref.company_id) || "");
+      apiPayload.append(`partner_references[${index}][referenced_partner_id]`, (typeof ref.referenced_partner_id === 'object' ? ref.referenced_partner_id?.value : ref.referenced_partner_id) || "");
       apiPayload.append(`partner_references[${index}][number]`, ref.number || "");
       apiPayload.append(`partner_references[${index}][remark]`, ref.remark || "");
     });
@@ -677,16 +661,15 @@ const preparePayloadForApi = (
 
   // --- 4. KYC Documents (Your existing logic for this is good) ---
   const kycDocsConfig = [
-    { feFile: "206AB_file", beFile: "declaration_206AB", feVerify: "declaration_206ab_remark_enabled", beVerify: "declaration_206AB_verify", feRemark: "declaration_206ab_remark", beRemark: "declaration_206AB_remark" },
-    { feFile: "ABCQ_file", beFile: "declaration_194Q", feVerify: "ABCQ_remark_enabled", beVerify: "ABCQ_declaration_verified", feRemark: "ABCQ_remark", beRemark: "ABCQ_remark" },
-    { feFile: "office_photo_file", beFile: "office_photo", feVerify: "office_photo_remark_enabled", beVerify: "office_photo_verified", feRemark: "office_photo_remark", beRemark: "office_photo_remark" },
-    { feFile: "gst_certificate_file", beFile: "gst_certificate", feVerify: "gst_certificate_remark_enabled", beVerify: "gst_certificate_verified", feRemark: "gst_certificate_remark", beRemark: "gst_certificate_remark" },
-    { feFile: "authority_letter_file", beFile: "authority_letter", feVerify: "authority_letter_remark_enabled", beVerify: "authority_letter_verified", feRemark: "authority_letter_remark", beRemark: "authority_letter_remark" },
-    { feFile: "visiting_card_file", beFile: "visiting_card", feVerify: "visiting_card_remark_enabled", beVerify: "visiting_card_verified", feRemark: "visiting_card_remark", beRemark: "visiting_card_remark" },
-    { feFile: "cancel_cheque_file", beFile: "cancel_cheque", feVerify: "cancel_cheque_remark_enabled", beVerify: "cancel_cheque_verified", feRemark: "cancel_cheque_remark", beRemark: "cancel_cheque_remark" },
-    { feFile: "aadhar_card_file", beFile: "aadhar_card", feVerify: "aadhar_card_remark_enabled", beVerify: "aadhar_card_verified", feRemark: "aadhar_card_remark", beRemark: "aadhar_card_remark" },
-    { feFile: "pan_card_file", beFile: "pan_card", feVerify: "pan_card_remark_enabled", beVerify: "pan_card_verified", feRemark: "pan_card_remark", beRemark: "pan_card_remark" },
-    { feFile: "other_document_file", beFile: "other_document", feVerify: "other_document_remark_enabled", beVerify: "other_document_verified", feRemark: "other_document_remark", beRemark: "other_document_remark" },
+    { feFile: "agreement_file", beFile: "declaration_194Q", feVerify: "agreement_verified", beVerify: "agreement_verified", feRemark: "agreement_remark", beRemark: "agreement_remark" },
+    { feFile: "office_photo_file", beFile: "office_photo", feVerify: "office_photo_verified", beVerify: "office_photo_verified", feRemark: "office_photo_remark", beRemark: "office_photo_remark" },
+    { feFile: "gst_certificate_file", beFile: "gst_certificate", feVerify: "gst_certificate_verified", beVerify: "gst_certificate_verified", feRemark: "gst_certificate_remark", beRemark: "gst_certificate_remark" },
+    { feFile: "authority_letter_file", beFile: "authority_letter", feVerify: "authority_letter_verified", beVerify: "authority_letter_verified", feRemark: "authority_letter_remark", beRemark: "authority_letter_remark" },
+    { feFile: "visiting_card_file", beFile: "visiting_card", feVerify: "visiting_card_verified", beVerify: "visiting_card_verified", feRemark: "visiting_card_remark", beRemark: "visiting_card_remark" },
+    { feFile: "cancel_cheque_file", beFile: "cancel_cheque", feVerify: "cancel_cheque_verified", beVerify: "cancel_cheque_verified", feRemark: "cancel_cheque_remark", beRemark: "cancel_cheque_remark" },
+    { feFile: "aadhar_card_file", beFile: "aadhar_card", feVerify: "aadhar_card_verified", beVerify: "aadhar_card_verified", feRemark: "aadhar_card_remark", beRemark: "aadhar_card_remark" },
+    { feFile: "pan_card_file", beFile: "pan_card", feVerify: "pan_card_verified", beVerify: "pan_card_verified", feRemark: "pan_card_remark", beRemark: "pan_card_remark" },
+    { feFile: "other_document_file", beFile: "other_document", feVerify: "other_document_verified", beVerify: "other_document_verified", feRemark: "other_document_remark", beRemark: "other_document_remark" },
   ];
 
   kycDocsConfig.forEach((doc: any) => {
@@ -695,6 +678,10 @@ const preparePayloadForApi = (
     apiPayload.append(doc.beRemark, data[doc.feRemark] || "");
   });
 
+  // For debugging:
+  for (let [key, value] of apiPayload.entries()) {
+    console.log(`${key}:`, value);
+  }
 
   return apiPayload;
 };
@@ -863,7 +850,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>
-       
+
         <FormItem
           label={<div>Owner/Director Name<span className="text-red-500"> * </span></div>}
           invalid={!!errors.owner_name}
@@ -880,11 +867,11 @@ const CompanyDetailsSection = ({
           />
         </FormItem>
 
-        
+
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
 
- <FormItem
+        <FormItem
           label={<div>Ownership Type<span className="text-red-500"> * </span></div>}
           invalid={!!errors.ownership_type}
           errorMessage={errors.ownership_type?.message as string}
@@ -901,7 +888,7 @@ const CompanyDetailsSection = ({
             )}
           />
         </FormItem>
-         <FormItem
+        <FormItem
           label="Industrial Expertise"
         >
           <Controller
@@ -911,19 +898,19 @@ const CompanyDetailsSection = ({
               <Select
                 placeholder="Select Expertise"
                 options={[
-                  {label:"Logistics", value:"Logistics"},
-                  {label:"CHA", value:"CHA"},
-                  {label:"Account", value:"Account"},
-                  {label:"CA", value:"CA"},
-                  {label:"Sales Consultant", value:"Sales Consultant"},
-                  {label:"HR Related Services", value:"HR Related Services"},
-                  {label:"Finance", value:"Finance"},
-                  {label:"Banking", value:"Banking"},
-                  {label:"IT", value:"IT"},
-                  {label:"Non IT Hardware", value:"Non IT Hardware"},
-                  {label:"Retail", value:"Retail"},
-                  {label:"Non Profit", value:"Non Profit"},
-                  {label:"Others", value:"Others"},
+                  { label: "Logistics", value: "Logistics" },
+                  { label: "CHA", value: "CHA" },
+                  { label: "Account", value: "Account" },
+                  { label: "CA", value: "CA" },
+                  { label: "Sales Consultant", value: "Sales Consultant" },
+                  { label: "HR Related Services", value: "HR Related Services" },
+                  { label: "Finance", value: "Finance" },
+                  { label: "Banking", value: "Banking" },
+                  { label: "IT", value: "IT" },
+                  { label: "Non IT Hardware", value: "Non IT Hardware" },
+                  { label: "Retail", value: "Retail" },
+                  { label: "Non Profit", value: "Non Profit" },
+                  { label: "Others", value: "Others" },
                 ]}
                 {...field}
               />
@@ -940,11 +927,11 @@ const CompanyDetailsSection = ({
               <Select
                 placeholder="Select Join us as"
                 options={[
-                  {label:"Team", value:"Team"},
-                  {label:"Remote Partner", value:"Remote Partner"},
-                  {label:"Consultant", value:"Consultant"},
-                  {label:"Auditor", value:"Auditor"},
-                  {label:"Other", value:"Other"},
+                  { label: "Team", value: "Team" },
+                  { label: "Remote Partner", value: "Remote Partner" },
+                  { label: "Consultant", value: "Consultant" },
+                  { label: "Auditor", value: "Auditor" },
+                  { label: "Other", value: "Other" },
                 ]}
                 {...field}
               />
@@ -1267,7 +1254,7 @@ const CompanyDetailsSection = ({
         </FormItem>{" "}
 
         <FormItem
-          label="Company Website"
+          label="Partner Website"
           invalid={!!errors.partner_website}
           errorMessage={errors.partner_website?.message as string}
         >
@@ -1298,7 +1285,7 @@ const CompanyDetailsSection = ({
           {typeof companyLogoBrochureValue === "string" &&
             companyLogoBrochureValue && (
               <img
-                src={companyLogoBrochureValue}
+                src={`https://aazovo.codefriend.in/${companyLogoBrochureValue}`}
                 alt="logo preview"
                 className="mt-2 h-16 w-auto"
               />
@@ -1611,64 +1598,58 @@ const CompanyDetailsSection = ({
 };
 
 // --- KYCDetailSection ---
-const KYCDetailSection = ({
-  control,
-  errors,
-  formMethods,
-  getValues
-
-}: FormSectionBaseProps) => {
+const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const kycDocs = [
     {
       label: "Aadhar Card",
       name: "aadhar_card_file" as const,
       remarkName: "aadhar_card_remark" as const,
-      enabledName: "aadhar_card_remark_enabled" as const,
+      enabledName: "aadhar_card_verified" as const,
     },
     {
       label: "PAN Card",
       name: "pan_card_file" as const,
       remarkName: "pan_card_remark" as const,
-      enabledName: "pan_card_remark_enabled" as const,
+      enabledName: "pan_card_verified" as const,
     },
     {
       label: "GST Certificate",
       name: "gst_certificate_file" as const,
       remarkName: "gst_certificate_remark" as const,
-      enabledName: "gst_certificate_remark_enabled" as const,
+      enabledName: "gst_certificate_verified" as const,
     },
 
     {
       label: "Visiting Card",
       name: "visiting_card_file" as const,
       remarkName: "visiting_card_remark" as const,
-      enabledName: "visiting_card_remark_enabled" as const,
+      enabledName: "visiting_card_verified" as const,
     },
     {
       label: "Office Photo",
       name: "office_photo_file" as const,
       remarkName: "office_photo_remark" as const,
-      enabledName: "office_photo_remark_enabled" as const,
+      enabledName: "office_photo_verified" as const,
     },
 
     {
       label: "Authority Letter",
       name: "authority_letter_file" as const,
       remarkName: "authority_letter_remark" as const,
-      enabledName: "authority_letter_remark_enabled" as const,
+      enabledName: "authority_letter_verified" as const,
     },
     {
       label: "Cancel Cheque",
       name: "cancel_cheque_file" as const,
       remarkName: "cancel_cheque_remark" as const,
-      enabledName: "cancel_cheque_remark_enabled" as const,
+      enabledName: "cancel_cheque_verified" as const,
     },
     {
-      label: "Agreement/Quotation",
-      name: "ABCQ_file" as const,
-      remarkName: "ABCQ_remark" as const,
-      enabledName: "ABCQ_remark_enabled" as const,
+      label: "agreement/Quotation",
+      name: "agreement_file" as const,
+      remarkName: "agreement_remark" as const,
+      enabledName: "agreement_verified" as const,
     },
     // {
     //   label: "206AB Declaration",
@@ -1680,7 +1661,7 @@ const KYCDetailSection = ({
       label: "Other Document",
       name: "other_document_file" as const,
       remarkName: "other_document_remark" as const,
-      enabledName: "other_document_remark_enabled" as const,
+      enabledName: "other_document_verified" as const,
     },
   ];
   return (
@@ -2064,12 +2045,12 @@ const ReferenceSection = ({
   errors,
   formMethods,
 }: FormSectionBaseProps) => {
-  const { CompanyData = [] } = useSelector(masterSelector);
+  const { partnerData = [] } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
   useEffect(() => {
     dispatch(getpartnerAction());
   }, [dispatch]);
-  const companyOptions = CompanyData?.data?.map((c: any) => ({
+  const companyOptions = partnerData?.data?.map((c: any) => ({
     value: String(c.id),
     label: c.partner_name,
   }));
@@ -2089,7 +2070,7 @@ const ReferenceSection = ({
           onClick={() =>
             append({
               person_name: "",
-              company_id: "",
+              referenced_partner_id: "",
               number: "",
               remark: "",
             })
@@ -2110,13 +2091,13 @@ const ReferenceSection = ({
                 )}
               />
             </FormItem>
-            <FormItem label="Company Name">
+            <FormItem label="partner Name">
               <Controller
-                name={`partner_references.${index}.company_id`}
+                name={`partner_references.${index}.referenced_partner_id`}
                 control={control}
                 render={({ field }) => (
                   <Select
-                    placeholder="Company Name"
+                    placeholder="partner Name"
                     options={companyOptions}
                     {...field}
                   />
@@ -2378,7 +2359,7 @@ const MemberManagementSection = ({
   errors,
   formMethods,
 }: FormSectionBaseProps) => {
-    const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
   const { memberData } = useSelector(masterSelector);
   const { fields, append, remove } = useFieldArray({
     control,
@@ -2396,9 +2377,9 @@ const MemberManagementSection = ({
       : [];
   }, [memberData]);
 
-    useEffect(() => {
-      dispatch(getMemberAction());
-    }, [dispatch]);
+  useEffect(() => {
+    dispatch(getMemberAction());
+  }, [dispatch]);
   return (
     <Card id="memberManagement">
       {" "}
@@ -2431,9 +2412,9 @@ const MemberManagementSection = ({
               <Controller
                 name={`member.${index}.${item.type === "team" ? "team_name" : "member_id"}`}
                 control={control}
-                render={({ field }) =>(
-                <Input placeholder="Team Name" {...field} />
-              )}
+                render={({ field }) => (
+                  <Input placeholder="Team Name" {...field} />
+                )}
               />
             </FormItem>
             <FormItem label="Designation">
@@ -2553,7 +2534,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     const fullInitialValues: Partial<CompanyFormSchema> = {
       member: [],
       partner_bank_details: [],
-      company_spot_verification: [],
       partner_references: [],
       partner_certificate: [],
       office_info: [],
@@ -2563,6 +2543,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     reset(fullInitialValues);
   }, [defaultValues, reset]);
   const internalFormSubmit = (values: CompanyFormSchema) => {
+    console.log(values, 'Payload');
+
     onFormSubmit?.(values, formMethods);
   };
   const navigationKeys = companyNavigationList.map((item) => item.link);
@@ -2676,6 +2658,7 @@ const CreatePartner = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { id } = useParams<{ id?: string }>();
+
   const isEditMode = Boolean(id);
 
   const [initialData, setInitialData] =
@@ -2703,6 +2686,8 @@ const CreatePartner = () => {
     zip_code: "",
     country_id: undefined,
     continent_id: undefined,
+    join_us_as: "",
+    industrial_expertise: "",
     gst_number: "",
     pan_number: "",
     trn_number: "",
@@ -2720,33 +2705,33 @@ const CreatePartner = () => {
     declaration_206ab: undefined,
     declaration_206ab_remark: "",
     declaration_206ab_remark_enabled: false,
-    ABCQ_file: undefined,
-    ABCQ_remark: "",
-    ABCQ_remark_enabled: false,
+    agreement_file: undefined,
+    agreement_remark: "",
+    agreement_verified: false,
     office_photo_file: undefined,
     office_photo_remark: "",
-    office_photo_remark_enabled: false,
+    office_photo_verified: false,
     gst_certificate_file: undefined,
     gst_certificate_remark: "",
-    gst_certificate_remark_enabled: false,
+    gst_certificate_verified: false,
     authority_letter_file: undefined,
     authority_letter_remark: "",
-    authority_letter_remark_enabled: false,
+    authority_letter_verified: false,
     visiting_card_file: undefined,
     visiting_card_remark: "",
-    visiting_card_remark_enabled: false,
+    visiting_card_verified: false,
     cancel_cheque_file: undefined,
     cancel_cheque_remark: "",
-    cancel_cheque_remark_enabled: false,
+    cancel_cheque_verified: false,
     aadhar_card_file: undefined,
     aadhar_card_remark: "",
-    aadhar_card_remark_enabled: false,
+    aadhar_card_verified: false,
     pan_card_file: undefined,
     pan_card_remark: "",
-    pan_card_remark_enabled: false,
+    pan_card_verified: false,
     other_document_file: undefined,
     other_document_remark: "",
-    other_document_remark_enabled: false,
+    other_document_verified: false,
     primary_account_number: "",
     primary_bank_name: undefined,
     primary_ifsc_code: "",
@@ -2784,11 +2769,13 @@ const CreatePartner = () => {
     dispatch(getCategoriesAction());
     dispatch(getMembersAction());
   }, [dispatch]);
+
   const { CompanyData = [] } = useSelector(masterSelector);
   const companyOptions = CompanyData?.data?.map((c: any) => ({
     value: String(c.id),
     label: c.partner_name,
   }));
+
   useEffect(() => {
     const emptyForm = getEmptyFormValues();
     if (isEditMode && id) {
@@ -2796,6 +2783,8 @@ const CreatePartner = () => {
         setPageLoading(true);
         try {
           const actionResult = await dispatch(getpartnerByIdAction(id)).unwrap();
+          console.log(actionResult, 'actionResult');
+
           if (actionResult) {
             const transformed = transformApiToFormSchema(actionResult, companyOptions);
             setInitialData({ ...emptyForm, ...transformed });

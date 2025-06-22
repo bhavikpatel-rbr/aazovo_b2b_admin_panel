@@ -3492,10 +3492,7 @@ export const addcompanyAction = createAsyncThunk<any, any>("auth/addcompany",
   }
 )
 
-export const editCompanyAction = createAsyncThunk<
-  any,
-  { id: string | number; payload: FormData }
->(
+export const editCompanyAction = createAsyncThunk<any,{ id: string | number; payload: FormData }>(
   "auth/editcompany",
   async ({ id, payload }, { rejectWithValue, dispatch }) => {
     try {
@@ -3673,7 +3670,7 @@ export const getpartnerAction = createAsyncThunk("auth/partner",
     try {
       const response: AxiosResponse<any> = await getpartnerAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
@@ -3699,23 +3696,23 @@ export const addpartnerAction = createAsyncThunk<any, any>("auth/addpartner",
     }
   }
 )
-
-export const editpartnerAction = createAsyncThunk<any, any>("auth/editpartner",
-  async (data, { rejectWithValue, dispatch }) => {
+export const editpartnerAction = createAsyncThunk<any,{ id: string | number; payload: FormData }>(
+  "auth/editpartner",
+  async ({ id, payload }, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await editpartnerAsync(data)
+      const response: AxiosResponse<any> = await editpartnerAsync(id, payload);
       if (response?.data?.status === true) {
-        dispatch(getpartnerAction())
+        dispatch(getpartnerAction());
 
-        return response?.data?.data
+        return response?.data?.data;
       }
 
-      return rejectWithValue(response)
+      return rejectWithValue(response);
     } catch (error: unknown) {
-      return rejectWithValue(error as Error)
+      return rejectWithValue(error as Error);
     }
   }
-)
+);
 
 export const deletepartnerAction = createAsyncThunk<any, any>("auth/deletePartner", // Corrected: "deletpartner"
   async (data, { rejectWithValue, dispatch }) => {
