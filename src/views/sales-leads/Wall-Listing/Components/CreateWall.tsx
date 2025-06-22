@@ -1,11 +1,10 @@
 // src/views/your-path/business-entities/WallItemForm.tsx
-// MODIFIED: Renamed file to reflect dual purpose (Add/Edit)
+// MODIFIED: This file is now fully equipped to handle both Add and Edit operations.
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-// NEW: Import useParams to read the item ID from the URL
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
@@ -22,7 +21,7 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import InputNumber from "@/components/ui/Input/InputNumber";
 import Notification from "@/components/ui/Notification";
-import Spinner from "@/components/ui/Spinner"; // NEW: For loading state
+import Spinner from "@/components/ui/Spinner";
 import toast from "@/components/ui/toast";
 import { BiChevronRight } from "react-icons/bi";
 
@@ -32,24 +31,23 @@ import {
   addWallItemAction,
   editWallItemAction,
   getAllProductAction,
-  getCompanyAction,
+  getMembersAction,
   getPaymentTermAction,
   getProductSpecificationsAction,
   getSalesPersonAction,
-  // NEW: You will need to create these actions in your Redux setup
-  getWallItemById,
+  getWallItemById
 } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
 import { useSelector } from 'react-redux';
 
-
 // Types
 export type WallIntent = "Buy" | "Sell" | "Exchange";
 
-// MODIFIED: Zod schema is mostly the same but tweaked for flexibility
+// --- MODIFIED & CORRECTED ZOD SCHEMA ---
+// Validates the actual IDs (productId, member_id) for better reliability.
 const wallItemFormSchema = z.object({
-  product_name: z.string().min(1, "Product Name is required."),
-  company_name: z.string().min(1, "Member Name is required."),
+  productId: z.number().min(1, "Product is required."),
+  member_id: z.number().min(1, "Member is required."),
   qty: z.coerce.number({ required_error: "Quantity is required." }).min(1, "Quantity must be at least 1."),
   price: z.coerce.number().min(0, "Price cannot be negative.").nullable().optional(),
   intent: z.enum(["Buy", "Sell", "Exchange"] as const, { required_error: "Intent (Want to) is required." }),
@@ -74,16 +72,13 @@ const wallItemFormSchema = z.object({
   warrantyInfo: z.string().optional().nullable(),
   returnPolicy: z.string().optional().nullable(),
   internalRemarks: z.string().nullable().optional(),
-  productId: z.number().min(1, "Product is required."),
-  // MODIFIED: companyId is not directly in the form but is required for submission
-  companyId: z.number().min(1, "Member is required."),
 });
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
 // Define option types for clarity
-type ProductOptionType = { value: string; label: string; id: number };
-type CompanyOptionType = { value: string; label: string; id: number };
-type PaymentTermType = { value: number; label: string; id: number };
+type ProductOptionType = { value: number; label: string };
+type MemberOptionType = { value: number; label: string };
+type PaymentTermType = { value: number; label: string };
 type ProductSpecOptionType = { value: number; label: string };
 type SalesPersonOptionType = { value: number; label: string };
 
@@ -99,86 +94,111 @@ const listingTypeOptions = [{ value: 'Featured', label: 'Featured' }, { value: '
 const dispatchModeOptions = [{ value: 'courier', label: 'Courier' }, { value: 'pickup', label: 'Pickup' }];
 const adminStatusOptions = [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }];
 
-// NEW: Helper function to transform API data to form data structure
+// --- REFINED ---
+// Helper function to transform API data TO form data structure (for setting/resetting the form)
 const transformApiDataToFormData = (apiData: any): WallItemFormData => {
   return {
-    product_name: apiData?.product?.name || "",
-    company_name: apiData?.customer?.name || "",
+    productId: Number(apiData?.product_id),
+    member_id: Number(apiData?.customer_id),
     qty: Number(apiData?.qty) || 1,
     price: apiData?.price ? Number(apiData.price) : null,
     intent: apiData?.want_to || "Sell",
     productStatus: apiData?.product_status || "Active",
-    productSpecId: apiData?.product_spec_id ? Number(apiData?.product_spec_id) : null,
+    productSpecId: apiData?.product_spec_id ? Number(apiData.product_spec_id) : null,
     deviceCondition: apiData?.device_condition || null,
-    color: apiData?.color || "",
+    color: apiData?.color || null,
     cartoonTypeId: apiData?.cartoon_type || null,
-    dispatchStatus: apiData?.dispatch_status || "",
+    dispatchStatus: apiData?.dispatch_status || null,
     dispatchMode: apiData?.dispatch_mode || null,
-    paymentTermId: apiData?.payment_term ? Number(apiData?.payment_term) : null,
-    eta: apiData?.eta_details ? dayjs(apiData?.eta_details).toDate() : null,
-    location: apiData?.location || "",
+    paymentTermId: apiData?.payment_term ? Number(apiData.payment_term) : null,
+    eta: apiData?.eta_details ? dayjs(apiData.eta_details).toDate() : null,
+    location: apiData?.location || null,
     listingType: apiData?.listing_type || "Regular",
     visibility: apiData?.visibility || "Public",
     priority: apiData?.priority || "Medium",
-    adminStatus: apiData?.admin_status || "Pending",
+    adminStatus: apiData?.admin_status || null,
     status: apiData?.status || "Pending",
-    assignedTeamId: apiData?.assigned_team_id ? Number(apiData?.assigned_team_id) : null,
-    activeHours: apiData?.active_hrs || "",
-    productUrl: apiData?.product_url || "",
-    warrantyInfo: apiData?.warranty_info || "",
-    returnPolicy: apiData?.return_policy || "",
-    internalRemarks: apiData?.internal_remarks || "",
-    productId: Number(apiData?.product_id),
-    companyId: Number(apiData?.customer_id),
+    assignedTeamId: apiData?.assigned_team_id ? Number(apiData.assigned_team_id) : null,
+    activeHours: apiData?.active_hrs || null,
+    productUrl: apiData?.product_url || null,
+    warrantyInfo: apiData?.warranty_info || null,
+    returnPolicy: apiData?.return_policy || null,
+    internalRemarks: apiData?.internal_remarks || null,
+  };
+};
+
+// --- REFINED ---
+// Helper function to transform form data BACK TO API payload structure (for submitting the form)
+const transformFormDataToApiPayload = (formData: WallItemFormData, initialData: any) => {
+  return {
+    // These keys might not be editable but are often required by PUT/PATCH APIs
+    id: initialData?.id,
+    
+    // Map form state to API keys
+    product_id: String(formData.productId),
+    customer_id: String(formData.member_id),
+    want_to: formData.intent,
+    qty: String(formData.qty),
+    price: formData.price !== null && formData.price !== undefined ? String(formData.price) : null,
+    product_status: formData.productStatus,
+    product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null,
+    device_condition: formData.deviceCondition,
+    color: formData.color,
+    cartoon_type: formData.cartoonTypeId,
+    dispatch_status: formData.dispatchStatus,
+    dispatch_mode: formData.dispatchMode,
+    payment_term: formData.paymentTermId ? String(formData.paymentTermId) : null,
+    eta_details: formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null,
+    location: formData.location,
+    listing_type: formData.listingType,
+    visibility: formData.visibility,
+    priority: formData.priority,
+    admin_status: formData.adminStatus,
+    status: formData.status,
+    assigned_team_id: formData.assignedTeamId ? String(formData.assignedTeamId) : null,
+    active_hrs: formData.activeHours,
+    product_url: formData.productUrl,
+    warranty_info: formData.warrantyInfo,
+    return_policy: formData.returnPolicy,
+    internal_remarks: formData.internalRemarks,
   };
 };
 
 const WallItemForm = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  // NEW: Get itemId from URL for edit mode
-  // const { itemId } = useParams<{ itemId: string }>();
-  const itemId = useLocation().state;
+  const location = useLocation();
+  const itemId = location.state; // Assuming the ID is passed in state as { id: ... }
   const isEditMode = !!itemId;
-  console.log(location, "location");
 
-  // NEW: State for managing submission and loading of data
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
 
-  // MODIFIED: useSelector now also gets the specific item detail for editing
   const {
     productsMasterData = [],
-    CompanyData = [],
+    memberData = [],
     ProductSpecificationsData = [],
     PaymentTermsData = [],
     salesPerson = [],
-    // NEW: Add a selector for the single item detail
-    wallItemsData, // Assuming your slice has a 'wallItemsData' field
-    getwallItemsData,
+    getwallItemsData, // This will hold the single item data for editing
     status: masterDataAccessStatus = 'idle',
   } = useSelector(masterSelector);
 
-
   const formMethods = useForm<WallItemFormData>({
     resolver: zodResolver(wallItemFormSchema),
-    mode: 'onBlur',
-    // MODIFIED: Default values are for ADD mode. They will be overwritten in EDIT mode.
+    mode: 'onTouched',
     defaultValues: {
-      product_name: "",
-      company_name: "",
+      productId: 0,
+      member_id: 0,
       qty: 1,
       price: null,
       intent: "Sell",
-      productStatus: productStatusOptions[0]?.value,
-      status: statusOptions[0]?.value,
-      visibility: visibilityOptions[0]?.value,
-      priority: priorityOptions[1]?.value,
-      listingType: listingTypeOptions[1]?.value,
-      adminStatus: adminStatusOptions[0]?.value,
-      // ... other fields set to empty/null/default
-      productId: 0,
-      companyId: 0,
+      productStatus: "Active",
+      status: "Pending",
+      visibility: 'Public',
+      priority: 'Medium',
+      listingType: 'Regular',
+      adminStatus: 'Pending',
       productSpecId: null,
       deviceCondition: null,
       color: "",
@@ -197,37 +217,24 @@ const WallItemForm = () => {
     },
   });
 
-  // NEW: useEffect to populate form when in EDIT mode
-  useEffect(() => {
-    if (isEditMode) {
-      getWallItemById(itemId);
-      const formData = transformApiDataToFormData(getwallItemsData);
-      console.log(formData, "formData ");
-
-      formMethods.reset(formData);
-    }
-  }, [isEditMode, wallItemsData, formMethods]);
-
-
-  // MODIFIED: useEffect to fetch all necessary data (for dropdowns and for edit item)
+  // This useEffect fetches all necessary data on component mount.
   useEffect(() => {
     const fetchData = async () => {
       setIsLoadingPageData(true);
       try {
-        const dropdownPromises = [
+        const promises = [
           dispatch(getAllProductAction()),
-          dispatch(getCompanyAction()),
+          dispatch(getMembersAction()),
           dispatch(getProductSpecificationsAction()),
           dispatch(getPaymentTermAction()),
           dispatch(getSalesPersonAction()),
         ];
 
-        // If in edit mode, also fetch the specific item's data
         if (isEditMode) {
-          dropdownPromises.push(dispatch(getWallItemById(itemId)));
+          promises.push(dispatch(getWallItemById(itemId)));
         }
 
-        await Promise.all(dropdownPromises);
+        await Promise.all(promises);
 
       } catch (error) {
         console.error("Failed to fetch page data:", error);
@@ -239,21 +246,31 @@ const WallItemForm = () => {
     fetchData();
   }, [dispatch, itemId, isEditMode]);
 
-  // --- Dropdown options (useMemo hooks remain the same) ---
+  // This useEffect populates the form once data for the item is available for editing.
+  useEffect(() => {
+    // Only populate if we are in EDIT mode and the specific item data has been fetched.
+    // The `getwallItemsData?.id` check ensures we have the data before calling reset.
+    if (isEditMode && getwallItemsData?.id === itemId) {
+      const formDataForEdit = transformApiDataToFormData(getwallItemsData);
+      formMethods.reset(formDataForEdit);
+    }
+  }, [isEditMode, itemId, getwallItemsData, formMethods]);
+
+  // --- Dropdown options (useMemo hooks are more efficient) ---
   const productOptions: ProductOptionType[] = useMemo(() => {
     if (!Array.isArray(productsMasterData)) return [];
-    return productsMasterData.map((product: any) => ({ value: product.name, label: product.name, id: product.id }));
+    return productsMasterData.map((product: any) => ({ value: product.id, label: product.name }));
   }, [productsMasterData]);
 
-  const companyOptions: CompanyOptionType[] = useMemo(() => {
-    const companies = CompanyData?.data || CompanyData || [];
+  const memberOptions: MemberOptionType[] = useMemo(() => {
+    const companies = memberData?.data || memberData || [];
     if (!Array.isArray(companies)) return [];
-    return companies.map((company: any) => ({ value: company.name || company.company_name, label: company.name || company.company_name, id: company.id }));
-  }, [CompanyData]);
+    return companies.map((company: any) => ({ value: company.id, label: company.name }));
+  }, [memberData]);
 
   const paymentTermsOption: PaymentTermType[] = useMemo(() => {
     if (!Array.isArray(PaymentTermsData)) return [];
-    return PaymentTermsData.map((payment: any) => ({ value: payment.id, label: payment.term_name || 'Unnamed Term', id: payment.id }));
+    return PaymentTermsData.map((payment: any) => ({ value: payment.id, label: payment.term_name || 'Unnamed Term' }));
   }, [PaymentTermsData]);
 
   const productSpecOptionsForSelect: ProductSpecOptionType[] = useMemo(() => {
@@ -263,58 +280,28 @@ const WallItemForm = () => {
 
   const salesPersonOptions: SalesPersonOptionType[] = useMemo(() => {
     if (!Array.isArray(salesPerson)) return [];
-    return salesPerson.map((person: any) => ({ value: person.id || person.value, label: person.name }));
+    return salesPerson.map((person: any) => ({ value: person.id, label: person.name }));
   }, [salesPerson]);
 
 
-  // MODIFIED: Form submission now handles both Add and Edit
+  // Form submission handler
   const onFormSubmit = async (formData: WallItemFormData) => {
     setIsSubmitting(true);
     try {
-      // The payload structure is largely the same for add and update
-      const payload = {
-        product_id: String(formData.productId),
-        customer_id: String(formData.companyId), // API uses customer_id
-        want_to: formData.intent,
-        qty: String(formData.qty),
-        price: formData.price !== null && formData.price !== undefined ? String(formData.price) : null,
-        product_status: formData.productStatus,
-        product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null,
-        device_condition: formData.deviceCondition,
-        color: formData.color,
-        cartoon_type: formData.cartoonTypeId,
-        dispatch_status: formData.dispatchStatus,
-        dispatch_mode: formData.dispatchMode,
-        payment_term: formData.paymentTermId ? String(formData.paymentTermId) : null,
-        eta_details: formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null, // API uses eta_details
-        location: formData.location,
-        listing_type: formData.listingType,
-        visibility: formData.visibility,
-        priority: formData.priority,
-        admin_status: formData.adminStatus,
-        status: formData.status,
-        assigned_team_id: formData.assignedTeamId ? String(formData.assignedTeamId) : null,
-        active_hrs: String(formData.activeHours),
-        product_url: formData.productUrl,
-        warranty_info: formData.warrantyInfo,
-        return_policy: formData.returnPolicy,
-        internal_remarks: formData.internalRemarks,
-      };
-
       if (isEditMode) {
         // --- EDIT LOGIC ---
-        // NEW: You must create this editWallItemAction in your redux setup
-        await dispatch(editWallItemAction({ id: itemId, ...payload })).unwrap();
+        const payload = transformFormDataToApiPayload(formData, getwallItemsData);
+        await dispatch(editWallItemAction(payload)).unwrap();
         toast.push(
           <Notification title="Update Successful" type="success">
-            Wall item for "{formData.product_name}" has been updated.
+            Wall item has been updated.
           </Notification>
         );
       } else {
         // --- ADD LOGIC ---
+        const payload = transformFormDataToApiPayload(formData, null);
         const addPayload = {
           ...payload,
-          // Add any fields specific to creation
           created_from: "FormUI-Add",
           source: "in",
           is_wall_manual: "0",
@@ -322,7 +309,7 @@ const WallItemForm = () => {
         await dispatch(addWallItemAction(addPayload)).unwrap();
         toast.push(
           <Notification title="Item Added" type="success">
-            Wall item for "{formData.product_name}" created.
+            New wall item has been created.
           </Notification>
         );
       }
@@ -343,17 +330,16 @@ const WallItemForm = () => {
     navigate("/sales-leads/wall-listing");
   };
 
-  // MODIFIED: Use a single loading flag for the whole page
-  const isLoading = isLoadingPageData || (masterDataAccessStatus === 'loading' && !wallItemsData);
-
-  // NEW: Show a spinner while loading initial data for the form
-  if (isLoading) {
+  if (isEditMode && isLoadingPageData) {
     return (
       <div className="flex justify-center items-center h-60">
         <Spinner size="40px" />
       </div>
     );
   }
+  
+  // Get product name for display in toast/title
+  const getProductName = (productId: number) => productOptions.find(p => p.value === productId)?.label || 'the';
 
   return (
     <>
@@ -362,12 +348,9 @@ const WallItemForm = () => {
           <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Wall Listing</h6>
         </NavLink>
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
-        {/* MODIFIED: Dynamic Title */}
         <h6 className="font-semibold text-primary">{isEditMode ? 'Edit Wall Item' : 'Add New Wall Item'}</h6>
       </div>
       <Card>
-        {/* ... (Your entire <Form> component JSX goes here, it should work without changes) ... */}
-        {/* Make sure to copy the entire Form block from your original code */}
         <Form
           id="wallItemAddForm"
           onSubmit={formMethods.handleSubmit(onFormSubmit, (errors) => {
@@ -377,29 +360,21 @@ const WallItemForm = () => {
           className="flex flex-col gap-y-4"
         >
           <div className="grid md:grid-cols-3 gap-4 p-4">
-            {/* Row 1 */}
+            {/* --- MODIFIED CONTROLLERS --- */}
             <FormItem
               label={<div>Product Name<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.product_name}
-              errorMessage={formMethods.formState.errors.product_name?.message}
+              invalid={!!formMethods.formState.errors.productId}
+              errorMessage={formMethods.formState.errors.productId?.message}
             >
               <Controller
-                name="product_name"
+                name="productId"
                 control={formMethods.control}
                 render={({ field }) => (
                   <UiSelect
-                    isLoading={isLoading}
+                    isLoading={isLoadingPageData}
                     options={productOptions}
                     value={productOptions.find(opt => opt.value === field.value) || null}
-                    onChange={option => {
-                      if (option) {
-                        field.onChange(option.value);
-                        formMethods.setValue('productId', option.id, { shouldValidate: true, shouldDirty: true });
-                      } else {
-                        field.onChange("");
-                        formMethods.setValue('productId', 0, { shouldValidate: true, shouldDirty: true });
-                      }
-                    }}
+                    onChange={option => field.onChange(option ? option.value : 0)}
                     placeholder="Select Product Name"
                     isClearable
                   />
@@ -408,32 +383,25 @@ const WallItemForm = () => {
             </FormItem>
             <FormItem
               label={<div>Member Name<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.company_name}
-              errorMessage={formMethods.formState.errors.company_name?.message}
+              invalid={!!formMethods.formState.errors.member_id}
+              errorMessage={formMethods.formState.errors.member_id?.message}
             >
               <Controller
-                name="company_name"
+                name="member_id"
                 control={formMethods.control}
                 render={({ field }) => (
                   <UiSelect
-                    isLoading={isLoading}
-                    options={companyOptions}
-                    value={companyOptions.find(opt => opt.value === field.value) || null}
-                    onChange={option => {
-                      if (option) {
-                        field.onChange(option.value);
-                        formMethods.setValue('companyId', option.id, { shouldValidate: true, shouldDirty: true });
-                      } else {
-                        field.onChange("");
-                        formMethods.setValue('companyId', 0, { shouldValidate: true, shouldDirty: true });
-                      }
-                    }}
+                    isLoading={isLoadingPageData}
+                    options={memberOptions}
+                    value={memberOptions.find(opt => opt.value === field.value) || null}
+                    onChange={option => field.onChange(option ? option.value : 0)}
                     placeholder="Select Member Name"
                     isClearable
                   />
                 )}
               />
             </FormItem>
+            {/* --- REMAINDER OF THE FORM IS LARGELY UNCHANGED, JUST BENEFITS FROM CLEANER STATE --- */}
             <FormItem
               label={<div>Quantity<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.qty}
@@ -479,7 +447,7 @@ const WallItemForm = () => {
             >
               <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
                 <UiSelect
-                  isLoading={isLoading}
+                  isLoading={isLoadingPageData}
                   options={productSpecOptionsForSelect}
                   value={productSpecOptionsForSelect.find(opt => opt.value === field.value) || null}
                   onChange={(option) => field.onChange(option ? option.value : null)}
@@ -548,7 +516,7 @@ const WallItemForm = () => {
             >
               <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
                 <UiSelect
-                  isLoading={isLoading}
+                  isLoading={isLoadingPageData}
                   options={paymentTermsOption}
                   value={paymentTermsOption.find(opt => opt.value === field.value) || null}
                   onChange={(option) => field.onChange(option ? option.value : null)}
@@ -619,7 +587,6 @@ const WallItemForm = () => {
                 placeholder="Select Admin Status"
                 isClearable />)} />
             </FormItem>
-            {/* --- NEW STATUS DROPDOWN --- */}
             <FormItem
               label={<div>Status<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.status}
@@ -646,7 +613,7 @@ const WallItemForm = () => {
             >
               <Controller name="assignedTeamId" control={formMethods.control} render={({ field }) => (
                 <UiSelect
-                  isLoading={isLoading}
+                  isLoading={isLoadingPageData}
                   options={salesPersonOptions} {...field}
                   value={salesPersonOptions.find(opt => opt.value === field.value) || null}
                   onChange={opt => field.onChange(opt ? opt.value : null)}
@@ -706,8 +673,7 @@ const WallItemForm = () => {
 
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
         <Button type="button" onClick={handleCancel} disabled={isSubmitting} > Cancel </Button>
-        {/* MODIFIED: Dynamic button text and disabled state */}
-        <Button type="submit" form="wallItemAddForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !formMethods.formState.isDirty || !formMethods.formState.isValid} >
+        <Button type="submit" form="wallItemAddForm" variant="solid" loading={isSubmitting} disabled={isSubmitting} >
           {isSubmitting ? 'Saving...' : (isEditMode ? 'Update' : 'Save')}
         </Button>
       </Card>
