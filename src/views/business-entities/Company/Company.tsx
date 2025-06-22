@@ -237,7 +237,7 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   const dispatch = useAppDispatch();
 
   // FIX: Initialize state assuming CompanyData?.data is an object like { data: [], total: 0 }
- 
+
   const [companyList, setCompanyList] = useState<CompanyItem[]>(CompanyData?.data ?? []);
   const [companyCount, setCompanyCount] = useState(CompanyData?.counts ?? {});
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
@@ -1248,9 +1248,10 @@ const CompanyActionColumn = ({
 
 // --- CompanyListTable Component (Unchanged logic, but will now work) ---
 const CompanyListTable = () => {
+
   const navigate = useNavigate();
   // With the provider fixed, companyList is now a guaranteed array.
-  const { companyList, selectedCompanies, setSelectedCompanies, companyCount } = useCompanyList();
+  const { companyList, selectedCompanies, setSelectedCompanies, companyCount, ContinentsData, CountriesData } = useCompanyList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -1269,10 +1270,8 @@ const CompanyListTable = () => {
     type: null,
     data: null,
   });
-  const handleOpenModal = (type: ModalType, companyData: CompanyItem) =>
-    setModalState({ isOpen: true, type, data: companyData });
-  const handleCloseModal = () =>
-    setModalState({ isOpen: false, type: null, data: null });
+  const handleOpenModal = (type: ModalType, companyData: CompanyItem) => setModalState({ isOpen: true, type, data: companyData });
+  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
   const filterFormMethods = useForm<CompanyFilterFormData>({
     resolver: zodResolver(companyFilterFormSchema),
@@ -1281,6 +1280,7 @@ const CompanyListTable = () => {
   useEffect(() => {
     filterFormMethods.reset(filterCriteria);
   }, [filterCriteria, filterFormMethods]);
+
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria);
     setFilterDrawerOpen(true);
@@ -1325,10 +1325,8 @@ const CompanyListTable = () => {
 
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
-  const handleEditCompany = (id: string) =>
-    navigate(`/business-entities/company-edit/${id}`);
-  const handleViewCompanyDetails = (id: string) =>
-    navigate("/business-entities/company-create", { state: id });
+  const handleEditCompany = (id: string) => navigate(`/business-entities/company-edit/${id}`);
+  const handleViewCompanyDetails = (id: string) => navigate("/business-entities/company-create", { state: id });
   const handleSetTableData = useCallback(
     (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d })),
     []
@@ -1483,27 +1481,6 @@ const CompanyListTable = () => {
           );
         },
       },
-      // {
-      //   header: "Preferences",
-      //   size: 180,
-      //   cell: ({ row }) => {
-      //     const { brands, category, interested_in } = row.original;
-      //     return (
-      //       <div className="flex flex-col gap-1 text-xs">
-      //         {" "}
-      //         <span>
-      //           <b>Brands:</b> {brands || "N/A"}
-      //         </span>{" "}
-      //         <span>
-      //           <b>Category:</b> {category || "N/A"}
-      //         </span>{" "}
-      //         <span>
-      //           <b>Interested In:</b> {interested_in}
-      //         </span>{" "}
-      //       </div>
-      //     );
-      //   },
-      // },
       {
         header: "Profile & Scores",
         size: 190,
@@ -1611,7 +1588,7 @@ const CompanyListTable = () => {
   );
   const companyTypeOptions = useMemo(
     () =>
-      Array.from(new Set(companyList.map((c) => c.type))).map((ct) => ({
+      Array.from(new Set(companyList.map((c) => c.ownership_type))).map((ct) => ({
         value: ct,
         label: ct,
       })),
@@ -1619,18 +1596,18 @@ const CompanyListTable = () => {
   );
   const continentOptions = useMemo(
     () =>
-      Array.from(new Set(companyList.map((c) => c.continent))).map((co) => ({
-        value: co,
-        label: co,
-      })),
+      Array.from(ContinentsData.map((co) => ({
+        value: co.id,
+        label: co.name,
+      }))),
     [companyList]
   );
   const countryOptions = useMemo(
     () =>
-      Array.from(new Set(companyList.map((c) => c.country))).map((cy) => ({
-        value: cy,
-        label: cy,
-      })),
+      Array.from(CountriesData.map((ct) => ({
+        value: ct.id,
+        label: ct.name,
+      }))),
     [companyList]
   );
   const stateOptions = useMemo(
