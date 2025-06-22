@@ -588,10 +588,10 @@ const preparePayloadForApi = (
     payload.dynamic_member_profiles = formData.member_profiles.map(profile => {
       // Transform back from {value, label} to simple values if needed
       const apiProfile: any = {};
-      if (profile.member_type) apiProfile.member_type = getValue(profile.member_type);
-      if (profile.brands) apiProfile.brands = profile.brands.map(b => getValue(b)); // Assuming API wants array of brand IDs
-      if (profile.categories) apiProfile.categories = profile.categories.map(c => getValue(c));
-      if (profile.sub_categories) apiProfile.sub_categories = profile.sub_categories.map(sc => getValue(sc));
+      if (profile.member_type) apiProfile.member_type_id = getValue(profile.member_type);
+      if (profile.brands) apiProfile.brand_id = profile.brands.map(b => getValue(b)); // Assuming API wants array of brand IDs
+      if (profile.categories) apiProfile.category_id = profile.categories.map(c => getValue(c));
+      if (profile.sub_categories) apiProfile.sub_category_id = profile.sub_categories.map(sc => getValue(sc));
       // Add other fields from profile as needed
       return apiProfile;
     });
@@ -1916,15 +1916,15 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     label: p.name,
   }));
   const brandOptions = BrandData.map((b: any) => ({
-    value: String(b.id),
+    value: b.id,
     label: b.name,
   }));
   const categoryOptions = CategoriesData.map((c: any) => ({
-    value: String(c.id),
+    value: c.id,
     label: c.name,
   }));
   const subCategoryOptions = CategoriesData.map((sc: any) => ({
-    value: String(sc.id),
+    value: sc.id,
     label: sc.name,
   }));
 
@@ -1961,14 +1961,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "Both", label: "Both" },
   ];
   const memberTypeOptions = [
-    { value: "INS - PREMIUM", label: "INS - PREMIUM" },
-    { value: "INS - SUPER", label: "INS - SUPER" },
-    { value: "INS - TOP", label: "INS - TOP" },
-    { value: "INS - SUPPLIER", label: "INS - SUPPLIER" },
-    { value: "GLB - PREMIUM", label: "GLB - PREMIUM" },
-    { value: "GLB - BUYER", label: "GLB - BUYER" },
-    { value: "INDIAN", label: "INDIAN" },
-    { value: "GLOBAL SUPPLIER", label: "GLOBAL SUPPLIER" },
+    { value: 1, label: "INS - PREMIUM" },
+    { value: 2, label: "INS - SUPER" },
+    { value: 3, label: "INS - TOP" },
+    { value: 4, label: "INS - SUPPLIER" },
+    { value: 5, label: "GLB - PREMIUM" },
+    { value: 6, label: "GLB - BUYER" },
+    { value: 7, label: "INDIAN" },
+    { value: 8, label: "GLOBAL SUPPLIER" },
   ];
 
   return (
