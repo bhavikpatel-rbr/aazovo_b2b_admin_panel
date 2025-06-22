@@ -2709,3 +2709,30 @@ export const sendCampaignNowAsync = async (data: any) => {
     return isAxiosError(err)
   }
 }
+
+export const getMemberTypeAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/member_type`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addMemberTypeAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/member_type`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const editMemberTypeAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/member_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name, status: unitData?.status })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}

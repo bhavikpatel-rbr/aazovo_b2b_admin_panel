@@ -98,6 +98,7 @@ import {
   getEmployeesAction,
   getParentCategoriesAction,
   getAllProductsAction,
+  getMemberTypeAction,
 } from "./middleware";
 import Opportunities from "@/views/sales-Leads/Opportunities";
 
@@ -195,6 +196,10 @@ const masterSlice = createSlice({
     builder.addCase(getDocumentTypeAction.fulfilled, (state, { payload }) => ({
       ...state,
       DocumentTypeData: payload,
+    }));
+    builder.addCase(getMemberTypeAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      MemberTypeData: payload,
     }));
     builder.addCase(addDocumentTypeAction.fulfilled, (state, { payload }) => ({
       ...state,
