@@ -414,7 +414,9 @@ const WallListing = () => {
   const [modalState, setModalState] = useState<WallModalState>({ isOpen: false, type: null, data: null });
 
   // --- Table and Filter State ---
+  // This state holds the raw filter values from the filter form
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
+  // This state holds the table's operational state (pagination, sorting, search)
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
@@ -476,47 +478,55 @@ const WallListing = () => {
     createdById: apiItem.created_by,
   }), []);
 
-  // ADDED: Construct API parameters from component state to send to the server
+  // ✅ CORRECT: This `useMemo` is the core of the server-side filtering logic.
+  // It combines table state (pagination, sort, search) and filter state into a single
+  // object that can be sent to the API.
   const apiParams = useMemo(() => {
-    const params: any = {
-      page: tableData.pageIndex,
-      per_page: tableData.pageSize,
-      search: tableData.query || undefined,
-      sort_by: tableData.sort?.key || undefined,
-      sort_order: tableData.sort?.order || undefined,
-    };
-
     // Helper to format array of react-select options into comma-separated strings for the API
     const formatMultiSelect = (items: { value: any }[] | undefined) => {
       if (!items || items.length === 0) return undefined;
       return items.map(item => item.value).join(',');
     };
 
-    // Map filter criteria to API-friendly parameter names
-    // NOTE: The keys (e.g., 'status', 'company_ids') must match what your backend API expects
-    params.status = formatMultiSelect(filterCriteria.filterRecordStatuses);
-    params.company_ids = formatMultiSelect(filterCriteria.filterCompanyIds);
-    params.want_to = formatMultiSelect(filterCriteria.filterIntents);
-    params.product_ids = formatMultiSelect(filterCriteria.filterProductIds);
-    params.category_ids = formatMultiSelect(filterCriteria.categories);
-    params.subcategory_ids = formatMultiSelect(filterCriteria.subcategories);
-    params.brand_ids = formatMultiSelect(filterCriteria.brands);
-    params.product_status = formatMultiSelect(filterCriteria.productStatus);
-    params.member_type_ids = formatMultiSelect(filterCriteria.memberType);
-    params.created_by_ids = formatMultiSelect(filterCriteria.createdBy);
-    params.product_spec_ids = formatMultiSelect(filterCriteria.productSpec);
+    const params: any = {
+      page: tableData.pageIndex,
+      per_page: tableData.pageSize,
+      search: tableData.query || undefined,
+      sort_by: tableData.sort?.key || undefined,
+      sort_order: tableData.sort?.order || undefined,
+      status: formatMultiSelect(filterCriteria.filterRecordStatuses),
+      company_ids: formatMultiSelect(filterCriteria.filterCompanyIds),
+      want_to: formatMultiSelect(filterCriteria.filterIntents),
+      product_ids: formatMultiSelect(filterCriteria.filterProductIds),
+      category_ids: formatMultiSelect(filterCriteria.categories),
+      subcategory_ids: formatMultiSelect(filterCriteria.subcategories),
+      brand_ids: formatMultiSelect(filterCriteria.brands),
+      product_status: formatMultiSelect(filterCriteria.productStatus),
+      member_type_ids: formatMultiSelect(filterCriteria.memberType),
+      created_by_ids: formatMultiSelect(filterCriteria.createdBy),
+      product_spec_ids: formatMultiSelect(filterCriteria.productSpec),
+      source: formatMultiSelect(filterCriteria.source),
+    };
 
     if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) {
       params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format('YYYY-MM-DD') : undefined;
       params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format('YYYY-MM-DD') : undefined;
     }
 
+    // Remove any undefined/null properties before sending to the API
+    Object.keys(params).forEach(key => {
+      if (params[key] === undefined || params[key] === null) {
+        delete params[key];
+      }
+    });
+
     return params;
   }, [tableData, filterCriteria]);
 
 
-  // CHANGED: This useEffect is now the primary data fetching trigger.
-  // It runs on initial load and whenever filters, pagination, sort, or search change.
+  // ✅ CORRECT: This useEffect is now the primary data fetching trigger.
+  // It runs on initial load and whenever `apiParams` changes, ensuring the
+  // table is always in sync with the state (filters, pagination, sort, search).
   useEffect(() => {
     dispatch(getWallListingAction(apiParams));
   }, [dispatch, apiParams]);
@@ -533,12 +543,13 @@ const WallListing = () => {
     dispatch(getAllCompany());
   }, [dispatch]);
 
-  // CHANGED: Data for the table is now directly from the Redux store's paginated response.
+  // ✅ CORRECT: Data for the table is directly from the Redux store's paginated response.
+  // No client-side processing is needed.
   const pageData = useMemo(() => {
     return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : [];
   }, [wallListing, mapApiToWallItem]);
 
-  // CHANGED: Total item count now comes directly from the API response metadata.
+  // ✅ CORRECT: Total item count now comes directly from the API response metadata.
   const total = wallListing?.data?.total || 0;
 
   // REMOVED: The large `useMemo` block for client-side filtering, sorting, and pagination is gone.
@@ -554,7 +565,7 @@ const WallListing = () => {
   const handleOpenModal = (type: WallModalType, wallItem: WallItem) => setModalState({ isOpen: true, type, data: wallItem });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
-  // CHANGED: The refetch after delete now uses the current `apiParams` to refresh the view.
+  // ✅ CORRECT: The refetch after delete now uses the current `apiParams` to refresh the view.
   const onConfirmDeleteSelectedItems = useCallback(async () => {
     if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info" >Please select items to delete.</Notification>); return; }
     setDeleteSelectedConfirmOpen(false);
@@ -580,7 +591,7 @@ const WallListing = () => {
     const defaults = filterFormSchema.parse({});
     filterFormMethods.reset(defaults);
     setFilterCriteria(defaults);
-    handleSetTableData({ query: "", pageIndex: 1 });
+    handleSetTableData({ query: "", pageIndex: 1 }); // also reset search query
   }, [filterFormMethods, handleSetTableData]);
 
   const handleOpenExportReasonModal = useCallback(() => {
@@ -592,7 +603,7 @@ const WallListing = () => {
     setIsExportReasonModalOpen(true);
   }, [total, exportReasonFormMethods]);
 
-  // CHANGED: Export now fetches all filtered data from the server before creating the CSV.
+  // ✅ FIXED: Export now correctly dispatches a thunk to fetch all filtered data from the server.
   const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "WallListing";
@@ -600,21 +611,24 @@ const WallListing = () => {
     const fileName = `wall_listing_export_${timestamp}.csv`;
 
     try {
+      // 1. Submit the reason for auditing purposes.
       await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
-      toast.push(<Notification title="Reason Submitted" type="success" />);
+      toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..." />);
 
-      // Fetch ALL data matching the current filters for export.
-      // We call the service directly to avoid polluting the main UI state.
-      // We use the same filters but override pagination (`per_page: -1`).
-      const exportParams = { ...apiParams, per_page: -1, page: 1 };
-      const exportDataResponse = await getWallListingAction(exportParams);
+      // debugger
+      // 2. Fetch ALL data matching the current filters for export.
+      // We create new params to fetch all items, overriding pagination.
+      const exportParams = { ...apiParams, per_page: 0, page: 1 };
+      // 3. **CRITICAL FIX**: Dispatch the thunk and `unwrap` the result to get the data or catch the error.
+      //    Do not call the thunk action creator directly.
+      const exportDataResponse = await dispatch(getWallListingAction(exportParams)).unwrap();
 
-      if (exportDataResponse?.data?.status !== true) {
-        throw new Error(exportDataResponse?.data?.message || "Failed to fetch data for export.");
+      // Assuming the unwrapped successful payload is an object like: { status: boolean, data: [], ... }
+      if (!exportDataResponse?.status) {
+        throw new Error(exportDataResponse?.message || "Failed to fetch data for export.");
       }
 
-      const allFilteredData = (exportDataResponse.data.data || []).map(mapApiToWallItem);
-
+      const allFilteredData = (exportDataResponse?.data?.data || []).map(mapApiToWallItem);
       const success = exportWallItemsToCsv(fileName, allFilteredData);
       if (success) {
         setIsExportReasonModalOpen(false);
