@@ -670,7 +670,7 @@ const WallListing = () => {
     params.category_id = mapToCommaSeparated(filterCriteria.categories);
     params.subcategory_id = mapToCommaSeparated(filterCriteria.subcategories);
     params.brands_id = mapToCommaSeparated(filterCriteria.brands);
-    params.product_status = mapToCommaSeparated(filterCriteria.productStatus); // For API product availability status
+    params.product_status = mapToCommaSeparated(filterCriteria.productStatus); // For API product availability
     params.source = mapToCommaSeparated(filterCriteria.source);
     params.product_spec = mapToCommaSeparated(filterCriteria.productSpec);
     params.member_type = mapToCommaSeparated(filterCriteria.memberType);
@@ -825,8 +825,6 @@ const WallListing = () => {
     {
       header: "Overview", accessorKey: "product_name", size: 280,
       cell: ({ row }) => {
-        console.log(row?.original, "rowrowrowrow");
-
         const { product_images, product_name, id, want_to } = row?.original || {};
         const intent = want_to as WallIntent;
         return (
@@ -1029,22 +1027,24 @@ const WallListing = () => {
       </Drawer>
 
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={480}
-        footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterWallForm" type="submit">Apply</Button></div>} >
-        <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-2 h-full">
-          <div className="md:grid grid-cols-2 gap-2 overflow-y-auto p-1"> {/* Added p-1 for slight padding */}
-            <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
-            <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select companies..." options={dummyCompanies.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-            <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
-            <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select products..." options={dummyProducts.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-            <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Categories..." options={[{ label: "Tools", value: "Tools" }, { label: "Electronics", value: "Electronics" }, { label: "Mobile", value: "MOBILE" },]} {...field} />)} /></FormItem>
-            <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Sub Categories..." options={[{ label: "Power Tools", value: "Power Tools" }, { label: "Sanding Tools", value: "Sanding Tools" }, { label: "Mobile", value: "MOBILE" },]} {...field} />)} /></FormItem>
-            <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Brands..." options={[{ label: "ToolMaster", value: "ToolMaster" }, { label: "BuildRight", value: "BuildRight" }, { label: "Redmi", value: "Redmi" },]} {...field} />)} /></FormItem>
-            <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s, }))} {...field} />)} /></FormItem>
-            <FormItem label="Created Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
-            <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" },]} {...field} />)} /></FormItem>
-            <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Product Spec..." options={[{ label: "500W", value: "500W" }]} {...field} />)} /></FormItem>
-            <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Member Type..." options={[{ label: "Premium", value: "Premium" }]} {...field} />)} /></FormItem>
-            <FormItem label="Created By (Example)" className="col-span-2"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Employee..." options={[{ label: "Sales Team A", value: "Sales Team A" }]} {...field} />)} /></FormItem>
+        footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button><Button size="sm" variant="solid" form="filterWallForm" type="submit">Apply</Button></div>} >
+        <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col h-full">
+          <div className="overflow-y-auto p-1 flex-grow">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
+              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select companies..." options={dummyCompanies.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
+              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select products..." options={dummyProducts.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Categories..." options={[{ label: "Tools", value: "Tools" }, { label: "Electronics", value: "Electronics" }, { label: "Mobile", value: "MOBILE" },]} {...field} />)} /></FormItem>
+              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Sub Categories..." options={[{ label: "Power Tools", value: "Power Tools" }, { label: "Sanding Tools", value: "Sanding Tools" }, { label: "Mobile", value: "MOBILE" },]} {...field} />)} /></FormItem>
+              <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Brands..." options={[{ label: "ToolMaster", value: "ToolMaster" }, { label: "BuildRight", value: "BuildRight" }, { label: "Redmi", value: "Redmi" },]} {...field} />)} /></FormItem>
+              <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s, }))} {...field} />)} /></FormItem>
+              <FormItem label="Created Date Range" className="col-span-2"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
+              <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" },]} {...field} />)} /></FormItem>
+              <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Product Spec..." options={[{ label: "500W", value: "500W" }]} {...field} />)} /></FormItem>
+              <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Member Type..." options={[{ label: "Premium", value: "Premium" }]} {...field} />)} /></FormItem>
+              <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Employee..." options={[{ label: "Sales Team A", value: "Sales Team A" }]} {...field} />)} /></FormItem>
+            </div>
           </div>
         </Form>
       </Drawer>
