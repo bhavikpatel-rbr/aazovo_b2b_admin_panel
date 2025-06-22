@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { CSVLink } from "react-csv";
+// REMOVED: import { CSVLink } from "react-csv";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -25,45 +25,39 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
+  Input,
+  Select,
+  Table,
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
-  Table,
-  Input,
-  Select,
-  FormItem,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
+import FormItem from "@/components/ui/Form/FormItem";
 import Notification from "@/components/ui/Notification";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
-import { MdCancel, MdCheckCircle } from "react-icons/md";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
   TbAlarm,
   TbAlertTriangle,
   TbBell,
   TbBrandWhatsapp,
   TbBuilding,
-  TbBuildingArch,
   TbBuildingBank,
-  TbBuildingCarousel,
   TbBuildingCommunity,
-  TbBuildingMinus,
   TbCalendar,
   TbCalendarEvent,
   TbCancel,
-  TbCheck,
   TbChecks,
   TbCircleCheck,
   TbCircleX,
   TbClipboardText,
-  TbClock,
-  TbCloudDownload,
   TbCloudUpload,
   TbDownload,
   TbEye,
@@ -72,11 +66,9 @@ import {
   TbFileZip,
   TbFilter,
   TbMail,
-  TbMessageCircle,
   TbPencil,
   TbPlus,
   TbReceipt,
-  TbReportMoney,
   TbSearch,
   TbShieldCheck,
   TbShieldX,
@@ -84,7 +76,7 @@ import {
   TbUser,
   TbUserCircle,
   TbUserSearch,
-  TbUsersGroup,
+  TbUsersGroup
 } from "react-icons/tb";
 
 // Types
@@ -100,6 +92,7 @@ import {
   getCompanyAction,
   getContinentsAction,
   getCountriesAction,
+  submitExportReasonAction, // ADDED: Assume this action exists
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
@@ -188,6 +181,174 @@ const companyFilterFormSchema = z.object({
     .default([null, null]),
 });
 type CompanyFilterFormData = z.infer<typeof companyFilterFormSchema>;
+
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+// --- CSV Exporter Utility for Companies ---
+const COMPANY_CSV_HEADERS = [
+  "ID",
+  "Name",
+  "Company Code",
+  "Type",
+  "Status",
+  "Business Type",
+  "Country",
+  "State",
+  "City",
+  "KYC Verified",
+  "Billing Enabled",
+  "Created Date",
+  "Owner",
+  "Contact Number",
+  "Email",
+  "Website",
+  "GST",
+  "PAN",
+  "Brands",
+  "Categories",
+];
+
+// Define a type for the transformed export item
+type CompanyExportItem = {
+  id: string;
+  name: string;
+  company_code: string;
+  type: string;
+  status: string;
+  business_type: string;
+  country: string;
+  state: string;
+  city: string;
+  kyc_verified: "Yes" | "No";
+  enable_billing: "Yes" | "No";
+  created_date: string;
+  company_owner: string;
+  company_contact_number: string;
+  company_email: string;
+  company_website: string;
+  gst_number: string;
+  pan_number: string;
+  brands: string;
+  category: string;
+};
+
+// Define the keys to match the export item and headers
+const COMPANY_CSV_KEYS: (keyof CompanyExportItem)[] = [
+  "id",
+  "name",
+  "company_code",
+  "type",
+  "status",
+  "business_type",
+  "country",
+  "state",
+  "city",
+  "kyc_verified",
+  "enable_billing",
+  "created_date",
+  "company_owner",
+  "company_contact_number",
+  "company_email",
+  "company_website",
+  "gst_number",
+  "pan_number",
+  "brands",
+  "category",
+];
+
+function exportToCsv(filename: string, rows: CompanyItem[]) {
+  if (!rows || !rows.length) {
+    toast.push(
+      <Notification title="No Data" type="info">
+        Nothing to export.
+      </Notification>
+    );
+    return false;
+  }
+
+  // Transform the data for export
+  const transformedRows: CompanyExportItem[] = rows.map((row) => ({
+    id: row.id || "N/A",
+    name: row.name || "N/A",
+    company_code: row.company_code || "N/A",
+    type: row.type || "N/A",
+    status: row.status || "N/A",
+    business_type: row.business_type || "N/A",
+    // @ts-ignore
+    country: row.country?.name || row.country || "N/A",
+    state: row.state || "N/A",
+    city: row.city || "N/A",
+    kyc_verified: row.kyc_verified || "No",
+    enable_billing: row.enable_billing || "No",
+    created_date: row.created_date
+      ? new Date(row.created_date).toLocaleDateString("en-GB")
+      : "N/A",
+    company_owner: row.company_owner || "N/A",
+    company_contact_number: row.company_contact_number || "N/A",
+    company_email: row.company_email || "N/A",
+    company_website: row.company_website || "N/A",
+    gst_number: row.gst_number || "N/A",
+    pan_number: row.pan_number || "N/A",
+    brands: Array.isArray(row.brands) ? row.brands.join(", ") : "N/A",
+    category: Array.isArray(row.category) ? row.category.join(", ") : "N/A",
+  }));
+
+  const separator = ",";
+  const csvContent =
+    COMPANY_CSV_HEADERS.join(separator) +
+    "\n" +
+    transformedRows
+      .map((row) => {
+        return COMPANY_CSV_KEYS.map((k) => {
+          let cell: any = row[k as keyof CompanyExportItem];
+          if (cell === null || cell === undefined) {
+            cell = "";
+          } else {
+            cell = String(cell).replace(/"/g, '""'); // Escape double quotes
+          }
+          if (String(cell).search(/("|,|\n)/g) >= 0) {
+            cell = `"${cell}"`; // Wrap in double quotes if it contains commas, newlines, or quotes
+          }
+          return cell;
+        }).join(separator);
+      })
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(
+      <Notification title="Export Successful" type="success">
+        Data exported to {filename}.
+      </Notification>
+    );
+    return true;
+  }
+  toast.push(
+    <Notification title="Export Failed" type="danger">
+      Browser does not support this feature.
+    </Notification>
+  );
+  return false;
+}
+// --- END CSV Exporter Utility ---
 
 // --- Status Colors & Context ---
 const companyStatusColors: Record<string, string> = {
@@ -716,7 +877,7 @@ const AssignTaskDialog: React.FC<{
             render={({ field }) => (
               <DatePicker
                 placeholder="Select date"
-                value={field.value}
+                value={field.value as any}
                 onChange={field.onChange}
               />
             )}
@@ -793,7 +954,7 @@ const AddScheduleDialog: React.FC<{
               render={({ field }) => (
                 <DatePicker.DateTimepicker
                   placeholder="Select date and time"
-                  value={field.value}
+                  value={field.value as any}
                   onChange={field.onChange}
                 />
               )}
@@ -1249,6 +1410,7 @@ const CompanyActionColumn = ({
 // --- CompanyListTable Component (UPDATED with Client-Side Filtering Logic) ---
 const CompanyListTable = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const {
     companyList,
     selectedCompanies,
@@ -1268,6 +1430,19 @@ const CompanyListTable = () => {
   const [filterCriteria, setFilterCriteria] = useState<CompanyFilterFormData>({
     filterCreatedDate: [null, null],
   });
+
+  // --- START: State and handlers for Export Reason Modal ---
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] =
+    useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
+
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
+  // --- END: State for Export Reason Modal ---
 
   // --- MODAL STATE AND HANDLERS ---
   const [modalState, setModalState] = useState<ModalState>({
@@ -1319,7 +1494,7 @@ const CompanyListTable = () => {
   };
 
   // --- Main data processing hook with filtering, searching, sorting, and pagination ---
-  const { pageData, total } = useMemo(() => {
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let filteredData = [...companyList];
 
     // 1. APPLY FILTERS
@@ -1453,10 +1628,61 @@ const CompanyListTable = () => {
     return {
       pageData: filteredData.slice((pI - 1) * pS, pI * pS),
       total: filteredData.length,
+      allFilteredAndSortedData: filteredData, // IMPORTANT: Return all data for export
     };
   }, [companyList, tableData, filterCriteria]);
 
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
+
+  // --- START: Handlers for Export ---
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (
+    data: ExportReasonFormData
+  ) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Companies";
+    const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `companies_export_${timestamp}.csv`;
+    try {
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
+
+      // Proceed with export
+      exportToCsv(fileName, allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+          message={error.message}
+        />
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
+  // --- END: Handlers for Export ---
 
   const handleEditCompany = (id: string) =>
     navigate(`/business-entities/company-edit/${id}`);
@@ -1490,15 +1716,7 @@ const CompanyListTable = () => {
       setSelectedCompanies(c ? r.map((i) => i.original) : []),
     [setSelectedCompanies]
   );
-  const csvData = useMemo(
-    () =>
-      companyList.map((i) => ({
-        ...i,
-        category: i.category,
-        brands: i.brands,
-      })),
-    [companyList]
-  );
+
   const columns: ColumnDef<CompanyItem>[] = useMemo(
     () => [
       {
@@ -1878,15 +2096,16 @@ const CompanyListTable = () => {
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
           </Button>
-          {companyList.length > 0 ? (
-            <CSVLink data={csvData} filename="companies_export.csv">
-              <Button icon={<TbCloudUpload />}>Export</Button>
-            </CSVLink>
-          ) : (
-            <Button icon={<TbCloudUpload />} disabled>
-              Export
-            </Button>
-          )}
+          <Button
+            icon={<TbCloudUpload />}
+            onClick={handleOpenExportReasonModal}
+            disabled={
+              !allFilteredAndSortedData ||
+              allFilteredAndSortedData.length === 0
+            }
+          >
+            Export
+          </Button>
         </div>
       </div>
       <DataTable
@@ -2069,6 +2288,61 @@ const CompanyListTable = () => {
         </UiForm>
       </Drawer>
       <CompanyModals modalState={modalState} onClose={handleCloseModal} />
+      {/* --- START: Export Reason Modal --- */}
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <UiForm
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <UiFormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </UiFormItem>
+        </UiForm>
+      </ConfirmDialog>
+      {/* --- END: Export Reason Modal --- */}
     </>
   );
 };
