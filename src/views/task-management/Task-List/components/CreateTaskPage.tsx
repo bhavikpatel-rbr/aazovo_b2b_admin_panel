@@ -1,145 +1,359 @@
 // src/views/your-path/CreateTaskPage.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate, useParams, NavLink } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import dayjs from 'dayjs';
+import { config } from "@/utils/config";
 
-// UI Components (Import what's needed from your UI library)
+// UI Components
 import Container from '@/components/shared/Container';
 import AdaptiveCard from '@/components/shared/AdaptiveCard';
-import { Button, Checkbox, Select, Input, Tag, Avatar, Dropdown, ScrollBar, Tabs, Card } from '@/components/ui';
-import UsersAvatarGroup from '@/components/shared/UsersAvatarGroup'; // Assuming you have this
-import CloseButton from '@/components/ui/CloseButton'; // Assuming you have this
-import { HiOutlinePlus } from 'react-icons/hi'; // For AddMoreMember
-import { TbDownload, TbPlus, TbTrash } from 'react-icons/tb';
-import { NavLink } from "react-router-dom";
+import { Button, Select, Input, Tag, Avatar, Dropdown, Tabs, Card, Spinner } from '@/components/ui';
+import UsersAvatarGroup from '@/components/shared/UsersAvatarGroup';
+import { HiOutlinePlus } from 'react-icons/hi';
+import { TbDownload, TbPlus, TbTrash, TbPaperclip } from 'react-icons/tb';
 import { BiChevronRight } from "react-icons/bi";
-import DatePicker from '@/components/ui/DatePicker'; // Assuming you have a DatePicker
-// import NoMedia from '@/components/shared/NoMedia'; // Assuming you have this
-import { TbPaperclip } from 'react-icons/tb'
-import Tooltip from '@/components/ui/Tooltip'
+import DatePicker from '@/components/ui/DatePicker';
+import Tooltip from '@/components/ui/Tooltip';
 import TabNav from '@/components/ui/Tabs/TabNav';
+import { encryptStorage } from '@/utils/secureLocalStorage';
+import toast from '@/components/ui/toast';
+import Notification from '@/components/ui/Notification';
+
+// Redux
+import { useAppDispatch } from '@/reduxtool/store';
+import { useSelector } from 'react-redux';
+import { masterSelector } from '@/reduxtool/master/masterSlice';
+import {
+    addTaskAction,
+    editTaskAction,
+    getAllCompany, // Make sure this is correctly imported and fetches company data
+    // getTaskByIdAction,
+    getUsersAction,
+    getDepartmentsAction,
+} from '@/reduxtool/master/middleware';
+
+
 // Define the types for this page
-// You might share some types with TaskList.tsx if applicable (e.g., TaskStatus)
-type User = { id: string; name: string; img: string; };
-type AttachmentFile = { id: string; name: string; size: string; src: string; file?: File }; // Added file for new uploads
-type Comment = { id: string; name: string; src: string; date: Date; message: string; };
+interface ApiUser { id: number; name: string; profile_pic_path?: string | null; /* other user fields */ }
+interface FormUser { id: string; name: string; img: string; }
+// Assuming Company data structure from API (adjust as needed)
+interface ApiCompany { id: number; company_name: string; /* other company fields */ }
+
+type AttachmentFile = { id: string; name: string; size: string; src: string; file?: File, type?: string };
+type Comment = { id: string; name: string; src: string; date: Date; message: string; user_id?: string | number };
 
 const LINK_TO_OPTIONS = [
   "Company", "Member", "Partner", "Inquiries", "Brand", "Categories",
   "Products", "Wall Listing", "Opportunity", "Offer & Demand", "Leads",
   "Request & Feedback", "campaign", "Teams", "CMS", "Others"
-] as const; // Use const assertion for stricter typing in Zod
+] as const;
 
 type LinkToOption = typeof LINK_TO_OPTIONS[number];
 
-const taskStatusLabels = ["New", "On Hold", "In Progress", "Pending", "Completed", "Cancelled"] as const; // Example, align with your actual labels
-type TaskStatusLabel = typeof taskStatusLabels[number];
+const MODULE_ID_MAP: Record<LinkToOption, string> = {
+    "Company": "2",
+    "Member": "3",
+    "Partner": "4",
+    "Inquiries": "5",
+    "Brand": "6",
+    "Categories": "7",
+    "Products": "8",
+    "Wall Listing": "9",
+    "Opportunity": "10",
+    "Offer & Demand": "11",
+    "Leads": "12",
+    "Request & Feedback": "13",
+    "campaign": "14",
+    "Teams": "15",
+    "CMS": "16",
+    "Others": "99",
+};
 
-// Zod Schema for Create Task Form
+
+const taskStatusLabelsApi = ["Pending", "On_Hold", "In_Progress", "Completed", "Cancelled"] as const;
+type TaskStatusApi = typeof taskStatusLabelsApi[number];
+
+const taskStatusLabelsDisplay = ["Pending", "On Hold", "In Progress", "Completed", "Cancelled"] as const;
+type TaskStatusDisplay = typeof taskStatusLabelsDisplay[number];
+
+
 const createTaskSchema = z.object({
+  task_title: z.string().min(1, "Task title is required.").max(255),
   linkedToTypes: z.array(z.enum(LINK_TO_OPTIONS)).min(1, "Select at least one item to link to."),
-  selectedLinkEntityId: z.string().optional().nullable(), // ID of the selected company, member, etc.
+  selectedLinkEntityId: z.string().optional().nullable(),
   assignedToIds: z.array(z.string()).min(1, "Assign to at least one member."),
-  statusLabels: z.array(z.enum(taskStatusLabels)).min(1, "Select at least one status label."),
+  status: z.enum(taskStatusLabelsApi, { required_error: "Status is required." }),
   priority: z.enum(["Low", "Medium", "High", "Urgent"], { required_error: "Priority is required." }),
-  category: z.string().min(1, "Category is required."),
+  department_id: z.string().min(1, "Department is required."),
   dueDate: z.date({ required_error: "Due date is required." }),
-  note: z.string().min(1, "Note/Task title is required.").max(500), // This can be the main task title/description
-  description: z.string().optional(), // Additional details
-  activity_type: z.string().optional()
-  // comments and attachments will be handled outside the main form data
+  note_remark: z.string().min(1, "Note/Remark is required.").max(1000),
+  additional_description: z.string().optional(),
+  activity_type: z.string().optional(), // Added from your previous code, ensure it's handled or remove if not needed
 });
 type CreateTaskFormData = z.infer<typeof createTaskSchema>;
 
-// Dummy data for Assignees, Status Labels, Categories, etc.
-// In a real app, this would come from an API or Redux store
-const DUMMY_BOARD_MEMBERS: User[] = [
-  { id: 'user1', name: 'Alice Johnson', img: '/img/avatars/thumb-1.jpg' },
-  { id: 'user2', name: 'Bob Williams', img: '/img/avatars/thumb-2.jpg' },
-  { id: 'user3', name: 'Carol Davis', img: '/img/avatars/thumb-3.jpg' },
-  { id: 'user4', name: 'David Brown', img: '/img/avatars/thumb-4.jpg' },
-];
-const DUMMY_LABEL_LIST: TaskStatusLabel[] = ["New", "On Hold", "In Progress", "Pending", "Completed", "Cancelled"]; // Should match your definitions
-const DUMMY_PRIORITY_OPTIONS = [{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }, { label: "Urgent", value: "Urgent" }];
-const DUMMY_CATEGORY_OPTIONS = [{ label: "General", value: "General" }, { label: "Development", value: "Development" }, { label: "Marketing", value: "Marketing" }, { label: "Sales", value: "Sales" }];
-const DUMMY_LINK_SELECT_OPTIONS: Record<LinkToOption, { label: string, value: string }[]> = {
-  "Company": [{ label: "Company A", value: "compA" }, { label: "Company B", value: "compB" }],
-  "Member": [{ label: "Member X", value: "memX" }, { label: "Member Y", value: "memY" }],
-  // ... populate for other LinkToOption types
-  "Partner": [], "Inquiries": [], "Brand": [], "Categories": [], "Products": [],
-  "Wall Listing": [], "Opportunity": [], "Offer & Demand": [], "Leads": [],
-  "Request & Feedback": [], "campaign": [], "Teams": [], "CMS": [], "Others": [],
-};
+const { useEncryptApplicationStorage } = config;
 
-// Mock task label colors
 const taskLabelColors: Record<string, string> = {
   Low: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
   Medium: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100',
   High: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
   Urgent: 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
-  // Add more as needed
+  Pending: 'bg-amber-100 text-amber-600',
+  On_Hold: 'bg-gray-100 text-gray-600',
+  In_Progress: 'bg-sky-100 text-sky-600',
+  Completed: 'bg-emerald-100 text-emerald-600',
+  Cancelled: 'bg-rose-100 text-rose-600',
 };
-
 
 const AddMoreMember = () => (
   <div className="flex items-center justify-center w-8 h-8 text-2xl text-gray-600 bg-gray-100 rounded-full dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
     <HiOutlinePlus />
   </div>
-)
+);
+
+// Updated function to fetch/process linkable entities
+const processLinkableEntities = async (
+    entityType: LinkToOption,
+    allUsers: FormUser[],
+    allCompanyData: ApiCompany[] // Pass the company data from Redux
+    // Add other data sources here, e.g., allPartnerData: ApiPartner[]
+): Promise<{ label: string, value: string }[]> => {
+    console.log(`Processing entities for: ${entityType}`);
+    // Simulate a small processing delay (can be removed if data is readily available and transformed quickly)
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    switch (entityType) {
+        case "Company":
+            if (allCompanyData && allCompanyData.length > 0) {
+                return allCompanyData.map(company => ({
+                    label: company.company_name, // Adjust if your company object has a different name field
+                    value: String(company.id)
+                }));
+            }
+            toast.push(<Notification title="Info" type="info" duration={2500}>No companies found or data still loading.</Notification>);
+            return []; // Return empty if no company data
+        case "Member":
+            return allUsers.map(user => ({ label: user.name, value: user.id }));
+        case "Partner":
+            // Replace with actual data fetching/processing for Partners
+            return [
+                { label: "Acme Partners (Mock)", value: "partner_acme" },
+                { label: "Beta Logistics (Mock)", value: "partner_beta" },
+            ];
+        case "Products":
+            // Replace with actual data fetching/processing for Products
+            return [
+                { label: "Product A001 (Mock)", value: "prod_A001" },
+                { label: "Product B002 (Mock)", value: "prod_B002" },
+            ];
+        // Add more cases for other LINK_TO_OPTIONS as needed
+        // ...
+        default:
+            toast.push(<Notification title="Info" type="info" duration={2500}>Data source for "{entityType}" is not configured yet.</Notification>)
+            return [{ label: `No ${entityType} available (placeholder)`, value: "" }];
+    }
+};
 
 
 const CreateTaskPage = () => {
+  const { taskId } = useParams<{ taskId?: string }>();
+  const isEditMode = Boolean(taskId);
+
+  const [loggedInUserData, setLoggedInUserData] = useState<any>(null);
   const navigate = useNavigate();
-  const { control, handleSubmit, watch, setValue, formState: { errors, isValid } } = useForm<CreateTaskFormData>({
+  const dispatch = useAppDispatch();
+
+  const {
+    usersData = [],
+    departmentsData = [],
+    AllCompanyData = [], // Ensure this matches your Redux slice state key
+    taskDetailsForEdit,
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector);
+
+  const [isLinkEntityLoading, setIsLinkEntityLoading] = useState(false);
+
+  console.log("departmentsData",departmentsData);
+  
+  const { control, handleSubmit, watch, setValue, reset, formState: { errors, isValid, isSubmitting } } = useForm<CreateTaskFormData>({
     resolver: zodResolver(createTaskSchema),
     mode: "onChange",
     defaultValues: {
+      task_title: "",
       linkedToTypes: [],
+      selectedLinkEntityId: null,
       assignedToIds: [],
-      statusLabels: [],
+      status: "Pending",
       priority: "Medium",
-      category: DUMMY_CATEGORY_OPTIONS[0]?.value,
-      dueDate: new Date(),
-      note: "",
-      activity_type: "",
+      department_id: "",
+      dueDate: dayjs().add(1,'day').toDate(),
+      note_remark: "",
+      additional_description: "",
+      activity_type: "", // Initialize activity_type
     }
   });
 
-  const [selectedLinkedToTypes, setSelectedLinkedToTypes] = useState<LinkToOption[]>([]);
+   useEffect(() => {
+      const getUserDataFromStorage = () => {
+        try {
+          return encryptStorage.getItem("UserData", !useEncryptApplicationStorage);
+        } catch (error) {
+          console.error("Error getting UserData:", error); return null;
+        }
+      };
+      setLoggedInUserData(getUserDataFromStorage());
+
+      dispatch(getUsersAction());
+      dispatch(getAllCompany()); // Fetch company data on component mount
+      dispatch(getDepartmentsAction());
+
+      if (isEditMode && taskId) {
+        // dispatch(getTaskByIdAction(taskId));
+      }
+    }, [dispatch, taskId, isEditMode]);
+
+
+  const boardMembersOptions: FormUser[] = useMemo(() =>
+   usersData && usersData.length > 0 ? usersData.map((user: ApiUser) => ({
+      id: String(user.id),
+      name: user.name,
+      img: user.profile_pic_path || `/img/avatars/default-avatar.png`
+    })) : []
+  , [usersData]);
+
+  const departmentOptions = useMemo(() =>
+   departmentsData?.data.length > 0 ? departmentsData?.data.map((dept: { id: string | number; name: string }) => ({
+      label: dept.name,
+      value: String(dept.id)
+    })) : []
+  , [departmentsData?.data]);
+
+
+  const [selectedLinkedToTypesUI, setSelectedLinkedToTypesUI] = useState<LinkToOption[]>([]);
   const [linkSelectOptions, setLinkSelectOptions] = useState<{ label: string, value: string }[]>([]);
-  const [assignedMembers, setAssignedMembers] = useState<User[]>([]);
-  const [currentStatusLabels, setCurrentStatusLabels] = useState<TaskStatusLabel[]>([]);
+  const [assignedMembers, setAssignedMembers] = useState<FormUser[]>([]);
+  const [currentDisplayStatus, setCurrentDisplayStatus] = useState<TaskStatusDisplay>("Pending");
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const watchedLinkedToTypes = watch("linkedToTypes");
+  const watchedStatus = watch("status");
+  const previousLinkedToTypeRef = useRef<LinkToOption | undefined>();
+
+
+  // Effect to process/load linkable entities when the primary linkedToType changes or relevant data loads
+  useEffect(() => {
+    const currentPrimaryType = watchedLinkedToTypes && watchedLinkedToTypes.length > 0 ? watchedLinkedToTypes[0] : undefined;
+    setSelectedLinkedToTypesUI(watchedLinkedToTypes || []);
+
+    if (currentPrimaryType) {
+        // Condition to re-process:
+        // 1. Primary type changed
+        // 2. Primary type is 'Company' and AllCompanyData has just loaded/changed
+        // 3. Primary type is 'Member' and boardMembersOptions has just loaded/changed (already a dep)
+        const shouldProcess = currentPrimaryType !== previousLinkedToTypeRef.current ||
+                              (currentPrimaryType === "Company" && AllCompanyData.length > 0 && previousLinkedToTypeRef.current === "Company" && linkSelectOptions.length === 0) || // Reprocess if company data arrived
+                              (currentPrimaryType === "Member" && boardMembersOptions.length > 0 && previousLinkedToTypeRef.current === "Member" && linkSelectOptions.length === 0); // Reprocess if member data arrived
+
+
+        if (shouldProcess) {
+            setValue("selectedLinkEntityId", null, { shouldValidate: true });
+            setLinkSelectOptions([]);
+            setIsLinkEntityLoading(true);
+
+            processLinkableEntities(currentPrimaryType, boardMembersOptions, AllCompanyData as ApiCompany[]) // Pass AllCompanyData
+                .then(options => {
+                    setLinkSelectOptions(options);
+                    // If in edit mode and an ID was pre-filled, try to re-select it if options are now available
+                    if (isEditMode && taskDetailsForEdit?.linked_entity_id && options.some(opt => opt.value === String(taskDetailsForEdit.linked_entity_id))) {
+                        setValue("selectedLinkEntityId", String(taskDetailsForEdit.linked_entity_id), { shouldValidate: true });
+                    }
+                })
+                .catch(error => {
+                    console.error("Failed to process linkable entities:", error);
+                    toast.push(<Notification title={`Error processing ${currentPrimaryType}`} type="danger">Could not load items.</Notification>);
+                    setLinkSelectOptions([]);
+                })
+                .finally(() => {
+                    setIsLinkEntityLoading(false);
+                });
+        }
+    } else {
+        setLinkSelectOptions([]);
+        setValue("selectedLinkEntityId", null, { shouldValidate: false });
+    }
+    previousLinkedToTypeRef.current = currentPrimaryType;
+
+  }, [
+    watchedLinkedToTypes,
+    setValue,
+    boardMembersOptions,
+    AllCompanyData, // Add AllCompanyData as a dependency
+    isEditMode,     // Add for edit mode pre-selection logic
+    taskDetailsForEdit // Add for edit mode pre-selection logic
+  ]);
+
 
   useEffect(() => {
-    // Update local state for UI and dynamic select options
-    setSelectedLinkedToTypes(watchedLinkedToTypes || []);
-    if (watchedLinkedToTypes && watchedLinkedToTypes.length > 0) {
-      // For simplicity, let's just use the options for the *first* selected type
-      // A more complex UI might allow selecting entities from multiple types
-      const firstSelectedType = watchedLinkedToTypes[0];
-      setLinkSelectOptions(DUMMY_LINK_SELECT_OPTIONS[firstSelectedType] || []);
-      setValue("selectedLinkEntityId", null); // Reset selected entity when type changes
-    } else {
-      setLinkSelectOptions([]);
-      setValue("selectedLinkEntityId", null);
+    if (isEditMode && taskDetailsForEdit && taskDetailsForEdit.id === taskId && boardMembersOptions.length > 0 /* && AllCompanyData.length > 0 if Company is pre-selected */) {
+        const apiTask = taskDetailsForEdit;
+        const assignedUserIds = (Array.isArray(apiTask.assign_to_users) ? apiTask.assign_to_users.map((u: ApiUser) => String(u.id)) : []) as string[];
+
+        const linkedToTypesFromApi = apiTask.module_name ? [apiTask.module_name as LinkToOption] : [];
+
+        reset({
+            task_title: apiTask.task_title || "",
+            linkedToTypes: linkedToTypesFromApi,
+            selectedLinkEntityId: apiTask.linked_entity_id ? String(apiTask.linked_entity_id) : null, // Pre-fill
+            assignedToIds: assignedUserIds,
+            status: (apiTask.status?.replace(/ /g, '_') as TaskStatusApi) || "Pending",
+            priority: apiTask.priority || "Medium",
+            department_id: String(apiTask.department_id) || "",
+            dueDate: apiTask.due_data ? dayjs(apiTask.due_data).toDate() : dayjs().add(1,'day').toDate(),
+            note_remark: apiTask.note_remark || "",
+            additional_description: apiTask.additional_description || "",
+            activity_type: apiTask.activity_type || "", // Assuming activity_type comes from API
+        });
+
+        const assigned = boardMembersOptions.filter(member => assignedUserIds.includes(member.id));
+        setAssignedMembers(assigned);
+        setCurrentDisplayStatus((apiTask.status?.replace(/_/g, ' ') as TaskStatusDisplay) || "Pending");
+
+
+        setComments( (apiTask.activity_notes || []).map((note: any) => ({
+            id: String(note.id),
+            name: note.user?.name || "Unknown User",
+            src: note.user?.profile_pic_path || '/img/avatars/default-avatar.png',
+            date: dayjs(note.created_at).toDate(),
+            message: note.activity_comment,
+            user_id: note.user_id,
+        })).sort((a,b) => b.date.getTime() - a.date.getTime())); // Sort comments by date descending
+        setAttachments((apiTask.attachments || []).map((att: any) => ({
+            id: String(att.id),
+            name: att.attachment_name,
+            size: "N/A",
+            src: att.attachment_path,
+            type: att.attachment_type,
+        })));
     }
-  }, [watchedLinkedToTypes, setValue]);
+  }, [isEditMode, taskDetailsForEdit, taskId, reset, boardMembersOptions, AllCompanyData]); // Added AllCompanyData here too for consistency if edit mode depends on it
 
 
-  const handleTicketClose = () => {
-    navigate("/tasks"); // Or to the previous page
-  };
+  useEffect(() => {
+    if(watchedStatus){
+        setCurrentDisplayStatus(watchedStatus.replace(/_/g, ' ') as TaskStatusDisplay);
+    }
+  }, [watchedStatus]);
+
 
   const handleAddMember = (memberId: string) => {
-    const member = DUMMY_BOARD_MEMBERS.find(m => m.id === memberId);
+    const member = boardMembersOptions.find(m => m.id === memberId);
     if (member && !assignedMembers.some(am => am.id === memberId)) {
       const newAssignedMembers = [...assignedMembers, member];
       setAssignedMembers(newAssignedMembers);
@@ -153,39 +367,47 @@ const CreateTaskPage = () => {
   };
 
 
-  const handleAddLabel = (label: TaskStatusLabel) => {
-    if (!currentStatusLabels.includes(label)) {
-      const newLabels = [...currentStatusLabels, label];
-      setCurrentStatusLabels(newLabels);
-      setValue("statusLabels", newLabels, { shouldValidate: true });
-    }
+  const handleStatusChange = (apiStatus: TaskStatusApi) => {
+    setValue("status", apiStatus, { shouldValidate: true });
   };
-  const handleRemoveLabel = (labelToRemove: TaskStatusLabel) => {
-    const newLabels = currentStatusLabels.filter(label => label !== labelToRemove);
-    setCurrentStatusLabels(newLabels);
-    setValue("statusLabels", newLabels, { shouldValidate: true });
-  }
 
 
   const submitComment = () => {
-    if (commentInputRef.current?.value) {
-      setComments([
-        ...comments,
-        { id: `c${Date.now()}`, name: 'Current User', src: '/img/avatars/thumb-1.jpg', date: new Date(), message: commentInputRef.current.value }
-      ]);
+    const activityType = watch('activity_type'); // Get activity type from form
+    if (!activityType) {
+        toast.push(<Notification title="Missing Info" type="warning" duration={3000}>Please enter an activity type before commenting.</Notification>);
+        // Optionally, focus the activity_type input
+        return;
+    }
+    if (commentInputRef.current?.value && loggedInUserData) {
+      const newComment: Comment = {
+        id: `temp-${Date.now()}`,
+        name: loggedInUserData.name,
+        src: loggedInUserData.profile_image_path || '/img/avatars/thumb-1.jpg',
+        date: new Date(),
+        // Prepend activity type to the comment message
+        message: `${activityType}: ${commentInputRef.current.value}`,
+        user_id: loggedInUserData.id,
+      };
+      setComments(prevComments => [newComment, ...prevComments].sort((a,b) => b.date.getTime() - a.date.getTime()));
       commentInputRef.current.value = '';
+      // Do not reset activity_type here, user might want to add multiple comments of the same type
     }
   };
+
+  console.log("loggedInUserData",loggedInUserData);
+  
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
       const newAttachments: AttachmentFile[] = Array.from(files).map(file => ({
-        id: `f${Date.now()}-${file.name}`,
+        id: `f-${Date.now()}-${file.name}`,
         name: file.name,
         size: `${(file.size / 1024).toFixed(2)} KB`,
-        src: URL.createObjectURL(file), // Create a preview URL
-        file: file // Store the actual file object
+        src: URL.createObjectURL(file),
+        file: file,
+        type: file.type,
       }));
       setAttachments(prev => [...prev, ...newAttachments]);
     }
@@ -194,23 +416,114 @@ const CreateTaskPage = () => {
   const handleRemoveAttachment = (fileId: string) => {
     const attachmentToRemove = attachments.find(att => att.id === fileId);
     if (attachmentToRemove?.src.startsWith('blob:')) {
-      URL.revokeObjectURL(attachmentToRemove.src); // Clean up blob URL
+      URL.revokeObjectURL(attachmentToRemove.src);
     }
     setAttachments(prev => prev.filter(att => att.id !== fileId));
   };
 
 
-  const onSubmit = (data: CreateTaskFormData) => {
-    console.log("Task Creation Data:", data);
-    console.log("Assigned Members:", assignedMembers);
-    console.log("Status Labels:", currentStatusLabels);
-    console.log("Comments:", comments);
-    console.log("Attachments:", attachments.map(a => a.file)); // Send actual files
-    // Here you would dispatch an action to save the task
-    // e.g., dispatch(createTaskAction({ ...data, comments, attachments: attachmentFiles }));
-    alert("Task data logged to console. Implement save logic.");
-    // navigate("/tasks"); // Optionally navigate back after save
+  const onSubmit = async (data: CreateTaskFormData) => {
+    if (!loggedInUserData?.id) {
+        toast.push(<Notification title="Error" type="danger">User not identified. Please log in again.</Notification>);
+        return;
+    }
+
+    const formDataPayload = new FormData();
+    formDataPayload.append("user_id", String(loggedInUserData?.id));
+    formDataPayload.append("task_title", data.task_title);
+
+    data.assignedToIds.forEach(id => formDataPayload.append("assign_to[]", id));
+
+    const moduleName = data.linkedToTypes[0];
+    formDataPayload.append("module_name", moduleName);
+    formDataPayload.append("module_id", MODULE_ID_MAP[moduleName] || "0");
+
+    if (data.selectedLinkEntityId) {
+        formDataPayload.append("linked_entity_id", data.selectedLinkEntityId);
+    }
+
+    formDataPayload.append("status", data.status);
+    formDataPayload.append("priority", data.priority);
+    formDataPayload.append("department_id", data.department_id);
+    formDataPayload.append("due_data", dayjs(data.dueDate).format('YYYY-MM-DD HH:mm:ss'));
+    formDataPayload.append("note_remark", data.note_remark);
+    if (data.additional_description) {
+        formDataPayload.append("additional_description", data.additional_description);
+    }
+    // if (data.activity_type) { // Include activity_type if it's part of the main task data
+    //     formDataPayload.append("activity_type_overall", data.activity_type);
+    // }
+
+
+    // Handle initial activity_note for "add" mode or new comments for "edit" mode
+    if (!isEditMode) {
+        // For add mode, the first "note_remark" could be considered the initial activity comment
+        // or a generic "Task created" comment.
+        // The API structure for "activity_note" in the example was a bit specific.
+        // Let's assume the main "note_remark" serves as the primary initial note.
+        // If a separate "activity_note" object is strictly required for creation:
+        if (data.activity_type && data.note_remark) { // If activity_type is meant for the initial note
+            formDataPayload.append("activity_note[user_id]", String(loggedInUserData?.id));
+            formDataPayload.append("activity_note[activity_type]", data.activity_type); // Use from form
+            formDataPayload.append("activity_note[activity_comment]", data.note_remark);
+        } else { // Generic creation note if activity_type isn't for the initial note
+             formDataPayload.append("activity_note[user_id]", String(loggedInUserData?.id));
+             formDataPayload.append("activity_note[activity_type]", "created_task");
+             formDataPayload.append("activity_note[activity_comment]", `Task "${data.task_title}" created by ${loggedInUserData?.name}.`);
+        }
+    } else { // Edit Mode - send new comments from the UI
+        const newUiComments = comments.filter(c => c.id.startsWith('temp-'));
+        newUiComments.forEach((comment, index) => {
+            // Extract activity type from comment message if it was prepended
+            const parts = comment.message.split(': ');
+            const activityType = parts.length > 1 ? parts[0] : (data.activity_type || "comment"); // Fallback
+            const messageContent = parts.length > 1 ? parts.slice(1).join(': ') : comment.message;
+
+            formDataPayload.append(`new_activity_notes[${index}][user_id]`, String(comment.user_id));
+            formDataPayload.append(`new_activity_notes[${index}][activity_type]`, activityType);
+            formDataPayload.append(`new_activity_notes[${index}][activity_comment]`, messageContent);
+        });
+    }
+
+
+    attachments.forEach((att, index) => {
+        if (att.file) {
+            formDataPayload.append(`attachments[${index}][user_id]`, String(loggedInUserData.id));
+            formDataPayload.append(`attachments[${index}][file_data]`, att.file, att.name);
+        }
+    });
+
+
+    try {
+        if (isEditMode && taskId) {
+            await dispatch(editTaskAction({ taskId, data: formDataPayload })).unwrap();
+            toast.push(<Notification title="Task Updated" type="success" duration={2000}>Task updated successfully.</Notification>);
+        } else {
+            await dispatch(addTaskAction(formDataPayload)).unwrap();
+            toast.push(<Notification title="Task Created" type="success" duration={2000}>Task created successfully.</Notification>);
+        }
+        navigate("/task/task-list");
+    } catch (error: any) {
+        const errorMessage = error?.data?.message || error?.message || "An error occurred during submission.";
+        toast.push(<Notification title="Operation Failed" type="danger" duration={4000}>{errorMessage}</Notification>);
+        console.error("Task submission error:", error);
+    }
   };
+
+  const statusDropdownOptions = taskStatusLabelsDisplay.map((displayLabel, index) => {
+    const apiValue = taskStatusLabelsApi[index];
+    return {
+        label: displayLabel,
+        value: apiValue,
+        colorClass: taskLabelColors[apiValue] || 'bg-gray-200',
+    };
+  });
+
+  const availableMembersToAdd = useMemo(() =>
+    boardMembersOptions.length > 0 ? boardMembersOptions.filter(
+        member => !assignedMembers.some(m => m.id === member.id)
+    ) : [],
+  [boardMembersOptions, assignedMembers]);
 
   return (
     <Container>
@@ -219,35 +532,29 @@ const CreateTaskPage = () => {
           <h6 className="font-semibold hover:text-primary">Task</h6>
         </NavLink>
         <BiChevronRight size={22} color="black" />
-        <h6 className="font-semibold text-primary">Add New Task</h6>
+        <h6 className="font-semibold text-primary">{isEditMode ? 'Edit Task' : 'Add New Task'}</h6>
       </div>
       <AdaptiveCard>
         <form onSubmit={handleSubmit(onSubmit)}>
-          {/* <div className="flex justify-between items-center mb-6">
-            <h4 className="text-lg font-semibold">Create New Task</h4>
-          </div> */}
-
-          {/* <div className="flex flex-col gap-3 p-1"> */}
-          <div className="lg:grid grid-cols-2 gap-3 p-1">
-            {/* Link to Section */}
+          <div className="lg:grid grid-cols-2 gap-x-6 gap-y-4 p-1">
             <div className="flex items-center">
               <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                Task Title / Name: <span className="text-red-500">*</span>
+                Task Title: <span className="text-red-500">*</span>
               </label>
               <div className="w-full">
                 <Controller
-                  name="activity_type"
+                  name="task_title"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} placeholder="Enter taks name or title..." />
+                    <Input {...field} placeholder="Enter task title..." />
                   )}
                 />
-                {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
+                {errors.task_title && <p className="text-red-500 text-xs mt-1">{errors.task_title.message}</p>}
               </div>
             </div>
-            {/* Assigned to Section */}
+
             <div className="flex items-start">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 mt-2">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 pt-2">
                 Assigned to: <span className="text-red-500">*</span>
               </label>
               <div className="w-full">
@@ -256,23 +563,29 @@ const CreateTaskPage = () => {
                     className="gap-1"
                     avatarProps={{ className: 'cursor-pointer' }}
                     avatarGroupProps={{ maxCount: 4 }}
-                    nameKey="name" // Ensure UsersAvatarGroup uses 'name'
-                    imgKey="img"   // Ensure UsersAvatarGroup uses 'img'
+                    nameKey="name"
+                    imgKey="img"
                     users={assignedMembers}
-                    onAvatarClick={(member: User) => handleRemoveMember(member.id)} // Optional: remove on click
+                    onAvatarClick={(member: FormUser) => handleRemoveMember(member.id)}
                   />
-                  {DUMMY_BOARD_MEMBERS.length !== assignedMembers.length && (
-                    <Dropdown renderTitle={<AddMoreMember />}>
-                      {DUMMY_BOARD_MEMBERS.map(member =>
-                        !assignedMembers.some(m => m.id === member.id) && (
-                          <Dropdown.Item key={member.id} eventKey={member.id} onSelect={() => handleAddMember(member.id)}>
-                            <div className="flex items-center">
-                              <Avatar shape="circle" size={22} src={member.img} />
-                              <span className="ml-2 rtl:mr-2">{member.name}</span>
-                            </div>
-                          </Dropdown.Item>
-                        )
-                      )}
+                  {boardMembersOptions.length > 0 && assignedMembers.length < boardMembersOptions.length && (
+                    <Dropdown renderTitle={<AddMoreMember />} placement="bottom-start" >
+                       <div className="max-h-60 overflow-y-auto min-w-[200px]">
+                        {availableMembersToAdd.length > 0 ? (
+                            availableMembersToAdd.map(member => (
+                            <Dropdown.Item key={member.id} eventKey={member.id} onSelect={() => handleAddMember(member.id)}>
+                                <div className="flex items-center">
+                                <Avatar shape="circle" size={22} src={member.img} />
+                                <span className="ml-2 rtl:mr-2">{member.name}</span>
+                                </div>
+                            </Dropdown.Item>
+                            ))
+                        ) : (
+                            <Dropdown.Item disabled className="text-center text-gray-500">
+                                {boardMembersOptions.length > 0 ? "All members assigned" : "No members available"}
+                            </Dropdown.Item>
+                        )}
+                       </div>
                     </Dropdown>
                   )}
                 </div>
@@ -293,7 +606,7 @@ const CreateTaskPage = () => {
                       {...field}
                       isMulti
                       options={LINK_TO_OPTIONS.map(option => ({ label: option, value: option }))}
-                      value={LINK_TO_OPTIONS.filter(option => field.value?.includes(option)).map(option => ({ label: option, value: option }))}
+                      value={field.value ? field.value.map(val => ({label: val, value: val})) : []}
                       onChange={options => field.onChange(options ? options.map(opt => opt.value) : [])}
                       placeholder="Select link types..."
                     />
@@ -301,11 +614,10 @@ const CreateTaskPage = () => {
                 />
                 {errors.linkedToTypes && <p className="text-red-500 text-xs mt-1">{errors.linkedToTypes.message}</p>}
               </div>
-              {/* Select Link Section (Dynamic) */}
-              {selectedLinkedToTypes.length > 0 && (
+              {selectedLinkedToTypesUI.length > 0 && (
                 <div className="flex items-center my-3">
                   <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                    Select {selectedLinkedToTypes.join(' / ')}:
+                    Select {selectedLinkedToTypesUI[0]}:
                   </label>
                   <div className="w-full">
                     <Controller
@@ -314,56 +626,59 @@ const CreateTaskPage = () => {
                       render={({ field }) => (
                         <Select
                           {...field}
-                          placeholder={`Select a ${selectedLinkedToTypes[0]}...`} // Example placeholder
+                          placeholder={isLinkEntityLoading ? `Loading ${selectedLinkedToTypesUI[0]}s...` : `Select a ${selectedLinkedToTypesUI[0]}...`}
                           options={linkSelectOptions}
-                          value={linkSelectOptions.find(opt => opt.value === field.value)}
+                          value={linkSelectOptions.find(opt => opt.value === field.value) || null}
                           onChange={option => field.onChange(option?.value)}
                           isClearable
+                          isLoading={isLinkEntityLoading}
+                          isDisabled={isLinkEntityLoading || (linkSelectOptions.length === 0 || (linkSelectOptions.length === 1 && linkSelectOptions[0].value === ""))}
                         />
                       )}
                     />
-                    {/* Add error display if needed for selectedLinkEntityId */}
+                     {errors.selectedLinkEntityId && <p className="text-red-500 text-xs mt-1">{errors.selectedLinkEntityId.message}</p>}
                   </div>
                 </div>
               )}
             </div>
 
-
-
-
-            {/* Status Labels Section */}
             <div className="flex items-start">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 mt-1">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 pt-1">
                 Status: <span className="text-red-500">*</span>
               </label>
               <div className="w-full">
-                <div className="flex items-center gap-1 flex-wrap">
-                  {currentStatusLabels.map(label => (
-                    <Tag key={label} className={`${taskLabelColors[label] || 'bg-gray-200'} cursor-pointer`} onClick={() => handleRemoveLabel(label)}>
-                      {label}
-                    </Tag>
-                  ))}
-                  <Dropdown
-                    renderTitle={<Tag className="border-dashed cursor-pointer border-2 bg-transparent dark:bg-transparent border-gray-300 dark:border-gray-500 hover:border-primary-500 hover:text-primary-500" prefix={<TbPlus />}> Add Status </Tag>}
-                    placement="bottom-end" >
-                    {DUMMY_LABEL_LIST.map(label =>
-                      !currentStatusLabels.includes(label) && (
-                        <Dropdown.Item key={label} eventKey={label} onSelect={() => handleAddLabel(label)}>
-                          <div className="flex items-center">
-                            <span className={`inline-block w-3 h-3 rounded-full mr-2 ${taskLabelColors[label] || 'bg-gray-200'}`}></span>
-                            {label}
-                          </div>
-                        </Dropdown.Item>
-                      )
+                <Controller
+                    name="status"
+                    control={control}
+                    render={({ field }) => (
+                        <Dropdown
+                            renderTitle={
+                                <Tag className={`${taskLabelColors[field.value] || 'bg-gray-200'} cursor-pointer min-w-[100px] text-center py-1.5`} >
+                                    {currentDisplayStatus}
+                                </Tag>
+                            }
+                            placement="bottom-start"
+                        >
+                            {statusDropdownOptions.map(opt => (
+                                <Dropdown.Item
+                                    key={opt.value}
+                                    eventKey={opt.value}
+                                    onSelect={() => handleStatusChange(opt.value as TaskStatusApi)}
+                                    className={field.value === opt.value ? 'bg-gray-100 dark:bg-gray-600' : ''}
+                                >
+                                    <div className="flex items-center">
+                                        <span className={`inline-block w-3 h-3 rounded-full mr-2 ${opt.colorClass}`}></span>
+                                        {opt.label}
+                                    </div>
+                                </Dropdown.Item>
+                            ))}
+                        </Dropdown>
                     )}
-                  </Dropdown>
-                </div>
-                {errors.statusLabels && <p className="text-red-500 text-xs mt-1">{errors.statusLabels.message}</p>}
+                />
+                {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>}
               </div>
             </div>
 
-
-            {/* Priority Section */}
             <div className="flex items-center">
               <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
                 Priority: <span className="text-red-500">*</span>
@@ -375,8 +690,8 @@ const CreateTaskPage = () => {
                   render={({ field }) => (
                     <Select
                       {...field}
-                      options={DUMMY_PRIORITY_OPTIONS}
-                      value={DUMMY_PRIORITY_OPTIONS.find(opt => opt.value === field.value)}
+                      options={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }, { label: "Urgent", value: "Urgent" }]}
+                      value={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }, { label: "Urgent", value: "Urgent" }].find(opt => opt.value === field.value) || null}
                       onChange={option => field.onChange(option?.value)}
                     />
                   )}
@@ -385,29 +700,28 @@ const CreateTaskPage = () => {
               </div>
             </div>
 
-            {/* Category Section */}
             <div className="flex items-center">
               <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
                 Department: <span className="text-red-500">*</span>
               </label>
               <div className="w-full">
                 <Controller
-                  name="category"
+                  name="department_id"
                   control={control}
                   render={({ field }) => (
                     <Select
                       {...field}
-                      options={DUMMY_CATEGORY_OPTIONS}
-                      value={DUMMY_CATEGORY_OPTIONS.find(opt => opt.value === field.value)}
+                      options={departmentOptions}
+                      value={departmentOptions.length > 0 ? departmentOptions.find(opt => opt.value === field.value) : null}
                       onChange={option => field.onChange(option?.value)}
+                      placeholder="Select Department..."
                     />
                   )}
                 />
-                {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
+                {errors.department_id && <p className="text-red-500 text-xs mt-1">{errors.department_id.message}</p>}
               </div>
             </div>
 
-            {/* Due Date Section */}
             <div className="flex items-center">
               <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
                 Due date: <span className="text-red-500">*</span>
@@ -420,7 +734,7 @@ const CreateTaskPage = () => {
                     <DatePicker
                       value={field.value}
                       onChange={date => field.onChange(date)}
-                      inputFormat="MMMM DD, YYYY" // Example format
+                      inputFormat="MMMM DD, YYYY"
                     />
                   )}
                 />
@@ -428,32 +742,29 @@ const CreateTaskPage = () => {
               </div>
             </div>
 
-            {/* Activity Type Section */}
-            {/* Note (Task Title/Main Description) Section */}
-            <div className="flex flex-col"> {/* Changed to flex-col for better label placement */}
+            <div className="flex flex-col">
               <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                Task Note / Remark: <span className="text-red-500">*</span>
+                Note / Remark: <span className="text-red-500">*</span>
               </label>
               <div className="w-full">
                 <Controller
-                  name="note"
+                  name="note_remark"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} textArea rows={5} placeholder="Enter the main task details or remark..." />
+                    <Input {...field} textArea rows={5} placeholder="Enter task note or remark..." />
                   )}
                 />
-                {errors.note && <p className="text-red-500 text-xs mt-1">{errors.note.message}</p>}
+                {errors.note_remark && <p className="text-red-500 text-xs mt-1">{errors.note_remark.message}</p>}
               </div>
             </div>
 
-            {/* Additional Description Section (Optional) */}
             <div className="flex flex-col">
               <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
                 Additional Description (Optional):
               </label>
               <div className="w-full">
                 <Controller
-                  name="description"
+                  name="additional_description"
                   control={control}
                   render={({ field }) => (
                     <Input {...field} textArea rows={5} placeholder="Enter any additional details..." />
@@ -462,54 +773,52 @@ const CreateTaskPage = () => {
               </div>
             </div>
 
-
-            {/* Tabs for Activity and Attachments */}
             <Tabs className="mt-3 col-span-2" defaultValue="activity">
               <Tabs.TabList>
                 <TabNav value="activity" className='text-base'><b>Activity Notes</b></TabNav>
                 <TabNav value="attachments">Attachments</TabNav>
               </Tabs.TabList>
-              <div className="p-4 rounded-b-md">
+              <div className="p-4 rounded-b-md border border-t-0 dark:border-gray-700">
                 <Tabs.TabContent value="activity">
-                  <div className="flex items-center mb-5">
+                 <div className="flex items-center mb-5">
                     <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">
-                      Activity Type: <span className="text-red-500">*</span>
+                      Activity Type:
                     </label>
                     <div className="w-full">
                       <Controller
-                        name="activity_type"
+                        name="activity_type" // This field is now part of the main form schema
                         control={control}
                         render={({ field }) => (
-                          <Input {...field} placeholder="Enter activity type..." />
+                          <Input {...field} placeholder="E.g., Follow-up, Meeting Note, General Update" />
                         )}
                       />
-                      {errors.activity_type && <p className="text-red-500 text-xs mt-1">{errors.activity_type.message}</p>}
+                      {/* Removed asterisk and error message as it's optional in schema for overall task, but required for new comments by logic */}
                     </div>
                   </div>
                   <div className="w-full">
                     {comments.length > 0 && (
-                      <div className="mb-4 max-h-60 overflow-y-auto">
+                      <div className="mb-4 max-h-60 overflow-y-auto pr-2">
                         {comments.map(comment => (
                           <div key={comment.id} className="mb-3 flex">
-                            <div className="mt-1"><Avatar shape="circle" size="sm" src={comment.src} /></div>
-                            <div className="ml-2 rtl:mr-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-md flex-1 text-sm">
+                            <div className="mt-1 shrink-0"><Avatar shape="circle" size="sm" src={comment.src} /></div>
+                            <div className="ml-2 rtl:mr-2 p-2 bg-gray-50 dark:bg-gray-700/60 rounded-md flex-1 text-sm">
                               <div className="flex items-center mb-1">
                                 <span className="font-semibold text-gray-900 dark:text-gray-100">{comment.name}</span>
-                                <span className="mx-1 text-xs text-gray-500 dark:text-gray-400">|</span>
+                                <span className="mx-1.5 text-xs text-gray-500 dark:text-gray-400">|</span>
                                 <span className="text-xs text-gray-500 dark:text-gray-400">{dayjs(comment.date).format('DD MMM YYYY, hh:mm A')}</span>
                               </div>
-                              <p className="mb-0">{comment.message}</p>
+                              <p className="mb-0 whitespace-pre-wrap break-words">{comment.message}</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
-                    <div className="mb-3 flex gap-2">
-                      <Avatar shape="circle" src="/img/avatars/thumb-1.jpg" /> {/* Placeholder for current user */}
+                    <div className="mb-3 flex gap-2 items-start">
+                      <Avatar shape="circle" src={loggedInUserData?.profile_image_path || "/img/avatars/thumb-1.jpg"} className="mt-1 shrink-0"/>
                       <div className="w-full relative">
-                        <Input ref={commentInputRef} textArea placeholder="Write comment..." />
+                        <Input ref={commentInputRef} textArea placeholder="Write comment..." rows={3}/>
                         <div className="absolute bottom-2 right-2">
-                          <Button size="xs" variant="solid" onClick={submitComment}>Send</Button>
+                          <Button size="xs" variant="solid" onClick={submitComment} type="button">Send</Button>
                         </div>
                       </div>
                     </div>
@@ -517,17 +826,23 @@ const CreateTaskPage = () => {
                 </Tabs.TabContent>
                 <Tabs.TabContent value="attachments">
                   <div className="mb-4">
-                    <Input type="file" multiple onChange={handleFileUpload} />
+                    <label htmlFor="file-upload" className="w-full inline-flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:border-primary dark:hover:border-primary text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                        <TbPaperclip className="mr-2" />
+                        <span>Select or Drop files here</span>
+                        <input id="file-upload" type="file" multiple onChange={handleFileUpload} className="hidden" />
+                    </label>
                   </div>
                   {attachments.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {attachments.map(file => (
                         <Card key={file.id} bodyClass="p-2" className="shadow-sm">
-                          {file.src.startsWith('blob:') && file.file?.type.startsWith('image/') ? (
+                          {file.file?.type?.startsWith('image/') ? (
+                            <img className="max-w-full h-24 object-contain rounded-md mx-auto mb-2" alt={file.name} src={file.src} />
+                          ) : !file.file && file.type?.startsWith('image/') ? (
                             <img className="max-w-full h-24 object-contain rounded-md mx-auto mb-2" alt={file.name} src={file.src} />
                           ) : (
-                            <div className="h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-600 rounded-md mb-2 text-4xl text-gray-400 dark:text-gray-500">
-
+                            <div className="h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md mb-2 text-4xl text-gray-400 dark:text-gray-500">
+                               <TbPaperclip />
                             </div>
                           )}
                           <div className="text-xs">
@@ -535,8 +850,14 @@ const CreateTaskPage = () => {
                             <span className="text-gray-500 dark:text-gray-400">{file.size}</span>
                           </div>
                           <div className="mt-1 flex justify-end items-center">
-                            <Tooltip title="Download (Not implemented)">
-                              <Button variant="plain" size="xs" icon={<TbDownload />} disabled />
+                            <Tooltip title="Download">
+                              <Button
+                                variant="plain"
+                                size="xs"
+                                icon={<TbDownload />}
+                                onClick={() => { if(file.src && !file.src.startsWith('blob:')) window.open(file.src, '_blank')}}
+                                disabled={file.src.startsWith('blob:')}
+                              />
                             </Tooltip>
                             <Tooltip title="Delete">
                               <Button variant="plain" color="red-500" size="xs" icon={<TbTrash />} onClick={() => handleRemoveAttachment(file.id)} />
@@ -546,24 +867,22 @@ const CreateTaskPage = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2 items-center justify-center text-center py-6">
-                      {/* <NoMedia height={100} width={100} /> */}
+                    <div className="flex flex-col gap-2 items-center justify-center text-center py-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md">
                       <TbPaperclip size={40} className="text-gray-400 dark:text-gray-500" />
                       <p className="font-semibold text-gray-600 dark:text-gray-300">No attachments yet.</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Upload files using the button above.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Upload files using the area above.</p>
                     </div>
                   )}
                 </Tabs.TabContent>
               </div>
             </Tabs>
-
-
           </div>
 
-
-          <div className="text-right mt-8 pt-4 border-t border-gray-200 dark:border-gray-600">
-            <Button className="mr-2 rtl:ml-2" size="sm" variant="plain" onClick={handleTicketClose} type="button">Cancel</Button>
-            <Button variant="solid" size="sm" type="submit" disabled={!isValid}>Create Task</Button>
+          <div className="text-right mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button className="mr-2 rtl:ml-2" size="sm" variant="plain" onClick={() => navigate("/task/task-list")} type="button">Cancel</Button>
+            <Button variant="solid" size="sm" type="submit" loading={isSubmitting || masterLoadingStatus === 'loading'} disabled={!isValid || isSubmitting || masterLoadingStatus === 'loading'}>
+                {isEditMode ? 'Update Task' : 'Create Task'}
+            </Button>
           </div>
         </form>
       </AdaptiveCard>
