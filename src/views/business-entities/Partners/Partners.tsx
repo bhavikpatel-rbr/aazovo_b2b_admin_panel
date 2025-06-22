@@ -25,13 +25,13 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
+  FormItem,
+  Input,
+  Select,
+  Table,
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
-  Table,
-  Input,
-  Select,
-  FormItem,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -41,25 +41,17 @@ import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
-import { MdCancel, MdCheckCircle } from "react-icons/md";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
   TbAlarm,
   TbAlertTriangle,
   TbBell,
   TbBrandWhatsapp,
-  TbBuilding,
-  TbBuildingArch,
-  TbBuildingBank,
-  TbBuildingCarousel,
-  TbBuildingCommunity,
-  TbBuildingMinus,
   TbCalendar,
   TbCalendarEvent,
-  TbCheck,
   TbChecks,
   TbClipboardText,
-  TbClock,
   TbCloudDownload,
   TbCloudUpload,
   TbDownload,
@@ -69,11 +61,9 @@ import {
   TbFileZip,
   TbFilter,
   TbMail,
-  TbMessageCircle,
   TbPencil,
   TbPlus,
   TbReceipt,
-  TbReportMoney,
   TbSearch,
   TbTagStarred,
   TbUser,
@@ -83,7 +73,7 @@ import {
   TbUserMinus,
   TbUserSearch,
   TbUsersGroup,
-  TbUserX,
+  TbUserX
 } from "react-icons/tb";
 
 // Types
@@ -95,10 +85,10 @@ import type {
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  deleteAllcompanyAction,
-  getCompanyAction,
+  deleteAllpartnerAction,
   getContinentsAction,
   getCountriesAction,
+  getpartnerAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
@@ -231,18 +221,18 @@ const useCompanyList = (): CompanyListStore => {
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { CompanyData, CountriesData, ContinentsData } =
+  const { partnerData, CountriesData, ContinentsData } =
     useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  console.log("CompanyData?.data", CompanyData?.data);
+  console.log("partnerData?.data", partnerData);
   
-  // FIX: Initialize state assuming CompanyData?.data is an object like { data: [], total: 0 }
+  // FIX: Initialize state assuming partnerData?.data is an object like { data: [], total: 0 }
   const [companyList, setCompanyList] = useState<CompanyItem[]>(
-    CompanyData?.data ?? []
+    partnerData ?? []
   );
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
   const [companyListTotal, setCompanyListTotal] = useState<number>(
-    CompanyData?.data?.total ?? 0
+    partnerData?.length ?? 0
   );
 
   useEffect(() => {
@@ -250,14 +240,14 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch(getContinentsAction());
   }, [dispatch]);
 
-  // FIX: Update local state correctly when CompanyData?.data from Redux changes.
+  // FIX: Update local state correctly when partnerData?.data from Redux changes.
   useEffect(() => {
-    setCompanyList(CompanyData?.data ?? []);
-    setCompanyListTotal(CompanyData?.data?.total ?? 0);
-  }, [CompanyData?.data]);
+    setCompanyList(partnerData ?? []);
+    setCompanyListTotal(partnerData?.length ?? 0);
+  }, [partnerData?.data]);
 
   useEffect(() => {
-    dispatch(getCompanyAction());
+    dispatch(getpartnerAction());
   }, [dispatch]);
 
   return (
@@ -1406,7 +1396,7 @@ const CompanyListTable = () => {
                 <b>Business:</b> {row.original.business_type}
               </span>{" "}
               <div className="text-xs text-gray-500">
-                {city}, {state}, {country}
+                {city?.name}, {state?.name}, {country?.name}
               </div>{" "}
             </div>
           );
@@ -1967,9 +1957,9 @@ const CompanyListSelected = () => {
     setIsDeleting(true);
     try {
       const ids = selectedCompanies.map((d) => d.id);
-      await dispatch(deleteAllcompanyAction({ ids: ids.toString() })).unwrap();
+      await dispatch(deleteAllpartnerAction({ ids: ids.toString() })).unwrap();
       toast.push(<Notification title="Partner Deleted" type="success" />);
-      dispatch(getCompanyAction());
+      dispatch(getpartnerAction());
     } catch (error: any) {
       toast.push(
         <Notification title="Failed to Delete" type="danger">

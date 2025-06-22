@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-// import cloneDeep from "lodash/cloneDeep"; // Not needed for main list with server-side processing
+import cloneDeep from "lodash/cloneDeep"; // ADDED: For client-side data processing
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +23,6 @@ import DebouceInput from "@/components/shared/DebouceInput";
 import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
-  // Table, // Not directly used, DataTable is used
   Card,
   DatePicker,
   Drawer,
@@ -37,12 +36,12 @@ import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
-import Select from "@/components/ui/Select"; // Ensure this is the correct Select (likely same as UiSelect)
+import Select from "@/components/ui/Select";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
-// Icons (ensure all used icons are imported)
+// Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
   TbAlarm, TbAlertTriangle, TbBell, TbBookmark, TbBox, TbBoxOff, TbBrandWhatsapp,
@@ -60,7 +59,7 @@ import type { TableQueries } from "@/@types/common";
 import type { CellContext, ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 
 // Redux
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path if slice structure changed
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   deleteAllWallAction,
   getAllCompany,
@@ -72,66 +71,19 @@ import {
   getProductSpecificationsAction,
   getSubcategoriesByCategoryIdAction,
   getWallListingAction,
-} from "@/reduxtool/master/middleware"; // Adjust path to where actions are defined
-
-
-import { getpWallListingAsync } from "@/reduxtool/master/services";
+  submitExportReasonAction, // Assume this exists for logging
+} from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 import { z } from "zod";
-// --- Define Types (Local to component if not shared, or import if shared) ---
-export type ApiWallItemFromSource = any; // Use the one from Redux middleware/slice
 
-export type WallRecordStatus =
-  | "Pending" | "Approved" | "Rejected" | "Expired" | "Fulfilled" | "Active" | string;
+// --- Type Definitions ---
+export type ApiWallItemFromSource = any;
+
+export type WallRecordStatus = "Pending" | "Approved" | "Rejected" | "Expired" | "Fulfilled" | "Active" | string;
 export type WallIntent = "Buy" | "Sell" | "Exchange";
 export type WallProductCondition = "New" | "Used" | "Refurbished" | string;
 
-// This is the shape of data items coming from the API
-export type ApiWallItem = {
-  id: number | null;
-  product_name: string;
-  company_name: string | null;
-  company_id_from_api?: string | null;
-  member_name: string;
-  member_id_from_api?: string | null;
-  member_email: string | null;
-  member_phone: string | null;
-  product_category: string | null;
-  product_subcategory: string | null;
-  product_description: string | null;
-  product_specs: string | null;
-  product_status: string; // API field for product availability status (e.g. "available", "out of stock")
-  quantity: string; // API might send as string
-  price: string;    // API might send as string
-  want_to: string;
-  listing_type: string | null;
-  shipping_options: string | null;
-  payment_method: string | null;
-  warranty: string | null;
-  return_policy: string | null;
-  listing_url: string | null;
-  brand: string | null;
-  product_images: string[];
-  created_date: string; // ISO date string
-  updated_at: string;   // ISO date string
-  visibility: string | null;
-  priority: string | null;
-  assigned_to: string | null;
-  interaction_type: string | null;
-  action: string | null;
-  status: string; // This is the API's 'status' field, used for our 'recordStatus'
-  cartoon_type_id?: number | null;
-  device_condition?: string | null;
-  inquiry_count: string; // API might send as string
-  share_count: string;   // API might send as string
-  is_bookmarked: boolean;
-  updated_by_name?: string;
-  updated_by_role?: string;
-};
-
-
-// This is the shape of data items used within the component (after mapping)
 export type WallItem = {
   id: number;
   product_name: string;
@@ -142,10 +94,12 @@ export type WallItem = {
   member_email: string;
   member_phone: string;
   product_category: string;
+  productCategoryId?: number; // ADDED: For filtering
   product_subcategory: string;
+  subCategoryId?: number; // ADDED: For filtering
   product_description: string;
   product_specs: string;
-  product_status: string; // This is the API product status e.g. "available"
+  product_status: string;
   quantity: number;
   price: number;
   want_to: WallIntent | string;
@@ -156,6 +110,7 @@ export type WallItem = {
   return_policy: string;
   listing_url: string;
   brand: string;
+  brandId?: number; // ADDED: For filtering
   product_images: string[];
   created_date: Date;
   updated_at: Date;
@@ -164,7 +119,7 @@ export type WallItem = {
   assigned_to: string;
   interaction_type: string;
   action: string;
-  recordStatus?: WallRecordStatus; // This is the internal/workflow status e.g. "Pending", "Approved"
+  recordStatus?: WallRecordStatus;
   cartoonTypeId?: number | null;
   deviceCondition?: WallProductCondition | null;
   inquiry_count: number;
@@ -172,21 +127,16 @@ export type WallItem = {
   is_bookmarked: boolean;
   updated_by_name?: string;
   updated_by_role?: string;
-  productId?: number;
-  productSpecId?: number;
-  customerId?: number;
-  color?: string | null;
-  dispatchStatus?: string | null;
-  paymentTermId?: number | null;
-  eta?: string | null;
-  location?: string | null;
-  internalRemarks?: string | null;
+  productId?: number; // ADDED: For filtering
+  productSpecId?: number; // ADDED: For filtering
+  memberTypeId?: number; // ADDED: For filtering
+  createdById?: number; // ADDED: For filtering
 };
 
-// Zod Schemas
+// --- Zod Schemas ---
 const selectOptionSchema = z.object({ value: z.any(), label: z.string() });
 const filterFormSchema = z.object({
-  filterRecordStatuses: z.array(selectOptionSchema).optional().default([]), // For workflow status
+  filterRecordStatuses: z.array(selectOptionSchema).optional().default([]),
   filterProductIds: z.array(selectOptionSchema).optional().default([]),
   filterCompanyIds: z.array(selectOptionSchema).optional().default([]),
   filterIntents: z.array(selectOptionSchema).optional().default([]),
@@ -194,7 +144,7 @@ const filterFormSchema = z.object({
   categories: z.array(selectOptionSchema).optional().default([]),
   subcategories: z.array(selectOptionSchema).optional().default([]),
   brands: z.array(selectOptionSchema).optional().default([]),
-  productStatus: z.array(selectOptionSchema).optional().default([]), // For API product availability status
+  productStatus: z.array(selectOptionSchema).optional().default([]),
   source: z.array(selectOptionSchema).optional().default([]),
   productSpec: z.array(selectOptionSchema).optional().default([]),
   memberType: z.array(selectOptionSchema).optional().default([]),
@@ -207,14 +157,14 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// Status Colors and Options
+// --- Status Colors and Options ---
 const recordStatusColor: Record<WallRecordStatus, string> = {
   Pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
   Approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   Rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
   Expired: "bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100",
   Fulfilled: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
-  Active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", // "Active" here refers to recordStatus
+  Active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
 };
 const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({ value: s, label: s }));
 
@@ -227,7 +177,7 @@ const intentOptions: { value: WallIntent; label: string }[] = [
   { value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" },
 ];
 
-const productApiStatusColor: Record<string, string> = { // For API product_status field (availability)
+const productApiStatusColor: Record<string, string> = {
   available: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100",
   "low stock": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
   "out of stock": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
@@ -236,14 +186,11 @@ const productApiStatusColor: Record<string, string> = { // For API product_statu
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
 };
 
-// Dummy Data (Consider fetching these from API if dynamic)
-const dummyProducts = [{ id: 1, name: "iPhone 15 Pro" }, { id: 2, name: "Samsung Galaxy S24 Ultra" }, { id: 544, name: "REDMI A2 PLUS 2GB 32GB" },];
-const dummyCompanies = [{ id: "COMP001", name: "TechDistributors Inc." }, { id: "COMP002", name: "Global Gadgets LLC" },];
+// --- Dummy Data ---
 export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
 
-
 // ============================================================================
-// --- MODALS SECTION ---
+// --- MODALS SECTION (No Changes) ---
 // ============================================================================
 export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "alert" | "share";
 export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
@@ -257,7 +204,6 @@ const dummyAlerts = [{ id: 1, severity: "warning", message: "Listing will expire
 const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose }) => {
   const { type, data: wallItem, isOpen } = modalState;
   if (!isOpen || !wallItem) return null;
-
   const renderModalContent = () => {
     switch (type) {
       case "email": return <SendEmailDialog wallItem={wallItem} onClose={onClose} />;
@@ -272,7 +218,6 @@ const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose }) => {
   };
   return <>{renderModalContent()}</>;
 };
-
 const SendEmailDialog: React.FC<{ wallItem: WallItem; onClose: () => void }> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({ defaultValues: { subject: "", message: "" } });
@@ -280,25 +225,15 @@ const SendEmailDialog: React.FC<{ wallItem: WallItem; onClose: () => void }> = (
     setIsLoading(true); console.log("Sending email to", wallItem.member_email, "with data:", data);
     setTimeout(() => { toast.push(<Notification type="success" title="Email Sent Successfully" />); setIsLoading(false); onClose(); }, 1000);
   };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send Email to {wallItem.member_name}</h5>
-      <form onSubmit={handleSubmit(onSendEmail)}>
-        <FormItem label="Subject">
-          <Controller name="subject" control={control} render={({ field }) => (<Input {...field} placeholder={`Regarding: ${wallItem.product_name}`} />)} />
-        </FormItem>
-        <FormItem label="Message">
-          <Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading}>Send</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">Send Email to {wallItem.member_name}</h5>
+    <form onSubmit={handleSubmit(onSendEmail)}>
+      <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => (<Input {...field} placeholder={`Regarding: ${wallItem.product_name}`} />)} /></FormItem>
+      <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} /></FormItem>
+      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send</Button></div>
+    </form>
+  </Dialog>);
 };
-
 const SendWhatsAppDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi ${wallItem.member_name}, I'm interested in your listing for "${wallItem.product_name}".` } });
   const onSendMessage = (data: { message: string }) => {
@@ -307,22 +242,14 @@ const SendWhatsAppDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }>
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(data.message)}`;
     window.open(url, "_blank"); toast.push(<Notification type="success" title="Redirecting to WhatsApp" />); onClose();
   };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send WhatsApp to {wallItem.member_name}</h5>
-      <form onSubmit={handleSubmit(onSendMessage)}>
-        <FormItem label="Message Template">
-          <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>Cancel</Button>
-          <Button variant="solid" type="submit">Open WhatsApp</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">Send WhatsApp to {wallItem.member_name}</h5>
+    <form onSubmit={handleSubmit(onSendMessage)}>
+      <FormItem label="Message Template"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
+      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit">Open WhatsApp</Button></div>
+    </form>
+  </Dialog>);
 };
-
 const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({ defaultValues: { title: "", users: [], message: "" } });
@@ -330,24 +257,16 @@ const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void;
     setIsLoading(true); console.log("Sending in-app notification for", wallItem.product_name, "with data:", data);
     setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000);
   };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Notification for "{wallItem.product_name}"</h5>
-      <form onSubmit={handleSubmit(onSend)}>
-        <FormItem label="Notification Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <FormItem label="Send to Users">
-          <Controller name="users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={dummyUsers} {...field} />)} />
-        </FormItem>
-        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading}>Send Notification</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">Add Notification for "{wallItem.product_name}"</h5>
+    <form onSubmit={handleSubmit(onSend)}>
+      <FormItem label="Notification Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+      <FormItem label="Send to Users"><Controller name="users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={dummyUsers} {...field} />)} /></FormItem>
+      <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
+      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send Notification</Button></div>
+    </form>
+  </Dialog>);
 };
-
 const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({ defaultValues: { title: "", assignee: null, dueDate: null, priority: null, description: "" } });
@@ -355,26 +274,20 @@ const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> =
     setIsLoading(true); console.log("Assigning task for", wallItem.product_name, "with data:", data);
     setTimeout(() => { toast.push(<Notification type="success" title="Task Assigned" />); setIsLoading(false); onClose(); }, 1000);
   };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
-      <form onSubmit={handleSubmit(onAssignTask)}>
-        <FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Follow up on listing" />)} /></FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<Select placeholder="Select User" options={dummyUsers} {...field} />)} /></FormItem>
-          <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} {...field} />)} /></FormItem>
-        </div>
-        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />)} /></FormItem>
-        <FormItem label="Description"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
+    <form onSubmit={handleSubmit(onAssignTask)}>
+      <FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Follow up on listing" />)} /></FormItem>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<Select placeholder="Select User" options={dummyUsers} {...field} />)} /></FormItem>
+        <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} {...field} />)} /></FormItem>
+      </div>
+      <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />)} /></FormItem>
+      <FormItem label="Description"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button></div>
+    </form>
+  </Dialog>);
 };
-
 const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({ defaultValues: { title: "", eventType: null, startDate: null, notes: "" } });
@@ -382,66 +295,37 @@ const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> 
     setIsLoading(true); console.log("Adding event for", wallItem.product_name, "with data:", data);
     setTimeout(() => { toast.push(<Notification type="success" title="Event Scheduled" />); setIsLoading(false); onClose(); }, 1000);
   };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Schedule for "{wallItem.product_name}"</h5>
-      <form onSubmit={handleSubmit(onAddEvent)}>
-        <FormItem label="Event Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Call about listing" />)} /></FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type"><Controller name="eventType" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} {...field} />)} /></FormItem>
-          <FormItem label="Date & Time"><Controller name="startDate" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
-        </div>
-        <FormItem label="Notes"><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading}>Save Event</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">Add Schedule for "{wallItem.product_name}"</h5>
+    <form onSubmit={handleSubmit(onAddEvent)}>
+      <FormItem label="Event Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Call about listing" />)} /></FormItem>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormItem label="Event Type"><Controller name="eventType" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} {...field} />)} /></FormItem>
+        <FormItem label="Date & Time"><Controller name="startDate" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value as Date} onChange={field.onChange} />)} /></FormItem>
+      </div>
+      <FormItem label="Notes"><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Save Event</Button></div>
+    </form>
+  </Dialog>);
 };
-
 const ViewAlertDialog: React.FC<{ wallItem: WallItem; onClose: () => void }> = ({ wallItem, onClose }) => {
   const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue", };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-      <h5 className="mb-4">Alerts for "{wallItem.product_name}"</h5>
-      <div className="mt-4 flex flex-col gap-3">
-        {dummyAlerts.length > 0 ? (
-          dummyAlerts.map((alert) => (
-            <div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}>
-              <div className="flex justify-between items-start">
-                <div className="flex items-start gap-2">
-                  <TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} />
-                  <p className="text-sm">{alert.message}</p>
-                </div>
-                <span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span>
-              </div>
-            </div>
-          ))
-        ) : (<p>No active alerts for this item.</p>)}
-      </div>
-      <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
-  );
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+    <h5 className="mb-4">Alerts for "{wallItem.product_name}"</h5>
+    <div className="mt-4 flex flex-col gap-3">{dummyAlerts.length > 0 ? (dummyAlerts.map((alert) => (<div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}><div className="flex justify-between items-start"><div className="flex items-start gap-2"><TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} /><p className="text-sm">{alert.message}</p></div><span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span></div></div>))) : (<p>No active alerts for this item.</p>)}</div>
+    <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+  </Dialog>);
 };
-
 const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const linkToShare = wallItem.listing_url || "No URL available for this item.";
   const handleCopy = () => { if (wallItem.listing_url) { navigator.clipboard.writeText(linkToShare).then(() => { toast.push(<Notification title="Copied to Clipboard" type="success" />); }); } };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Share Link for "{wallItem.product_name}"</h5>
-      <p className="mb-2 text-sm">Use the link below to share this listing:</p>
-      <div className="flex items-center gap-2">
-        <Input readOnly value={linkToShare} />
-        <Tooltip title="Copy Link"><Button shape="circle" icon={<TbCopy />} onClick={handleCopy} disabled={!wallItem.listing_url} /></Tooltip>
-      </div>
-      <div className="text-right mt-6"><Button onClick={onClose}>Close</Button></div>
-    </Dialog>
-  );
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">Share Link for "{wallItem.product_name}"</h5>
+    <p className="mb-2 text-sm">Use the link below to share this listing:</p>
+    <div className="flex items-center gap-2"><Input readOnly value={linkToShare} /><Tooltip title="Copy Link"><Button shape="circle" icon={<TbCopy />} onClick={handleCopy} disabled={!wallItem.listing_url} /></Tooltip></div>
+    <div className="text-right mt-6"><Button onClick={onClose}>Close</Button></div>
+  </Dialog>);
 };
-
 const GenericActionDialog: React.FC<{ type: WallModalType | null; wallItem: WallItem; onClose: () => void; }> = ({ type, wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
@@ -449,47 +333,46 @@ const GenericActionDialog: React.FC<{ type: WallModalType | null; wallItem: Wall
     setIsLoading(true); console.log(`Performing action '${type}' for wall item ${wallItem.product_name}`);
     setTimeout(() => { toast.push(<Notification type="success" title="Action Completed" />); setIsLoading(false); onClose(); }, 1000);
   };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-2">{title}</h5>
-      <p>Are you sure you want to perform this action for <span className="font-semibold">{wallItem.product_name}</span>?</p>
-      <div className="text-right mt-6">
-        <Button className="mr-2" onClick={onClose}>Cancel</Button>
-        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button>
-      </div>
-    </Dialog>
-  );
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-2">{title}</h5>
+    <p>Are you sure you want to perform this action for <span className="font-semibold">{wallItem.product_name}</span>?</p>
+    <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button></div>
+  </Dialog>);
 };
-// ============================================================================
-// --- END MODALS SECTION ---
-// ============================================================================
-
 
 // --- CSV Export ---
-const CSV_WALL_HEADERS = ["ID", "Listing ID", "Product Name", "Company Name", "Company ID", "Member Name", "Member ID", "Member Email", "Member Phone", "Category", "Subcategory", "Description", "Specs", "Product Status", "Quantity", "Price", "Intent", "Listing Type", "Shipping", "Payment", "Warranty", "Return Policy", "URL", "Brand", "Images", "Created Date", "Last Updated", "Visibility", "Priority", "Assigned To", "Interaction Type", "Action", "Record Status", "Cartoon Type ID", "Device Condition", "Inquiry Count", "Share Count", "Bookmarked", "Updated By", "Updated Role",];
-const CSV_WALL_KEYS: (keyof WallItem)[] = ["id", "id", "product_name", "company_name", "companyId", "member_name", "memberId", "member_email", "member_phone", "product_category", "product_subcategory", "product_description", "product_specs", "product_status", "quantity", "price", "want_to", "listing_type", "shipping_options", "payment_method", "warranty", "return_policy", "listing_url", "brand", "product_images", "created_date", "updated_at", "visibility", "priority", "assigned_to", "interaction_type", "action", "recordStatus", "cartoonTypeId", "deviceCondition", "inquiry_count", "share_count", "is_bookmarked", "updated_by_name", "updated_by_role",];
+const CSV_WALL_HEADERS = ["ID", "Product Name", "Company Name", "Member Name", "Category", "Subcategory", "Product Status", "Quantity", "Price", "Intent", "Created Date", "Record Status"];
+const CSV_WALL_KEYS: (keyof WallItem)[] = ["id", "product_name", "company_name", "member_name", "product_category", "product_subcategory", "product_status", "quantity", "price", "want_to", "created_date", "recordStatus"];
 
 function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
-  if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
+  if (!rows || !rows.length) {
+    toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+    return false;
+  }
   const separator = ",";
   const csvContent = CSV_WALL_HEADERS.join(separator) + "\n" + rows.map((row) => {
     return CSV_WALL_KEYS.map((k) => {
       let cell = row[k] as any;
       if (cell === null || cell === undefined) cell = "";
-      else if (k === "product_images" && Array.isArray(cell)) cell = cell.join(";");
-      else if (cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
-      else if (typeof cell === "boolean") cell = cell ? "Yes" : "No";
+      else if (k === "created_date" && cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
       else cell = String(cell).replace(/"/g, '""');
       if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
       return cell;
     }).join(separator);
   }).join("\n");
 
-  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;", });
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename);
-    link.style.visibility = "hidden"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
     return true;
   }
   toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
@@ -497,93 +380,42 @@ function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
 }
 
 // --- Child Components ---
-const StyledActionColumn = ({ onEdit, onViewDetail, onOpenModal, rowData, }: { onEdit: () => void; onViewDetail: () => void; onOpenModal: (type: WallModalType, data: WallItem) => void; rowData: WallItem; }) => (
-  <div className="flex items-center justify-center">
-    <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-md" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
-    <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md" role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
-    <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-      <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbBulb size={18} /> <span className="text-xs">Match Opportunity</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2"><TbShare size={18} /> <span className="text-xs">Share Wall Link</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
-    </Dropdown>
-  </div>
-);
-
+const StyledActionColumn = ({ onEdit, onViewDetail, onOpenModal, rowData, }: { onEdit: () => void; onViewDetail: () => void; onOpenModal: (type: WallModalType, data: WallItem) => void; rowData: WallItem; }) => (<div className="flex items-center justify-center"><Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-md" role="button" onClick={onEdit}><TbPencil /></div></Tooltip><Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md" role="button" onClick={onViewDetail}><TbEye /></div></Tooltip><Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}><Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbBulb size={18} /> <span className="text-xs">Match Opportunity</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2"><TbShare size={18} /> <span className="text-xs">Share Wall Link</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item></Dropdown></div>);
 interface WallSearchProps { onInputChange: (value: string) => void; }
 const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)} />));
 WallSearch.displayName = "WallSearch";
-
 interface WallTableToolsProps { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onAddNew: () => void; onImport: () => void; onClearFilters: () => void; }
-const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, }: WallTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    <div className="flex-grow"><WallSearch onInputChange={onSearchChange} /></div>
-    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip>
-      <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
-      <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-    </div>
-  </div>
-);
-
+const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, }: WallTableToolsProps) => (<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"><div className="flex-grow"><WallSearch onInputChange={onSearchChange} /></div><div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"><Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip><Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button><Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button><Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button></div></div>);
 interface WallTableProps { columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[]; onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void; }
-const WallTable = (props: WallTableProps) => (
-  <DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />
-);
-
+const WallTable = (props: WallTableProps) => (<DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
 interface WallSelectedFooterProps { selectedItems: WallItem[]; deleteConfirmOpen: boolean; setDeleteConfirmOpen: (open: boolean) => void; onConfirmDelete: () => void; isDeleting: boolean; }
-const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting, }: WallSelectedFooterProps) => {
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t px-8">
-        <div className="flex items-center justify-between w-full">
-          <span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500" /><span className="font-semibold">{selectedItems.length} item{selectedItems.length > 1 ? "s" : ""}{" "}selected</span></span>
-          <Button size="sm" variant="plain" className="text-red-500 hover:text-red-700" onClick={() => setDeleteConfirmOpen(true)}>Delete Selected</Button>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title="Delete Selected Wall Items" onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={onConfirmDelete} loading={isDeleting}>
-        <p>Are you sure you want to delete {selectedItems.length} selected item{selectedItems.length > 1 ? "s" : ""}?{" "}</p>
-      </ConfirmDialog>
-    </>
-  );
-};
+const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting, }: WallSelectedFooterProps) => { if (selectedItems.length === 0) return null; return (<><StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t px-8"><div className="flex items-center justify-between w-full"><span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500" /><span className="font-semibold">{selectedItems.length} item{selectedItems.length > 1 ? "s" : ""}{" "}selected</span></span><Button size="sm" variant="plain" className="text-red-500 hover:text-red-700" onClick={() => setDeleteConfirmOpen(true)}>Delete Selected</Button></div></StickyFooter><ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title="Delete Selected Wall Items" onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={onConfirmDelete} loading={isDeleting}><p>Are you sure you want to delete {selectedItems.length} selected item{selectedItems.length > 1 ? "s" : ""}?{" "}</p></ConfirmDialog></>); };
+
 
 // --- Main Component ---
 const WallListing = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
+  // --- Redux State ---
   const {
-    wallListing,
-    AllProductsData,
-    AllCategorysData,
-    subCategoriesForSelectedCategoryData,
-    BrandData,
-    MemberTypeData,
-    ProductSpecificationsData,
-    Employees,
-    AllCompanyData,
+    wallListing, AllProductsData, AllCategorysData, subCategoriesForSelectedCategoryData,
+    BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData,
     status: masterLoadingStatus
   } = useSelector(masterSelector);
 
+  // --- Component State ---
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WallItem | null>(null);
-
-  const isOverallLoading = masterLoadingStatus === "loading";
-
   const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<WallItem[]>([]);
+  const [modalState, setModalState] = useState<WallModalState>({ isOpen: false, type: null, data: null });
 
+  // --- Table and Filter State ---
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -591,28 +423,30 @@ const WallListing = () => {
     sort: { order: "desc", key: "created_date" },
     query: "",
   });
-  const [selectedItems, setSelectedItems] = useState<WallItem[]>([]);
 
-  const [modalState, setModalState] = useState<WallModalState>({ isOpen: false, type: null, data: null });
-  const handleOpenModal = (type: WallModalType, wallItem: WallItem) => setModalState({ isOpen: true, type, data: wallItem });
-  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
-
+  // --- Forms ---
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
+  // --- Data Mapping ---
   const mapApiToWallItem = useCallback((apiItem: ApiWallItemFromSource): WallItem => ({
     id: apiItem.id as number,
+    productId: apiItem.product_id, // Map ID
     product_name: apiItem.product_name,
     company_name: apiItem.company_name || "",
     companyId: apiItem.company_id_from_api || undefined,
     member_name: apiItem.member_name,
     memberId: String(apiItem.member_id_from_api || ""),
+    memberTypeId: apiItem.member_type_id, // Map ID
     member_email: apiItem.member_email || "",
     member_phone: apiItem.member_phone || "",
     product_category: apiItem.product_category || "",
+    productCategoryId: apiItem.product_category_id, // Map ID
     product_subcategory: apiItem.product_subcategory || "",
+    subCategoryId: apiItem.subcategory_id, // Map ID
     product_description: apiItem.product_description || "",
     product_specs: apiItem.product_specs || "",
+    productSpecId: apiItem.product_spec_id, // Map ID
     product_status: apiItem.product_status,
     quantity: Number(apiItem.quantity) || 0,
     price: Number(apiItem.price) || 0,
@@ -624,6 +458,7 @@ const WallListing = () => {
     return_policy: apiItem.return_policy || "",
     listing_url: apiItem.listing_url || "",
     brand: apiItem.brand || "",
+    brandId: apiItem.brand_id, // Map ID
     product_images: apiItem.product_images || [],
     created_date: new Date(apiItem.created_date),
     updated_at: new Date(apiItem.updated_at),
@@ -640,71 +475,18 @@ const WallListing = () => {
     is_bookmarked: apiItem.is_bookmarked,
     updated_by_name: apiItem.updated_by_name,
     updated_by_role: apiItem.updated_by_role,
+    createdById: apiItem.created_by, // Map ID
   }), []);
 
-  const pageData = useMemo(() => {
-    return Array.isArray(wallListing?.data.data) ? wallListing?.data.data.map(mapApiToWallItem) : [];
-  }, [wallListing?.data.data, mapApiToWallItem]);
+  const allWallItems = useMemo(() => {
+    return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : [];
+  }, [wallListing, mapApiToWallItem]);
 
-  const totalItems = useMemo(() => wallListing?.total || 0, [wallListing?.total]);
-
-  const buildApiParams = useCallback((forExport: boolean = false): any => {
-    const params: any = {
-      page: forExport ? 1 : tableData.pageIndex as number,
-      per_page: forExport ? -1 : tableData.pageSize as number, // API should handle -1 as "all"
-      search: tableData.query?.trim() || undefined,
-    };
-
-    const currentSortKey = tableData.sort?.key;
-    const currentSortOrder = tableData.sort?.order;
-
-    if (!forExport && currentSortKey && currentSortOrder) {
-      let apiKey = currentSortKey as string;
-      if (apiKey === 'recordStatus') apiKey = 'status'; // Map internal 'recordStatus' to API's 'status' field
-      // Add other mappings if table keys differ from API query keys
-      // Example: if (apiKey === 'memberName') apiKey = 'member_name_api_field';
-      params.sort_by = apiKey;
-      params.sort_order = currentSortOrder as 'asc' | 'desc';
-    } else if (forExport && currentSortKey && currentSortOrder) {
-      let apiKey = currentSortKey as string;
-      if (apiKey === 'recordStatus') apiKey = 'status';
-      params.sort_by = apiKey;
-      params.sort_order = currentSortOrder as 'asc' | 'desc';
-    }
-
-
-    const mapToCommaSeparated = (items: { value: any }[]) => items.length > 0 ? items.map(opt => opt.value).join(',') : undefined;
-
-    params.status = mapToCommaSeparated(filterCriteria.filterRecordStatuses); // For workflow status (API field: status)
-    params.company_id = mapToCommaSeparated(filterCriteria.filterCompanyIds);
-    params.want_to = mapToCommaSeparated(filterCriteria.filterIntents);
-    params.product_id = mapToCommaSeparated(filterCriteria.filterProductIds);
-    params.category_id = mapToCommaSeparated(filterCriteria.categories);
-    params.subcategory_id = mapToCommaSeparated(filterCriteria.subcategories);
-    params.brands_id = mapToCommaSeparated(filterCriteria.brands);
-    params.product_status = mapToCommaSeparated(filterCriteria.productStatus); // For API product availability
-    params.source = mapToCommaSeparated(filterCriteria.source);
-    params.product_spec = mapToCommaSeparated(filterCriteria.productSpec);
-    params.member_type = mapToCommaSeparated(filterCriteria.memberType);
-    params.created_by = mapToCommaSeparated(filterCriteria.createdBy);
-
-    if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) {
-      const start = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format('YYYY-MM-DD') : '';
-      const end = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format('YYYY-MM-DD') : '';
-      params.created_date_range = `${start},${end}`; // API needs to handle "date1," or ",date2" or "date1,date2"
-    }
-    return params;
-  }, [tableData, filterCriteria]);
-
+  // --- Fetch Initial Data ---
   useEffect(() => {
-    const apiParams = buildApiParams();
-    dispatch(getWallListingAction(apiParams));
-  }, [dispatch, buildApiParams]);
-
-
-  useEffect(() => {
-    const apiParams = buildApiParams();
-    dispatch(getWallListingAction(apiParams));
+    // Fetch all data for client-side processing
+    dispatch(getWallListingAction({ per_page: -1 }));
+    // Fetch related data for filters
     dispatch(getProductsDataAsync());
     dispatch(getCategoriesData());
     dispatch(getSubcategoriesByCategoryIdAction(0));
@@ -713,13 +495,109 @@ const WallListing = () => {
     dispatch(getProductSpecificationsAction());
     dispatch(getEmployeesAction());
     dispatch(getAllCompany());
-  }, [dispatch, buildApiParams]);
+  }, [dispatch]);
 
+  // --- Client-side Data Processing ---
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    let processedData = allWallItems.length > 0 ? cloneDeep(allWallItems) : [];
 
+    // --- Apply Filters ---
+    const { filterRecordStatuses, filterIntents, filterProductIds, categories, subcategories, brands, productStatus, dateRange } = filterCriteria;
+    if (filterRecordStatuses?.length) {
+      const values = filterRecordStatuses.map(opt => opt.value);
+      processedData = processedData.filter(item => item.recordStatus && values.includes(item.recordStatus));
+    }
+    if (filterIntents?.length) {
+      const values = filterIntents.map(opt => opt.value);
+      processedData = processedData.filter(item => values.includes(item.want_to));
+    }
+    if (filterProductIds?.length) {
+      const values = filterProductIds.map(opt => opt.value);
+      processedData = processedData.filter(item => item.productId && values.includes(item.productId));
+    }
+    if (categories?.length) {
+        const values = categories.map(opt => opt.value);
+        processedData = processedData.filter(item => item.productCategoryId && values.includes(item.productCategoryId));
+    }
+    if (subcategories?.length) {
+        const values = subcategories.map(opt => opt.value);
+        processedData = processedData.filter(item => item.subCategoryId && values.includes(item.subCategoryId));
+    }
+    if (brands?.length) {
+        const values = brands.map(opt => opt.value);
+        processedData = processedData.filter(item => item.brandId && values.includes(item.brandId));
+    }
+    if (productStatus?.length) {
+        const values = productStatus.map(opt => opt.value);
+        processedData = processedData.filter(item => values.includes(item.product_status));
+    }
+    if (dateRange && (dateRange[0] || dateRange[1])) {
+        processedData = processedData.filter(item => {
+            const itemDate = dayjs(item.created_date);
+            const start = dateRange[0] ? dayjs(dateRange[0]).startOf('day') : null;
+            const end = dateRange[1] ? dayjs(dateRange[1]).endOf('day') : null;
+            if (start && end) return itemDate.isBetween(start, end, null, '[]');
+            if (start) return itemDate.isSameOrAfter(start);
+            if (end) return itemDate.isSameOrBefore(end);
+            return true;
+        });
+    }
+
+    // --- Apply Search Query ---
+    if (tableData.query) {
+      const query = tableData.query.toLowerCase().trim();
+      processedData = processedData.filter(item =>
+        item.product_name.toLowerCase().includes(query) ||
+        item.company_name.toLowerCase().includes(query) ||
+        item.member_name.toLowerCase().includes(query) ||
+        String(item.id).includes(query)
+      );
+    }
+
+    // --- Apply Sorting ---
+    const { order, key } = tableData.sort as OnSortParam;
+    if (order && key) {
+      processedData.sort((a, b) => {
+        const aValue = a[key as keyof WallItem] as any;
+        const bValue = b[key as keyof WallItem] as any;
+        if (aValue === null || aValue === undefined) return order === 'asc' ? 1 : -1;
+        if (bValue === null || bValue === undefined) return order === 'asc' ? -1 : 1;
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        }
+        if (aValue instanceof Date && bValue instanceof Date) {
+            return order === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
+        }
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return order === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+        return 0;
+      });
+    }
+
+    const currentTotal = processedData.length;
+    const pageIndex = tableData.pageIndex as number;
+    const pageSize = tableData.pageSize as number;
+    const startIndex = (pageIndex - 1) * pageSize;
+    const paginatedData = processedData.slice(startIndex, startIndex + pageSize);
+
+    return {
+      pageData: paginatedData,
+      total: currentTotal,
+      allFilteredAndSortedData: processedData, // For export
+    };
+  }, [allWallItems, tableData, filterCriteria]);
+
+  // --- Handlers ---
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const openAddDrawer = useCallback(() => navigate("/sales-leads/wall-item/add"), [navigate]);
   const openEditDrawer = useCallback((item: WallItem) => navigate(`/sales-leads/wall-item/edit/${item.id}`), [navigate]);
   const openViewDrawer = useCallback((item: WallItem) => { setEditingItem(item); setIsViewDrawerOpen(true); }, []);
   const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingItem(null); }, []);
+  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+  const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
+  const handleOpenModal = (type: WallModalType, wallItem: WallItem) => setModalState({ isOpen: true, type, data: wallItem });
+  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
   const onConfirmDeleteSelectedItems = useCallback(async () => {
     if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info" >Please select items to delete.</Notification>); return; }
@@ -729,46 +607,13 @@ const WallListing = () => {
       await dispatch(deleteAllWallAction({ ids })).unwrap();
       toast.push(<Notification title="Success" type="success">{selectedItems.length} item(s) deleted.</Notification>);
       setSelectedItems([]);
-      dispatch(getWallListingAction(buildApiParams()));
+      dispatch(getWallListingAction({ per_page: -1 })); // Refetch all data
     } catch (error: any) {
-      toast.push(<Notification title="Error" type="danger">{error.message || error || "Bulk delete failed."}</Notification>);
+      toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>);
     }
-  }, [dispatch, selectedItems, buildApiParams]);
-
-  const handleChangeStatus = useCallback(async (item: WallItem) => {
-    const statusesCycle: WallRecordStatus[] = ["Pending", "Approved", "Rejected", "Expired", "Fulfilled", "Active",];
-    const currentRecordStatus = item.recordStatus || "Pending";
-    let currentIndex = statusesCycle.indexOf(currentRecordStatus);
-    if (currentIndex === -1) currentIndex = 0;
-    const newStatus = statusesCycle[(currentIndex + 1) % statusesCycle.length];
-
-    try {
-      // TODO: Replace with actual API call to update status
-      // await dispatch(updateWallItemStatusAction({ id: item.id, status: newStatus })).unwrap(); 
-      await new Promise(res => setTimeout(res, 500)); // Simulate API
-      toast.push(<Notification title="Status Updated" type="success">{`Status changed to ${newStatus}.`}</Notification>);
-      dispatch(getWallListingAction(buildApiParams()));
-    } catch (error: any) { toast.push(<Notification title="Error" type="danger">Failed to update status.</Notification>); }
-  }, [dispatch, buildApiParams]);
-
-  const handleToggleBookmark = useCallback(async (item: WallItem) => {
-    try {
-      // TODO: Replace with actual API call to toggle bookmark
-      // await dispatch(toggleBookmarkAction({ id: item.id, isBookmarked: !item.is_bookmarked })).unwrap(); 
-      await new Promise(res => setTimeout(res, 500)); // Simulate API
-      toast.push(<Notification title="Bookmark Updated" type="success">{`Item ${!item.is_bookmarked ? "bookmarked" : "unbookmarked"}.`}</Notification>);
-      dispatch(getWallListingAction(buildApiParams()));
-    } catch (error: any) { toast.push(<Notification title="Error" type="danger">Failed to update bookmark.</Notification>); }
-  }, [dispatch, buildApiParams]);
-
-  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
-  const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
+  }, [dispatch, selectedItems]);
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
-    console.log(data, "datadatadatadata");
-
     setFilterCriteria(data);
     handleSetTableData({ pageIndex: 1 });
     closeFilterDrawer();
@@ -778,57 +623,42 @@ const WallListing = () => {
     const defaults = filterFormSchema.parse({});
     filterFormMethods.reset(defaults);
     setFilterCriteria(defaults);
-    setTableData(prev => ({
-      ...prev,
-      query: "",
-      pageIndex: 1,
-      // sort: { order: "desc", key: "created_date" } // Optionally reset sort
-    }));
-  }, [filterFormMethods]);
-
+    handleSetTableData({ query: "", pageIndex: 1 });
+  }, [filterFormMethods, handleSetTableData]);
 
   const handleOpenExportReasonModal = useCallback(() => {
-    if (totalItems === 0) {
+    if (total === 0) {
       toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
       return;
     }
     exportReasonFormMethods.reset({ reason: "" });
     setIsExportReasonModalOpen(true);
-  }, [totalItems, exportReasonFormMethods]);
+  }, [total, exportReasonFormMethods]);
 
   const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    // Optional: dispatch submitExportReasonAction if it's a separate logging action
-    // try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Wall Listing" })).unwrap(); } catch { /* handle error if needed */ }
-
-    const exportParams = buildApiParams(true);
-
+    const moduleName = "WallListing";
+    const timestamp = dayjs().format('YYYY-MM-DD');
+    const fileName = `wall_listing_export_${timestamp}.csv`;
     try {
-      const response = await getpWallListingAsync(exportParams); // Direct API call for all data
-      if (response.data?.status && response.data.data?.data) {
-        const apiItemsToExport: ApiWallItemFromSource[] = response.data.data.data;
-        const itemsToExport: WallItem[] = apiItemsToExport.map(mapApiToWallItem);
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+      toast.push(<Notification title="Reason Submitted" type="success" />);
 
-        const success = exportWallItemsToCsv("wall_listing_export.csv", itemsToExport);
-        if (success) {
-          toast.push(<Notification title="Export Successful" type="success">Data exported.</Notification>);
-        }
-      } else {
-        throw new Error(response.data?.message || "Failed to fetch data for export.");
-      }
-    } catch (error) {
-      toast.push(<Notification title="Export Failed" type="danger">{(error as Error).message || "Could not retrieve data."}</Notification>);
+      // Export the client-side filtered and sorted data
+      exportWallItemsToCsv(fileName, allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+
+    } catch (error: any) {
+      toast.push(<Notification title="Failed to Export" type="danger" message={error.message} />);
     } finally {
       setIsSubmittingExportReason(false);
-      setIsExportReasonModalOpen(false);
     }
-  }, [buildApiParams, mapApiToWallItem, dispatch]);
+  }, [allFilteredAndSortedData, dispatch]);
 
-  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-  const handlePageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
-  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
-  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
-
+  const handlePaginationChange = (page: number) => handleSetTableData({ pageIndex: page });
+  const handlePageSizeChange = (value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); };
+  const handleSort = (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 });
+  const handleSearchChange = (query: string) => handleSetTableData({ query, pageIndex: 1 });
   const handleRowSelect = (checked: boolean, row: WallItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id));
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<WallItem>[]) => {
     const originals = currentRows.map((r) => r.original);
@@ -849,6 +679,7 @@ const WallListing = () => {
     if (event.target) event.target.value = ""; // Reset file input
   }, []);
 
+  // --- Columns Definition ---
   const columns: ColumnDef<WallItem>[] = useMemo(() => [
     {
       header: "Overview", accessorKey: "product_name", size: 280,
@@ -915,7 +746,7 @@ const WallListing = () => {
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
               <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
               <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
-              <Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}><button onClick={() => handleToggleBookmark(row.original)} className="p-0 m-0 bg-transparent border-none cursor-pointer"><TbBookmark size={14} className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} /></button></Tooltip>
+              <Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}><button onClick={() => {}} className="p-0 m-0 bg-transparent border-none cursor-pointer"><TbBookmark size={14} className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} /></button></Tooltip>
             </div>
             {created_date && (<span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1"><TbCalendarEvent />{dayjs(created_date).format("MMM D, YYYY")}</span>)}
           </div>
@@ -933,13 +764,10 @@ const WallListing = () => {
     {
       header: "Workflow Status", accessorKey: "recordStatus", enableSorting: true, size: 180,
       cell: ({ row }) => {
-        const { recordStatus, visibility, priority, assigned_to } = row.original;
+        const { recordStatus } = row.original;
         return (
           <div className="flex flex-col gap-1 text-xs">
-            {recordStatus && (<div><Tag onClick={() => handleChangeStatus(row.original)} className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize cursor-pointer`}>{recordStatus}</Tag></div>)}
-            {visibility && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Visibility:</span> <span className="text-gray-600 dark:text-gray-400">{visibility}</span></span>)}
-            {priority && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Priority:</span> <span className="text-gray-600 dark:text-gray-400">{priority}</span></span>)}
-            {assigned_to && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Assigned:</span> <span className="text-gray-600 dark:text-gray-400">{assigned_to}</span></span>)}
+            {recordStatus && (<div><Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>{recordStatus}</Tag></div>)}
           </div>
         );
       },
@@ -948,18 +776,9 @@ const WallListing = () => {
       header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" },
       cell: (props: CellContext<WallItem, any>) => (<StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />),
     },
-  ], [openViewDrawer, openEditDrawer, handleToggleBookmark, handleChangeStatus, handleOpenModal]);
+  ], [openViewDrawer, openEditDrawer, handleOpenModal]);
 
-  const counts = wallListing?.counts || {
-    active: 0,
-    buy: 0,
-    non_active: 0,
-    pending: 0,
-    rejected: 0,
-    sell: 0,
-    today: 0,
-    total: 0
-  };
+  const counts = wallListing?.counts || { active: 0, buy: 0, non_active: 0, pending: 0, rejected: 0, sell: 0, today: 0, total: 0 };
 
   return (
     <>
@@ -969,11 +788,10 @@ const WallListing = () => {
             <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
             <div className="flex gap-2">
               <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
-              <Button variant="solid" icon={<TbPlus />}>Add Multiple</Button> {/* TODO: Implement Add Multiple */}
+              <Button variant="solid" icon={<TbPlus />}>Add Multiple</Button>
             </div>
           </div>
 
-          {/* Stats Cards - These are currently placeholders or need separate data fetching */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
             <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-blue-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div className="flex flex-col"><b className="text-blue-500">{counts.total}</b><span className="font-semibold text-[11px]">Total</span></div></Card>
             <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-emerald-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-emerald-500">{counts.today}</b><span className="font-semibold text-[11px]">Today</span></div></Card>
@@ -985,24 +803,14 @@ const WallListing = () => {
             <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-red-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.rejected}</b><span className="font-semibold text-[11px]">Rejected</span></div></Card>
           </div>
 
-          <WallTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal}
-            onAddNew={openAddDrawer}
-            onImport={handleImportData}
-            onClearFilters={onClearFilters}
-          />
+          <WallTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onAddNew={openAddDrawer} onImport={handleImportData} onClearFilters={onClearFilters} />
+          
           <div className="mt-4">
             <WallTable
               columns={columns}
               data={pageData}
-              loading={isOverallLoading}
-              pagingData={{
-                total: totalItems,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
+              loading={masterLoadingStatus === "loading"}
+              pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
               onSelectChange={handlePageSizeChange}
@@ -1013,44 +821,23 @@ const WallListing = () => {
           </div>
         </AdaptiveCard>
       </Container>
-      <WallSelectedFooter selectedItems={selectedItems} deleteConfirmOpen={deleteSelectedConfirmOpen} setDeleteConfirmOpen={setDeleteSelectedConfirmOpen} onConfirmDelete={onConfirmDeleteSelectedItems} isDeleting={masterLoadingStatus === 'loading' && deleteSelectedConfirmOpen} />
+      <WallSelectedFooter selectedItems={selectedItems} deleteConfirmOpen={deleteSelectedConfirmOpen} setDeleteConfirmOpen={setDeleteSelectedConfirmOpen} onConfirmDelete={onConfirmDeleteSelectedItems} isDeleting={masterLoadingStatus === 'loading'} />
       <WallModals modalState={modalState} onClose={handleCloseModal} />
 
       <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
         {editingItem && (
-          <div className="p-4 space-y-3">
-            <div className="flex items-start gap-4 mb-4">
-              {editingItem.product_images && editingItem.product_images.length > 0 && (<Avatar size={100} shape="rounded" src={editingItem.product_images?.[0]} icon={!editingItem.product_images?.[0] && (<TbPhoto className="text-gray-400" />)} />)}
-              <div>
-                <h5 className="font-semibold text-xl text-gray-800 dark:text-gray-100">{editingItem.product_name}</h5>
-                <p className="text-gray-500 dark:text-gray-400">ID: {editingItem.id || "N/A"}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {Object.entries(editingItem).filter(([key]) => !["product_images", "product_name", "id", "productId", "productSpecId", "customerId",].includes(key)).map(([key, value]) => {
-                let displayValue = value;
-                if (key === "cartoonTypeId" && typeof value === "number") { displayValue = dummyCartoonTypes.find((ct) => ct.id === value)?.name || value.toString(); }
-                else if (key === "is_bookmarked" && typeof value === "boolean") { displayValue = value ? "Yes" : "No"; }
-                return (
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                {Object.entries(editingItem).filter(([key]) => !["product_images", "product_name", "id",].includes(key)).map(([key, value]) => (
                   <div key={key} className="border-b border-gray-200 dark:border-gray-700 pb-2">
                     <strong className="capitalize text-gray-700 dark:text-gray-200">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}:</strong>{" "}
                     <span className="text-gray-600 dark:text-gray-400">
-                      {displayValue instanceof Date ? (dayjs(displayValue).format("MMM D, YYYY h:mm A"))
-                        : Array.isArray(displayValue) ? (displayValue.join(", "))
-                          : displayValue !== null && displayValue !== undefined && displayValue !== "" ? (String(displayValue))
-                            : (<span className="italic text-gray-400 dark:text-gray-500">N/A</span>)}
+                      {value instanceof Date ? dayjs(value).format("MMM D, YYYY h:mm A") : (value !== null && value !== "") ? String(value) : "N/A"}
                     </span>
                   </div>
-                );
-              })}
-            </div>
-            {editingItem.product_images && editingItem.product_images.length > 1 && (
-              <div className="mt-4">
-                <strong className="text-gray-700 dark:text-gray-200 text-sm">Additional Images:</strong>
-                <div className="flex flex-wrap gap-2 mt-2">{editingItem.product_images.slice(1).map((img, idx) => (<Avatar key={idx} src={img} shape="rounded" size={60} />))}</div>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
         )}
       </Drawer>
 
@@ -1059,42 +846,26 @@ const WallListing = () => {
         <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col h-full">
           <div className="overflow-y-auto p-1 flex-grow">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
-
-              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select companies..." options={AllCompanyData?.map((p) => ({ value: p.id, label: p.company_name, }))} {...field} />)} /></FormItem> {/* PENDING */}
-
-              <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
-
-              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select products..." options={AllProductsData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-
-              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Categories..." options={AllCategorysData.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-
-              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Sub Categories..." options={subCategoriesForSelectedCategoryData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-
-              <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Brands..." options={BrandData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-
-              <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s, }))} {...field} />)} /></FormItem>
-
+              <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
+              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p) => ({ value: p.id, label: p.company_name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
+              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={AllCategorysData.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Categories..." options={subCategoriesForSelectedCategoryData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s, }))} {...field} />)} /></FormItem>
               <FormItem label="Created Date Range" className="col-span-2"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
-
-              <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" },]} {...field} />)} /></FormItem>
-
-              <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-
-              <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Member Type..." options={MemberTypeData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-
-              <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Employee..." options={Employees?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" },]} {...field} />)} /></FormItem>
+              <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
             </div>
           </div>
         </Form>
       </Drawer>
 
       <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)} title="Import Wall Items">
-        <div className="p-4">
-          <p>Upload a CSV file to import Wall Items. (This is a dummy import)</p>
-          <FormItem label="CSV File"><Input type="file" accept=".csv" onChange={handleImportFileSelect} /></FormItem>
-          <div className="text-right mt-4"><Button size="sm" onClick={() => setImportDialogOpen(false)}>Cancel</Button></div>
-        </div>
+          <div className="p-4"><p>Upload a CSV file to import Wall Items. (This is a dummy import)</p><FormItem label="CSV File"><Input type="file" accept=".csv" onChange={handleImportFileSelect} /></FormItem><div className="text-right mt-4"><Button size="sm" onClick={() => setImportDialogOpen(false)}>Cancel</Button></div></div>
       </Dialog>
 
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export"
