@@ -177,7 +177,7 @@ export interface CompanyFormSchema {
   secondary_bank_name?: string | { label: string; value: string };
   secondary_ifsc_code?: string;
   secondary_bank_verification_photo?: File | string;
-  additional_bank_details?: CompanyBankDetailItemFE[];
+  company_bank_details?: CompanyBankDetailItemFE[];
 
   USER_ACCESS?: boolean;
   BILLING_FIELD?: boolean;
@@ -467,7 +467,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Par
     secondary_bank_verification_photo:
       apiData.secondary_bank_verification_photo,
 
-    additional_bank_details: apiData.company_bank_details?.map((b) => ({
+    company_bank_details: apiData.company_bank_details?.map((b) => ({
       bank_account_number: b.bank_account_number,
       bank_name: b.bank_name,
       ifsc_code: b.ifsc_code,
@@ -616,8 +616,8 @@ const preparePayloadForApi = (
   append("secondary_ifsc_code", data.secondary_ifsc_code);
   append("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
   const allBankDetails: any = [];
-  if (data.additional_bank_details) {
-    data.additional_bank_details.forEach(bank => {
+  if (data.company_bank_details) {
+    data.company_bank_details.forEach(bank => {
       if (bank.bank_account_number) allBankDetails.push(bank);
     });
   }
@@ -702,7 +702,7 @@ const preparePayloadForApi = (
   // --- 4. KYC Documents (Your existing logic for this is good) ---
   const kycDocsConfig = [
     { feFile: "206AB_file", beFile: "declaration_206AB", feVerify: "declaration_206ab_remark_enabled", beVerify: "declaration_206AB_verify", feRemark: "declaration_206ab_remark", beRemark: "declaration_206AB_remark" },
-    { feFile: "194Q_file", beFile: "declaration_194Q", feVerify: "ABCQ_remark_enabled", beVerify: "ABCQ_declaration_verified", feRemark: "ABCQ_remark", beRemark: "ABCQ_remark" },
+    { feFile: "ABCQ_file", beFile: "declaration_194Q", feVerify: "ABCQ_remark_enabled", beVerify: "ABCQ_declaration_verified", feRemark: "ABCQ_remark", beRemark: "ABCQ_remark" },
     { feFile: "office_photo_file", beFile: "office_photo", feVerify: "office_photo_remark_enabled", beVerify: "office_photo_verified", feRemark: "office_photo_remark", beRemark: "office_photo_remark" },
     { feFile: "gst_certificate_file", beFile: "gst_certificate", feVerify: "gst_certificate_remark_enabled", beVerify: "gst_certificate_verified", feRemark: "gst_certificate_remark", beRemark: "gst_certificate_remark" },
     { feFile: "authority_letter_file", beFile: "authority_letter", feVerify: "authority_letter_remark_enabled", beVerify: "authority_letter_verified", feRemark: "authority_letter_remark", beRemark: "authority_letter_remark" },
@@ -1808,7 +1808,7 @@ const BankDetailsSection = ({
   ];
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "additional_bank_details",
+    name: "company_bank_details",
   });
   const primaryBankPhotoValue = watch("primary_bank_verification_photo");
   const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
@@ -1959,14 +1959,14 @@ const BankDetailsSection = ({
       </div>{" "}
       {fields.map((item, index) => {
         const bankPhotoValue = watch(
-          `additional_bank_details.${index}.verification_photo`
+          `company_bank_details.${index}.verification_photo`
         );
         return (
           <Card key={item.id} className="mb-4 border-black relative rounded-md">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
               <FormItem label={`Type`}>
                 <Controller
-                  name={`additional_bank_details.${index}.type`}
+                  name={`company_bank_details.${index}.type`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -1979,7 +1979,7 @@ const BankDetailsSection = ({
               </FormItem>
               <FormItem label={`Account Number`}>
                 <Controller
-                  name={`additional_bank_details.${index}.bank_account_number`}
+                  name={`company_bank_details.${index}.bank_account_number`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="Account No." {...field} />
@@ -1988,7 +1988,7 @@ const BankDetailsSection = ({
               </FormItem>
               <FormItem label={`Bank Name`}>
                 <Controller
-                  name={`additional_bank_details.${index}.bank_name`}
+                  name={`company_bank_details.${index}.bank_name`}
                   control={control}
                   render={({ field }) => (
                     // <Select
@@ -2002,7 +2002,7 @@ const BankDetailsSection = ({
               </FormItem>
               <FormItem label={`IFSC Code`}>
                 <Controller
-                  name={`additional_bank_details.${index}.ifsc_code`}
+                  name={`company_bank_details.${index}.ifsc_code`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="IFSC" {...field} />
@@ -2014,7 +2014,7 @@ const BankDetailsSection = ({
                 className="md:col-span-2"
               >
                 <Controller
-                  name={`additional_bank_details.${index}.verification_photo`}
+                  name={`company_bank_details.${index}.verification_photo`}
                   control={control}
                   render={({ field: { onChange, ref } }) => (
                     <Input
@@ -2688,7 +2688,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     const initialValues = defaultValues || {};
     const fullInitialValues: Partial<CompanyFormSchema> = {
       member: [],
-      additional_bank_details: [],
+      company_bank_details: [],
       company_spot_verification: [],
       company_references: [],
       company_certificate: [],
@@ -2893,7 +2893,7 @@ const CompanyCreate = () => {
     secondary_bank_name: undefined,
     secondary_ifsc_code: "",
     secondary_bank_verification_photo: undefined,
-    additional_bank_details: [],
+    company_bank_details: [],
     USER_ACCESS: false,
     BILLING_FIELD: false,
     billing_documents: [],

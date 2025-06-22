@@ -1702,7 +1702,7 @@ const CompanyListTable = () => {
             <TbBuildingBank size={16} />
           </div>
           <div className="flex flex-col gap-0">
-            <b className="text-sm pb-0 mb-0">{companyCount?.total ?? 0}</b>
+            <b className="text-sm pb-0 mb-0">{companyCount?.active ?? 0}</b>
             <span className="text-[9px] font-semibold">Active</span>
           </div>
         </Card>
@@ -1711,7 +1711,7 @@ const CompanyListTable = () => {
             <TbCancel size={16} />
           </div>
           <div className="flex flex-col gap-0">
-            <b className="text-sm pb-0 mb-0">{companyCount?.total ?? 0}</b>
+            <b className="text-sm pb-0 mb-0">{companyCount?.disable ?? 0}</b>
             <span className="text-[9px] font-semibold">Disabled</span>
           </div>
         </Card>
