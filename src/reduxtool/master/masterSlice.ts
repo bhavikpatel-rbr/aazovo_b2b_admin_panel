@@ -97,6 +97,7 @@ import {
   getSuppliersAction,
   getEmployeesAction,
   getParentCategoriesAction,
+  getAllProductsAction,
 } from "./middleware";
 import Opportunities from "@/views/sales-Leads/Opportunities";
 
@@ -110,6 +111,7 @@ const INITIAL_STATE: any = {
   CountriesData: "",
   DocumentListData: "",
   memberData: "",
+  allProducts: "",
   productsMasterData: "",
   autoMatchData: "",
   buyerListings: "",
@@ -146,6 +148,7 @@ const INITIAL_STATE: any = {
   inquiryList: [],
   CompanyData: [],
   MemberData: [],
+  AllProducts: [],
   partnerData: [],
   jobApplicationsData: [],
   wallListing: [],
@@ -491,6 +494,10 @@ const masterSlice = createSlice({
     builder.addCase(getMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
       MemberData: payload,
+    }));
+    builder.addCase(getAllProductsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      AllProducts: payload,
     }));
     builder.addCase(addMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
