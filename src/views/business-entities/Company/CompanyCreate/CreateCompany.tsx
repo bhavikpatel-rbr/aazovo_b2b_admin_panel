@@ -141,31 +141,31 @@ export interface CompanyFormSchema {
   declaration_206ab?: File | string;
   declaration_206ab_remark?: string;
   declaration_206ab_remark_enabled?: boolean;
-  declaration_194q?: File | string;
+  ABCQ_file?: File | string;
   ABCQ_remark?: string;
   ABCQ_remark_enabled?: boolean;
-  office_photo?: File | string;
+  office_photo_file?: File | string;
   office_photo_remark?: string;
   office_photo_remark_enabled?: boolean;
-  gst_certificate?: File | string;
+  gst_certificate_file?: File | string;
   gst_certificate_remark?: string;
   gst_certificate_remark_enabled?: boolean;
-  authority_letter?: File | string;
+  authority_letter_file?: File | string;
   authority_letter_remark?: string;
   authority_letter_remark_enabled?: boolean;
-  visiting_card?: File | string;
+  visiting_card_file?: File | string;
   visiting_card_remark?: string;
   visiting_card_remark_enabled?: boolean;
-  cancel_cheque?: File | string;
+  cancel_cheque_file?: File | string;
   cancel_cheque_remark?: string;
   cancel_cheque_remark_enabled?: boolean;
-  aadhar_card?: File | string;
+  aadhar_card_file?: File | string;
   aadhar_card_remark?: string;
   aadhar_card_remark_enabled?: boolean;
-  pan_card?: File | string;
+  pan_card_file?: File | string;
   pan_card_remark?: string;
   pan_card_remark_enabled?: boolean;
-  other_document?: File | string;
+  other_document_file?: File | string;
   other_document_remark?: string;
   other_document_remark_enabled?: boolean;
 
@@ -415,43 +415,43 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Par
       apiData.declaration_206AB_verify
     ),
     declaration_206ab_remark: apiData.declaration_206AB_remark,
-    declaration_194q: apiData.ABCQ_file,
+    ABCQ_file: apiData.ABCQ_file,
     ABCQ_remark_enabled: kycVerifyToBoolean(
       apiData.ABCQ_declaration_verified
     ),
     ABCQ_remark: apiData.ABCQ_remark,
-    office_photo: apiData.office_photo_file,
+    office_photo_file: apiData.office_photo_file,
     office_photo_remark_enabled: kycVerifyToBoolean(
       apiData.office_photo_verified
     ),
     office_photo_remark: apiData.office_photo_remark,
-    gst_certificate: apiData.gst_certificate_file,
+    gst_certificate_file: apiData.gst_certificate_file,
     gst_certificate_remark_enabled: kycVerifyToBoolean(
       apiData.gst_certificate_verified
     ),
     gst_certificate_remark: apiData.gst_certificate_remark,
-    authority_letter: apiData.authority_letter_file,
+    authority_letter_file: apiData.authority_letter_file,
     authority_letter_remark_enabled: kycVerifyToBoolean(
       apiData.authority_letter_verified
     ),
     authority_letter_remark: apiData.authority_letter_remark,
-    visiting_card: apiData.visiting_card_file,
+    visiting_card_file: apiData.visiting_card_file,
     visiting_card_remark_enabled: kycVerifyToBoolean(
       apiData.visiting_card_verified
     ),
     visiting_card_remark: apiData.visiting_card_remark,
-    cancel_cheque: apiData.cancel_cheque_file,
+    cancel_cheque_file: apiData.cancel_cheque_file,
     cancel_cheque_remark_enabled: kycVerifyToBoolean(
       apiData.cancel_cheque_verified
     ),
     cancel_cheque_remark: apiData.cancel_cheque_remark,
-    aadhar_card: apiData.aadhar_card_file,
+    aadhar_card_file: apiData.aadhar_card_file,
     aadhar_card_remark_enabled: kycVerifyToBoolean(apiData.aadhar_card_verified),
     aadhar_card_remark: apiData.aadhar_card_remark,
-    pan_card: apiData.pan_card_file,
+    pan_card_file: apiData.pan_card_file,
     pan_card_remark_enabled: kycVerifyToBoolean(apiData.pan_card_verified),
     pan_card_remark: apiData.pan_card_remark,
-    other_document: apiData.other_document_file,
+    other_document_file: apiData.other_document_file,
     other_document_remark_enabled: kycVerifyToBoolean(
       apiData.other_document_verified
     ),
@@ -536,7 +536,7 @@ const preparePayloadForApi = (
   isEditMode: boolean
 ): FormData => {
   const apiPayload = new FormData();
-  const data = { ...formData }; // Use a shorter name
+  const data: any = { ...formData }; // Use a shorter name
 
   // --- 1. A simpler, more reliable helper for appending data ---
   const append = (key: string, value: any) => {
@@ -562,7 +562,6 @@ const preparePayloadForApi = (
   if (isEditMode && data.id) {
     apiPayload.append("id", String(data.id));
   }
-  console.log(data, 'data');
 
   append("company_name", data.company_name);
   append("owner_name", data.owner_name);
@@ -595,9 +594,9 @@ const preparePayloadForApi = (
   append("enable_billing", data.BILLING_FIELD);
 
   // Handle file upload for logo
-  if (data.company_logo instanceof File) {
+  // if (data.company_logo instanceof File) {
     append("logo", data.company_logo);
-  }
+  // }
 
   // Handle multi-selects explicitly
   append("brands", data.brands);
@@ -616,21 +615,19 @@ const preparePayloadForApi = (
   append("secondary_bank_name", data.secondary_bank_name);
   append("secondary_ifsc_code", data.secondary_ifsc_code);
   append("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
-  const allBankDetails = [];
+  const allBankDetails: any = [];
   if (data.additional_bank_details) {
     data.additional_bank_details.forEach(bank => {
       if (bank.bank_account_number) allBankDetails.push(bank);
     });
   }
 
-  allBankDetails.forEach((bank, index) => {
+  allBankDetails.forEach((bank: any, index: number) => {
     apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
     apiPayload.append(`company_bank_details[${index}][bank_name]`, (typeof bank.bank_name === 'object' ? bank.bank_name?.value : bank.bank_name) || '');
     apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
     apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
-    if (bank.verification_photo instanceof File) {
-      apiPayload.append(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
-    }
+    apiPayload.append(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
   });
 
   // Certificates
@@ -646,8 +643,6 @@ const preparePayloadForApi = (
   }
   // Members
   if (data.member) {
-    console.log(data.member, );
-    
     data.member.forEach((member, index) => {
       if (member.team_name) {
         apiPayload.append(`company_team_members[${index}][team_name]`, member.team_name || '');
@@ -718,7 +713,7 @@ const preparePayloadForApi = (
     { feFile: "other_document_file", beFile: "other_document", feVerify: "other_document_remark_enabled", beVerify: "other_document_verified", feRemark: "other_document_remark", beRemark: "other_document_remark" },
   ];
 
-  kycDocsConfig.forEach((doc) => {
+  kycDocsConfig.forEach((doc: any) => {
     apiPayload.append(doc.feFile, data[doc.feFile]);
     apiPayload.append(doc.beVerify, data[doc.feVerify] ? "1" : "0");
     apiPayload.append(doc.beRemark, data[doc.feRemark] || "");
@@ -1741,7 +1736,7 @@ const KYCDetailSection = ({
                     />
                   ) : isImageUrl(fileValue) ? (
                     <img
-                      src={fileValue}
+                      src={`https://aazovo.codefriend.in/${fileValue}`}
                       alt="Preview"
                       className="h-24 w-auto object-contain border rounded p-1"
                     />
@@ -2863,31 +2858,31 @@ const CompanyCreate = () => {
     declaration_206ab: undefined,
     declaration_206ab_remark: "",
     declaration_206ab_remark_enabled: false,
-    declaration_194q: undefined,
+    ABCQ_file: undefined,
     ABCQ_remark: "",
     ABCQ_remark_enabled: false,
-    office_photo: undefined,
+    office_photo_file: undefined,
     office_photo_remark: "",
     office_photo_remark_enabled: false,
-    gst_certificate: undefined,
+    gst_certificate_file: undefined,
     gst_certificate_remark: "",
     gst_certificate_remark_enabled: false,
-    authority_letter: undefined,
+    authority_letter_file: undefined,
     authority_letter_remark: "",
     authority_letter_remark_enabled: false,
-    visiting_card: undefined,
+    visiting_card_file: undefined,
     visiting_card_remark: "",
     visiting_card_remark_enabled: false,
-    cancel_cheque: undefined,
+    cancel_cheque_file: undefined,
     cancel_cheque_remark: "",
     cancel_cheque_remark_enabled: false,
-    aadhar_card: undefined,
+    aadhar_card_file: undefined,
     aadhar_card_remark: "",
     aadhar_card_remark_enabled: false,
-    pan_card: undefined,
+    pan_card_file: undefined,
     pan_card_remark: "",
     pan_card_remark_enabled: false,
-    other_document: undefined,
+    other_document_file: undefined,
     other_document_remark: "",
     other_document_remark_enabled: false,
     primary_account_number: "",
