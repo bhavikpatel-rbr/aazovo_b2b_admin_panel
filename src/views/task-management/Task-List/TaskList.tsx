@@ -881,7 +881,11 @@ export const useTaskListingLogic = () => {
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<TaskItem>[]) => { /* ... */ }, []);
   
   // CRUD operations (client-side for now, can be changed to dispatch actions)
-  const handleEdit = useCallback((task: TaskItem) => navigate(`/task/task-list/edit/${task.id}`), [navigate]);
+
+  const handleEdit = useCallback((task: TaskItem) => {
+    // Pass the entire task object in the navigation state
+    navigate(`/task/task-list/create/${task.id}`, { state: { taskToEdit: task } });
+  }, [navigate]);
   const handleClone = useCallback((taskToClone: TaskItem) => { /* ... setTasks ... toast ... */ }, [setTasks]);
   const handleChangeStatus = useCallback((task: TaskItem) => { /* ... setTasks ... toast ... */ }, [setTasks]);
   const handleDelete = useCallback((taskToDelete: TaskItem) => { /* ... setTasks ... setSelectedTasks ... toast ... */ }, [setTasks, setSelectedTasks]);
