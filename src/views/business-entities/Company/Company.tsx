@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { CSVLink } from "react-csv";
+// REMOVED: import { CSVLink } from "react-csv";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -25,45 +25,39 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
+  Input,
+  Select,
+  Table,
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
-  Table,
-  Input,
-  Select,
-  FormItem,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
+import FormItem from "@/components/ui/Form/FormItem";
 import Notification from "@/components/ui/Notification";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
-import { MdCancel, MdCheckCircle } from "react-icons/md";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
   TbAlarm,
   TbAlertTriangle,
   TbBell,
   TbBrandWhatsapp,
   TbBuilding,
-  TbBuildingArch,
   TbBuildingBank,
-  TbBuildingCarousel,
   TbBuildingCommunity,
-  TbBuildingMinus,
   TbCalendar,
   TbCalendarEvent,
   TbCancel,
-  TbCheck,
   TbChecks,
   TbCircleCheck,
   TbCircleX,
   TbClipboardText,
-  TbClock,
-  TbCloudDownload,
   TbCloudUpload,
   TbDownload,
   TbEye,
@@ -72,11 +66,9 @@ import {
   TbFileZip,
   TbFilter,
   TbMail,
-  TbMessageCircle,
   TbPencil,
   TbPlus,
   TbReceipt,
-  TbReportMoney,
   TbSearch,
   TbShieldCheck,
   TbShieldX,
@@ -84,7 +76,7 @@ import {
   TbUser,
   TbUserCircle,
   TbUserSearch,
-  TbUsersGroup,
+  TbUsersGroup
 } from "react-icons/tb";
 
 // Types
@@ -100,6 +92,7 @@ import {
   getCompanyAction,
   getContinentsAction,
   getCountriesAction,
+  submitExportReasonAction, // ADDED: Assume this action exists
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
@@ -115,12 +108,12 @@ export type CompanyItem = {
   brands: string[];
   country: string;
   status:
-  | "Active"
-  | "Pending"
-  | "Inactive"
-  | "Verified"
-  | "active"
-  | "inactive";
+    | "Active"
+    | "Pending"
+    | "Inactive"
+    | "Verified"
+    | "active"
+    | "inactive";
   progress: number;
   gst_number?: string;
   pan_number?: string;
@@ -189,6 +182,174 @@ const companyFilterFormSchema = z.object({
 });
 type CompanyFilterFormData = z.infer<typeof companyFilterFormSchema>;
 
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+// --- CSV Exporter Utility for Companies ---
+const COMPANY_CSV_HEADERS = [
+  "ID",
+  "Name",
+  "Company Code",
+  "Type",
+  "Status",
+  "Business Type",
+  "Country",
+  "State",
+  "City",
+  "KYC Verified",
+  "Billing Enabled",
+  "Created Date",
+  "Owner",
+  "Contact Number",
+  "Email",
+  "Website",
+  "GST",
+  "PAN",
+  "Brands",
+  "Categories",
+];
+
+// Define a type for the transformed export item
+type CompanyExportItem = {
+  id: string;
+  name: string;
+  company_code: string;
+  type: string;
+  status: string;
+  business_type: string;
+  country: string;
+  state: string;
+  city: string;
+  kyc_verified: "Yes" | "No";
+  enable_billing: "Yes" | "No";
+  created_date: string;
+  company_owner: string;
+  company_contact_number: string;
+  company_email: string;
+  company_website: string;
+  gst_number: string;
+  pan_number: string;
+  brands: string;
+  category: string;
+};
+
+// Define the keys to match the export item and headers
+const COMPANY_CSV_KEYS: (keyof CompanyExportItem)[] = [
+  "id",
+  "name",
+  "company_code",
+  "type",
+  "status",
+  "business_type",
+  "country",
+  "state",
+  "city",
+  "kyc_verified",
+  "enable_billing",
+  "created_date",
+  "company_owner",
+  "company_contact_number",
+  "company_email",
+  "company_website",
+  "gst_number",
+  "pan_number",
+  "brands",
+  "category",
+];
+
+function exportToCsv(filename: string, rows: CompanyItem[]) {
+  if (!rows || !rows.length) {
+    toast.push(
+      <Notification title="No Data" type="info">
+        Nothing to export.
+      </Notification>
+    );
+    return false;
+  }
+
+  // Transform the data for export
+  const transformedRows: CompanyExportItem[] = rows.map((row) => ({
+    id: row.id || "N/A",
+    name: row.name || "N/A",
+    company_code: row.company_code || "N/A",
+    type: row.type || "N/A",
+    status: row.status || "N/A",
+    business_type: row.business_type || "N/A",
+    // @ts-ignore
+    country: row.country?.name || row.country || "N/A",
+    state: row.state || "N/A",
+    city: row.city || "N/A",
+    kyc_verified: row.kyc_verified || "No",
+    enable_billing: row.enable_billing || "No",
+    created_date: row.created_date
+      ? new Date(row.created_date).toLocaleDateString("en-GB")
+      : "N/A",
+    company_owner: row.company_owner || "N/A",
+    company_contact_number: row.company_contact_number || "N/A",
+    company_email: row.company_email || "N/A",
+    company_website: row.company_website || "N/A",
+    gst_number: row.gst_number || "N/A",
+    pan_number: row.pan_number || "N/A",
+    brands: Array.isArray(row.brands) ? row.brands.join(", ") : "N/A",
+    category: Array.isArray(row.category) ? row.category.join(", ") : "N/A",
+  }));
+
+  const separator = ",";
+  const csvContent =
+    COMPANY_CSV_HEADERS.join(separator) +
+    "\n" +
+    transformedRows
+      .map((row) => {
+        return COMPANY_CSV_KEYS.map((k) => {
+          let cell: any = row[k as keyof CompanyExportItem];
+          if (cell === null || cell === undefined) {
+            cell = "";
+          } else {
+            cell = String(cell).replace(/"/g, '""'); // Escape double quotes
+          }
+          if (String(cell).search(/("|,|\n)/g) >= 0) {
+            cell = `"${cell}"`; // Wrap in double quotes if it contains commas, newlines, or quotes
+          }
+          return cell;
+        }).join(separator);
+      })
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(
+      <Notification title="Export Successful" type="success">
+        Data exported to {filename}.
+      </Notification>
+    );
+    return true;
+  }
+  toast.push(
+    <Notification title="Export Failed" type="danger">
+      Browser does not support this feature.
+    </Notification>
+  );
+  return false;
+}
+// --- END CSV Exporter Utility ---
+
 // --- Status Colors & Context ---
 const companyStatusColors: Record<string, string> = {
   Active:
@@ -228,17 +389,18 @@ const useCompanyList = (): CompanyListStore => {
 };
 
 // =========================================================================
-// --- FIX: The entire CompanyListProvider is updated to match the working MemberListProvider ---
+// --- FIX: The CompanyListProvider is updated to correctly manage state. ---
 // =========================================================================
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { CompanyData, CountriesData, ContinentsData } = useSelector(masterSelector);
+  const { CompanyData, CountriesData, ContinentsData } =
+    useSelector(masterSelector);
   const dispatch = useAppDispatch();
 
-  // FIX: Initialize state assuming CompanyData?.data is an object like { data: [], total: 0 }
-
-  const [companyList, setCompanyList] = useState<CompanyItem[]>(CompanyData?.data ?? []);
+  const [companyList, setCompanyList] = useState<CompanyItem[]>(
+    CompanyData?.data ?? []
+  );
   const [companyCount, setCompanyCount] = useState(CompanyData?.counts ?? {});
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
   const [companyListTotal, setCompanyListTotal] = useState<number>(
@@ -250,13 +412,12 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch(getContinentsAction());
   }, [dispatch]);
 
-  // FIX: Update local state correctly when CompanyData?.data from Redux changes.
+  // Update local state when CompanyData from Redux changes.
   useEffect(() => {
-    setCompanyCount(CompanyData?.counts ?? {})
+    setCompanyCount(CompanyData?.counts ?? {});
     setCompanyList(CompanyData?.data ?? []);
     setCompanyListTotal(CompanyData?.data?.length ?? 0);
-
-  }, [CompanyData?.data]);
+  }, [CompanyData]);
 
   useEffect(() => {
     dispatch(getCompanyAction());
@@ -282,7 +443,7 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// --- Child Components (Search, ActionTools) (unchanged) ---
+// --- Child Components (Search, ActionTools) ---
 const CompanyListSearch: React.FC<{
   onInputChange: (value: string) => void;
 }> = ({ onInputChange }) => {
@@ -311,7 +472,6 @@ const CompanyListActionTools = () => {
 
 // ============================================================================
 // --- MODALS SECTION ---
-// This section is well-structured and appears correct. No changes needed.
 // ============================================================================
 
 // --- Type Definitions for Modals ---
@@ -476,7 +636,7 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
   return <>{renderModalContent()}</>;
 };
 
-// --- Individual Dialog Components (Unchanged) ---
+// --- Individual Dialog Components ---
 const SendEmailDialog: React.FC<{
   company: CompanyItem;
   onClose: () => void;
@@ -717,7 +877,7 @@ const AssignTaskDialog: React.FC<{
             render={({ field }) => (
               <DatePicker
                 placeholder="Select date"
-                value={field.value}
+                value={field.value as any}
                 onChange={field.onChange}
               />
             )}
@@ -794,7 +954,7 @@ const AddScheduleDialog: React.FC<{
               render={({ field }) => (
                 <DatePicker.DateTimepicker
                   placeholder="Select date and time"
-                  value={field.value}
+                  value={field.value as any}
                   onChange={field.onChange}
                 />
               )}
@@ -885,9 +1045,11 @@ const ViewAlertDialog: React.FC<{
           dummyAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]
-                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]
-                }-500/10`}
+              className={`p-3 rounded-lg border-l-4 border-${
+                alertColors[alert.severity]
+              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
+                alertColors[alert.severity]
+              }-500/10`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -1123,8 +1285,7 @@ const GenericActionDialog: React.FC<{
   );
 };
 
-
-// --- CompanyActionColumn Component (Unchanged) ---
+// --- CompanyActionColumn Component ---
 const CompanyActionColumn = ({
   rowData,
   onEdit,
@@ -1246,12 +1407,18 @@ const CompanyActionColumn = ({
   );
 };
 
-// --- CompanyListTable Component (Unchanged logic, but will now work) ---
+// --- CompanyListTable Component (UPDATED with Client-Side Filtering Logic) ---
 const CompanyListTable = () => {
-
   const navigate = useNavigate();
-  // With the provider fixed, companyList is now a guaranteed array.
-  const { companyList, selectedCompanies, setSelectedCompanies, companyCount, ContinentsData, CountriesData } = useCompanyList();
+  const dispatch = useAppDispatch();
+  const {
+    companyList,
+    selectedCompanies,
+    setSelectedCompanies,
+    companyCount,
+    ContinentsData,
+    CountriesData,
+  } = useCompanyList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -1264,14 +1431,29 @@ const CompanyListTable = () => {
     filterCreatedDate: [null, null],
   });
 
+  // --- START: State and handlers for Export Reason Modal ---
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] =
+    useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
+
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
+  // --- END: State for Export Reason Modal ---
+
   // --- MODAL STATE AND HANDLERS ---
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     type: null,
     data: null,
   });
-  const handleOpenModal = (type: ModalType, companyData: CompanyItem) => setModalState({ isOpen: true, type, data: companyData });
-  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
+  const handleOpenModal = (type: ModalType, companyData: CompanyItem) =>
+    setModalState({ isOpen: true, type, data: companyData });
+  const handleCloseModal = () =>
+    setModalState({ isOpen: false, type: null, data: null });
 
   const filterFormMethods = useForm<CompanyFilterFormData>({
     resolver: zodResolver(companyFilterFormSchema),
@@ -1291,42 +1473,221 @@ const CompanyListTable = () => {
     setFilterDrawerOpen(false);
   };
   const onClearFilters = () => {
-    filterFormMethods.reset({ filterCreatedDate: [null, null] });
-    setFilterCriteria({ filterCreatedDate: [null, null] });
+    const defaultFilters = {
+      filterCreatedDate: [null, null],
+      filterStatus: [],
+      filterBusinessType: [],
+      filterCompanyType: [],
+      filterContinent: [],
+      filterCountry: [],
+      filterState: [],
+      filterCity: [],
+      filterInterestedIn: [],
+      filterBrand: [],
+      filterCategory: [],
+      filterKycVerified: [],
+      filterEnableBilling: [],
+    };
+    filterFormMethods.reset(defaultFilters);
+    setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1 });
   };
 
-  // This useMemo will now work without crashing.
-  const { pageData, total } = useMemo(() => {
-    let f = [...companyList];
+  // --- Main data processing hook with filtering, searching, sorting, and pagination ---
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    let filteredData = [...companyList];
+
+    // 1. APPLY FILTERS
+    if (
+      filterCriteria.filterStatus &&
+      filterCriteria.filterStatus.length > 0
+    ) {
+      const selectedStatuses = filterCriteria.filterStatus.map((s) => s.value);
+      filteredData = filteredData.filter((company) =>
+        selectedStatuses.includes(company.status)
+      );
+    }
+
+    if (
+      filterCriteria.filterCompanyType &&
+      filterCriteria.filterCompanyType.length > 0
+    ) {
+      const selectedTypes = filterCriteria.filterCompanyType.map(
+        (t) => t.value
+      );
+      filteredData = filteredData.filter((company) =>
+        selectedTypes.includes(company.type)
+      );
+    }
+
+    if (
+      filterCriteria.filterContinent &&
+      filterCriteria.filterContinent.length > 0
+    ) {
+      const selectedContinents = filterCriteria.filterContinent.map(
+        (c) => c.value
+      );
+      filteredData = filteredData.filter((company) =>
+        selectedContinents.includes(company.continent)
+      );
+    }
+
+    if (
+      filterCriteria.filterCountry &&
+      filterCriteria.filterCountry.length > 0
+    ) {
+      const selectedCountries = filterCriteria.filterCountry.map(
+        (c) => c.value
+      );
+      filteredData = filteredData.filter((company) =>
+        selectedCountries.includes(company.country as any)
+      );
+    }
+
+    if (filterCriteria.filterState && filterCriteria.filterState.length > 0) {
+      const selectedStates = filterCriteria.filterState.map((s) => s.value);
+      filteredData = filteredData.filter((company) =>
+        selectedStates.includes(company.state)
+      );
+    }
+
+    if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) {
+      const selectedCities = filterCriteria.filterCity.map((c) => c.value);
+      filteredData = filteredData.filter((company) =>
+        selectedCities.includes(company.city)
+      );
+    }
+
+    if (
+      filterCriteria.filterKycVerified &&
+      filterCriteria.filterKycVerified.length > 0
+    ) {
+      const selectedKyc = filterCriteria.filterKycVerified.map(
+        (k) => k.value
+      );
+      filteredData = filteredData.filter((company) =>
+        selectedKyc.includes(company.kyc_verified)
+      );
+    }
+
+    if (
+      filterCriteria.filterEnableBilling &&
+      filterCriteria.filterEnableBilling.length > 0
+    ) {
+      const selectedBilling = filterCriteria.filterEnableBilling.map(
+        (b) => b.value
+      );
+      filteredData = filteredData.filter((company) =>
+        selectedBilling.includes(company.enable_billing)
+      );
+    }
+
+    if (
+      filterCriteria.filterCreatedDate &&
+      filterCriteria.filterCreatedDate[0] &&
+      filterCriteria.filterCreatedDate[1]
+    ) {
+      const [startDate, endDate] = filterCriteria.filterCreatedDate;
+      const inclusiveEndDate = new Date(endDate);
+      inclusiveEndDate.setHours(23, 59, 59, 999);
+
+      filteredData = filteredData.filter((company) => {
+        const createdDate = new Date(company.created_date);
+        return createdDate >= startDate && createdDate <= inclusiveEndDate;
+      });
+    }
+
+    // 2. APPLY QUICK SEARCH on the already filtered data
     if (tableData.query) {
-      f = f.filter((i) =>
+      filteredData = filteredData.filter((i) =>
         Object.values(i).some((v) =>
           String(v).toLowerCase().includes(tableData.query.toLowerCase())
         )
       );
     }
+
+    // 3. APPLY SORTING on the final filtered/searched data
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
-      f.sort((a, b) => {
+      filteredData.sort((a, b) => {
         const av = a[key as keyof CompanyItem] ?? "";
         const bv = b[key as keyof CompanyItem] ?? "";
         if (typeof av === "string" && typeof bv === "string") {
           return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
         }
+        if (typeof av === "number" && typeof bv === "number") {
+          return order === "asc" ? av - bv : bv - av;
+        }
         return 0;
       });
     }
 
+    // 4. PAGINATE the results
     const pI = tableData.pageIndex as number;
     const pS = tableData.pageSize as number;
-    return { pageData: f.slice((pI - 1) * pS, pI * pS), total: f.length };
+    return {
+      pageData: filteredData.slice((pI - 1) * pS, pI * pS),
+      total: filteredData.length,
+      allFilteredAndSortedData: filteredData, // IMPORTANT: Return all data for export
+    };
   }, [companyList, tableData, filterCriteria]);
 
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
-  const handleEditCompany = (id: string) => navigate(`/business-entities/company-edit/${id}`);
-  const handleViewCompanyDetails = (id: string) => navigate("/business-entities/company-create", { state: id });
+  // --- START: Handlers for Export ---
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (
+    data: ExportReasonFormData
+  ) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Companies";
+    const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `companies_export_${timestamp}.csv`;
+    try {
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
+
+      // Proceed with export
+      exportToCsv(fileName, allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+          message={error.message}
+        />
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
+  // --- END: Handlers for Export ---
+
+  const handleEditCompany = (id: string) =>
+    navigate(`/business-entities/company-edit/${id}`);
+  const handleViewCompanyDetails = (id: string) =>
+    navigate("/business-entities/company-create", { state: id });
   const handleSetTableData = useCallback(
     (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d })),
     []
@@ -1355,15 +1716,7 @@ const CompanyListTable = () => {
       setSelectedCompanies(c ? r.map((i) => i.original) : []),
     [setSelectedCompanies]
   );
-  const csvData = useMemo(
-    () =>
-      companyList.map((i) => ({
-        ...i,
-        category: i.category,
-        brands: i.brands,
-      })),
-    [companyList]
-  );
+
   const columns: ColumnDef<CompanyItem>[] = useMemo(
     () => [
       {
@@ -1404,7 +1757,8 @@ const CompanyListTable = () => {
                 <b>Business:</b> {row.original.business_type}
               </span>{" "}
               <div className="text-xs text-gray-500">
-                {city}, {state}, {country?.name}
+                {/* @ts-ignore */}
+                {city}, {state}, {country?.name || country}
               </div>{" "}
             </div>
           );
@@ -1563,89 +1917,57 @@ const CompanyListTable = () => {
         ),
       },
     ],
-    [handleOpenModal] // Keep handleOpenModal dependency
+    [handleOpenModal]
   );
 
-  const handleImport = () => {
-    console.log("Import Companies Clicked"); /* Implement import */
-  };
-
-  // Dynamic Filter Options
+  // --- Dynamic Filter Options (Corrected for robustness) ---
   const statusOptions = useMemo(
     () =>
-      Array.from(new Set(companyList.map((c) => c.status))).map((s) => ({
-        value: s,
-        label: s,
-      })),
+      Array.from(new Set(companyList.map((c) => c.status)))
+        .filter(Boolean)
+        .map((s) => ({ value: s, label: s })),
     [companyList]
   );
-  const businessTypeOptions = useMemo(
-    () =>
-      Array.from(new Set(companyList.map((c) => c.business_type))).map(
-        (bt) => ({ value: bt, label: bt })
-      ),
-    [companyList]
-  );
+
   const companyTypeOptions = useMemo(
     () =>
-      Array.from(new Set(companyList.map((c) => c.ownership_type))).map((ct) => ({
-        value: ct,
-        label: ct,
-      })),
+      Array.from(new Set(companyList.map((c) => c.type)))
+        .filter(Boolean)
+        .map((ct) => ({
+          value: ct,
+          label: ct,
+        })),
     [companyList]
   );
+
   const continentOptions = useMemo(
-    () =>
-      Array.from(ContinentsData.map((co) => ({
-        value: co.id,
-        label: co.name,
-      }))),
-    [companyList]
+    () => ContinentsData.map((co) => ({ value: co.name, label: co.name })),
+    [ContinentsData]
   );
+
   const countryOptions = useMemo(
-    () =>
-      Array.from(CountriesData.map((ct) => ({
-        value: ct.id,
-        label: ct.name,
-      }))),
-    [companyList]
+    () => CountriesData.map((ct) => ({ value: ct.name, label: ct.name })),
+    [CountriesData]
   );
+
   const stateOptions = useMemo(
     () =>
-      Array.from(new Set(companyList.map((c) => c.state))).map((st) => ({
-        value: st,
-        label: st,
-      })),
+      Array.from(new Set(companyList.map((c) => c.state)))
+        .filter(Boolean)
+        .map((st) => ({
+          value: st,
+          label: st,
+        })),
     [companyList]
   );
   const cityOptions = useMemo(
     () =>
-      Array.from(new Set(companyList.map((c) => c.city))).map((ci) => ({
-        value: ci,
-        label: ci,
-      })),
-    [companyList]
-  );
-  const interestedInOptions = useMemo(
-    () =>
-      Array.from(new Set(companyList.map((c) => c.interested_in))).map(
-        (ii) => ({ value: ii, label: ii })
-      ),
-    [companyList]
-  );
-  const brandOptions = useMemo(
-    () =>
-      Array.from(new Set(companyList.flatMap((c) => c.brands))).map((b) => ({
-        value: b,
-        label: b,
-      })),
-    [companyList]
-  );
-  const categoryOptions = useMemo(
-    () =>
-      Array.from(new Set(companyList.flatMap((c) => c.category))).map(
-        (cat) => ({ value: cat, label: cat })
-      ),
+      Array.from(new Set(companyList.map((c) => c.city)))
+        .filter(Boolean)
+        .map((ci) => ({
+          value: ci,
+          label: ci,
+        })),
     [companyList]
   );
   const kycOptions = [
@@ -1665,7 +1987,10 @@ const CompanyListTable = () => {
         <CompanyListActionTools />
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-blue-200">
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-blue-200"
+        >
           <div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
             <TbBuilding size={16} />
           </div>
@@ -1674,7 +1999,10 @@ const CompanyListTable = () => {
             <span className="text-[9px] font-semibold">Total</span>
           </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-green-200">
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-green-200"
+        >
           <div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
             <TbBuildingBank size={16} />
           </div>
@@ -1683,7 +2011,10 @@ const CompanyListTable = () => {
             <span className="text-[9px] font-semibold">Active</span>
           </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-red-200"
+        >
           <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
             <TbCancel size={16} />
           </div>
@@ -1692,7 +2023,10 @@ const CompanyListTable = () => {
             <span className="text-[9px] font-semibold">Disabled</span>
           </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-emerald-200">
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-emerald-200"
+        >
           <div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
             <TbCircleCheck size={16} />
           </div>
@@ -1701,7 +2035,10 @@ const CompanyListTable = () => {
             <span className="text-[9px] font-semibold">Verified</span>
           </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-red-200"
+        >
           <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
             <TbCircleX size={16} />
           </div>
@@ -1710,7 +2047,10 @@ const CompanyListTable = () => {
             <span className="text-[9px] font-semibold">Non Verified</span>
           </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-violet-200">
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-violet-200"
+        >
           <div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
             <TbShieldCheck size={16} />
           </div>
@@ -1719,16 +2059,24 @@ const CompanyListTable = () => {
             <span className="text-[9px] font-semibold">Eligible</span>
           </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-red-200"
+        >
           <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
             <TbShieldX size={16} />
           </div>
           <div className="flex flex-col gap-0">
-            <b className="text-sm pb-0 mb-0">{companyCount?.unregistered ?? 0}</b>
+            <b className="text-sm pb-0 mb-0">
+              {companyCount?.unregistered ?? 0}
+            </b>
             <span className="text-[9px] font-semibold">Not Eligible</span>
           </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-orange-200">
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-orange-200"
+        >
           <div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
             <TbBuildingCommunity size={16} />
           </div>
@@ -1748,18 +2096,16 @@ const CompanyListTable = () => {
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
           </Button>
-          {/* <Button icon={<TbCloudDownload />} onClick={handleImport}>
-            Import
-          </Button> */}
-          {companyList.length > 0 ? (
-            <CSVLink data={csvData} filename="companies_export.csv">
-              <Button icon={<TbCloudUpload />}>Export</Button>
-            </CSVLink>
-          ) : (
-            <Button icon={<TbCloudUpload />} disabled>
-              Export
-            </Button>
-          )}
+          <Button
+            icon={<TbCloudUpload />}
+            onClick={handleOpenExportReasonModal}
+            disabled={
+              !allFilteredAndSortedData ||
+              allFilteredAndSortedData.length === 0
+            }
+          >
+            Export
+          </Button>
         </div>
       </div>
       <DataTable
@@ -1787,7 +2133,7 @@ const CompanyListTable = () => {
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
+              Clear All
             </Button>
             <Button
               size="sm"
@@ -1820,21 +2166,6 @@ const CompanyListTable = () => {
                 )}
               />
             </UiFormItem>
-            {/* <UiFormItem label="Business Type">
-              <Controller
-                name="filterBusinessType"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Type"
-                    options={businessTypeOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem> */}
             <UiFormItem label="Ownership Type">
               <Controller
                 name="filterCompanyType"
@@ -1910,51 +2241,6 @@ const CompanyListTable = () => {
                 )}
               />
             </UiFormItem>
-            {/* <UiFormItem label="Interested In">
-              <Controller
-                name="filterInterestedIn"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Interest"
-                    options={interestedInOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem label="Brand">
-              <Controller
-                name="filterBrand"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Brand"
-                    options={brandOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem>
-            <UiFormItem label="Category">
-              <Controller
-                name="filterCategory"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Category"
-                    options={categoryOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
-            </UiFormItem> */}
             <UiFormItem label="KYC Verified">
               <Controller
                 name="filterKycVerified"
@@ -2001,13 +2287,67 @@ const CompanyListTable = () => {
           </div>
         </UiForm>
       </Drawer>
-      {/* --- RENDER THE MODAL MANAGER --- */}
       <CompanyModals modalState={modalState} onClose={handleCloseModal} />
+      {/* --- START: Export Reason Modal --- */}
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <UiForm
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <UiFormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </UiFormItem>
+        </UiForm>
+      </ConfirmDialog>
+      {/* --- END: Export Reason Modal --- */}
     </>
   );
 };
 
-// --- CompanyListSelected & Main Company Component (Unchanged) ---
+// --- CompanyListSelected ---
 const CompanyListSelected = () => {
   const { selectedCompanies, setSelectedCompanies } = useCompanyList();
   const dispatch = useAppDispatch();
@@ -2092,6 +2432,7 @@ const CompanyListSelected = () => {
         title="Remove Companies"
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+        loading={isDeleting}
       >
         <p>
           Are you sure you want to remove these companies? This action can't be
@@ -2137,13 +2478,13 @@ const CompanyListSelected = () => {
   );
 };
 
+// --- Main Company Component ---
 const Company = () => {
   return (
     <CompanyListProvider>
       <Container>
         <AdaptiveCard>
           <div className="flex flex-col gap-4">
-
             <CompanyListTable />
           </div>
         </AdaptiveCard>
