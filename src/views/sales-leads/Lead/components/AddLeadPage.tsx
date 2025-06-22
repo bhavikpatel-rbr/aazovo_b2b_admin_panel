@@ -117,6 +117,7 @@ const AddLeadPage = () => {
     suppliers = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
+  console.log("memberData",memberData);
   
   const {
     control,
