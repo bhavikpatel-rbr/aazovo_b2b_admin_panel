@@ -376,7 +376,7 @@ export const editDocumentListAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, document_type: unitData?.document_type, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", ...unitData })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2299,6 +2299,14 @@ export const deleteAllWallAsync = async (unitData: any) => {
 }
 
 
+export const editWallAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/wall/enquiry/${unitData.id}`, { _method: 'PUT', ...unitData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 export const addInquiriesAsync = async (unitData: any) => {
   try {

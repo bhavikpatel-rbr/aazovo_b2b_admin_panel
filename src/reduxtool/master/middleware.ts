@@ -1188,7 +1188,7 @@ export const editWallItemAction = createAsyncThunk<any, any>(
     try {
       // Assuming editWallItemAsync exists and should be used instead of editDocumentListAsync
       // For now, keeping the original service call as per instructions to only fix logs/comments primarily.
-      const response: AxiosResponse<any> = await editDocumentListAsync(data) // Potentially incorrect service call
+      const response: AxiosResponse<any> = await editWallAsync(data) // Potentially incorrect service call
       if (response?.data?.status === true) {
         dispatch(getWallItemsAction()) // Corrected dispatch
 
