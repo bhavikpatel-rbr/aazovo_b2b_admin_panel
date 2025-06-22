@@ -1,54 +1,185 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useForm, Controller, useFieldArray, useWatch, UseFormSetValue, UseFormSetError } from 'react-hook-form'; // Added UseFormSetError
+import { useEffect, useMemo, useState } from 'react';
+// EDIT-MODE: Added useParams to get the ID from the URL
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate, NavLink } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { Controller, useFieldArray, useForm, UseFormSetValue, useWatch } from 'react-hook-form';
+import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { z } from 'zod'; // EDIT-MODE: Import Zod for schema definition
 
 // UI Components
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import Container from '@/components/shared/Container';
+import Loading from '@/components/shared/Loading'; // EDIT-MODE: Added for better UX
+import { Button, Card, DatePicker, Radio, Select as UiSelect } from '@/components/ui';
+import { FormContainer, FormItem } from '@/components/ui/Form';
 import Input from '@/components/ui/Input';
-import { FormItem, FormContainer } from '@/components/ui/Form';
-import { Select as UiSelect, DatePicker, Button, Radio, Card } from '@/components/ui';
 import Notification from '@/components/ui/Notification';
 import toast from '@/components/ui/toast';
-import Container from '@/components/shared/Container';
-import ConfirmDialog from '@/components/shared/ConfirmDialog';
 
 // Icons
 import { BiChevronRight } from 'react-icons/bi';
 import { TbPlus, TbTrash } from 'react-icons/tb';
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-    getJobApplicationsAction,
     addJobApplicationAction,
+    editJobApplicationAction, getCountriesAction, // EDIT-MODE: Import the edit action
     getDepartmentsAction,
+    getJobApplicationsAction,
 } from '@/reduxtool/master/middleware';
+import { useAppDispatch } from "@/reduxtool/store";
 
 // Types and Schema
+import { useSelector } from 'react-redux';
 import type {
     ApplicationFormData,
-    FamilyMemberData,
     EducationDetailData,
     EmploymentDetailData,
-    // Gender as GenderType // Import if needed for strict typing, genderOptions already uses it
-} from '../types'; // Adjust path if 'types.ts' is elsewhere
-import {
-    applicationFormSchema,
-    applicationStatusOptions,
-    genderOptions,
-    maritalStatusOptions,
-    bloodGroupOptions,
-} from '../types'; // Adjust path
-import { useSelector } from 'react-redux';
+    FamilyMemberData,
+} from '../types';
+// NOTE: For a self-contained solution, the schema from '../types' is now defined below.
+// import {
+//     applicationFormSchema,
+//     applicationStatusOptions,
+//     bloodGroupOptions,
+//     genderOptions,
+//     maritalStatusOptions,
+// } from '../types';
 
 // --- START: Embedded Utilities & Static Data ---
 
+// --- Schemas & Types (Moved from '../types' to fix validation issues) ---
+
+// EDIT-MODE: A more lenient phone number regex
+const phoneRegex = new RegExp(
+    /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
+);
+
+const familyDetailSchema = z.object({
+    familyName: z.string().min(1, "Name is required."),
+    familyRelation: z.string().min(1, "Relation is required."),
+    familyOccupation: z.string().min(1, "Occupation is required."),
+    familyDateOfBirth: z.date().nullable(),
+});
+
+const educationalDetailSchema = z.object({
+    degree: z.string().min(1, "Degree is required."),
+    university: z.string().min(1, "University is required."),
+    percentageGrade: z.string().min(1, "Percentage/Grade is required."),
+    educationFromDate: z.date({ required_error: "Start date is required." }),
+    educationToDate: z.date({ required_error: "End date is required." }),
+    specialization: z.string().optional(),
+}).refine(data => {
+    if (data.educationFromDate && data.educationToDate) {
+        return data.educationToDate >= data.educationFromDate;
+    }
+    return true;
+}, {
+    message: "End date must be on or after start date",
+    path: ["educationToDate"],
+});
+
+const employmentDetailSchema = z.object({
+    organization: z.string().min(1, "Organization is required."),
+    designation: z.string().min(1, "Designation is required."),
+    annualCTC: z.string().optional(),
+    periodServiceFrom: z.date({ required_error: "Start date is required." }),
+    periodServiceTo: z.date({ required_error: "End date is required." }),
+}).refine(data => {
+    if (data.periodServiceFrom && data.periodServiceTo) {
+        return data.periodServiceTo >= data.periodServiceFrom;
+    }
+    return true;
+}, {
+    message: "End date must be on or after start date",
+    path: ["periodServiceTo"],
+});
+
+// EDIT-MODE: Corrected schema to resolve all validation errors
+export const applicationFormSchema = z.object({
+    department: z.number({ required_error: "Department is required." }),
+    name: z.string().min(1, "Applicant name is required."),
+    email: z.string().email("Invalid email address."),
+    mobileNo: z.string().min(10, "Mobile number must be at least 10 digits.").regex(phoneRegex, "Invalid phone number format"),
+    gender: z.string({ required_error: "Gender is required." }),
+    dateOfBirth: z.date({ required_error: "Date of Birth is required." }),
+    age: z.number().nullable(),
+    nationality: z.number().optional().nullable(),
+    maritalStatus: z.string().optional().nullable(),
+    bloodGroup: z.string().optional().nullable(),
+    country: z.number().optional().nullable(),
+    // EDIT-MODE: Changed state and city from number to string to support text input
+    state: z.string().optional().nullable(),
+    city: z.string().optional().nullable(),
+    localAddress: z.string().optional(),
+    permanentAddress: z.string().optional(),
+    jobTitle: z.string().min(1, "Job title is required."),
+    jobId: z.string().optional(),
+    applicationDate: z.date({ required_error: "Application date is required." }),
+    status: z.enum(['New', 'In Review', 'Shortlisted', 'Hired', 'Rejected']),
+    resumeUrl: z.string().optional(),
+    jobApplicationLink: z.string().optional(),
+    coverLetter: z.string().optional(),
+    notes: z.string().optional(),
+    emergencyRelation: z.string().min(1, "Emergency contact relation is required."),
+    emergencyMobileNo: z.string().min(10, "Emergency mobile number is required.").regex(phoneRegex, "Invalid mobile number format"),
+    familyDetails: z.array(familyDetailSchema).optional(),
+    educationalDetails: z.array(educationalDetailSchema).min(1, "At least one educational detail is required."),
+    workExperienceType: z.enum(['fresher', 'experienced']),
+    employmentDetails: z.array(employmentDetailSchema),
+    total_experience: z.string().optional(),
+    expected_salary: z.string().optional(),
+    notice_period: z.string().optional(),
+    reference: z.string().optional(),
+    reference_specify: z.string().optional(),
+}).superRefine((data, ctx) => {
+    if (data.workExperienceType === 'experienced') {
+        if (!data.total_experience?.trim()) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Total experience is required.", path: ['total_experience'] });
+        }
+        if (!data.expected_salary?.trim()) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Expected salary is required.", path: ['expected_salary'] });
+        }
+        if (!data.notice_period?.trim()) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Notice period is required.", path: ['notice_period'] });
+        }
+        if (data.employmentDetails.length === 0) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "At least one employment detail is required for experienced candidates.", path: ['employmentDetails'] });
+        }
+    }
+    if (data.reference?.trim() && !data.reference_specify?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Please specify details for the reference provided.", path: ['reference_specify'] });
+    }
+});
+
+// --- Static Options Data (Moved from '../types') ---
+export const genderOptions = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' },];
+export const maritalStatusOptions = [{ value: 'Single', label: 'Single' }, { value: 'Married', label: 'Married' }, { value: 'Divorced', label: 'Divorced' }, { value: 'Widowed', label: 'Widowed' },];
+export const bloodGroupOptions = [{ value: 'A+', label: 'A+' }, { value: 'A-', label: 'A-' }, { value: 'B+', label: 'B+' }, { value: 'B-', label: 'B-' }, { value: 'O+', label: 'O+' }, { value: 'O-', label: 'O-' }, { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' },];
+
+// EDIT-MODE: Corrected 'value' to be lowercase to match the Zod enum.
+export const applicationStatusOptions = [
+    { value: 'New', label: 'New' },
+    { value: 'In Review', label: 'In Review' },
+    { value: 'Shortlisted', label: 'Shortlisted' },
+    { value: 'Hired', label: 'Hired' },
+    { value: 'Rejected', label: 'Rejected' },
+];
+
+// --- Data Transformation Utilities ---
+
+// EDIT-MODE: Utility now correctly returns lowercase form values.
+const transformApiStatusToFormStatus = (apiStatus?: string): string => {
+    if (!apiStatus) return 'new';
+    const option = applicationStatusOptions.find(opt => opt.label.toLowerCase() === apiStatus.toLowerCase());
+    return option ? option.value : 'new'; // Default to "new" if not found
+};
+
 const transformFormStatusToApiStatus = (formStatusValue?: string): string => {
-    if (!formStatusValue) return 'New'; // Default if undefined
+    if (!formStatusValue) return 'New';
     const option = applicationStatusOptions.find(opt => opt.value === formStatusValue);
-    return option ? option.label : formStatusValue; // API expects the label
+    return option ? option.label : formStatusValue;
 };
 
 const transformFormDataToApiPayload = (formData: ApplicationFormData, applicationId?: string) => {
@@ -57,20 +188,24 @@ const transformFormDataToApiPayload = (formData: ApplicationFormData, applicatio
         name: formData.name,
         email: formData.email,
         mobile_no: formData.mobileNo || "",
-        city: formData.city ? Number(formData.city) : null,
-        state: formData.state ? Number(formData.state) : null,
-        country: formData.country ? Number(formData.country) : null,
-        nationality: formData.nationality ? Number(formData.nationality) : null,
+        // EDIT-MODE: Changed state/city to send as string instead of number
+        city: String(formData.city) || "",
+        state: formData.state || "",
+        country: String(formData.country) || null,
+        nationality: String(formData.nationality) || null,
         marital_status: formData.maritalStatus || "",
-        emg_mobile_no: "", // As per example payload, these are empty at the top level
-        emg_relation: "",  // Data is in emergency_contact_details
-        gender: formData.gender || "", // Will be non-empty due to schema validation
+        gender: formData.gender || "",
         age: formData.age ? Number(formData.age) : null,
         dob: formData.dateOfBirth ? dayjs(formData.dateOfBirth).format("YYYY-MM-DD") : null,
         blood_group: formData.bloodGroup || "",
         local_address: formData.localAddress || "",
         permanent_address: formData.permanentAddress || "",
-        work_experience: formData.workExperienceType === "experienced" ? 1 : 0,
+        // EDIT-MODE: Changed work_experience to send a string "1" or "0" as per the new API spec.
+        work_experience: formData.workExperienceType === "experienced" ? "1" : "0",
+
+        // EDIT-MODE: Added new top-level emergency contact keys as per the new API spec.
+        emg_mobile_no: formData.emergencyMobileNo || "",
+        emg_relation: formData.emergencyRelation || "",
 
         total_experience: formData.workExperienceType === "experienced" ? formData.total_experience || "" : "",
         expected_salary: formData.workExperienceType === "experienced" ? formData.expected_salary || "" : "",
@@ -87,14 +222,15 @@ const transformFormDataToApiPayload = (formData: ApplicationFormData, applicatio
             specialization: ed.specialization || "",
         })) || [],
 
+        // EDIT-MODE: Updated employee_details to match new API keys (company_name) and removed annual_ctc.
         employee_details: formData.workExperienceType === "experienced"
             ? formData.employmentDetails?.map(emp => ({
-                organization: emp.organization,
+                company_name: emp.organization,
                 designation: emp.designation,
-                annual_ctc: emp.annualCTC || "",
                 from_date: emp.periodServiceFrom ? dayjs(emp.periodServiceFrom).format("YYYY-MM-DD") : null,
                 to_date: emp.periodServiceTo ? dayjs(emp.periodServiceTo).format("YYYY-MM-DD") : null,
-            })) || [] // Send empty array if not experienced or no details
+                // reason_for_leaving is in the new spec but not collected by the form.
+            })) || []
             : [],
 
         family_details: formData.familyDetails?.map(fd => ({
@@ -104,29 +240,20 @@ const transformFormDataToApiPayload = (formData: ApplicationFormData, applicatio
             dob: fd.familyDateOfBirth ? dayjs(fd.familyDateOfBirth).format("YYYY-MM-DD") : null,
         })) || [],
 
-        first_interview: "",
-        first_int_remarks: "",
-        second_interview: "",
-        second_int_remarks: "",
-        final_interview: "",
-        final_int_remarks: "",
-
-        status: transformFormStatusToApiStatus(formData.status), // API expects "Rejected", not "rejected"
-        remarks: formData.notes || "", // API 'remarks' is 'notes' in form
-        job_link_token: formData.jobApplicationLink || "", // Per example, this could be empty
-        job_link_datetime: "", // No form field, send empty
+        status: transformFormStatusToApiStatus(formData.status),
+        remarks: formData.notes || "",
+        job_link_token: formData.jobApplicationLink || "",
 
         job_title: formData.jobTitle,
         job_id: formData.jobId || "",
         application_date: formData.applicationDate ? dayjs(formData.applicationDate).format("YYYY-MM-DD") : null,
         resume_url: formData.resumeUrl || "",
-        application_link: formData.jobApplicationLink || "", // Per example, this could be an ID like "89489"
+        application_link: formData.jobApplicationLink || "",
 
-        emergency_contact_details: JSON.stringify({ // This contains the actual emergency contact data
-            relation: formData.emergencyRelation || "",
-            mobile_no: formData.emergencyMobileNo || "",
-        }),
-        note: formData.coverLetter || "", // API 'note' is 'coverLetter' in form
+        // EDIT-MODE: Removed the old `emergency_contact_details` JSON string.
+        // The new keys `emg_relation` and `emg_mobile_no` are used instead.
+
+        note: formData.coverLetter || "",
     };
 
     if (applicationId) {
@@ -135,41 +262,89 @@ const transformFormDataToApiPayload = (formData: ApplicationFormData, applicatio
     return payload;
 };
 
-// These options are specific to this form's value requirements (numeric IDs)
-const formNationalityOptions = [
-    { value: 1, label: 'American' }, { value: 2, label: 'Canadian' },
-    { value: 3, label: 'Indian' }, { value: 4, label: 'British' },
-    { value: 5, label: 'Other' }, // Example, expand as needed
-];
-const formCountriesData = [
-    { value: 1, label: 'United States' }, { value: 2, label: 'Canada' },
-    { value: 3, label: 'India' }, { value: 4, label: 'United Kingdom' },
-];
-const formStatesByCountryData: Record<number, Array<{ value: number; label: string }>> = {
-    1: [{ value: 10, label: 'New York' }, { value: 11, label: 'California' }, { value: 12, label: 'Texas' }],
-    2: [{ value: 20, label: 'Ontario' }, { value: 21, label: 'Quebec' }, { value: 22, label: 'British Columbia' }],
-    3: [{ value: 30, label: 'Maharashtra' }, { value: 31, label: 'Karnataka' }, { value: 32, label: 'Delhi' }, { value: 33, label: 'Tamil Nadu' }],
-    4: [{ value: 40, label: 'England' }, { value: 41, label: 'Scotland' }, { value: 42, label: 'Wales' }],
-};
-const formCitiesByStateData: Record<number, Array<{ value: number; label: string }>> = {
-    10: [{ value: 100, label: 'New York City' }, { value: 101, label: 'Buffalo' }],
-    11: [{ value: 110, label: 'Los Angeles' }, { value: 111, label: 'San Francisco' }],
-    30: [{ value: 300, label: 'Mumbai' }, { value: 301, label: 'Pune' }],
-    31: [{ value: 310, label: 'Bengaluru'}, { value: 311, label: 'Mysuru'}],
-    12: [{ value: 120, label: 'Houston' }, { value: 121, label: 'Austin' }],
-    20: [{ value: 200, label: 'Toronto' }, { value: 201, label: 'Ottawa' }],
-    21: [{ value: 210, label: 'Montreal' }, { value: 211, label: 'Quebec City' }],
-    22: [{ value: 220, label: 'Vancouver' }, { value: 221, label: 'Victoria' }],
-    32: [{ value: 320, label: 'New Delhi' }],
-    33: [{ value: 330, label: 'Chennai' }, { value: 331, label: 'Coimbatore' }],
-    40: [{ value: 400, label: 'London' }, { value: 401, label: 'Manchester' }],
-    41: [{ value: 410, label: 'Edinburgh' }, { value: 411, label: 'Glasgow' }],
-    42: [{ value: 420, label: 'Cardiff' }, { value: 421, label: 'Swansea' }],
-};
-// --- END: Embedded Utilities & Static Data ---
+const transformApiToFormData = (apiData: any): ApplicationFormData => {
+    const safeJsonParse = (jsonString: string | null, defaultVal: any[] = []) => {
+        if (!jsonString) return defaultVal;
+        // Handle cases where data might already be an object/array
+        if (typeof jsonString === 'object') return jsonString;
+        try {
+            return JSON.parse(jsonString) || defaultVal;
+        } catch (e) {
+            console.error("Failed to parse JSON string:", jsonString, e);
+            return defaultVal;
+        }
+    };
 
+    // EDIT-MODE: Updated work_experience check to include string "1".
+    const workExperienceType = apiData.work_experience === "Experience" || apiData.work_experience === 1 || apiData.work_experience === "1" ? 'experienced' : 'fresher';
+
+    return {
+        department: apiData.job_department_id ? Number(apiData.job_department_id) : undefined,
+        name: apiData.name || "",
+        email: apiData.email || "",
+        mobileNo: apiData.mobile_no || "",
+        gender: apiData.gender || undefined,
+        dateOfBirth: apiData.dob ? dayjs(apiData.dob, "YYYY-MM-DD").toDate() : null,
+        age: apiData.age ? Number(apiData.age) : null,
+        nationality: apiData.nationality ? Number(apiData.nationality) : undefined,
+        maritalStatus: apiData.marital_status || undefined,
+        bloodGroup: apiData.blood_group || undefined,
+        country: apiData.country ? Number(apiData.country) : undefined,
+        // EDIT-MODE: Changed state/city to treat as string for input fields
+        state: apiData.state || "",
+        city: apiData.city || "",
+        localAddress: apiData.local_address || "",
+        permanentAddress: apiData.permanent_address || "",
+        workExperienceType: workExperienceType,
+        total_experience: apiData.total_experience || "",
+        expected_salary: apiData.expected_salary || "",
+        notice_period: apiData.notice_period || "",
+        reference: apiData.reference || "",
+        reference_specify: apiData.reference_specify || "",
+        jobTitle: apiData.job_title || "",
+        jobId: apiData.job_id || "",
+        applicationDate: apiData.application_date ? dayjs(apiData.application_date, "YYYY-MM-DD").toDate() : new Date(),
+        status: transformApiStatusToFormStatus(apiData.status),
+        resumeUrl: apiData.resume_url || "",
+        jobApplicationLink: apiData.application_link || "",
+        coverLetter: apiData.note || "",
+        notes: apiData.remarks || "",
+        // EDIT-MODE: Map from new top-level keys emg_relation and emg_mobile_no.
+        emergencyRelation: apiData.emg_relation || "",
+        emergencyMobileNo: apiData.emg_mobile_no || "",
+        familyDetails: safeJsonParse(apiData.family_details).map((fd: any) => ({
+            familyName: fd.name || "",
+            familyRelation: fd.relation || "",
+            familyOccupation: fd.occupation || "",
+            familyDateOfBirth: fd.dob ? dayjs(fd.dob, "YYYY-MM-DD").toDate() : null,
+        })),
+        educationalDetails: safeJsonParse(apiData.education_details).map((ed: any) => ({
+            degree: ed.degree || "",
+            university: ed.university || "",
+            percentageGrade: ed.grade || "",
+            educationFromDate: ed.from_date ? dayjs(ed.from_date, "YYYY-MM-DD").toDate() : null,
+            educationToDate: ed.to_date ? dayjs(ed.to_date, "YYYY-MM-DD").toDate() : null,
+            specialization: ed.specialization || "",
+        })),
+        // EDIT-MODE: Map `company_name` from API to `organization` in the form.
+        // `annualCTC` will be empty if not provided by API, which is correct.
+        employmentDetails: workExperienceType === 'experienced' ? safeJsonParse(apiData.employee_details).map((emp: any) => ({
+            organization: emp.company_name || "",
+            designation: emp.designation || "",
+            annualCTC: emp.annual_ctc || "",
+            periodServiceFrom: emp.from_date ? dayjs(emp.from_date, "YYYY-MM-DD").toDate() : null,
+            periodServiceTo: emp.to_date ? dayjs(emp.to_date, "YYYY-MM-DD").toDate() : null,
+        })) : [],
+    };
+};
+const formNationalityOptions = [{ value: 1, label: 'American' }, { value: 2, label: 'Canadian' }, { value: 3, label: 'Indian' }, { value: 4, label: 'British' }, { value: 5, label: 'Other' },];
+const formCountriesData = [{ value: 1, label: 'United States' }, { value: 2, label: 'Canada' }, { value: 3, label: 'India' }, { value: 4, label: 'United Kingdom' },];
+// EDIT-MODE: These are no longer needed for state/city dropdowns but kept for reference or other uses.
+// const formStatesByCountryData: Record<number, Array<{ value: number; label: string }>> = { 1: [{ value: 10, label: 'New York' }, { value: 11, label: 'California' }, { value: 12, label: 'Texas' }], 2: [{ value: 20, label: 'Ontario' }, { value: 21, label: 'Quebec' }, { value: 22, label: 'British Columbia' }], 3: [{ value: 30, label: 'Maharashtra' }, { value: 31, label: 'Karnataka' }, { value: 32, label: 'Delhi' }, { value: 33, label: 'Tamil Nadu' }], 4: [{ value: 40, label: 'England' }, { value: 41, label: 'Scotland' }, { value: 42, label: 'Wales' }], };
+// const formCitiesByStateData: Record<number, Array<{ value: number; label: string }>> = { 10: [{ value: 100, label: 'New York City' }, { value: 101, label: 'Buffalo' }], 11: [{ value: 110, label: 'Los Angeles' }, { value: 111, label: 'San Francisco' }], 30: [{ value: 300, label: 'Mumbai' }, { value: 301, label: 'Pune' }], 31: [{ value: 310, label: 'Bengaluru' }, { value: 311, label: 'Mysuru' }], 12: [{ value: 120, label: 'Houston' }, { value: 121, label: 'Austin' }], 20: [{ value: 200, label: 'Toronto' }, { value: 201, label: 'Ottawa' }], 21: [{ value: 210, label: 'Montreal' }, { value: 211, label: 'Quebec City' }], 22: [{ value: 220, label: 'Vancouver' }, { value: 221, label: 'Victoria' }], 32: [{ value: 320, label: 'New Delhi' }], 33: [{ value: 330, label: 'Chennai' }, { value: 331, label: 'Coimbatore' }], 40: [{ value: 400, label: 'London' }, { value: 401, label: 'Manchester' }], 41: [{ value: 410, label: 'Edinburgh' }, { value: 411, label: 'Glasgow' }], 42: [{ value: 420, label: 'Cardiff' }, { value: 421, label: 'Swansea' }], };
 
 // --- START: Embedded Form Section Components ---
+// NOTE: No changes were needed in the section components themselves.
 interface PersonalDetailsSectionProps {
     control: any;
     errors: any;
@@ -180,68 +355,30 @@ interface PersonalDetailsSectionProps {
 const PersonalDetailsSection = ({ control, errors, setValue, departmentOptions, workExperienceType }: PersonalDetailsSectionProps) => {
     const dob = useWatch({ control, name: 'dateOfBirth' });
     const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
-    const selectedCountry = useWatch({ control, name: 'country' }) as number | undefined;
-    const selectedState = useWatch({ control, name: 'state' }) as number | undefined;
-    const [stateOptions, setStateOptions] = useState<Array<{ value: number; label: string }>>([]);
-    const [cityOptions, setCityOptions] = useState<Array<{ value: number; label: string }>>([]);
-
     const referenceValue = useWatch({ control, name: 'reference' });
+    const {
+        CountriesData = [],
+    } = useSelector(masterSelector);
+
+
+    const countryOptions = CountriesData.map((country: any) => ({
+        // EDIT-MODE: Changed value from String(country.id) to country.id to match the schema's number type.
+        value: country.id,
+        label: country.name,
+    }));
+    // EDIT-MODE: Removed all state management and effects for state/city dropdowns
+    // as they are now text inputs.
 
     useEffect(() => {
         if (dob && dayjs(dob).isValid()) {
             const age = dayjs().diff(dayjs(dob), 'year');
             setCalculatedAge(age);
-            setValue('age', age, {shouldValidate: true, shouldDirty: true });
+            setValue('age', age, { shouldValidate: true, shouldDirty: true });
         } else {
             setCalculatedAge(null);
-            setValue('age', null, {shouldValidate: true, shouldDirty: true });
+            setValue('age', null, { shouldValidate: true, shouldDirty: true });
         }
     }, [dob, setValue]);
-
-    useEffect(() => {
-        if (selectedCountry) {
-            const newStates = formStatesByCountryData[selectedCountry] || [];
-            setStateOptions(newStates);
-            const currentSelectedState = control._getWatch('state');
-            if (!newStates.find(s => s.value === currentSelectedState)) {
-                 setValue('state', undefined, { shouldValidate: true, shouldDirty: true });
-                 setValue('city', undefined, { shouldValidate: true, shouldDirty: true });
-            }
-        } else {
-            setStateOptions([]);
-            setCityOptions([]); // Clear city options if country is cleared
-            setValue('state', undefined, { shouldValidate: true, shouldDirty: true });
-            setValue('city', undefined, { shouldValidate: true, shouldDirty: true });
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedCountry, setValue]); // control removed as _getWatch can be problematic in deps
-
-    useEffect(() => {
-        if (selectedState) {
-            const newCities = formCitiesByStateData[selectedState] || [];
-            setCityOptions(newCities);
-            const currentCity = control._getWatch('city');
-            if (!newCities.find(c => c.value === currentCity)) {
-                setValue('city', undefined, { shouldValidate: true, shouldDirty: true });
-            }
-        } else {
-            setCityOptions([]);
-            // setValue('city', undefined, { shouldValidate: true, shouldDirty: true }); // This might clear city when state is reset by country change
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedState, setValue]); // control removed
-
-    useEffect(() => { // For initial load or if values are pre-filled externally
-        const initialCountry = control._getWatch('country');
-        if (initialCountry && formStatesByCountryData[initialCountry]) {
-            setStateOptions(formStatesByCountryData[initialCountry]);
-        }
-        const initialState = control._getWatch('state');
-        if (initialState && formCitiesByStateData[initialState]) {
-            setCityOptions(formCitiesByStateData[initialState]);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Run once on mount
 
     return (
         <Card id="personalDetails" className="mb-6">
@@ -259,15 +396,16 @@ const PersonalDetailsSection = ({ control, errors, setValue, departmentOptions, 
                 <FormItem label={<div>Gender<span className="text-red-500"> * </span></div>} error={errors.gender?.message as string}><Controller name="gender" control={control} render={({ field }) => <UiSelect placeholder="Select Gender" options={genderOptions} value={genderOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                 <FormItem label={<div>Date of Birth<span className="text-red-500"> * </span></div>} error={errors.dateOfBirth?.message as string}><Controller name="dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select DOB" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
                 <FormItem label="Age" error={errors.age?.message as string}>
-                    <Controller name="age" control={control} render={({ field }) => (<Input type="number" placeholder="Calculated/Enter Age" {...field} value={field.value ?? (calculatedAge !== null ? calculatedAge : '')} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} /> )} />
+                    <Controller name="age" control={control} render={({ field }) => (<Input type="number" placeholder="Calculated/Enter Age" {...field} value={field.value ?? (calculatedAge !== null ? calculatedAge : '')} onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))} />)} />
                 </FormItem>
                 <FormItem label="Nationality" error={errors.nationality?.message as string}><Controller name="nationality" control={control} render={({ field }) => <UiSelect placeholder="Select Nationality" options={formNationalityOptions} value={formNationalityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                 <FormItem label="Marital Status" error={errors.maritalStatus?.message as string}><Controller name="maritalStatus" control={control} render={({ field }) => <UiSelect placeholder="Select Marital Status" options={maritalStatusOptions} value={maritalStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
-                <FormItem label="Blood Group" error={errors.bloodGroup?.message as string}><Controller name="bloodGroup" control={control} render={({ field }) => <UiSelect placeholder="Select Blood Group" options={bloodGroupOptions} value={bloodGroupOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />}/></FormItem>
+                <FormItem label="Blood Group" error={errors.bloodGroup?.message as string}><Controller name="bloodGroup" control={control} render={({ field }) => <UiSelect placeholder="Select Blood Group" options={bloodGroupOptions} value={bloodGroupOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
 
-                <FormItem label="Country" error={errors.country?.message as string}><Controller name="country" control={control} render={({ field }) => <UiSelect placeholder="Select Country" options={formCountriesData} value={formCountriesData.find(o => o.value === field.value)} onChange={opt => { field.onChange(opt?.value); setValue('state', undefined, {shouldValidate: true}); setValue('city', undefined, {shouldValidate: true}); }} isClearable />} /></FormItem>
-                <FormItem label="State" error={errors.state?.message as string}><Controller name="state" control={control} render={({ field }) => <UiSelect placeholder="Select State" options={stateOptions} value={stateOptions.find(o => o.value === field.value)} onChange={opt => { field.onChange(opt?.value); setValue('city', undefined, {shouldValidate: true}); }} isDisabled={!selectedCountry || stateOptions.length === 0} isClearable />} /></FormItem>
-                <FormItem label="City" error={errors.city?.message as string}><Controller name="city" control={control} render={({ field }) => <UiSelect placeholder="Select City" options={cityOptions} value={cityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isDisabled={!selectedState || cityOptions.length === 0} isClearable />} /></FormItem>
+                {/* EDIT-MODE: Country's onChange now clears state/city text inputs. State and City are now Input fields. */}
+                <FormItem label="Country" error={errors.country?.message as string}><Controller name="country" control={control} render={({ field }) => <UiSelect placeholder="Select Country" options={countryOptions} value={countryOptions.find(o => o.value === field.value)} onChange={opt => { field.onChange(opt?.value); setValue('state', '', { shouldValidate: true }); setValue('city', '', { shouldValidate: true }); }} isClearable />} /></FormItem>
+                <FormItem label="State" error={errors.state?.message as string}><Controller name="state" control={control} render={({ field }) => <Input {...field} placeholder="Enter State" />} /></FormItem>
+                <FormItem label="City" error={errors.city?.message as string}><Controller name="city" control={control} render={({ field }) => <Input {...field} placeholder="Enter City" />} /></FormItem>
 
                 <FormItem label="Local Address" error={errors.localAddress?.message as string} className="md:col-span-3"><Controller name="localAddress" control={control} render={({ field }) => <Input textArea rows={2} placeholder="Enter Local Address" {...field} />} /></FormItem>
                 <FormItem label="Permanent Address" error={errors.permanentAddress?.message as string} className="md:col-span-3"><Controller name="permanentAddress" control={control} render={({ field }) => <Input textArea rows={2} placeholder="Enter Permanent Address" {...field} />} /></FormItem>
@@ -295,7 +433,6 @@ const PersonalDetailsSection = ({ control, errors, setValue, departmentOptions, 
                                 <Controller name="reference_specify" control={control} render={({ field }) => <Input textArea rows={1} {...field} placeholder="More details about the reference" />} />
                             </FormItem>
                         )}
-                        {/* Ensure grid layout consistency */}
                         {!(referenceValue && referenceValue.trim() !== "") && <div className="md:col-span-2 hidden md:block"></div>}
 
                     </>
@@ -354,21 +491,21 @@ const EducationalDetailsSection = ({ control, errors }: { control: any, errors: 
             {errors.educationalDetails && !Array.isArray(errors.educationalDetails) && errors.educationalDetails.message && <p className="text-red-500 text-sm mb-2">{errors.educationalDetails.message as string}</p>}
             {fields.map((item, index) => (
                 <div key={item.id} className="border p-4 rounded-md mb-4 relative">
-                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 items-start">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 items-start">
                         <FormItem label={<div>Degree {index + 1}<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.degree?.message as string} className="mb-0"><Controller name={`educationalDetails.${index}.degree`} control={control} render={({ field }) => <Input {...field} placeholder="e.g., B.Tech" />} /></FormItem>
                         <FormItem label={<div>University/Institution<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.university?.message as string} className="mb-0"><Controller name={`educationalDetails.${index}.university`} control={control} render={({ field }) => <Input {...field} placeholder="Name of University" />} /></FormItem>
                         <FormItem label={<div>Percentage/Grade<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.percentageGrade?.message as string} className="mb-0"><Controller name={`educationalDetails.${index}.percentageGrade`} control={control} render={({ field }) => <Input {...field} placeholder="e.g., 75% or A+" />} /></FormItem>
-                        <FormItem label={<div>From Date<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.educationFromDate?.message as string} className="mb-0"><Controller name={`educationalDetails.${index}.educationFromDate`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date=> field.onChange(date)} maxDate={new Date()} />} /></FormItem>
-                        <FormItem label={<div>To Date<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.educationToDate?.message as string} className="mb-0"><Controller name={`educationalDetails.${index}.educationToDate`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date=> field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                        <FormItem label={<div>From Date<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.educationFromDate?.message as string} className="mb-0"><Controller name={`educationalDetails.${index}.educationFromDate`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                        <FormItem label={<div>To Date<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.educationToDate?.message as string} className="mb-0"><Controller name={`educationalDetails.${index}.educationToDate`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
                         <FormItem label="Specialization" error={errors.educationalDetails?.[index]?.specialization?.message as string} className="mb-0"><Controller name={`educationalDetails.${index}.specialization`} control={control} render={({ field }) => <Input {...field} placeholder="e.g., CS" />} /></FormItem>
                     </div>
                     <Button size="xs" color="red-500" variant="plain" icon={<TbTrash />} type="button" onClick={() => remove(index)} className="absolute top-2 right-2">Remove</Button>
                 </div>
             ))}
-             {fields.length === 0 && errors.educationalDetails?.message && !Array.isArray(errors.educationalDetails) && (
-                 <p className="text-sm text-red-500 mt-2">{errors.educationalDetails.message as string}</p>
-             )}
-             {fields.length === 0 && !errors.educationalDetails?.message && <p className="text-sm text-gray-500">At least one educational detail is required.</p>}
+            {fields.length === 0 && errors.educationalDetails?.message && !Array.isArray(errors.educationalDetails) && (
+                <p className="text-sm text-red-500 mt-2">{errors.educationalDetails.message as string}</p>
+            )}
+            {fields.length === 0 && !errors.educationalDetails?.message && <p className="text-sm text-gray-500">At least one educational detail is required.</p>}
         </Card>
     );
 };
@@ -385,49 +522,61 @@ const EmploymentDetailsSection = ({ control, errors, workExperienceType }: { con
                         <FormItem label={<div>Organization {index + 1}<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.organization?.message as string} className="mb-0"><Controller name={`employmentDetails.${index}.organization`} control={control} render={({ field }) => <Input {...field} placeholder="Company Name" />} /></FormItem>
                         <FormItem label={<div>Designation<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.designation?.message as string} className="mb-0"><Controller name={`employmentDetails.${index}.designation`} control={control} render={({ field }) => <Input {...field} placeholder="Your Role" />} /></FormItem>
                         <FormItem label="Annual CTC" error={errors.employmentDetails?.[index]?.annualCTC?.message as string} className="mb-0"><Controller name={`employmentDetails.${index}.annualCTC`} control={control} render={({ field }) => <Input {...field} placeholder="e.g., 12 LPA" />} /></FormItem>
-                        <FormItem label={<div>From<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.periodServiceFrom?.message as string} className="mb-0"><Controller name={`employmentDetails.${index}.periodServiceFrom`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date=> field.onChange(date)} maxDate={new Date()} />} /></FormItem>
-                        <FormItem label={<div>To<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.periodServiceTo?.message as string} className="mb-0"><Controller name={`employmentDetails.${index}.periodServiceTo`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date=> field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                        <FormItem label={<div>From<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.periodServiceFrom?.message as string} className="mb-0"><Controller name={`employmentDetails.${index}.periodServiceFrom`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
+                        <FormItem label={<div>To<span className="text-red-500"> * </span></div>} error={errors.employmentDetails?.[index]?.periodServiceTo?.message as string} className="mb-0"><Controller name={`employmentDetails.${index}.periodServiceTo`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} value={field.value ? dayjs(field.value).toDate() : null} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
                     </div>
                     <Button size="xs" color="red-500" variant="plain" icon={<TbTrash />} type="button" onClick={() => remove(index)} className="absolute top-2 right-2">Remove</Button>
                 </div>
             ))}
-             {fields.length === 0 && errors.employmentDetails?.message && !Array.isArray(errors.employmentDetails) && (
-                 <p className="text-sm text-red-500 mt-2">{errors.employmentDetails.message as string}</p>
-             )}
-             {fields.length === 0 && !errors.employmentDetails?.message && <p className="text-sm text-gray-500">At least one employment detail is required for experienced candidates.</p>}
+            {fields.length === 0 && errors.employmentDetails?.message && !Array.isArray(errors.employmentDetails) && (
+                <p className="text-sm text-red-500 mt-2">{errors.employmentDetails.message as string}</p>
+            )}
+            {fields.length === 0 && !errors.employmentDetails?.message && <p className="text-sm text-gray-500">At least one employment detail is required for experienced candidates.</p>}
         </Card>
     );
 };
 // --- END: Embedded Form Section Components ---
 
-
 const AddJobApplicationPage = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
+    const applicationId = location?.state?.id || 0
+    
+    const isEditMode = !!applicationId;
+
+    const [isLoadingData, setIsLoadingData] = useState(isEditMode);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
-    const { departmentsData } = useSelector(masterSelector);
+    const { departmentsData, jobApplicationsData, CountriesData } = useSelector(masterSelector);
+
     useEffect(() => {
+        dispatch(getCountriesAction());
         if (!departmentsData?.data || departmentsData.data.length === 0) {
             dispatch(getDepartmentsAction());
         }
-    }, [dispatch, departmentsData]);
+        if (isEditMode && (!jobApplicationsData?.data || jobApplicationsData.data.length === 0)) {
+            dispatch(getJobApplicationsAction());
+        }
+    }, [dispatch, departmentsData, jobApplicationsData, isEditMode]);
 
     const departmentOptions = useMemo(() => {
         const depts: any = Array.isArray(departmentsData?.data) ? departmentsData.data : [];
         return depts.map((dept: { id: number; name: string }) => ({ value: dept.id, label: dept.name }));
     }, [departmentsData?.data]);
 
-
-    const { control, handleSubmit, reset, formState: { errors, isDirty, isValid }, watch, setValue, trigger, setError } = useForm<ApplicationFormData>({
+    const { control, handleSubmit, reset, formState: { errors, isDirty }, watch, setValue, trigger, setError } = useForm<ApplicationFormData>({
         resolver: zodResolver(applicationFormSchema),
         defaultValues: {
             department: undefined, name: "", email: "", mobileNo: "", gender: undefined, dateOfBirth: null, age: null,
             nationality: undefined, maritalStatus: undefined, bloodGroup: undefined,
-            country: undefined, state: undefined, city: undefined,
+            // EDIT-MODE: Default values for state/city are now empty strings
+            country: undefined, state: "", city: "",
             localAddress: "", permanentAddress: "", workExperienceType: "fresher",
-            jobId: "", jobTitle: "", applicationDate: new Date(), status: "New", // Default to New status
+            jobId: "", jobTitle: "", applicationDate: new Date(),
+            // EDIT-MODE: Default status is now lowercase to match schema
+            status: "new",
             resumeUrl: "", jobApplicationLink: "",
             coverLetter: "", notes: "",
             familyDetails: [], emergencyRelation: "", emergencyMobileNo: "",
@@ -439,6 +588,22 @@ const AddJobApplicationPage = () => {
     });
 
     useEffect(() => {
+        if (isEditMode && jobApplicationsData?.data) {
+            console.log(jobApplicationsData, "jobApplicationsData 11111", applicationId);
+            
+            const applicationToEdit = jobApplicationsData.data.find(app => app.id.toString() === applicationId);
+            if (applicationToEdit) {
+                const formData = transformApiToFormData(applicationToEdit);
+                reset(formData);
+                setIsLoadingData(false);
+            } else {
+                toast.push(<Notification title="Not Found" type="danger">Job application not found.</Notification>);
+                navigate('/hr-employees/job-applications');
+            }
+        }
+    }, [isEditMode, applicationId]);
+
+    useEffect(() => {
         if (Object.keys(errors).length > 0) {
             console.log("Current Form Validation Errors:", JSON.parse(JSON.stringify(errors)));
         }
@@ -447,90 +612,52 @@ const AddJobApplicationPage = () => {
     const workExperienceType = watch('workExperienceType');
 
     useEffect(() => {
-        const fieldsToResetForFresher: (keyof ApplicationFormData)[] = [
-            'total_experience', 'expected_salary', 'notice_period',
-            'reference', 'reference_specify'
-        ];
-
+        const fieldsToResetForFresher: (keyof ApplicationFormData)[] = ['total_experience', 'expected_salary', 'notice_period', 'reference', 'reference_specify'];
         if (workExperienceType === 'fresher') {
             fieldsToResetForFresher.forEach(field => setValue(field, "", { shouldValidate: true, shouldDirty: true }));
             setValue('employmentDetails', [], { shouldValidate: true, shouldDirty: true });
-            // Optionally trigger validation for these fields if needed, though superRefine should catch it.
-            // trigger([...fieldsToResetForFresher, 'employmentDetails']);
+        }
+        // When switching, re-validate to apply conditional rules
+        if (workExperienceType === 'experienced') {
+            trigger(['total_experience', 'expected_salary', 'notice_period', 'employmentDetails']);
         }
     }, [workExperienceType, setValue, trigger]);
 
-
-   
-    
-    
-
     const onSubmitHandler = async (formData: ApplicationFormData) => {
         setIsSubmitting(true);
-        const payload = transformFormDataToApiPayload(formData);
-        console.log("Submitting New Application Payload:", JSON.stringify(payload, null, 2));
+        const payload = transformFormDataToApiPayload(formData, applicationId);
+        console.log(`Submitting ${isEditMode ? 'Updated' : 'New'} Application Payload:`, JSON.stringify(payload, null, 2));
+
+        const action = isEditMode ? editJobApplicationAction(payload) : addJobApplicationAction(payload);
+        const actionType = isEditMode ? 'Update' : 'Add';
 
         try {
-            const resultAction = await dispatch(addJobApplicationAction(payload));
-            if (addJobApplicationAction.fulfilled.match(resultAction)) {
-                toast.push(<Notification title="Application Added" type="success" duration={2000}>New job application added successfully.</Notification>);
-                dispatch(getJobApplicationsAction()); // Refresh list
+            const resultAction = await dispatch(action);
+            if (resultAction) {
+                toast.push(<Notification title={`Application ${actionType}d`} type="success" duration={2000}>Job application {actionType.toLowerCase()}d successfully.</Notification>);
+                dispatch(getJobApplicationsAction());
                 reset();
-                navigate('/hr-employees/job-applications');
+                navigate('/hr-employees/job-application');
             } else {
-                let toastMessage = "Operation failed. Please check your input.";
+                let toastMessage = `Operation failed. Please check your input.`;
                 const errorPayload = resultAction.payload as any;
 
-                if (errorPayload && typeof errorPayload === 'object') {
-                    if (errorPayload.message && typeof errorPayload.message === 'string') {
-                        toastMessage = errorPayload.message;
-                    }
-
-                    if (errorPayload.errors && typeof errorPayload.errors === 'object') {
-                        const fieldErrors = Object.entries(errorPayload.errors)
-                            .map(([field, messages]) => {
-                                const messageArray = Array.isArray(messages) ? messages : [messages];
-                                // Attempt to map API error key to form field name (simple example)
-                                // const formFieldKey = apiToFormFieldKeyMap[field] || field;
-                                // setError(formFieldKey as any, { type: 'server', message: messageArray.join(', ') });
-                                return `${field}: ${messageArray.join(', ')}`;
-                            })
-                            .join('; ');
-
-                        if (fieldErrors) {
-                            // If a general message was already set from errorPayload.message, append details.
-                            // Otherwise, the field errors themselves become the main message.
-                            if (toastMessage !== "Operation failed. Please check your input." && toastMessage !== errorPayload.message) {
-                                toastMessage = fieldErrors; // Prefer specific errors if no general message from API
-                            } else if (errorPayload.message && errorPayload.message !== toastMessage) {
-                                toastMessage = `${errorPayload.message} Details: ${fieldErrors}`;
-                            }
-                             else {
-                                toastMessage = `Validation Failed: ${fieldErrors}`;
-                            }
-                        }
-                    }
-                } else if (typeof resultAction.payload === 'string') {
-                    toastMessage = resultAction.payload;
+                if (errorPayload?.message) {
+                    toastMessage = errorPayload.message;
+                }
+                if (errorPayload?.errors) {
+                    Object.entries(errorPayload.errors).forEach(([field, messages]) => {
+                        setError(field as any, { type: 'server', message: (messages as string[]).join(', ') });
+                    });
+                    const fieldErrorText = Object.values(errorPayload.errors).flat().join(' ');
+                    toastMessage = `Validation Failed: ${fieldErrorText}`;
                 }
 
-                toast.push(<Notification title="Add Failed" type="danger" duration={5000}>{toastMessage}</Notification>);
-                console.error("Submit Error (API):", resultAction.payload || resultAction.error);
+                toast.push(<Notification title={`${actionType} Failed`} type="danger" duration={5000}>{toastMessage}</Notification>);
+                console.error(`Submit Error (API) for ${actionType}:`, resultAction.payload || resultAction.error);
             }
         } catch (error: any) {
-            // This catch block handles unexpected errors during dispatch or other operations
-            let exceptionMessage = "An unexpected error occurred.";
-            if (error?.response?.data) { // Example for Axios error structure
-                const responseData = error.response.data;
-                if (responseData.message) exceptionMessage = responseData.message;
-                if (responseData.errors) {
-                    const fieldErrors = Object.entries(responseData.errors).map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`).join('; ');
-                    exceptionMessage += ` Details: ${fieldErrors}`;
-                }
-            } else if (error?.message) {
-                exceptionMessage = error.message;
-            }
-            toast.push(<Notification title="Submit Exception" type="danger" duration={5000}>{exceptionMessage}</Notification>);
+            toast.push(<Notification title="Submit Exception" type="danger" duration={5000}>An unexpected error occurred.</Notification>);
             console.error("Submit Exception:", error);
         } finally {
             setIsSubmitting(false);
@@ -542,29 +669,28 @@ const AddJobApplicationPage = () => {
         else navigate('/hr-employees/job-applications');
     };
 
+    if (isLoadingData) {
+        return (
+            <Container className="h-full">
+                <Loading loading={true} />
+            </Container>
+        );
+    }
 
-    
     return (
         <Container className="h-full">
             <FormContainer>
                 <form onSubmit={handleSubmit(onSubmitHandler, (formErrors) => {
-                    
                     console.log("Form validation errors on submit (handler):", formErrors);
-                     toast.push(<Notification title="Validation Error" type="warning" duration={3000}>Please correct the highlighted errors before submitting.</Notification>);
+                    toast.push(<Notification title="Validation Error" type="warning" duration={3000}>Please correct the highlighted errors before submitting.</Notification>);
                 })}>
                     <div className='flex gap-1 items-center mb-3'>
                         <NavLink to="/hr-employees/job-applications"><h6 className='font-semibold hover:text-primary-600'>Job Applications</h6></NavLink>
                         <BiChevronRight size={18} className="text-gray-500" />
-                        <h6 className='font-semibold text-primary-600'>Add New Application</h6>
+                        <h6 className='font-semibold text-primary-600'>{isEditMode ? 'Edit Application' : 'Add New Application'}</h6>
                     </div>
 
-                    <PersonalDetailsSection
-                        control={control}
-                        errors={errors}
-                        setValue={setValue}
-                        departmentOptions={departmentOptions}
-                        workExperienceType={workExperienceType}
-                    />
+                    <PersonalDetailsSection control={control} errors={errors} setValue={setValue} departmentOptions={departmentOptions} workExperienceType={workExperienceType} />
                     <FamilyDetailsSection control={control} errors={errors} />
                     <EmergencyContactSection control={control} errors={errors} />
                     <EducationalDetailsSection control={control} errors={errors} />
@@ -572,13 +698,8 @@ const AddJobApplicationPage = () => {
 
                     <div className="mt-8 flex justify-end gap-2">
                         <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
-                        <Button
-                            type="submit"
-                            variant="solid"
-                            loading={isSubmitting}
-                            disabled={isSubmitting || !isDirty || !isValid} // Keep !isDirty || !isValid for better UX
-                        >
-                            Submit Application
+                        <Button type="submit" variant="solid" loading={isSubmitting} disabled={isSubmitting}>
+                            {isEditMode ? 'Update Application' : 'Submit Application'}
                         </Button>
                     </div>
                 </form>

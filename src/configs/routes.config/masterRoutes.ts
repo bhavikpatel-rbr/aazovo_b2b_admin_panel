@@ -14,6 +14,15 @@ const masterRoutes: Routes = [
         },
     },
     {
+        key: 'master.memberType',
+        path: `${MASTER_PREFIX_PATH}/member-type`,
+        component: lazy(() => import('@/views/master/MemberType')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'master.documents',
         path: `${MASTER_PREFIX_PATH}/documents`,
         component: lazy(() => import('@/views/master/Documents-List')),

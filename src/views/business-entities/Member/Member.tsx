@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import classNames from "classnames";
 import React, {
   useCallback,
   useContext,
@@ -7,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { CSVLink } from "react-csv";
+// REMOVED: import { CSVLink } from "react-csv";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -26,13 +25,12 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
-  FormItem,
-  Input,
-  Select,
-  Table,
   Form as UiForm,
   FormItem as UiFormItem,
-  Select as UiSelect
+  Input,
+  Select,
+  Select as UiSelect,
+  Table,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -40,7 +38,6 @@ import Notification from "@/components/ui/Notification";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
-import axiosInstance from "@/services/api/api";
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -75,7 +72,7 @@ import {
   TbUserCircle,
   TbUserExclamation,
   TbUserSearch,
-  TbUsersGroup
+  TbUsersGroup,
 } from "react-icons/tb";
 
 // Types
@@ -85,14 +82,17 @@ import type {
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
+import FormItem from "@/components/ui/Form/FormItem";
 import Td from "@/components/ui/Table/Td";
 import Tr from "@/components/ui/Table/Tr";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   deleteAllMemberAction,
   getMemberAction,
+  submitExportReasonAction, // ADDED: Assume this action exists
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useAppDispatch } from "@/reduxtool/store";
+import cloneDeep from "lodash/cloneDeep";
 import { MdCheckCircle } from "react-icons/md";
 import { useSelector } from "react-redux";
 
@@ -121,6 +121,8 @@ export type FormItem = {
   kyc_status: string;
   // Added for modal consistency
   health_score?: number;
+  // Properties that might exist on data but not in type
+  [key: string]: any;
 };
 // --- End MemberData Type ---
 
@@ -154,13 +156,172 @@ const filterFormSchema = z.object({
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
   // Add new fields from the filter drawer here
-  filterBusinessOpportunity: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterCountry: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterDealing: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  memberGrade: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterBusinessOpportunity: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
+  filterCountry: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
+  filterDealing: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
+  memberGrade: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 // --- End Filter Schema ---
+
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+// --- End Export Reason Schema ---
+
+// --- CSV Exporter Utility ---
+const CSV_HEADERS = [
+  "Member ID",
+  "Name",
+  "Email",
+  "Contact Number",
+  "Company Name",
+  "Company ID",
+  "Status",
+  "Joined Date",
+  "Business Type",
+  "Business Opportunity",
+  "Member Grade",
+  "Interested In",
+  "Brands",
+  "Location",
+  "Profile Completion (%)",
+];
+
+// Define a type for the transformed export item
+type MemberExportItem = {
+  id: string;
+  member_name: string;
+  member_email_id: string;
+  member_contact_number: string;
+  company_name: string;
+  company_id_actual: string;
+  status: string;
+  created_at_formatted: string;
+  business_type: string;
+  business_opportunity: string;
+  member_grade: string;
+  interested_in: string;
+  associated_brands_str: string;
+  member_location: string;
+  profile_completion: number;
+};
+
+// Define the keys to match the export item and headers
+const CSV_KEYS_EXPORT: (keyof MemberExportItem)[] = [
+  "id",
+  "member_name",
+  "member_email_id",
+  "member_contact_number",
+  "company_name",
+  "company_id_actual",
+  "status",
+  "created_at_formatted",
+  "business_type",
+  "business_opportunity",
+  "member_grade",
+  "interested_in",
+  "associated_brands_str",
+  "member_location",
+  "profile_completion",
+];
+
+function exportToCsv(filename: string, rows: FormItem[]) {
+  if (!rows || !rows.length) {
+    toast.push(
+      <Notification title="No Data" type="info">
+        Nothing to export.
+      </Notification>
+    );
+    return false;
+  }
+
+  // Transform the data for export
+  const transformedRows: MemberExportItem[] = rows.map((row) => ({
+    id: row.id,
+    member_name: row.name || "N/A",
+    member_email_id: row.email || "N/A",
+    member_contact_number: row.number || "N/A",
+    company_name: row.company_name || "N/A",
+    company_id_actual: row.company_id_actual || "N/A",
+    status: row.status || "N/A",
+    created_at_formatted: row.created_at
+      ? new Date(row.created_at).toLocaleDateString("en-GB")
+      : "N/A",
+    business_type: row.business_type || "N/A",
+    business_opportunity: row.business_opportunity || "N/A",
+    member_grade: row.member_grade || "N/A",
+    interested_in: row.interested_in || "N/A",
+    associated_brands_str: Array.isArray(row.associated_brands)
+      ? row.associated_brands.join(", ")
+      : "N/A",
+    member_location: row.country?.name || "N/A",
+    profile_completion: row.profile_completion || 0,
+  }));
+
+  const separator = ",";
+  const csvContent =
+    CSV_HEADERS.join(separator) +
+    "\n" +
+    transformedRows
+      .map((row) => {
+        return CSV_KEYS_EXPORT.map((k) => {
+          let cell: any = row[k as keyof MemberExportItem];
+          if (cell === null || cell === undefined) {
+            cell = "";
+          } else {
+            // Escape double quotes and wrap if necessary
+            cell = String(cell).replace(/"/g, '""');
+          }
+          if (String(cell).search(/("|,|\n)/g) >= 0) {
+            cell = `"${cell}"`;
+          }
+          return cell;
+        }).join(separator);
+      })
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(
+      <Notification title="Export Successful" type="success">
+        Data exported to {filename}.
+      </Notification>
+    );
+    return true;
+  }
+  toast.push(
+    <Notification title="Export Failed" type="danger">
+      Browser does not support this feature.
+    </Notification>
+  );
+  return false;
+}
+// --- END CSV Exporter Utility ---
 
 // ============================================================================
 // --- MODALS SECTION ---
@@ -180,7 +341,9 @@ export type MemberModalType =
   | "engagement"
   | "document"
   | "feedback"
-  | "wallLink";
+  | "wallLink"
+  |"viewDetail"
+  |"resetPassword";
 
 export interface MemberModalState {
   isOpen: boolean;
@@ -287,6 +450,8 @@ const MemberModals: React.FC<MemberModalsProps> = ({
         return <ViewEngagementDialog member={member} onClose={onClose} />;
       case "document":
         return <DownloadDocumentDialog member={member} onClose={onClose} />;
+      case "viewDetail": // ADDED
+        return <ViewMemberDetailDialog member={member} onClose={onClose} />;
       // Add other cases as needed
       default:
         return (
@@ -667,9 +832,11 @@ const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
           dummyAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]
-                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]
-                }-500/10`}
+              className={`p-3 rounded-lg border-l-4 border-${
+                alertColors[alert.severity]
+              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
+                alertColors[alert.severity]
+              }-500/10`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -853,17 +1020,294 @@ const GenericActionDialog: React.FC<{
 // --- END MODALS SECTION ---
 // ============================================================================
 
+const ViewMemberDetailDialog: React.FC<{
+  member: any;
+  onClose: () => void;
+}> = ({ member, onClose }) => {
+  const getDisplayValue = (value: any, fallback = "N/A") =>
+    value || fallback;
+  const joinDate =
+    member.member_join_date || member.created_at || "N/A";
+  const formattedJoinDate =
+    joinDate !== "N/A"
+      ? new Date(joinDate).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "N/A";
+
+  const renderDetailItem = (label: string, value: React.ReactNode) => (
+    <div className="mb-3">
+      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="text-sm font-semibold">
+        {value === "" || value === undefined || value === null ? "N/A" : value}
+      </p>
+    </div>
+  );
+
+  const renderListAsTags = (list: (string | number)[] | undefined | null, itemClassName = "text-xs") => {
+  if (!list || list.length === 0) return "N/A";
+  return (
+    <div className="flex flex-wrap gap-1">
+      {list.map((item, idx) => (
+        <Tag key={idx} className={itemClassName}>
+          {getDisplayValue(item)}
+        </Tag>
+      ))}
+    </div>
+  );
+};
+
+
+
+// Helper to format dates
+const formatDate = (dateString: string | undefined | null, includeTime = false) => {
+  if (!dateString) return "N/A";
+  try {
+    const options: Intl.DateTimeFormatOptions = {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    };
+    if (includeTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+      // options.timeZoneName = 'short'; // Optional: if you want to show timezone
+    }
+    return new Date(dateString).toLocaleDateString("en-GB", options);
+  } catch (error) {
+    console.error("Error formatting date:", dateString, error);
+    return "Invalid Date";
+  }
+};
+
+// Helper to render boolean values as "Yes"/"No"
+const renderBoolean = (value: boolean | undefined | null) => {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "N/A";
+};
+
+// Helper to render links, or plain text if not a valid URL format
+const renderLink = (url: string | undefined | null, text?: string) => {
+  const displayUrl = getDisplayValue(url);
+  if (displayUrl === "N/A") return "N/A";
+
+  const isUrl = typeof displayUrl === 'string' && (displayUrl.startsWith('http://') || displayUrl.startsWith('https://'));
+  
+  if (isUrl) {
+    return (
+      <a href={displayUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+        {text || displayUrl}
+      </a>
+    );
+  }
+  return displayUrl; // Display as plain text if not a URL
+};
+
+
+
+// Status color mapping (ensure keys are lowercase)
+const statusColorMap: Record<string, string> = {
+    active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    blocked: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+    inactive: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
+    unregistered: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+};
+ const currentStatus = (member.status || "inactive").toLowerCase();
+
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={700}
+    >
+  
+      <div className="p-1"> {/* Container for padding and structure */}
+        <h5 className="mb-6 text-xl font-semibold">
+          Member Details: {getDisplayValue(member.name)}
+        </h5>
+        
+        <div className="max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar"> {/* Scrollable content area */}
+          
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Basic Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Member ID", getDisplayValue(member.id))}
+            {renderDetailItem("Name", getDisplayValue(member.name))}
+            {renderDetailItem(
+              "Status",
+              <Tag
+                className={`${
+                  statusColorMap[currentStatus] || statusColorMap["inactive"]
+                } capitalize`}
+              >
+                {getDisplayValue(member.status)}
+              </Tag>
+            )}
+            {renderDetailItem("Interested In", getDisplayValue(member.interested_in))}
+            {renderDetailItem("Joined Date", formattedJoinDate)}
+            {renderDetailItem("Last Updated At", formatDate(member.updated_at, true))}
+            {renderDetailItem(
+              "Profile Completion",
+              <div className="flex items-center gap-2">
+                <span>{getDisplayValue(member.profile_completion, 0)}%</span>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 flex-grow">
+                  <div
+                    className="bg-blue-500 h-1.5 rounded-full"
+                    style={{
+                      width: `${getDisplayValue(member.profile_completion, 0)}%`,
+                    }}
+                  ></div>
+                </div>
+              </div>
+            )}
+            {renderDetailItem("Profile Picture", member.full_profile_pic ? renderLink(member.full_profile_pic, "View Image") : "N/A")}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Contact Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Primary Number", `${getDisplayValue(member.number_code)} ${getDisplayValue(member.number)}`)}
+            {renderDetailItem("Email", getDisplayValue(member.email))}
+            {renderDetailItem("WhatsApp Number", getDisplayValue(member.whatsApp_no))}
+            {renderDetailItem("Alternate Contact Number", `${getDisplayValue(member.alternate_contact_number_code)} ${getDisplayValue(member.alternate_contact_number)}`)}
+            {renderDetailItem("Landline Number", getDisplayValue(member.landline_number))}
+            {renderDetailItem("Fax Number", getDisplayValue(member.fax_number))}
+            {renderDetailItem("Alternate Email", getDisplayValue(member.alternate_email))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Company Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Temporary Company Name", getDisplayValue(member.company_temp))}
+            {renderDetailItem("Actual Company Name", getDisplayValue(member.company_actual))}
+            {renderDetailItem("Business Type", getDisplayValue(member.business_type))}
+          </div>
+          
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Address & Location</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Address", getDisplayValue(member.address))}
+            {renderDetailItem("City", getDisplayValue(member.city))}
+            {renderDetailItem("State", getDisplayValue(member.state))}
+            {renderDetailItem("Pincode", getDisplayValue(member.pincode))}
+            {renderDetailItem("Country", getDisplayValue(member.country?.name))}
+            {renderDetailItem("Continent", getDisplayValue(member.continent?.name))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Social & Web Presence</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Website", renderLink(member.website))}
+            {renderDetailItem("LinkedIn Profile", renderLink(member.linkedIn_profile))}
+            {renderDetailItem("Facebook Profile", renderLink(member.facebook_profile))}
+            {renderDetailItem("Instagram Handle", renderLink(member.instagram_handle))}
+            {renderDetailItem("Botim ID", renderLink(member.botim_id))}
+            {renderDetailItem("Skype ID", renderLink(member.skype_id))}
+            {renderDetailItem("WeChat ID", renderLink(member.wechat_id))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Business & Membership</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Business Opportunity", getDisplayValue(member.business_opportunity))}
+            {renderDetailItem("Member Grade", getDisplayValue(member.member_grade))}
+            {renderDetailItem("Dealing in Bulk", getDisplayValue(member.dealing_in_bulk))}
+            {renderDetailItem("Current Membership Plan", getDisplayValue(member.membership_plan_current))}
+            {renderDetailItem("Upgrade Plan Suggestion", getDisplayValue(member.upgrade_your_plan))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Permissions</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Product Upload Permission", renderBoolean(member.product_upload_permission))}
+            {renderDetailItem("Wall Enquiry Permission", renderBoolean(member.wall_enquiry_permission))}
+            {renderDetailItem("Enquiry Permission", renderBoolean(member.enquiry_permission))}
+            {renderDetailItem("Trade Inquiry Allowed", renderBoolean(member.trade_inquiry_allowed))}
+          </div>
+
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Preferences & Miscellaneous</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem(
+              "Favourite Products",
+              member.favourite_products_list && member.favourite_products_list.length > 0
+                ? (
+                  <ul className="list-disc list-inside">
+                    {member.favourite_products_list.map((product: any) => (
+                      <li key={product.id}>{getDisplayValue(product.name)}</li>
+                    ))}
+                  </ul>
+                )
+                : "N/A"
+            )}
+            {renderDetailItem(
+              "Favourite Brands",
+              member.favourite_brands_list && member.favourite_brands_list.length > 0
+                ? renderListAsTags(member.favourite_brands_list.map((brand: any) => brand.name || brand))
+                : "N/A"
+            )}
+             {renderDetailItem("Top-level Brand Name", getDisplayValue(member.brand_name))}
+             {renderDetailItem("Top-level Category", getDisplayValue(member.category))}
+             {renderDetailItem("Top-level Subcategory", getDisplayValue(member.subcategory))}
+             {renderDetailItem("Remarks", getDisplayValue(member.remarks))}
+          </div>
+          
+          <hr className="my-6" />
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Administrative Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+            {renderDetailItem("Created By", getDisplayValue(member.created_by_user?.name))}
+            {renderDetailItem("Updated By", getDisplayValue(member.updated_by_user?.name))}
+            {renderDetailItem("Relationship Manager", getDisplayValue(member.relationship_manager?.name))}
+          </div>
+
+          {member.dynamic_member_profiles && member.dynamic_member_profiles.length > 0 && (
+            <>
+              <hr className="my-6" />
+              <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Dynamic Member Profiles</h6>
+              {member.dynamic_member_profiles.map((profile: any, index: number) => (
+                <div key={profile.id || index} className="mb-6 p-4 border rounded-md dark:border-gray-700">
+                  <h5 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">
+                    Profile {index + 1}: {getDisplayValue(profile.member_type?.name)}
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    {renderDetailItem("Member Type", getDisplayValue(profile.member_type?.name))}
+                    {renderDetailItem("Brands", renderListAsTags(profile.brand_names))}
+                    {renderDetailItem("Categories", renderListAsTags(profile.category_names))}
+                    {renderDetailItem("Sub-categories", renderListAsTags(profile.sub_category_names))}
+                    {renderDetailItem("Profile Created At", formatDate(profile.created_at, true))}
+                    {renderDetailItem("Profile Updated At", formatDate(profile.updated_at, true))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div className="text-right mt-8">
+          <Button variant="solid" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+};
 // --- Status Colors ---
-const statusColor: Record<FormItem["member_status"], string> = {
+const statusColor: Record<string, string> = {
   active: "bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600",
   inactive: "bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600",
+  Active: "bg-green-200 dark:bg-green-200 text-green-600 dark:text-green-600", // For case variations
+  Disabled: "bg-red-200 dark:bg-red-200 text-red-600 dark:text-red-600",
 };
 
 // --- MOCK FILTER OPTIONS (Replace with dynamic/actual data) ---
 const memberStatusOptions = [
-  { value: "active", label: "Active" },
-  { value: "disbled", label: "Disabled" },
-  { value: "unregistered", label: "Unregistered" },
+  { value: "Active", label: "Active" },
+  { value: "Disabled", label: "Disabled" },
+  { value: "Unregistered", label: "Unregistered" },
 ];
 const continentOptions = [
   { value: "Asia", label: "Asia" },
@@ -901,8 +1345,8 @@ const cityOptions = [
   { value: "Bengaluru", label: "Bengaluru" },
 ];
 const interestedForOptions = [
-  { value: "Buy", label: "Buy" },
-  { value: "Sell", label: "Sell" },
+  { value: "For Sell", label: "For Sell" },
+  { value: "For Buy", label: "For Buy" },
   { value: "Both", label: "Both" },
 ];
 // --- END MOCK FILTER OPTIONS ---
@@ -911,10 +1355,8 @@ const interestedForOptions = [
 interface MemberListStore {
   memberList: FormItem[];
   selectedMembers: FormItem[];
-  memberListTotal: number;
   setMemberList: React.Dispatch<React.SetStateAction<FormItem[]>>;
   setSelectedMembers: React.Dispatch<React.SetStateAction<FormItem[]>>;
-  setMemberListTotal: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const MemberListContext = React.createContext<MemberListStore | undefined>(
@@ -933,22 +1375,19 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { MemberData } = useSelector(masterSelector);
+
   const dispatch = useAppDispatch();
 
   const [memberList, setMemberList] = useState<FormItem[]>(
     MemberData?.data ?? []
   );
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
-  const [memberListTotal, setMemberListTotal] = useState<number>(
-    MemberData?.total ?? 0
-  );
 
   useEffect(() => {
-    if(MemberData?.data) {
-        setMemberList(MemberData?.data);
+    if (MemberData?.data) {
+      setMemberList(MemberData.data);
     }
-    setMemberListTotal(MemberData?.total ?? 0);
-  }, [MemberData]);
+  }, [MemberData?.data]);
 
   useEffect(() => {
     dispatch(getMemberAction());
@@ -961,8 +1400,6 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({
         setMemberList,
         selectedMembers,
         setSelectedMembers,
-        memberListTotal,
-        setMemberListTotal,
       }}
     >
       {children}
@@ -1038,7 +1475,7 @@ const ActionColumn = ({
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
           role="button"
-          onClick={onViewDetail}
+           onClick={() => onOpenModal("viewDetail", rowData)}
         >
           <TbEye />
         </div>
@@ -1048,7 +1485,6 @@ const ActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-
         <Dropdown.Item
           onClick={() => onOpenModal("notification", rowData)}
           className="flex items-center gap-2"
@@ -1117,9 +1553,7 @@ const ActionColumn = ({
         >
           <TbLink size={18} /> <span className="text-xs">Add Wall Link</span>
         </Dropdown.Item>
-        <Dropdown.Item
-          className="flex items-center gap-2"
-        >
+        <Dropdown.Item className="flex items-center gap-2">
           <TbKey size={18} /> <span className="text-xs">Reset Password</span>
         </Dropdown.Item>
         <Dropdown.Item
@@ -1144,14 +1578,8 @@ const ActionColumn = ({
 // --- FormListTable Component ---
 const FormListTable = () => {
   const navigate = useNavigate();
-  const {
-    memberList: forms,
-    setMemberList,
-    selectedMembers,
-    setSelectedMembers,
-    memberListTotal,
-    setMemberListTotal,
-  } = useMemberList();
+  const dispatch = useAppDispatch();
+  const { memberList: forms, setSelectedMembers } = useMemberList();
 
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
@@ -1163,6 +1591,19 @@ const FormListTable = () => {
 
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
+
+  // --- START: State and handlers for Export Reason Modal ---
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] =
+    useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
+
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
+  // --- END: State for Export Reason Modal ---
 
   // --- MODAL STATE AND HANDLERS ---
   const [modalState, setModalState] = useState<MemberModalState>({
@@ -1190,8 +1631,6 @@ const FormListTable = () => {
   };
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
-
-
   const handleQueryChange = (newQuery: string) => {
     setTableData((prev) => ({ ...prev, query: newQuery, pageIndex: 1 }));
   };
@@ -1206,35 +1645,114 @@ const FormListTable = () => {
     const defaultFilters: FilterFormData = {};
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+    setTableData((prev) => ({ ...prev, query: "" , pageIndex: 1 }));
   };
 
-  const { pageData, total } = useMemo(() => {
-    if (!forms) {
-      return { pageData: [], total: 0 };
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    const sourceData: FormItem[] = forms ? cloneDeep(forms) : [];
+    let processedData: FormItem[] = sourceData;
+
+    // Apply filters from filterCriteria
+    const {
+      filterStatus,
+      filterBusinessType,
+      filterBusinessOpportunity,
+      filterContinent,
+      filterCountry,
+      filterState,
+      filterCity,
+      filterInterestedFor,
+      filterBrand,
+      memberGrade,
+    } = filterCriteria;
+
+    if (filterStatus?.length) {
+      const values = filterStatus.map((opt) => opt.value);
+      processedData = processedData.filter((item) =>
+        values.includes(item.status)
+      );
     }
-    let processedData = [...forms];
-    if (tableData.query) {
-      const query = tableData.query.toLowerCase();
+    if (filterBusinessType?.length) {
+      const values = filterBusinessType.map((opt) => opt.value);
       processedData = processedData.filter(
-        (form: any) =>
-          form.member_name?.toLowerCase().includes(query) ||
-          form.member_email_id?.toLowerCase().includes(query) ||
-          form.company_name?.toLowerCase().includes(query)
+        (item) =>
+          item.business_type && values.includes(item.business_type as string)
       );
     }
-    if (
-      filterCriteria.filterStatus &&
-      filterCriteria.filterStatus.length > 0
-    ) {
-      const selectedStatuses = filterCriteria.filterStatus.map(
-        (opt) => opt.value
-      );
-      processedData = processedData.filter((form) =>
-        selectedStatuses.includes(form.member_status)
+    if (filterBusinessOpportunity?.length) {
+      const values = filterBusinessOpportunity.map((opt) => opt.value);
+      processedData = processedData.filter(
+        (item) =>
+          item.business_opportunity && values.includes(item.business_opportunity)
       );
     }
-    // ... other client-side filters
+    if (filterContinent?.length) {
+      const values = filterContinent.map((opt) => opt.value.toLowerCase());
+      processedData = processedData.filter(
+        (item) =>
+          item.member_location &&
+          values.some((v) => item.member_location.toLowerCase().includes(v))
+      );
+    }
+    if (filterCountry?.length) {
+      const values = filterCountry.map((opt) => opt.value.toLowerCase());
+      processedData = processedData.filter(
+        (item) =>
+          item.country?.name &&
+          values.includes(item.country.name.toLowerCase())
+      );
+    }
+    if (filterState?.length) {
+      const values = filterState.map((opt) => opt.value.toLowerCase());
+      processedData = processedData.filter(
+        (item) =>
+          item.member_location &&
+          values.some((v) => item.member_location.toLowerCase().includes(v))
+      );
+    }
+    if (filterCity?.length) {
+      const values = filterCity.map((opt) => opt.value.toLowerCase());
+      processedData = processedData.filter(
+        (item) =>
+          item.member_location &&
+          values.some((v) => item.member_location.toLowerCase().includes(v))
+      );
+    }
+    if (filterInterestedFor?.length) {
+      const values = filterInterestedFor.map((opt) => opt.value);
+      processedData = processedData.filter(
+        (item) => item.interested_in && values.includes(item.interested_in)
+      );
+    }
+    if (filterBrand?.length) {
+      const values = filterBrand.map((opt) => opt.value);
+      processedData = processedData.filter(
+        (item) =>
+          item.associated_brands &&
+          item.associated_brands.some((brand) => values.includes(brand))
+      );
+    }
+    if (memberGrade?.length) {
+      const values = memberGrade.map((opt) => opt.value);
+      processedData = processedData.filter(
+        (item) => item.member_grade && values.includes(item.member_grade)
+      );
+    }
+    // End of filters
+
+    // Apply search query
+    if (tableData.query) {
+      const query = tableData.query.toLowerCase().trim();
+      processedData = processedData.filter(
+        (item) =>
+          item.name?.toLowerCase().includes(query) ||
+          item.email?.toLowerCase().includes(query) ||
+          item.company_name?.toLowerCase().includes(query) ||
+          String(item.id).includes(query)
+      );
+    }
+
+    // Apply sorting
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedData.sort((a, b) => {
@@ -1252,8 +1770,68 @@ const FormListTable = () => {
       });
     }
 
-    return { pageData: processedData, total: memberListTotal };
-  }, [forms, tableData, filterCriteria, memberListTotal]);
+    const currentTotal = processedData.length;
+    const pageIndex = tableData.pageIndex as number;
+    const pageSize = tableData.pageSize as number;
+    const startIndex = (pageIndex - 1) * pageSize;
+    const paginatedData = processedData.slice(startIndex, startIndex + pageSize);
+
+    return {
+      pageData: paginatedData,
+      total: currentTotal,
+      allFilteredAndSortedData: processedData,
+    };
+  }, [forms, tableData, filterCriteria]);
+
+  // --- START: Handlers for Export ---
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (
+    data: ExportReasonFormData
+  ) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Members";
+    const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const fileName = `members_export_${timestamp}.csv`;
+    try {
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
+
+      // Proceed with export
+      exportToCsv(fileName, allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+          message={error.message}
+        />
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
+  // --- END: Handlers for Export ---
 
   const handleEdit = (form: FormItem) => {
     navigate(`/business-entities/member-edit/${form.id}`, { state: form });
@@ -1272,13 +1850,18 @@ const FormListTable = () => {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
               <div className="text-xs">
-                <b className="text-xs text-blue-500"><em>70892{(props?.row?.original as any)?.id || ""}</em></b> <br />
-                <b className="texr-xs">{(props?.row?.original as any)?.name || ""}</b>
+                <b className="text-xs text-blue-500">
+                  <em>70892{(props?.row?.original as any)?.id || ""}</em>
+                </b>{" "}
+                <br />
+                <b className="texr-xs">
+                  {(props?.row?.original as any)?.name || ""}
+                </b>
               </div>
             </div>
             <div className="text-xs">
               <div className="text-xs text-gray-500">
-                {(props?.row?.original as any)?.alternate_email || ""}
+                {(props?.row?.original as any)?.email || ""}
               </div>
               <div className="text-xs text-gray-500">
                 {(props?.row?.original as any)?.number || ""}
@@ -1297,12 +1880,15 @@ const FormListTable = () => {
         cell: (props) => (
           <div className="ml-2 rtl:mr-2 text-xs">
             <b className="text-xs ">
-              <em className="text-blue-500">{(props?.row?.original as any)?.company_id_actual || ""}</em>
-
+              <em className="text-blue-500">
+                {(props?.row?.original as any)?.company_id_actual || ""}
+              </em>
             </b>
             <div className="text-xs flex gap-1">
               <MdCheckCircle size={20} className="text-green-500" />
-              <b className="">{props.row.original.company_name || "Unique Enterprise"}</b>
+              <b className="">
+                {props.row.original.company_name || "Unique Enterprise"}
+              </b>
             </div>
           </div>
         ),
@@ -1312,15 +1898,20 @@ const FormListTable = () => {
         accessorKey: "member_status",
         size: 140,
         cell: (props) => {
-          const { status: member_status, created_at } = props.row.original as any;
+          const { status: member_status, created_at } = props.row
+            .original as any;
           return (
             <div className="flex flex-col text-xs">
-              <Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>
+              <Tag
+                className={`${
+                  statusColor[member_status as keyof typeof statusColor]
+                } inline capitalize`}
+              >
                 {member_status || ""}
               </Tag>
               <span className="mt-0.5">
                 <div className="text-[10px] text-gray-500 mt-0.5">
-                  Joined Date:     {" "}
+                  Joined Date:{" "}
                   {new Date(created_at)
                     .toLocaleDateString("en-GB", {
                       day: "numeric",
@@ -1353,16 +1944,23 @@ const FormListTable = () => {
               <b>Grade: {(props?.row?.original as any)?.member_grade || ""}</b>
             </span>
             <span>
-              <b>Business Opportunity: {(props?.row?.original as any)?.business_opportunity || ""}</b>
+              <b>
+                Business Opportunity:{" "}
+                {(props?.row?.original as any)?.business_opportunity || ""}
+              </b>
             </span>
             <Tooltip
-              title={`Profile: ${(props?.row?.original as any)?.profile_completion || 0}%`}
+              title={`Profile: ${
+                (props?.row?.original as any)?.profile_completion || 0
+              }%`}
             >
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
                 <div
                   className="bg-blue-500 h-1.5 rounded-full"
                   style={{
-                    width: `${(props?.row?.original as any)?.profile_completion || 0}%`,
+                    width: `${
+                      (props?.row?.original as any)?.profile_completion || 0
+                    }%`,
                   }}
                 ></div>
               </div>
@@ -1375,17 +1973,27 @@ const FormListTable = () => {
         accessorKey: "associated_brands",
         size: 300,
         cell: (props) => {
-          const [isOpen, setIsOpen] = useState<boolean>(false)
-          const openDialog = () => setIsOpen(true)
-          const closeDialog = () => setIsOpen(false)
+          const [isOpen, setIsOpen] = useState<boolean>(false);
+          const openDialog = () => setIsOpen(true);
+          const closeDialog = () => setIsOpen(false);
           return (
             <div className="flex flex-col gap-1">
               <span className="text-xs">
-                <b className="text-xs">Business Type: {(props?.row?.original as any)?.business_type || ""}</b>
+                <b className="text-xs">
+                  Business Type:{" "}
+                  {(props?.row?.original as any)?.business_type || ""}
+                </b>
               </span>
               <span className="text-xs flex items-center gap-1">
-                <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span>
-                <b className="text-xs">Brands: {(props?.row?.original as any)?.brand_name || ""}</b>
+                <span onClick={openDialog}>
+                  <TbInfoCircle
+                    size={16}
+                    className="text-blue-500 cursor-pointer"
+                  />
+                </span>
+                <b className="text-xs">
+                  Brands: {(props?.row?.original as any)?.brand_name || ""}
+                </b>
               </span>
               <span className="text-xs">
                 <span className="text-[11px]">
@@ -1393,28 +2001,47 @@ const FormListTable = () => {
                   {props.row.original.interested_in}
                 </span>
               </span>
-              <Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}>
+              <Dialog
+                width={620}
+                isOpen={isOpen}
+                onRequestClose={closeDialog}
+                onClose={closeDialog}
+              >
                 <h6>Dynamic Profile</h6>
                 <Table className="mt-6">
-                    <thead className="bg-gray-100 rounded-md">
-                        <Tr>
-                            <Td width={130}>Member Type</Td>
-                            <Td>Brands</Td>
-                            <Td>Category</Td>
-                            <Td>Sub Category</Td>
-                        </Tr>
-                    </thead>
-                    <tbody>
-                        <Tr>
-                            <Td>INS - PREMIUM</Td>
-                            <Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td>
-                            <Td><Tag>Electronics</Tag></Td>
-                            <Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td>
-                        </Tr>
-                    </tbody>
+                  <thead className="bg-gray-100 rounded-md">
+                    <Tr>
+                      <Td width={130}>Member Type</Td>
+                      <Td>Brands</Td>
+                      <Td>Category</Td>
+                      <Td>Sub Category</Td>
+                    </Tr>
+                  </thead>
+                  <tbody>
+                    <Tr>
+                      <Td>INS - PREMIUM</Td>
+                      <Td>
+                        <span className="flex gap-0.5 flex-wrap">
+                          <Tag>Apple</Tag>
+                          <Tag>Samsung</Tag>
+                          <Tag>POCO</Tag>
+                        </span>
+                      </Td>
+                      <Td>
+                        <Tag>Electronics</Tag>
+                      </Td>
+                      <Td>
+                        <span className="flex gap-0.5 flex-wrap">
+                          <Tag>Mobile</Tag>
+                          <Tag>Laptop</Tag>
+                        </span>
+                      </Td>
+                    </Tr>
+                  </tbody>
                 </Table>
               </Dialog>
-            </div>)
+            </div>
+          );
         },
       },
       {
@@ -1487,19 +2114,6 @@ const FormListTable = () => {
     [setSelectedMembers]
   );
 
-  const csvData = useMemo(() => {
-    if (!forms || forms.length === 0) return [];
-    return forms.map((form) => {
-      const newForm: Record<string, any> = { ...form };
-      Object.keys(newForm).forEach((key) => {
-        if (Array.isArray(newForm[key])) {
-          newForm[key] = (newForm[key] as string[]).join(', ');
-        }
-      });
-      return newForm;
-    });
-  }, [forms]);
-
   const getBrandOptions = useMemo(() => {
     if (!forms) return [];
     return forms
@@ -1516,15 +2130,16 @@ const FormListTable = () => {
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
           </Button>
-          {forms && forms.length > 0 ? (
-            <CSVLink data={csvData} filename="members_export.csv">
-              <Button icon={<TbCloudUpload />}>Export</Button>
-            </CSVLink>
-          ) : (
-            <Button icon={<TbCloudUpload />} disabled>
-              Export
-            </Button>
-          )}
+          <Button
+            icon={<TbCloudUpload />}
+            onClick={handleOpenExportReasonModal}
+            disabled={
+              !allFilteredAndSortedData ||
+              allFilteredAndSortedData.length === 0
+            }
+          >
+            Export
+          </Button>
         </div>
       </div>
       <DataTable
@@ -1538,26 +2153,25 @@ const FormListTable = () => {
           pageIndex: tableData.pageIndex as number,
           pageSize: tableData.pageSize as number,
         }}
-        onPagingChange={({ pageIndex, pageSize }) => {
-            handlePaginationChange(pageIndex);
-            handleSelectChange(pageSize);
-        }}
+         onPaginationChange={handlePaginationChange}
+       
         onSort={handleSort}
         onCheckBoxChange={(rows) => {
-            const isAllChecked = rows.every((row:any) => row.getIsSelected());
-            const isIndeterminate = rows.some((row:any) => row.getIsSelected()) && !isAllChecked;
-            const originalRows = rows.map((row:any) => row.original);
+          const isAllChecked = rows.every((row: any) => row.getIsSelected());
+          const isIndeterminate =
+            rows.some((row: any) => row.getIsSelected()) && !isAllChecked;
+          const originalRows = rows.map((row: any) => row.original);
 
-            if(isAllChecked) {
-                handleAllRowSelect(false, originalRows);
-            } else if (isIndeterminate) {
-                handleAllRowSelect(true, originalRows);
-            } else {
-                 handleAllRowSelect(true, originalRows);
-            }
+          if (isAllChecked) {
+            handleAllRowSelect(false, originalRows);
+          } else if (isIndeterminate) {
+            handleAllRowSelect(true, originalRows);
+          } else {
+            handleAllRowSelect(true, originalRows);
+          }
         }}
         onIndeterminateCheckBoxChange={(checked, row) =>
-            handleRowSelect(checked, row.original)
+          handleRowSelect(checked, row.original)
         }
       />
       <Drawer
@@ -1656,9 +2270,7 @@ const FormListTable = () => {
                   <UiSelect
                     isMulti
                     placeholder="Select Country"
-                    options={[
-                      { label: "India", value: "India" }
-                    ]}
+                    options={[{ label: "India", value: "India" }]}
                     value={field.value || []}
                     onChange={(val) => field.onChange(val || [])}
                   />
@@ -1782,6 +2394,62 @@ const FormListTable = () => {
         </UiForm>
       </Drawer>
       <MemberModals modalState={modalState} onClose={handleCloseModal} />
+
+      {/* --- START: Export Reason Modal --- */}
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <UiForm
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <UiFormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </UiFormItem>
+        </UiForm>
+      </ConfirmDialog>
+      {/* --- END: Export Reason Modal --- */}
     </>
   );
 };
@@ -1963,6 +2631,25 @@ const FormListSelected = () => {
 
 // --- Main Member Page Component ---
 const Member = () => {
+  // --- START: Added logic to get member counts ---
+  const { MemberData } = useSelector(masterSelector);
+
+  const counts = useMemo(() => {
+    const list = MemberData?.data || [];
+    const total = list.length || 0;
+
+    const active = list.filter((m: any) => m.status === "Active").length;
+
+    const disabled = list.filter((m: any) => m.status === "Disabled").length;
+
+    const unregistered = list.filter(
+      (m: any) => m.status === "Unregistered"
+    ).length;
+
+    return { total, active, disabled, unregistered };
+  }, [MemberData?.data]);
+  // --- END: Added logic to get member counts ---
+
   return (
     <MemberListProvider>
       <>
@@ -1973,44 +2660,58 @@ const Member = () => {
                 <h5>Member</h5>
                 <FormListActionTools />
               </div>
+              {/* --- START: Updated stats cards with dynamic counts --- */}
               <div className="grid grid-cols-4 mb-4 gap-2">
-                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+                <Card
+                  bodyClass="flex gap-2 p-2"
+                  className="rounded-md border border-blue-200"
+                >
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                     <TbUsersGroup size={24} />
                   </div>
                   <div>
-                    <h6 className="text-blue-500">12</h6>
+                    <h6 className="text-blue-500">{counts.total}</h6>
                     <span className="font-semibold text-xs">Total</span>
                   </div>
                 </Card>
-                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
+                <Card
+                  bodyClass="flex gap-2 p-2"
+                  className="rounded-md border border-green-300"
+                >
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
                     <TbUserCheck size={24} />
                   </div>
                   <div>
-                    <h6 className="text-green-500">12</h6>
+                    <h6 className="text-green-500">{counts.active}</h6>
                     <span className="font-semibold text-xs">Active</span>
                   </div>
                 </Card>
-                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+                <Card
+                  bodyClass="flex gap-2 p-2"
+                  className="rounded-md border border-red-200"
+                >
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
                     <TbUserCancel size={24} />
                   </div>
                   <div>
-                    <h6 className="text-red-500">12</h6>
+                    <h6 className="text-red-500">{counts.disabled}</h6>
                     <span className="font-semibold text-xs">Disabled</span>
                   </div>
                 </Card>
-                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+                <Card
+                  bodyClass="flex gap-2 p-2"
+                  className="rounded-md border border-pink-200"
+                >
                   <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
                     <TbUserExclamation size={24} />
                   </div>
                   <div>
-                    <h6 className="text-pink-500">12</h6>
+                    <h6 className="text-pink-500">{counts.unregistered}</h6>
                     <span className="font-semibold text-xs">Unregistered</span>
                   </div>
                 </Card>
               </div>
+              {/* --- END: Updated stats cards --- */}
               <FormListTable />
             </div>
           </AdaptiveCard>

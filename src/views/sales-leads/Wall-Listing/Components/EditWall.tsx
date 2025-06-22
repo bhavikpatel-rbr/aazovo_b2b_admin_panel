@@ -29,14 +29,12 @@ import Container from "@/components/shared/Container";
 import { useAppDispatch } from '@/reduxtool/store'; // VERIFY PATH
 import { useSelector } from 'react-redux';
 import {
-    // getProductsAction, // Assuming getAllProductAction is the correct one from WallItemAdd
-    getCompanyProfileAction, // VERIFY: Assumes this fetches a LIST of companies
+    getCompanyProfileAction,
     getProductSpecificationsAction,
     getPaymentTermAction,
     getAllProductAction,
     getWallItemById,
-    editWallItemAction, // Used in WallItemAdd, assuming it's for product names
-    // getWallItemByIdAction, // << YOU WOULD ADD AN ACTION LIKE THIS FOR REAL API
+    editWallItemAction,
 } from '@/reduxtool/master/middleware'; // VERIFY PATH
 import { masterSelector } from '@/reduxtool/master/masterSlice'; // VERIFY PATH
 
@@ -51,7 +49,7 @@ export type ApiFetchedWallItem = {
   price: number | null;
   want_to: WallIntent;
   product_status: string;
-  cartoon_type: number | null;
+  cartoon_type: string | null; // API might send name or id, we'll handle number
   internal_remarks: string | null;
   active_hrs: string | null;
   product_spec_id: number | null;
@@ -66,6 +64,7 @@ export type ApiFetchedWallItem = {
   visibility: string;
   priority: string | null;
   admin_status: string | null;
+  status: string; // NEW: Added status from API
   assigned_team: number | null;
   listing_url: string | null;
   warranty: string | null;
@@ -78,10 +77,10 @@ export type ApiFetchedWallItem = {
   created_at_from_api?: string | null;
 };
 
-// Zod Schema for Edit Wall Item Form (Identical to Add Form's schema)
+// Zod Schema for Edit Wall Item Form (Aligned with Add Form's schema)
 const wallItemFormSchema = z.object({
-  product_id: z.number().min(1, "Product Name is required."),
-  company_id: z.number().min(1, "Company Name is required."),
+  product_name: z.string().min(1, "Product Name is required."),
+  company_name: z.string().min(1, "Member Name is required."),
   qty: z
     .number({ required_error: "Quantity is required." })
     .min(0, "Quantity cannot be negative."),
@@ -93,7 +92,7 @@ const wallItemFormSchema = z.object({
   productSpecId: z.number().nullable().optional(),
   deviceCondition: z.string().min(1, "Device condition is required.").nullable(),
   color: z.string().max(50, "Color too long.").nullable().optional(),
-  cartoonType: z.string().nullable().optional(),
+  cartoonTypeId: z.number().nullable().optional(),
   dispatchStatus: z.string().max(100, "Dispatch status too long.").nullable().optional(),
   dispatchMode: z.string().optional().nullable(),
   paymentTermId: z.number().nullable().optional(),
@@ -103,7 +102,8 @@ const wallItemFormSchema = z.object({
   visibility: z.string().min(1, "Visibility is required."),
   priority: z.string().min(1, "Priority is required.").optional().nullable(),
   adminStatus: z.string().min(1, "Admin Status is required.").optional().nullable(),
-  assignedTeamId: z.string().nullable().optional(),
+  status: z.string().min(1, "Status is required."), // NEW: Added status field
+  assignedTeamId: z.number().nullable().optional(),
   activeHours: z.string().optional().nullable(),
   productUrl: z.string().url("Invalid URL format.").or(z.literal("")).optional().nullable(),
   warrantyInfo: z.string().optional().nullable(),
@@ -115,7 +115,7 @@ const wallItemFormSchema = z.object({
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 
 // Define option types
-type ProductOptionType = { value: number; label: string; id: number };
+type ProductOptionType = { value: string; label: string; id: number };
 type CompanyOptionType = { value: string; label: string; id: number };
 type ProductSpecOptionType = { value: number; label: string };
 type PaymentTermType = { value: number; label: string; id: number};
@@ -123,17 +123,21 @@ type PaymentTermType = { value: number; label: string; id: number};
 
 // --- Form Options (Static options remain) ---
 const intentOptions: { value: WallIntent; label: string }[] = [
-  { value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" }
-];
+  { value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" }];
 const productStatusOptions: { value: string; label: string }[] = [
-    { value: "In Stock", label: "In Stock" }, 
-    { value: "Low Stock", label: "Low Stock" }, 
-    { value: "Out of Stock", label: "Out of Stock" },
     { value: "Active", label: "Active" },
-    { value: "In-Active", label: "In-Active" },
+    { value: "Non-active", label: "Non-active" },
 ];
-const dummyCartoonTypes: { value: string; label: string }[] = [
-  { value: "Master Carton", label: "Master Carton" }, { value: "Inner Carton", label: "Inner Carton" }, { value: "Pallet", label: "Pallet" }
+const statusOptions = [
+    { value: "Active", label: "Active" },
+    { value: "Rejected", label: "Rejected" },
+    { value: "Pending", label: "Pending" },
+    { value: "inactive", label: "Inactive" },
+];
+const dummyCartoonTypes = [
+  { id: 1, name: "Master Carton" },
+  { id: 2, name: "Inner Carton" },
+  { id: 3, name: "Pallet" },
 ];
 const deviceConditionRadioOptions: { value: string; label: string }[] = [
   { value: "New", label: "New" }, { value: "Old", label: "Old" }
@@ -144,8 +148,10 @@ const visibilityOptions: { value: string; label: string }[] = [
 const priorityOptions: { value: string; label: string }[] = [
   { value: 'High', label: 'High' }, { value: 'Medium', label: 'Medium' }, { value: 'Low', label: 'Low' }
 ];
-const assignedTeamOptions: { value: string; label: string }[] = [
-  { value: 'Sales Team Alpha', label: 'Sales Team Alpha' }, { value: 'Sales Team Beta', label: 'Sales Team Beta' }, { value: 'Support Team', label: 'Support Team' }
+const assignedTeamOptions = [
+    { value: 1, label: 'Sales Team Alpha' },
+    { value: 2, label: 'Sales Team Beta' },
+    { value: 3, label: 'Support Team' },
 ];
 const listingTypeOptions: { value: string; label: string }[] = [
   { value: 'Featured', label: 'Featured' }, { value: 'Regular', label: 'Regular' }
@@ -163,7 +169,6 @@ const WallItemEdit = () => {
   const { id: itemIdFromParams } = useParams<{ id: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
-  const [isLoadingDropdownData, setIsLoadingDropdownData] = useState(true);
 
   const [itemToEditApiData, setItemToEditApiData] = useState<ApiFetchedWallItem | null>(null);
 
@@ -177,7 +182,31 @@ const WallItemEdit = () => {
 
   const formMethods = useForm<WallItemFormData>({
     resolver: zodResolver(wallItemFormSchema),
+    defaultValues: {
+      product_name: "",
+      company_name: "",
+      status: "Pending", // Default status
+    },
   });
+
+  // --- Prepare options for Select components ---
+  const productOptions: ProductOptionType[] = useMemo(() => {
+    if (!Array.isArray(productsMasterData)) return [];
+    return productsMasterData.map((product: any) => ({
+      value: product.name,
+      label: `${product.name}${product.name ? ` (${product.name})` : ''}`.trim(),
+      id: product.id,
+    }));
+  }, [productsMasterData]);
+
+  const companyOptions: CompanyOptionType[] = useMemo(() => {
+    if (!Array.isArray(CompanyData)) return [];
+    return CompanyData.map((company: any) => ({
+      value: company.name || company.company_name, // Handle different property names
+      label: company.name || company.company_name,
+      id: company.id,
+    }));
+  }, [CompanyData]);
 
   const paymentTermsOption: PaymentTermType[] = useMemo(() => {
     if (!Array.isArray(PaymentTermsData)) return [];
@@ -187,25 +216,6 @@ const WallItemEdit = () => {
       id: payment.id,
     }));
   }, [PaymentTermsData]);
-
-   const productOptions: ProductOptionType[] = useMemo(() => {
-    if (!Array.isArray(productsMasterData)) return [];
-    return productsMasterData.map((product: any) => ({
-      value: product.id,
-      label: product.name,
-      id: product.id,
-    }));
-  }, [productsMasterData]);
-  
-
-  const companyOptions: CompanyOptionType[] = useMemo(() => {
-    if (!Array.isArray(CompanyData)) return [];
-    return CompanyData.map((company: any) => ({
-      value: company.id,
-      label: company.company_id || company.name,
-      id: company.id,
-    }));
-  }, [CompanyData]);
 
   const productSpecOptionsForSelect: ProductSpecOptionType[] = useMemo(() => {
     if (!Array.isArray(ProductSpecificationsData)) return [];
@@ -226,34 +236,23 @@ const WallItemEdit = () => {
       }
       
       setIsLoadingInitialData(true);
-      setIsLoadingDropdownData(true);
 
       try {
-        // Dispatch actions to get dropdown options
         await Promise.all([
           dispatch(getAllProductAction()),
           dispatch(getCompanyProfileAction()),
           dispatch(getProductSpecificationsAction()),
           dispatch(getPaymentTermAction()),
         ]);
-        setIsLoadingDropdownData(false);
-
-        // Fetch the specific item to edit
+        
         const id = parseInt(itemIdFromParams, 10);
         if (isNaN(id)) {
           toast.push(<Notification title="Error" type="danger">Invalid item ID format.</Notification>);
           navigate("/sales-leads/wall-listing");
-          setIsLoadingInitialData(false); // Clear loading state
           return;
         }
 
-        // In a real app, this would be:
-        // dispatch(getWallItemByIdAction(id));
-        // And then you'd select the item from the Redux store using `useSelector`.
-        // The result would then be set to `itemToEditApiData` or used directly.
-        // For this simulation, we call our mocked fetch function:
         const fetchedApiItem = await dispatch(getWallItemById(id)).unwrap();
-
 
         if (fetchedApiItem) {
           setItemToEditApiData(fetchedApiItem);
@@ -264,27 +263,25 @@ const WallItemEdit = () => {
       } catch (error) {
         console.error("Failed to fetch data for edit form:", error);
         toast.push(<Notification title="Data Load Error" type="danger">Could not load required data for editing.</Notification>);
-        if (isLoadingDropdownData) setIsLoadingDropdownData(false);
       } finally {
         setIsLoadingInitialData(false);
       }
     };
     fetchData();
-  }, [dispatch, itemIdFromParams, navigate]); // isLoadingDropdownData removed as it's managed inside
+  }, [dispatch, itemIdFromParams, navigate]);
 
   // --- Populate form once all data is available ---
   useEffect(() => {
-    if (itemToEditApiData && (!isLoadingDropdownData || ['succeeded', 'failed'].includes(masterDataAccessStatus))) {
-      const matchedProductStatusOption = productStatusOptions.find(opt =>
-        opt.label.toLowerCase().replace(/[^a-z0-9]/gi, '') ===
-        itemToEditApiData?.product_status ||
-        opt.value.toLowerCase().replace(/[^a-z0-9]/gi, '') ===
-        itemToEditApiData?.product_status
-      );
+    // This effect runs when the item data OR the dropdown options are ready
+    if (itemToEditApiData && masterDataAccessStatus === 'succeeded') {
+      const product = productOptions.find(p => p.id === itemToEditApiData.product_id);
+      const company = companyOptions.find(c => c.id === itemToEditApiData.company_id);
+      // Find cartoonTypeId from name if needed
+      const cartoon = dummyCartoonTypes.find(ct => ct.name === itemToEditApiData.cartoon_type);
 
       formMethods.reset({
-        product_id: Number(itemToEditApiData.product_id),
-        company_id: Number(itemToEditApiData.company_id),
+        product_name: product?.label || "",
+        company_name: company?.label || "",
         qty: Number(itemToEditApiData.qty),
         price: itemToEditApiData.price !== null ? Number(itemToEditApiData.price) : null,
         intent: itemToEditApiData.want_to,
@@ -292,7 +289,7 @@ const WallItemEdit = () => {
         productSpecId: itemToEditApiData.product_spec_id !== null ? Number(itemToEditApiData.product_spec_id) : null,
         deviceCondition: itemToEditApiData.device_condition,
         color: itemToEditApiData.color,
-        cartoonType: itemToEditApiData.cartoon_type !== null ? String(itemToEditApiData.cartoon_type) : null,
+        cartoonTypeId: cartoon?.id ?? null,
         dispatchStatus: itemToEditApiData.dispatch_status,
         dispatchMode: itemToEditApiData.dispatch_mode,
         paymentTermId: itemToEditApiData.payment_term !== null ? Number(itemToEditApiData.payment_term) : null,
@@ -302,6 +299,7 @@ const WallItemEdit = () => {
         visibility: itemToEditApiData.visibility,
         priority: itemToEditApiData.priority,
         adminStatus: itemToEditApiData.admin_status,
+        status: itemToEditApiData.status, // Populate status field
         assignedTeamId: itemToEditApiData.assigned_team !== null ? Number(itemToEditApiData.assigned_team) : null,
         activeHours: itemToEditApiData.active_hrs,
         productUrl: itemToEditApiData.listing_url,
@@ -312,24 +310,18 @@ const WallItemEdit = () => {
         companyId: Number(itemToEditApiData.company_id),
       });
     }
-  }, [itemToEditApiData, formMethods, isLoadingDropdownData, masterDataAccessStatus, productOptions, companyOptions, productSpecOptionsForSelect]);
+  }, [itemToEditApiData, formMethods, masterDataAccessStatus, productOptions, companyOptions]);
 
 
-const onFormSubmit = useCallback(
-  async (formData: WallItemFormData) => {
-    if (!itemIdFromParams) {
-      toast.push(<Notification title="Error" type="danger">Item ID is missing.</Notification>);
-      return;
-    }
-
+  const onFormSubmit = useCallback(async (formData: WallItemFormData) => {
+    if (!itemIdFromParams) return;
     setIsSubmitting(true);
 
-    const cartoonTypeDetails = formData.cartoonType;
-    const productSpecDetails = formData.productSpecId
-      ? productSpecOptionsForSelect.find(spec => spec.value === formData.productSpecId)
+    const cartoonTypeDetails = formData.cartoonTypeId
+      ? dummyCartoonTypes.find(ct => ct.id === formData.cartoonTypeId)
       : null;
-
-    const payload: any = {
+    
+    const payload = {
       id: parseInt(itemIdFromParams, 10),
       product_id: formData.productId ? String(formData.productId) : null,
       company_id: formData.companyId ? String(formData.companyId) : null,
@@ -340,7 +332,7 @@ const onFormSubmit = useCallback(
       product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null,
       device_condition: formData.deviceCondition,
       color: formData.color,
-      cartoon_type: formData.cartoonType ?? "",
+      cartoon_type: cartoonTypeDetails?.name ?? null,
       dispatch_status: formData.dispatchStatus,
       dispatch_mode: formData.dispatchMode,
       payment_term: formData.paymentTermId ? String(formData.paymentTermId) : "0",
@@ -350,80 +342,38 @@ const onFormSubmit = useCallback(
       visibility: formData.visibility,
       priority: formData.priority,
       admin_status: formData.adminStatus,
-      assigned_to: formData.assignedTeamId ?? null,
+      assigned_to: formData.assignedTeamId ? String(formData.assignedTeamId) : null,
       assigned_team: formData.assignedTeamId ?? null,
       active_hrs: String(formData.activeHours),
       product_url: formData.productUrl,
       warranty: formData.warrantyInfo,
       internal_remarks: formData.internalRemarks,
       return_policy: formData.returnPolicy,
-
-      // Meta fields
-      created_from: "FormUI-Edit",
-      created_at: itemToEditApiData?.created_at_from_api || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      status: formData.adminStatus,
+      status: formData.status, // Send the new status
       source: itemToEditApiData?.source || "in_edit",
       is_wall_manual: itemToEditApiData?.is_wall_manual || "0",
+      updated_at: new Date().toISOString(),
     };
 
-    // Optional structured fields for internal usage or relational joins
-    payload.product = {
-      id: formData.productId,
-      name: formData.product_id,
-      description: null,
-      status: formData.productStatus,
-    };
-
-    payload.product_spec = productSpecDetails
-      ? { id: productSpecDetails.value, name: productSpecDetails.label }
-      : null;
-
-    payload.customer = {
-      id: formData.companyId,
-      name: formData.company_id,
-    };
-
-    payload.company = null;
-
-    // Simulated API call
-    await dispatch(editWallItemAction(payload)).unwrap();
-
-    toast.push(<Notification title="Success" type="success">Wall item updated. (Simulated)</Notification>);
-    setIsSubmitting(false);
-    navigate("/sales-leads/wall-listing");
-  },
-  [navigate, itemIdFromParams, itemToEditApiData, productSpecOptionsForSelect]
-);
+    try {
+        await dispatch(editWallItemAction(payload)).unwrap();
+        toast.push(<Notification title="Success" type="success">Wall item updated successfully.</Notification>);
+        navigate("/sales-leads/wall-listing");
+    } catch (error: any) {
+        toast.push(<Notification title="Update Failed" type="danger">{error.message || "Could not update wall item."}</Notification>);
+    } finally {
+        setIsSubmitting(false);
+    }
+  }, [navigate, dispatch, itemIdFromParams, itemToEditApiData]);
 
 
   const handleCancel = () => {
     navigate("/sales-leads/wall-listing");
   };
   
-  const handleSaveAsDraft = () => {
-    if (!itemIdFromParams) return;
-    const currentValues = formMethods.getValues();
-    const draftData = {
-        ...currentValues,
-        id: parseInt(itemIdFromParams, 10),
-        eta: currentValues.eta ? dayjs(currentValues.eta).format("YYYY-MM-DD") : null,
-        // Retain original source/creator if available from itemToEditApiData for drafts
-        source: itemToEditApiData?.source,
-        created_by: itemToEditApiData?.created_by,
-        is_wall_manual: itemToEditApiData?.is_wall_manual,
-        created_at_from_api: itemToEditApiData?.created_at_from_api,
+  const isLoading = isLoadingInitialData || masterDataAccessStatus === "loading";
 
-    };
-    console.log("Saving as draft (Edit):", draftData);
-    toast.push(<Notification title="Draft Saved" type="info">Changes saved as draft. (Simulated)</Notification>);
-  };
-
-  // Combined loading state: true if initial item data is loading OR dropdown data is loading (either via its own state or Redux status)
-  const isLoadingCombined = isLoadingInitialData || isLoadingDropdownData || masterDataAccessStatus === "loading";
-
-
-  if (isLoadingCombined) {
+  if (isLoading) {
     return (
       <Container> 
         <div className="flex justify-center items-center h-screen">
@@ -433,12 +383,12 @@ const onFormSubmit = useCallback(
     );
   }
   
-  if (!itemToEditApiData && !isLoadingInitialData) { // Handles case where item wasn't found but initial load finished
+  if (!itemToEditApiData && !isLoadingInitialData) {
     return (
       <Container>
         <div className="text-center p-8">
           <h4 className="text-lg font-semibold mb-2">Item Not Found</h4>
-          <p>The requested wall item could not be loaded. It might have been removed or the ID is incorrect.</p>
+          <p>The requested wall item could not be loaded.</p>
           <Button className="mt-4" variant="solid" onClick={() => navigate("/sales-leads/wall-listing")}>
             Back to Wall Listing
           </Button>
@@ -466,15 +416,15 @@ const onFormSubmit = useCallback(
             {/* Row 1 */}
             <FormItem
                 label={<div>Product Name<span className="text-red-500"> * </span></div>}
-                invalid={!!formMethods.formState.errors.product_id}
-                errorMessage={formMethods.formState.errors.product_id?.message}
+                invalid={!!formMethods.formState.errors.product_name}
+                errorMessage={formMethods.formState.errors.product_name?.message}
             >
                 <Controller
-                    name="product_id"
+                    name="product_name"
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading"}
+                            isLoading={isLoading}
                             options={productOptions}
                             value={productOptions.find(opt => opt.value === field.value) || null }
                             onChange={option => {
@@ -493,16 +443,16 @@ const onFormSubmit = useCallback(
                 />
             </FormItem>
             <FormItem
-                label={<div>Company Name<span className="text-red-500"> * </span></div>}
-                invalid={!!formMethods.formState.errors.company_id}
-                errorMessage={formMethods.formState.errors.company_id?.message}
+                label={<div>Member Name<span className="text-red-500"> * </span></div>}
+                invalid={!!formMethods.formState.errors.company_name}
+                errorMessage={formMethods.formState.errors.company_name?.message}
             >
                 <Controller
-                    name="company_id"
+                    name="company_name"
                     control={formMethods.control}
                     render={({ field }) => (
                         <UiSelect
-                            isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading"}
+                            isLoading={isLoading}
                             options={companyOptions}
                             value={companyOptions.find(opt => opt.value === field.value) || null}
                             onChange={option => {
@@ -514,7 +464,7 @@ const onFormSubmit = useCallback(
                                     formMethods.setValue('companyId', null, { shouldValidate: true, shouldDirty: true });
                                 }
                             }}
-                            placeholder="Select Company Name"
+                            placeholder="Select Member Name"
                             isClearable
                         />
                     )}
@@ -551,7 +501,7 @@ const onFormSubmit = useCallback(
               )}/>
             </FormItem>
             <FormItem
-              label={<div>Produt Status<span className="text-red-500"> * </span></div>}
+              label={<div>Product Status<span className="text-red-500"> * </span></div>}
               invalid={!!formMethods.formState.errors.productStatus}
               errorMessage={formMethods.formState.errors.productStatus?.message}
             >
@@ -560,7 +510,7 @@ const onFormSubmit = useCallback(
                     options={productStatusOptions} 
                     value={productStatusOptions.find(opt => opt.value === field.value)}
                     onChange={opt => field.onChange(opt ? opt.value : null)}
-                    placeholder="Select Product Stock Status" 
+                    placeholder="Select Product Status" 
                 /> 
               )}/>
             </FormItem>
@@ -573,7 +523,7 @@ const onFormSubmit = useCallback(
             >
               <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
                   <UiSelect 
-                    isLoading={isLoadingDropdownData || masterDataAccessStatus === "loading"}
+                    isLoading={isLoading}
                     options={productSpecOptionsForSelect} 
                     value={productSpecOptionsForSelect.find(opt => opt.value === field.value) || null} 
                     onChange={(option) => field.onChange(option ? option.value : null)} 
@@ -601,12 +551,12 @@ const onFormSubmit = useCallback(
             
             <FormItem
               label="Cartoon Type"
-              invalid={!!formMethods.formState.errors.cartoonType}
-              errorMessage={formMethods.formState.errors.cartoonType?.message}
+              invalid={!!formMethods.formState.errors.cartoonTypeId}
+              errorMessage={formMethods.formState.errors.cartoonTypeId?.message}
             >
-              <Controller name="cartoonType" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={dummyCartoonTypes}
-                  value={dummyCartoonTypes.find(opt => opt.value === field.value || null)} 
+              <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (
+                  <UiSelect options={dummyCartoonTypes.map(ct => ({ value: ct.id, label: ct.name }))}
+                  value={dummyCartoonTypes.map(ct => ({ value: ct.id, label: ct.name })).find(opt => opt.value === field.value) || null} 
                   onChange={(option) => field.onChange(option ? option.value : null)} 
                   placeholder="Select Cartoon Type (Optional)" 
                   isClearable/>
@@ -640,7 +590,8 @@ const onFormSubmit = useCallback(
               errorMessage={formMethods.formState.errors.paymentTermId?.message}
             >
               <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
-                  <UiSelect options={paymentTermsOption} {...field} 
+                  <UiSelect options={paymentTermsOption} 
+                  isLoading={isLoading}
                   value={paymentTermsOption.find(opt => opt.value === field.value) || null}
                   onChange={(option) => field.onChange(option ? option.value : null)} 
                   placeholder="Select Payment Term (Optional)" 
@@ -718,29 +669,48 @@ const onFormSubmit = useCallback(
               )}/>
             </FormItem>
             <FormItem
+                label={<div>Status<span className="text-red-500"> * </span></div>}
+                invalid={!!formMethods.formState.errors.status}
+                errorMessage={formMethods.formState.errors.status?.message}
+            >
+                <Controller
+                    name="status"
+                    control={formMethods.control}
+                    render={({ field }) => (
+                        <UiSelect
+                            options={statusOptions}
+                            value={statusOptions.find(opt => opt.value === field.value)}
+                            onChange={opt => field.onChange(opt ? opt.value : null)}
+                            placeholder="Select Status"
+                        />
+                    )}
+                />
+            </FormItem>
+            <FormItem
               label="Assigned Team"
               invalid={!!formMethods.formState.errors.assignedTeamId}
               errorMessage={formMethods.formState.errors.assignedTeamId?.message}
             >
               <Controller name="assignedTeamId" control={formMethods.control} render={({ field }) => (
                   <UiSelect options={assignedTeamOptions.map(team => ({ value: team.value, label: team.label }))} 
-                  value={assignedTeamOptions.map(team => ({value: team.value, label: team.label})).find(opt => opt.value === field.value) || null} 
+                  value={assignedTeamOptions.find(opt => opt.value === field.value) || null} 
                   onChange={opt => field.onChange(opt ? opt.value : null)} 
                   placeholder="Select Assigned Team (Optional)" 
                   isClearable/>
                 )} />
             </FormItem>
-             <FormItem
+
+            <FormItem
               label="Active Hours"
+              className="md:col-span-1"
               invalid={!!formMethods.formState.errors.activeHours}
               errorMessage={formMethods.formState.errors.activeHours?.message}
             >
-              <Controller name="activeHours" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM, 24/7 (Optional)" /> )} />
+              <Controller name="activeHours" control={formMethods.control} render={({ field }) => ( <Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM (Optional)" /> )} />
             </FormItem>
-            
              <FormItem
               label="Product URL"
-              className="md:col-span-1"
+              className="md:col-span-2"
               invalid={!!formMethods.formState.errors.productUrl}
               errorMessage={formMethods.formState.errors.productUrl?.message}
             >
@@ -748,7 +718,7 @@ const onFormSubmit = useCallback(
             </FormItem>
             <FormItem
               label="Warranty Info"
-              className="md:col-span-2" 
+              className="md:col-span-3" 
               invalid={!!formMethods.formState.errors.warrantyInfo}
               errorMessage={formMethods.formState.errors.warrantyInfo?.message}
             >
@@ -779,15 +749,14 @@ const onFormSubmit = useCallback(
       </Card>
       
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
-        <Button type="button" onClick={handleCancel} disabled={isSubmitting || isLoadingCombined} > Cancel </Button>
-        <Button type="button" onClick={handleSaveAsDraft} disabled={isSubmitting || isLoadingCombined}> Draft </Button>
+        <Button type="button" onClick={handleCancel} disabled={isSubmitting || isLoading} > Cancel </Button>
         <Button 
             type="submit" 
             form="wallItemEditForm" 
             variant="solid" 
             loading={isSubmitting} 
-            disabled={isSubmitting || isLoadingCombined} >
-          {isSubmitting ? "Saving..." : "Save"}
+            disabled={isSubmitting || isLoading || !formMethods.formState.isDirty} >
+          {isSubmitting ? "Saving..." : "Save Changes"}
         </Button>
       </Card>
     </>

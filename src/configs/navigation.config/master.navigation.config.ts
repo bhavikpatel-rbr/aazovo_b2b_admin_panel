@@ -36,6 +36,22 @@ const masterNavigationConfig: NavigationTree[] = [
                 subMenu: [],
             },
             {
+                key: 'master.memberType',
+                path: `${MASTER_PREFIX_PATH}/member-type`,
+                title: 'Member Type',
+                translateKey: 'nav.master.memberType',
+                icon: 'memberType',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN],
+                meta: {
+                    description: {
+                        translateKey: 'nav.master.memberType',
+                        label: 'Manage member types',
+                    },
+                },
+                subMenu: [],
+            },
+            {
                 key: 'master.paymentTerms',
                 path: `${MASTER_PREFIX_PATH}/payment-terms`,
                 title: 'Payment Terms',
