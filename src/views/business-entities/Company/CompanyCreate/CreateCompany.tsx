@@ -49,7 +49,7 @@ import { z } from "zod";
 // --- Type Definitions ---
 
 interface MemberItem {
-  member?: string | { label: string; value: string };
+  member_id?: string | { label: string; value: string };
   designation?: string;
   person_name?: string;
   number?: string;
@@ -646,6 +646,8 @@ const preparePayloadForApi = (
   }
   // Members
   if (data.member) {
+    console.log(data.member, );
+    
     data.member.forEach((member, index) => {
       if (member.team_name) {
         apiPayload.append(`company_team_members[${index}][team_name]`, member.team_name || '');
@@ -653,7 +655,7 @@ const preparePayloadForApi = (
         apiPayload.append(`company_team_members[${index}][person_name]`, member.person_name || '');
         apiPayload.append(`company_team_members[${index}][number]`, member.number || '');
       } else {
-        apiPayload.append(`company_member_management[${index}][member_id]`, member.member?.value || '');
+        apiPayload.append(`company_member_management[${index}][member_id]`, member.member_id?.value || '');
         apiPayload.append(`company_member_management[${index}][designation]`, member.designation || '');
         apiPayload.append(`company_member_management[${index}][person_name]`, member.person_name || '');
         apiPayload.append(`company_member_management[${index}][number]`, member.number || '');
@@ -818,8 +820,8 @@ const CompanyDetailsSection = ({
     { value: "Foreign Company", label: "Foreign Company" },
   ];
   const statusOptions = [
-    { value: "verified", label: "Verified" },
-    { value: "unverified", label: "Non verified" },
+    { value: "Verified", label: "Verified" },
+    { value: "Non Verified", label: "Non Verified" },
   ];
   const officeTypeOptions = [
     { label: "Head Office", value: "Head Office" },
@@ -2496,9 +2498,7 @@ const MemberManagementSection = ({
   });
 
   // Correctly access nested data for paginated results
-  console.log(memberData, 'memberData');
   const memberOptions = useMemo(() => {
-
     const data = memberData?.data?.data || memberData;
     return Array.isArray(data)
       ? data.map((m: any) => ({
@@ -2524,7 +2524,7 @@ const MemberManagementSection = ({
             onClick={() =>
               append({
                 type: "member",
-                member: undefined,
+                member_id: undefined,
                 designation: "",
                 person_name: "",
                 number: "",
@@ -2540,7 +2540,7 @@ const MemberManagementSection = ({
             onClick={() =>
               append({
                 type: "team",
-                member: undefined, // ignored for team
+                member_id: undefined, // ignored for team
                 designation: "",
                 person_name: "",
                 number: "",
@@ -2562,7 +2562,7 @@ const MemberManagementSection = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
             <FormItem label={item.type === "team" ? "Team Name" : "Member"}>
               <Controller
-                name={`member.${index}.${item.type === "team" ? "team_name" : "member"}`}
+                name={`member.${index}.${item.type === "team" ? "team_name" : "member_id"}`}
                 control={control}
                 render={({ field }) =>
                   item.type === "team" ? (
