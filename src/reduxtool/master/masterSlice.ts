@@ -38,6 +38,7 @@ import {
   getAllCompany,
   getAllProductAction,
   getAllProductsAction,
+  getAllTaskAction,
   getAutoEmailsAction,
   getAutoEmailTemplatesAction,
   getAutoMatchDataAction,
@@ -462,6 +463,11 @@ const masterSlice = createSlice({
       ...state,
       productsMasterData: payload,
     }));
+    builder.addCase(getAllTaskAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      AllTaskData: payload,
+    }));
+
     builder.addCase(getMembersAction.fulfilled, (state, { payload }) => ({
       ...state,
       memberData: payload,

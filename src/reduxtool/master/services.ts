@@ -413,6 +413,17 @@ export const getBrandAsync = async () => {
   }
 }
 
+export const getAllTaskAsync = async () => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/get-all-task`, {
+      "user_id": 53
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const addBrandAsync = async (unitData: FormData) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
@@ -2104,7 +2115,7 @@ export const addCompanyAsync = async (unitData: any) => {
       }
     );
     console.log(unitData, response);
-    
+
     return response;
   } catch (err) {
     return isAxiosError(err);
