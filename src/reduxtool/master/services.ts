@@ -2575,6 +2575,15 @@ export const getCompanyByIdAsync = async (id: string | number) => {
   }
 }
 
+export const getAllCompanyAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/company`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
 export const editCompanyAsync = async (id: string | number, formData: FormData) => {
   try {
     formData.append("_method", "PUT");

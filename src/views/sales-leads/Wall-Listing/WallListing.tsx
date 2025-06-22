@@ -63,6 +63,7 @@ import type { CellContext, ColumnDef, OnSortParam, Row } from "@/components/shar
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path if slice structure changed
 import {
   deleteAllWallAction,
+  getAllCompany,
   getBrandAction,
   getCategoriesData,
   getEmployeesAction,
@@ -568,6 +569,7 @@ const WallListing = () => {
     MemberTypeData,
     ProductSpecificationsData,
     Employees,
+    AllCompanyData,
     status: masterLoadingStatus
   } = useSelector(masterSelector);
 
@@ -697,6 +699,12 @@ const WallListing = () => {
   useEffect(() => {
     const apiParams = buildApiParams();
     dispatch(getWallListingAction(apiParams));
+  }, [dispatch, buildApiParams]);
+
+
+  useEffect(() => {
+    const apiParams = buildApiParams();
+    dispatch(getWallListingAction(apiParams));
     dispatch(getProductsDataAsync());
     dispatch(getCategoriesData());
     dispatch(getSubcategoriesByCategoryIdAction(0));
@@ -704,6 +712,7 @@ const WallListing = () => {
     dispatch(getMemberTypeAction());
     dispatch(getProductSpecificationsAction());
     dispatch(getEmployeesAction());
+    dispatch(getAllCompany());
   }, [dispatch, buildApiParams]);
 
 
@@ -758,6 +767,8 @@ const WallListing = () => {
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
+    console.log(data, "datadatadatadata");
+
     setFilterCriteria(data);
     handleSetTableData({ pageIndex: 1 });
     closeFilterDrawer();
@@ -1050,7 +1061,7 @@ const WallListing = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
 
-              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select companies..." options={dummyCompanies.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem> {/* PENDING */}
+              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select companies..." options={AllCompanyData?.map((p) => ({ value: p.id, label: p.company_name, }))} {...field} />)} /></FormItem> {/* PENDING */}
 
               <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti className="text-nowrap text-ellipsis" placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
 

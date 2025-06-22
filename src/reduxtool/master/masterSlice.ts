@@ -35,6 +35,7 @@ import {
   editPaymentTermAction,
   editUnitAction,
   getActivityLogAction,
+  getAllCompany,
   getAllProductAction,
   getAllProductsAction,
   getAutoEmailsAction,
@@ -168,6 +169,7 @@ const INITIAL_STATE: any = {
   salesPerson: [],
   suppliers: [],
   Employees: [],
+  AllCompanyData: []
 };
 
 const masterSlice = createSlice({
@@ -615,7 +617,10 @@ const masterSlice = createSlice({
       ...state,
       ParentCategories: payload,
     }));
-
+    builder.addCase(getAllCompany.fulfilled, (state, { payload }) => ({
+      ...state,
+      AllCompanyData: payload,
+    }));
 
   },
 });
