@@ -376,7 +376,7 @@ export const editDocumentListAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", name: unitData?.name, document_type: unitData?.document_type, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_master/${unitData?.id}`, { _method: "PUT", ...unitData })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -407,6 +407,17 @@ export const deleteAllDocumentListAsync = async (unitData: any) => {
 export const getBrandAsync = async () => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/master/brand/get`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getAllTaskAsync = async () => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/get-all-task`, {
+      "user_id": 53
+    })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2104,7 +2115,7 @@ export const addCompanyAsync = async (unitData: any) => {
       }
     );
     console.log(unitData, response);
-    
+
     return response;
   } catch (err) {
     return isAxiosError(err);
@@ -2260,7 +2271,7 @@ export const deleteAllpartnerAsync = async (unitData: any) => {
   }
 }
 
-export const getpWallListingAsync = async (params: WallApiRequestParams = {}) => { // <-- ACCEPTS PARAMS
+export const getpWallListingAsync = async (params: any = {}) => { // <-- ACCEPTS PARAMS
   const queryParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && String(value).trim() !== '') {
@@ -2298,6 +2309,14 @@ export const deleteAllWallAsync = async (unitData: any) => {
 }
 
 
+export const editWallAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/wall/enquiry/${unitData.id}`, { _method: 'PUT', ...unitData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 export const addInquiriesAsync = async (unitData: any) => {
   try {
@@ -2782,3 +2801,41 @@ export const editMemberTypeAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+
+export const addTaskListAsync = async (unitData: FormData) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/create-task`, unitData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const editTaskListAsync = async (formData: FormData) => {
+  for (const pair of formData.entries()) {
+    console.log(pair[0] + ': ' + pair[1]);
+  }
+
+  try {
+    // The formData already contains _method: 'PUT'
+    // Axios will automatically set 'Content-Type': 'multipart/form-data'
+    // when the second argument to post/put is a FormData instance.
+    const response = await axiosInstance.post(
+      `${config.apiURL}/create-task`, // Use brandId in the URL
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};

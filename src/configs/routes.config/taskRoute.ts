@@ -33,8 +33,8 @@ const taskRoute: Routes = [
     },
     {
         key: 'task.taskList',
-        path: `${TASK_PREFIX_PATH}/task-list/edit/:id`,
-        component: lazy(() => import('@/views/task-management/Task-List/components/EditTaskPage')),
+        path: `${TASK_PREFIX_PATH}/task-list/create/:id`,
+        component: lazy(() => import('@/views/task-management/Task-List/components/CreateTaskPage')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',

@@ -1,18 +1,16 @@
+// This is my listing page
 // src/views/your-path/WallListing.tsx
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-import cloneDeep from "lodash/cloneDeep"; // ADDED: For client-side data processing
+// REMOVED: Unnecessary dayjs plugins for client-side filtering
+// import isBetween from "dayjs/plugin/isBetween";
+// import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+// import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+// REMOVED: cloneDeep is no longer needed as all processing is server-side
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-
-dayjs.extend(isBetween);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -71,7 +69,7 @@ import {
   getProductSpecificationsAction,
   getSubcategoriesByCategoryIdAction,
   getWallListingAction,
-  submitExportReasonAction, // Assume this exists for logging
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
@@ -94,9 +92,9 @@ export type WallItem = {
   member_email: string;
   member_phone: string;
   product_category: string;
-  productCategoryId?: number; // ADDED: For filtering
+  productCategoryId?: number;
   product_subcategory: string;
-  subCategoryId?: number; // ADDED: For filtering
+  subCategoryId?: number;
   product_description: string;
   product_specs: string;
   product_status: string;
@@ -110,7 +108,7 @@ export type WallItem = {
   return_policy: string;
   listing_url: string;
   brand: string;
-  brandId?: number; // ADDED: For filtering
+  brandId?: number;
   product_images: string[];
   created_date: Date;
   updated_at: Date;
@@ -127,10 +125,10 @@ export type WallItem = {
   is_bookmarked: boolean;
   updated_by_name?: string;
   updated_by_role?: string;
-  productId?: number; // ADDED: For filtering
-  productSpecId?: number; // ADDED: For filtering
-  memberTypeId?: number; // ADDED: For filtering
-  createdById?: number; // ADDED: For filtering
+  productId?: number;
+  productSpecId?: number;
+  memberTypeId?: number;
+  createdById?: number;
 };
 
 // --- Zod Schemas ---
@@ -416,7 +414,9 @@ const WallListing = () => {
   const [modalState, setModalState] = useState<WallModalState>({ isOpen: false, type: null, data: null });
 
   // --- Table and Filter State ---
+  // This state holds the raw filter values from the filter form
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
+  // This state holds the table's operational state (pagination, sorting, search)
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
@@ -431,22 +431,22 @@ const WallListing = () => {
   // --- Data Mapping ---
   const mapApiToWallItem = useCallback((apiItem: ApiWallItemFromSource): WallItem => ({
     id: apiItem.id as number,
-    productId: apiItem.product_id, // Map ID
+    productId: apiItem.product_id,
     product_name: apiItem.product_name,
     company_name: apiItem.company_name || "",
     companyId: apiItem.company_id_from_api || undefined,
     member_name: apiItem.member_name,
     memberId: String(apiItem.member_id_from_api || ""),
-    memberTypeId: apiItem.member_type_id, // Map ID
+    memberTypeId: apiItem.member_type_id,
     member_email: apiItem.member_email || "",
     member_phone: apiItem.member_phone || "",
     product_category: apiItem.product_category || "",
-    productCategoryId: apiItem.product_category_id, // Map ID
+    productCategoryId: apiItem.product_category_id,
     product_subcategory: apiItem.product_subcategory || "",
-    subCategoryId: apiItem.subcategory_id, // Map ID
+    subCategoryId: apiItem.subcategory_id,
     product_description: apiItem.product_description || "",
     product_specs: apiItem.product_specs || "",
-    productSpecId: apiItem.product_spec_id, // Map ID
+    productSpecId: apiItem.product_spec_id,
     product_status: apiItem.product_status,
     quantity: Number(apiItem.quantity) || 0,
     price: Number(apiItem.price) || 0,
@@ -458,7 +458,7 @@ const WallListing = () => {
     return_policy: apiItem.return_policy || "",
     listing_url: apiItem.listing_url || "",
     brand: apiItem.brand || "",
-    brandId: apiItem.brand_id, // Map ID
+    brandId: apiItem.brand_id,
     product_images: apiItem.product_images || [],
     created_date: new Date(apiItem.created_date),
     updated_at: new Date(apiItem.updated_at),
@@ -475,18 +475,64 @@ const WallListing = () => {
     is_bookmarked: apiItem.is_bookmarked,
     updated_by_name: apiItem.updated_by_name,
     updated_by_role: apiItem.updated_by_role,
-    createdById: apiItem.created_by, // Map ID
+    createdById: apiItem.created_by,
   }), []);
 
-  const allWallItems = useMemo(() => {
-    return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : [];
-  }, [wallListing, mapApiToWallItem]);
+  // ✅ CORRECT: This `useMemo` is the core of the server-side filtering logic.
+  // It combines table state (pagination, sort, search) and filter state into a single
+  // object that can be sent to the API.
+  const apiParams = useMemo(() => {
+    // Helper to format array of react-select options into comma-separated strings for the API
+    const formatMultiSelect = (items: { value: any }[] | undefined) => {
+      if (!items || items.length === 0) return undefined;
+      return items.map(item => item.value).join(',');
+    };
 
-  // --- Fetch Initial Data ---
+    const params: any = {
+      page: tableData.pageIndex,
+      per_page: tableData.pageSize,
+      search: tableData.query || undefined,
+      sort_by: tableData.sort?.key || undefined,
+      sort_order: tableData.sort?.order || undefined,
+      status: formatMultiSelect(filterCriteria.filterRecordStatuses),
+      company_ids: formatMultiSelect(filterCriteria.filterCompanyIds),
+      want_to: formatMultiSelect(filterCriteria.filterIntents),
+      product_ids: formatMultiSelect(filterCriteria.filterProductIds),
+      category_ids: formatMultiSelect(filterCriteria.categories),
+      subcategory_ids: formatMultiSelect(filterCriteria.subcategories),
+      brand_ids: formatMultiSelect(filterCriteria.brands),
+      product_status: formatMultiSelect(filterCriteria.productStatus),
+      member_type_ids: formatMultiSelect(filterCriteria.memberType),
+      created_by_ids: formatMultiSelect(filterCriteria.createdBy),
+      product_spec_ids: formatMultiSelect(filterCriteria.productSpec),
+      source: formatMultiSelect(filterCriteria.source),
+    };
+
+    if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) {
+      params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format('YYYY-MM-DD') : undefined;
+      params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format('YYYY-MM-DD') : undefined;
+    }
+
+    // Remove any undefined/null properties before sending to the API
+    Object.keys(params).forEach(key => {
+      if (params[key] === undefined || params[key] === null) {
+        delete params[key];
+      }
+    });
+
+    return params;
+  }, [tableData, filterCriteria]);
+
+
+  // ✅ CORRECT: This useEffect is now the primary data fetching trigger.
+  // It runs on initial load and whenever `apiParams` changes, ensuring the
+  // table is always in sync with the state (filters, pagination, sort, search).
   useEffect(() => {
-    // Fetch all data for client-side processing
-    dispatch(getWallListingAction({ per_page: -1 }));
-    // Fetch related data for filters
+    dispatch(getWallListingAction(apiParams));
+  }, [dispatch, apiParams]);
+
+  // This useEffect fetches data for the filter dropdowns only once on component mount.
+  useEffect(() => {
     dispatch(getProductsDataAsync());
     dispatch(getCategoriesData());
     dispatch(getSubcategoriesByCategoryIdAction(0));
@@ -497,101 +543,21 @@ const WallListing = () => {
     dispatch(getAllCompany());
   }, [dispatch]);
 
-  // --- Client-side Data Processing ---
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData = allWallItems.length > 0 ? cloneDeep(allWallItems) : [];
+  // ✅ CORRECT: Data for the table is directly from the Redux store's paginated response.
+  // No client-side processing is needed.
+  const pageData = useMemo(() => {
+    return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : [];
+  }, [wallListing, mapApiToWallItem]);
 
-    // --- Apply Filters ---
-    const { filterRecordStatuses, filterIntents, filterProductIds, categories, subcategories, brands, productStatus, dateRange } = filterCriteria;
-    if (filterRecordStatuses?.length) {
-      const values = filterRecordStatuses.map(opt => opt.value);
-      processedData = processedData.filter(item => item.recordStatus && values.includes(item.recordStatus));
-    }
-    if (filterIntents?.length) {
-      const values = filterIntents.map(opt => opt.value);
-      processedData = processedData.filter(item => values.includes(item.want_to));
-    }
-    if (filterProductIds?.length) {
-      const values = filterProductIds.map(opt => opt.value);
-      processedData = processedData.filter(item => item.productId && values.includes(item.productId));
-    }
-    if (categories?.length) {
-        const values = categories.map(opt => opt.value);
-        processedData = processedData.filter(item => item.productCategoryId && values.includes(item.productCategoryId));
-    }
-    if (subcategories?.length) {
-        const values = subcategories.map(opt => opt.value);
-        processedData = processedData.filter(item => item.subCategoryId && values.includes(item.subCategoryId));
-    }
-    if (brands?.length) {
-        const values = brands.map(opt => opt.value);
-        processedData = processedData.filter(item => item.brandId && values.includes(item.brandId));
-    }
-    if (productStatus?.length) {
-        const values = productStatus.map(opt => opt.value);
-        processedData = processedData.filter(item => values.includes(item.product_status));
-    }
-    if (dateRange && (dateRange[0] || dateRange[1])) {
-        processedData = processedData.filter(item => {
-            const itemDate = dayjs(item.created_date);
-            const start = dateRange[0] ? dayjs(dateRange[0]).startOf('day') : null;
-            const end = dateRange[1] ? dayjs(dateRange[1]).endOf('day') : null;
-            if (start && end) return itemDate.isBetween(start, end, null, '[]');
-            if (start) return itemDate.isSameOrAfter(start);
-            if (end) return itemDate.isSameOrBefore(end);
-            return true;
-        });
-    }
+  // ✅ CORRECT: Total item count now comes directly from the API response metadata.
+  const total = wallListing?.data?.total || 0;
 
-    // --- Apply Search Query ---
-    if (tableData.query) {
-      const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(item =>
-        item.product_name.toLowerCase().includes(query) ||
-        item.company_name.toLowerCase().includes(query) ||
-        item.member_name.toLowerCase().includes(query) ||
-        String(item.id).includes(query)
-      );
-    }
-
-    // --- Apply Sorting ---
-    const { order, key } = tableData.sort as OnSortParam;
-    if (order && key) {
-      processedData.sort((a, b) => {
-        const aValue = a[key as keyof WallItem] as any;
-        const bValue = b[key as keyof WallItem] as any;
-        if (aValue === null || aValue === undefined) return order === 'asc' ? 1 : -1;
-        if (bValue === null || bValue === undefined) return order === 'asc' ? -1 : 1;
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-        }
-        if (aValue instanceof Date && bValue instanceof Date) {
-            return order === 'asc' ? aValue.getTime() - bValue.getTime() : bValue.getTime() - aValue.getTime();
-        }
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-          return order === 'asc' ? aValue - bValue : bValue - aValue;
-        }
-        return 0;
-      });
-    }
-
-    const currentTotal = processedData.length;
-    const pageIndex = tableData.pageIndex as number;
-    const pageSize = tableData.pageSize as number;
-    const startIndex = (pageIndex - 1) * pageSize;
-    const paginatedData = processedData.slice(startIndex, startIndex + pageSize);
-
-    return {
-      pageData: paginatedData,
-      total: currentTotal,
-      allFilteredAndSortedData: processedData, // For export
-    };
-  }, [allWallItems, tableData, filterCriteria]);
+  // REMOVED: The large `useMemo` block for client-side filtering, sorting, and pagination is gone.
 
   // --- Handlers ---
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const openAddDrawer = useCallback(() => navigate("/sales-leads/wall-item/add"), [navigate]);
-  const openEditDrawer = useCallback((item: WallItem) => navigate(`/sales-leads/wall-item/edit/${item.id}`), [navigate]);
+  const openEditDrawer = useCallback((item: WallItem) => navigate("/sales-leads/wall-item/add", { state: item?.id }), [navigate]);
   const openViewDrawer = useCallback((item: WallItem) => { setEditingItem(item); setIsViewDrawerOpen(true); }, []);
   const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingItem(null); }, []);
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
@@ -599,6 +565,7 @@ const WallListing = () => {
   const handleOpenModal = (type: WallModalType, wallItem: WallItem) => setModalState({ isOpen: true, type, data: wallItem });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
+  // ✅ CORRECT: The refetch after delete now uses the current `apiParams` to refresh the view.
   const onConfirmDeleteSelectedItems = useCallback(async () => {
     if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info" >Please select items to delete.</Notification>); return; }
     setDeleteSelectedConfirmOpen(false);
@@ -607,15 +574,16 @@ const WallListing = () => {
       await dispatch(deleteAllWallAction({ ids })).unwrap();
       toast.push(<Notification title="Success" type="success">{selectedItems.length} item(s) deleted.</Notification>);
       setSelectedItems([]);
-      dispatch(getWallListingAction({ per_page: -1 })); // Refetch all data
+      // Refetch the current page of data with the same filters.
+      dispatch(getWallListingAction(apiParams));
     } catch (error: any) {
       toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>);
     }
-  }, [dispatch, selectedItems]);
+  }, [dispatch, selectedItems, apiParams]);
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
     setFilterCriteria(data);
-    handleSetTableData({ pageIndex: 1 });
+    handleSetTableData({ pageIndex: 1 }); // Reset to first page on new filter
     closeFilterDrawer();
   }, [handleSetTableData, closeFilterDrawer]);
 
@@ -623,7 +591,7 @@ const WallListing = () => {
     const defaults = filterFormSchema.parse({});
     filterFormMethods.reset(defaults);
     setFilterCriteria(defaults);
-    handleSetTableData({ query: "", pageIndex: 1 });
+    handleSetTableData({ query: "", pageIndex: 1 }); // also reset search query
   }, [filterFormMethods, handleSetTableData]);
 
   const handleOpenExportReasonModal = useCallback(() => {
@@ -635,25 +603,43 @@ const WallListing = () => {
     setIsExportReasonModalOpen(true);
   }, [total, exportReasonFormMethods]);
 
+  // ✅ FIXED: Export now correctly dispatches a thunk to fetch all filtered data from the server.
   const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "WallListing";
     const timestamp = dayjs().format('YYYY-MM-DD');
     const fileName = `wall_listing_export_${timestamp}.csv`;
-    try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
-      toast.push(<Notification title="Reason Submitted" type="success" />);
 
-      // Export the client-side filtered and sorted data
-      exportWallItemsToCsv(fileName, allFilteredAndSortedData);
-      setIsExportReasonModalOpen(false);
+    try {
+      // 1. Submit the reason for auditing purposes.
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+      toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..." />);
+
+      // debugger
+      // 2. Fetch ALL data matching the current filters for export.
+      // We create new params to fetch all items, overriding pagination.
+      const exportParams = { ...apiParams, per_page: 0, page: 1 };
+      // 3. **CRITICAL FIX**: Dispatch the thunk and `unwrap` the result to get the data or catch the error.
+      //    Do not call the thunk action creator directly.
+      const exportDataResponse = await dispatch(getWallListingAction(exportParams)).unwrap();
+
+      // Assuming the unwrapped successful payload is an object like: { status: boolean, data: [], ... }
+      if (!exportDataResponse?.status) {
+        throw new Error(exportDataResponse?.message || "Failed to fetch data for export.");
+      }
+
+      const allFilteredData = (exportDataResponse?.data?.data || []).map(mapApiToWallItem);
+      const success = exportWallItemsToCsv(fileName, allFilteredData);
+      if (success) {
+        setIsExportReasonModalOpen(false);
+      }
 
     } catch (error: any) {
-      toast.push(<Notification title="Failed to Export" type="danger" message={error.message} />);
+      toast.push(<Notification title="Failed to Export" type="danger" message={error.message || 'An unknown error occurred'} />);
     } finally {
       setIsSubmittingExportReason(false);
     }
-  }, [allFilteredAndSortedData, dispatch]);
+  }, [apiParams, dispatch, mapApiToWallItem]);
 
   const handlePaginationChange = (page: number) => handleSetTableData({ pageIndex: page });
   const handlePageSizeChange = (value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); };
@@ -676,7 +662,7 @@ const WallListing = () => {
   const handleImportFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) { toast.push(<Notification title="Import Started" type="info">File processing initiated. (Dummy)</Notification>); setImportDialogOpen(false); }
-    if (event.target) event.target.value = ""; // Reset file input
+    if (event.target) event.target.value = "";
   }, []);
 
   // --- Columns Definition ---
@@ -746,7 +732,7 @@ const WallListing = () => {
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
               <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
               <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
-              <Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}><button onClick={() => {}} className="p-0 m-0 bg-transparent border-none cursor-pointer"><TbBookmark size={14} className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} /></button></Tooltip>
+              <Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}><button onClick={() => { }} className="p-0 m-0 bg-transparent border-none cursor-pointer"><TbBookmark size={14} className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} /></button></Tooltip>
             </div>
             {created_date && (<span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1"><TbCalendarEvent />{dayjs(created_date).format("MMM D, YYYY")}</span>)}
           </div>
@@ -804,7 +790,7 @@ const WallListing = () => {
           </div>
 
           <WallTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onAddNew={openAddDrawer} onImport={handleImportData} onClearFilters={onClearFilters} />
-          
+
           <div className="mt-4">
             <WallTable
               columns={columns}
@@ -826,18 +812,18 @@ const WallListing = () => {
 
       <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
         {editingItem && (
-            <div className="p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                {Object.entries(editingItem).filter(([key]) => !["product_images", "product_name", "id",].includes(key)).map(([key, value]) => (
-                  <div key={key} className="border-b border-gray-200 dark:border-gray-700 pb-2">
-                    <strong className="capitalize text-gray-700 dark:text-gray-200">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}:</strong>{" "}
-                    <span className="text-gray-600 dark:text-gray-400">
-                      {value instanceof Date ? dayjs(value).format("MMM D, YYYY h:mm A") : (value !== null && value !== "") ? String(value) : "N/A"}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          <div className="p-4 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              {Object.entries(editingItem).filter(([key]) => !["product_images", "product_name", "id",].includes(key)).map(([key, value]) => (
+                <div key={key} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+                  <strong className="capitalize text-gray-700 dark:text-gray-200">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}:</strong>{" "}
+                  <span className="text-gray-600 dark:text-gray-400">
+                    {value instanceof Date ? dayjs(value).format("MMM D, YYYY h:mm A") : (value !== null && value !== "") ? String(value) : "N/A"}
+                  </span>
+                </div>
+              ))}
             </div>
+          </div>
         )}
       </Drawer>
 
@@ -865,7 +851,7 @@ const WallListing = () => {
       </Drawer>
 
       <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)} title="Import Wall Items">
-          <div className="p-4"><p>Upload a CSV file to import Wall Items. (This is a dummy import)</p><FormItem label="CSV File"><Input type="file" accept=".csv" onChange={handleImportFileSelect} /></FormItem><div className="text-right mt-4"><Button size="sm" onClick={() => setImportDialogOpen(false)}>Cancel</Button></div></div>
+        <div className="p-4"><p>Upload a CSV file to import Wall Items. (This is a dummy import)</p><FormItem label="CSV File"><Input type="file" accept=".csv" onChange={handleImportFileSelect} /></FormItem><div className="text-right mt-4"><Button size="sm" onClick={() => setImportDialogOpen(false)}>Cancel</Button></div></div>
       </Dialog>
 
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export"

@@ -38,6 +38,7 @@ import {
   getAllCompany,
   getAllProductAction,
   getAllProductsAction,
+  getAllTaskAction,
   getAutoEmailsAction,
   getAutoEmailTemplatesAction,
   getAutoMatchDataAction,
@@ -100,6 +101,7 @@ import {
   getTrendingImagesAction,
   getUnitAction,
   getUsersAction,
+  getWallItemById,
   getWallItemsAction,
   getWallListingAction,
 } from "./middleware";
@@ -169,7 +171,8 @@ const INITIAL_STATE: any = {
   salesPerson: [],
   suppliers: [],
   Employees: [],
-  AllCompanyData: []
+  AllCompanyData: [],
+  getwallItemsData:  {}
 };
 
 const masterSlice = createSlice({
@@ -307,6 +310,10 @@ const masterSlice = createSlice({
     builder.addCase(getWallItemsAction.fulfilled, (state, { payload }) => ({
       ...state,
       wallItemsData: payload,
+    }));
+    builder.addCase(getWallItemById.fulfilled, (state, { payload }) => ({
+      ...state,
+      getwallItemsData: payload,
     }));
     builder.addCase(getPriceListAction.fulfilled, (state, { payload }) => ({
       ...state,
@@ -462,6 +469,11 @@ const masterSlice = createSlice({
       ...state,
       productsMasterData: payload,
     }));
+    builder.addCase(getAllTaskAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      AllTaskData: payload,
+    }));
+
     builder.addCase(getMembersAction.fulfilled, (state, { payload }) => ({
       ...state,
       memberData: payload,
