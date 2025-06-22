@@ -3712,7 +3712,7 @@ export const getWallListingAction = createAsyncThunk("auth/walllisting",
     try {
       const response: AxiosResponse<any> = await getpWallListingAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
