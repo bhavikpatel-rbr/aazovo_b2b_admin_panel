@@ -3437,7 +3437,7 @@ export const getCompanyAction = createAsyncThunk("auth/company",
     try {
       const response: AxiosResponse<any> = await getcompanyAsync()
       if (response?.data?.status) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)

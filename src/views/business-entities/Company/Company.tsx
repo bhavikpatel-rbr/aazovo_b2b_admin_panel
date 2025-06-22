@@ -206,6 +206,7 @@ const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
   return companyStatusColors[statusValue] || "bg-gray-200 text-gray-600";
 };
 interface CompanyListStore {
+  companyCount: {};
   companyList: CompanyItem[];
   selectedCompanies: CompanyItem[];
   CountriesData: any[];
@@ -232,14 +233,13 @@ const useCompanyList = (): CompanyListStore => {
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { CompanyData, CountriesData, ContinentsData } =
-    useSelector(masterSelector);
+  const { CompanyData, CountriesData, ContinentsData } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
 
   // FIX: Initialize state assuming CompanyData?.data is an object like { data: [], total: 0 }
-  const [companyList, setCompanyList] = useState<CompanyItem[]>(
-    CompanyData ?? []
-  );
+ 
+  const [companyList, setCompanyList] = useState<CompanyItem[]>(CompanyData?.data ?? []);
+  const [companyCount, setCompanyCount] = useState(CompanyData?.counts ?? {});
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
   const [companyListTotal, setCompanyListTotal] = useState<number>(
     CompanyData?.length ?? 0
@@ -252,9 +252,10 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // FIX: Update local state correctly when CompanyData?.data from Redux changes.
   useEffect(() => {
+    setCompanyCount(CompanyData?.counts ?? {})
+    setCompanyList(CompanyData?.data ?? []);
+    setCompanyListTotal(CompanyData?.data?.length ?? 0);
 
-    setCompanyList(CompanyData ?? []);
-    setCompanyListTotal(CompanyData?.length ?? 0);
   }, [CompanyData?.data]);
 
   useEffect(() => {
@@ -264,6 +265,7 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   return (
     <CompanyListContext.Provider
       value={{
+        companyCount,
         companyList,
         setCompanyList,
         selectedCompanies,
@@ -1248,8 +1250,7 @@ const CompanyActionColumn = ({
 const CompanyListTable = () => {
   const navigate = useNavigate();
   // With the provider fixed, companyList is now a guaranteed array.
-  const { companyList, selectedCompanies, setSelectedCompanies } =
-    useCompanyList();
+  const { companyList, selectedCompanies, setSelectedCompanies, companyCount } = useCompanyList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -1316,13 +1317,7 @@ const CompanyListTable = () => {
         return 0;
       });
     }
-    for (let index = 0; index < f.length; index++) {
-      delete f[index]['created_by_user']
-      delete f[index]['updated_by_user']
-      delete f[index]['continent']
-      delete f[index]['country']
-    }
-    
+
     const pI = tableData.pageIndex as number;
     const pS = tableData.pageSize as number;
     return { pageData: f.slice((pI - 1) * pS, pI * pS), total: f.length };
@@ -1411,7 +1406,7 @@ const CompanyListTable = () => {
                 <b>Business:</b> {row.original.business_type}
               </span>{" "}
               <div className="text-xs text-gray-500">
-                {city}, {state}, {country}
+                {city}, {state}, {country?.name}
               </div>{" "}
             </div>
           );
@@ -1688,6 +1683,84 @@ const CompanyListTable = () => {
 
   return (
     <>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <h5>Company</h5>
+        <CompanyListActionTools />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
+        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-blue-200">
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+            <TbBuilding size={16} />
+          </div>
+          <div className="flex flex-col gap-0">
+            <b className="text-sm ">{companyCount?.total ?? 0}</b>
+            <span className="text-[9px] font-semibold">Total</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-green-200">
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+            <TbBuildingBank size={16} />
+          </div>
+          <div className="flex flex-col gap-0">
+            <b className="text-sm pb-0 mb-0">{companyCount?.total ?? 0}</b>
+            <span className="text-[9px] font-semibold">Active</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+            <TbCancel size={16} />
+          </div>
+          <div className="flex flex-col gap-0">
+            <b className="text-sm pb-0 mb-0">{companyCount?.total ?? 0}</b>
+            <span className="text-[9px] font-semibold">Disabled</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-emerald-200">
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
+            <TbCircleCheck size={16} />
+          </div>
+          <div className="flex flex-col gap-0">
+            <b className="text-sm pb-0 mb-0">{companyCount?.verified ?? 0}</b>
+            <span className="text-[9px] font-semibold">Verified</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+            <TbCircleX size={16} />
+          </div>
+          <div className="flex flex-col gap-0">
+            <b className="text-sm pb-0 mb-0">{companyCount?.unverified ?? 0}</b>
+            <span className="text-[9px] font-semibold">Non Verified</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-violet-200">
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+            <TbShieldCheck size={16} />
+          </div>
+          <div className="flex flex-col gap-0">
+            <b className="text-sm pb-0 mb-0">{companyCount?.registered ?? 0}</b>
+            <span className="text-[9px] font-semibold">Eligible</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+            <TbShieldX size={16} />
+          </div>
+          <div className="flex flex-col gap-0">
+            <b className="text-sm pb-0 mb-0">{companyCount?.unregistered ?? 0}</b>
+            <span className="text-[9px] font-semibold">Not Eligible</span>
+          </div>
+        </Card>
+        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-orange-200">
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+            <TbBuildingCommunity size={16} />
+          </div>
+          <div className="flex flex-col gap-0">
+            <b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b>
+            <span className="text-[9px] font-semibold">Members</span>
+          </div>
+        </Card>
+      </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <CompanyListSearch
           onInputChange={(val) =>
@@ -2093,84 +2166,7 @@ const Company = () => {
       <Container>
         <AdaptiveCard>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-              <h5>Company</h5>
-              <CompanyListActionTools />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
-              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-blue-200">
-                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                  <TbBuilding size={16} />
-                </div>
-                <div className="flex flex-col gap-0">
-                  <b className="text-sm ">8</b>
-                  <span className="text-[9px] font-semibold">Total</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-green-200">
-                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                  <TbBuildingBank size={16} />
-                </div>
-                <div className="flex flex-col gap-0">
-                  <b className="text-sm pb-0 mb-0">2</b>
-                  <span className="text-[9px] font-semibold">Active</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
-                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                  <TbCancel size={16} />
-                </div>
-                <div className="flex flex-col gap-0">
-                  <b className="text-sm pb-0 mb-0">34</b>
-                  <span className="text-[9px] font-semibold">Disabled</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-emerald-200">
-                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
-                  <TbCircleCheck size={16} />
-                </div>
-                <div className="flex flex-col gap-0">
-                  <b className="text-sm pb-0 mb-0">4</b>
-                  <span className="text-[9px] font-semibold">Verified</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
-                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                  <TbCircleX size={16} />
-                </div>
-                <div className="flex flex-col gap-0">
-                  <b className="text-sm pb-0 mb-0">4</b>
-                  <span className="text-[9px] font-semibold">Non Verified</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-violet-200">
-                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                  <TbShieldCheck size={16} />
-                </div>
-                <div className="flex flex-col gap-0">
-                  <b className="text-sm pb-0 mb-0">4</b>
-                  <span className="text-[9px] font-semibold">Eligible</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200">
-                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                  <TbShieldX size={16} />
-                </div>
-                <div className="flex flex-col gap-0">
-                  <b className="text-sm pb-0 mb-0">4</b>
-                  <span className="text-[9px] font-semibold">Not Eligible</span>
-                </div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-orange-200">
-                <div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                  <TbBuildingCommunity size={16} />
-                </div>
-                <div className="flex flex-col gap-0">
-                  <b className="text-sm pb-0 mb-0">20</b>
-                  <span className="text-[9px] font-semibold">Members</span>
-                </div>
-              </Card>
-            </div>
+
             <CompanyListTable />
           </div>
         </AdaptiveCard>
